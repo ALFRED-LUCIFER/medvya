@@ -9,15 +9,22 @@ import type { BoardCard, VisitSteps } from '../features/front-desk/domain/board'
 import BoardPage from '../features/front-desk/components/BoardPage';
 import FrontDeskViews from '../features/front-desk/components/FrontDeskViews';
 import { useBoardController } from '../features/front-desk/hooks/useBoardController';
+import { FollowUpDismissDialog, FollowUpDueLine } from '../features/front-desk/components/FollowUpDue';
+import { bookFollowUpPath } from '../features/front-desk/domain/followUpDue';
+import { useFollowUpDueController } from '../features/front-desk/hooks/useFollowUpDueController';
 
 type Props = {
   facilityId: string; online: boolean; canMove: boolean;
+  /** May cancel a visit from the board's card menu: full "Register / book patients" (the server checks again). */
+  canCancel: boolean;
   /** Register patient, when this role may register (from the navigation). */
   registerPath: string | null;
   /** Walk-in (MDV-P1-025), when this role may book and check in. */
   walkInPath: string | null;
   /** The waitlist (MDV-P1-027), when this role may book. */
   waitlistPath: string | null;
+  /** The schedule, when this role may book: a follow-up's Book opens it (MDV-P1-102). */
+  bookPath: string | null;
   /** Billing, when the billing.invoices flag is on and this role may take payments (from the navigation). */
   billingPath: string | null;
   /** Doctors (Patient 360 at Full) start consultations from the board (MDV-P2-001); the server checks clinical access each time. */
@@ -35,9 +42,10 @@ export function Consult({ card, online }: { card: BoardCard; online: boolean }) 
 }
 
 /** Composition only: the board controller for the active facility, fed to the presentational P-01 page. */
-export default function FrontDeskRoute({ facilityId, online, canMove, registerPath, walkInPath, waitlistPath, billingPath, canConsult: doctor, intakePath, steps }: Props) {
+export default function FrontDeskRoute({ facilityId, online, canMove, canCancel, registerPath, walkInPath, waitlistPath, billingPath, bookPath, canConsult: doctor, intakePath, steps }: Props) {
   const { t } = useI18n();
   const board = useBoardController(facilityId, online);
+  const dismissal = useFollowUpDueController();
   const register = registerPath || walkInPath ? <>
     {walkInPath && <Link to={walkInPath} className={buttonVariants()}><Footprints aria-hidden />{t('walkIn.action')}</Link>}
     {registerPath && <Link to={registerPath} className={buttonVariants({ variant: walkInPath ? 'outline' : 'default' })}><UserPlus aria-hidden />{t('nav.register')}</Link>}
@@ -51,5 +59,9 @@ export default function FrontDeskRoute({ facilityId, online, canMove, registerPa
     ? <Link to={intakePath(card.id)} className={buttonVariants({ variant: 'outline', className: 'mt-1 min-h-11 whitespace-normal' })}
         aria-label={t('intake.queue.openFor', { name: card.patientName || t('board.unknownPatient') })}>{t('intake.queue.open')}</Link>
     : null) : undefined;
-  return <BoardPage {...board} steps={steps} canMove={canMove} registerAction={register} paymentAction={payment} overviewAction={waitlist} views={<FrontDeskViews boardPath="/front-desk" doctorsPath="/front-desk/overview" />} consultAction={consultAction} nurseStep={nurseStep} />;
+  // MDV-P1-102: the doctor's follow-up on the Done card; booking and dismissing need booking access (the server checks again).
+  const followUp = (card: BoardCard) => card.followUp && <FollowUpDueLine followUp={card.followUp} patientName={card.patientName || t('board.unknownPatient')} online={online}
+    bookPath={bookPath && bookFollowUpPath(bookPath, card.patientId, card.followUp)} onDismiss={bookPath ? dismissal.onStart : null} />;
+  return <BoardPage {...board} steps={steps} canMove={canMove} canCancel={canCancel} registerAction={register} paymentAction={payment} overviewAction={waitlist} views={<FrontDeskViews boardPath="/front-desk" doctorsPath="/front-desk/overview" />} consultAction={consultAction} nurseStep={nurseStep}
+    followUp={followUp} followUpDialog={<FollowUpDismissDialog {...dismissal} online={online} />} />;
 }

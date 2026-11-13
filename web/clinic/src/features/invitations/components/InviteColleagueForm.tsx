@@ -30,7 +30,7 @@ export default function InviteColleagueForm({ form, loading, forbidden, loadFail
       <form noValidate onSubmit={onSubmit} className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
           <Label htmlFor="invite-email">{t('inviteForm.email')}</Label>
-          <Input id="invite-email" type="email" autoComplete="off" className="h-11" aria-invalid={!!errors.email}
+          <Input id="invite-email" type="email" autoComplete="off" aria-invalid={!!errors.email}
             aria-describedby={errors.email ? 'invite-email-error' : undefined} {...form.register('email')} />
           {errors.email && <p id="invite-email-error" className={fieldError}>{t('inviteForm.error.email')}</p>}
         </div>
@@ -38,7 +38,7 @@ export default function InviteColleagueForm({ form, loading, forbidden, loadFail
           <Label htmlFor="invite-role">{t('inviteForm.role')}</Label>
           <Controller control={form.control} name="role" render={({ field }) => (
             <Select value={field.value} onValueChange={field.onChange}>
-              <SelectTrigger id="invite-role" className="h-11 w-full"><SelectValue /></SelectTrigger>
+              <SelectTrigger id="invite-role" className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>{invitableRoles.map(r => <SelectItem key={r} value={r}>{t(`role.${r}`)}</SelectItem>)}</SelectContent>
             </Select>
           )} />
@@ -47,7 +47,7 @@ export default function InviteColleagueForm({ form, loading, forbidden, loadFail
           <Label htmlFor="invite-facility">{t('inviteForm.facility')}</Label>
           <Controller control={form.control} name="facilityId" render={({ field }) => (
             <Select value={field.value} onValueChange={field.onChange}>
-              <SelectTrigger id="invite-facility" className="h-11 w-full" aria-invalid={!!errors.facilityId}
+              <SelectTrigger id="invite-facility" className="w-full" aria-invalid={!!errors.facilityId}
                 aria-describedby={errors.facilityId ? 'invite-facility-error' : undefined}>
                 <SelectValue placeholder={t('inviteForm.facilityPlaceholder')} />
               </SelectTrigger>

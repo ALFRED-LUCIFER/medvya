@@ -11,7 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Medvya.IntegrationTests;
 
 /// <summary>
-/// MDV-P2-003 over HTTP on real PostgreSQL: the ⌘K lookup returns only initials, age and the MRN tail (payload test), says per row whether the
+/// MDV-P2-003 over HTTP on real PostgreSQL: the ⌘K lookup returns only the desk's search row (payload test; MDV-P1-101), says per row whether the
 /// caller may open the chart or must ask, and audits each search for treatment. Synthetic data only.
 /// </summary>
 public sealed class GlobalSearchEndpointTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IAsyncLifetime
@@ -56,15 +56,17 @@ public sealed class GlobalSearchEndpointTests(PostgresFixture sql) : IClassFixtu
     static string AccessOf(string json) => JsonDocument.Parse(json).RootElement.GetProperty("items")[0].GetProperty("access").GetString()!;
 
     [Fact]
-    public async Task ResultsCarryOnlyInitialsAgeAndTheMrnTail()
+    public async Task ResultsCarryTheDeskRowAndNeverAWholeNumber()
     {
         var (status, json) = await Lookup(h.Doctor, new { query = "meera" });
         Assert.Equal(HttpStatusCode.OK, status);
         var row = Assert.Single(JsonDocument.Parse(json).RootElement.GetProperty("items").EnumerateArray());
         // The whole shape, so a field added later fails here until someone decides it is safe to show before the chart is opened.
-        Assert.Equal(["access", "ageEstimated", "ageYears", "id", "initials", "mrnTail"], row.EnumerateObject().Select(p => p.Name).Order(StringComparer.Ordinal));
+        // MDV-P1-101 decided the desk's row (name, sex, date of birth, phone tail, last visit, duplicate mark): this role may already search it.
+        Assert.Equal(["access", "ageEstimated", "ageYears", "dateOfBirth", "duplicate", "fullName", "id", "initials", "lastVisitOn", "mobileTail", "mrnTail", "sexAtBirth"],
+            row.EnumerateObject().Select(p => p.Name).Order(StringComparer.Ordinal));
         Assert.Equal(("MI", "Open"), (row.GetProperty("initials").GetString(), row.GetProperty("access").GetString()));
-        foreach (var leak in new[] { "Meera", "Iyer", "+91", "9000000101", "1972", "000001" }) Assert.DoesNotContain(leak, json, StringComparison.OrdinalIgnoreCase);
+        foreach (var leak in new[] { "+91", "9000000101", "000001" }) Assert.DoesNotContain(leak, json, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

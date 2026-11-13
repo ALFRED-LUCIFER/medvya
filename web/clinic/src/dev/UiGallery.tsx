@@ -1,9 +1,14 @@
 import { type ReactNode, useState } from 'react';
 import { CircleStop, PenLine, Sparkles } from 'lucide-react';
 import {
-  alertLooks, Button, ClinicalAlert, IdentityBanner, Input, Label, provenanceLooks, ProvenanceTag,
-  RecordingPill, recordingLooks, StatusChip, statusLooks, SystemState, systemStates,
+  alertLooks, Button, ChoiceRow, ClinicalAlert, IdentityBanner, Input, Label, provenanceLooks, ProvenanceTag,
+  RecordingPill, recordingLooks, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, StatusChip, statusLooks,
+  Switch, SystemState, systemStates, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Textarea,
 } from '@medvya/ui';
+import PageComponentsGallery from './PageComponentsGallery';
+import FieldGallery from './FieldGallery';
+import PatientBannerSection from './gallery/PatientBannerSection';
+import ShellComponentsGallery from './ShellComponentsGallery';
 
 const keys = <T extends object>(o: T) => Object.keys(o) as (keyof T)[];
 
@@ -20,7 +25,7 @@ function Field({ id, label, defaultValue, error, disabled }: { id: string; label
   return (
     <div className="flex w-56 flex-col gap-1.5">
       <Label htmlFor={id}>{label}</Label>
-      <Input id={id} defaultValue={defaultValue} disabled={disabled} aria-invalid={!!error} aria-describedby={error ? `${id}-err` : undefined} className="min-h-11" />
+      <Input id={id} defaultValue={defaultValue} disabled={disabled} aria-invalid={!!error} aria-describedby={error ? `${id}-err` : undefined} />
       {error && <p id={`${id}-err`} className="text-xs font-semibold text-danger-700">{error}</p>}
     </div>
   );
@@ -40,6 +45,18 @@ function Measured({ name, className = name, read, children }: { name: string; cl
       <code className="w-56 shrink-0 text-xs">{name}</code>
       <span className="w-44 shrink-0 text-xs text-muted-foreground tabular-nums">{value}</span>
       <div ref={el => { if (el) setValue(read(getComputedStyle(el))); }} className={className}>{children}</div>
+    </div>
+  );
+}
+
+// A control at its library default, with no class added, and the height it renders at (MDV-P1-077).
+function DefaultControl({ name, children }: { name: string; children: ReactNode }) {
+  const [height, setHeight] = useState<number>();
+  return (
+    <div ref={el => { const c = el?.querySelector('input, textarea, button'); if (c) setHeight(Math.round(c.getBoundingClientRect().height)); }}
+      data-measured={name} className="flex w-56 flex-col gap-1.5">
+      {children}
+      <p className="text-xs text-muted-foreground">{name} · {height ?? '…'} px</p>
     </div>
   );
 }
@@ -81,6 +98,32 @@ export default function UiGallery({ switcher }: { switcher: ReactNode }) {
         <Field id="f-pin" label="PIN code" defaultValue="68203" error="PIN code must be 6 digits" />
         <Field id="f-locked" label="Locked" defaultValue="Locked" disabled />
       </Section>
+      <Section title="Controls at the library default (44 px)">
+        <DefaultControl name="Input"><Label htmlFor="d-input">Mobile number</Label><Input id="d-input" dir="ltr" defaultValue="98400 12345" /></DefaultControl>
+        <DefaultControl name="Select">
+          <Label htmlFor="d-select">Doctor</Label>
+          <Select defaultValue="rao"><SelectTrigger id="d-select"><SelectValue /></SelectTrigger>
+            <SelectContent><SelectItem value="rao">Dr. Arjun Rao</SelectItem><SelectItem value="iyer">Dr. Meera Iyer</SelectItem></SelectContent>
+          </Select>
+        </DefaultControl>
+        <DefaultControl name="Textarea"><Label htmlFor="d-textarea">Reason for visit</Label><Textarea id="d-textarea" defaultValue="Follow-up" /></DefaultControl>
+        <DefaultControl name="Switch"><Label htmlFor="d-switch">Send reminders</Label><Switch id="d-switch" defaultChecked /></DefaultControl>
+        <fieldset className="flex flex-col">
+          <legend className="text-sm font-bold">Visit type</legend>
+          <ChoiceRow type="radio" name="d-visit" defaultChecked>Walk-in</ChoiceRow>
+          <ChoiceRow type="radio" name="d-visit">Booked</ChoiceRow>
+          <ChoiceRow type="checkbox">Send a reminder</ChoiceRow>
+        </fieldset>
+      </Section>
+      <Section title="Table (label required)">
+        <Table label="Today's queue" className="min-w-[480px]">
+          <TableHeader><TableRow><TableHead scope="col">Token</TableHead><TableHead scope="col">Patient</TableHead><TableHead scope="col" numeric>Wait (min)</TableHead></TableRow></TableHeader>
+          <TableBody>
+            <TableRow><TableCell className="font-mono">A-07</TableCell><TableCell className="font-bold">Deepak Nair</TableCell><TableCell numeric>12</TableCell></TableRow>
+            <TableRow><TableCell className="font-mono">A-08</TableCell><TableCell className="font-bold">Meera Iyer</TableCell><TableCell numeric>4</TableCell></TableRow>
+          </TableBody>
+        </Table>
+      </Section>
       <section className="flex flex-col gap-3">
         <h2 className="text-lg font-bold">Type tokens</h2>
         {typeTokens.map(c => <Measured key={c} name={c} read={s => `${s.fontSize} / ${s.lineHeight} · ${s.fontWeight}`}>Meera Iyer · DQ-10-4482 · ميرا</Measured>)}
@@ -100,6 +143,10 @@ export default function UiGallery({ switcher }: { switcher: ReactNode }) {
           <Measured key={c} name={c} className={`${c} size-11 shrink-0 border bg-card`} read={s => (c.startsWith('shadow') ? 'elevation' : s.borderRadius)} />)}
         <Measured name="duration-fast ease-out" className="transition-colors duration-fast ease-out" read={s => `${s.transitionDuration} ${s.transitionTimingFunction}`}>Motion</Measured>
       </section>
+      <PageComponentsGallery />
+      <FieldGallery />
+      <PatientBannerSection />
+      <ShellComponentsGallery />
     </main>
   );
 }

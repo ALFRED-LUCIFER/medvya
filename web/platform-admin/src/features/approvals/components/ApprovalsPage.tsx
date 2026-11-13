@@ -27,7 +27,7 @@ export default function ApprovalsPage({ vm, operator }: { vm: { queue: QueueVm; 
             </TabsList>
             <TabsContent value={q.filter}>
               <TableState state={q.state} messages={{ loading: t('platform.state.loading'), error: t(q.forbidden ? 'platform.state.forbidden' : 'platform.state.error'), empty: t('platform.approvals.empty') }}>
-                <Table>
+                <Table label={t('platform.approvals.queueTable')}>
                   <TableHeader>
                     <TableRow>
                       <TableHead>{t('platform.approvals.col.organisation')}</TableHead>
@@ -39,7 +39,7 @@ export default function ApprovalsPage({ vm, operator }: { vm: { queue: QueueVm; 
                     {q.items.map(i => (
                       <TableRow key={i.tenantId} className={cn(q.selectedId === i.tenantId && 'bg-accent')}>
                         <TableCell>
-                          <Button variant="link" className="h-auto min-h-11 justify-start px-0 text-start font-semibold whitespace-normal" aria-current={q.selectedId === i.tenantId ? 'true' : undefined}
+                          <Button variant="link" className="h-auto justify-start px-0 text-start font-semibold whitespace-normal" aria-current={q.selectedId === i.tenantId ? 'true' : undefined}
                             onClick={() => q.onSelect(i.tenantId)}>{i.name}</Button>
                           <p className="text-sm text-muted-foreground">{t(`platform.approvals.type.${i.type}` as MessageKey)}{' · '}{i.country}</p>
                         </TableCell>

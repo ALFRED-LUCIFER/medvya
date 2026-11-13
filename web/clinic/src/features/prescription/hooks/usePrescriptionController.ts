@@ -11,6 +11,7 @@ import { freeTextSchema, invalidFields, problemOf, toDraft, type PrintLanguage, 
 import {
   addFreeText, addFromFormulary, authorise, cancelPrescription, fetchAuthorisation, fetchChecks, fetchPrescription, includeLine, overrideAlert, saveSig, searchMedicines,
 } from '../services/prescriptionApi';
+import { useDidYouMean } from './useAddMedicineController';
 
 const autosaveMs = 700;
 
@@ -32,6 +33,7 @@ export function usePrescriptionController(encounterId: string) {
   const add = useForm<{ medicine: string }>({ resolver: zodResolver(freeTextSchema), defaultValues: { medicine: '' } });
   const text = (useWatch({ control: add.control, name: 'medicine' }) ?? '').trim();
   const search = useQuery({ queryKey: ['formulary', 'doctor', text], queryFn: () => searchMedicines(text), enabled: list.isSuccess && text.length >= 2, placeholderData: keepPreviousData });
+  const suggestions = useDidYouMean(text, text.length >= 2 && search.isSuccess && (search.data ?? []).length === 0);
   const [drafts, setDrafts] = useState<Record<string, SigDraft>>({});
   const [saves, setSaves] = useState<Record<string, SaveState>>({});
   const [problem, setProblem] = useState<RxProblem | null>(null);
@@ -96,6 +98,7 @@ export function usePrescriptionController(encounterId: string) {
     failed: list.isError && error?.status !== 403,
     add,
     results: text.length >= 2 ? (search.data ?? []) : [],
+    suggestions,
     searching: search.isFetching,
     language, onLanguage: setLanguage,
     problem,

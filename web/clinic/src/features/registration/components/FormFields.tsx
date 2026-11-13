@@ -20,7 +20,7 @@ export function FieldError({ id, code }: { id: string; code: string | undefined 
   );
 }
 
-type InputA11y = { id: string; 'aria-invalid'?: true; 'aria-describedby'?: string; 'aria-required'?: true; className: string };
+type InputA11y = { id: string; 'aria-invalid'?: true; 'aria-describedby'?: string; 'aria-required'?: true };
 
 export function Field({ id, label, required = false, error, hint, wide = false, children }: {
   id: string; label: string; required?: boolean; error?: string; hint?: ReactNode; wide?: boolean; children: (a: InputA11y) => ReactNode;
@@ -29,7 +29,7 @@ export function Field({ id, label, required = false, error, hint, wide = false, 
   return (
     <div className={wide ? 'flex flex-col gap-1.5 md:col-span-2' : 'flex flex-col gap-1.5'}>
       <Label htmlFor={id}>{label} {required && <Required />}</Label>
-      {children({ id, 'aria-invalid': error ? true : undefined, 'aria-describedby': described, 'aria-required': required || undefined, className: 'min-h-11' })}
+      {children({ id, 'aria-invalid': error ? true : undefined, 'aria-describedby': described, 'aria-required': required || undefined })}
       {hint && <p id={`${id}-hint`} className="text-xs text-muted-foreground">{hint}</p>}
       <FieldError id={`${id}-error`} code={error} />
     </div>
@@ -62,7 +62,7 @@ export function SelectField<T extends string>({ f, name, label, required, hint, 
       {a => (
         <Controller control={f.control} name={name} render={({ field }) => (
           <Select value={field.value as string} onValueChange={field.onChange}>
-            <SelectTrigger {...a} className="min-h-11 w-full" onBlur={field.onBlur}><SelectValue placeholder={placeholder} /></SelectTrigger>
+            <SelectTrigger {...a} className="w-full" onBlur={field.onBlur}><SelectValue placeholder={placeholder} /></SelectTrigger>
             <SelectContent>{options.map(o => <SelectItem key={o} value={o}>{optionLabel(o)}</SelectItem>)}</SelectContent>
           </Select>
         )} />

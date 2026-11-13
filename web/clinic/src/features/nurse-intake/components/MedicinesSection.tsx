@@ -33,16 +33,16 @@ export default function MedicinesSection(p: Props) {
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="medicine-name" className="font-bold">{t('intake.medicine.name')}</Label>
-              <Input id="medicine-name" autoComplete="off" maxLength={100} className="h-11" aria-invalid={!!errors.name} {...p.form.register('name')} />
+              <Input id="medicine-name" autoComplete="off" maxLength={100} aria-invalid={!!errors.name} {...p.form.register('name')} />
               {errors.name && <p role="alert" className="text-sm font-semibold text-danger-700">{t('intake.medicine.nameRequired')}</p>}
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="medicine-dose" className="font-bold">{t('intake.medicine.dose')}</Label>
-              <Input id="medicine-dose" autoComplete="off" maxLength={50} className="h-11" {...p.form.register('dose')} />
+              <Input id="medicine-dose" autoComplete="off" maxLength={50} {...p.form.register('dose')} />
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="medicine-frequency" className="font-bold">{t('intake.medicine.frequency')}</Label>
-              <Input id="medicine-frequency" autoComplete="off" maxLength={50} className="h-11" {...p.form.register('frequency')} />
+              <Input id="medicine-frequency" autoComplete="off" maxLength={50} {...p.form.register('frequency')} />
             </div>
           </div>
           <div className="flex min-h-11 items-center gap-3">
@@ -51,7 +51,7 @@ export default function MedicinesSection(p: Props) {
             )} />
             <Label htmlFor="medicine-clarify" className="min-h-11 flex-1">{t('intake.medicine.needsClarification')}</Label>
           </div>
-          <Button type="submit" className="min-h-11 self-start" loading={p.adding} disabled={!p.online}>{t('intake.medicine.add')}</Button>
+          <Button type="submit" className="self-start" loading={p.adding} disabled={!p.online}>{t('intake.medicine.add')}</Button>
         </form>
       )}
     </section>

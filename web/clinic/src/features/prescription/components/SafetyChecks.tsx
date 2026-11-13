@@ -108,15 +108,15 @@ export default function SafetyChecks(p: SafetyProps) {
                 {!given && a.severity === 'Severe' && !p.ended && (p.overriding === a.key ? (
                   <form noValidate onSubmit={p.onReason} className="flex flex-col gap-2">
                     <Field id={reasonId} label={t('rx.check.reason')} hint={t('rx.check.reasonHint')} error={error && t('rx.check.reasonRequired')}>
-                      <Input id={reasonId} className="h-11" autoComplete="off" {...describedBy(reasonId, !!error, true)} {...p.reasonForm.register('reason')} />
+                      <Input id={reasonId} autoComplete="off" {...describedBy(reasonId, !!error, true)} {...p.reasonForm.register('reason')} />
                     </Field>
                     <div className="flex flex-wrap gap-2">
-                      <Button type="submit" className="min-h-11" disabled={p.busy}>{t('rx.check.record')}</Button>
-                      <Button type="button" variant="outline" className="min-h-11" onClick={() => p.onOverride(null)}>{t('rx.check.cancel')}</Button>
+                      <Button type="submit" disabled={p.busy}>{t('rx.check.record')}</Button>
+                      <Button type="button" variant="outline" onClick={() => p.onOverride(null)}>{t('rx.check.cancel')}</Button>
                     </div>
                   </form>
                 ) : (
-                  <Button type="button" variant="outline" className="min-h-11 self-start" disabled={p.busy} onClick={() => p.onOverride(a.key)}>{t('rx.check.override')}</Button>
+                  <Button type="button" variant="outline" className="self-start" disabled={p.busy} onClick={() => p.onOverride(a.key)}>{t('rx.check.override')}</Button>
                 ))}
               </li>
             );

@@ -21,7 +21,7 @@ POST   /v1/sessions/{id}/revoke
 GET    /v1/admin/audit?scope=authorized            # P0/P1 (F-12)
 POST   /v1/patients                                # P1 (P-02)
 POST   /v1/patients/search                         # privacy-safe results (D-02); text in the body, never the URL (P1-018)
-POST   /v1/patients/lookup                         # ⌘K results (D-02): initials, age, MRN tail + open/request-access verdict per row (P2-003)
+POST   /v1/patients/lookup                         # ⌘K results (D-02): the desk's search row (name, age, sex, date of birth, MRN and phone tails, last visit day, duplicate mark; P1-101) + open/request-access verdict per row (P2-003)
 GET    /v1/patients/{id}                           # open a record (audited read, purpose registration); national/insurance numbers masked to the last 4
 POST   /v1/patients/{id}/identifiers/reveal        # full numbers on request (Register / book at Full), audited, rate-limited
 POST   /v1/patients/duplicate-check                # while typing (P1-05)
@@ -42,12 +42,14 @@ GET    /v1/waitlist?facilityId=                    # P1-027: waiting and offered
 POST   /v1/waitlist {facilityId, patientId, calendarId?, visitType, reasonCategory, days[], from?, until?}   # add; one open entry per patient
 POST   /v1/waitlist/{id}/offer {calendarId, start}  # holds that slot (keyed by the entry, 30 min) on the booking path and queues a WaitlistOffer message (clinic, date, time only)
 POST   /v1/waitlist/{id}/accept|decline             # accept books the held slot and ends the entry; decline releases it. An offer that runs out frees the slot by itself
-DELETE /v1/waitlist/{id}                            # off the list, any hold released
+DELETE /v1/waitlist/{id}?reason=                    # off the list, any hold released; a doctor's follow-up is dismissed with a reason code (P1-102, kept in the audit row)
 POST   /v1/appointments/{id}/check-in              # P1-028; a repeat returns the visit unchanged
 POST   /v1/appointments/{id}/status                # next board column only (state machine), else 409
+POST   /v1/appointments/{id}/undo                  # the caller's own last move, within 30 s, else 409 (MDV-P1-100)
+POST   /v1/appointments/{id}/left                  # left without being seen, with a reason (MDV-P1-100)
 POST   /v1/appointments/{id}/reassign  {calendarId, reason}   # P1-030: a waiting visit to another doctor today; reason is a code
 GET    /v1/front-desk/overview?facilityId=         # P1-030 D-04: doctors (counts per state, delay, next) and the waiting room
-GET    /v1/front-desk/board?facilityId=            # P-01 today, nonclinical; SignalR hub for live updates (P1-029)
+GET    /v1/front-desk/board?facilityId=            # P-01 today, nonclinical; SignalR hub for live updates (P1-029); a Done card carries the doctor's follow-up still to book, date and doctor only (P1-102)
 HUB    /v1/hubs/board  Watch(facilityId) → BoardChanged{appointmentId,state,changedAt}  # P1-029; session's facility only, boards refetch
 POST   /v1/queue/tv/session  {token}               # P1-031: pairs a TV (token from the link's #fragment) → HttpOnly display cookie
 GET    /v1/queue/tv                                # display cookie only: {now:[{token,room,doctor}], next:[{token,waitMinutes}]}

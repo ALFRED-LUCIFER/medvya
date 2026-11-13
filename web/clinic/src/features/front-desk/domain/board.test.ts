@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { inToday, groupByColumn, needsRebooking, minutesSince, ageYears, moveError, nextState, serverNow, visibleColumns, walkInError, type BoardCard } from './board';
+import { canUndo, endKinds, inToday, groupByColumn, needsRebooking, minutesSince, ageYears, moveError, nextState, serverNow, visibleColumns, walkInError, type BoardCard } from './board';
 
 describe('walk-in (MDV-P1-025)', () => {
   it('tells "no free slot" (choose a doctor to queue with) and "busy" from other failures', () => {
@@ -10,6 +10,20 @@ describe('walk-in (MDV-P1-025)', () => {
 const card = (id: string, state: BoardCard['state'], start: string): BoardCard => ({
   id, reference: `APT-${id}`, patientId: `p-${id}`, patientName: `Patient ${id} (synthetic)`, dateOfBirth: '1972-03-12', registrationIncomplete: false,
   calendarId: 'd-1', calendarName: 'Dr. Arjun Rao (synthetic)', visitType: 'FollowUp', reasonCategory: 'General', start, end: start, state, since: start, room: null, token: null,
+});
+
+describe('undo and the card menu (MDV-P1-100)', () => {
+  it('offers undo only for a move the server undoes: backwards to Checked in, Ready, In consult or Billing', () => {
+    expect([canUndo('ReadyForDoctor', 'InConsult'), canUndo('InConsult', 'Done'), canUndo('Billing', 'Done'), canUndo('CheckedIn', 'WithNurse')]).toEqual([true, true, true, true]);
+    expect([canUndo('Booked', 'CheckedIn'), canUndo('WithNurse', 'ReadyForDoctor'), canUndo('InConsult', 'ReadyForDoctor')]).toEqual([false, false, false]);
+  });
+  it('lets a waiting visit end as left; cancel needs booking access and is not offered once the nurse has the patient', () => {
+    expect([endKinds('CheckedIn', true), endKinds('ReadyForDoctor', false), endKinds('WithNurse', true)]).toEqual([['left', 'cancel'], ['left'], ['left']]);
+    expect([endKinds('Booked', true), endKinds('InConsult', true), endKinds('Done', true), endKinds('LeftWithoutBeingSeen', true)]).toEqual([[], [], [], []]);
+  });
+  it('knows the new refusals by their codes', () => {
+    expect([moveError('changed'), moveError('undo_expired'), moveError('with_doctor')]).toEqual(['changed', 'undo_expired', 'with_doctor']);
+  });
 });
 
 describe('reception board', () => {

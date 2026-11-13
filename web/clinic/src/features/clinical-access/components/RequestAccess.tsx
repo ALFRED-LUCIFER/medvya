@@ -21,10 +21,10 @@ export default function RequestAccess(p: Props) {
     <>
       <p className="font-bold">{t('consult.refused.ask')}</p>
       <Select value={p.reason} onValueChange={v => p.onReason(v as AccessReason)}>
-        <SelectTrigger className="h-11 w-full" aria-label={t('consult.refused.reason')}><SelectValue /></SelectTrigger>
+        <SelectTrigger className="w-full" aria-label={t('consult.refused.reason')}><SelectValue /></SelectTrigger>
         <SelectContent>{accessReasons.map(r => <SelectItem key={r} value={r}>{t(`clinicalAccess.reason.${r}`)}</SelectItem>)}</SelectContent>
       </Select>
-      <Button className="min-h-11 whitespace-normal" loading={p.asking} onClick={p.onRequestAccess}>{t('state.noAccess.cta')}</Button>
+      <Button className="whitespace-normal" loading={p.asking} onClick={p.onRequestAccess}>{t('state.noAccess.cta')}</Button>
       {p.askFailed && <p className="font-bold text-danger-700">{t('consult.failed')}</p>}
     </>
   );

@@ -65,14 +65,14 @@ export function StructuredField({ section, text, readOnly, onChange, heading }: 
               <div role="group" aria-labelledby={label} className="flex flex-wrap items-center gap-2">
                 <span id={label} className="min-w-32 text-sm font-bold">{t(itemLabelKey(item))}</span>
                 {answersFor(section).map(answer => (
-                  <Button key={answer} type="button" size="sm" variant={a?.answer === answer ? 'selected' : 'outline'} className="min-h-11 min-w-11" aria-pressed={a?.answer === answer}
+                  <Button key={answer} type="button" size="sm" variant={a?.answer === answer ? 'selected' : 'outline'} className="min-w-11" aria-pressed={a?.answer === answer}
                     onClick={() => onChange(writeAnswers(section, toggle(answers, item, answer)))}>{t(answerLabelKey(answer))}</Button>
                 ))}
               </div>
               {exam && a && (
                 <div className="flex flex-col gap-1">
                   <Label htmlFor={`${label}-note`} className="text-sm">{t(a.answer === 'abnormal' ? 'structured.noteRequired' : 'structured.note', { item: t(itemLabelKey(item)) })}</Label>
-                  <Input id={`${label}-note`} className="min-h-11" maxLength={1000} value={a.note ?? ''} aria-required={a.answer === 'abnormal'} aria-invalid={missing}
+                  <Input id={`${label}-note`} maxLength={1000} value={a.note ?? ''} aria-required={a.answer === 'abnormal'} aria-invalid={missing}
                     aria-describedby={missing ? `${label}-missing` : undefined}
                     onChange={e => onChange(writeAnswers(section, { ...answers, [item]: { ...a, note: e.target.value } }))} />
                   {missing && <p id={`${label}-missing`} className="text-sm font-bold text-danger-700">{t('structured.noteMissing')}</p>}
@@ -102,7 +102,7 @@ export function TemplatePicker(p: PickerProps) {
     <div className="flex flex-wrap items-center gap-2">
       <Label htmlFor="note-template">{t('noteEditor.template')}</Label>
       <Select value={p.templateKey} onValueChange={p.onRequestSwitch} disabled={p.readOnly}>
-        <SelectTrigger ref={templateRef} id="note-template" className="min-h-11 min-w-48"><SelectValue /></SelectTrigger>
+        <SelectTrigger ref={templateRef} id="note-template" className="min-w-48"><SelectValue /></SelectTrigger>
         <SelectContent>{p.choices.map(c => <SelectItem key={c.key} value={c.key}>{t(templateNameKey(c.key))}</SelectItem>)}</SelectContent>
       </Select>
       {p.suggested && !p.readOnly && <p className="text-sm text-muted-foreground">{t('structured.suggested')}</p>}
@@ -118,8 +118,8 @@ export function TemplatePicker(p: PickerProps) {
             </DialogDescription>
           )}
           <div className="flex flex-wrap gap-3">
-            <Button className="min-h-11" onClick={p.onConfirmSwitch}>{t('noteEditor.switch.confirm')}</Button>
-            <Button variant="outline" className="min-h-11" onClick={p.onCancelSwitch}>{t('noteEditor.switch.cancel')}</Button>
+            <Button onClick={p.onConfirmSwitch}>{t('noteEditor.switch.confirm')}</Button>
+            <Button variant="outline" onClick={p.onCancelSwitch}>{t('noteEditor.switch.cancel')}</Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -127,22 +127,26 @@ export function TemplatePicker(p: PickerProps) {
   );
 }
 
-/** Never colour alone: each state has words. A failure or conflict is an alert; the text stays on screen either way. */
-export function SaveState({ phase, reloading, onRetry, onReapply }: { phase: SavePhase; reloading: boolean; onRetry: () => void; onReapply: () => void }) {
+/**
+ * Never colour alone: each state has words, and "Saved" appears only once the server has answered, with the time (MDV-P1-089). One status
+ * element carries saving, saved and not saved, so each change is read out politely. A conflict is an alert; the text stays on screen either way.
+ */
+export function SaveState({ phase, savedAt, reloading, onRetry, onReapply }: { phase: SavePhase; savedAt: string | null; reloading: boolean; onRetry: () => void; onReapply: () => void }) {
   const { t } = useI18n();
-  if (phase === 'failed') return (
-    <div role="alert" className="flex flex-wrap items-center gap-3 font-bold text-danger-700">
-      <span>{t('noteEditor.save.failed')}</span>
-      <Button variant="outline" className="min-h-11" onClick={onRetry}>{t('noteEditor.save.retry')}</Button>
-    </div>
-  );
   if (phase === 'conflict') return (
     <div role="alert" className="flex flex-wrap items-center gap-3 font-bold text-danger-700">
       <span>{t('noteEditor.save.conflict')}</span>
-      <Button variant="outline" className="min-h-11" loading={reloading} onClick={onReapply}>{t('noteEditor.save.reapply')}</Button>
+      <Button variant="outline" loading={reloading} onClick={onReapply}>{t('noteEditor.save.reapply')}</Button>
     </div>
   );
-  return <p role="status" className="text-sm text-muted-foreground">{t(`noteEditor.save.${phase}`)}</p>;
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      <p role="status" className={phase === 'failed' ? 'font-bold text-danger-700' : 'text-sm text-muted-foreground'}>
+        {phase === 'saved' ? t('noteEditor.save.saved', { time: savedAt ?? '' }) : t(`noteEditor.save.${phase}`)}
+      </p>
+      {phase === 'failed' && <Button variant="outline" onClick={onRetry}>{t('noteEditor.save.retry')}</Button>}
+    </div>
+  );
 }
 
 /**

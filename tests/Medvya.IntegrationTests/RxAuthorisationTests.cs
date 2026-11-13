@@ -331,6 +331,36 @@ public sealed class RxAuthorisationTests(PostgresFixture sql, AzuriteFixture blo
         Assert.Null(Assert.Single(Assert.Single(await AuthorisedAsync()).Lines).Reason);
     }
 
+    /// <summary>
+    /// MDV-P1-088 AC2. SAFETY (mutation check: give the brand a row of its own without the ingredient code, or drop the class match in
+    /// SafetyRules.AllergyAlert, and this fails): a medicine found by its brand is the generic's row, so a penicillin allergy blocks it in the
+    /// checks the Add medicine dialog reads and again at authorisation. Augmentin is the ticket's example pair, not a reviewed list.
+    /// </summary>
+    [Fact]
+    public async Task AMedicineFoundByItsBrandIsBlockedForAPenicillinAllergyInTheChecksAndAtAuthorisation()
+    {
+        await h.Get<IFormulary>(h.Admin).AddAsync(new Medvya.Prescribing.Application.AddMedicine("Amoxicillin and clavulanate", "625 mg", "Tablet", null, null, RegulatoryClass.ScheduleH, "J01CR02", null));
+        await h.Get<IFormulary>(h.Admin).AddBrandsAsync(new AddBrands([new BrandRow("Augmentin", "Amoxicillin and clavulanate", "625 mg", "Tablet", "penicillins")]));
+        await using (var db = sql.Encounters(h.Tenant))
+        {
+            db.Allergies.Add(new Allergy { Id = Guid.NewGuid(), TenantId = h.Tenant, PatientId = h.SecondPatient, Kind = AllergyKind.Substance, Substance = "Penicillin", Status = AllergyStatus.Confirmed, Source = ChartSource.ClinicianVerified, RecordedAt = h.Clock.GetUtcNow() });
+            await db.SaveChangesAsync();
+        }
+        await h.Get<IEncounters>(h.Doctor).EndAsync(encounter); // one open consultation at a time
+        var visit = await h.BookAsync(11, patient: h.SecondPatient);
+        await h.FrontDesk(h.Reception).CheckInAsync(visit.Id, new CheckIn());
+        encounter = (await h.Get<IEncounters>(h.Doctor).StartAsync(new StartEncounter(visit.Id)))!.Id;
+
+        var line = await PrescribeAsync("Augmentin", Twice); // the search by brand answers the generic's row
+        var check = (await h.Get<IPrescriptions>(h.Doctor).CheckAsync(encounter))!;
+        var alert = Assert.Single(check.Alerts);
+        Assert.Equal((RxAlertKind.Allergy, RxSeverity.Severe, "penicillins", "Amoxicillin and clavulanate", (Guid?)line), (alert.Kind, alert.Severity, alert.Code, alert.Medicine, alert.ItemId));
+        Assert.DoesNotContain(check.NotChecked, n => n.Reason is NotCheckedReason.FreeText or NotCheckedReason.NoIngredientCode);
+        using var refused = await AuthoriseAsync(h.Doctor);
+        Assert.Equal((HttpStatusCode.Conflict, "unresolved_alerts"), (refused.StatusCode, await Code(refused)));
+        Assert.Empty(await AuthorisedAsync());
+    }
+
     // SAFETY mutation check: drop the care-relationship check (RequireAsync in AuthoriseAsync) and the colleague case fails.
     [Fact]
     public async Task OnlyADoctorWithACareRelationshipAndALicenceAuthorises()

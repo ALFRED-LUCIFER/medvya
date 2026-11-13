@@ -1,7 +1,7 @@
 name: fullstack-e2e
 
 # MDV-P0-029: the browser against the real Host.Api and a real PostgreSQL in Docker, no mocked APIs (tests/e2e/fullstack).
-# Not a required check yet: it runs nightly, on demand, and on PRs that touch it, until it has a record of being stable on the
+# Not a required check yet: it runs nightly, on demand, and on PRs that touch the code it exercises, until it has a record of being stable on the
 # runners. Then move the job into pr.yml (the timeout below is its budget). Synthetic data only; nothing here touches Azure.
 on:
   schedule:
@@ -9,6 +9,10 @@ on:
   workflow_dispatch:
   pull_request:
     paths:
+      # The code under test too: #1163 changed only src/ and merged with J2 broken (MDV-P0-028 regression, #1232).
+      - 'src/**'
+      - 'web/**'
+      - 'packages/**'
       - 'tests/e2e/fullstack/**'
       - 'tests/e2e/journeys/storyboard.ts' # the full-stack J2 to J6 specs read their steps through it
       - 'docs/02-design/journeys.md'

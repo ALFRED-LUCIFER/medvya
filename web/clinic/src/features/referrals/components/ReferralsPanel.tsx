@@ -62,7 +62,7 @@ export default function ReferralsPanel(p: Props) {
                     <TableCell><span className="inline-flex items-center gap-1.5 font-bold"><Icon aria-hidden className="size-4 shrink-0" />{t(`referrals.state.${r.state}`)}</span></TableCell>
                     <TableCell>{r.channel ? `${t(`referrals.channel.${r.channel}`)}${r.sentAt ? `, ${formatDate(new Date(r.sentAt))}` : ''}` : ''}</TableCell>
                     <TableCell>
-                      {r.open && !p.ended && <Button type="button" variant="outline" className="min-h-11" aria-label={t('referrals.manageNamed', { name: r.provider })} onClick={() => p.onSelect(r.id)}>{t('referrals.manage')}</Button>}
+                      {r.open && !p.ended && <Button type="button" variant="outline" aria-label={t('referrals.manageNamed', { name: r.provider })} onClick={() => p.onSelect(r.id)}>{t('referrals.manage')}</Button>}
                     </TableCell>
                   </TableRow>
                 );
@@ -87,12 +87,12 @@ export default function ReferralsPanel(p: Props) {
             <div className="flex flex-wrap items-end gap-3">
               <Field id="ref-channel" label={t('referrals.field.channel')} hint={t('referrals.field.channel.hint')} className="min-w-64">
                 <Select value={p.channel} onValueChange={v => p.onChannel(v as Channel)}>
-                  <SelectTrigger id="ref-channel" className="h-11 w-full" {...describedBy('ref-channel', false, true)}><SelectValue /></SelectTrigger>
+                  <SelectTrigger id="ref-channel" className="w-full" {...describedBy('ref-channel', false, true)}><SelectValue /></SelectTrigger>
                   <SelectContent>{channels.map(c => <SelectItem key={c} value={c}>{t(`referrals.channel.${c}`)}</SelectItem>)}</SelectContent>
                 </Select>
               </Field>
-              <Button type="button" className="min-h-11" disabled={p.busy} onClick={p.onSend}><Send aria-hidden className="size-4" />{t('referrals.send')}</Button>
-              <Link to={`/consult/${p.encounterId}/referrals/${p.selected.id}/letter`} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t('referrals.letterLink')}</Link>
+              <Button type="button" disabled={p.busy} onClick={p.onSend}><Send aria-hidden className="size-4" />{t('referrals.send')}</Button>
+              <Link to={`/consult/${p.encounterId}/referrals/${p.selected.id}/letter`} className={buttonVariants({ variant: 'outline' })}>{t('referrals.letterLink')}</Link>
             </div>
           )}
           {nextStates(p.selected.state).length > 0 && p.selected.state !== 'Draft' && (
@@ -100,7 +100,7 @@ export default function ReferralsPanel(p: Props) {
               <Field id="ref-state" label={t('referrals.field.state')}>
                 <Controller control={p.advanceForm.control} name="state" render={({ field }) => (
                   <Select value={nextStates(p.selected!.state).includes(field.value) ? field.value : nextStates(p.selected!.state)[0]} onValueChange={field.onChange}>
-                    <SelectTrigger id="ref-state" className="h-11 w-full"><SelectValue /></SelectTrigger>
+                    <SelectTrigger id="ref-state" className="w-full"><SelectValue /></SelectTrigger>
                     <SelectContent>{nextStates(p.selected!.state).map(s => <SelectItem key={s} value={s}>{t(`referrals.state.${s}`)}</SelectItem>)}</SelectContent>
                   </Select>
                 )} />
@@ -109,16 +109,16 @@ export default function ReferralsPanel(p: Props) {
                 <Field id="ref-evidence" label={t('referrals.field.evidence')} hint={t('referrals.field.evidence.hint')}>
                   <Controller control={p.advanceForm.control} name="documentId" render={({ field }) => (
                     <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger id="ref-evidence" className="h-11 w-full" {...describedBy('ref-evidence', false, true)}><SelectValue placeholder={t('referrals.choose')} /></SelectTrigger>
+                      <SelectTrigger id="ref-evidence" className="w-full" {...describedBy('ref-evidence', false, true)}><SelectValue placeholder={t('referrals.choose')} /></SelectTrigger>
                       <SelectContent>{p.documents.map(d => <SelectItem key={d.id} value={d.id}>{`${t(`documents.type.${d.type}`)}, ${d.documentDate}`}</SelectItem>)}</SelectContent>
                     </Select>
                   )} />
                 </Field>
               )}
               <Field id="ref-note" label={t('referrals.field.note')} className="sm:col-span-2">
-                <Input id="ref-note" className="h-11" autoComplete="off" maxLength={200} {...p.advanceForm.register('note')} />
+                <Input id="ref-note" autoComplete="off" maxLength={200} {...p.advanceForm.register('note')} />
               </Field>
-              <Button type="submit" variant="outline" className="min-h-11 self-start" disabled={p.busy}>{t('referrals.update')}</Button>
+              <Button type="submit" variant="outline" className="self-start" disabled={p.busy}>{t('referrals.update')}</Button>
             </form>
           )}
           {evidenceOf(p.selected).length > 0 && <p className="flex items-center gap-2 text-sm"><CircleCheck aria-hidden className="size-4" />{t('referrals.evidenceCount', { count: evidenceOf(p.selected).length })}</p>}
@@ -130,12 +130,12 @@ export default function ReferralsPanel(p: Props) {
           <Section title={t('referrals.add.title')}>
             <form noValidate onSubmit={p.onCreate} className="grid gap-4 sm:grid-cols-2">
               <Field id="ref-provider" label={t('referrals.field.provider')} error={problem(p.createForm.formState.errors.provider)}>
-                <Input id="ref-provider" className="h-11" autoComplete="off" {...describedBy('ref-provider', !!p.createForm.formState.errors.provider)} {...p.createForm.register('provider')} />
+                <Input id="ref-provider" autoComplete="off" {...describedBy('ref-provider', !!p.createForm.formState.errors.provider)} {...p.createForm.register('provider')} />
               </Field>
               <Field id="ref-urgency" label={t('referrals.field.urgency')}>
                 <Controller control={p.createForm.control} name="urgency" render={({ field }) => (
                   <Select value={field.value ?? 'Routine'} onValueChange={field.onChange}>
-                    <SelectTrigger id="ref-urgency" className="h-11 w-full"><SelectValue /></SelectTrigger>
+                    <SelectTrigger id="ref-urgency" className="w-full"><SelectValue /></SelectTrigger>
                     <SelectContent>{urgencies.map(u => <SelectItem key={u} value={u}>{t(`referrals.urgency.${u}`)}</SelectItem>)}</SelectContent>
                   </Select>
                 )} />
@@ -153,27 +153,27 @@ export default function ReferralsPanel(p: Props) {
                   </label>
                 ))}
               </fieldset>
-              <Button type="submit" className="min-h-11 self-start" disabled={p.busy}>{t('referrals.add.submit')}</Button>
+              <Button type="submit" className="self-start" disabled={p.busy}>{t('referrals.add.submit')}</Button>
             </form>
           </Section>
 
           <Section title={t('referrals.in.title')} intro={t('referrals.in.intro')}>
             <form noValidate onSubmit={p.onFileIn} className="grid gap-4 sm:grid-cols-2">
               <Field id="refin-provider" label={t('referrals.in.provider')} error={problem(p.fileForm.formState.errors.provider)}>
-                <Input id="refin-provider" className="h-11" autoComplete="off" {...describedBy('refin-provider', !!p.fileForm.formState.errors.provider)} {...p.fileForm.register('provider')} />
+                <Input id="refin-provider" autoComplete="off" {...describedBy('refin-provider', !!p.fileForm.formState.errors.provider)} {...p.fileForm.register('provider')} />
               </Field>
               <Field id="refin-document" label={t('referrals.in.document')} hint={t('referrals.in.document.hint')} error={problem(p.fileForm.formState.errors.documentId)}>
                 <Controller control={p.fileForm.control} name="documentId" render={({ field }) => (
                   <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger id="refin-document" className="h-11 w-full" {...describedBy('refin-document', !!p.fileForm.formState.errors.documentId, true)}><SelectValue placeholder={t('referrals.choose')} /></SelectTrigger>
+                    <SelectTrigger id="refin-document" className="w-full" {...describedBy('refin-document', !!p.fileForm.formState.errors.documentId, true)}><SelectValue placeholder={t('referrals.choose')} /></SelectTrigger>
                     <SelectContent>{p.documents.map(d => <SelectItem key={d.id} value={d.id}>{`${t(`documents.type.${d.type}`)}, ${d.documentDate}`}</SelectItem>)}</SelectContent>
                   </Select>
                 )} />
               </Field>
               <Field id="refin-reason" label={t('referrals.in.reason')} className="sm:col-span-2">
-                <Input id="refin-reason" className="h-11" autoComplete="off" maxLength={500} {...p.fileForm.register('reason')} />
+                <Input id="refin-reason" autoComplete="off" maxLength={500} {...p.fileForm.register('reason')} />
               </Field>
-              <Button type="submit" variant="outline" className="min-h-11 self-start" disabled={p.busy}>{t('referrals.in.submit')}</Button>
+              <Button type="submit" variant="outline" className="self-start" disabled={p.busy}>{t('referrals.in.submit')}</Button>
             </form>
           </Section>
         </>

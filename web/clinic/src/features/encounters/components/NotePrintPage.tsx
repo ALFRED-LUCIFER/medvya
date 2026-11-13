@@ -26,9 +26,9 @@ export default function NotePrintPage(p: Props) {
   return (
     <div className="flex max-w-[720px] flex-col gap-4">
       <div className="flex flex-wrap gap-3 print:hidden">
-        <Button className="min-h-11" onClick={p.onPrint}><Printer aria-hidden className="size-4" />{t('notePrint.print')}</Button>
-        <Button variant="outline" className="min-h-11" loading={p.downloading} onClick={p.onPdf}><FileDown aria-hidden className="size-4" />{t('notePrint.pdf')}</Button>
-        <Link to={p.consultPath} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t('notePrint.back')}</Link>
+        <Button onClick={p.onPrint}><Printer aria-hidden className="size-4" />{t('notePrint.print')}</Button>
+        <Button variant="outline" loading={p.downloading} onClick={p.onPdf}><FileDown aria-hidden className="size-4" />{t('notePrint.pdf')}</Button>
+        <Link to={p.consultPath} className={buttonVariants({ variant: 'outline' })}>{t('notePrint.back')}</Link>
       </div>
       {p.pdfProblem && <p role="alert" className="font-bold text-danger-700 print:hidden">{t(p.pdfProblem === 'unsupported' ? 'notePrint.pdfUnsupported' : 'notePrint.pdfFailed')}</p>}
       <article aria-labelledby="note-print-title" className="flex flex-col gap-4 rounded-xl border bg-white p-6 text-black print:rounded-none print:border-0 print:p-0">

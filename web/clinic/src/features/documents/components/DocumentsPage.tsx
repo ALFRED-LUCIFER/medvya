@@ -35,7 +35,7 @@ export default function DocumentsPage(p: Props) {
         <h1 className="text-xl font-extrabold">{p.patient.fullName}</h1>
         <span>{t('consult.banner.mrn', { mrn: ltr(p.patient.mrn) })}</span>
         <span>{t('documents.dob', { date: formatCalendarDate(p.patient.dateOfBirth) })}</span>
-        <Link to={p.backPath} className={buttonVariants({ variant: 'outline', className: 'ms-auto min-h-11' })}>{t('documents.back')}</Link>
+        <Link to={p.backPath} className={buttonVariants({ variant: 'outline', className: 'ms-auto' })}>{t('documents.back')}</Link>
       </section>
       <h2 className="text-lg font-extrabold">{t('documents.title')}</h2>
       <UploadPanel {...p} />
@@ -62,18 +62,18 @@ function UploadPanel(p: Props) {
         <div className="flex flex-col gap-1">
           <Label htmlFor="doc-type">{t('documents.field.type')}</Label>
           <Select value={p.form.type} onValueChange={v => p.onForm({ type: v as DocumentType })}>
-            <SelectTrigger id="doc-type" className="h-11 w-52"><SelectValue /></SelectTrigger>
+            <SelectTrigger id="doc-type" className="w-52"><SelectValue /></SelectTrigger>
             <SelectContent>{documentTypes.map(x => <SelectItem key={x} value={x}>{t(`documents.type.${x}`)}</SelectItem>)}</SelectContent>
           </Select>
         </div>
         <div className="flex flex-col gap-1">
           <Label htmlFor="doc-date">{t('documents.field.date')}</Label>
-          <Input id="doc-date" type="date" className="h-11 w-44" value={p.form.date} onChange={e => p.onForm({ date: e.target.value })} />
+          <Input id="doc-date" type="date" className="w-44" value={p.form.date} onChange={e => p.onForm({ date: e.target.value })} />
         </div>
         <div className="flex flex-col gap-1">
           <Label htmlFor="doc-source">{t('documents.field.source')}</Label>
           <Select value={p.form.source} onValueChange={v => p.onForm({ source: v as DocumentSource })}>
-            <SelectTrigger id="doc-source" className="h-11 w-60"><SelectValue /></SelectTrigger>
+            <SelectTrigger id="doc-source" className="w-60"><SelectValue /></SelectTrigger>
             <SelectContent>{documentSources.map(x => <SelectItem key={x} value={x}>{t(`documents.source.${x}`)}</SelectItem>)}</SelectContent>
           </Select>
         </div>
@@ -81,16 +81,16 @@ function UploadPanel(p: Props) {
       <div className="flex flex-wrap items-center gap-3">
         <input ref={file} type="file" hidden accept="application/pdf,image/jpeg,image/png" aria-label={t('documents.chooseFile')}
           onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) p.onFile(f); }} />
-        <Button className="min-h-11" loading={p.uploading} disabled={busy} onClick={() => file.current?.click()}><Upload aria-hidden className="size-4" />{t('documents.chooseFile')}</Button>
+        <Button loading={p.uploading} disabled={busy} onClick={() => file.current?.click()}><Upload aria-hidden className="size-4" />{t('documents.chooseFile')}</Button>
         <input ref={photo} type="file" hidden accept="image/*" capture="environment" aria-label={t('documents.addPage')}
           onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) p.onPhoto(f); }} />
-        <Button variant="outline" className="min-h-11" loading={p.addingPhoto} disabled={busy} onClick={() => photo.current?.click()}><Camera aria-hidden className="size-4" />{t(p.pages === 0 ? 'documents.scan' : 'documents.addPage')}</Button>
+        <Button variant="outline" loading={p.addingPhoto} disabled={busy} onClick={() => photo.current?.click()}><Camera aria-hidden className="size-4" />{t(p.pages === 0 ? 'documents.scan' : 'documents.addPage')}</Button>
       </div>
       {p.pages > 0 && (
         <div className="flex flex-wrap items-center gap-3 rounded-md border p-3">
           <span role="status" className="font-bold">{t('documents.pages', { count: p.pages })}</span>
-          <Button className="min-h-11" loading={p.uploading} disabled={busy} onClick={p.onSavePages}>{t('documents.savePages', { count: p.pages })}</Button>
-          <Button variant="ghost" className="min-h-11" disabled={busy} onClick={p.onClearPages}>{t('documents.discardPages')}</Button>
+          <Button loading={p.uploading} disabled={busy} onClick={p.onSavePages}>{t('documents.savePages', { count: p.pages })}</Button>
+          <Button variant="ghost" disabled={busy} onClick={p.onClearPages}>{t('documents.discardPages')}</Button>
         </div>
       )}
       {p.photoFailed && <p role="alert" className="font-bold text-danger-700">{t('documents.photoFailed')}</p>}
@@ -101,8 +101,8 @@ function UploadPanel(p: Props) {
       {p.failure && (
         <div role="alert" className="flex flex-wrap items-center gap-3 rounded-md border p-3">
           <span className="inline-flex items-center gap-1.5 font-bold text-danger-700"><CircleAlert aria-hidden className="size-4" />{t(`documents.failure.${p.failure}`)}</span>
-          {p.canRetry && <Button className="min-h-11" onClick={p.onRetry}>{t('documents.retry')}</Button>}
-          <Button variant="ghost" className="min-h-11" onClick={p.onDismissFailure}>{t('documents.dismiss')}</Button>
+          {p.canRetry && <Button onClick={p.onRetry}>{t('documents.retry')}</Button>}
+          <Button variant="ghost" onClick={p.onDismissFailure}>{t('documents.dismiss')}</Button>
         </div>
       )}
     </section>
@@ -126,24 +126,24 @@ function Row({ doc: d, ...p }: Props & { doc: DocumentRow }) {
           {d.scanStatus === 'Clean' ? <CircleCheck aria-hidden className="size-4" /> : d.scanStatus === 'Pending' ? <Hourglass aria-hidden className="size-4" /> : <ShieldAlert aria-hidden className="size-4" />}
           {t(`documents.scan.${d.scanStatus}`)}
         </span>
-        {p.canOpen && d.scanStatus !== 'Infected' && !editing && <Button variant="outline" className="min-h-11" onClick={() => p.onEdit(d)} aria-label={t('documents.editFor', { type: t(`documents.type.${d.type}`) })}><Pencil aria-hidden className="size-4" />{t('documents.edit')}</Button>}
-        {open && <Button variant="default" className="min-h-11" loading={p.opening === d.id} onClick={() => p.onOpen(d.id)} aria-label={t('documents.openFor', { type: t(`documents.type.${d.type}`) })}>{t('documents.open')}</Button>}
+        {p.canOpen && d.scanStatus !== 'Infected' && !editing && <Button variant="outline" onClick={() => p.onEdit(d)} aria-label={t('documents.editFor', { type: t(`documents.type.${d.type}`) })}><Pencil aria-hidden className="size-4" />{t('documents.edit')}</Button>}
+        {open && <Button variant="default" loading={p.opening === d.id} onClick={() => p.onOpen(d.id)} aria-label={t('documents.openFor', { type: t(`documents.type.${d.type}`) })}>{t('documents.open')}</Button>}
       </div>
       {editing && (
         <div role="group" aria-label={t('documents.editing')} className="flex w-full flex-wrap items-end gap-3 rounded-md border p-3">
           <div className="flex flex-col gap-1">
             <Label htmlFor={`edit-type-${d.id}`}>{t('documents.field.type')}</Label>
             <Select value={editing.type} onValueChange={v => p.onEditChange({ type: v as DocumentType })}>
-              <SelectTrigger id={`edit-type-${d.id}`} className="h-11 w-52"><SelectValue /></SelectTrigger>
+              <SelectTrigger id={`edit-type-${d.id}`} className="w-52"><SelectValue /></SelectTrigger>
               <SelectContent>{documentTypes.map(x => <SelectItem key={x} value={x}>{t(`documents.type.${x}`)}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <div className="flex flex-col gap-1">
             <Label htmlFor={`edit-date-${d.id}`}>{t('documents.field.date')}</Label>
-            <Input id={`edit-date-${d.id}`} type="date" className="h-11 w-44" value={editing.date} onChange={e => p.onEditChange({ date: e.target.value })} />
+            <Input id={`edit-date-${d.id}`} type="date" className="w-44" value={editing.date} onChange={e => p.onEditChange({ date: e.target.value })} />
           </div>
-          <Button className="min-h-11" loading={p.saving} onClick={p.onSaveEdit}>{t('documents.edit.save')}</Button>
-          <Button variant="ghost" className="min-h-11" disabled={p.saving} onClick={p.onCancelEdit}>{t('documents.edit.cancel')}</Button>
+          <Button loading={p.saving} onClick={p.onSaveEdit}>{t('documents.edit.save')}</Button>
+          <Button variant="ghost" disabled={p.saving} onClick={p.onCancelEdit}>{t('documents.edit.cancel')}</Button>
           <p className="basis-full text-sm text-muted-foreground">{t('documents.edit.note')}</p>
           {p.editFailed && <p role="alert" className="basis-full font-bold text-danger-700">{t('documents.edit.failed')}</p>}
         </div>
@@ -166,7 +166,7 @@ function Viewer({ viewer, timeZone, onClose }: { viewer: ViewLink; timeZone: str
     <section aria-label={t('documents.viewer')} className="flex flex-col gap-2 rounded-xl border-2 border-brand-700 bg-card p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm">{t('documents.viewer.note', { time: formatTime(until, timeZone) })}</p>
-        <Button variant="outline" className="min-h-11" onClick={onClose}>{t('documents.viewer.close')}</Button>
+        <Button variant="outline" onClick={onClose}>{t('documents.viewer.close')}</Button>
       </div>
       <div className="relative min-h-96 overflow-hidden rounded-md border bg-muted">
         {viewer.contentType === 'application/pdf'
@@ -185,7 +185,7 @@ function Message({ title, body, backPath }: { title: string; body?: string; back
     <div role="alert" className="flex flex-col items-start gap-3 rounded-xl border bg-card p-6">
       <h1 className="text-lg font-extrabold">{title}</h1>
       {body && <p>{body}</p>}
-      <Link to={backPath} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t('documents.back')}</Link>
+      <Link to={backPath} className={buttonVariants({ variant: 'outline' })}>{t('documents.back')}</Link>
     </div>
   );
 }

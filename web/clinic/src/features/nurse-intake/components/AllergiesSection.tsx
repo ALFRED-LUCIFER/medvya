@@ -32,7 +32,7 @@ export default function AllergiesSection(p: Props) {
           : (
             <div className="flex flex-col items-start gap-2">
               <p className="inline-flex items-center gap-1.5 font-bold"><CircleHelp aria-hidden className="size-4" />{t('intake.allergy.noneRecorded')}</p>
-              {!p.readOnly && <Button type="button" variant="outline" className="min-h-11 whitespace-normal" loading={p.confirmingNone} disabled={!p.online} onClick={p.onNone}>{t('intake.allergy.confirmNone')}</Button>}
+              {!p.readOnly && <Button type="button" variant="outline" className="whitespace-normal" loading={p.confirmingNone} disabled={!p.online} onClick={p.onNone}>{t('intake.allergy.confirmNone')}</Button>}
             </div>
           )
       ) : (
@@ -44,7 +44,7 @@ export default function AllergiesSection(p: Props) {
               {a.status === null && <p className="inline-flex items-center gap-1.5 text-sm font-bold"><CircleHelp aria-hidden className="size-4" />{t('intake.allergy.unset')}</p>}
               <Label htmlFor={`allergy-${a.id}`} className="sr-only">{t('intake.allergy.statusFor', { name: a.substance })}</Label>
               <Select value={a.status ?? ''} disabled={p.readOnly || !p.online || p.settingId === a.id} onValueChange={v => p.onStatus(a.id, v as AllergyStatus)}>
-                <SelectTrigger id={`allergy-${a.id}`} className="h-11 w-full max-w-[18rem]"><SelectValue placeholder={t('intake.allergy.setStatus')} /></SelectTrigger>
+                <SelectTrigger id={`allergy-${a.id}`} className="w-full max-w-[18rem]"><SelectValue placeholder={t('intake.allergy.setStatus')} /></SelectTrigger>
                 <SelectContent>{allergyStatuses.map(s => <SelectItem key={s} value={s}>{t(`intake.allergy.status.${s}`)}</SelectItem>)}</SelectContent>
               </Select>
             </li>
@@ -56,24 +56,24 @@ export default function AllergiesSection(p: Props) {
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="allergy-substance" className="font-bold">{t('intake.allergy.substance')}</Label>
-              <Input id="allergy-substance" autoComplete="off" maxLength={100} className="h-11" aria-invalid={!!errors.substance || !!refused('substance')} {...p.form.register('substance')} />
+              <Input id="allergy-substance" autoComplete="off" maxLength={100} aria-invalid={!!errors.substance || !!refused('substance')} {...p.form.register('substance')} />
               {(errors.substance || refused('substance')) && <p role="alert" className={fieldError}>{t(refused('substance') === 'duplicate' ? 'intake.allergy.duplicate' : 'intake.allergy.substanceRequired')}</p>}
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="allergy-reaction" className="font-bold">{t('intake.allergy.reaction')}</Label>
-              <Input id="allergy-reaction" autoComplete="off" maxLength={500} className="h-11" {...p.form.register('reaction')} />
+              <Input id="allergy-reaction" autoComplete="off" maxLength={500} {...p.form.register('reaction')} />
             </div>
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="allergy-new-status" className="font-bold">{t('intake.allergy.newStatus')}</Label>
             <Controller control={p.form.control} name="status" render={({ field }) => (
               <Select value={field.value} onValueChange={field.onChange}>
-                <SelectTrigger id="allergy-new-status" className="h-11 w-full max-w-[18rem]"><SelectValue /></SelectTrigger>
+                <SelectTrigger id="allergy-new-status" className="w-full max-w-[18rem]"><SelectValue /></SelectTrigger>
                 <SelectContent>{newAllergyStatuses.map(s => <SelectItem key={s} value={s}>{t(`intake.allergy.status.${s}`)}</SelectItem>)}</SelectContent>
               </Select>
             )} />
           </div>
-          <Button type="submit" className="min-h-11 self-start" loading={p.adding} disabled={!p.online}>{t('intake.allergy.add')}</Button>
+          <Button type="submit" className="self-start" loading={p.adding} disabled={!p.online}>{t('intake.allergy.add')}</Button>
         </form>
       )}
     </section>

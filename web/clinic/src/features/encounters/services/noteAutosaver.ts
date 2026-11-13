@@ -1,14 +1,20 @@
 import { ApiError } from '../../schedule/services/scheduleApi';
 import { reapply, staleVersion, type NoteDraft, type NoteSections, type NoteView, type SavePhase } from '../domain/note';
 
-type Options = { save: (draft: NoteDraft, baseVersion: number) => Promise<NoteView>; delayMs: number; onPhase: (phase: SavePhase) => void };
+type Options = {
+  /** `keepalive`: the page is going away, and the browser must finish the request after it. */
+  save: (draft: NoteDraft, baseVersion: number, keepalive: boolean) => Promise<NoteView>;
+  delayMs: number; retryMs: number; onPhase: (phase: SavePhase) => void;
+  /** What the server answered to a save: the only moment the note counts as saved. */
+  onSaved?: (view: NoteView) => void;
+};
 
 /**
  * Debounced autosave of one note, in memory only (no PHI in browser storage). One save at a time: text typed while one is in flight goes in the
- * next. A failed save keeps the text and retries on the next edit or `retry()`. A stale save (409) holds every later save until `resolve()`,
+ * next. A failed save keeps the text and tries again every `retryMs`, on the next edit or on `retry()`. A stale save (409) holds every later save until `resolve()`,
  * so the doctor's text is never overwritten on the server and never lost here.
  */
-export function createAutosaver({ save, delayMs, onPhase }: Options) {
+export function createAutosaver({ save, delayMs, retryMs, onPhase, onSaved }: Options) {
   let base = { version: 0, sections: {} as NoteSections };
   let pending: NoteDraft | null = null;
   let phase: SavePhase = 'idle';
@@ -16,23 +22,27 @@ export function createAutosaver({ save, delayMs, onPhase }: Options) {
   let inflight: Promise<void> = Promise.resolve();
   const set = (p: SavePhase) => { phase = p; onPhase(p); };
 
-  function run() {
+  function run(keepalive = false) {
     clearTimeout(timer);
-    if (phase === 'saving' || phase === 'conflict' || !pending) return Promise.resolve();
+    if ((phase === 'saving' && !keepalive) || phase === 'conflict' || !pending) return Promise.resolve();
     const draft = pending;
     pending = null;
     set('saving');
-    return (inflight = attempt(draft));
+    return (inflight = attempt(draft, keepalive));
   }
 
-  async function attempt(draft: NoteDraft) {
+  async function attempt(draft: NoteDraft, keepalive: boolean) {
     try {
-      const view = await save(draft, base.version);
+      const view = await save(draft, base.version, keepalive);
       base = { version: view.version, sections: view.sections };
+      onSaved?.(view);
       if (pending) void run(); else set('saved');
     } catch (e) {
       pending ??= draft;
-      set(e instanceof ApiError && staleVersion(e.status, e.body) !== null ? 'conflict' : 'failed');
+      const stale = e instanceof ApiError && staleVersion(e.status, e.body) !== null;
+      set(stale ? 'conflict' : 'failed');
+      // "Not saved. Trying again." must be true (MDV-P1-089). shortcut: a fixed delay and no limit, also for a refusal that will not change (403); back off or stop when a clinic's logs show it matters.
+      if (!stale) timer = setTimeout(() => void run(), retryMs);
     }
   }
 
@@ -40,7 +50,13 @@ export function createAutosaver({ save, delayMs, onPhase }: Options) {
     /** The note as the server last had it (on load). */
     setBase(view: NoteView) { base = { version: view.version, sections: view.sections }; },
     edit(draft: NoteDraft) { pending = draft; clearTimeout(timer); if (phase !== 'conflict') timer = setTimeout(() => void run(), delayMs); },
-    retry: run,
+    retry: () => run(),
+    /**
+     * The page is going away (pagehide): sends the unsent text now, with keepalive, even while an earlier save is in flight.
+     * shortcut: the browser refuses a keepalive body over 64 KiB, and a save in flight that lands first makes this one stale; both lose only the text
+     * typed in the last autosave delay. Upgrade with a server endpoint that takes the text without a version if a clinic reports it.
+     */
+    leave: () => void run(true),
     /** Lays the unsaved text over the server's newer version, saves that, and returns it for the editor to show. */
     resolve(theirs: NoteView): NoteDraft | null {
       if (!pending) return null;

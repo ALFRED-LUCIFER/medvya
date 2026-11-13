@@ -35,12 +35,12 @@ export default function AccessRequestsPanel(p: Props) {
                   </span>
                   <span className="flex flex-wrap items-center gap-2">
                     <Select value={String(p.daysFor(r.id))} onValueChange={v => p.onDays(r.id, Number(v))}>
-                      <SelectTrigger className="h-11 w-36" aria-label={t('clinicalAccess.requests.durationFor', { name: who })}><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="w-36" aria-label={t('clinicalAccess.requests.durationFor', { name: who })}><SelectValue /></SelectTrigger>
                       <SelectContent>{p.grantDays.map(d => <SelectItem key={d} value={String(d)}>{tCount('clinicalAccess.requests.days', d)}</SelectItem>)}</SelectContent>
                     </Select>
-                    <Button className="min-h-11" loading={p.decidingId === r.id} disabled={p.decidingId !== null}
+                    <Button loading={p.decidingId === r.id} disabled={p.decidingId !== null}
                       aria-label={t('clinicalAccess.requests.grantFor', { name: who })} onClick={() => p.onGrant(r.id)}>{t('clinicalAccess.requests.grant')}</Button>
-                    <Button variant="outline" className="min-h-11" disabled={p.decidingId !== null}
+                    <Button variant="outline" disabled={p.decidingId !== null}
                       aria-label={t('clinicalAccess.requests.declineFor', { name: who })} onClick={() => p.onDecline(r.id)}>{t('clinicalAccess.requests.decline')}</Button>
                   </span>
                 </li>

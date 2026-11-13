@@ -56,7 +56,7 @@ export default function ConsultStudio(p: Props) {
     <section aria-labelledby="note-title" className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 id="note-title" className="text-lg font-extrabold">{t('noteEditor.title')}</h2>
-        {!p.readOnly && <SaveState phase={p.phase} reloading={p.reloading} onRetry={p.onRetry} onReapply={p.onReapply} />}
+        {!p.readOnly && <SaveState phase={p.phase} savedAt={p.savedAt} reloading={p.reloading} onRetry={p.onRetry} onReapply={p.onReapply} />}
       </div>
       <div className="flex flex-col gap-2">
         <RecordingConsentChoice value={p.consent} readOnly={p.readOnly} onChange={p.onConsent} />
@@ -68,7 +68,7 @@ export default function ConsultStudio(p: Props) {
         <div className="flex min-w-0 flex-col gap-4">
           {!p.readOnly && <Numbered id="vitals" title={numbered}>
             {p.assist && p.assist.vitals.length > 0
-              ? <div><Button variant="outline" className="min-h-11" onClick={p.assist.onInsertVitals}>{t('noteAssist.vitals.insert')}</Button></div>
+              ? <div><Button variant="outline" onClick={p.assist.onInsertVitals}>{t('noteAssist.vitals.insert')}</Button></div>
               : <p className="text-sm text-muted-foreground">{t('noteAssist.vitals.empty')}</p>}
             {p.entry}
           </Numbered>}

@@ -69,7 +69,7 @@ export default function NotificationsPanel(p: Props) {
           </ul>
           <Field id="sender-name" label={t('settings.notifications.senderName')} hint={t('settings.notifications.senderNameHint')}
             error={(errors.senderName || p.senderNameError === 'tooLong') ? t('settings.error.tooLong') : p.senderNameError === 'link' ? t('settings.error.link') : undefined}>
-            <Input id="sender-name" className="h-11" maxLength={60} autoComplete="organization" {...describedBy('sender-name', !!errors.senderName || !!p.senderNameError, true)} {...p.form.register('senderName')} />
+            <Input id="sender-name" maxLength={60} autoComplete="organization" {...describedBy('sender-name', !!errors.senderName || !!p.senderNameError, true)} {...p.form.register('senderName')} />
           </Field>
           <p className="text-sm text-muted-foreground">{t('settings.notifications.senderNote')}</p>
         </Section>
@@ -77,16 +77,16 @@ export default function NotificationsPanel(p: Props) {
         <Section title={t('settings.notifications.quiet')} intro={t('settings.notifications.quietIntro')}>
           <div className="flex flex-wrap gap-4">
             <Field id="quiet-start" label={t('settings.notifications.quietStart')} error={errors.quietStart && t('settings.error.required')}>
-              <Input id="quiet-start" type="time" dir="ltr" className="h-11 w-32" {...describedBy('quiet-start', !!errors.quietStart)} {...p.form.register('quietStart')} />
+              <Input id="quiet-start" type="time" dir="ltr" className="w-32" {...describedBy('quiet-start', !!errors.quietStart)} {...p.form.register('quietStart')} />
             </Field>
             <Field id="quiet-end" label={t('settings.notifications.quietEnd')} error={errors.quietEnd && t('settings.error.required')}>
-              <Input id="quiet-end" type="time" dir="ltr" className="h-11 w-32" {...describedBy('quiet-end', !!errors.quietEnd)} {...p.form.register('quietEnd')} />
+              <Input id="quiet-end" type="time" dir="ltr" className="w-32" {...describedBy('quiet-end', !!errors.quietEnd)} {...p.form.register('quietEnd')} />
             </Field>
           </div>
         </Section>
 
         <div className="flex flex-wrap items-center gap-3" aria-live="polite">
-          <Button type="submit" className="min-h-11" loading={p.saving}>{t('settings.save')}</Button>
+          <Button type="submit" loading={p.saving}>{t('settings.save')}</Button>
           {p.saved && <span>{t('settings.saved')}</span>}
           {p.saveFailed && <span role="alert" className={fieldError}>{t('settings.saveFailed')}</span>}
         </div>

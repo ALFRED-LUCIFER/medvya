@@ -62,8 +62,8 @@ export default function ReconciliationPage(p: Props) {
         <div className="flex flex-wrap items-center gap-3">
           {confirmed
             ? <p role="status" className="inline-flex items-center gap-1.5 font-bold"><CircleCheck aria-hidden className="size-4" />{t('reconcile.confirmedAt', { time: formatTime(new Date(view.confirmedAt!), p.banner?.timeZone) })}</p>
-            : <Button className="min-h-11" loading={p.confirming} disabled={!canConfirm(view) || !p.online} aria-describedby="reconcile-confirm-note" onClick={p.onConfirm}>{t('reconcile.confirm')}</Button>}
-          <Link to={p.consultPath} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t('reconcile.backToConsult')}</Link>
+            : <Button loading={p.confirming} disabled={!canConfirm(view) || !p.online} aria-describedby="reconcile-confirm-note" onClick={p.onConfirm}>{t('reconcile.confirm')}</Button>}
+          <Link to={p.consultPath} className={buttonVariants({ variant: 'outline' })}>{t('reconcile.backToConsult')}</Link>
         </div>
         {!confirmed && <p id="reconcile-confirm-note" className="text-sm text-muted-foreground">{t(canConfirm(view) ? 'reconcile.confirmReady' : 'reconcile.confirmBlocked')}</p>}
         {p.problem && <p role="alert" className="font-bold text-danger-700">{t(`reconcile.error.${p.problem}`)}</p>}
@@ -113,7 +113,7 @@ export function DecisionCell(p: DecisionProps & { row: MedicineRow; locked: bool
     <div className="flex flex-col gap-2">
       <div role="group" aria-label={t('reconcile.decisionFor', { name: row.name })} className="flex flex-wrap gap-2">
         {row.allowed.map(k => (
-          <Button key={k} type="button" size="sm" variant={(opening?.kind ?? row.decision?.kind) === k ? 'selected' : 'outline'} className="min-h-11"
+          <Button key={k} type="button" size="sm" variant={(opening?.kind ?? row.decision?.kind) === k ? 'selected' : 'outline'}
             aria-pressed={(opening?.kind ?? row.decision?.kind) === k} disabled={p.saving || !p.online} onClick={() => p.onPick(row.key, k)}>{t(`reconcile.decision.${k}`)}</Button>
         ))}
       </div>
@@ -129,16 +129,16 @@ export function DecisionCell(p: DecisionProps & { row: MedicineRow; locked: bool
                 <div key={id} className="flex flex-wrap items-end gap-2">
                   <div className="flex flex-col gap-1.5">
                     <Label htmlFor={`step-dose-${row.key}-${i}`}>{t('reconcile.taper.dose', { n: i + 1 })}</Label>
-                    <Input id={`step-dose-${row.key}-${i}`} autoComplete="off" maxLength={100} className="h-11 w-40" {...p.form.register(`steps.${i}.dose`)} />
+                    <Input id={`step-dose-${row.key}-${i}`} autoComplete="off" maxLength={100} className="w-40" {...p.form.register(`steps.${i}.dose`)} />
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <Label htmlFor={`step-days-${row.key}-${i}`}>{t('reconcile.taper.days', { n: i + 1 })}</Label>
-                    <Input id={`step-days-${row.key}-${i}`} autoComplete="off" inputMode="numeric" maxLength={3} className="h-11 w-24" {...p.form.register(`steps.${i}.days`)} />
+                    <Input id={`step-days-${row.key}-${i}`} autoComplete="off" inputMode="numeric" maxLength={3} className="w-24" {...p.form.register(`steps.${i}.days`)} />
                   </div>
-                  {p.steps.length > 1 && <Button type="button" variant="ghost" className="min-h-11" onClick={() => p.onRemoveStep(i)}>{t('reconcile.taper.remove', { n: i + 1 })}</Button>}
+                  {p.steps.length > 1 && <Button type="button" variant="ghost" onClick={() => p.onRemoveStep(i)}>{t('reconcile.taper.remove', { n: i + 1 })}</Button>}
                 </div>
               ))}
-              {p.canAddStep && <Button type="button" variant="outline" className="min-h-11 self-start" onClick={p.onAddStep}>{t('reconcile.taper.add')}</Button>}
+              {p.canAddStep && <Button type="button" variant="outline" className="self-start" onClick={p.onAddStep}>{t('reconcile.taper.add')}</Button>}
               <p className="text-sm text-muted-foreground">{t('reconcile.taper.hint')}</p>
               {errors.steps && <p role="alert" className="text-sm font-semibold text-danger-700">{t('reconcile.taper.stepsRequired')}</p>}
             </fieldset>
@@ -146,18 +146,18 @@ export function DecisionCell(p: DecisionProps & { row: MedicineRow; locked: bool
           {opening.kind === 'Change' && (
             <div className="flex flex-col gap-1.5">
               <Label htmlFor={`dose-${row.key}`} className="font-bold">{t('reconcile.newDose')}</Label>
-              <Input id={`dose-${row.key}`} autoComplete="off" maxLength={100} className="h-11" aria-invalid={!!errors.newDose} {...p.form.register('newDose')} />
+              <Input id={`dose-${row.key}`} autoComplete="off" maxLength={100} aria-invalid={!!errors.newDose} {...p.form.register('newDose')} />
               {errors.newDose && <p role="alert" className="text-sm font-semibold text-danger-700">{t('reconcile.newDoseRequired')}</p>}
             </div>
           )}
           <div className="flex flex-col gap-1.5">
             <Label htmlFor={`reason-${row.key}`} className="font-bold">{t('reconcile.reason')}</Label>
-            <Input id={`reason-${row.key}`} autoComplete="off" maxLength={500} className="h-11" aria-invalid={!!errors.reason} {...p.form.register('reason')} />
+            <Input id={`reason-${row.key}`} autoComplete="off" maxLength={500} aria-invalid={!!errors.reason} {...p.form.register('reason')} />
             {errors.reason && <p role="alert" className="text-sm font-semibold text-danger-700">{t('reconcile.reasonRequired')}</p>}
           </div>
           <div className="flex gap-2">
-            <Button type="submit" className="min-h-11" loading={p.saving} disabled={!p.online}>{t('reconcile.save')}</Button>
-            <Button type="button" variant="outline" className="min-h-11" onClick={p.onCancel}>{t('reconcile.cancel')}</Button>
+            <Button type="submit" loading={p.saving} disabled={!p.online}>{t('reconcile.save')}</Button>
+            <Button type="button" variant="outline" onClick={p.onCancel}>{t('reconcile.cancel')}</Button>
           </div>
         </form>
       )}
@@ -171,7 +171,7 @@ function Message({ title, body, boardPath }: { title: string; body?: string; boa
     <div role="alert" className="flex flex-col items-start gap-3 rounded-xl border bg-card p-6">
       <h1 className="text-lg font-extrabold">{title}</h1>
       {body && <p>{body}</p>}
-      <Link to={boardPath} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t('consult.backToBoard')}</Link>
+      <Link to={boardPath} className={buttonVariants({ variant: 'outline' })}>{t('consult.backToBoard')}</Link>
     </div>
   );
 }

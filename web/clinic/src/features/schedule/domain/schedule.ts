@@ -3,10 +3,10 @@
 export type CalendarKind = 'Doctor' | 'Resource';
 export type UnavailableReason = 'NotWorking' | 'Break' | 'NoSchedule' | 'Closed' | 'Leave';
 export type VisitType = 'FollowUp' | 'NewConsultation' | 'Procedure' | 'Teleconsult';
-export type AppointmentState = 'Booked' | 'CheckedIn' | 'WithNurse' | 'ReadyForDoctor' | 'InConsult' | 'Billing' | 'Done' | 'Cancelled' | 'NoShow' | 'NeedsRebooking';
+export type AppointmentState = 'Booked' | 'CheckedIn' | 'WithNurse' | 'ReadyForDoctor' | 'InConsult' | 'Billing' | 'Done' | 'Cancelled' | 'NoShow' | 'NeedsRebooking' | 'LeftWithoutBeingSeen';
 
 /** States that occupy time; a cancelled, no-show or needs-rebooking visit does not count as booked. */
-export const occupies = (state: AppointmentState) => state !== 'Cancelled' && state !== 'NoShow' && state !== 'NeedsRebooking';
+export const occupies = (state: AppointmentState) => state !== 'Cancelled' && state !== 'NoShow' && state !== 'NeedsRebooking' && state !== 'LeftWithoutBeingSeen';
 
 export type Span = { start: string; end: string };
 /** A slot that has started (compared as instants, so the facility zone cannot change the answer); the server refuses it, so the screens do not offer it. */

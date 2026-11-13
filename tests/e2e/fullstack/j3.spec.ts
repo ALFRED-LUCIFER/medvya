@@ -169,4 +169,117 @@ journey('J3', {
     await expect(waiting).toContainText(/Dr\. S\. Menon/);
     await expectArabicAxeClean(browser, joseph, '/app/front-desk/overview');
   },
+  // MDV-P1-100 (F-05): a wrong Call in is undone from the status line within 30 seconds; the card is back with the same token.
+  10: async ({ page }) => {
+    const patient = syntheticPatient('Nandini', 'Shankar');
+    await signIn(page, joseph);
+    await walkIn(page, patient, rao);
+    await page.goto(board);
+    const ready = page.getByRole('region', { name: /^Ready for doctor/ }).getByRole('article', { name: patient.name });
+    const token = await ready.getByText(/^Token [A-Z]-\d+$/).textContent();
+    await ready.getByRole('button', { name: 'Call in' }).click();
+    await expect(page.getByRole('region', { name: /^In consult/ }).getByRole('article', { name: patient.name })).toBeVisible();
+    await page.getByRole('button', { name: 'Undo' }).click();
+    await expect(ready.getByText(token!, { exact: true })).toBeVisible();
+    await expect(page.getByRole('status').filter({ hasText: 'Undone' })).toContainText(`${patient.name} is back in Ready for doctor`);
+    await page.reload(); // the server holds the undo
+    await expect(ready).toBeVisible();
+    await expectNoAxeViolations(page);
+  },
+  // MDV-P1-100: a walk-in who leaves is marked from the card menu with a reason; the card leaves the board and the shared waiting room.
+  11: async ({ page, browser }) => {
+    const patient = syntheticPatient('Kavitha', 'Murali');
+    await signIn(page, joseph);
+    await walkIn(page, patient, rao);
+    await page.goto(board);
+    await page.getByRole('button', { name: `More for ${patient.name}` }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Left without being seen' }).click();
+    const form = page.getByRole('dialog', { name: `${patient.name} left without being seen` });
+    await form.getByRole('combobox', { name: 'Reason' }).click();
+    await page.getByRole('option', { name: 'Patient asked to cancel' }).click();
+    await expectNoAxeViolations(page);
+    await form.getByRole('button', { name: 'Mark as left' }).click();
+    await expect(page.getByRole('article', { name: patient.name })).toHaveCount(0);
+    await expect(page.getByText(/^Left without being seen today: \d+$/)).toBeVisible();
+    await page.goto('/app/front-desk/overview');
+    await expect(page.getByRole('region', { name: /^Waiting room/ }).getByRole('row').filter({ hasText: patient.name })).toHaveCount(0);
+    await expectArabicAxeClean(browser, joseph, board);
+  },
+  // MDV-P1-100: with the doctor's consultation open the desk card reads "With the doctor"; a direct close is refused with 409.
+  12: async ({ page, browser }) => {
+    const patient = syntheticPatient('Geetha', 'Balan');
+    await signIn(page, joseph);
+    await walkIn(page, patient, rao);
+    const doctor = await browser.newPage();
+    await signIn(doctor, rao);
+    await doctor.goto(board);
+    await doctor.getByRole('button', { name: `Start consultation with ${patient.name}` }).click();
+    // The shared database may hold another open consultation of Dr. Rao's (one open per doctor): keep it open and start this one.
+    const leaveOpen = doctor.getByRole('button', { name: 'Leave it open and start this one' });
+    const opened = async () => /\/app\/consult\//.test(doctor.url()) || await leaveOpen.isVisible();
+    await expect.poll(opened).toBe(true);
+    if (await leaveOpen.isVisible()) await leaveOpen.click();
+    await expect(doctor).toHaveURL(/\/app\/consult\/[0-9a-f-]{36}$/);
+
+    await page.goto(board);
+    const card = page.getByRole('region', { name: /^In consult/ }).getByRole('article', { name: patient.name });
+    await expect(card.getByText('With the doctor')).toBeVisible();
+    await expect(card.getByRole('button')).toHaveCount(0);
+    const id = (await card.getAttribute('aria-labelledby'))!.replace('board-card-', '');
+    const close = await page.request.post(`/v1/appointments/${id}/status`, { headers: { 'X-Medvya-Csrf': '1' }, data: { state: 'Done' } });
+    expect(close.status()).toBe(409);
+    expect((await close.json()).code).toBe('with_doctor');
+    await expectNoAxeViolations(page);
+    await doctor.close();
+  },
+  // MDV-P1-102 (F-06): the doctor sets a follow-up of 2 weeks and ends the visit; the desk sees "Follow-up due" with the date and the doctor on the Done
+  // card and the desk record, books it from Book (the schedule on that day, patient and doctor chosen) and the line is gone.
+  13: async ({ page, browser }) => {
+    const watch = watchUrls(page);
+    const patient = syntheticPatient('Revathi', 'Kannan');
+    await signIn(page, joseph);
+    await walkIn(page, patient, rao);
+    const doctor = await browser.newPage();
+    await signIn(doctor, rao);
+    await doctor.goto(board);
+    await doctor.getByRole('button', { name: `Start consultation with ${patient.name}` }).click();
+    const leaveOpen = doctor.getByRole('button', { name: 'Leave it open and start this one' });
+    const opened = async () => /\/app\/consult\//.test(doctor.url()) || await leaveOpen.isVisible();
+    await expect.poll(opened).toBe(true);
+    if (await leaveOpen.isVisible()) await leaveOpen.click();
+    await expect(doctor).toHaveURL(/\/app\/consult\/[0-9a-f-]{36}$/);
+    const fu = doctor.getByRole('group', { name: 'Follow-up' });
+    await fu.getByRole('button', { name: '2 weeks' }).click();
+    await expect(fu.getByRole('button', { name: '2 weeks' })).toHaveAttribute('aria-pressed', 'true');
+    await doctor.getByRole('button', { name: 'End consultation' }).click();
+    await expect(doctor.getByRole('status').filter({ hasText: 'Consultation ended' })).toBeVisible();
+    await doctor.close();
+
+    await page.goto(board);
+    const line = page.getByRole('region', { name: /^Done/ }).getByRole('article', { name: patient.name }).getByRole('group', { name: /^Follow-up due from/ });
+    await expect(line).toContainText('Dr. Arjun Rao');
+    await expectNoAxeViolations(page);
+    const book = line.getByRole('link', { name: `Book the follow-up for ${patient.name}` });
+    const href = new URL((await book.getAttribute('href'))!, 'http://x');
+    const patientId = href.searchParams.get('patient')!;
+
+    // The desk record shows the same line, in English and Arabic, axe clean.
+    await page.goto(`/app/patients/directory/${patientId}`);
+    await expect(page.getByRole('group', { name: /^Follow-up due from/ })).toContainText('Dr. Arjun Rao');
+    await expectNoAxeViolations(page);
+    await expectArabicAxeClean(browser, joseph, `/app/patients/directory/${patientId}`);
+
+    await page.goto(board);
+    await book.click();
+    await expect(page).toHaveURL(new RegExp(`/app/schedule\\?date=${href.searchParams.get('date')}&view=day&patient=${patientId}&doctor=`));
+    await page.getByRole('list', { name: /Dr\. Arjun Rao/ }).getByRole('button', { name: /^Book / }).first().click();
+    const booked = page.waitForResponse(r => r.request().method() === 'POST' && new URL(r.url()).pathname === '/v1/appointments');
+    await page.getByRole('button', { name: 'Confirm booking' }).click();
+    expect((await booked).status()).toBeLessThan(300);
+    await page.goto(board);
+    await expect(page.getByRole('region', { name: /^Done/ }).getByRole('article', { name: patient.name })).toBeVisible();
+    await expect(page.getByRole('group', { name: /^Follow-up due from/ }).filter({ hasText: patient.name })).toHaveCount(0);
+    await expect(page.getByRole('region', { name: /^Done/ }).getByRole('article', { name: patient.name }).getByRole('group')).toHaveCount(0);
+    expect(watch.leaks([patient.name, patient.dob, patient.mobile])).toEqual([]);
+  },
 });

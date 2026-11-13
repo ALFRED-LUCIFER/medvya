@@ -34,7 +34,7 @@ export default function GrowthCard(p: Props) {
         {!v.noCentiles && (
           <div className="flex flex-wrap gap-2">
             {indicators.map(i => (
-              <Button key={i} type="button" variant={i === p.indicator ? 'selected' : 'outline'} className="min-h-11" aria-pressed={i === p.indicator} onClick={() => p.onIndicator(i)}>
+              <Button key={i} type="button" variant={i === p.indicator ? 'selected' : 'outline'} aria-pressed={i === p.indicator} onClick={() => p.onIndicator(i)}>
                 {t(`childHealth.growth.indicator.${i}`)}
               </Button>
             ))}
@@ -114,7 +114,7 @@ function Measurements({ view }: { view: Growth }) {
   if (view.measurements.length === 0) return <p className="text-muted-foreground">{t('childHealth.growth.none')}</p>;
   const n = (x: number | null) => (x === null ? '' : formatNumber(x));
   return (
-    <Table>
+    <Table label={t('childHealth.growth.table')}>
       <TableCaption className="sr-only">{t('childHealth.growth.table')}</TableCaption>
       <TableHeader>
         <TableRow>
@@ -145,7 +145,7 @@ function GrowthForm(p: Props) {
   const field = (name: 'weightKg' | 'lengthCm' | 'headCm', id: string) => (
     <div className="flex flex-col gap-1">
       <Label htmlFor={id}>{t(`childHealth.growth.form.${name}`)}</Label>
-      <Input id={id} inputMode="decimal" autoComplete="off" className="h-11" {...describedBy(id, !!errors[name], false)} {...p.form.register(name)} />
+      <Input id={id} inputMode="decimal" autoComplete="off" {...describedBy(id, !!errors[name], false)} {...p.form.register(name)} />
       {errors[name] && <p id={`${id}-error`} className="text-sm font-bold text-danger-700">{t(errors[name].message === 'required' ? 'childHealth.growth.form.oneRequired' : 'childHealth.growth.form.number')}</p>}
     </div>
   );
@@ -155,7 +155,7 @@ function GrowthForm(p: Props) {
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="flex flex-col gap-1">
           <Label htmlFor="growth-on">{t('childHealth.growth.form.takenOn')}</Label>
-          <Input id="growth-on" type="date" className="h-11" {...describedBy('growth-on', !!errors.takenOn, false)} {...p.form.register('takenOn')} />
+          <Input id="growth-on" type="date" {...describedBy('growth-on', !!errors.takenOn, false)} {...p.form.register('takenOn')} />
           {errors.takenOn && <p id="growth-on-error" className="text-sm font-bold text-danger-700">{t('childHealth.growth.form.takenOnRequired')}</p>}
         </div>
         {field('weightKg', 'growth-weight')}
@@ -164,7 +164,7 @@ function GrowthForm(p: Props) {
           <Label htmlFor="growth-position">{t('childHealth.growth.form.position')}</Label>
           <Controller control={p.form.control} name="position" render={({ field: f }) => (
             <Select value={f.value} onValueChange={f.onChange}>
-              <SelectTrigger id="growth-position" className="h-11 w-full" {...describedBy('growth-position', !!errors.position, false)}><SelectValue placeholder={t('childHealth.growth.form.positionPick')} /></SelectTrigger>
+              <SelectTrigger id="growth-position" className="w-full" {...describedBy('growth-position', !!errors.position, false)}><SelectValue placeholder={t('childHealth.growth.form.positionPick')} /></SelectTrigger>
               <SelectContent>{positions.map(o => <SelectItem key={o} value={o}>{t(`childHealth.growth.position.${o}`)}</SelectItem>)}</SelectContent>
             </Select>
           )} />
@@ -172,7 +172,7 @@ function GrowthForm(p: Props) {
         </div>
         {field('headCm', 'growth-head')}
       </div>
-      <div><Button type="submit" className="min-h-11" loading={p.recording} disabled={!p.online}>{t('childHealth.growth.form.submit')}</Button></div>
+      <div><Button type="submit" loading={p.recording} disabled={!p.online}>{t('childHealth.growth.form.submit')}</Button></div>
     </form>
   );
 }

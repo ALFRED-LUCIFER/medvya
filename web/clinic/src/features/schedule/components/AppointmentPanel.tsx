@@ -2,11 +2,12 @@ import type { UseFormReturn } from 'react-hook-form';
 import { Link } from 'react-router';
 import { CircleAlert, CircleCheck, X } from 'lucide-react';
 import { useI18n, type MessageKey } from '@medvya/i18n';
-import { Button, buttonVariants, cn, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea } from '@medvya/ui';
+import { Button, buttonVariants, cn } from '@medvya/ui';
 import { codeKey, needsAttention, type PatientMessage } from '../domain/messages';
-import { actions, cancelReasons, localDate, type Action, type CancelForm, type ChangeError, type Rule, type VisitMove } from '../domain/changes';
+import { actions, localDate, type Action, type CancelForm, type ChangeError, type Rule, type VisitMove } from '../domain/changes';
 import type { Appointment } from '../domain/schedule';
 import { termsPath } from '../../settings/domain/settings';
+import CancelReasonFields from './CancelReasonFields';
 import { StateLabel } from './StateLabel';
 
 type Props = {
@@ -139,29 +140,10 @@ export default function AppointmentPanel(p: Props) {
 
 function CancelForm(p: Props) {
   const { t } = useI18n();
-  const { register, formState: { errors }, watch } = p.form;
-  const reason = watch('reason');
-  const reasonError = errors.reason ? 'appointment.cancel.error.reason' : null;
-  const noteError = errors.note?.message === 'noteLong' ? 'appointment.cancel.error.noteLong' : errors.note ? 'appointment.cancel.error.note' : null;
   return (
     <form noValidate className="flex flex-col gap-3" onSubmit={e => { e.preventDefault(); p.onConfirmCancel(); }}>
       <h3 className="text-sm font-extrabold">{t('appointment.cancel.title')}</h3>
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="cancel-reason">{t('appointment.cancel.reason')}</Label>
-        <Select value={reason ?? ''} onValueChange={v => p.onReason(v as CancelForm['reason'])}>
-          <SelectTrigger id="cancel-reason" aria-invalid={!!reasonError} aria-describedby={reasonError ? 'cancel-reason-error' : undefined} className="h-11 w-full">
-            <SelectValue placeholder={t('appointment.cancel.choose')} />
-          </SelectTrigger>
-          <SelectContent>{cancelReasons.map(r => <SelectItem key={r} value={r}>{t(`cancelReason.${r}`)}</SelectItem>)}</SelectContent>
-        </Select>
-        {reasonError && <p id="cancel-reason-error" className="text-xs font-bold text-danger-700">{t(reasonError)}</p>}
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="cancel-note">{t(reason === 'Other' ? 'appointment.cancel.noteRequired' : 'appointment.cancel.note')}</Label>
-        <Textarea id="cancel-note" rows={3} aria-invalid={!!noteError} aria-describedby={noteError ? 'cancel-note-error cancel-note-hint' : 'cancel-note-hint'} {...register('note')} />
-        <p id="cancel-note-hint" className="text-xs text-muted-foreground">{t('appointment.cancel.noteHint')}</p>
-        {noteError && <p id="cancel-note-error" className="text-xs font-bold text-danger-700">{t(noteError)}</p>}
-      </div>
+      <CancelReasonFields form={p.form} onReason={p.onReason} />
       <div className="flex flex-wrap gap-2">
         <Button type="submit" variant="default" disabled={p.working}>{t('appointment.cancel.confirm')}</Button>
         {p.opened.appointment.seriesId && (

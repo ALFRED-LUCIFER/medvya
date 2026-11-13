@@ -47,18 +47,18 @@ export default function LocationsPanel(p: Props) {
                 <span className="font-bold">{l.name}</span>
                 <span className="text-sm text-muted-foreground">{[l.address, l.timeZone].filter(Boolean).join(' · ')}</span>
               </span>
-              <Button type="button" variant="outline" className="min-h-11 min-w-11" aria-label={t('settings.locations.editNamed', { name: l.name })} onClick={() => p.onEdit(l.id)}>{t('settings.edit')}</Button>
+              <Button type="button" variant="outline" className="min-w-11" aria-label={t('settings.locations.editNamed', { name: l.name })} onClick={() => p.onEdit(l.id)}>{t('settings.edit')}</Button>
             </li>
           ))}
         </ul>
         <form noValidate onSubmit={p.onSubmit} className="grid gap-4 sm:grid-cols-2" aria-label={editing ? t('settings.locations.editNamed', { name: editing.name }) : t('settings.locations.add')}>
           <h3 className="font-bold sm:col-span-2">{editing ? t('settings.locations.editNamed', { name: editing.name }) : t('settings.locations.add')}</h3>
           <Field id="location-name" label={t('settings.locations.name')} error={errors.name && t('settings.error.required')}>
-            <Input id="location-name" className="h-11" autoComplete="off" {...describedBy('location-name', !!errors.name)} {...p.form.register('name')} />
+            <Input id="location-name" autoComplete="off" {...describedBy('location-name', !!errors.name)} {...p.form.register('name')} />
           </Field>
           <Field id="location-zone" label={t('settings.locations.timeZone')} hint={editing ? undefined : t('settings.locations.timeZoneHint')}>
             <Select value={zone} onValueChange={v => p.form.setValue('timeZone', v, { shouldDirty: true })}>
-              <SelectTrigger id="location-zone" className="h-11 w-full"><SelectValue /></SelectTrigger>
+              <SelectTrigger id="location-zone" className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>{zones.map(z => <SelectItem key={z} value={z}>{z}</SelectItem>)}</SelectContent>
             </Select>
           </Field>
@@ -68,18 +68,18 @@ export default function LocationsPanel(p: Props) {
           {!editing && (
             <>
               <Field id="location-tax" label={t('settings.locations.taxNumber')} hint={t('settings.locations.taxNumberHint')} error={errors.taxNumber && t(errors.taxNumber.message as MessageKey)}>
-                <Input id="location-tax" className="h-11" autoComplete="off" {...describedBy('location-tax', !!errors.taxNumber, true)} {...p.form.register('taxNumber')} />
+                <Input id="location-tax" autoComplete="off" {...describedBy('location-tax', !!errors.taxNumber, true)} {...p.form.register('taxNumber')} />
               </Field>
               <Field id="location-certificate" label={t('settings.locations.certificate')} hint={t('settings.locations.certificateHint')} error={p.certificateError && t(p.certificateError)}>
-                <Input id="location-certificate" type="file" accept="application/pdf,image/png,image/jpeg" className="h-auto min-h-11 py-2" {...describedBy('location-certificate', !!p.certificateError, true)}
+                <Input id="location-certificate" type="file" accept="application/pdf,image/png,image/jpeg" className="h-auto py-2" {...describedBy('location-certificate', !!p.certificateError, true)}
                   onChange={e => p.onCertificate(e.currentTarget.files?.[0])} />
               </Field>
               {p.certificateName && <p role="status" className="sm:col-span-2">{t('settings.locations.certificateChosen', { name: p.certificateName })}</p>}
             </>
           )}
           <div className="flex flex-wrap items-center gap-3 sm:col-span-2" aria-live="polite">
-            <Button type="submit" className="min-h-11" loading={p.saving}>{editing ? t('settings.save') : t('settings.locations.addButton')}</Button>
-            {editing && <Button type="button" variant="outline" className="min-h-11" onClick={() => p.onEdit(null)}>{t('settings.cancel')}</Button>}
+            <Button type="submit" loading={p.saving}>{editing ? t('settings.save') : t('settings.locations.addButton')}</Button>
+            {editing && <Button type="button" variant="outline" onClick={() => p.onEdit(null)}>{t('settings.cancel')}</Button>}
             {p.saveProblem && <span role="alert" className={fieldError}>{t(p.saveProblem)}</span>}
             {p.added && <span role="status">{t('settings.locations.added', { name: p.added })}</span>}
           </div>
@@ -95,9 +95,9 @@ export default function LocationsPanel(p: Props) {
         )}
         <form noValidate onSubmit={p.onAddResource} className="flex flex-wrap items-end gap-3">
           <Field id="room-name" label={t('settings.rooms.name')} error={p.resourceForm.formState.errors.name && t('settings.error.required')} className="min-w-60 flex-1">
-            <Input id="room-name" className="h-11" autoComplete="off" placeholder={t('settings.rooms.placeholder')} {...describedBy('room-name', !!p.resourceForm.formState.errors.name)} {...p.resourceForm.register('name')} />
+            <Input id="room-name" autoComplete="off" placeholder={t('settings.rooms.placeholder')} {...describedBy('room-name', !!p.resourceForm.formState.errors.name)} {...p.resourceForm.register('name')} />
           </Field>
-          <Button type="submit" className="min-h-11" loading={p.addingResource}>{t('settings.rooms.add')}</Button>
+          <Button type="submit" loading={p.addingResource}>{t('settings.rooms.add')}</Button>
           {p.addResourceFailed && <span role="alert" className={fieldError}>{t('settings.saveFailed')}</span>}
         </form>
       </Section>

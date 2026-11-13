@@ -122,3 +122,11 @@ public sealed class EncounterService(
     static EncounterView View(Encounter e, string? room) =>
         new(e.Id, e.AppointmentId, e.PatientId, e.FacilityId, e.LeadClinicianId, e.Status, e.AuthorityMode, e.StartedAt, e.EndedAt, room);
 }
+
+/// <summary>The visits with a consultation open (MDV-P1-100): the board shows them as with the doctor and the desk cannot close or undo them.</summary>
+public sealed class OpenConsultations(EncountersDbContext db) : IOpenConsultations
+{
+    public async Task<IReadOnlySet<Guid>> OpenAsync(IReadOnlyCollection<Guid> appointmentIds, CancellationToken cancellationToken = default) =>
+        (await db.Encounters.AsNoTracking().Where(e => appointmentIds.Contains(e.AppointmentId) && e.Status == EncounterStatus.Active)
+            .Select(e => e.AppointmentId).ToListAsync(cancellationToken)).ToHashSet();
+}

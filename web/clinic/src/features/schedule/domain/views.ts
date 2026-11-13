@@ -23,6 +23,7 @@ export type StateLook = 'booked' | 'checkedIn' | 'inRoom' | 'completed' | 'noSho
 const looks: Record<AppointmentState, StateLook> = {
   Booked: 'booked', CheckedIn: 'checkedIn', WithNurse: 'checkedIn', ReadyForDoctor: 'checkedIn', InConsult: 'inRoom',
   Billing: 'completed', Done: 'completed', NoShow: 'noShow', Cancelled: 'cancelled', NeedsRebooking: 'needsRebooking',
+  LeftWithoutBeingSeen: 'cancelled', // the dashed, muted look of a visit that did not happen; the words say which
 };
 export const lookOf = (state: AppointmentState): StateLook => looks[state];
 

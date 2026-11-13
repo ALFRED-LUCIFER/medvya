@@ -74,9 +74,9 @@ export default function HoursPanel({ choice, hours, schedules }: Props) {
                   </label>
                   {r.open && (
                     <span className="flex flex-wrap items-center gap-2" role="group" aria-label={t('settings.hours.timesFor', { day: t(`settings.weekday.${r.weekday}`) })}>
-                      <Input type="time" dir="ltr" className="h-11 w-32" aria-label={t('settings.hours.opens')} aria-invalid={bad || undefined} value={r.opens} onChange={e => hours.onTime(r.weekday, 'opens', e.target.value)} />
+                      <Input type="time" dir="ltr" className="w-32" aria-label={t('settings.hours.opens')} aria-invalid={bad || undefined} value={r.opens} onChange={e => hours.onTime(r.weekday, 'opens', e.target.value)} />
                       <span aria-hidden>{'–'}</span>
-                      <Input type="time" dir="ltr" className="h-11 w-32" aria-label={t('settings.hours.closes')} aria-invalid={bad || undefined} value={r.closes} onChange={e => hours.onTime(r.weekday, 'closes', e.target.value)} />
+                      <Input type="time" dir="ltr" className="w-32" aria-label={t('settings.hours.closes')} aria-invalid={bad || undefined} value={r.closes} onChange={e => hours.onTime(r.weekday, 'closes', e.target.value)} />
                       {bad && <span role="alert" className={fieldError}>{t('settings.hours.order')}</span>}
                     </span>
                   )}
@@ -86,7 +86,7 @@ export default function HoursPanel({ choice, hours, schedules }: Props) {
           </ul>
         )}
         <div className="flex flex-wrap items-center gap-3" aria-live="polite">
-          <Button type="button" className="min-h-11" loading={hours.saving} disabled={!hours.dirty || hours.problems.length > 0} onClick={hours.onSave}>{t('settings.save')}</Button>
+          <Button type="button" loading={hours.saving} disabled={!hours.dirty || hours.problems.length > 0} onClick={hours.onSave}>{t('settings.save')}</Button>
           {hours.saved && <span>{t('settings.saved')}</span>}
           {hours.saveFailed && <span role="alert" className={fieldError}>{t('settings.saveFailed')}</span>}
         </div>
@@ -98,13 +98,13 @@ export default function HoursPanel({ choice, hours, schedules }: Props) {
             <div className="flex flex-wrap gap-4">
               <Field id="schedule-calendar" label={t('settings.schedules.calendar')} className="min-w-60 flex-1">
                 <Select value={schedules.calendarId} onValueChange={schedules.onCalendar}>
-                  <SelectTrigger id="schedule-calendar" className="h-11 w-full"><SelectValue /></SelectTrigger>
+                  <SelectTrigger id="schedule-calendar" className="w-full"><SelectValue /></SelectTrigger>
                   <SelectContent>{schedules.calendars.map(c => <SelectItem key={c.calendarId} value={c.calendarId}>{c.name}</SelectItem>)}</SelectContent>
                 </Select>
               </Field>
               <Field id="schedule-slot" label={t('settings.schedules.slot')} className="w-40">
                 <Select value={String(schedules.slotMinutes)} onValueChange={v => schedules.onSlot(Number(v))}>
-                  <SelectTrigger id="schedule-slot" className="h-11 w-full"><SelectValue /></SelectTrigger>
+                  <SelectTrigger id="schedule-slot" className="w-full"><SelectValue /></SelectTrigger>
                   <SelectContent>{slotLengths.map(m => <SelectItem key={m} value={String(m)}>{t('settings.schedules.minutes', { minutes: m })}</SelectItem>)}</SelectContent>
                 </Select>
               </Field>
@@ -115,21 +115,21 @@ export default function HoursPanel({ choice, hours, schedules }: Props) {
                 // The row order is the user's, and rows carry no id: the index is the key.
                 <li key={i} className="flex flex-wrap items-center gap-3 p-3">
                   <Select value={s.weekday} onValueChange={v => schedules.onSession(i, { weekday: v as typeof s.weekday })}>
-                    <SelectTrigger className="h-11 w-44" aria-label={t('settings.schedules.day')}><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="w-44" aria-label={t('settings.schedules.day')}><SelectValue /></SelectTrigger>
                     <SelectContent>{weekdays.map(d => <SelectItem key={d} value={d}>{t(`settings.weekday.${d}`)}</SelectItem>)}</SelectContent>
                   </Select>
-                  <Input type="time" dir="ltr" className="h-11 w-32" aria-label={t('settings.schedules.from')} value={s.start} onChange={e => schedules.onSession(i, { start: e.target.value })} />
+                  <Input type="time" dir="ltr" className="w-32" aria-label={t('settings.schedules.from')} value={s.start} onChange={e => schedules.onSession(i, { start: e.target.value })} />
                   <span aria-hidden>{'–'}</span>
-                  <Input type="time" dir="ltr" className="h-11 w-32" aria-label={t('settings.schedules.to')} value={s.end} onChange={e => schedules.onSession(i, { end: e.target.value })} />
-                  <Button type="button" variant="outline" className="min-h-11" onClick={() => schedules.onRemoveSession(i)}
+                  <Input type="time" dir="ltr" className="w-32" aria-label={t('settings.schedules.to')} value={s.end} onChange={e => schedules.onSession(i, { end: e.target.value })} />
+                  <Button type="button" variant="outline" onClick={() => schedules.onRemoveSession(i)}
                     aria-label={t('settings.schedules.removeSession', { day: t(`settings.weekday.${s.weekday}`), from: s.start, to: s.end })}>{t('settings.remove')}</Button>
                 </li>
               ))}
             </ul>
             {schedules.problem && <p role="alert" className={fieldError}>{t(`settings.schedules.error.${schedules.problem}`)}</p>}
             <div className="flex flex-wrap items-center gap-3" aria-live="polite">
-              <Button type="button" variant="outline" className="min-h-11" onClick={schedules.onAddSession}>{t('settings.schedules.addSession')}</Button>
-              <Button type="button" className="min-h-11" loading={schedules.saving} disabled={!schedules.dirty || !!schedules.problem} onClick={schedules.onSave}>{t('settings.save')}</Button>
+              <Button type="button" variant="outline" onClick={schedules.onAddSession}>{t('settings.schedules.addSession')}</Button>
+              <Button type="button" loading={schedules.saving} disabled={!schedules.dirty || !!schedules.problem} onClick={schedules.onSave}>{t('settings.save')}</Button>
               {/* With visits left outside the hours, the warning below already opens with "Saved." */}
               {schedules.saved && schedules.outside.length === 0 && <span role="status" className="font-bold">{t('settings.saved')}</span>}
               {schedules.saveFailed && <span role="alert" className={fieldError}>{t('settings.saveFailed')}</span>}

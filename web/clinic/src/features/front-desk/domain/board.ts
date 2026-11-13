@@ -1,5 +1,6 @@
 import type { ReasonCategory } from '../../schedule/domain/booking';
 import type { AppointmentState, ScheduleColumn, VisitType } from '../../schedule/domain/schedule';
+import type { FollowUpDue } from './followUpDue';
 
 // GET /v1/front-desk/board (src/Modules/Scheduling/Medvya.Scheduling.Application/IFrontDeskService.cs). Nonclinical only:
 // the reason is a category, never the patient's words. Instants are UTC; they are shown in the facility's zone.
@@ -21,8 +22,13 @@ export type BoardCard = {
   unscheduled?: boolean;
   /** Sex at birth, with the age a desk tells two patients of one name apart by (MDV-AUDIT-1105); absent when the record was not found. */
   sex?: 'Female' | 'Male' | 'Other' | null;
+  /** A consultation is open for the visit (MDV-P1-100): the doctor's End moves it, the desk has no action. */
+  withDoctor?: boolean;
+  /** On a Done card: the doctor's follow-up still to book, date and doctor only (MDV-P1-102). */
+  followUp?: FollowUpDue | null;
 };
-export type Board = { facilityId: string; timeZone: string; date: string; now: string; cards: BoardCard[] };
+/** leftWithoutBeingSeen: today's patients who left before being seen; they are off the board and never in Done. */
+export type Board = { facilityId: string; timeZone: string; date: string; now: string; cards: BoardCard[]; leftWithoutBeingSeen?: number };
 
 /** Real-time connection to the board hub (MDV-P1-029): live, or paused (offline, dropped, refused) while the board refreshes on a timer. */
 export type LiveStatus = 'connecting' | 'live' | 'paused';
@@ -82,10 +88,27 @@ export const minutesSince = (since: string, now: number) => Math.max(0, Math.flo
 export const serverNow = (board: Pick<Board, 'now'>, fetchedAt: number, deviceNow: number) => Date.parse(board.now) + Math.max(0, deviceNow - fetchedAt);
 
 /** 409 codes from the API (VisitTransitionException); anything else is a generic failure. */
-export const moveErrors = ['invalid_transition', 'not_today', 'intake_required'] as const;
+export const moveErrors = ['invalid_transition', 'not_today', 'intake_required', 'changed', 'undo_expired', 'with_doctor'] as const;
 export type MoveError = (typeof moveErrors)[number] | 'failed';
 export const moveError = (code: string | undefined): MoveError =>
   (moveErrors as readonly string[]).includes(code ?? '') ? (code as MoveError) : 'failed';
+
+// MDV-P1-100: undo the last move, and end a waiting visit from the card. Mirrors VisitFlow (CanUndo, UndoWindow, CanLeave, CanCancel);
+// the server is the authority and refuses anything these rules would hide.
+/** How long the status line offers Undo; the server refuses later. */
+export const undoWindowMs = 30_000;
+/** A move the server would undo: backwards to Checked in, Ready for doctor, In consult or Billing (not check-in, not the nurse's handoff). */
+export const canUndo = (from: BoardColumn, to: BoardColumn) =>
+  (from === 'CheckedIn' || from === 'ReadyForDoctor' || from === 'InConsult' || from === 'Billing') && boardColumns.indexOf(to) > boardColumns.indexOf(from);
+
+/** How a waiting visit ends without a consultation: the patient left before being seen, or the visit is cancelled. */
+export type EndKind = 'left' | 'cancel';
+/** What the card's menu offers: left for anyone waiting; cancel needs booking access and is not offered once the nurse has the patient. */
+export const endKinds = (state: AppointmentState, canCancel: boolean): EndKind[] =>
+  state === 'CheckedIn' || state === 'ReadyForDoctor' ? (canCancel ? ['left', 'cancel'] : ['left']) : state === 'WithNurse' ? ['left'] : [];
+
+/** What the status line says after a change on this desk; `undo` is offered for 30 seconds or until the next change. */
+export type Notice = { kind: 'moved' | 'undone' | EndKind; id: string; name: string; state: BoardColumn; undo: boolean };
 
 // MDV-P1-025 walk-in: POST /v1/appointments/walk-in (IBookingService.WalkInAsync), then the board's check-in.
 /** calendarId "" = the next available doctor. */

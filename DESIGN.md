@@ -255,7 +255,7 @@ Also required: Arabic right-to-left with logical properties, and reduced motion 
 
 ## Guardrails
 
-- No `min-h-11` or `h-11` on library controls in features; no arbitrary font sizes or raw hex colours; no `sm:grid-cols-*`; no raw `h1` in features (MDV-P1-076, #1172).
+- No `min-h-11` or `h-11` on library controls in features: oxlint `medvya-ui/no-height-patch` fails it (MDV-P1-078, #1174; re-run `node tools/codemods/remove-height-patches.mjs` on a branch). No arbitrary font sizes or raw hex colours; no `sm:grid-cols-*`; no raw `h1` in features (MDV-P1-076, #1172).
 - Counts in CI that may only fall: `pnpm check:ui-drift` compares the patterns above, the `border bg-card` string and local `Message`, `Field`, `Card` and `Empty` components with `tools/check-ui-drift/baseline.json`. A rise fails; a fall is committed with `--update` in the same pull request. When a count reaches zero, that ticket turns the matching lint rule to error and removes the count.
 - One browser test, mutation-checked: the patient strip is visible after scrolling the consultation (MDV-P1-092, #1188).
 - The contrast test reads the tone tokens (MDV-P1-080, #1176).

@@ -21,7 +21,7 @@ export function SignNote(p: Props) {
     <div className="flex flex-col gap-3">
       {p.canSign && (
         <div className="flex flex-wrap items-center gap-3">
-          <Button ref={signRef} className="min-h-11" loading={p.signing} disabled={p.remaining > 0} aria-describedby="sign-remaining" onClick={p.onRequest}>{t('noteSign.button')}</Button>
+          <Button ref={signRef} loading={p.signing} disabled={p.remaining > 0} aria-describedby="sign-remaining" onClick={p.onRequest}>{t('noteSign.button')}</Button>
           <p id="sign-remaining" aria-live="polite" className="inline-flex items-center gap-1.5 font-bold">
             {p.remaining > 0 ? <CircleAlert aria-hidden className="size-4" /> : <CircleCheck aria-hidden className="size-4" />}
             {p.remaining > 0 ? tCount('signChecklist.remaining', p.remaining) : t('signChecklist.ready')}
@@ -39,8 +39,8 @@ export function SignNote(p: Props) {
           <DialogDescription>{t('noteSign.confirm.body')}</DialogDescription>
           <p className="text-sm text-muted-foreground">{t('noteSign.confirm.stepUp')}</p>
           <div className="flex flex-wrap gap-3">
-            <Button className="min-h-11" loading={p.signing} onClick={p.onConfirm}>{t('noteSign.confirm.confirm', { doctor: withTitle(p.doctorName ?? '') })}</Button>
-            <Button variant="outline" className="min-h-11" disabled={p.signing} onClick={p.onCancel}>{t('noteSign.confirm.cancel')}</Button>
+            <Button loading={p.signing} onClick={p.onConfirm}>{t('noteSign.confirm.confirm', { doctor: withTitle(p.doctorName ?? '') })}</Button>
+            <Button variant="outline" disabled={p.signing} onClick={p.onCancel}>{t('noteSign.confirm.cancel')}</Button>
           </div>
         </DialogContent>
       </Dialog>

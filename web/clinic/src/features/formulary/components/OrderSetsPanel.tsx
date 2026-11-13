@@ -46,7 +46,7 @@ export default function OrderSetsPanel(p: Props) {
       <Section title={t('orderSets.add.title')}>
         <form noValidate onSubmit={p.onSubmit} className="flex flex-col gap-4">
           <Field id="set-name" label={t('orderSets.field.name')} error={problem(errors.name)}>
-            <Input id="set-name" className="h-11" autoComplete="off" {...describedBy('set-name', !!errors.name)} {...p.form.register('name')} />
+            <Input id="set-name" autoComplete="off" {...describedBy('set-name', !!errors.name)} {...p.form.register('name')} />
           </Field>
           <Field id="set-items" label={t('orderSets.field.items')} error={problem(errors.items)}>
             <Textarea id="set-items" rows={5} {...describedBy('set-items', !!errors.items)} {...p.form.register('items')} />

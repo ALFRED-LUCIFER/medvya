@@ -60,6 +60,7 @@ export default function PilotMetricsPanel(p: Props) {
                 : t('pilotMetrics.checkInGap', { gap: formatNumber(p.gapSeconds), target: formatNumber(c.targetSeconds) })}</span>
               <span>{t('pilotMetrics.checkInCounts', { returning: formatNumber(c.returningCount), all: formatNumber(c.count),
                 median: c.medianSeconds === null ? none : unit('CheckInSeconds', Math.round(c.medianSeconds)) })}</span>
+              {c.unmeasured > 0 && <span>{t('pilotMetrics.checkInUnmeasured', { count: formatNumber(c.unmeasured) })}</span>}
             </span>}
             baseline={baseline('CheckInSeconds')} />
           <Tile label={t('pilotMetrics.noShow')} value={m.noShows.percent === null ? none : unit('NoShowPercent', m.noShows.percent)}
@@ -79,26 +80,26 @@ export default function PilotMetricsPanel(p: Props) {
           <Field id="baseline-metric" label={t('pilotMetrics.metric')}>
             <Controller control={p.form.control} name="metric" render={({ field }) => (
               <Select value={field.value} onValueChange={field.onChange}>
-                <SelectTrigger id="baseline-metric" className="h-11 w-full"><SelectValue /></SelectTrigger>
+                <SelectTrigger id="baseline-metric" className="w-full"><SelectValue /></SelectTrigger>
                 <SelectContent>{pilotMetricIds.map(id => <SelectItem key={id} value={id}>{t(`pilotMetrics.metric.${id}`)}</SelectItem>)}</SelectContent>
               </Select>
             )} />
           </Field>
           <Field id="baseline-value" label={t('pilotMetrics.value')} error={errors.value ? t('pilotMetrics.error.value') : null}>
-            <Input id="baseline-value" inputMode="decimal" autoComplete="off" className="h-11" {...describedBy('baseline-value', !!errors.value)} {...p.form.register('value')} />
+            <Input id="baseline-value" inputMode="decimal" autoComplete="off" {...describedBy('baseline-value', !!errors.value)} {...p.form.register('value')} />
           </Field>
           <Field id="baseline-method" label={t('pilotMetrics.method')} hint={t('pilotMetrics.methodHint')} className="sm:col-span-2"
             error={errors.method ? t('pilotMetrics.error.method') : null}>
-            <Input id="baseline-method" autoComplete="off" maxLength={200} className="h-11" {...describedBy('baseline-method', !!errors.method, true)} {...p.form.register('method')} />
+            <Input id="baseline-method" autoComplete="off" maxLength={200} {...describedBy('baseline-method', !!errors.method, true)} {...p.form.register('method')} />
           </Field>
           <Field id="baseline-from" label={t('pilotMetrics.from')} error={errors.fromDate ? t('pilotMetrics.error.date') : null}>
-            <Input id="baseline-from" type="date" className="h-11" {...describedBy('baseline-from', !!errors.fromDate)} {...p.form.register('fromDate')} />
+            <Input id="baseline-from" type="date" {...describedBy('baseline-from', !!errors.fromDate)} {...p.form.register('fromDate')} />
           </Field>
           <Field id="baseline-to" label={t('pilotMetrics.to')} error={errors.toDate ? t('pilotMetrics.error.toDate') : null}>
-            <Input id="baseline-to" type="date" className="h-11" {...describedBy('baseline-to', !!errors.toDate)} {...p.form.register('toDate')} />
+            <Input id="baseline-to" type="date" {...describedBy('baseline-to', !!errors.toDate)} {...p.form.register('toDate')} />
           </Field>
           <div className="flex flex-wrap items-center gap-3 sm:col-span-2" aria-live="polite">
-            <Button type="submit" className="min-h-11" loading={p.saving}>{t('pilotMetrics.record')}</Button>
+            <Button type="submit" loading={p.saving}>{t('pilotMetrics.record')}</Button>
             {p.saveFailed && <p role="alert" className={fieldError}>{t('pilotMetrics.saveFailed')}</p>}
             {p.saved && !p.saving && <p>{t('pilotMetrics.saved')}</p>}
           </div>

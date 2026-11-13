@@ -17,7 +17,7 @@ export const emptyCancel = { note: '' } as Partial<CancelForm>;
 export type Action = 'checkIn' | 'reschedule' | 'cancel' | 'noShow';
 export const actions: readonly Action[] = ['checkIn', 'reschedule', 'cancel', 'noShow'];
 /** Why an action is not offered; each is a sentence the panel shows beside the disabled button. */
-export type Why = 'noAccess' | 'noCheckIn' | 'onlyBooked' | 'notToday' | 'notStarted' | 'inVisit' | 'completed' | 'cancelled' | 'noShow';
+export type Why = 'noAccess' | 'noCheckIn' | 'onlyBooked' | 'notToday' | 'notStarted' | 'inVisit' | 'completed' | 'cancelled' | 'noShow' | 'left';
 export type Rule = { allowed: true } | { allowed: false; why: Why };
 
 /** The facility-local calendar date (YYYY-MM-DD) of an instant. */
@@ -25,7 +25,7 @@ export const localDate = (iso: string, timeZone: string) =>
   new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(iso));
 
 const ended = (a: Appointment): Why | null =>
-  a.state === 'Done' ? 'completed' : a.state === 'Cancelled' ? 'cancelled' : a.state === 'NoShow' ? 'noShow' : null;
+  a.state === 'Done' ? 'completed' : a.state === 'Cancelled' ? 'cancelled' : a.state === 'NoShow' ? 'noShow' : a.state === 'LeftWithoutBeingSeen' ? 'left' : null;
 
 /**
  * Each action for this visit, allowed or with the reason it is not. `now` is when the desk opened the visit; check-in needs

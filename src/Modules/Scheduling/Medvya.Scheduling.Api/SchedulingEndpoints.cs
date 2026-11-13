@@ -69,9 +69,11 @@ public static class SchedulingEndpoints
                 await service.FindPatientAsync(facilityId ?? Guid.Empty, patientId, ct) is { } p ? Results.Ok(p) : Results.NotFound())
             .AuditedWithErrors("patient.lookup", "patient", "registration", patientRouteKey: "patientId"); // the purpose front-desk search uses (MDV-P1-018)
 
-        // The desk record's visit list (MDV-1088): dates and status only. Opens the patient's record, so the id is in the route and the audit row.
+        // The desk record's visit list (MDV-1088): dates and status only, and the doctor's follow-up still to book, date and doctor only (MDV-P1-102). Opens the patient's record, so the id is in the route and the audit row.
         schedule.MapGet("/patients/{patientId:guid}/visits", async (Guid patientId, Guid? facilityId, [FromServices] IBookingService service, CancellationToken ct) =>
-                await service.VisitsAsync(facilityId ?? Guid.Empty, patientId, ct) is { } visits ? Results.Ok(new { visits }) : Results.NotFound())
+                await service.VisitsAsync(facilityId ?? Guid.Empty, patientId, ct) is { } visits
+                    ? Results.Ok(new { visits, followUp = await service.FollowUpDueAsync(facilityId ?? Guid.Empty, patientId, ct) })
+                    : Results.NotFound())
             .AuditedWithErrors("patient.visits.list", "patient", "registration", patientRouteKey: "patientId");
 
         var holds = app.MapGroup("/v1/slot-holds").RequireAuthorization();
@@ -114,6 +116,10 @@ public static class SchedulingEndpoints
         appointments.MapPost("/{appointmentId:guid}/no-show", (Guid appointmentId, [FromServices] IBookingService service, CancellationToken ct) =>
                 service.MarkNoShowAsync(appointmentId, ct))
             .AuditedWriteWithErrors(SchedulingAudit.NoShow, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment);
+        // The patient arrived and left before being seen (MDV-P1-100): a queue action with a reason, apart from cancel and no-show.
+        appointments.MapPost("/{appointmentId:guid}/left", (Guid appointmentId, CancelAppointment command, [FromServices] IBookingService service, CancellationToken ct) =>
+                service.MarkLeftAsync(appointmentId, command, ct))
+            .AuditedWriteWithErrors(SchedulingAudit.Left, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment);
         // The visit's moves for the appointment panel (MDV-P1-024): names, slots and times, no patient data.
         appointments.MapGet("/{appointmentId:guid}/history", (Guid appointmentId, [FromServices] IBookingService service, CancellationToken ct) =>
                 service.HistoryAsync(appointmentId, ct))
@@ -128,6 +134,10 @@ public static class SchedulingEndpoints
         appointments.MapPost("/{appointmentId:guid}/status", (Guid appointmentId, MoveVisit command, [FromServices] IFrontDeskService service, CancellationToken ct) =>
                 service.MoveAsync(appointmentId, command, ct))
             .AuditedWriteWithErrors(SchedulingAudit.Status, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment);
+        // Undo the caller's own last move within 30 seconds (MDV-P1-100); later, or after anyone's next move, a 409.
+        appointments.MapPost("/{appointmentId:guid}/undo", (Guid appointmentId, UndoMove command, [FromServices] IFrontDeskService service, CancellationToken ct) =>
+                service.UndoAsync(appointmentId, command, ct))
+            .AuditedWriteWithErrors(SchedulingAudit.Undo, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment);
 
         // Waitlist (MDV-P1-027): the use cases need full booking access at the entry's facility. An offer holds a slot and messages the patient; accepting books it.
         var waitlist = app.MapGroup("/v1/waitlist").RequireAuthorization();
@@ -143,9 +153,10 @@ public static class SchedulingEndpoints
         waitlist.MapPost("/{id:guid}/accept", (Guid id, [FromServices] IWaitlistService service, CancellationToken ct) => service.AcceptAsync(id, ct))
             .AuditedWriteWithErrors(SchedulingAudit.WaitlistAccept, SchedulingAudit.WaitlistResource, SchedulingAudit.Treatment)
             .RequireAcceptedTerms();
-        waitlist.MapDelete("/{id:guid}", async (Guid id, [FromServices] IWaitlistService service, CancellationToken ct) =>
+        // A doctor's follow-up is dismissed with a reason code (MDV-P1-102); a code is no patient data, so it may travel in the query.
+        waitlist.MapDelete("/{id:guid}", async (Guid id, FollowUpDismissReason? reason, [FromServices] IWaitlistService service, CancellationToken ct) =>
             {
-                await service.RemoveAsync(id, ct);
+                await service.RemoveAsync(id, reason, ct);
                 return Results.NoContent();
             })
             .AuditedWriteWithErrors(SchedulingAudit.WaitlistRemove, SchedulingAudit.WaitlistResource, SchedulingAudit.Treatment);

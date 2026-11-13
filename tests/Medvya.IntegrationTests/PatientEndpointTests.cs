@@ -125,7 +125,7 @@ public sealed class PatientEndpointTests(PostgresFixture sql) : IClassFixture<Po
     }
 
     [Fact]
-    public async Task TheDeskSearchesByPostSeesTheNameButNoFullPhoneOrBirthDateAndOpensTheRecord()
+    public async Task TheDeskSearchesByPostSeesTheNameAndBirthDateButNoFullPhoneAndOpensTheRecord()
     {
         using var host = Host();
         using var desk = Client(host, "receptionist");
@@ -137,8 +137,9 @@ public sealed class PatientEndpointTests(PostgresFixture sql) : IClassFixture<Po
         Assert.Equal("Name", doc.RootElement.GetProperty("matchedOn").GetString());
         var row = Assert.Single(doc.RootElement.GetProperty("items").EnumerateArray());
         Assert.Equal(("MI", "Meera Iyer (synthetic)", "0101", meera), (row.GetProperty("initials").GetString(), row.GetProperty("fullName").GetString(), row.GetProperty("mobileTail").GetString(), row.GetProperty("id").GetGuid()));
-        // The name and the phone tail are shown (MDV-AUDIT-1100); the full phone and the birth date are not.
-        foreach (var leak in new[] { "+91", "9000000101", "1980-01-01" }) Assert.DoesNotContain(leak, json, StringComparison.OrdinalIgnoreCase);
+        // The name and the phone tail are shown (MDV-AUDIT-1100), and the date of birth (MDV-P1-101, to tell two people with one name apart); the full phone is not.
+        Assert.Equal("1980-01-01", row.GetProperty("dateOfBirth").GetString());
+        foreach (var leak in new[] { "+91", "9000000101" }) Assert.DoesNotContain(leak, json, StringComparison.OrdinalIgnoreCase);
 
         var opened = await desk.GetFromJsonAsync<JsonElement>(new Uri($"/v1/patients/{meera}", UriKind.Relative));
         Assert.Equal(("Meera Iyer (synthetic)", "+919000000101"), (opened.GetProperty("fullName").GetString(), opened.GetProperty("mobile").GetString()));

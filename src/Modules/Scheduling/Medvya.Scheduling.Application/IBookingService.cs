@@ -155,6 +155,9 @@ public interface IBookingService
     /// <summary>The patient's latest visits at the organisation (shared record), newest first: date and status only. Needs "Register / book" at Read or Full, as the calendar does; null when there is no such patient in the organisation.</summary>
     Task<IReadOnlyList<DeskVisit>?> VisitsAsync(Guid facilityId, Guid patientId, CancellationToken cancellationToken = default);
 
+    /// <summary>The doctor's follow-up still to book for this patient at the facility (MDV-P1-102), date and doctor only; null when there is none. Access as <see cref="VisitsAsync"/>.</summary>
+    Task<FollowUpDue?> FollowUpDueAsync(Guid facilityId, Guid patientId, CancellationToken cancellationToken = default);
+
     /// <summary>
     /// Moves a booked visit to another slot (MDV-P1-024) on the booking path: the doctor-days of both slots locked, the new slot
     /// re-checked against the template, other appointments and other users' holds, the old slot freed and the new one taken in
@@ -195,6 +198,14 @@ public interface IBookingService
     /// <summary>Marks a Booked visit whose start has passed as a no-show and frees its slots; the desk is then offered a rebook.</summary>
     /// <exception cref="VisitTransitionException">Not Booked ("invalid_transition"), not started yet ("not_started"), or changed meanwhile ("changed").</exception>
     Task<AppointmentChip> MarkNoShowAsync(Guid appointmentId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The patient arrived and left before the doctor saw them (MDV-P1-100): a waiting visit ends as Left without being seen, with a reason
+    /// as for a cancellation. Its slots are freed and its token leaves the queue display; the patient is sent nothing. A queue action
+    /// (full "Check-in &amp; queue"), audited with the reason code and the state it left.
+    /// </summary>
+    /// <exception cref="VisitTransitionException">Not waiting ("invalid_transition"), or changed meanwhile ("changed").</exception>
+    Task<AppointmentChip> MarkLeftAsync(Guid appointmentId, CancelAppointment command, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// The visit's moves, oldest first (MDV-P1-024): each reschedule and each same-day move to another doctor's queue (MDV-P1-030),

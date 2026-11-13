@@ -18,7 +18,7 @@ type Props = SafetyProps & {
   patient: AddMedicinePatient | null;
   open: boolean; encounterId: string | null; refused: boolean;
   onOpen: () => void; onClose: () => void;
-  search: UseFormReturn<{ medicine: string }>; results: Medicine[]; searching: boolean; noResults: boolean;
+  search: UseFormReturn<{ medicine: string }>; results: Medicine[]; searching: boolean; noResults: boolean; suggestions: Medicine[];
   medicine: Medicine | null; strengths: Medicine[]; onMedicine: (m: Medicine) => void;
   choice: Choice; onChoice: (c: Partial<Choice>) => void; instructionsInvalid: boolean;
   line: RxLine | null; quantity: number | 'pack' | null; saving: boolean;
@@ -36,7 +36,7 @@ export default function AddMedicinePanel(p: Props) {
     // The trigger is Radix's, so closing (Escape, the close button, Cancel) hands focus back to it.
     <Dialog open={p.open} onOpenChange={o => (o ? p.onOpen() : p.onClose())}>
       <div className="flex flex-col items-start gap-2">
-        <DialogTrigger asChild><Button variant="outline" className="min-h-11"><Plus aria-hidden className="size-4" />{t('rx.addMed.open')}</Button></DialogTrigger>
+        <DialogTrigger asChild><Button variant="outline"><Plus aria-hidden className="size-4" />{t('rx.addMed.open')}</Button></DialogTrigger>
         {p.added && <p role="status" className="text-sm">{t('rx.addMed.added', { name: p.added })}</p>}
       </div>
       <DialogContent closeLabel={t('rx.addMed.close')}
@@ -74,7 +74,7 @@ function Picks<K extends string>({ id, label, options, chosen, onPick, wordOf }:
       <span id={id} className="text-sm font-bold">{label}</span>
       <div role="group" aria-labelledby={id} className="flex flex-wrap gap-2">
         {options.map(k => (
-          <Button key={k} type="button" variant={chosen === k ? 'selected' : 'outline'} aria-pressed={chosen === k} className="min-h-11" onClick={() => onPick(k)}>{wordOf(k)}</Button>
+          <Button key={k} type="button" variant={chosen === k ? 'selected' : 'outline'} aria-pressed={chosen === k} onClick={() => onPick(k)}>{wordOf(k)}</Button>
         ))}
       </div>
     </div>
@@ -89,17 +89,19 @@ function Body(p: Props & { language: PrintLanguage }) {
   return (
     <div className="flex flex-col gap-4">
       <Field id="addmed-search" label={t('rx.addMed.search')} hint={t('rx.addMed.searchHint')}>
-        <Input id="addmed-search" className="h-11" type="search" autoComplete="off" {...describedBy('addmed-search', false, true)} {...p.search.register('medicine')} />
+        <Input id="addmed-search" type="search" autoComplete="off" {...describedBy('addmed-search', false, true)} {...p.search.register('medicine')} />
       </Field>
       {p.searching && <p role="status" className="text-sm text-muted-foreground">{t('rx.addMed.searching')}</p>}
       {p.noResults && <p role="status" className="text-sm">{t('rx.addMed.noResults')}</p>}
-      {p.results.length > 0 && (
-        <ul aria-label={t('rx.addMed.results')} className="flex flex-col gap-2">
-          {p.results.map(r => {
+      {/* MDV-P1-088: a name that matched nothing is answered with the closest formulary rows, which are checked as any other. */}
+      {p.suggestions.length > 0 && <h3 id="addmed-suggestions" className="text-sm font-bold">{t('rx.didYouMean')}</h3>}
+      {[p.results, p.suggestions].map((rows, suggested) => rows.length > 0 && (
+        <ul key={suggested} {...(suggested ? { 'aria-labelledby': 'addmed-suggestions' } : { 'aria-label': t('rx.addMed.results') })} className="flex flex-col gap-2">
+          {rows.map(r => {
             const picked = !!m && m.generic === r.generic && m.form === r.form;
             return (
               <li key={r.id}>
-                <Button type="button" variant={picked ? 'selected' : 'outline'} aria-pressed={picked} disabled={p.busy} className="h-auto min-h-11 w-full flex-col items-start py-2 text-start"
+                <Button type="button" variant={picked ? 'selected' : 'outline'} aria-pressed={picked} disabled={p.busy} className="h-auto w-full flex-col items-start py-2 text-start"
                   onClick={() => p.onMedicine(r)}>
                   <span className="inline-flex items-center gap-2 font-bold"><Pill aria-hidden className="size-4" />{t('rx.addMed.result', { generic: r.generic, form: r.form })}</span>
                   {r.brands.length > 0 && <span className="text-xs">{t('rx.addMed.brands', { list: r.brands.join(', ') })}</span>}
@@ -108,7 +110,7 @@ function Body(p: Props & { language: PrintLanguage }) {
             );
           })}
         </ul>
-      )}
+      ))}
 
       {m && <>
         <Picks id="addmed-strength" label={t('rx.addMed.strength')} options={p.strengths.map(s => s.id)} chosen={m.id}
@@ -117,7 +119,7 @@ function Body(p: Props & { language: PrintLanguage }) {
         <Picks id="addmed-when" label={t('rx.addMed.when')} options={keys(whenTaken)} chosen={p.choice.when} onPick={when => p.onChoice({ when })} wordOf={k => t(`rx.addMed.when.${k}`)} />
         <Picks id="addmed-long" label={t('rx.addMed.long')} options={keys(howLong)} chosen={p.choice.long} onPick={long => p.onChoice({ long })} wordOf={k => t(`rx.addMed.long.${k}`)} />
         <Field id="addmed-instructions" label={t('rx.addMed.instructions')} hint={t('rx.addMed.instructionsHint')} error={p.instructionsInvalid ? t('rx.addMed.instructionsTooLong') : null}>
-          <Input id="addmed-instructions" className="h-11" autoComplete="off" value={p.choice.instructions}
+          <Input id="addmed-instructions" autoComplete="off" value={p.choice.instructions}
             {...describedBy('addmed-instructions', p.instructionsInvalid, true)} onChange={e => p.onChoice({ instructions: e.target.value })} />
         </Field>
 
@@ -142,8 +144,8 @@ function Body(p: Props & { language: PrintLanguage }) {
       {p.problem && <p role="alert" className={fieldError}>{t(`rx.error.${p.problem}`)}</p>}
       {m && !p.chosen && <p className="text-sm">{t('rx.addMed.needChoices')}</p>}
       <div className="flex flex-wrap gap-2 border-t pt-4">
-        <Button className="min-h-11" disabled={!p.canAdd} onClick={p.onAdd}><Plus aria-hidden className="size-4" />{t('rx.addMed.add')}</Button>
-        <Button variant="outline" className="min-h-11" onClick={p.onClose}>{t('rx.addMed.cancel')}</Button>
+        <Button disabled={!p.canAdd} onClick={p.onAdd}><Plus aria-hidden className="size-4" />{t('rx.addMed.add')}</Button>
+        <Button variant="outline" onClick={p.onClose}>{t('rx.addMed.cancel')}</Button>
       </div>
     </div>
   );

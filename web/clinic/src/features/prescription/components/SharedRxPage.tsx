@@ -26,15 +26,15 @@ export default function SharedRxPage(p: Props) {
       <section aria-labelledby="shared-rx-title" className="flex flex-col gap-3">
         <h1 id="shared-rx-title" className="text-xl font-extrabold">{t('sharedRx.title')}</h1>
         <p>{t('sharedRx.intro')}</p>
-        <Button type="button" variant={p.codeSent ? 'outline' : 'default'} className="min-h-11 self-start" loading={p.sending} onClick={p.onSendCode}>
+        <Button type="button" variant={p.codeSent ? 'outline' : 'default'} className="self-start" loading={p.sending} onClick={p.onSendCode}>
           <MessageSquare aria-hidden className="size-4" />{t(p.codeSent ? 'sharedRx.resend' : 'sharedRx.sendCode')}
         </Button>
         {p.codeSent && <p role="status" className="flex items-center gap-2"><CircleCheck aria-hidden className="size-4 shrink-0" />{t('sharedRx.codeSent')}</p>}
         <form className="flex flex-wrap items-end gap-3" onSubmit={p.onOpen} noValidate>
           <Field id="shared-rx-code" label={t('sharedRx.code')} error={invalid ? t('sharedRx.codeInvalid') : null} className="min-w-48">
-            <Input id="shared-rx-code" inputMode="numeric" autoComplete="one-time-code" dir="ltr" maxLength={6} className="h-11" {...describedBy('shared-rx-code', invalid)} {...p.form.register('code')} />
+            <Input id="shared-rx-code" inputMode="numeric" autoComplete="one-time-code" dir="ltr" maxLength={6} {...describedBy('shared-rx-code', invalid)} {...p.form.register('code')} />
           </Field>
-          <Button type="submit" className="min-h-11" loading={p.opening}><FileDown aria-hidden className="size-4" />{t('sharedRx.open')}</Button>
+          <Button type="submit" loading={p.opening}><FileDown aria-hidden className="size-4" />{t('sharedRx.open')}</Button>
         </form>
         {p.opened && <p role="status" className="flex items-center gap-2"><CircleCheck aria-hidden className="size-4 shrink-0" />{t('sharedRx.opened')}</p>}
         {p.problem && <p role="alert" className="flex items-start gap-2 font-bold"><CircleAlert aria-hidden className="mt-0.5 size-5 shrink-0" />{t(`sharedRx.problem.${p.problem}`)}</p>}

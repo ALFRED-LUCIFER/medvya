@@ -1,7 +1,7 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
 
-// MDV-P2-003 (D-02): the ⌘K overlay searches from any screen, shows initials, age and the MRN tail only, opens a chart with the keyboard,
+// MDV-P2-003 (D-02): the ⌘K overlay searches from any screen, shows the desk's search row (MDV-P1-101: name, date of birth, last visit, masked MRN and phone), opens a chart with the keyboard,
 // and offers "Request access" for a patient outside the care relationship. CI has no API: the session and the lookup are mocked in the shapes
 // the server sends; the payload shape, the care-relationship verdicts, the audit row and the 300 ms budget are covered by
 // GlobalSearchEndpointTests and PatientSearchPerformanceTests on PostgreSQL.
@@ -11,7 +11,11 @@ const doctor = {
   active: { membershipId: 'm-1', tenantId: 't-1', facilityId: 'f-1', role: 'SoloDoctor', flags: [] as string[], country: 'IN',
     capabilities: { RegisterBookPatients: 'Full', CheckInQueue: 'Full', Patient360Chart: 'Full' } },
 };
-const row = (id: string, initials: string, access: string) => ({ id, initials, ageYears: 54, ageEstimated: false, mrnTail: '0001', access });
+const names: Record<string, string> = { MI: 'Meera Iyer (synthetic)', LP: 'Lakshmi Pillai (synthetic)' };
+const row = (id: string, initials: string, access: string, more: Record<string, unknown> = {}) => ({
+  id, initials, fullName: names[initials] ?? initials, ageYears: 54, ageEstimated: false, sexAtBirth: 'Female', dateOfBirth: '1972-03-12', mrnTail: '0001', mobileTail: '0101',
+  lastVisitOn: '2026-10-12', duplicate: null, access, ...more,
+});
 
 async function open(page: Page, { locale = 'en', items = [row('p-1', 'MI', 'Open'), row('p-2', 'LP', 'CanRequest')] } = {}) {
   const calls = { lookups: [] as { url: string; body: unknown }[], requests: [] as unknown[] };
@@ -29,7 +33,7 @@ async function open(page: Page, { locale = 'en', items = [row('p-1', 'MI', 'Open
   return calls;
 }
 
-test('Ctrl+K opens the search from any screen; arrows, Enter and Esc work; results hold only initials, age and MRN tail', async ({ page }) => {
+test('Ctrl+K opens the search from any screen; arrows, Enter and Esc work; results hold the desk row with masked numbers', async ({ page }) => {
   const calls = await open(page);
   await page.keyboard.press('Control+k');
   const search = page.getByRole('dialog', { name: 'Search patients' });
@@ -40,10 +44,13 @@ test('Ctrl+K opens the search from any screen; arrows, Enter and Esc work; resul
   await expect(search.getByRole('status').first()).toHaveText('Patients found: 2');
   const rows = search.getByRole('option');
   await expect(rows).toHaveCount(2);
-  await expect(rows.first()).toContainText('MI');
+  await expect(rows.first()).toContainText('Meera Iyer (synthetic)');
+  await expect(rows.first()).toContainText('Born 12 Mar 1972');
+  await expect(rows.first()).toContainText('Last visit 12 Oct 2026');
+  await expect(rows.first()).toContainText('Phone ··0101');
   await expect(rows.first()).toContainText('54 y');
   await expect(rows.first()).toContainText('MRN ··0001');
-  expect(await search.innerText()).not.toMatch(/Meera|Iyer|\+91/);
+  expect(await search.innerText()).not.toMatch(/\+91|000001/); // never a whole phone number or MRN
   await input.press('ArrowDown');
   await expect(rows.first()).toHaveAttribute('aria-selected', 'true');
   await input.press('ArrowDown');
@@ -98,8 +105,8 @@ test('no match says so and offers to register a patient', async ({ page }) => {
 
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 for (const locale of ['en', 'ar'])
-  test(`axe finds no violations in the open search (${locale}); 44 px targets`, async ({ page }) => {
-    await open(page, { locale });
+  test(`axe finds no violations in the open search (${locale}); 44 px targets, 48 px rows`, async ({ page }) => {
+    await open(page, { locale, items: [row('p-1', 'MI', 'Open', { duplicate: 'MainRecord' }), row('p-2', 'MI', 'CanRequest', { dateOfBirth: '1972-08-30', lastVisitOn: null, duplicate: 'PossibleDuplicate' })] });
     await page.keyboard.press('Control+k');
     const search = page.getByRole('dialog');
     await search.getByRole('combobox').fill('me');
@@ -107,6 +114,14 @@ for (const locale of ['en', 'ar'])
     await search.getByRole('option').first().click();
     if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
     for (const b of await search.getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    for (const o of await search.getByRole('option').all()) expect((await o.boundingBox())!.height).toBeGreaterThanOrEqual(48);
+    if (locale === 'en') {
+      // MDV-P1-101: two people with one name differ by date of birth, last visit and the duplicate mark; the main record is first.
+      await expect(search.getByRole('option').first()).toContainText('Main record');
+      await expect(search.getByRole('option').nth(1)).toContainText('Born 30 Aug 1972');
+      await expect(search.getByRole('option').nth(1)).toContainText('No visit yet');
+      await expect(search.getByRole('option').nth(1)).toContainText('Possible duplicate');
+    }
     await search.getByRole('option').nth(1).click();
     await page.addScriptTag({ path: axePath });
     const violations = await page.evaluate(async () =>

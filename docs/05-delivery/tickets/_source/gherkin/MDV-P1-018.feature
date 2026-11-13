@@ -11,7 +11,7 @@ Feature: Patient directory and privacy-safe search for the front desk
   @done
   Scenario: Result rows are minimal and opening is audited
     When search results are shown
-    Then rows show only initials, age, sex and MRN tail
+    Then rows show the full name, age, sex and the MRN and phone tails
     And full demographics appear only after opening, which writes an audit event
 
   @done

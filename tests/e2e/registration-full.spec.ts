@@ -87,8 +87,11 @@ test('India: full registration in steps, with Aadhaar last 4 only, the PIN rule 
   await expect(page.getByRole('switch', { name: 'Treatment' })).toBeChecked();
   await expect(page.getByRole('switch', { name: 'Health tips and offers' })).not.toBeChecked();
   await expect(page.getByRole('switch', { name: 'Link to ABHA' })).not.toBeChecked();
+  // MDV-AUDIT-1106: SMS reminders start on (the desk asks); WhatsApp and email start off.
+  await expect(page.getByRole('switch', { name: 'SMS' })).toBeChecked();
+  await expect(page.getByRole('switch', { name: 'Email' })).not.toBeChecked();
+  await expect(page.getByRole('switch', { name: 'WhatsApp' })).not.toBeChecked();
   await page.getByRole('switch', { name: 'WhatsApp' }).click();
-  await expect(page.getByRole('switch', { name: 'SMS' })).not.toBeChecked();
   await next(page);
 
   await expect(page.getByRole('heading', { name: 'Review & duplicate check' })).toBeFocused();
@@ -112,7 +115,7 @@ test('India: full registration in steps, with Aadhaar last 4 only, the PIN rule 
     payer: { kind: 'PrivateInsurance', payerName: 'Synthetic Health', network: 'Synthetic TPA', memberNumber: 'SYN-23-000411-01' },
     emergencyContact: { name: 'Suresh Pillai', relationship: 'Spouse', phone: '+91 90000 00412' }, guardian: null,
     consents: { policyVersion: '2026-11-draft', decisions: [
-      { type: 'Treatment', channel: null, granted: true }, { type: 'Reminders', channel: 'WhatsApp', granted: true }, { type: 'Reminders', channel: 'Sms', granted: false }, { type: 'Reminders', channel: 'Email', granted: false },
+      { type: 'Treatment', channel: null, granted: true }, { type: 'Reminders', channel: 'WhatsApp', granted: true }, { type: 'Reminders', channel: 'Sms', granted: true }, { type: 'Reminders', channel: 'Email', granted: false },
       { type: 'InformationExchange', channel: null, granted: false }, { type: 'Portal', channel: null, granted: true }, { type: 'Marketing', channel: null, granted: false }] },
   });
   expect(body).not.toHaveProperty('countryCode'); // the country is the tenant's, never sent

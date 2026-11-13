@@ -16,7 +16,7 @@ test('a second tenant\'s user cannot see the first tenant\'s patients, schedule 
   // Control: the same search finds the user's own patient, so an empty answer below means isolation, not a broken search.
   await search.fill('Fatima');
   await search.press('Enter');
-  await expect(page.getByRole('link', { name: /F M, \d+ y, Female/ })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Fatima .*, \d+ y, Female/ })).toBeVisible();
 
   await search.fill('Meera');
   await search.press('Enter');

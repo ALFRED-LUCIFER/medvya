@@ -30,7 +30,7 @@ async function openChart(page: Page) {
 async function startVisit(page: Page, intake?: () => Promise<void>) {
   await page.goto('/app/schedule');
   await page.getByRole('list', { name: rao }).getByRole('button', { name: /^Book / }).first().click();
-  const panel = await choosePatient(page, 'Meera', /^M I, 54 y, Female/);
+  const panel = await choosePatient(page, 'Meera', /^Meera Iyer \(synthetic\), 54 y, Female/);
   await panel.getByRole('button', { name: 'Confirm booking' }).click();
   await expect(panel).toContainText('Appointment booked');
 

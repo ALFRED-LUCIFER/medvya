@@ -151,7 +151,7 @@ export const emptyForm: RegistrationForm = {
   payerKind: '', payerName: '', plan: '', memberNumber: '', validTo: '', network: '',
   ecName: '', ecRelationship: '', ecPhone: '', guardianName: '', guardianRelationship: '', guardianPhone: '',
   // Portal invite is on and everything else off until the patient says yes (docs/04-security-compliance: consent model).
-  consentWhatsApp: false, consentSms: false, consentEmail: false, consentExchange: false, consentPortal: true, consentMarketing: false,
+  consentWhatsApp: false, consentSms: true, consentEmail: false, consentExchange: false, consentPortal: true, consentMarketing: false,
 };
 
 /** Fields each full-mode step owns; "Continue" validates only these. */

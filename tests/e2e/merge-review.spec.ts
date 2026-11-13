@@ -118,7 +118,7 @@ async function recordWithRequestSection(page: Page, locale = 'en') {
   await page.route(`**/v1/patients/${survivorId}/merges`, r => r.fulfill({ json: { merges: [] } }));
   await page.route(`**/v1/patients/${survivorId}/consents`, r => r.fulfill({ json: { policyVersion: '2026-11-draft', decisions: [] } }));
   await page.route('**/v1/patients/search**', r => r.fulfill({ json: { matchedOn: 'Directory', page: 1, pageSize: 20, total: 1,
-    items: [{ id: otherId, initials: 'RK', ageYears: 55, ageEstimated: false, sexAtBirth: 'Male', mrnTail: '0041', status: 'Complete' }] } }));
+    items: [{ id: otherId, initials: 'RK', fullName: 'Ravi Kumar (synthetic)', ageYears: 55, ageEstimated: false, sexAtBirth: 'Male', mrnTail: '0041', mobileTail: '0041', status: 'Complete' }] } }));
   await page.route('**/v1/patients/merge-requests', r => {
     if (r.request().method() !== 'POST') return r.fulfill({ json: { requests: [] } });
     posts.push(r.request().postDataJSON());

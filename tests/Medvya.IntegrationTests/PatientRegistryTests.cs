@@ -160,7 +160,7 @@ public class PatientRegistryTests(PostgresFixture sql) : IClassFixture<PostgresF
     }
 
     [Fact]
-    public async Task SearchRowsShowOnlyInitialsAgeSexAndTheMrnTail()
+    public async Task SearchRowsShowTheFullNameAgeSexAndOnlyTheMrnAndPhoneTails()
     {
         var registered = await Registry(tenantA).RegisterAsync(IndiaFull(facility) with { FullName = "Kavya Lakshmi Iyer (synthetic)", DateOfBirth = new DateOnly(1980, 1, 1), Identifiers = [] });
         var result = await Search(tenantA, "IN", "kavya");
@@ -168,9 +168,10 @@ public class PatientRegistryTests(PostgresFixture sql) : IClassFixture<PostgresF
         Assert.Equal(SearchKind.Name, result.MatchedOn);
         var row = Assert.Single(result.Items);
         var age = CountryRules.India.Today(DateTimeOffset.UtcNow).Year - 1980; // born 1 Jan 1980
-        Assert.Equal(new PatientSearchRow(registered.PatientId, "KI", age, false, SexAtBirth.Female, registered.Mrn[^4..], RegistrationStatus.Complete), row);
-        // The row type itself has no name, phone, date of birth or identifier to leak.
-        Assert.Equal(["AgeEstimated", "AgeYears", "Id", "Initials", "MrnTail", "SexAtBirth", "Status"], typeof(PatientSearchRow).GetProperties().Select(p => p.Name).Order());
+        Assert.Equal(new PatientSearchRow(registered.PatientId, "KI", "Kavya Lakshmi Iyer (synthetic)", age, false, SexAtBirth.Female, registered.Mrn[^4..], row.MobileTail, RegistrationStatus.Complete), row);
+        Assert.Equal(4, row.MobileTail.Length);
+        // The row type itself has no date of birth, full phone, email or identifier to leak (MDV-AUDIT-1100: the name and the phone tail are shown on purpose).
+        Assert.Equal(["AgeEstimated", "AgeYears", "FullName", "Id", "Initials", "MobileTail", "MrnTail", "SexAtBirth", "Status"], typeof(PatientSearchRow).GetProperties().Select(p => p.Name).Order());
     }
 
     [Fact]

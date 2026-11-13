@@ -88,7 +88,7 @@ type Calls = {
 };
 
 // POST /v1/patients/search (MDV-P1-018): privacy-safe rows only. "Nair" finds Deepak Nair (synthetic), anything else nobody.
-const nair = { id: patientId, initials: 'DN', ageYears: 47, ageEstimated: false, sexAtBirth: 'Male', mrnTail: '0002', status: 'Complete' };
+const nair = { id: patientId, initials: 'DN', fullName: 'Deepak Nair (synthetic)', ageYears: 47, ageEstimated: false, sexAtBirth: 'Male', mrnTail: '0002', mobileTail: '0201', status: 'Complete' };
 
 /** Signs in and answers the scheduling API; returns what the page sent. `holdCode` makes holds fail with that 409 code. */
 async function open(page: Page, { locale = 'en', status = 200, as = reception, holdCode = '', delayMs = 0, changeCode = '', refusal = 409 } = {}) {
@@ -118,10 +118,11 @@ async function open(page: Page, { locale = 'en', status = 200, as = reception, h
   });
   await page.route('**/v1/slot-holds/*', r => { calls.releases.push(r.request().url().split('/').pop()!); return r.fulfill({ status: 204 }); });
   await page.route('**/v1/patients/search', r => {
-    const body = r.request().postDataJSON() as { query: string };
+    const body = r.request().postDataJSON() as { query: string | null; page?: number };
     calls.searches.push({ body, url: r.request().url() });
-    const items = body.query?.toLowerCase().includes('nair') ? [nair] : [];
-    return r.fulfill({ json: { matchedOn: 'Name', items, page: 1, pageSize: 20, total: items.length } });
+    const everyone = body.query === null; // "Show all patients" (MDV-AUDIT-1100): 41 people, 20 to a page
+    const items = everyone || body.query?.toLowerCase().includes('nair') ? [nair] : [];
+    return r.fulfill({ json: { matchedOn: everyone ? 'Directory' : 'Name', items, page: body.page ?? 1, pageSize: 20, total: everyone ? 41 : items.length } });
   });
   await page.route('**/v1/schedule/patients/*', r =>
     r.request().url().includes(patientId) ? r.fulfill({ json: { id: patientId, fullName: 'Deepak Nair (synthetic)', mrn: '000002' } }) : r.fulfill({ status: 404, json: {} }));
@@ -288,9 +289,10 @@ test('reception books an empty slot: hold, longer visit type, confirm the patien
     `/patients/new?date=2026-10-19&view=day&calendar=d-1&start=${encodeURIComponent(ist('2026-10-19', '10:00'))}&visitType=NewConsultation`);
   await search.fill('Nair');
   await panel.getByRole('button', { name: 'Search' }).click();
-  const row = panel.getByRole('button', { name: 'D N, 47 y, Male, MRN ending 0002. Choose for this booking' });
+  const row = panel.getByRole('button', { name: 'Deepak Nair (synthetic), 47 y, Male, MRN 0002, phone 0201. Choose for this booking' });
   await expect(row).toHaveAttribute('aria-pressed', 'false');
-  await expect(panel.getByRole('list', { name: 'Patients found' })).not.toContainText('Deepak'); // initials, age, sex and MRN tail only
+  await expect(panel.getByRole('list', { name: 'Patients found' })).toContainText('Deepak Nair (synthetic)'); // MDV-AUDIT-1100: the full name, never the whole phone
+  await expect(panel.getByRole('list', { name: 'Patients found' })).not.toContainText('+91');
   await row.click();
   await expect(row).toHaveAttribute('aria-pressed', 'true');
   await expect(panel).toContainText('Deepak Nair (synthetic) · MRN 000002'); // the audited lookup confirms the chosen patient
@@ -499,7 +501,7 @@ test('keyboard books without a mouse; 44 px targets; 200% zoom never scrolls the
   await panel.getByRole('searchbox', { name: 'Name, MRN, phone or ID' }).focus();
   await page.keyboard.type('Nair');
   await page.keyboard.press('Enter');
-  const row = panel.getByRole('button', { name: /^D N, 47 y, Male/ });
+  const row = panel.getByRole('button', { name: /^Deepak Nair \(synthetic\), 47 y, Male/ });
   await row.focus();
   await page.keyboard.press('Enter');
   await expect(panel).toContainText('Deepak Nair (synthetic) · MRN 000002');
@@ -519,6 +521,41 @@ for (const locale of ['en', 'ar'])
     await expect(column(page, 'Dr. Arjun Rao (synthetic)')).toBeVisible();
     await column(page, 'Dr. Arjun Rao (synthetic)').getByRole('button').first().click();
     await expect(page.getByRole('complementary').getByRole('button').first()).toBeVisible();
+    await page.addScriptTag({ path: axePath });
+    const violations = await page.evaluate(async () =>
+      (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations
+        .map(v => `${v.id} (${v.nodes.length})`));
+    expect(violations).toEqual([]);
+  });
+
+// MDV-AUDIT-1100: results appear while typing (one search after the pause), arrows walk the rows, and "Browse all patients" lists everyone by page.
+for (const locale of ['en', 'ar'])
+  test(`the patient search lists matches while typing and shows every patient a page at a time, axe clean (${locale})`, async ({ page }) => {
+    const calls = await open(page, { locale });
+    await page.getByRole('button', { name: locale === 'en' ? 'Book Dr. Arjun Rao (synthetic) at 10:00' : 'احجز مع Dr. Arjun Rao (synthetic) الساعة 10:00' }).click();
+    const panel = page.getByRole('complementary').first();
+    await expect(panel.getByRole('searchbox')).toBeVisible();
+    const search = panel.getByRole('searchbox');
+    await search.fill('Nair'); // no Enter and no button
+    const list = panel.getByRole('list');
+    await expect(list.getByRole('button')).toHaveCount(1);
+    await expect(list).toContainText('Deepak Nair (synthetic)');
+    expect(calls.searches.map(s => s.body.query)).toEqual(['Nair']);
+    expect(calls.searches.every(s => !s.url.includes('Nair'))).toBe(true);
+
+    await search.press('ArrowDown');
+    await expect(list.getByRole('button').first()).toBeFocused();
+    await page.keyboard.press('ArrowUp');
+    await expect(search).toBeFocused();
+
+    await search.fill('');
+    await expect(list).toHaveCount(0); // clearing the box ends a typed search
+    await panel.getByRole('button', { name: locale === 'en' ? 'Browse all patients' : 'تصفّح كل المرضى' }).click();
+    const pages = panel.getByRole('navigation', { name: locale === 'en' ? 'Result pages' : 'صفحات النتائج' });
+    await expect(pages).toContainText(locale === 'en' ? 'Page 1 of 3' : /3/);
+    await pages.getByRole('button').nth(1).click(); // Next
+    await expect.poll(() => calls.searches.at(-1)!.body).toEqual({ query: null, filter: 'All', page: 2 });
+
     await page.addScriptTag({ path: axePath });
     const violations = await page.evaluate(async () =>
       (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations
@@ -892,7 +929,7 @@ test('a weekly series shows its conflict, lets the desk move it, then books the 
   const panel = page.getByRole('complementary', { name: 'Book appointment' });
   await panel.getByRole('searchbox', { name: 'Name, MRN, phone or ID' }).fill('Nair');
   await panel.getByRole('button', { name: 'Search' }).click();
-  await panel.getByRole('button', { name: 'D N, 47 y, Male, MRN ending 0002. Choose for this booking' }).click();
+  await panel.getByRole('button', { name: 'Deepak Nair (synthetic), 47 y, Male, MRN 0002, phone 0201. Choose for this booking' }).click();
   await expect(panel).toContainText('Deepak Nair (synthetic) · MRN 000002');
   await panel.locator('summary').click(); // UX-10: repeating is folded until asked
   await panel.getByLabel('Number of visits').fill('3');
@@ -927,7 +964,7 @@ async function chooseNair(page: Page) {
   const panel = page.getByRole('complementary', { name: 'Book appointment' });
   await panel.getByRole('searchbox', { name: 'Name, MRN, phone or ID' }).fill('Nair');
   await panel.getByRole('button', { name: 'Search' }).click();
-  await panel.getByRole('button', { name: 'D N, 47 y, Male, MRN ending 0002. Choose for this booking' }).click();
+  await panel.getByRole('button', { name: 'Deepak Nair (synthetic), 47 y, Male, MRN 0002, phone 0201. Choose for this booking' }).click();
   await expect(panel).toContainText('Deepak Nair (synthetic) · MRN 000002');
   return panel;
 }

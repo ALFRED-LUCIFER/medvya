@@ -1,10 +1,11 @@
+import { useRef, type KeyboardEvent } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { Link } from 'react-router';
-import { CircleAlert, CircleCheck, Hourglass, Search } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CircleAlert, CircleCheck, Hourglass, Search } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
 import { Button, buttonVariants, cn, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea } from '@medvya/ui';
 import PatientSummaryLine from '../../patients/components/PatientSummaryLine';
-import type { SearchErrorCode, SearchResult } from '../../patients/domain/directory';
+import { pageCount, type SearchErrorCode, type SearchResult } from '../../patients/domain/directory';
 import { channels, reasonCategories, visitTypes, type BookedAppointment, type BookingForm, type Hold, type PatientMatch, type SlotChoice, type SlotError } from '../domain/booking';
 import type { VisitLength, VisitType } from '../domain/schedule';
 import { localTime, weekdayOrder, type PlanRow, type SeriesDone } from '../domain/series';
@@ -27,9 +28,10 @@ type Props = {
   onChannel: (v: BookingForm['channel']) => void;
   patient: { loading: boolean; match: PatientMatch | null } | null;
   chosenPatientId: string;
-  /** Front-desk search (MDV-P1-018) to choose the patient; rows show initials, age, sex and MRN tail only. */
+  /** Front-desk search (MDV-P1-018) to choose the patient: results while typing, rows with the full name (MDV-AUDIT-1100), and "Show all patients" a page at a time. */
   patientSearch: {
     text: string; onText: (text: string) => void; onSubmit: () => void;
+    onBrowseAll: () => void; browsing: boolean; page: number; onPage: (page: number) => void; updating: boolean;
     state: 'idle' | 'loading' | 'ready' | 'invalid' | 'forbidden' | 'notFound' | 'error';
     result: SearchResult | null; errorCode: SearchErrorCode | null; onPick: (id: string) => void;
   };
@@ -257,12 +259,24 @@ type PickerProps = { search: Props['patientSearch']; chosen: string; registerPat
 export type PatientSearchView = Props['patientSearch'];
 
 /**
- * Choose the patient with front-desk search (MDV-P1-018). Rows show initials, age, sex and MRN tail only; the name and MRN
- * appear once one is chosen (an audited lookup). Inside the booking form, so Enter searches instead of submitting the booking.
+ * Choose the patient with front-desk search (MDV-P1-018, MDV-AUDIT-1100). Results appear while typing; each row shows the full name, age, sex and the
+ * last four of the MRN and phone, so two people with one name differ. "Show all patients" lists everyone a page at a time. Arrow keys move between the
+ * box and the rows. Inside the booking form, so Enter searches instead of submitting the booking.
  */
 export function PatientPicker({ search: s, chosen, registerPath, invalid }: PickerProps) {
   const { t } = useI18n();
   const hint = 'booking-patient-hint', searchError = 'booking-patient-search-error', pickError = 'booking-patient-error';
+  const results = useRef<HTMLUListElement>(null);
+  // Arrow keys walk the rows (focus moves, so a screen reader reads each one); the first Up returns to the box.
+  const walk = (e: KeyboardEvent<HTMLUListElement>) => {
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    e.preventDefault();
+    const rows = [...e.currentTarget.querySelectorAll('button')];
+    const at = rows.indexOf(document.activeElement as HTMLButtonElement);
+    if (e.key === 'ArrowDown') rows[Math.min(at + 1, rows.length - 1)]?.focus();
+    else if (at <= 0) document.getElementById('booking-patient-search')?.focus();
+    else rows[at - 1]?.focus();
+  };
   const describedBy = [invalid && pickError, s.state === 'invalid' && searchError, hint].filter(Boolean).join(' ');
   return (
     <fieldset className={field}>
@@ -272,9 +286,13 @@ export function PatientPicker({ search: s, chosen, registerPath, invalid }: Pick
         <Input id="booking-patient-search" type="search" autoComplete="off" spellCheck={false} maxLength={100} className={cn(control, 'min-w-0 flex-1')}
           placeholder={t('patients.search.label')} value={s.text} onChange={e => s.onText(e.target.value)} aria-describedby={describedBy}
           aria-invalid={invalid || s.state === 'invalid' || undefined}
-          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); s.onSubmit(); } }} />
+          onKeyDown={e => {
+            if (e.key === 'Enter') { e.preventDefault(); s.onSubmit(); }
+            if (e.key === 'ArrowDown') { e.preventDefault(); results.current?.querySelector('button')?.focus(); }
+          }} />
         <Button type="button" variant="outline" onClick={s.onSubmit}><Search aria-hidden />{t('patients.search.submit')}</Button>
       </div>
+      <Button type="button" variant="link" className="self-start px-0" aria-pressed={s.browsing} onClick={s.onBrowseAll}>{t('patients.search.browseAll')}</Button>
       <p id={hint} className="text-xs text-muted-foreground">{t('patients.search.hint')}</p>
       {s.state === 'invalid' && (
         <p id={searchError} className="flex items-center gap-1.5 text-sm font-semibold text-danger-700">
@@ -287,12 +305,14 @@ export function PatientPicker({ search: s, chosen, registerPath, invalid }: Pick
         {(s.state === 'error' || s.state === 'notFound') && <p className="text-sm font-bold text-destructive">{t('patients.error.title')}</p>}
         {s.state === 'forbidden' && <p className="text-sm font-bold text-destructive">{t('patients.forbidden.body')}</p>}
         {s.state === 'ready' && s.result?.items.length === 0 && <p className="text-sm font-bold">{t('patients.empty')}</p>}
+        {s.state === 'ready' && s.result && s.result.items.length > 0 && <p className="text-xs text-muted-foreground">{t('patients.search.count', { n: s.result.total })}</p>}
       </div>
       {s.state === 'ready' && s.result && s.result.items.length > 0 && (
-        <ul aria-label={t('booking.patientResults')} className="flex max-h-64 flex-col divide-y overflow-y-auto rounded-md border">
+        <ul ref={results} onKeyDown={walk} aria-label={t('booking.patientResults')} aria-busy={s.updating || undefined}
+          className={cn('flex max-h-64 flex-col divide-y overflow-y-auto rounded-md border', s.updating && 'opacity-60')}>
           {s.result.items.map(row => {
             const age = t(row.ageEstimated ? 'patients.ageEstimated' : 'patients.age', { age: row.ageYears });
-            const label = t('booking.patientPick', { initials: row.initials.split('').join(' '), age, sex: t(`patients.sex.${row.sexAtBirth}`), mrn: row.mrnTail }) + (row.status === 'Incomplete' ? t('patients.row.incomplete') : '');
+            const label = t('booking.patientPick', { name: row.fullName, age, sex: t(`patients.sex.${row.sexAtBirth}`), mrn: row.mrnTail, phone: row.mobileTail, state: row.status === 'Incomplete' ? t('patients.row.incomplete') : '' });
             return (
               <li key={row.id}>
                 <button type="button" aria-pressed={chosen === row.id} aria-label={label} onClick={() => s.onPick(row.id)}
@@ -304,6 +324,17 @@ export function PatientPicker({ search: s, chosen, registerPath, invalid }: Pick
             );
           })}
         </ul>
+      )}
+      {s.state === 'ready' && s.result && pageCount(s.result) > 1 && (
+        <nav aria-label={t('patients.pagination')} className="flex items-center justify-between gap-2">
+          <Button type="button" variant="outline" disabled={s.page <= 1 || s.updating} onClick={() => s.onPage(s.page - 1)}>
+            <ChevronLeft className="rtl:rotate-180" aria-hidden />{t('patients.page.previous')}
+          </Button>
+          <p className="text-sm font-semibold">{t('patients.page', { page: s.result.page, pages: pageCount(s.result) })}</p>
+          <Button type="button" variant="outline" disabled={s.page >= pageCount(s.result) || s.updating} onClick={() => s.onPage(s.page + 1)}>
+            {t('patients.page.next')}<ChevronRight className="rtl:rotate-180" aria-hidden />
+          </Button>
+        </nav>
       )}
       {/* The link carries the slot: registration brings the desk back here with the new patient chosen. */}
       {registerPath && (

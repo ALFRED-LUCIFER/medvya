@@ -8,12 +8,12 @@ export type PayerKind = 'SelfPay' | 'Corporate' | 'PrivateInsurance' | 'Governme
 
 /** Directory table columns; the label of each is the i18n key `patients.col.<key>`.
  * shortcut: no column sort, since the server pages results by match relevance; add server-side sort if desks ask to order the whole list. */
-export const directoryColumns = ['patient', 'age', 'sex', 'mrn', 'status'] as const;
+export const directoryColumns = ['patient', 'age', 'sex', 'mrn', 'phone', 'status'] as const;
 export type DirectoryColumn = (typeof directoryColumns)[number];
 
-/** A privacy-safe result row: initials, age, sex and the MRN tail only, until the record is opened (audited). */
+/** A result row for staff who register and book (MDV-AUDIT-1100): the full name tells two people apart; the phone and MRN show their last four only. The rest needs the record opened (audited). */
 export type PatientSummary = {
-  id: string; initials: string; ageYears: number; ageEstimated: boolean; sexAtBirth: SexAtBirth; mrnTail: string; status: RegistrationStatus;
+  id: string; initials: string; fullName: string; ageYears: number; ageEstimated: boolean; sexAtBirth: SexAtBirth; mrnTail: string; mobileTail: string; status: RegistrationStatus;
 };
 
 export type SearchResult = { matchedOn: SearchKind; items: PatientSummary[]; page: number; pageSize: number; total: number };
@@ -63,6 +63,10 @@ export const asSearchError = (code: string | undefined): SearchErrorCode | null 
 
 /** Blank search = the directory list. The server applies the same trim and a 100-character limit. */
 export const toQuery = (text: string): string | null => (text.trim() === '' ? null : text.trim());
+
+/** Type-ahead in a picker (MDV-AUDIT-1100): the search runs this long after the last key, and only from this many characters; each search is audited and rate-limited. */
+export const typeaheadDelayMs = 350;
+export const typeaheadMinChars = 2;
 
 export const pageCount = (r: Pick<SearchResult, 'total' | 'pageSize'>) => Math.max(1, Math.ceil(r.total / r.pageSize));
 

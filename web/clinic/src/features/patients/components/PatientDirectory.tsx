@@ -134,8 +134,9 @@ function Row({ row, to }: { row: PatientSummary; to: string }) {
         {/* The link's name reads the whole row, so the record opens from the first cell. */}
         <Link to={to} className="flex min-h-11 items-center gap-2 px-3 py-1.5 hover:underline focus-visible:outline-offset-[-2px]">
           <span aria-hidden className="grid size-8 shrink-0 place-items-center rounded-full bg-muted font-extrabold text-brand-700">{row.initials}</span>
+          <span aria-hidden className="font-bold">{row.fullName}</span>
           <span className="sr-only">
-            {t('patients.row.label', { initials: row.initials.split('').join(' '), age, sex, mrn: row.mrnTail })}
+            {t('patients.row.label', { name: row.fullName, age, sex, mrn: row.mrnTail, phone: row.mobileTail })}
             {incomplete && t('patients.row.incomplete')}
           </span>
         </Link>
@@ -143,6 +144,7 @@ function Row({ row, to }: { row: PatientSummary; to: string }) {
       <TableCell>{age}</TableCell>
       <TableCell>{sex}</TableCell>
       <TableCell className="font-mono"><bdi dir="ltr">{t('patients.mrnTail', { mrn: row.mrnTail })}</bdi></TableCell>
+      <TableCell className="font-mono"><bdi dir="ltr">{t('patients.mobileTail', { phone: row.mobileTail })}</bdi></TableCell>
       <TableCell>
         {incomplete && (
           <span className="inline-flex items-center gap-1 rounded-sm border bg-card px-2 py-1 text-xs font-bold text-warning-700">

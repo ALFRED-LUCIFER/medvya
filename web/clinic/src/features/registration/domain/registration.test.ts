@@ -242,11 +242,15 @@ describe('consents (MDV-P1-019)', () => {
     const set = toRegisterRequest({ ...deepak, consentWhatsApp: true }, 'IN', false, null).consents;
     expect(set.policyVersion).toBe(consentPolicyVersion);
     expect(set.decisions.map(d => `${d.type}${d.channel ? `/${d.channel}` : ''}=${d.granted}`)).toEqual([
-      'Treatment=true', 'Reminders/WhatsApp=true', 'Reminders/Sms=false', 'Reminders/Email=false', 'InformationExchange=false', 'Portal=true', 'Marketing=false']);
+      'Treatment=true', 'Reminders/WhatsApp=true', 'Reminders/Sms=true', 'Reminders/Email=false', 'InformationExchange=false', 'Portal=true', 'Marketing=false']);
   });
 
   it('asks only for treatment in quick mode, and marketing starts off', () => {
     expect(toRegisterRequest(deepak, 'IN', true, null).consents.decisions).toEqual([{ type: 'Treatment', channel: null, granted: true }]);
     expect(emptyForm.consentMarketing).toBe(false);
+  });
+
+  it('starts with SMS reminders on and every other reminder channel off (MDV-AUDIT-1106)', () => {
+    expect([emptyForm.consentSms, emptyForm.consentEmail, emptyForm.consentWhatsApp]).toEqual([true, false, false]);
   });
 });

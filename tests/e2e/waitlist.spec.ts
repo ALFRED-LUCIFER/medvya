@@ -42,7 +42,7 @@ async function desk(page: Page, { locale = 'en', as = reception }: { locale?: st
   }));
   await page.route('**/v1/schedule/patients/p-3?*', r => r.fulfill({ json: { id: 'p-3', fullName: 'Arjun Nair (synthetic)', mrn: '000003' } }));
   await page.route('**/v1/patients/search**', r => r.fulfill({ json: { matchedOn: 'Name', page: 1, pageSize: 20, total: 1,
-    items: [{ id: 'p-3', initials: 'AN', ageYears: 36, ageEstimated: false, sexAtBirth: 'Male', mrnTail: '0003', status: 'Complete' }] } }));
+    items: [{ id: 'p-3', initials: 'AN', fullName: 'Arjun Nair (synthetic)', ageYears: 36, ageEstimated: false, sexAtBirth: 'Male', mrnTail: '0003', mobileTail: '0003', status: 'Complete' }] } }));
   await page.route('**/v1/waitlist?*', r => r.fulfill({ json: list() }));
   await page.route('**/v1/waitlist', r => {
     calls.adds.push(r.request());
@@ -111,7 +111,7 @@ test('adding a patient sends preferences as ids, days and times, never in the UR
   await page.goto('/front-desk/waitlist');
   await page.getByRole('searchbox', { name: 'Name, MRN, phone or ID' }).fill('Arjun');
   await page.getByRole('button', { name: 'Search' }).click();
-  await page.getByRole('button', { name: /A N/ }).click();
+  await page.getByRole('button', { name: /Arjun Nair/ }).click();
   await expect(page.getByText('Patient: Arjun Nair (synthetic) · MRN 000003')).toBeVisible();
   await page.getByRole('checkbox', { name: 'Tuesday' }).check();
   await page.getByLabel('Earliest start').fill('17:00');

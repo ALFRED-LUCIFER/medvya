@@ -77,9 +77,9 @@ test('the access log starts on patient records and widens to any action on reque
   await expect.poll(() => urls.at(-1)).not.toContain('patientRecords');
 });
 
-test('choosing a patient asks the per-patient route and shows the name only then', async ({ page }) => {
+test('choosing a patient asks the per-patient route', async ({ page }) => {
   await setUp(page);
-  await page.route('**/v1/patients/search', r => r.fulfill({ json: { matchedOn: 'Name', page: 1, pageSize: 20, total: 1, items: [{ id: 'p-1', initials: 'MI', ageYears: 54, ageEstimated: false, sexAtBirth: 'Female', mrnTail: '0001', status: 'Complete' }] } }));
+  await page.route('**/v1/patients/search', r => r.fulfill({ json: { matchedOn: 'Name', page: 1, pageSize: 20, total: 1, items: [{ id: 'p-1', initials: 'MI', fullName: 'Meera Iyer (synthetic)', ageYears: 54, ageEstimated: false, sexAtBirth: 'Female', mrnTail: '0001', mobileTail: '0101', status: 'Complete' }] } }));
   const paths: string[] = [];
   await page.route('**/v1/audit/access-log**', r => {
     paths.push(new URL(r.request().url()).pathname);
@@ -88,7 +88,7 @@ test('choosing a patient asks the per-patient route and shows the name only then
   await page.goto('/settings?tab=audit');
   await page.getByPlaceholder('Name, MRN, phone or ID').fill('Meera');
   await page.getByRole('button', { name: 'Search', exact: true }).click();
-  await page.getByRole('button', { name: /M I/ }).click();
+  await page.getByRole('button', { name: /Meera Iyer/ }).click();
   await expect(page.getByText('Showing events on the record of Meera Iyer (synthetic)')).toBeVisible();
   expect(paths.at(-1)).toBe('/v1/audit/access-log/patients/p-1');
   await page.getByRole('button', { name: 'Show all patients' }).click();

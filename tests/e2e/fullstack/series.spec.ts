@@ -47,6 +47,7 @@ test('a weekly series: the review shows the conflict, the desk moves it, four vi
     await page.goto('/app/schedule');
     await slot(page, time).click();
     const panel = await choosePatient(page, patient.mobile, /^K P, \d+ y, Female/);
+    await panel.locator('summary').click(); // UX-10: repeating is folded until asked
     await panel.getByLabel('Number of visits').fill('4');
     await panel.getByRole('button', { name: 'Review series' }).click();
     const rows = panel.getByRole('listitem');
@@ -118,6 +119,7 @@ test('a weekly series: the review shows the conflict, the desk moves it, four vi
       await panel.getByRole('searchbox').fill(patient.mobile);
       await panel.getByRole('searchbox').press('Enter');
       await panel.getByRole('list').last().getByRole('button').click();
+      await panel.locator('summary').click(); // UX-10: repeating is folded until asked
       await panel.locator('#booking-repeat').fill('2');
       await panel.locator('button[type=submit]').click();
       await expect(panel.getByRole('checkbox')).toHaveCount(2);

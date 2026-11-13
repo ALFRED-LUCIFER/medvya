@@ -71,6 +71,7 @@ export const printView = () => ({
     { discontinue: true, medicine: 'Atorvastatin', strength: null, form: null, printRequirements: [], reason: 'Muscle pain (synthetic)', sig: { en: 'Stop this medicine.' } },
   ],
   verifyUrl: 'https://clinic.test/app/verify/rx/synthetic-token', qr, layoutVersion: 1,
+  patientAge: 53, diagnoses: [{ description: 'Type 2 diabetes (synthetic)', provisional: false }], followUpOn: '2026-11-02',
 });
 
 type AuthState = { authorised: ReturnType<typeof authorised> | null; changed: boolean };

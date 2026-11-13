@@ -18,7 +18,7 @@ export type RxPrint = {
   authorisation: RxAuthorisation; clinic: string; timeZone: string; doctor: string; qualifications: string | null; licenceNumber: string; licenceAuthority: string;
   patient: { fullName: string; mrn: string; dateOfBirth: string; sexAtBirth: 'Female' | 'Male' | 'Other' };
   allergies: 'NotRecorded' | 'NoKnownAllergies' | 'Listed'; allergySubstances: string[]; lines: RxPrintLine[]; verifyUrl: string; qr: string[]; layoutVersion: number;
-  advice: RxAdvice | null;
+  advice: RxAdvice | null; patientAge: number; diagnoses: { description: string; provisional: boolean }[]; followUpOn: string | null;
 };
 /** The advice for the patient (MDV-P2-043). `inPatientLanguage` false: it prints in English with a note (no reviewed translation exists). */
 export type RxAdvice = { text: string | null; patientLanguage: string | null; inPatientLanguage: boolean };
@@ -30,7 +30,7 @@ export type RxLayout = { layoutVersion: number; approvedAt: string | null };
 /** The public QR check of an investigation slip or referral letter (MDV-P2-018/019): what it is, when and from whom, how many items; never whose. */
 export type PaperVerify = { kind: 'InvestigationSlip' | 'ReferralLetter'; issuedAt: string; timeZone: string; clinic: string; doctor: string; items: number };
 
-export type RxVerify = { status: 'Valid' | 'Replaced' | 'Cancelled'; number: string; versionNo: number; authorisedAt: string; timeZone: string; clinic: string; doctor: string; lines: number };
+export type RxVerify = { status: 'Valid' | 'Replaced' | 'Cancelled'; number: string; versionNo: number; authorisedAt: string; timeZone: string; clinic: string; doctor: string; lines: number; contentHash: string };
 
 export type AuthoriseProblem = 'reauth' | 'unresolved_alerts' | 'nothing_to_authorise' | 'no_instructions' | 'no_licence' | 'failed';
 const known: readonly string[] = ['unresolved_alerts', 'nothing_to_authorise', 'no_instructions', 'no_licence'];

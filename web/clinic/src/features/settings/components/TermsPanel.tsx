@@ -7,7 +7,7 @@ import { Section } from './Section';
 
 type Props = { terms: TermsStatus | null; loading: boolean; loadFailed: boolean; accepting: boolean; notOwner: boolean; acceptFailed: boolean; onAccept: () => void };
 
-/** Terms of Service and DPA (MDV-P1-019): the owner accepts once; until then booking and messages are refused by the server. */
+/** Terms of Service and DPA (MDV-P1-019): the owner accepts once; while acceptance is required and missing, booking and messages are refused by the server. */
 export default function TermsPanel(p: Props) {
   const { t, formatDate } = useI18n();
   if (p.loading) return <p role="status">{t('settings.loading')}</p>;
@@ -26,7 +26,10 @@ export default function TermsPanel(p: Props) {
         <p role="status" className="flex items-center gap-2 font-bold"><CircleCheck aria-hidden className="size-5" />{t('settings.terms.accepted', { date: formatDate(new Date(terms.acceptedAt)) })}</p>
       ) : (
         <>
-          <p className="flex items-center gap-2 font-bold"><TriangleAlert aria-hidden className="size-5 text-warning-700" />{t('settings.terms.pending')}</p>
+          {/* The server's own answer: the gate refuses booking only while acceptance is required (TermsAcceptances.Required). */}
+          {terms.required
+            ? <p className="flex items-center gap-2 font-bold"><TriangleAlert aria-hidden className="size-5 text-warning-700" />{t('settings.terms.pending')}</p>
+            : <p className="font-bold">{t('settings.terms.notRequired')}</p>}
           <Button className="self-start" loading={p.accepting} onClick={p.onAccept}>{t('settings.terms.accept')}</Button>
           {p.notOwner && <p role="alert" className={fieldError}>{t('settings.terms.notOwner')}</p>}
           {p.acceptFailed && <p role="alert" className={fieldError}>{t('settings.terms.failed')}</p>}

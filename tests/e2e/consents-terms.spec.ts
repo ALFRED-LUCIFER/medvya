@@ -90,6 +90,30 @@ for (const locale of ['en', 'ar'])
     expect(await axe(page)).toEqual([]);
   });
 
+// MDV-P2-055 AC2: the status line says what the server's gate does. Paused only while acceptance is required (the gate then refuses
+// booking: TermsAcceptanceTests); where the server does not require it (Development), the line never says booking is paused.
+for (const [locale, paused, notPaused] of [
+  ['en', 'Booking and messages are paused until the owner accepts.', 'This environment does not require acceptance, so booking and messages are not paused.'],
+  ['ar', 'الحجز والرسائل متوقفان إلى أن يوافق المالك.', 'هذه البيئة لا تشترط الموافقة، لذلك الحجز والرسائل غير متوقفين.'],
+] as const)
+  test(`the terms status line follows the server's requirement, axe clean (${locale})`, async ({ page }) => {
+    let required = true;
+    await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
+    await page.route('**/v1/me/context', r => r.fulfill({ json: context('PracticeAdmin', { StaffRolesIntegrations: 'Config' }) }));
+    await page.route('**/v1/settings/terms', r => r.fulfill({ json: { version: '2026-11-draft-2', accepted: false, acceptedAt: null, required } }));
+    await page.goto('/settings?tab=terms');
+    const panel = page.getByRole('main');
+    await expect(panel.getByText(paused)).toBeVisible();
+    await expect(panel.getByText(notPaused)).toHaveCount(0);
+
+    required = false;
+    await page.reload();
+    await expect(panel.getByText(notPaused)).toBeVisible();
+    await expect(panel.getByText(paused)).toHaveCount(0);
+    await expect(page.getByRole('note')).toHaveCount(0); // the owner's banner says paused only when required, as before
+    expect(await axe(page)).toEqual([]);
+  });
+
 test('a non-owner who tries to accept is told only the owner can', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('medvya.locale', 'en'));
   await page.route('**/v1/me/context', r => r.fulfill({ json: context('HospitalIt', { StaffRolesIntegrations: 'Config' }) }));

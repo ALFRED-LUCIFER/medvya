@@ -21,25 +21,10 @@ const localComponent = name => ({
   count: matches(new RegExp(`\\b(?:function|const)\\s+${name}\\b`, 'g')),
 });
 
-// The text of the JSX opening tag that starts at `from`: it ends at the first '>' outside {…}, so `() => x` in a prop does not end it.
-function openingTag(text, from) {
-  let depth = 0;
-  for (let i = from; i < text.length; i++) {
-    if (text[i] === '{') depth++;
-    else if (text[i] === '}') depth--;
-    else if (text[i] === '>' && depth === 0) return text.slice(from, i);
-  }
-  return text.slice(from);
-}
 const HEX = /["'[]#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})["'\]]/g;
 
 export const RULES = {
-  // The library control is 44 px by default; a call site must not patch its height (falls in MDV-P1-077, MDV-P1-078).
-  heightPatch: {
-    in: inApps,
-    count: text => [...text.matchAll(/<(?:Input|SelectTrigger|Textarea|Button)\b/g)]
-      .filter(m => /(?<![\w-])(?:min-)?h-11(?![\w-])/.test(openingTag(text, m.index))).length,
-  },
+  // A height patch on a library control reached zero in MDV-P1-078; oxlint's medvya-ui/no-height-patch rule now fails it (tools/oxlint-plugin).
   // Type sizes come from the scale. The queue display and the print pages are read from a distance or on paper (MDV-P2-057).
   arbitraryFontSize: {
     in: f => inApps(f) && !/\/queue-tv\/|PrintPage\.tsx$/.test(f),
@@ -98,15 +83,11 @@ function selfTest() {
   const sample = `
     function Message() { return <h1 className="text-[13px] sm:grid-cols-2">x</h1>; }
     const Empty = () => <div className="rounded-xl border bg-card bg-[#E7F6F4]" style={{ color: '#fff' }} />;
-    <Input onChange={e => set(e.target.value)} className="min-h-11" />
-    <Button
-      onClick={() => go()}
-      className="h-11 w-full">go</Button>
-    <Button className="max-h-11" /> <div className="h-11" /> <Input />`;
+    <div className="sm:grid-cols-3" />`;
   const at = files => measure(files);
   const base = at([[page, sample]]);
   const totals = Object.fromEntries(Object.entries(base).map(([k, v]) => [k, total(v)]));
-  assert(JSON.stringify(totals) === JSON.stringify({ heightPatch: 2, arbitraryFontSize: 1, rawHexLibrary: 0, rawHexApps: 2, smGridCols: 1, rawH1: 1, inlineCard: 1, localMessage: 1, localField: 0, localCard: 0, localEmpty: 1 }), `a rule's pattern changed: ${JSON.stringify(totals)}`);
+  assert(JSON.stringify(totals) === JSON.stringify({ arbitraryFontSize: 1, rawHexLibrary: 0, rawHexApps: 2, smGridCols: 2, rawH1: 1, inlineCard: 1, localMessage: 1, localField: 0, localCard: 0, localEmpty: 1 }), `a rule's pattern changed: ${JSON.stringify(totals)}`);
 
   // Scope: tests and other folders are not counted; the library counts hex only; the queue display may size its own text.
   assert(total(at([['web/clinic/src/app/App.tsx', sample]]).rawH1) === 0, 'clinic app/ is outside the scope');
@@ -121,9 +102,9 @@ function selfTest() {
   const other = 'web/clinic/src/features/y/components/New.tsx';
   const more = compare(base, at([[page, sample], [other, 'function Message() {}']]));
   assert(more.rose.length === 1 && more.rose[0].startsWith(`localMessage: ${other} has 1, baseline 0`), 'one extra local Message fails and names the file');
-  const patched = compare(base, at([[page, sample + '<Input className="h-11" />']]));
-  assert(patched.rose.length === 1 && patched.rose[0].startsWith(`heightPatch: ${page} has 3, baseline 2`), 'one extra h-11 patch fails and names the file');
-  const lowered = at([[page, sample.replace('min-h-11', '')]]);
+  const patched = compare(base, at([[page, sample + '<div className="sm:grid-cols-4" />']]));
+  assert(patched.rose.length === 1 && patched.rose[0].startsWith(`smGridCols: ${page} has 3, baseline 2`), 'one extra sm:grid-cols fails and names the file');
+  const lowered = at([[page, sample.replace('sm:grid-cols-3', '')]]);
   const fewer = compare(base, lowered);
   assert(fewer.rose.length === 0 && fewer.stale, 'after a fall nothing rose, but the baseline must be lowered');
   assert(compare(lowered, base).rose.length === 1, 'once the baseline is lowered the old number fails');

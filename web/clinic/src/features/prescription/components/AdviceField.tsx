@@ -29,7 +29,7 @@ export default function AdviceField(p: Props) {
       </p>
       {!p.ended && (
         <div className="flex flex-wrap items-center gap-3">
-          <Button type="submit" variant="outline" className="min-h-11" loading={p.saving}>{t('plan.advice.save')}</Button>
+          <Button type="submit" variant="outline" loading={p.saving}>{t('plan.advice.save')}</Button>
           {p.saved && <p role="status" className="inline-flex items-center gap-1.5 text-sm font-bold"><CircleCheck aria-hidden className="size-4" />{t('plan.advice.saved')}</p>}
         </div>
       )}

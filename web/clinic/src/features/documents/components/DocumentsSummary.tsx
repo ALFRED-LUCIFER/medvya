@@ -32,7 +32,7 @@ export default function DocumentsSummary(p: Props) {
               </li>))}
           </ul>
         )}
-      <Link to={p.documentsPath} className={buttonVariants({ variant: 'outline', className: 'min-h-11 self-start' })}>{t('documents.openAll')}</Link>
+      <Link to={p.documentsPath} className={buttonVariants({ variant: 'outline', className: 'self-start' })}>{t('documents.openAll')}</Link>
     </section>
   );
 }

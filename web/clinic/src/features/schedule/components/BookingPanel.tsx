@@ -67,7 +67,6 @@ type Props = {
 };
 
 const field = 'flex flex-col gap-1.5';
-const control = 'h-11 w-full';
 
 /** P-04 booking panel: confirm the patient, visit type, nonclinical reason category and channel for the held slot. */
 export default function BookingPanel(p: Props) {
@@ -133,11 +132,11 @@ export default function BookingPanel(p: Props) {
                   <>
                     <div className="flex flex-col gap-1">
                       <Label htmlFor={`series-move-day-${i}`} className="text-xs">{t('series.row.moveToDay')}</Label>
-                      <Input id={`series-move-day-${i}`} type="date" className="h-11 w-44" defaultValue={localDate(row.start, p.timeZone)} onBlur={e => { if (e.target.value && e.target.value !== localDate(row.start, p.timeZone)) p.onMoveOccurrence(i, { date: e.target.value }); }} />
+                      <Input id={`series-move-day-${i}`} type="date" className="w-44" defaultValue={localDate(row.start, p.timeZone)} onBlur={e => { if (e.target.value && e.target.value !== localDate(row.start, p.timeZone)) p.onMoveOccurrence(i, { date: e.target.value }); }} />
                     </div>
                     <div className="flex flex-col gap-1">
                       <Label htmlFor={`series-move-${i}`} className="text-xs">{t('series.row.moveTo')}</Label>
-                      <Input id={`series-move-${i}`} type="time" className="h-11 w-32" step={300} defaultValue={localTime(row.start, p.timeZone)} onBlur={e => { if (e.target.value && e.target.value !== localTime(row.start, p.timeZone)) p.onMoveOccurrence(i, { time: e.target.value }); }} />
+                      <Input id={`series-move-${i}`} type="time" className="w-32" step={300} defaultValue={localTime(row.start, p.timeZone)} onBlur={e => { if (e.target.value && e.target.value !== localTime(row.start, p.timeZone)) p.onMoveOccurrence(i, { time: e.target.value }); }} />
                     </div>
                   </>
                 )}
@@ -170,7 +169,7 @@ export default function BookingPanel(p: Props) {
         <div className={field}>
           <Label htmlFor="booking-visit-type">{t('booking.visitType')}</Label>
           <Select value={p.choice.visitType} onValueChange={v => p.onVisitType(v as VisitType)}>
-            <SelectTrigger id="booking-visit-type" className={control}><SelectValue /></SelectTrigger>
+            <SelectTrigger id="booking-visit-type" className="w-full"><SelectValue /></SelectTrigger>
             <SelectContent>
               {visitTypes.map(v => (
                 <SelectItem key={v} value={v}>{t('booking.visitTypeLength', { type: t(`visitType.${v}`), minutes: lengthOf(v) ?? 0 })}</SelectItem>
@@ -189,7 +188,7 @@ export default function BookingPanel(p: Props) {
         <div className={field}>
           <Label htmlFor="booking-reason">{t('booking.reasonCategory')}</Label>
           <Select value={p.reasonCategory} onValueChange={v => p.onReasonCategory(v as BookingForm['reasonCategory'])}>
-            <SelectTrigger id="booking-reason" className={control}><SelectValue /></SelectTrigger>
+            <SelectTrigger id="booking-reason" className="w-full"><SelectValue /></SelectTrigger>
             <SelectContent>{reasonCategories.map(r => <SelectItem key={r} value={r}>{t(`reasonCategory.${r}`)}</SelectItem>)}</SelectContent>
           </Select>
         </div>
@@ -205,7 +204,7 @@ export default function BookingPanel(p: Props) {
         <div className={field}>
           <Label htmlFor="booking-channel">{t('booking.channel')}</Label>
           <Select value={p.channel} onValueChange={v => p.onChannel(v as BookingForm['channel'])}>
-            <SelectTrigger id="booking-channel" className={control}><SelectValue /></SelectTrigger>
+            <SelectTrigger id="booking-channel" className="w-full"><SelectValue /></SelectTrigger>
             <SelectContent>{channels.map(c => <SelectItem key={c} value={c}>{t(`channel.${c}`)}</SelectItem>)}</SelectContent>
           </Select>
         </div>
@@ -217,7 +216,7 @@ export default function BookingPanel(p: Props) {
             <div className={field}>
               <Label htmlFor="booking-unit">{t('series.unit')}</Label>
               <Select value={p.unit} onValueChange={v => p.onUnit(v as Props['unit'])}>
-                <SelectTrigger id="booking-unit" className={control}><SelectValue /></SelectTrigger>
+                <SelectTrigger id="booking-unit" className="w-full"><SelectValue /></SelectTrigger>
                 <SelectContent>{(['weekly', 'monthly', 'weekdays'] as const).map(u => <SelectItem key={u} value={u}>{t(`series.unit.${u}`)}</SelectItem>)}</SelectContent>
               </Select>
             </div>
@@ -238,7 +237,7 @@ export default function BookingPanel(p: Props) {
 
             <div className={field}>
               <Label htmlFor="booking-repeat">{t('series.repeat')}</Label>
-              <Input id="booking-repeat" type="number" inputMode="numeric" min={1} max={p.maxRepeat} className={cn(control, 'w-28')} value={p.repeat}
+              <Input id="booking-repeat" type="number" inputMode="numeric" min={1} max={p.maxRepeat} className="w-28" value={p.repeat}
                 aria-describedby="booking-repeat-hint" onChange={e => p.onRepeat(e.target.valueAsNumber)} />
               <p id="booking-repeat-hint" className="text-xs text-muted-foreground">{t('series.repeatHint', { max: p.maxRepeat })}</p>
             </div>
@@ -283,7 +282,7 @@ export function PatientPicker({ search: s, chosen, registerPath, invalid }: Pick
       <legend className="mb-1.5 text-sm font-medium">{t('booking.patient')}</legend>
       <Label htmlFor="booking-patient-search" className="sr-only">{t('patients.search.label')}</Label>
       <div className="flex gap-2">
-        <Input id="booking-patient-search" type="search" autoComplete="off" spellCheck={false} maxLength={100} className={cn(control, 'min-w-0 flex-1')}
+        <Input id="booking-patient-search" type="search" autoComplete="off" spellCheck={false} maxLength={100} className="w-full min-w-0 flex-1"
           placeholder={t('patients.search.label')} value={s.text} onChange={e => s.onText(e.target.value)} aria-describedby={describedBy}
           aria-invalid={invalid || s.state === 'invalid' || undefined}
           onKeyDown={e => {

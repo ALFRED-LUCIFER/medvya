@@ -35,8 +35,7 @@ export default function GlobalSearch(p: Props) {
         <DialogTitle>{t('patients.search.open')}</DialogTitle>
         <DialogDescription id="gs-description">{t('globalSearch.description')}</DialogDescription>
         <Input role="combobox" aria-expanded={p.rows.length > 0} aria-controls="gs-list" aria-autocomplete="list" autoComplete="off" autoFocus
-          aria-activedescendant={p.active >= 0 ? `gs-row-${p.active}` : undefined} aria-label={t('globalSearch.input')} placeholder={t('globalSearch.input')}
-          className="min-h-11" value={p.text} onChange={e => p.onText(e.target.value)} onKeyDown={p.onKeyDown} />
+          aria-activedescendant={p.active >= 0 ? `gs-row-${p.active}` : undefined} aria-label={t('globalSearch.input')} placeholder={t('globalSearch.input')} value={p.text} onChange={e => p.onText(e.target.value)} onKeyDown={p.onKeyDown} />
         <p role="status" className="text-sm text-muted-foreground">
           {p.status === 'found' ? t('globalSearch.status.found', { count: p.total }) : t(`globalSearch.status.${p.status}`)}
         </p>
@@ -74,19 +73,19 @@ function Actions(p: Props & { row: LookupRow }) {
     <div role="group" aria-label={t('globalSearch.actions')} className="flex flex-col gap-2">
       {row.access === 'Open' && (
         <div className="flex flex-wrap gap-2">
-          <Button variant="default" className="min-h-11" onClick={() => p.onOpenChart(row)}>{t('globalSearch.openChart')}</Button>
-          {p.startVisitPath && <Link to={`${p.startVisitPath}?patient=${row.id}`} onClick={p.onClose} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t('globalSearch.startVisit')}</Link>}
-          {p.bookPath && <Link to={`${p.bookPath}?patient=${row.id}`} onClick={p.onClose} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t('globalSearch.book')}</Link>}
+          <Button variant="default" onClick={() => p.onOpenChart(row)}>{t('globalSearch.openChart')}</Button>
+          {p.startVisitPath && <Link to={`${p.startVisitPath}?patient=${row.id}`} onClick={p.onClose} className={buttonVariants({ variant: 'outline' })}>{t('globalSearch.startVisit')}</Link>}
+          {p.bookPath && <Link to={`${p.bookPath}?patient=${row.id}`} onClick={p.onClose} className={buttonVariants({ variant: 'outline' })}>{t('globalSearch.book')}</Link>}
         </div>
       )}
       {row.access === 'CanRequest' && (
         <div role="alert" className="flex flex-col gap-2 rounded-md border p-2 text-sm">
           <p className="font-bold">{t('consult.refused.ask')}</p>
           <Select value={p.reason} onValueChange={v => p.onReason(v as AccessReason)}>
-            <SelectTrigger className="h-11 w-full" aria-label={t('consult.refused.reason')}><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-full" aria-label={t('consult.refused.reason')}><SelectValue /></SelectTrigger>
             <SelectContent>{accessReasons.map(r => <SelectItem key={r} value={r}>{t(`clinicalAccess.reason.${r}`)}</SelectItem>)}</SelectContent>
           </Select>
-          <Button className="min-h-11 whitespace-normal" loading={p.asking} onClick={() => p.onRequestAccess(row)}>{t('state.noAccess.cta')}</Button>
+          <Button className="whitespace-normal" loading={p.asking} onClick={() => p.onRequestAccess(row)}>{t('state.noAccess.cta')}</Button>
           {p.askFailed && <p className="font-bold text-danger-700">{t('consult.failed')}</p>}
         </div>
       )}

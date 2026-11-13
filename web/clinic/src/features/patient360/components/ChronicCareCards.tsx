@@ -85,17 +85,17 @@ function Targets(p: Props) {
               {p.canDecide && (p.editing === x.code ? (
                 <form noValidate onSubmit={p.onSubmitTarget} aria-label={t('chronicCare.target.form', { measure })} className="flex flex-col gap-2">
                   <Field id={`target-${x.code}`} label={t('chronicCare.target.limitLabel', { measure, unit: x.unit })} error={message(p.targetForm.formState.errors.limit?.message)}>
-                    <Input id={`target-${x.code}`} inputMode="decimal" dir="ltr" autoComplete="off" className="h-11"
+                    <Input id={`target-${x.code}`} inputMode="decimal" dir="ltr" autoComplete="off"
                       {...describedBy(`target-${x.code}`, !!p.targetForm.formState.errors.limit)} {...p.targetForm.register('limit')} />
                   </Field>
                   {p.targetFailed && <p role="alert" className={fieldError}>{t('chronicCare.target.failed')}</p>}
                   <div className="flex flex-wrap gap-2">
-                    <Button type="submit" className="min-h-11" loading={p.savingTarget}>{t('chronicCare.target.save')}</Button>
-                    <Button type="button" variant="outline" className="min-h-11" onClick={p.onCancelTarget}>{t('chronicCare.cancel')}</Button>
+                    <Button type="submit" loading={p.savingTarget}>{t('chronicCare.target.save')}</Button>
+                    <Button type="button" variant="outline" onClick={p.onCancelTarget}>{t('chronicCare.cancel')}</Button>
                   </div>
                 </form>
               ) : (
-                <div><Button variant="outline" className="min-h-11" aria-label={t('chronicCare.target.changeFor', { measure })} onClick={() => p.onEditTarget(x.code, x.limit)}>{t('chronicCare.target.change')}</Button></div>
+                <div><Button variant="outline" aria-label={t('chronicCare.target.changeFor', { measure })} onClick={() => p.onEditTarget(x.code, x.limit)}>{t('chronicCare.target.change')}</Button></div>
               ))}
             </li>
           );
@@ -138,12 +138,12 @@ function Gaps(p: Props) {
                 </span>
                 {p.canDecide && (
                   <div className="flex flex-wrap gap-2">
-                    <Button variant="outline" className="min-h-11" loading={!!p.acting && gapKey(p.acting) === k}
+                    <Button variant="outline" loading={!!p.acting && gapKey(p.acting) === k}
                       aria-label={t('chronicCare.action.for', { action: t(`chronicCare.action.${g.action}`), gap: name })} onClick={() => p.onAct(g)}>
                       {t(`chronicCare.action.${g.action}`)}
                     </Button>
                     {kind && p.checking !== k && (
-                      <Button variant="outline" className="min-h-11" aria-label={t('chronicCare.check.recordFor', { gap: name })} onClick={() => p.onCheck(g)}>{t('chronicCare.check.record')}</Button>
+                      <Button variant="outline" aria-label={t('chronicCare.check.recordFor', { gap: name })} onClick={() => p.onCheck(g)}>{t('chronicCare.check.record')}</Button>
                     )}
                   </div>
                 )}
@@ -151,12 +151,12 @@ function Gaps(p: Props) {
                 {kind && p.checking === k && (
                   <form noValidate onSubmit={p.onSubmitCheck(g)} aria-label={t('chronicCare.check.form', { gap: name })} className="flex flex-col gap-2">
                     <Field id={`check-${g.rule}`} label={t('chronicCare.check.doneOn')} error={errors.doneOn?.message && t(`chronicCare.error.${errors.doneOn.message as CareError}`)}>
-                      <Input id={`check-${g.rule}`} type="date" dir="ltr" className="h-11" {...describedBy(`check-${g.rule}`, !!errors.doneOn)} {...p.checkForm.register('doneOn')} />
+                      <Input id={`check-${g.rule}`} type="date" dir="ltr" {...describedBy(`check-${g.rule}`, !!errors.doneOn)} {...p.checkForm.register('doneOn')} />
                     </Field>
                     {p.checkFailed && <p role="alert" className={fieldError}>{t('chronicCare.check.failed')}</p>}
                     <div className="flex flex-wrap gap-2">
-                      <Button type="submit" className="min-h-11" loading={p.savingCheck}>{t('chronicCare.check.save')}</Button>
-                      <Button type="button" variant="outline" className="min-h-11" onClick={p.onCancelCheck}>{t('chronicCare.cancel')}</Button>
+                      <Button type="submit" loading={p.savingCheck}>{t('chronicCare.check.save')}</Button>
+                      <Button type="button" variant="outline" onClick={p.onCancelCheck}>{t('chronicCare.cancel')}</Button>
                     </div>
                   </form>
                 )}
@@ -192,17 +192,17 @@ function Goals(p: Props) {
               {p.canDecide && (p.moving === g.id ? (
                 <form noValidate onSubmit={p.onSubmitMove} aria-label={t('chronicCare.goals.moveFor', { goal: g.text })} className="flex flex-col gap-2">
                   <Field id={`goal-${g.id}`} label={t('chronicCare.goals.progressLabel')} error={message(p.progressForm.formState.errors.progress?.message)}>
-                    <Input id={`goal-${g.id}`} inputMode="numeric" dir="ltr" autoComplete="off" className="h-11"
+                    <Input id={`goal-${g.id}`} inputMode="numeric" dir="ltr" autoComplete="off"
                       {...describedBy(`goal-${g.id}`, !!p.progressForm.formState.errors.progress)} {...p.progressForm.register('progress')} />
                   </Field>
                   {p.progressFailed && <p role="alert" className={fieldError}>{t('chronicCare.goals.failed')}</p>}
                   <div className="flex flex-wrap gap-2">
-                    <Button type="submit" className="min-h-11" loading={p.savingProgress}>{t('chronicCare.goals.saveProgress')}</Button>
-                    <Button type="button" variant="outline" className="min-h-11" onClick={p.onCancelMove}>{t('chronicCare.cancel')}</Button>
+                    <Button type="submit" loading={p.savingProgress}>{t('chronicCare.goals.saveProgress')}</Button>
+                    <Button type="button" variant="outline" onClick={p.onCancelMove}>{t('chronicCare.cancel')}</Button>
                   </div>
                 </form>
               ) : (
-                <div><Button variant="outline" className="min-h-11" aria-label={t('chronicCare.goals.moveFor', { goal: g.text })} onClick={() => p.onMove(g.id, g.progressPercent)}>{t('chronicCare.goals.move')}</Button></div>
+                <div><Button variant="outline" aria-label={t('chronicCare.goals.moveFor', { goal: g.text })} onClick={() => p.onMove(g.id, g.progressPercent)}>{t('chronicCare.goals.move')}</Button></div>
               ))}
             </li>
           ))}
@@ -211,21 +211,21 @@ function Goals(p: Props) {
       {p.canDecide && (p.adding ? (
         <form noValidate onSubmit={p.onSubmitGoal} aria-label={t('chronicCare.goals.form')} className="flex flex-col gap-3 border-t pt-3">
           <Field id="goal-text" label={t('chronicCare.goals.text')} error={message(gErrors.text?.message)}>
-            <Input id="goal-text" className="h-11" {...describedBy('goal-text', !!gErrors.text)} {...p.goalForm.register('text')} />
+            <Input id="goal-text" {...describedBy('goal-text', !!gErrors.text)} {...p.goalForm.register('text')} />
           </Field>
           <Field id="goal-target" label={t('chronicCare.goals.target')} error={message(gErrors.target?.message)}>
-            <Input id="goal-target" className="h-11" {...describedBy('goal-target', !!gErrors.target)} {...p.goalForm.register('target')} />
+            <Input id="goal-target" {...describedBy('goal-target', !!gErrors.target)} {...p.goalForm.register('target')} />
           </Field>
           <Field id="goal-progress" label={t('chronicCare.goals.progressLabel')} error={message(gErrors.progress?.message)}>
-            <Input id="goal-progress" inputMode="numeric" dir="ltr" autoComplete="off" className="h-11" {...describedBy('goal-progress', !!gErrors.progress)} {...p.goalForm.register('progress')} />
+            <Input id="goal-progress" inputMode="numeric" dir="ltr" autoComplete="off" {...describedBy('goal-progress', !!gErrors.progress)} {...p.goalForm.register('progress')} />
           </Field>
           {p.goalFailed && <p role="alert" className={fieldError}>{t('chronicCare.goals.failed')}</p>}
           <div className="flex flex-wrap gap-2">
-            <Button type="submit" className="min-h-11" loading={p.savingGoal}>{t('chronicCare.goals.save')}</Button>
-            <Button type="button" variant="outline" className="min-h-11" onClick={p.onCancelGoal}>{t('chronicCare.cancel')}</Button>
+            <Button type="submit" loading={p.savingGoal}>{t('chronicCare.goals.save')}</Button>
+            <Button type="button" variant="outline" onClick={p.onCancelGoal}>{t('chronicCare.cancel')}</Button>
           </div>
         </form>
-      ) : <div><Button variant="outline" className="min-h-11" onClick={p.onAddGoal}>{t('chronicCare.goals.add')}</Button></div>)}
+      ) : <div><Button variant="outline" onClick={p.onAddGoal}>{t('chronicCare.goals.add')}</Button></div>)}
     </Card>
   );
 }

@@ -76,7 +76,7 @@ export default function ChildHealthCard(p: Props) {
               <div className="flex flex-col gap-1">
                 <Label htmlFor="answered-by">{t('childHealth.answeredBy')}</Label>
                 <Select value={p.answeredBy} onValueChange={a => p.onAnsweredBy(a as MilestoneAnswerer)}>
-                  <SelectTrigger id="answered-by" className="h-11 w-full sm:w-60"><SelectValue /></SelectTrigger>
+                  <SelectTrigger id="answered-by" className="w-full sm:w-60"><SelectValue /></SelectTrigger>
                   <SelectContent>{answerers.map(a => <SelectItem key={a} value={a}>{t(`childHealth.answerer.${a}`)}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
@@ -93,7 +93,7 @@ export default function ChildHealthCard(p: Props) {
                     {p.canRecord && (
                       <div role="group" aria-label={t('childHealth.answerFor', { name })} className="flex flex-wrap gap-2">
                         {answers.map(a => (
-                          <Button key={a} type="button" size="sm" variant={m.answer === a ? 'selected' : 'outline'} className="min-h-11" aria-pressed={m.answer === a}
+                          <Button key={a} type="button" size="sm" variant={m.answer === a ? 'selected' : 'outline'} aria-pressed={m.answer === a}
                             disabled={!p.online || p.answering} onClick={() => p.onAnswer(m.key, a)}>{t(`childHealth.answer.${a}`)}</Button>
                         ))}
                       </div>
@@ -124,7 +124,7 @@ function DoseForm(p: Props & { view: ChildHealth }) {
           <Label htmlFor="dose-pick">{t('childHealth.record.dose')}</Label>
           <Controller control={p.form.control} name="dose" render={({ field }) => (
             <Select value={field.value} onValueChange={field.onChange}>
-              <SelectTrigger id="dose-pick" className="h-11 w-full" {...describedBy('dose-pick', !!errors.dose, false)}><SelectValue placeholder={t('childHealth.record.pick')} /></SelectTrigger>
+              <SelectTrigger id="dose-pick" className="w-full" {...describedBy('dose-pick', !!errors.dose, false)}><SelectValue placeholder={t('childHealth.record.pick')} /></SelectTrigger>
               <SelectContent>{open.map(d => <SelectItem key={d.key} value={d.key}>{t('childHealth.dose', { vaccine: ltr(t(`childHealth.vaccine.${d.vaccine}`)), dose: d.dose })}</SelectItem>)}</SelectContent>
             </Select>
           )} />
@@ -134,7 +134,7 @@ function DoseForm(p: Props & { view: ChildHealth }) {
           <Label htmlFor="dose-outcome">{t('childHealth.record.outcome')}</Label>
           <Controller control={p.form.control} name="outcome" render={({ field }) => (
             <Select value={field.value} onValueChange={field.onChange}>
-              <SelectTrigger id="dose-outcome" className="h-11 w-full"><SelectValue /></SelectTrigger>
+              <SelectTrigger id="dose-outcome" className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>{(['Given', 'Deferred'] as const).map(o => <SelectItem key={o} value={o}>{t(`childHealth.outcome.${o}`)}</SelectItem>)}</SelectContent>
             </Select>
           )} />
@@ -142,16 +142,16 @@ function DoseForm(p: Props & { view: ChildHealth }) {
         {outcome === 'Given' ? <>
           <div className="flex flex-col gap-1">
             <Label htmlFor="dose-given-on">{t('childHealth.record.givenOn')}</Label>
-            <Input id="dose-given-on" type="date" className="h-11" {...describedBy('dose-given-on', !!errors.givenOn, false)} {...p.form.register('givenOn')} />
+            <Input id="dose-given-on" type="date" {...describedBy('dose-given-on', !!errors.givenOn, false)} {...p.form.register('givenOn')} />
             {errors.givenOn && <p id="dose-given-on-error" className="text-sm font-bold text-danger-700">{t('childHealth.record.givenOnRequired')}</p>}
           </div>
           <div className="flex flex-col gap-1">
             <Label htmlFor="dose-batch">{t('childHealth.record.batch')}</Label>
-            <Input id="dose-batch" autoComplete="off" maxLength={50} className="h-11" {...p.form.register('batch')} />
+            <Input id="dose-batch" autoComplete="off" maxLength={50} {...p.form.register('batch')} />
           </div>
           <div className="flex flex-col gap-1 sm:col-span-2">
             <Label htmlFor="dose-given-by">{t('childHealth.record.givenBy')}</Label>
-            <Input id="dose-given-by" autoComplete="off" maxLength={100} className="h-11" {...describedBy('dose-given-by', false, true)} {...p.form.register('givenBy')} />
+            <Input id="dose-given-by" autoComplete="off" maxLength={100} {...describedBy('dose-given-by', false, true)} {...p.form.register('givenBy')} />
             <p id="dose-given-by-hint" className="text-sm text-muted-foreground">{t('childHealth.record.givenByHint')}</p>
           </div>
         </> : (
@@ -162,7 +162,7 @@ function DoseForm(p: Props & { view: ChildHealth }) {
           </div>
         )}
       </div>
-      <div><Button type="submit" className="min-h-11" loading={p.recording} disabled={!p.online}>{t('childHealth.record.submit')}</Button></div>
+      <div><Button type="submit" loading={p.recording} disabled={!p.online}>{t('childHealth.record.submit')}</Button></div>
     </form>
   );
 }

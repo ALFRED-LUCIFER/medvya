@@ -68,7 +68,7 @@ export default function ConsultStudio(p: Props) {
         <div className="flex min-w-0 flex-col gap-4">
           {!p.readOnly && <Numbered id="vitals" title={numbered}>
             {p.assist && p.assist.vitals.length > 0
-              ? <div><Button variant="outline" className="min-h-11" onClick={p.assist.onInsertVitals}>{t('noteAssist.vitals.insert')}</Button></div>
+              ? <div><Button variant="outline" onClick={p.assist.onInsertVitals}>{t('noteAssist.vitals.insert')}</Button></div>
               : <p className="text-sm text-muted-foreground">{t('noteAssist.vitals.empty')}</p>}
             {p.entry}
           </Numbered>}

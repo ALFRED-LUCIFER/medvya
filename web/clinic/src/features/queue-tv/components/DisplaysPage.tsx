@@ -38,10 +38,10 @@ export default function DisplaysPage(p: Props) {
           <form noValidate onSubmit={p.onSubmit} className="flex flex-wrap items-end gap-3">
             <div className="flex min-w-60 flex-1 flex-col gap-2">
               <Label htmlFor="display-name">{t('displays.name')}</Label>
-              <Input id="display-name" autoComplete="off" className="h-11" placeholder={t('displays.namePlaceholder')} aria-invalid={!!errors.name}
+              <Input id="display-name" autoComplete="off" placeholder={t('displays.namePlaceholder')} aria-invalid={!!errors.name}
                 aria-describedby={errors.name ? 'display-name-error' : undefined} {...p.form.register('name')} />
             </div>
-            <Button type="submit" className="min-h-11" loading={p.adding}>{t('displays.add')}</Button>
+            <Button type="submit" loading={p.adding}>{t('displays.add')}</Button>
             {errors.name && <p id="display-name-error" className={`${fieldError} basis-full`}>{t('displays.error.name')}</p>}
           </form>
           <div aria-live="polite" className="flex flex-col gap-2">
@@ -51,8 +51,8 @@ export default function DisplaysPage(p: Props) {
                 <p className="font-bold">{t('displays.created', { name: p.created.name })}</p>
                 <Label htmlFor="display-link">{t('displays.link')}</Label>
                 <div className="flex flex-wrap gap-2">
-                  <Input id="display-link" readOnly value={p.created.link} className="h-11 min-w-0 flex-1 font-mono text-xs" onFocus={e => e.currentTarget.select()} />
-                  <Button type="button" variant="outline" className="min-h-11" onClick={p.onCopy}><Copy aria-hidden />{t(p.copied ? 'displays.copied' : 'displays.copy')}</Button>
+                  <Input id="display-link" readOnly value={p.created.link} className="min-w-0 flex-1 font-mono text-xs" onFocus={e => e.currentTarget.select()} />
+                  <Button type="button" variant="outline" onClick={p.onCopy}><Copy aria-hidden />{t(p.copied ? 'displays.copied' : 'displays.copy')}</Button>
                 </div>
                 <p className="text-sm text-muted-foreground">{t('displays.onceOnly')}</p>
               </div>
@@ -69,7 +69,7 @@ export default function DisplaysPage(p: Props) {
                     </span>
                   </span>
                   {!d.revokedAt && (
-                    <Button type="button" variant="outline" className="min-h-11" loading={p.revokingId === d.id} onClick={() => p.onRevoke(d.id)}
+                    <Button type="button" variant="outline" loading={p.revokingId === d.id} onClick={() => p.onRevoke(d.id)}
                       aria-label={t('displays.revokeNamed', { name: d.name })}>{t('displays.revoke')}</Button>
                   )}
                 </li>

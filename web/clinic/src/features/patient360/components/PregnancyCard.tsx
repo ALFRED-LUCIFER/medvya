@@ -60,8 +60,8 @@ function None({ p }: { p: Props }) {
       {p.form === 'start' ? <StartFields p={p} /> : (
         <div className="flex flex-wrap gap-2">
           {/* Secondary, never the chart's one primary action (UX-09). */}
-          {p.canManage && <Button type="button" variant="outline" className="min-h-11" onClick={() => p.onOpen('start')}>{t('pregnancy.start')}</Button>}
-          {p.canRecord && !ruled && <Button type="button" variant="outline" className="min-h-11" disabled={p.saving} onClick={p.onRuledOut}>{t('pregnancy.ruleOut')}</Button>}
+          {p.canManage && <Button type="button" variant="outline" onClick={() => p.onOpen('start')}>{t('pregnancy.start')}</Button>}
+          {p.canRecord && !ruled && <Button type="button" variant="outline" disabled={p.saving} onClick={p.onRuledOut}>{t('pregnancy.ruleOut')}</Button>}
         </div>
       )}
     </>
@@ -115,9 +115,9 @@ function Open({ p, open }: { p: Props; open: OpenPregnancy }) {
       {p.form === 'close' && <CloseFields p={p} />}
       {p.form === null && (
         <div className="flex flex-wrap gap-2">
-          {p.canRecord && <Button type="button" variant="outline" className="min-h-11" disabled={p.saving} onClick={p.onCounselled}>{t('pregnancy.counsel')}</Button>}
-          {p.canRecord && <Button type="button" variant="outline" className="min-h-11" onClick={() => p.onOpen('readings')}>{t('pregnancy.readings')}</Button>}
-          {p.canManage && <Button type="button" variant="outline" className="min-h-11" onClick={() => p.onOpen('close')}>{t('pregnancy.close')}</Button>}
+          {p.canRecord && <Button type="button" variant="outline" disabled={p.saving} onClick={p.onCounselled}>{t('pregnancy.counsel')}</Button>}
+          {p.canRecord && <Button type="button" variant="outline" onClick={() => p.onOpen('readings')}>{t('pregnancy.readings')}</Button>}
+          {p.canManage && <Button type="button" variant="outline" onClick={() => p.onOpen('close')}>{t('pregnancy.close')}</Button>}
         </div>
       )}
     </>
@@ -150,7 +150,7 @@ function StartFields({ p }: { p: Props }) {
   const { register, formState: { errors } } = p.startForm;
   const num = (name: 'scanWeeks' | 'scanDays' | 'gravida' | 'para' | 'abortions' | 'living') => (
     <Field id={`pregnancy-${name}`} label={t(`pregnancy.field.${name}`)} invalid={!!errors[name]}>
-      <Input id={`pregnancy-${name}`} type="number" inputMode="numeric" className="min-h-11 w-28" aria-invalid={!!errors[name]} {...register(name)} />
+      <Input id={`pregnancy-${name}`} type="number" inputMode="numeric" className="w-28" aria-invalid={!!errors[name]} {...register(name)} />
     </Field>
   );
   return (
@@ -158,7 +158,7 @@ function StartFields({ p }: { p: Props }) {
       <div className="flex flex-wrap gap-3">
         {(['lmp', 'scanDate'] as const).map(name => (
           <Field key={name} id={`pregnancy-${name}`} label={t(`pregnancy.field.${name}`)} invalid={!!errors[name]}>
-            <Input id={`pregnancy-${name}`} type="date" className="min-h-11 w-44" aria-invalid={!!errors[name]} {...register(name)} />
+            <Input id={`pregnancy-${name}`} type="date" className="w-44" aria-invalid={!!errors[name]} {...register(name)} />
           </Field>
         ))}
         {num('scanWeeks')}{num('scanDays')}
@@ -178,7 +178,7 @@ function ReadingsFields({ p }: { p: Props }) {
       <div className="flex flex-wrap gap-3">
         {(['fundalHeightCm', 'fetalHeartRate'] as const).map(name => (
           <Field key={name} id={`pregnancy-${name}`} label={t(`pregnancy.field.${name}`)} invalid={!!errors[name]}>
-            <Input id={`pregnancy-${name}`} type="number" inputMode="decimal" step="0.1" className="min-h-11 w-32" aria-invalid={!!errors[name]} {...register(name)} />
+            <Input id={`pregnancy-${name}`} type="number" inputMode="decimal" step="0.1" className="w-32" aria-invalid={!!errors[name]} {...register(name)} />
           </Field>
         ))}
       </div>
@@ -194,7 +194,7 @@ function CloseFields({ p }: { p: Props }) {
     <form onSubmit={p.onClose} className="flex flex-wrap items-end gap-3">
       <Field id="pregnancy-outcome" label={t('pregnancy.field.outcome')} invalid={!!p.closeForm.formState.errors.outcome}>
         <Select value={p.closeForm.watch('outcome') || undefined} onValueChange={v => p.closeForm.setValue('outcome', v as CloseForm['outcome'], { shouldValidate: true })}>
-          <SelectTrigger id="pregnancy-outcome" className="min-h-11 w-56"><SelectValue placeholder={t('pregnancy.outcomePlaceholder')} /></SelectTrigger>
+          <SelectTrigger id="pregnancy-outcome" className="w-56"><SelectValue placeholder={t('pregnancy.outcomePlaceholder')} /></SelectTrigger>
           <SelectContent>{outcomes.map(o => <SelectItem key={o} value={o}>{t(`pregnancy.outcome.${o}`)}</SelectItem>)}</SelectContent>
         </Select>
       </Field>
@@ -207,8 +207,8 @@ function Actions({ p }: { p: Props }) {
   const { t } = useI18n();
   return (
     <div className="flex flex-wrap gap-2">
-      <Button type="submit" className="min-h-11" disabled={p.saving}>{t('pregnancy.save')}</Button>
-      <Button type="button" variant="outline" className="min-h-11" onClick={p.onCancel}>{t('pregnancy.cancel')}</Button>
+      <Button type="submit" disabled={p.saving}>{t('pregnancy.save')}</Button>
+      <Button type="button" variant="outline" onClick={p.onCancel}>{t('pregnancy.cancel')}</Button>
     </div>
   );
 }

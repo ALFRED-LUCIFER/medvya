@@ -36,7 +36,7 @@ export default function AuditLogPanel(p: Props) {
       <div className="grid gap-4 sm:grid-cols-2">
         <Field id="audit-actor" label={t('audit.staff')}>
           <Select value={p.filters.actor} onValueChange={v => p.onFilters({ actor: v })}>
-            <SelectTrigger id="audit-actor" className="h-11 w-full"><SelectValue /></SelectTrigger>
+            <SelectTrigger id="audit-actor" className="w-full"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value={all}>{t('audit.everyone')}</SelectItem>
               {p.people.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
@@ -45,7 +45,7 @@ export default function AuditLogPanel(p: Props) {
         </Field>
         <Field id="audit-action" label={t('audit.action')}>
           <Select value={p.filters.action} onValueChange={v => p.onFilters({ action: v })}>
-            <SelectTrigger id="audit-action" className="h-11 w-full"><SelectValue /></SelectTrigger>
+            <SelectTrigger id="audit-action" className="w-full"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value={patientRecords}>{t('audit.patientRecords')}</SelectItem>
               <SelectItem value={all}>{t('audit.anyAction')}</SelectItem>
@@ -54,17 +54,17 @@ export default function AuditLogPanel(p: Props) {
           </Select>
         </Field>
         <Field id="audit-from" label={t('audit.from')}>
-          <Input id="audit-from" type="date" className="h-11" value={p.filters.from} max={p.filters.to || undefined} onChange={e => p.onFilters({ from: e.target.value })} />
+          <Input id="audit-from" type="date" value={p.filters.from} max={p.filters.to || undefined} onChange={e => p.onFilters({ from: e.target.value })} />
         </Field>
         <Field id="audit-to" label={t('audit.to')}>
-          <Input id="audit-to" type="date" className="h-11" value={p.filters.to} min={p.filters.from || undefined} onChange={e => p.onFilters({ to: e.target.value })} />
+          <Input id="audit-to" type="date" value={p.filters.to} min={p.filters.from || undefined} onChange={e => p.onFilters({ to: e.target.value })} />
         </Field>
       </div>
 
       {p.filters.patientId ? (
         <div className="flex flex-wrap items-center gap-2 rounded-lg border p-3">
           <span className="font-bold">{p.patientName ? t('audit.patientChosen', { name: p.patientName }) : t('audit.patientChosenNoName')}</span>
-          <Button type="button" variant="outline" className="min-h-11" onClick={p.onClearPatient}><X aria-hidden className="size-4" />{t('audit.clearPatient')}</Button>
+          <Button type="button" variant="outline" onClick={p.onClearPatient}><X aria-hidden className="size-4" />{t('audit.clearPatient')}</Button>
         </div>
       ) : (
         <PatientPicker search={p.patientSearch} chosen="" registerPath={null} invalid={false} />

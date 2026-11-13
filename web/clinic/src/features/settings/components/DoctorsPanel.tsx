@@ -58,7 +58,7 @@ export default function DoctorsPanel(p: Props) {
     return (
       <div className="flex flex-col items-start gap-3">
         <p role="alert" className={fieldError}>{t(p.forbidden ? 'settings.forbidden' : 'settings.loadFailed')}</p>
-        {!p.forbidden && <Button type="button" variant="outline" className="min-h-11" onClick={p.onRetry}>{t('doctors.retry')}</Button>}
+        {!p.forbidden && <Button type="button" variant="outline" onClick={p.onRetry}>{t('doctors.retry')}</Button>}
       </div>
     );
   }
@@ -68,14 +68,14 @@ export default function DoctorsPanel(p: Props) {
         <p role="status" className="flex items-start gap-2 rounded-md border bg-muted p-3">
           <Info className="mt-0.5 size-4 shrink-0" aria-hidden />
           <span>{t('doctors.added', { name: p.added.name })}{p.added.signatureFailed ? ` ${t('doctors.added.signatureFailed')}` : ''}</span>
-          <Button type="button" variant="ghost" className="ms-auto min-h-11" onClick={p.onDismissAdded}>{t('doctors.dismiss')}</Button>
+          <Button type="button" variant="ghost" className="ms-auto" onClick={p.onDismissAdded}>{t('doctors.dismiss')}</Button>
         </p>
       )}
       {p.adding
         ? <DoctorWizard {...p} />
         : (
           <Section title={t('doctors.title')} intro={t('doctors.intro')}>
-            <div><Button type="button" className="min-h-11" onClick={p.onOpen}>{t('doctors.add')}</Button></div>
+            <div><Button type="button" onClick={p.onOpen}>{t('doctors.add')}</Button></div>
             {p.doctors.length === 0 && <p className="text-muted-foreground">{t('doctors.empty')}</p>}
             <ul className="flex flex-col gap-3">
               {p.doctors.map(d => <DoctorRow key={d.id} doctor={d} {...p} />)}
@@ -101,13 +101,13 @@ function DoctorRow({ doctor: d, ...p }: Props & { doctor: Doctor }) {
       <p className="text-sm text-muted-foreground">{[d.specialty, d.facilityName].filter(Boolean).join(' · ')}</p>
       <p className="text-sm"><span dir="ltr">{d.authority} {d.number}</span>{d.expiresOn ? ` · ${t('doctors.licence.until', { date: d.expiresOn })}` : ''}</p>
       {d.expired && <p role="note" className="text-sm font-semibold">{t('doctors.licence.expiredNote')}</p>}
-      {!editing && <div><Button type="button" variant="outline" className="min-h-11" onClick={() => p.onCorrect(d)}>{t(d.expired ? 'doctors.licence.renew' : 'doctors.licence.correct')}</Button></div>}
+      {!editing && <div><Button type="button" variant="outline" onClick={() => p.onCorrect(d)}>{t(d.expired ? 'doctors.licence.renew' : 'doctors.licence.correct')}</Button></div>}
       {editing && (
         <form noValidate onSubmit={p.onSubmitLicence} className="grid gap-4 sm:grid-cols-2" aria-label={t('doctors.licence.correct')}>
           <LicenceFields form={p.licenceForm} errors={p.licenceErrors} authorities={p.authorities} prefix={`c-${d.id}`} />
           <div className="flex flex-wrap items-center gap-3 sm:col-span-2" aria-live="polite">
-            <Button type="submit" className="min-h-11" loading={p.correctingBusy}>{t('doctors.licence.resubmit')}</Button>
-            <Button type="button" variant="ghost" className="min-h-11" onClick={() => p.onCorrect(null)}>{t('settings.cancel')}</Button>
+            <Button type="submit" loading={p.correctingBusy}>{t('doctors.licence.resubmit')}</Button>
+            <Button type="button" variant="ghost" onClick={() => p.onCorrect(null)}>{t('settings.cancel')}</Button>
             {p.correctFailed && <span role="alert" className={fieldError}>{t('settings.saveFailed')}</span>}
           </div>
         </form>
@@ -118,10 +118,10 @@ function DoctorRow({ doctor: d, ...p }: Props & { doctor: Doctor }) {
         <div className="flex flex-wrap items-end gap-3">
           <Field id={`sig-${d.id}`} label={d.hasSignature ? t('doctors.signature.replace') : t('doctors.signature.choose')} hint={t('doctors.signature.hint')}
             error={problem ? t(`doctors.signature.error.${problem}`) : null} className="min-w-60">
-            <Input id={`sig-${d.id}`} type="file" accept="image/png,image/jpeg" className="h-auto min-h-11 py-2" disabled={busy} {...describedBy(`sig-${d.id}`, !!problem, true)}
+            <Input id={`sig-${d.id}`} type="file" accept="image/png,image/jpeg" className="h-auto py-2" disabled={busy} {...describedBy(`sig-${d.id}`, !!problem, true)}
               onChange={e => { p.onSignature(d.id, e.currentTarget.files?.[0]); e.currentTarget.value = ''; }} />
           </Field>
-          {d.hasSignature && <Button type="button" variant="outline" className="min-h-11" loading={busy} onClick={() => p.onRemoveSignature(d.id)}>{t('doctors.signature.remove')}</Button>}
+          {d.hasSignature && <Button type="button" variant="outline" loading={busy} onClick={() => p.onRemoveSignature(d.id)}>{t('doctors.signature.remove')}</Button>}
         </div>
       </div>
     </li>

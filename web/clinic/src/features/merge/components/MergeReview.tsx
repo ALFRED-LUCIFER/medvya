@@ -64,7 +64,7 @@ export default function MergeReview(props: Props) {
             {queue.map(r => (
               <li key={r.id}>
                 <Link to={props.reviewPath(r.id)} aria-current={review?.id === r.id ? 'page' : undefined}
-                  className={cn(buttonVariants({ variant: 'ghost' }), 'h-auto min-h-11 w-full flex-wrap justify-start gap-x-3 whitespace-normal py-2', review?.id === r.id && 'bg-muted')}>
+                  className={cn(buttonVariants({ variant: 'ghost' }), 'h-auto w-full flex-wrap justify-start gap-x-3 whitespace-normal py-2', review?.id === r.id && 'bg-muted')}>
                   <span>{t('merge.queue.row', { survivor: r.survivorMrn, merged: r.mergedMrn })}</span>
                   <span className="text-xs font-bold text-muted-foreground">{t(`merge.status.${r.status}`)}</span>
                 </Link>

@@ -31,7 +31,7 @@ export default function MedicineActions(p: Props) {
         </ul>
       )}
       {p.problem && <p role="alert" className="text-sm font-bold text-danger-700">{t(`reconcile.error.${p.problem}`)}</p>}
-      <Link to={p.reconcilePath} className={buttonVariants({ variant: 'outline', className: 'min-h-11 self-start' })}>{t('plan.medicines.reconcile')}</Link>
+      <Link to={p.reconcilePath} className={buttonVariants({ variant: 'outline', className: 'self-start' })}>{t('plan.medicines.reconcile')}</Link>
     </div>
   );
 }

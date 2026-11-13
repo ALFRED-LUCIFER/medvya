@@ -44,7 +44,7 @@ export default function SignInPage({ languageSwitcher, form, failure, onSubmit, 
       <form noValidate onSubmit={onSubmit} className="flex flex-col gap-[18px]">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="signin-email">{t('signin.email')}</Label>
-          <Input id="signin-email" type="email" dir="ltr" autoComplete="username" inputMode="email" spellCheck={false} className="min-h-11"
+          <Input id="signin-email" type="email" dir="ltr" autoComplete="username" inputMode="email" spellCheck={false}
             aria-invalid={error ? true : undefined} aria-describedby={error ? 'signin-email-error' : undefined} {...form.register('email')} />
           {error && (
             <p id="signin-email-error" role="alert" className="flex items-center gap-1.5 text-sm font-semibold text-danger-700">
@@ -61,7 +61,7 @@ export default function SignInPage({ languageSwitcher, form, failure, onSubmit, 
       <Button variant="outline" onClick={onWithoutEmail}><Building2 className="size-5" aria-hidden />{t('signin.sso')}</Button>
       <p className="flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground">
         {t('signin.newPractice')}
-        <Link to="/signup" className={buttonVariants({ variant: 'link', className: 'min-h-11 px-0' })}>{t('signin.createPractice')}</Link>
+        <Link to="/signup" className={buttonVariants({ variant: 'link', className: 'px-0' })}>{t('signin.createPractice')}</Link>
       </p>
     </AuthFrame>
   );

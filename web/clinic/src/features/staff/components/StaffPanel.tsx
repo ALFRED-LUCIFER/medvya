@@ -113,11 +113,11 @@ export default function StaffPanel(p: Props) {
                     </TableCell>
                     <TableCell>
                       <span className="flex flex-wrap gap-2">
-                        {canResend(m) && <Button type="button" variant="outline" className="min-h-11 min-w-11" disabled={p.working} aria-label={t('staff.resendNamed', { name: who })} onClick={() => p.onResend(m.invitationId!)}>{t('staff.resend')}</Button>}
-                        {canRevoke(m) && <Button type="button" variant="outline" className="min-h-11 min-w-11" disabled={p.working} aria-label={t('staff.revokeNamed', { name: who })} onClick={() => p.onRevoke(m.invitationId!)}>{t('staff.revoke')}</Button>}
-                        {canSetLocations(m) && p.locations.length > 1 && <Button type="button" variant="outline" className="min-h-11 min-w-11" disabled={p.working || !!p.locating} aria-label={t('staff.locationsNamed', { name: who })} onClick={() => p.onLocations(m)}>{t('staff.locations')}</Button>}
-                        {canReactivate(m) && <Button type="button" variant="outline" className="min-h-11 min-w-11" disabled={p.working || !!p.reactivating} aria-label={t('staff.reactivateNamed', { name: who })} onClick={() => p.onReactivate(m)}>{t('staff.reactivate')}</Button>}
-                        {canOffboard(m) && <Button type="button" variant="outline" className="min-h-11 min-w-11" disabled={p.working || !!p.offboarding} aria-label={t('staff.offboardNamed', { name: who })} onClick={() => p.onOffboard(m)}>{t('staff.offboard')}</Button>}
+                        {canResend(m) && <Button type="button" variant="outline" className="min-w-11" disabled={p.working} aria-label={t('staff.resendNamed', { name: who })} onClick={() => p.onResend(m.invitationId!)}>{t('staff.resend')}</Button>}
+                        {canRevoke(m) && <Button type="button" variant="outline" className="min-w-11" disabled={p.working} aria-label={t('staff.revokeNamed', { name: who })} onClick={() => p.onRevoke(m.invitationId!)}>{t('staff.revoke')}</Button>}
+                        {canSetLocations(m) && p.locations.length > 1 && <Button type="button" variant="outline" className="min-w-11" disabled={p.working || !!p.locating} aria-label={t('staff.locationsNamed', { name: who })} onClick={() => p.onLocations(m)}>{t('staff.locations')}</Button>}
+                        {canReactivate(m) && <Button type="button" variant="outline" className="min-w-11" disabled={p.working || !!p.reactivating} aria-label={t('staff.reactivateNamed', { name: who })} onClick={() => p.onReactivate(m)}>{t('staff.reactivate')}</Button>}
+                        {canOffboard(m) && <Button type="button" variant="outline" className="min-w-11" disabled={p.working || !!p.offboarding} aria-label={t('staff.offboardNamed', { name: who })} onClick={() => p.onOffboard(m)}>{t('staff.offboard')}</Button>}
                       </span>
                     </TableCell>
                   </TableRow>
@@ -222,11 +222,11 @@ export default function StaffPanel(p: Props) {
             {p.step === 'scope' && (
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field id="staff-email" label={t('staff.email')} error={errors.email && t('settings.error.email')}>
-                  <Input id="staff-email" type="email" autoComplete="off" className="h-11" {...describedBy('staff-email', !!errors.email)} {...p.form.register('email')} />
+                  <Input id="staff-email" type="email" autoComplete="off" {...describedBy('staff-email', !!errors.email)} {...p.form.register('email')} />
                 </Field>
                 <Field id="staff-facility" label={t('staff.facility')} hint={t('staff.hoursNote')}>
                   <Select value={p.form.watch('facilityId')} onValueChange={v => p.form.setValue('facilityId', v, { shouldValidate: true })}>
-                    <SelectTrigger id="staff-facility" className="h-11 w-full"><SelectValue /></SelectTrigger>
+                    <SelectTrigger id="staff-facility" className="w-full"><SelectValue /></SelectTrigger>
                     <SelectContent>{p.locations.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}</SelectContent>
                   </Select>
                 </Field>

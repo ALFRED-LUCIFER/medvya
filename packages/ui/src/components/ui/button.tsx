@@ -22,7 +22,7 @@ const buttonVariants = cva(
       },
       size: {
         default: "min-h-11 px-4 has-[>svg]:px-3",
-        sm: "min-h-9 px-3 text-[13px]",
+        sm: "min-h-11 px-3 text-[13px]", // smaller text and padding, never a smaller target (MDV-P1-078)
         icon: "size-11",
       },
     },

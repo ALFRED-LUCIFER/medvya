@@ -6,7 +6,11 @@
     "oxc",
     "import"
   ],
+  "jsPlugins": [
+    "../../tools/oxlint-plugin/medvya-ui.mjs"
+  ],
   "rules": {
+    "medvya-ui/no-height-patch": "error",
     "react/rules-of-hooks": "error",
     "react/only-export-components": [
       "warn",

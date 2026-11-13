@@ -20,9 +20,9 @@ export default function LetterPage(p: Props) {
   return (
     <div className="flex max-w-[720px] flex-col gap-4">
       <div className="flex flex-wrap gap-3 print:hidden">
-        <Button className="min-h-11" onClick={p.onPrint}><Printer aria-hidden className="size-4" />{t('referrals.letter.print')}</Button>
-        <Button variant="outline" className="min-h-11" loading={p.downloading} disabled={p.downloading} onClick={p.onPdf}><FileDown aria-hidden className="size-4" />{t('paper.pdf')}</Button>
-        <Link to={p.consultPath} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t('referrals.letter.back')}</Link>
+        <Button onClick={p.onPrint}><Printer aria-hidden className="size-4" />{t('referrals.letter.print')}</Button>
+        <Button variant="outline" loading={p.downloading} disabled={p.downloading} onClick={p.onPdf}><FileDown aria-hidden className="size-4" />{t('paper.pdf')}</Button>
+        <Link to={p.consultPath} className={buttonVariants({ variant: 'outline' })}>{t('referrals.letter.back')}</Link>
       </div>
       {p.pdfProblem && <p role="alert" className="font-bold text-danger-700 print:hidden">{t(p.pdfProblem === 'unsupported' ? 'paper.pdfUnsupported' : 'paper.pdfFailed')}</p>}
       <article aria-labelledby="letter-title" className="flex flex-col gap-4 rounded-xl border bg-white p-6 text-black print:rounded-none print:border-0 print:p-0">

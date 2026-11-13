@@ -48,7 +48,7 @@ export default function PatientDirectory(p: Props) {
         <div className="flex flex-wrap gap-2">
           <Input id="patient-search" type="search" autoComplete="off" spellCheck={false} maxLength={100} value={p.text}
             onChange={e => p.onTextChange(e.target.value)} aria-describedby={invalid ? `${errorId} ${hintId}` : hintId}
-            aria-invalid={invalid || undefined} className="min-h-11 min-w-0 flex-1 basis-60" />
+            aria-invalid={invalid || undefined} className="min-w-0 flex-1 basis-60" />
           <Button type="submit"><Search aria-hidden />{t('patients.search.submit')}</Button>
         </div>
         <p id={hintId} className="text-sm text-muted-foreground">{t('patients.search.hint')}</p>

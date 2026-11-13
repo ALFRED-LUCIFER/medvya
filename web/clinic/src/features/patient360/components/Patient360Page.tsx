@@ -71,13 +71,13 @@ export default function Patient360Page(p: Props) {
           {treatmentConsent ? <><CircleCheck aria-hidden className="size-4" />{t('consult.banner.consentGiven')}</> : <><CircleAlert aria-hidden className="size-4" />{t('consult.banner.consentNotRecorded')}</>}
         </span>
         {chart.openEncounterId
-          ? <Link to={p.consultPath(chart.openEncounterId)} className={buttonVariants({ variant: 'default', className: 'min-h-11' })}>{t('consult.open')}</Link>
+          ? <Link to={p.consultPath(chart.openEncounterId)} className={buttonVariants({ variant: 'default' })}>{t('consult.open')}</Link>
           : p.startConsult ?? <span className="text-muted-foreground">{t('patient360.startFromBoard')}</span>}
-        <Link to={p.backPath} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t('patient360.back')}</Link>
+        <Link to={p.backPath} className={buttonVariants({ variant: 'outline' })}>{t('patient360.back')}</Link>
       </div>
       <div role="group" aria-label={t('patient360.section.label')} className="sticky top-0 z-10 flex flex-wrap gap-2 bg-background py-1">
         {chartSections.map(s => (
-          <Button key={s} variant={s === p.section ? 'selected' : 'outline'} className="min-h-11" aria-pressed={s === p.section} onClick={() => p.onSection(s)}>
+          <Button key={s} variant={s === p.section ? 'selected' : 'outline'} aria-pressed={s === p.section} onClick={() => p.onSection(s)}>
             {t(s === 'stage' ? `patient360.section.stage.${lifeStage}` : `patient360.section.${s}`)}
           </Button>))}
       </div>
@@ -169,7 +169,7 @@ const Empty = ({ text }: { text: string }) => <p className="text-muted-foregroun
 /** Where a prescribed medicine came from (MDV-1087): its visit and, for a role that prints prescriptions, the printed prescription. */
 export function PrescribedLinks({ encounterId, consultPath, printRx }: { encounterId: string; consultPath: (encounterId: string) => string; printRx: boolean }) {
   const { t } = useI18n();
-  const link = buttonVariants({ variant: 'link', className: 'min-h-11 px-0' });
+  const link = buttonVariants({ variant: 'link', className: 'px-0' });
   return (
     <span className="flex flex-wrap gap-x-4">
       <Link to={consultPath(encounterId)} className={link}>{t('medicine.prescribed.visit')}</Link>
@@ -302,7 +302,7 @@ function Message({ title, body, backPath }: { title: string; body?: ReactNode; b
     <div role="alert" className="flex flex-col items-start gap-3 rounded-xl border bg-card p-6">
       <h1 className="text-lg font-extrabold">{title}</h1>
       {body && <div className="flex flex-col items-start gap-2">{body}</div>}
-      <Link to={backPath} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t('patient360.back')}</Link>
+      <Link to={backPath} className={buttonVariants({ variant: 'outline' })}>{t('patient360.back')}</Link>
     </div>
   );
 }

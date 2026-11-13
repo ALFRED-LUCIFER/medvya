@@ -62,7 +62,7 @@ export default function OrganisationRequestPage(p: Props) {
 
       {r.state === 'Rejected' && (
         <div className="flex flex-col gap-2">
-          <Button className="min-h-11 self-start" loading={p.startingNew} onClick={p.onStartNew}>{t('orgRequest.startNew')}</Button>
+          <Button className="self-start" loading={p.startingNew} onClick={p.onStartNew}>{t('orgRequest.startNew')}</Button>
           {p.startNewFailed && <p role="alert" className={error}>{t('orgRequest.error.failed')}</p>}
         </div>
       )}
@@ -90,7 +90,7 @@ export default function OrganisationRequestPage(p: Props) {
                     <input id={id} type="file" accept="application/pdf,image/png,image/jpeg" className="peer sr-only" disabled={p.uploading === kind}
                       aria-describedby={failed ? `${id}-error` : undefined} aria-invalid={failed ? true : undefined}
                       onChange={e => { p.onFile(kind, e.currentTarget.files?.[0]); e.currentTarget.value = ''; }} />
-                    <label htmlFor={id} className={buttonVariants({ variant: 'outline', className: 'min-h-11 w-fit cursor-pointer peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring peer-disabled:pointer-events-none peer-disabled:opacity-50' })}>
+                    <label htmlFor={id} className={buttonVariants({ variant: 'outline', className: 'w-fit cursor-pointer peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring peer-disabled:pointer-events-none peer-disabled:opacity-50' })}>
                       {p.uploading === kind ? t('orgRequest.doc.uploading') : added ? t('orgRequest.doc.replace') : t('orgRequest.doc.choose')}
                     </label>
                   </>
@@ -107,16 +107,16 @@ export default function OrganisationRequestPage(p: Props) {
             <legend className="mb-1 text-lg font-bold sm:col-span-2">{t('orgRequest.it.legend')}</legend>
             <div className="flex flex-col gap-2">
               <Label htmlFor="it-name">{t('orgRequest.it.name')}</Label>
-              <Input id="it-name" className="h-11" autoComplete="off" aria-invalid={errors.name ? true : undefined} aria-describedby={errors.name ? 'it-name-error' : undefined} {...p.form.register('name')} />
+              <Input id="it-name" autoComplete="off" aria-invalid={errors.name ? true : undefined} aria-describedby={errors.name ? 'it-name-error' : undefined} {...p.form.register('name')} />
               {errors.name && <p id="it-name-error" role="alert" className={error}>{t(`onboarding.error.${errors.name.message === 'tooLong' ? 'tooLong' : 'required'}`)}</p>}
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="it-email">{t('orgRequest.it.email')}</Label>
-              <Input id="it-email" type="email" dir="ltr" className="h-11" autoComplete="off" aria-invalid={errors.email ? true : undefined} aria-describedby={errors.email ? 'it-email-error' : undefined} {...p.form.register('email')} />
+              <Input id="it-email" type="email" dir="ltr" autoComplete="off" aria-invalid={errors.email ? true : undefined} aria-describedby={errors.email ? 'it-email-error' : undefined} {...p.form.register('email')} />
               {errors.email && <p id="it-email-error" role="alert" className={error}>{t(`onboarding.error.${errors.email.message === 'format' ? 'format' : 'required'}`)}</p>}
             </div>
             <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
-              <Button type="submit" variant="outline" className="min-h-11" loading={p.savingContact}>{t('orgRequest.it.save')}</Button>
+              <Button type="submit" variant="outline" loading={p.savingContact}>{t('orgRequest.it.save')}</Button>
               {p.contactSaved && <span role="status" className="flex items-center gap-1.5 text-sm font-semibold"><CircleCheck className="size-4" aria-hidden />{t('orgRequest.it.saved')}</span>}
               {p.contactFailed && <span role="alert" className={error}>{t('orgRequest.error.failed')}</span>}
             </div>
@@ -126,7 +126,7 @@ export default function OrganisationRequestPage(p: Props) {
 
       {p.editable ? (
         <div className="flex flex-col gap-2">
-          <Button className="min-h-11 self-start" loading={p.submitting} disabled={!p.ready} onClick={p.onSubmit}>
+          <Button className="self-start" loading={p.submitting} disabled={!p.ready} onClick={p.onSubmit}>
             {t(r.state === 'NeedsChanges' ? 'orgRequest.resubmit' : 'orgRequest.submit')}
           </Button>
           {!p.ready && <p className="text-sm text-muted-foreground">{t('orgRequest.submit.missing')}</p>}

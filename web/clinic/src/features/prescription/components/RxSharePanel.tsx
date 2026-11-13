@@ -35,20 +35,20 @@ export default function RxSharePanel(p: Props) {
         <Field id="rx-share-target" label={t('rxShare.to')} className="min-w-56">
           <Controller control={p.shareForm.control} name="target" render={({ field }) => (
             <Select value={field.value} onValueChange={field.onChange}>
-              <SelectTrigger id="rx-share-target" className="h-11 w-full"><SelectValue /></SelectTrigger>
+              <SelectTrigger id="rx-share-target" className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>{shareTargets.map(s => <SelectItem key={s} value={s}>{t(`rxShare.target.${s}`)}</SelectItem>)}</SelectContent>
             </Select>
           )} />
         </Field>
         {target === 'Pharmacy' && <>
           <Field id="rx-share-pharmacy" label={t('rxShare.pharmacyName')} error={errors.pharmacyName && t('rxShare.error.pharmacyName')} className="min-w-56">
-            <Input id="rx-share-pharmacy" className="h-11" {...describedBy('rx-share-pharmacy', !!errors.pharmacyName)} {...p.shareForm.register('pharmacyName')} />
+            <Input id="rx-share-pharmacy" {...describedBy('rx-share-pharmacy', !!errors.pharmacyName)} {...p.shareForm.register('pharmacyName')} />
           </Field>
           <Field id="rx-share-email" label={t('rxShare.pharmacyEmail')} error={errors.pharmacyEmail && t('rxShare.error.pharmacyEmail')} className="min-w-56">
-            <Input id="rx-share-email" type="email" dir="ltr" className="h-11" {...describedBy('rx-share-email', !!errors.pharmacyEmail)} {...p.shareForm.register('pharmacyEmail')} />
+            <Input id="rx-share-email" type="email" dir="ltr" {...describedBy('rx-share-email', !!errors.pharmacyEmail)} {...p.shareForm.register('pharmacyEmail')} />
           </Field>
         </>}
-        <Button type="submit" className="min-h-11" loading={p.busy}><Send aria-hidden className="size-4" />{t('rxShare.send')}</Button>
+        <Button type="submit" loading={p.busy}><Send aria-hidden className="size-4" />{t('rxShare.send')}</Button>
       </form>
       {p.sent && <p role="status" className="flex items-center gap-2"><CircleCheck aria-hidden className="size-4" />{t('rxShare.sent')}</p>}
       {p.problem && <p role="alert" className={`flex items-center gap-2 ${fieldError}`}><CircleAlert aria-hidden className="size-4" />{t(`rxShare.error.${p.problem}`)}</p>}
@@ -73,8 +73,8 @@ export default function RxSharePanel(p: Props) {
                   </TableCell>
                   <TableCell>
                     {s.dispatch?.state === 'Sent' && <div className="flex flex-wrap gap-2">
-                      <Button type="button" variant="outline" className="min-h-11" aria-label={t('rxShare.markDispensedNamed', { name })} onClick={() => p.onDispensing(s.id)}>{t('rxShare.markDispensed')}</Button>
-                      <Button type="button" variant="outline" className="min-h-11" aria-label={t('rxShare.cancelNamed', { name })} disabled={p.busy} onClick={() => p.onCancelDispatch(s.id)}>{t('rxShare.cancel')}</Button>
+                      <Button type="button" variant="outline" aria-label={t('rxShare.markDispensedNamed', { name })} onClick={() => p.onDispensing(s.id)}>{t('rxShare.markDispensed')}</Button>
+                      <Button type="button" variant="outline" aria-label={t('rxShare.cancelNamed', { name })} disabled={p.busy} onClick={() => p.onCancelDispatch(s.id)}>{t('rxShare.cancel')}</Button>
                     </div>}
                   </TableCell>
                 </TableRow>
@@ -87,13 +87,13 @@ export default function RxSharePanel(p: Props) {
       {p.dispensing && (
         <form className="flex flex-wrap items-end gap-3" aria-label={t('rxShare.dispensedTitle')} onSubmit={p.onDispensed} noValidate>
           <Field id="rx-dispensed-at" label={t('rxShare.dispensedWhen')} error={p.dispensedForm.formState.errors.dispensedAt && t('rxShare.error.dispensedAt')} className="min-w-56">
-            <Input id="rx-dispensed-at" type="datetime-local" className="h-11" {...describedBy('rx-dispensed-at', !!p.dispensedForm.formState.errors.dispensedAt)} {...p.dispensedForm.register('dispensedAt')} />
+            <Input id="rx-dispensed-at" type="datetime-local" {...describedBy('rx-dispensed-at', !!p.dispensedForm.formState.errors.dispensedAt)} {...p.dispensedForm.register('dispensedAt')} />
           </Field>
           <Field id="rx-dispensed-ref" label={t('rxShare.pharmacyRef')} className="min-w-56">
-            <Input id="rx-dispensed-ref" dir="ltr" className="h-11" {...p.dispensedForm.register('pharmacyRef')} />
+            <Input id="rx-dispensed-ref" dir="ltr" {...p.dispensedForm.register('pharmacyRef')} />
           </Field>
-          <Button type="submit" className="min-h-11" loading={p.busy}>{t('rxShare.saveDispensed')}</Button>
-          <Button type="button" variant="outline" className="min-h-11" onClick={() => p.onDispensing(null)}>{t('rxShare.close')}</Button>
+          <Button type="submit" loading={p.busy}>{t('rxShare.saveDispensed')}</Button>
+          <Button type="button" variant="outline" onClick={() => p.onDispensing(null)}>{t('rxShare.close')}</Button>
         </form>
       )}
     </section>

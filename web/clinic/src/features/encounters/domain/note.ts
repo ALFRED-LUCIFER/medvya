@@ -40,6 +40,8 @@ export type SavePhase = 'idle' | 'saving' | 'saved' | 'failed' | 'conflict';
 
 export const maxSectionLength = 10_000;
 export const autosaveDelayMs = 1500;
+/** A failed save is tried again this often until it is saved (MDV-P1-089). */
+export const saveRetryDelayMs = 5000;
 export const noteFormSchema = z.object({ sections: z.record(z.string(), z.string().max(maxSectionLength)) });
 export type NoteForm = z.infer<typeof noteFormSchema>;
 export const templateChoiceSchema = z.object({ keys: z.array(z.string()).min(1) });

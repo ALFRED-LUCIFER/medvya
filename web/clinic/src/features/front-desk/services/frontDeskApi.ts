@@ -1,5 +1,5 @@
 import { newIdempotencyKey } from '../../api/services/idempotencyKey';
-import { post, send } from '../../schedule/services/scheduleApi';
+import { csrf, post, send } from '../../schedule/services/scheduleApi';
 import type { Board, BoardCard, BoardColumn, WalkInChoice, WalkInVisit } from '../domain/board';
 import type { ClinicOverview, ReassignReason } from '../domain/overview';
 
@@ -34,6 +34,10 @@ export const undoMove = (appointmentId: string, state: BoardColumn) => post<Boar
 
 /** The patient left before being seen: a reason code and an optional note in the body, never in the URL. */
 export const markLeft = (appointmentId: string, reason: string, note: string) => post<unknown>(`/v1/appointments/${appointmentId}/left`, { reason, note: note || null });
+
+/** Takes the doctor's follow-up off the desk's list without booking it (MDV-P1-102). The reason is a code, never patient words, so it may be in the query. */
+export const dismissFollowUp = (id: string, reason: string) =>
+  send<void>(`/v1/waitlist/${id}?${new URLSearchParams({ reason })}`, { method: 'DELETE', headers: csrf });
 
 /** Milliseconds on a monotonic clock, for timing a check-in. */
 export const monotonicNow = () => performance.now();

@@ -379,3 +379,43 @@ for (const locale of ['en', 'ar'])
         .map(v => `${v.id} (${v.nodes.length})`));
     expect(violations).toEqual([]);
   });
+
+// MDV-P1-102: the doctor's follow-up on the Done card, date and doctor only; Book opens the schedule on that day with the patient and doctor chosen;
+// Dismiss asks for a reason first and sends only its code. The server's role scope, booking and audit are proven in FollowUpDueTests.
+const followUp = { id: 'w-1', dueOn: '2026-11-02', calendarId: 'd-1', calendarName: 'Dr. Arjun Rao (synthetic)' };
+for (const locale of ['en', 'ar'])
+  test(`a Done card shows Follow-up due with Book, and dismissing takes a reason (${locale})`, async ({ page }) => {
+    const dismissed: string[] = [];
+    await page.route('**/v1/waitlist/w-1?*', r => {
+      expect(r.request().method()).toBe('DELETE');
+      dismissed.push(new URL(r.request().url()).searchParams.get('reason')!);
+      return r.fulfill({ status: 204 });
+    });
+    const calls = await open(page, { locale, extra: [card('a7', 'Deepak Nair (synthetic)', '09:00', 'Done', { followUp }), card('a8', 'Sara Thomas (synthetic)', '09:10', 'Done')] });
+    const deepak = cardOf(page, 'Deepak Nair (synthetic)');
+    await expect(deepak.getByRole('group')).toHaveCount(1);
+    await expect(cardOf(page, 'Sara Thomas (synthetic)').getByRole('group')).toHaveCount(0); // no follow-up, no line
+    await page.addScriptTag({ path: axePath });
+    expect(await axeViolations(page)).toEqual([]);
+    await deepak.getByRole('group').getByRole('button').click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    expect(await axeViolations(page)).toEqual([]);
+    if (locale === 'ar') return;
+
+    const dialog = page.getByRole('dialog', { name: 'Dismiss the follow-up for Deepak Nair (synthetic)' });
+    await dialog.getByRole('button', { name: 'Back' }).click();
+    await expect(deepak.getByRole('group', { name: /^Follow-up due from/ })).toHaveText(/Follow-up due from Monday, 2 November 2026 · Dr\. Arjun Rao \(synthetic\)/);
+    await expect(deepak.getByRole('link', { name: 'Book the follow-up for Deepak Nair (synthetic)' }))
+      .toHaveAttribute('href', '/schedule?date=2026-11-02&view=day&patient=p-a7&doctor=d-1');
+    await deepak.getByRole('button', { name: 'Dismiss the follow-up for Deepak Nair (synthetic)' }).click();
+    await dialog.getByRole('button', { name: 'Dismiss follow-up' }).click();
+    await expect(dialog.getByText('Choose a reason.')).toBeVisible(); // nothing is sent without one
+    expect(dismissed).toEqual([]);
+    await dialog.getByRole('combobox', { name: 'Reason' }).click();
+    await page.getByRole('option', { name: 'Patient declined' }).click();
+    calls.state.find(c => c.id === 'a7')!.followUp = null; // what the server's board answers after the dismissal
+    await dialog.getByRole('button', { name: 'Dismiss follow-up' }).click();
+    await expect(dialog).toHaveCount(0);
+    expect(dismissed).toEqual(['PatientDeclined']);
+    await expect(deepak.getByRole('group')).toHaveCount(0);
+  });

@@ -286,6 +286,7 @@ public sealed class BookingService(
         });
         db.Outbox.Add(Booked(booked, booked.BookedAt));
         await db.SaveChangesAsync(cancellationToken);
+        if (!booked.WalkIn) await FollowUpBookings.BookDueAsync(db, context, booked, cancellationToken);
         await context.AuditAsync(action, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment, booked.Id, booked.PatientId, cancellationToken);
         return booked;
     }
@@ -601,6 +602,13 @@ public sealed class BookingService(
         if (!(await context.PatientsAsync([patientId], cancellationToken)).ContainsKey(patientId)) return null;
         return await db.Appointments.AsNoTracking().Where(a => a.PatientId == patientId).OrderByDescending(a => a.Start).ThenByDescending(a => a.Id).Take(30)
             .Select(a => new DeskVisit(a.Id, a.Start, a.State)).ToListAsync(cancellationToken);
+    }
+
+    public async Task<FollowUpDue?> FollowUpDueAsync(Guid facilityId, Guid patientId, CancellationToken cancellationToken = default)
+    {
+        await context.RequireAsync(facilityId, SchedulingAccess.CanView, cancellationToken);
+        var calendars = (await context.CalendarsAsync(facilityId, cancellationToken)).ToDictionary(c => c.Id, c => c.Name);
+        return (await FollowUpBookings.DueAsync(db, facilityId, [patientId], calendars, cancellationToken)).GetValueOrDefault(patientId);
     }
 
     /// <summary>

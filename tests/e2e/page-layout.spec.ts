@@ -24,7 +24,7 @@ for (const { w, h } of [{ w: 1920, h: 1080 }, { w: 1366, h: 768 }]) {
       const box = (await container.boundingBox())!;
       if (s.width === 'fluid') expect(box.width).toBeGreaterThanOrEqual(main - 1);
       else expect(box.width).toBeLessThanOrEqual(limit[s.width] + 1);
-      await expect(page.locator('main h1').first()).toHaveCSS('font-size', '24px');
+      await expect(page.locator('main h1').first()).toHaveCSS('font-size', '20px');
     });
   }
 }

@@ -44,7 +44,11 @@ public sealed partial class FrontDeskService(
         var calendars = (await context.CalendarsAsync(facilityId, cancellationToken)).ToDictionary(c => c.Id, c => c.Name);
         var tokens = await TokensAsync([.. visits.Select(a => a.Id)], cancellationToken);
         var withDoctor = await WithDoctorAsync([.. visits.Where(a => a.State == AppointmentState.InConsult).Select(a => a.Id)], cancellationToken);
-        return new(facilityId, facility.TimeZone, date, now, [.. visits.Select(a => Card(a, patients, calendars, tokens, withDoctor))], today.Count - visits.Count);
+        // The doctor's follow-up shows on the Done card, where the desk sees the patient off (MDV-P1-102).
+        var followUps = await FollowUpBookings.DueAsync(db, facilityId, [.. visits.Where(a => a.State == AppointmentState.Done).Select(a => a.PatientId).Distinct()], calendars, cancellationToken);
+        return new(facilityId, facility.TimeZone, date, now, [.. visits.Select(a => a.State == AppointmentState.Done
+            ? Card(a, patients, calendars, tokens, withDoctor) with { FollowUp = followUps.GetValueOrDefault(a.PatientId) }
+            : Card(a, patients, calendars, tokens, withDoctor))], today.Count - visits.Count);
     }
 
     public async Task<BoardCard> CheckInAsync(Guid appointmentId, CheckIn command, CancellationToken cancellationToken = default)

@@ -1,7 +1,9 @@
-// Global search (⌘K, MDV-P2-003): POST /v1/patients/lookup. A result is initials, age and the MRN tail only; the server says whether the
-// caller may open the chart. Nothing here grants anything.
+import type { PatientSummary } from '../../patients/domain/directory';
+
+// Global search (⌘K, MDV-P2-003): POST /v1/patients/lookup. A result is the desk's search row (MDV-P1-101: name, age, sex, date of birth, MRN and
+// phone tails, last visit, duplicate mark); the server says whether the caller may open the chart. Nothing here grants anything.
 export type LookupAccess = 'Open' | 'CanRequest' | 'RequestPending' | 'NoAccess';
-export type LookupRow = { id: string; initials: string; ageYears: number; ageEstimated: boolean; mrnTail: string; access: LookupAccess };
+export type LookupRow = Omit<PatientSummary, 'status'> & { access: LookupAccess };
 export type LookupResult = { items: LookupRow[]; total: number };
 
 /** Each search is audited and rate limited, so a search starts only for text that can match something. */

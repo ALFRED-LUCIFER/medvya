@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight, CircleAlert, CircleCheck, Hourglass, Search 
 import { useI18n } from '@medvya/i18n';
 import { Button, buttonVariants, cn, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea } from '@medvya/ui';
 import PatientSummaryLine from '../../patients/components/PatientSummaryLine';
-import { pageCount, type SearchErrorCode, type SearchResult } from '../../patients/domain/directory';
+import { pageCount, spokenExtras, type SearchErrorCode, type SearchResult } from '../../patients/domain/directory';
 import { channels, reasonCategories, visitTypes, type BookedAppointment, type BookingForm, type Hold, type PatientMatch, type SlotChoice, type SlotError } from '../domain/booking';
 import type { VisitLength, VisitType } from '../domain/schedule';
 import { localTime, weekdayOrder, type PlanRow, type SeriesDone } from '../domain/series';
@@ -264,7 +264,7 @@ export type PatientSearchView = Props['patientSearch'];
  * box and the rows. Inside the booking form, so Enter searches instead of submitting the booking.
  */
 export function PatientPicker({ search: s, chosen, registerPath, invalid }: PickerProps) {
-  const { t } = useI18n();
+  const { t, formatCalendarDate } = useI18n();
   const hint = 'booking-patient-hint', searchError = 'booking-patient-search-error', pickError = 'booking-patient-error';
   const results = useRef<HTMLUListElement>(null);
   // Arrow keys walk the rows (focus moves, so a screen reader reads each one); the first Up returns to the box.
@@ -312,7 +312,7 @@ export function PatientPicker({ search: s, chosen, registerPath, invalid }: Pick
           className={cn('flex max-h-64 flex-col divide-y overflow-y-auto rounded-md border', s.updating && 'opacity-60')}>
           {s.result.items.map(row => {
             const age = t(row.ageEstimated ? 'patients.ageEstimated' : 'patients.age', { age: row.ageYears });
-            const label = t('booking.patientPick', { name: row.fullName, age, sex: t(`patients.sex.${row.sexAtBirth}`), mrn: row.mrnTail, phone: row.mobileTail, state: row.status === 'Incomplete' ? t('patients.row.incomplete') : '' });
+            const label = t('booking.patientPick', { name: row.fullName, age, sex: t(`patients.sex.${row.sexAtBirth}`), mrn: row.mrnTail, phone: row.mobileTail, ...spokenExtras(row, t, formatCalendarDate), state: row.status === 'Incomplete' ? t('patients.row.incomplete') : '' });
             return (
               <li key={row.id}>
                 <button type="button" aria-pressed={chosen === row.id} aria-label={label} onClick={() => s.onPick(row.id)}

@@ -181,7 +181,7 @@ A "Clinic approval" demo switch (Approved, Waiting, Suspended). Waiting: after s
 - Leave (settings ⚠): "Leave: 20–24 Oct 2026 · **6 booked patients will be offered new slots before leave is saved.**"
 
 ## Global search (D-02)
-- Search name / MRN / phone. Results show **initials + age + MRN tail only** until the record is opened.
+- Search name / MRN / phone. Each result is on two lines, like every patient picker (MDV-P1-101): **name, age and sex**, then **date of birth, MRN tail, phone tail and last visit date**. The MRN and phone stay masked to their last four until the record is opened. A record in an open merge request reads **Possible duplicate**; the older record is listed first and reads **Main record**. A date of birth estimated from a stated age is not shown.
 - Patients outside your care relationship show "Request access" (break-glass in hospitals).
 - Empty state: "No patients match. Register a new patient".
 

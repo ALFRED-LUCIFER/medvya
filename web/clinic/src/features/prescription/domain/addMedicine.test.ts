@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checksFor, draftOf, medicinesOf, quantityOf, unitOf, withDefaults } from './addMedicine';
+import { checksFor, closest, draftOf, medicinesOf, quantityOf, unitOf, withDefaults } from './addMedicine';
 import type { RxChecks, SafetyAlert } from './checks';
 import { invalidFields, type Medicine, type SigDraft, type SigField } from './prescription';
 
@@ -40,6 +40,26 @@ describe('add medicine sig', () => {
   it('lists one row per medicine; its strengths are the rows that share generic and form', () => {
     const rows = [med('1', 'Atorvastatin', '10 mg'), med('2', 'Atorvastatin', '20 mg'), med('3', 'Amlodipine', '5 mg')];
     expect(medicinesOf(rows).map(m => m.id)).toEqual(['1', '3']);
+  });
+});
+
+describe('did you mean (MDV-P1-088)', () => {
+  const row = (id: string, generic: string, strength: string, brands: string[] = []): Medicine => ({ id, generic, strength, form: 'Tablet', brands });
+  const rows = [
+    row('1', 'Amlodipine', '5 mg'), row('2', 'Amoxicillin and clavulanate', '375 mg', ['Augmentin']), row('3', 'Amoxicillin and clavulanate', '625 mg', ['Augmentin']),
+    row('4', 'Aspirin', '75 mg', ['Synthetic Augur']), row('5', 'Metformin', '500 mg'),
+  ];
+
+  it('offers the medicines whose generic or brand starts most like the typed name, every strength, best first', () => {
+    expect(closest(' Augmentn ', rows).map(m => m.id)).toEqual(['2', '3', '4']); // the brand shares "augment", then "augu" shares three letters
+    expect(closest('clavulanic', rows).map(m => m.id)).toEqual(['2', '3']); // a later word of the generic counts
+    expect(closest('amoxil', rows, 1).map(m => m.id)).toEqual(['2', '3']); // one medicine, both strengths
+  });
+
+  it('offers nothing when fewer than three starting letters are shared: no guess', () => {
+    expect(closest('Agumentin', rows)).toEqual([]);
+    expect(closest('formin', rows)).toEqual([]); // never a match inside a word
+    expect(closest('xyz', [])).toEqual([]);
   });
 });
 

@@ -7270,6 +7270,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/settings/formulary/brands": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["AddBrands"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/settings/order-sets": {
         parameters: {
             query?: never;
@@ -8563,6 +8600,9 @@ export interface components {
             reaction: null | string;
             status: null | components["schemas"]["AllergyStatus"];
         };
+        AddBrands: {
+            rows: null | components["schemas"]["BrandRow"][];
+        };
         AddCareGoal: {
             text: null | string;
             target: null | string;
@@ -8835,6 +8875,13 @@ export interface components {
             channel?: components["schemas"]["BookingChannel"];
             starts?: string[];
         };
+        BrandRow: {
+            brand: null | string;
+            generic: null | string;
+            strength: null | string;
+            form: null | string;
+            allergyClass: null | string;
+        };
         /** @enum {unknown} */
         CalendarKind: "Doctor" | "Resource";
         CancelAppointment: {
@@ -8865,6 +8912,8 @@ export interface components {
             count: number | string;
             /** Format: int32 */
             targetSeconds: number | string;
+            /** Format: int32 */
+            unmeasured: number | string;
         };
         ChooseNoteTemplates: {
             keys: null | string[];

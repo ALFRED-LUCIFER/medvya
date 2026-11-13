@@ -148,6 +148,39 @@ namespace Medvya.Prescribing.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Medvya.Prescribing.Domain.FormularyBrand", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("AddedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("AddedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("FormularyItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FormularyItemId");
+
+                    b.HasIndex("TenantId", "FormularyItemId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("FormularyBrands", "prescribing");
+                });
+
             modelBuilder.Entity("Medvya.Prescribing.Domain.FormularyItem", b =>
                 {
                     b.Property<Guid>("Id")
@@ -846,6 +879,15 @@ namespace Medvya.Prescribing.Infrastructure.Persistence.Migrations
                     b.HasIndex("TenantId", "ShareId");
 
                     b.ToTable("RxShareCodes", "prescribing");
+                });
+
+            modelBuilder.Entity("Medvya.Prescribing.Domain.FormularyBrand", b =>
+                {
+                    b.HasOne("Medvya.Prescribing.Domain.FormularyItem", null)
+                        .WithMany()
+                        .HasForeignKey("FormularyItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }

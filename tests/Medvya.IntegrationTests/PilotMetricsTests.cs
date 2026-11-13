@@ -13,6 +13,7 @@ namespace Medvya.IntegrationTests;
 /// double-booking refusals) from what the desk already does, baselines with method and dates, practice configuration only, and
 /// another tenant sees none of it. SAFETY: mutation check: dropping CheckInMs from the status event, the "first &lt; c.Start" returning
 /// rule, the NoShow count, the conflict write in DoctorDayTransaction or the CanConfigure check each fails a test here.
+/// MDV-P1-106: counting a not-measured check-in as zero again (in the query or in what check-in stores) fails the unmeasured test.
 /// </summary>
 public sealed class PilotMetricsTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IAsyncLifetime
 {
@@ -47,13 +48,56 @@ public sealed class PilotMetricsTests(PostgresFixture sql) : IClassFixture<Postg
         h.Clock.Advance(TimeSpan.FromMinutes(20));
 
         var m = await Metrics(h.Admin).GetAsync(h.Facility, 14);
-        Assert.Equal(new CheckInMetric(40, 2, 65, 4, 60), m.CheckIn);
+        Assert.Equal(new CheckInMetric(40, 2, 65, 4, 60, 0), m.CheckIn);
         Assert.Equal(new NoShowMetric(1, 4, 20), m.NoShows);
         Assert.Equal((0, h.Clock.GetUtcNow()), (m.DoubleBookingRefusals, m.To));
         Assert.Empty(m.Baselines);
         var elsewhere = await Metrics(h.Elsewhere).GetAsync(h.OtherFacility, 14); // the other location's admin: none of Adyar's visits
         Assert.Equal((0, 0, 0), (elsewhere.CheckIn.Count, elsewhere.NoShows.NoShows, elsewhere.NoShows.Attended));
     }
+
+    /// <summary>MDV-P1-106: a check-in with no start, an impossible time, or an old zero-second row is not measured: counted apart, never as 0 s.</summary>
+    [Fact]
+    public async Task ACheckInWithoutATrustworthyTimeIsLeftOutOfTheMedianNotCountedAsZero()
+    {
+        var visits = new List<AppointmentView>();
+        for (var i = 0; i < 7; i++) visits.Add(await h.BookAsync(9 + i / 3, 20 * (i % 3))); // 09:00 to 11:00, one patient
+        h.Clock.Advance(At(11, 30) - MondayMorning);
+        var desk = h.FrontDesk(h.Reception);
+        await desk.CheckInAsync(visits[0].Id, new CheckIn { ElapsedMs = 55_000 });  // the first visit: makes the rest returning
+        await desk.CheckInAsync(visits[1].Id, new CheckIn { ElapsedMs = 40_000 });  // a walk-in checked in 40 s after Walk-in was opened
+        await desk.CheckInAsync(visits[2].Id, new CheckIn());                       // no measured start
+        await desk.CheckInAsync(visits[3].Id, new CheckIn { ElapsedMs = 0 });       // "created and checked in by one action"
+        await desk.CheckInAsync(visits[4].Id, new CheckIn { ElapsedMs = -5_000 });  // a clock that went backwards
+        await desk.CheckInAsync(visits[5].Id, new CheckIn { ElapsedMs = 400 });     // faster than any desk
+        await desk.CheckInAsync(visits[6].Id, new CheckIn { ElapsedMs = long.MaxValue }); // absurd: must not overflow into a time
+        await using (var db = sql.Scheduling(h.Tenant))
+        {
+            Assert.Equal([40_000, 55_000], (await db.StatusEvents.Where(e => e.CheckInMs != null).Select(e => e.CheckInMs!.Value).ToListAsync()).Order());
+            // A row stored before the lower bound existed (a zero-second check-in of the old measure): excluded when read.
+            var old = await db.StatusEvents.SingleAsync(e => e.AppointmentId == visits[5].Id && e.State == AppointmentState.CheckedIn);
+            await db.StatusEvents.Where(e => e.Id == old.Id).ExecuteUpdateAsync(s => s.SetProperty(e => e.CheckInMs, 3));
+        }
+        h.Clock.Advance(TimeSpan.FromMinutes(1));
+
+        // Counted as zero, the five would drag the returning median to 0 s ("target met"); left out, it is the one real 40 s.
+        Assert.Equal(new CheckInMetric(40, 1, 47.5, 2, 60, 5), (await Metrics(h.Admin).GetAsync(h.Facility, 14)).CheckIn);
+        // No timed check-in: no median at all (the panel says "No data yet"), not a number.
+        Assert.Equal(new CheckInMetric(null, 0, null, 0, 60, 0), (await Metrics(h.Elsewhere).GetAsync(h.OtherFacility, 14)).CheckIn);
+        await using var other = sql.Scheduling(Guid.NewGuid()); // another clinic reads none of these rows, with or without the EF filter
+        Assert.Equal(0, await other.StatusEvents.IgnoreQueryFilters().CountAsync());
+    }
+
+    [Theory]
+    [InlineData(null, null)]
+    [InlineData(-1L, null)]
+    [InlineData(0L, null)]
+    [InlineData(999L, null)]
+    [InlineData(1000L, 1000)]
+    [InlineData(1_800_000L, 1_800_000)]
+    [InlineData(1_800_001L, null)]
+    [InlineData(long.MaxValue, null)]
+    public void ACheckInTimeIsTrustedOnlyBetweenOneSecondAndHalfAnHour(long? sent, int? stored) => Assert.Equal(stored, PilotMetricRules.TimedMs(sent));
 
     [Fact]
     public async Task ADoubleBookingTheDatabaseRefusesIsCounted()

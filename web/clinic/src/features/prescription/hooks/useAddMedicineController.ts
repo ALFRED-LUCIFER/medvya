@@ -3,13 +3,20 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm, useWatch } from 'react-hook-form';
 import { ApiError } from '../../schedule/services/scheduleApi';
-import { checksFor, draftOf, medicinesOf, quantityOf, sameMedicine, unitOf, type Choice } from '../domain/addMedicine';
+import { checksFor, closest, draftOf, medicinesOf, quantityOf, sameMedicine, unitOf, type Choice } from '../domain/addMedicine';
 import { lineSafety, overrideSchema } from '../domain/checks';
 import { invalidFields, problemOf, type Medicine, type RxLine, type RxProblem } from '../domain/prescription';
 import { addFromFormulary, fetchChecks, fetchPrescription, includeLine, overrideAlert, saveSig, searchMedicines } from '../services/prescriptionApi';
 
 const autosaveMs = 500;
 const none: Choice = { often: null, when: null, long: null, instructions: '' };
+
+/** MDV-P1-088, "Did you mean": when a typed name matched nothing, the formulary rows that start as it does, closest first (see `closest`). */
+export function useDidYouMean(text: string, missed: boolean): Medicine[] {
+  const start = text.slice(0, 3);
+  const near = useQuery({ queryKey: ['formulary', 'doctor', 'near', start], queryFn: () => searchMedicines(start, 50), enabled: missed && text.length > 3 });
+  return missed && text.length > 3 ? closest(text, near.data ?? []) : [];
+}
 
 /**
  * The Add medicine panel (MDV-P2-039) over the consultation's draft prescription (MDV-P2-015). Picking a strength puts the line on the draft,
@@ -87,6 +94,8 @@ export function useAddMedicineController(encounterId: string | null) {
   const close = () => { if (staged.current) void switchOff(staged.current); reset(); setOpen(false); };
   const line = list.data?.find(l => l.id === lineId) ?? null;
   const results = text.length >= 2 ? (found.data ?? []) : [];
+  const noResults = text.length >= 2 && found.isSuccess && results.length === 0;
+  const suggested = useDidYouMean(text, noResults);
   const mine = checks.data && lineId ? checksFor(checks.data, lineId) : null;
   const blocked = !!mine && !!lineId && lineSafety(mine, lineId) === 'severe';
   const chosen = !!choice.often && !!choice.when && !!choice.long;
@@ -99,8 +108,8 @@ export function useAddMedicineController(encounterId: string | null) {
     refused: list.error instanceof ApiError && list.error.status === 403,
     onOpen: () => { setAdded(null); setOpen(true); },
     onClose: close,
-    search, results: medicinesOf(results), searching: found.isFetching, noResults: text.length >= 2 && found.isSuccess && results.length === 0,
-    medicine, strengths: medicine ? results.filter(m => sameMedicine(m, medicine)) : [],
+    search, results: medicinesOf(results), searching: found.isFetching, noResults, suggestions: medicinesOf(suggested),
+    medicine, strengths: medicine ? [...results, ...suggested].filter(m => sameMedicine(m, medicine)) : [],
     onMedicine: (m: Medicine) => { setMedicine(m); stage.mutate(m); },
     choice,
     onChoice: (c: Partial<Choice>) => {

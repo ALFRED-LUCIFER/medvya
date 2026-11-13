@@ -21,8 +21,8 @@ public sealed record BoardCard(
 public sealed record FrontDeskBoard(Guid FacilityId, string TimeZone, DateOnly Date, DateTimeOffset Now, IReadOnlyList<BoardCard> Cards);
 
 /// <summary>
-/// Check in a visit. ElapsedMs is how long the desk took from tapping "Check in" to confirming (exit gate 3 measures the
-/// median); it is a number only, never patient data.
+/// Check in a visit. ElapsedMs is how long the desk took, from opening Walk-in or tapping "Check in" to this call (exit gate 3
+/// measures the median); it is a number only, never patient data. Missing or outside <see cref="PilotMetricRules.TimedMs"/>: not measured.
 /// </summary>
 public sealed record CheckIn
 {

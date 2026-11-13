@@ -7,6 +7,9 @@ import { browserNow, choosePatient, expectNoAxeViolations, signIn, watchUrls } f
 // returning check-in the pilot metrics time (MDV-P1-041, exit gate 3). Step 2 (fees catalogue) and steps 5-8
 // (consent, recording, note, invoice) have no screens yet and are not faked here. Synthetic people only.
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
+// MDV-P1-106: a check-in under one second is stored as not measured (no desk is that fast), so the script reads the name and
+// date of birth for a moment, as a receptionist does, before confirming.
+const deskPauseMs = 1100;
 const n = Math.floor(Math.random() * 9000) + 1000;
 const patient = {
   name: `Latha Iyengar${[...String(n)].map(d => 'abcdefghij'[+d]).join('')}`, dob: `${1950 + (n % 50)}-${String(1 + (n % 12)).padStart(2, '0')}-${String(1 + (n % 28)).padStart(2, '0')}`,
@@ -142,6 +145,7 @@ test('J1: a new clinic owner sets up the practice, Medvya approves it, then a pa
     await page.getByRole('link', { name: 'Front desk' }).first().click();
     const card = page.getByRole('article', { name: patient.name });
     await card.getByRole('button', { name: 'Check in' }).click();
+    await page.waitForTimeout(deskPauseMs);
     await card.getByRole('group', { name: 'Confirm identity' }).getByRole('button', { name: 'Confirm arrival' }).click();
     await expect(page.getByRole('region', { name: /^Ready for doctor/ }).getByRole('article', { name: patient.name })).toBeVisible(); // nurse intake is off (the default): check-in goes straight to Ready for doctor (#1104)
     await expectNoAxeViolations(page);
@@ -175,6 +179,7 @@ test('J1: a new clinic owner sets up the practice, Medvya approves it, then a pa
     await expect(checkIn).toBeVisible();
     const started = Date.now(); // the stopwatch: tap "Check in" to the card in Ready for doctor
     await checkIn.click();
+    await page.waitForTimeout(deskPauseMs);
     await card.getByRole('group', { name: 'Confirm identity' }).getByRole('button', { name: 'Confirm arrival' }).click();
     await expect(page.getByRole('region', { name: /^Ready for doctor/ }).getByRole('article', { name: patient.name })).toHaveCount(2);
     const stopwatchSeconds = (Date.now() - started) / 1000;
@@ -197,6 +202,37 @@ test('J1: a new clinic owner sets up the practice, Medvya approves it, then a pa
     await page.waitForLoadState('networkidle');
     await expectNoAxeViolations(page);
     await page.evaluate(() => localStorage.setItem('medvya.locale', 'en'));
+  });
+
+  await test.step('J1.4 a walk-in is timed from opening Walk-in to the token: 3 clicks for a returning patient, never 0 s (MDV-P1-106)', async () => {
+    await page.reload(); // English again
+    await page.getByRole('link', { name: 'Front desk' }).first().click();
+    await page.getByRole('link', { name: 'Walk-in' }).click(); // click 1
+    const search = page.getByRole('searchbox', { name: 'Name, MRN, phone or ID' });
+    await expect(search).toBeVisible();
+    const opened = Date.now(); // Walk-in is open: the clock is running
+    await search.fill(patient.mobile);
+    await search.press('Enter');
+    await page.getByRole('button', { name: new RegExp(`^${patient.name}, \\d+ y, Female`) }).click(); // click 2
+    await expect(page.getByText(`Patient: ${patient.name} · MRN`, { exact: false })).toBeVisible();
+    await page.waitForTimeout(deskPauseMs);
+    await page.getByRole('button', { name: 'Check in now' }).click(); // click 3
+    // She already has two visits today, so the desk is warned and chooses (MDV-P1-052); a first visit of the day has no such step.
+    await page.getByRole('button', { name: 'Make a second visit anyway' }).click();
+    await expect(page.getByText(/^Token /)).toBeVisible();
+    const stopwatchSeconds = (Date.now() - opened) / 1000;
+
+    const facilityId = (await (await page.request.get('/v1/me/context')).json()).active.facilityId as string;
+    const { checkIn } = await (await page.request.get(`/v1/schedule/metrics?facilityId=${facilityId}&days=14`)).json();
+    // The walk-in is a timed check-in (count 3, none unmeasured): it took over a second because it ran from opening Walk-in.
+    // Timed from its last tap alone it would be under a second, so it would be stored as not measured (count 2, unmeasured 1).
+    expect(checkIn).toMatchObject({ count: 3, returningCount: 2, unmeasured: 0 });
+    expect(checkIn.returningMedianSeconds).toBeGreaterThanOrEqual(1);
+    expect(checkIn.returningMedianSeconds).toBeLessThanOrEqual(stopwatchSeconds);
+    await page.goto('/app/settings?tab=metrics');
+    const report = page.getByRole('region', { name: 'Pilot metrics' });
+    await expect(report).toContainText('2 returning of 3 timed check-ins');
+    await expect(report).not.toContainText(/(^|[^\d])0 s/);
   });
 
   expect(watch.leaks(['Latha', 'Iyengar', 'Gopal', patient.dob, `0${n}`])).toEqual([]);

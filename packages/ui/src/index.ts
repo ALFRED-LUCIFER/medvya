@@ -9,6 +9,7 @@ export { PageContainer, PageHeader, pageWidths, type PageWidth } from '#componen
 export { Tabs, TabsContent, TabsList, TabsTrigger } from '#components/ui/tabs';
 export { Dialog, DialogTrigger, DialogContent, DialogTitle, DialogDescription } from '#components/ui/dialog';
 export { Switch } from '#components/ui/switch';
+export { ChoiceRow } from '#components/ui/choice-row';
 export { Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow, TableState, type SortDirection } from '#components/ui/table';
 // Radix's focus scope (the one Dialog uses), for a panel that is modal only at some widths (the schedule's tablet drawer).
 import { FocusScope as FocusScopePrimitive } from 'radix-ui/internal';

@@ -4,14 +4,14 @@ import { cn } from "#lib/utils"
 
 type SortDirection = "ascending" | "descending" | "none"
 
-// With `label` the scroll wrapper is a focusable region, so a keyboard user can scroll a wide table (WCAG 2.1.1).
-function Table({ className, containerClassName, label, ...props }: React.ComponentProps<"table"> & { containerClassName?: string; label?: string }) {
+// `label` is required: the scroll wrapper is a named, focusable region, so a keyboard user can scroll a wide table (WCAG 2.1.1).
+function Table({ className, containerClassName, label, ...props }: React.ComponentProps<"table"> & { containerClassName?: string; label: string }) {
   return (
     <div
       data-slot="table-container"
-      role={label ? "region" : undefined}
+      role="region"
       aria-label={label}
-      tabIndex={label ? 0 : undefined}
+      tabIndex={0}
       className={cn("relative w-full overflow-x-auto rounded-lg border focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1 focus-visible:outline-ring", containerClassName)}
     >
       <table

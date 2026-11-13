@@ -47,6 +47,8 @@ etag=$(az storage container immutability-policy show --account-name <storage> -c
 az storage container immutability-policy lock --account-name <storage> -c ledger-digests --if-match "$etag"
 ```
 
+After the lock, every deployment of that environment passes `ledgerDigestPolicyLocked=true`. Azure refuses any write to a locked policy, even an unchanged one, so without it the deployment fails. Dev was locked on 13 Nov 2026, and `infra-dev.yml` passes it.
+
 **First deployment of an environment, once** (values never echoed or committed):
 
 1. `openssl rand -base64 32 | tr -d '\n' > /tmp/k && az keyvault secret set --vault-name <kv> --name audit-digest-key --file /tmp/k -o none && rm /tmp/k`

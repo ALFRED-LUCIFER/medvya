@@ -1,0 +1,99 @@
+{
+  "consults": [
+    "/consult/01a1d400-8c17-7d5e-94c3-40c10b20ce3e"
+  ],
+  "patients": [
+    "/patients/new",
+    "/patients/directory/merge",
+    "/patients/directory/01a1d401-b3d6-7cb8-9a1d-131763d94532",
+    "/patients/directory/01a1d401-a299-7486-a4e2-66f07de75cb0",
+    "/patients/directory/01a1d401-79a5-756a-814e-dc0a31842895",
+    "/patients/directory/01a1d401-6448-7a16-ba65-ebee8e32a4cc",
+    "/patients/directory/01a1d401-5639-7183-b2c3-276f73ad9217",
+    "/patients/directory/01a1d401-4846-73eb-8618-0dd6a991d819",
+    "/patients/directory/01a1d401-3023-79bc-8e20-67b87b1e7bef",
+    "/patients/directory/01a1d400-21cc-7b22-a98c-4c709c0cf8d3",
+    "/patients/directory/5e1d0001-0004-4000-8000-000000000001",
+    "/patients/directory/5e1d0001-0004-4000-8000-000000000002"
+  ],
+  "todayText": "Today\n\nToday · Tuesday, 3 November 2026\n\nLive updates\n\nMy patients\nWhole clinic\nNext patient\n\nKavya Pillaibdcc\n\n10:00 · Long-term condition review\n\nReady for doctor\nAllergies not recorded\nRegistration incomplete\nStart consultation\nToday's visits\n10:00 Kavya Pillaibdcc · 54 y\n\nLong-term condition review\n\nReady for doctor\nAllergies not recorded\nRegistration incomplete\nStart consultation\n10:40 Meera Iyer (synthetic) · 54 y\n\nLong-term condition review\n\nDone\nAllergies listed\n11:20 Meera Iyer (synthetic) · 54 y\n\nLong-term condition review\n\nDone\nAllergies listed\n11:40 Meera Iyer (synthetic) · 54 y\n\nLong-term condition review\n\nDone\nAllergies listed\n12:00 Anjali Varmahjdd · 43 y\n\nGeneral consultation\n\nReady for doctor\nAllergies not recorded\nRegistration incomplete\nWalk-in\nStart consultation\n17:00 Meenakshi Sundarameejh · 29 y\n\nGeneral consultation\n\nWith nurse\nAllergies not recorded\nRegistration incomplete\nWalk-in\nStart consultation\n17:40 Kavitha Menongige · 62 y\n\nGeneral consultation\n\nReady for doctor\nNurse escalation: Synthetic chest pain on arrival\nNo known allergies\nRegistration incomplete\nWalk-in\nStart consultation\n18:20 Revathi Krishnaniadg · 40 y\n\nGeneral consultation\n\nReady for doctor\nAllergies not recorded\nRegistration incomplete\nWalk-in\nStart consultation\n1 note to sign\nMeera Iyer (synthetic)\n03 Nov 2026 · No note written yet\nOpen to finish",
+  "directoryText": "Patients\n\nSearch by name, phone number (full or at least 4 digits), Aadhaar, MRN or ABHA / Emirates ID. Results show initials, age, sex and the end of the MRN until you open a record.\n\nReview possible duplicate records\nName, MRN, phone or ID\nSearch\n\nResults appear as you type. Use any part of a name, at least 4 digits of a phone number, or an Aadhaar number (only its last 4 digits are used and nothing is kept).\n\nAll patients\nIncomplete registration\nRegistered this week\n\nPatients: 10\n\nPatients: 10\nPatient\tAge\tSex\tMRN\tPhone\tRegistration\n\nSR\nSowmya Raghavanjaih\nSowmya Raghavanjaih, 39 y, Female, MRN ending 0008, phone ending 9087. Open record, incomplete registration\n\t39 y\tFemale\tMRN ··0008\tPhone ··9087\t\nIncomplete registration\n\nRK\nRevathi Krishnaniadg\nRevathi Krishnaniadg, 40 y, Female, MRN ending 0007, phone ending 8036. Open record, incomplete registration\n\t40 y\tFemale\tMRN ··0007\tPhone ··8036\t\nIncomplete registration\n\nKM\nKavitha Menongige\nKavitha Menongige, 62 y, Female, MRN ending 0006, phone ending 6864. Open record, incomplete registration\n\t62 y\tFemale\tMRN ··0006\tPhone ··6864\t\nIncomplete registration\n\nMS\nMeenakshi Sundarameejh\nMeenakshi Sundarameejh, 29 y, Female, MRN ending 0005, phone ending 4497. Open record, incomplete registration\n\t29 y\tFemale\tMRN ··0005\tPhone ··4497\t\nIncomplete registration\n\nDN\nDeepak Nair (synthetic)\nDeepak Nair (synthetic), 47 y, Male, MRN ending 0004, phone ending 0102. Open record, incomplete registration\n\t47 y\tMale\tMRN ··0004\tPhone ··0102\t\nIncom",
+  "boardText": "Front desk\n\nReception board · Tuesday, 3 November 2026\n\nFacility time · Asia/Kolkata\n\nBy status\nBy doctor\n\nLive updates\n\nReceptionist view hides clinical notes\n\nWaitlist\nWalk-in\nRegister patient\nDoctor workload\nDr. Arjun Rao (synthetic)\n5 waiting · On time\nDr. S. Menon (synthetic)\n1 waiting · On time\nBooked\n0\n0 visits\n\nNo visits\n\nChecked in\n0\n0 visits\n\nNo visits\n\nWith nurse\n1\n1 visit\nMeenakshi Sundarameejh\n17:00\n\n29 y · Female\n\nWalk-in\nRegistration incomplete\nToken A-06\nIntake done\nStart consultation\nReady for doctor\n5\n5 visits\nKavya Pillaibdcc\n10:00\n\n54 y · Female\n\nRegistration incomplete\nToken A-01\nWaiting 5 min\nCall in\nStart consultation\nAnjali Varmahjdd\n12:00\n\n43 y · Female\n\nWalk-in\nRegistration incomplete\nToken A-05\nWaiting 4 min\nCall in\nStart consultation\nKavitha Menongige\n17:40\n\n62 y · Female\n\nWalk-in\nRegistration incomplete\nToken A-07\nWaiting 3 min\nCall in\nStart consultation\nRevathi Krishnaniadg\n18:20\n\n40 y · Female\n\nWalk-in\nRegistration incomplete\nToken A-08\nWaiting 3 min\nCall in\nStart consultation\nSowmya Raghavanjaih\n19:00\n\n39 y · Female\n\nWalk-in\nRegistration incomplete\nToken A-09\nWaiting 3 min\nCall in\nStart consultation\nIn consult\n0\n0 visits\n\nNo visits\n\nDone\n3\n3 visits\nMeera Iyer (synthetic)\n10:40\n\n54 y · Female\n\nToken A-02\nMeera Iyer (synthetic)\n11:20\n\n54 y · Female\n\nToken A-03\nMeera Iyer (synthetic)\n11:40\n\n54 y · Female\n\nToken A-04",
+  "boardLinks": [
+    "/front-desk | By status",
+    "/front-desk/overview | By doctor",
+    "/front-desk/waitlist | Waitlist",
+    "/front-desk/walk-in | Walk-in",
+    "/patients/new | Register patient"
+  ],
+  "doctor": {
+    "landing": "/app/patients/5e1d0001-0004-4000-8000-000000000001",
+    "nav": [
+      "/today",
+      "/patients",
+      "/front-desk",
+      "/schedule",
+      "/patients/new",
+      "/settings",
+      "/patients/5e1d0001-0004-4000-8000-000000000001/docs",
+      "/more"
+    ]
+  },
+  "receptionist": {
+    "landing": "/app/front-desk",
+    "nav": [
+      "/front-desk",
+      "/schedule",
+      "/patients/new",
+      "/more"
+    ]
+  },
+  "nurse": {
+    "landing": "/app/today",
+    "nav": [
+      "/today",
+      "/patients",
+      "/front-desk",
+      "/schedule",
+      "/more"
+    ]
+  },
+  "practice-admin": {
+    "landing": "/app/front-desk",
+    "nav": [
+      "/front-desk",
+      "/schedule",
+      "/patients/new",
+      "/settings",
+      "/more"
+    ]
+  },
+  "care-coordinator": {
+    "landing": "/app/today",
+    "nav": [
+      "/today",
+      "/patients",
+      "/front-desk",
+      "/schedule",
+      "/more"
+    ]
+  },
+  "hospital-doctor": {
+    "landing": "/app/today",
+    "nav": [
+      "/today",
+      "/patients",
+      "/front-desk",
+      "/schedule",
+      "/patients/new",
+      "/more"
+    ]
+  },
+  "hospital-it": {
+    "landing": "/app/settings",
+    "nav": [
+      "/settings",
+      "/more"
+    ]
+  }
+}

@@ -314,6 +314,42 @@ test('reception books an empty slot: hold, longer visit type, confirm the patien
   expect(calls.releases).toEqual([]); // booking used the hold; nothing to release
 });
 
+test('a patient who was never seen is booked as a New consultation, unless the desk picked a type', async ({ page }) => {
+  const calls = await open(page);
+  // UX-10: the desk lookup says the patient has no attended visit (later routes win over the shared mock).
+  await page.route('**/v1/schedule/patients/*', r => r.fulfill({ json: { id: patientId, fullName: 'Deepak Nair (synthetic)', mrn: '000002', hasVisited: false } }));
+  await bookButton(page, '10:00').click();
+  const panel = page.getByRole('complementary', { name: 'Book appointment' });
+  await expect(panel).toContainText('Held for you until');
+  await panel.getByRole('searchbox', { name: 'Name, MRN, phone or ID' }).fill('Nair');
+  await panel.getByRole('button', { name: 'Search' }).click();
+  await panel.getByRole('button', { name: 'D N, 47 y, Male, MRN ending 0002. Choose for this booking' }).click();
+  await expect(panel).toContainText('Deepak Nair (synthetic) · MRN 000002');
+  await expect(panel).toContainText('10:00–10:40'); // held again for the longer first visit
+  expect(calls.holds.map(h => h.visitType)).toEqual(['FollowUp', 'NewConsultation']);
+});
+
+test('where a first visit does not fit the slot, the booking stays a Follow-up instead of failing', async ({ page }) => {
+  const calls = await open(page);
+  await page.route('**/v1/schedule/patients/*', r => r.fulfill({ json: { id: patientId, fullName: 'Deepak Nair (synthetic)', mrn: '000002', hasVisited: false } }));
+  await page.route('**/v1/slot-holds', r => {
+    const body = r.request().postDataJSON() as { visitType: string };
+    calls.holds.push(body);
+    return body.visitType === 'NewConsultation'
+      ? r.fulfill({ status: 409, json: { title: 'Not bookable', code: 'not_bookable' } })
+      : r.fulfill({ json: { id: `h-${calls.holds.length}`, facilityId: 'f-1', calendarId: 'd-1', ...body, start: ist('2026-10-19', '10:00'), end: ist('2026-10-19', '10:20'), expiresAt: ist('2026-10-19', '08:02') } });
+  });
+  await bookButton(page, '10:00').click();
+  const panel = page.getByRole('complementary', { name: 'Book appointment' });
+  await panel.getByRole('searchbox', { name: 'Name, MRN, phone or ID' }).fill('Nair');
+  await panel.getByRole('button', { name: 'Search' }).click();
+  await panel.getByRole('button', { name: 'D N, 47 y, Male, MRN ending 0002. Choose for this booking' }).click();
+  await expect(panel).toContainText('Deepak Nair (synthetic) · MRN 000002');
+  await expect(panel.getByRole('combobox', { name: 'Visit type' })).toContainText('Follow-up');
+  await expect(panel.getByRole('alert')).toHaveCount(0);
+  expect(calls.holds.map(h => h.visitType)).toEqual(['FollowUp', 'NewConsultation', 'FollowUp']);
+});
+
 test('closing the panel releases the hold, and a slot taken meanwhile says so', async ({ page }) => {
   const calls = await open(page);
   await bookButton(page, '10:20').click();

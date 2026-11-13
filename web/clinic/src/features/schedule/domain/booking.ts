@@ -12,7 +12,7 @@ export type Channel = (typeof channels)[number];
 /** POST /v1/slot-holds answer: the slots are reserved for this user until expiresAt. */
 export type Hold = { id: string; facilityId: string; calendarId: string; visitType: VisitType; start: string; end: string; expiresAt: string };
 export type BookedAppointment = { id: string; reference: string; patientName: string; mrn: string; calendarId: string; start: string; end: string; state: 'Booked' };
-export type PatientMatch = { id: string; fullName: string; mrn: string };
+export type PatientMatch = { id: string; fullName: string; mrn: string; hasVisited: boolean };
 
 /** The slot the user clicked, and the visit type that decides how many slots the hold covers. */
 export type SlotChoice = { calendarId: string; calendarName: string; start: string; visitType: VisitType };

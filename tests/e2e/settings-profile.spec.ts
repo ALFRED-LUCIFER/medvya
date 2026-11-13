@@ -104,3 +104,65 @@ for (const locale of ['en', 'ar'])
       (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations.map(v => `${v.id} (${v.nodes.length})`));
     expect(violations).toEqual([]);
   });
+
+// MDV-P2-055 AC5: at 1024 px and wider a group's sections are a left sub-navigation (right in Arabic) in place of the second tab row; narrower,
+// the row stays. The five groups and every ?tab= address open the same section as before.
+const sections: Record<string, string> = {
+  profile: 'Profile', locations: 'Locations', hours: 'Hours', holidays: 'Holidays', displays: 'Queue displays', metrics: 'Pilot metrics', terms: 'Terms',
+  staff: 'Staff', doctors: 'Doctors', nurse: 'Nurse intake', queue: 'Queue order', medicines: 'Medicines', notifications: 'Notifications',
+  requests: 'Access requests', policy: 'Who opens records', review: 'Access review', audit: 'Audit log', data: 'Data',
+};
+async function settings(page: Page, locale = 'en') {
+  await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
+  await page.route('**/v1/me/context', r => r.fulfill({ json: owner }));
+  await page.route('**/v1/notifications/inbox?*', r => r.fulfill({ json: { unread: 0, items: [] } }));
+  await page.route('**/v1/settings/profile', r => r.fulfill({ json: profile }));
+}
+
+test('at 1024 px and wider the sections are a left sub-navigation and every ?tab= address opens its section', async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 900 });
+  await settings(page);
+  for (const [id, name] of Object.entries(sections)) {
+    await page.goto(`/settings?tab=${id}`);
+    if (id === 'notifications') { // the Messages group has one section: no sub-navigation
+      await expect(page.getByRole('tab', { name: 'Messages', selected: true })).toBeVisible();
+      await expect(page.getByRole('tablist', { name: 'Settings sections' })).toHaveCount(0);
+      continue;
+    }
+    const list = page.getByRole('tablist', { name: 'Settings sections' });
+    await expect(list.getByRole('tab', { name, exact: true, selected: true })).toBeVisible();
+    await expect(list).toHaveAttribute('aria-orientation', 'vertical');
+  }
+
+  await page.goto('/settings?tab=profile');
+  const list = page.getByRole('tablist', { name: 'Settings sections' });
+  const panel = page.getByRole('tabpanel', { name: 'Profile' });
+  await expect(panel).toBeVisible();
+  expect((await list.boundingBox())!.x + (await list.boundingBox())!.width).toBeLessThanOrEqual((await panel.boundingBox())!.x); // beside, on the left
+  await list.getByRole('tab', { name: 'Profile' }).focus();
+  await page.keyboard.press('ArrowDown'); // a vertical list moves with up and down
+  await expect(list.getByRole('tab', { name: 'Locations', selected: true })).toBeFocused();
+  await expect(page).toHaveURL(/\?tab=locations$/);
+
+  await page.setViewportSize({ width: 800, height: 900 }); // narrower: the second row comes back, live
+  await expect(list).toHaveAttribute('aria-orientation', 'horizontal');
+  const row = (await list.boundingBox())!;
+  expect(row.y + row.height).toBeLessThanOrEqual((await page.getByRole('tabpanel', { name: 'Locations' }).boundingBox())!.y); // above the panel
+});
+
+for (const locale of ['en', 'ar'])
+  test(`the settings sub-navigation is axe clean and on the reading side (${locale})`, async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await settings(page, locale);
+    await page.goto('/settings?tab=profile');
+    await expect(page.locator('#profile-registration-expires')).toBeVisible();
+    await expect(page.locator('html')).toHaveAttribute('dir', locale === 'ar' ? 'rtl' : 'ltr');
+    const list = (await page.getByRole('tablist', { name: locale === 'ar' ? 'أقسام الإعدادات' : 'Settings sections' }).boundingBox())!;
+    const panel = (await page.getByRole('tabpanel', { name: locale === 'ar' ? 'الملف التعريفي' : 'Profile' }).boundingBox())!;
+    if (locale === 'ar') expect(list.x).toBeGreaterThanOrEqual(panel.x + panel.width);
+    else expect(list.x + list.width).toBeLessThanOrEqual(panel.x);
+    await page.addScriptTag({ path: axePath });
+    const violations = await page.evaluate(async () =>
+      (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations.map(v => `${v.id} (${v.nodes.length})`));
+    expect(violations).toEqual([]);
+  });

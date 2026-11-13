@@ -9,6 +9,7 @@ const subscribe = (onChange: () => void) => {
   m.addEventListener("change", onChange)
   return () => m.removeEventListener("change", onChange)
 }
+/** True at the `wide:` tier (1024 px and wider), live as the window resizes: for a layout whose semantics change there, not only its CSS. */
 const useWide = () => React.useSyncExternalStore(subscribe, () => window.matchMedia(wideQuery).matches)
 
 const sideWidths = {
@@ -48,4 +49,4 @@ function SplitLayout({ side, sideLabel, sideWidth = "panel", open, onOpenChange,
   )
 }
 
-export { SplitLayout }
+export { SplitLayout, useWide }

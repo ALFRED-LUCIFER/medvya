@@ -90,7 +90,7 @@ test('an unfinished registration survives opening another menu item and is resto
   await typeDeepak(page);
   await page.getByRole('link', { name: 'Front desk' }).click();
   await expect(page).toHaveURL(/\/front-desk/);
-  await page.getByRole('link', { name: 'Register patient' }).first().click();
+  await page.getByRole('main').getByRole('link', { name: 'Register patient' }).first().click(); // the desk loads on demand: wait for its own link, not the menu's
   await expect(page.getByText('Your unfinished registration was restored.')).toBeVisible();
   await expect(page.getByLabel('Full name')).toHaveValue('Deepak Nair');
   await page.getByRole('button', { name: 'Start again' }).click();

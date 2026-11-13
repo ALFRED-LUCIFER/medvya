@@ -87,8 +87,8 @@ test('with no timed check-in the metric says No data yet, never 0 s or target me
   await expect(tile).toContainText('No timed check-in of a returning patient yet (target 60 s).');
   await expect(tile).toContainText('0 returning of 0 timed check-ins; all patients: No data yet.');
   await expect(tile).toContainText('Not measured and left out: 3');
-  await expect(tile).not.toContainText('0 s');
-  await expect(tile).not.toContainText('met');
+  await expect(tile).not.toContainText(/(^|[^\d])0 s/); // no "0 s" value ("target 60 s" is fine)
+  await expect(tile).not.toContainText('met.');
   expect(await axe(page)).toEqual([]);
 });
 

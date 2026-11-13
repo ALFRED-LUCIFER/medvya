@@ -233,7 +233,7 @@ test('J1: a new clinic owner sets up the practice, Medvya approves it, then a pa
     await page.goto('/app/settings?tab=metrics');
     const report = page.getByRole('region', { name: 'Pilot metrics' });
     await expect(report).toContainText('2 returning of 3 timed check-ins');
-    await expect(report).not.toContainText(' 0 s');
+    await expect(report).not.toContainText(/(^|[^\d])0 s/);
   });
 
   expect(watch.leaks(['Latha', 'Iyengar', 'Gopal', patient.dob, `0${n}`])).toEqual([]);

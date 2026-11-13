@@ -8865,6 +8865,8 @@ export interface components {
             count: number | string;
             /** Format: int32 */
             targetSeconds: number | string;
+            /** Format: int32 */
+            unmeasured: number | string;
         };
         ChooseNoteTemplates: {
             keys: null | string[];

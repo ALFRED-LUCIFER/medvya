@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import {
   Send, Pipette, Inbox, Eye, Phone, MessageSquareCheck, CircleCheck,
-  Sparkles, BadgeCheck, User, ArrowLeftRight, Upload, Lock,
+  Sparkles, BadgeCheck, User, ArrowLeftRight, Upload, Lock, Stethoscope, PenLine,
   CircleAlert, TriangleAlert, Info, Pause, CircleMinus, Pill as PillIcon, CircleHelp,
   Clock, Ban, SearchX, WifiOff, Hourglass, CalendarCheck, Tag as TagIcon, UserCheck, DoorOpen, CalendarClock, CalendarX, CircleX, Radio, RefreshCw, Footprints, Ticket, MessageSquareWarning, type LucideIcon,
 } from 'lucide-react';
@@ -34,6 +34,9 @@ export const provenanceLooks = {
   his:      { label: 'provenance.his', icon: ArrowLeftRight, bg: 'var(--color-info-bg)', fg: 'var(--color-info-text)' },
   imported: { label: 'provenance.imported', icon: Upload, bg: 'var(--color-ink-100)', fg: 'var(--color-neutral-text)' },
   signed:   { label: 'provenance.signed', icon: Lock, bg: 'var(--color-brand-950)', fg: 'var(--color-white)' },
+  // MDV-P1-104: the doctor's chief complaint taken from nurse intake, and the same once the doctor changed it.
+  nurse:       { label: 'provenance.nurse', icon: Stethoscope, bg: 'var(--color-brand-bg)', fg: 'var(--color-brand-text)' },
+  nurseEdited: { label: 'provenance.nurseEdited', icon: PenLine, bg: 'var(--color-brand-bg)', fg: 'var(--color-brand-text)' },
 } satisfies Record<string, Look>;
 
 export const alertLooks = {

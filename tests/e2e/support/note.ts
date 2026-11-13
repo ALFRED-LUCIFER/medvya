@@ -25,7 +25,10 @@ type Note = { templateKey: string; sections: Record<string, string>; version: nu
   /** MDV-P2-044: the doctor's record of the recording consent (null: not recorded) and the sections with an undecided AI draft. */
   recordingConsent?: 'Agreed' | 'Declined' | 'Withdrawn' | null; undecidedAi?: string[];
   /** MDV-P2-042: the template the server suggests for a note with nothing saved. */
-  suggestedTemplateKey?: string | null };
+  suggestedTemplateKey?: string | null;
+  /** MDV-P1-104: where the chief complaint came from, as the server decides it. */
+  chiefComplaintSource?: ComplaintSource | null };
+type ComplaintSource = { source: 'NurseIntake' | 'EditedByDoctor'; byName: string | null; at: string | null };
 // The doctor profile's name, which the server uses for the signature, the addenda and the sign button; the session's display name differs on purpose.
 const signer = 'Dr Asha Raman (synthetic)';
 export type NoteMock = {
@@ -44,6 +47,8 @@ export type NoteMock = {
   /** What the server offers to copy into the note (MDV-P2-009): verified vitals of this visit and earlier signed notes. Empty until a spec seeds them. */
   vitals: { code: string; value: number; unit: string; takenAt: string; source: string; recordedByName: string | null }[];
   previous: { encounterId: string; signedAt: string; signedByName: string | null; templateKey: string; sections: Record<string, string> }[];
+  /** MDV-P1-104: the chief complaint the nurse saved at this visit's intake (null: none, as with nurse intake off). */
+  chiefComplaint: { text: string; byName: string | null; at: string | null } | null;
   /** The visit's problem list as the checklist reads it (MDV audit UX-11): one active diagnosis unless a spec clears it. */
   problems: { id: string; code: string | null; description: string; verification: string; status: 'Active' | 'Resolved'; addedHere: boolean; confirmed: boolean }[];
   /** The visit's vitals and allergies entry in the consultation (MDV audit P0-2): nothing recorded until the doctor confirms "no known allergies". */
@@ -51,11 +56,11 @@ export type NoteMock = {
 };
 
 export async function mockNote(page: Page, seed: Partial<Note> = {}): Promise<NoteMock> {
-  const mock: NoteMock = { note: { templateKey: 'general-opd', sections: {}, version: 0, status: 'Draft', signAsName: signer, recordingConsent: null, undecidedAi: [], ...seed }, puts: [], chosen: [], next: null, saveDelayMs: 0, signs: [], reauths: [], reauthed: false, signNext: null, reconciliation: { confirmedAt: null, total: 0 }, addendumPosts: [], pdfs: 0, pdfNext: null, vitals: [], previous: [], noKnownAllergies: false,
+  const mock: NoteMock = { note: { templateKey: 'general-opd', sections: {}, version: 0, status: 'Draft', signAsName: signer, recordingConsent: null, undecidedAi: [], ...seed }, puts: [], chosen: [], next: null, saveDelayMs: 0, signs: [], reauths: [], reauthed: false, signNext: null, reconciliation: { confirmedAt: null, total: 0 }, addendumPosts: [], pdfs: 0, pdfNext: null, vitals: [], previous: [], chiefComplaint: null, noKnownAllergies: false,
     problems: [{ id: 'pr-1', code: 'E11.9', description: 'Type 2 diabetes (synthetic)', verification: 'Verified', status: 'Active', addedHere: false, confirmed: true }] };
   await page.route('**/v1/encounters/e-1/medicines/reconciliation', r => r.fulfill({ json: { encounterId: 'e-1', patientId: 'p-a1', rows: [], decided: 0, disagree: 0, ...mock.reconciliation } }));
   await page.route('**/v1/encounters/e-1/problems', r => r.fulfill({ json: { encounterId: 'e-1', patientId: 'p-a1', rows: mock.problems, locked: false } }));
-  await page.route('**/v1/encounters/e-1/note/prefill', r => r.fulfill({ json: { vitals: mock.vitals } }));
+  await page.route('**/v1/encounters/e-1/note/prefill', r => r.fulfill({ json: { vitals: mock.vitals, chiefComplaint: mock.chiefComplaint } }));
   await page.route('**/v1/encounters/e-1/note/previous', r => r.fulfill({ json: { notes: mock.previous } }));
   const intake = () => ({ appointmentId: 'a1', patientId: 'p-a1', facilityId: 'f-1', state: 'InConsult', chiefComplaint: null, vitals: [], allergies: [], medicines: [],
     noKnownAllergiesConfirmed: mock.noKnownAllergies, escalated: false, handedOff: false, blockers: [] });
@@ -70,7 +75,12 @@ export async function mockNote(page: Page, seed: Partial<Note> = {}): Promise<No
     if (mock.next === 'offline') { mock.next = null; return r.abort('connectionfailed'); }
     if (mock.next === 'stale') { mock.next = null; return r.fulfill({ status: 409, contentType: 'application/problem+json', json: { code: 'stale_note', currentVersion: mock.note.version } }); }
     mock.puts.push(body);
-    mock.note = { ...mock.note, templateKey: body.templateKey, sections: body.sections, recordingConsent: body.recordingConsent, version: body.baseVersion + 1 };
+    // The server's rule (ComplaintSourceRule, tested in ComplaintSourceRuleTests): from intake only into a blank field, edited once changed.
+    const [before, text, source] = [mock.note.sections.chiefComplaint, body.sections.chiefComplaint, mock.note.chiefComplaintSource ?? null];
+    const chiefComplaintSource: ComplaintSource | null = !text?.trim() ? null : text === before ? source
+      : !before?.trim() && mock.chiefComplaint && text === mock.chiefComplaint.text ? { source: 'NurseIntake', byName: mock.chiefComplaint.byName, at: mock.chiefComplaint.at }
+      : source && { ...source, source: 'EditedByDoctor' };
+    mock.note = { ...mock.note, templateKey: body.templateKey, sections: body.sections, recordingConsent: body.recordingConsent, version: body.baseVersion + 1, chiefComplaintSource };
     return r.fulfill({ json: view() });
   });
   const problem = (r: Route, status: number, json: object) => r.fulfill({ status, contentType: 'application/problem+json', json });

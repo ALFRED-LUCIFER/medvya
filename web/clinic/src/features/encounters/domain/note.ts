@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { MessageKey } from '@medvya/i18n';
 import { isStructured, keepItems } from './structured';
+import type { ComplaintSource } from './complaint';
 
 // The consultation note draft (MDV-P2-009) and its templates (MDV-P2-025): what the server answers. The server decides access, structure and
 // versions; these rules only save a round trip and keep the doctor's text safe.
@@ -32,6 +33,8 @@ export type NoteView = {
   undecidedAi?: string[];
   /** MDV-P2-042: on a note with nothing saved, the template the server picked from the patient's age and problems (the note starts on it). */
   suggestedTemplateKey?: string | null;
+  /** MDV-P1-104: the chief complaint came from nurse intake (signed: as signed). */
+  chiefComplaintSource?: ComplaintSource | null;
 };
 /** What an autosave sends besides the version: the template, the whole note (a section left out is cleared) and the recording consent. */
 export type NoteDraft = { templateKey: string; sections: NoteSections; recordingConsent: RecordingConsent | null };

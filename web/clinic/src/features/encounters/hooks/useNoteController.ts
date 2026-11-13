@@ -8,9 +8,10 @@ import { fetchReconciliation } from '../../reconciliation/services/reconciliatio
 import { fetchProblems } from '../../problems/services/problemsApi';
 import { remainingItems, sectionTicks, signChecklist } from '../domain/checklist';
 import type { EncounterBanner } from '../domain/encounter';
-import { autosaveDelayMs, saveRetryDelayMs, defaultTargetSection, insertAt, inTemplateOrder, phraseKey, vitalNameKey, type PreviousNote, type VerifiedVital, missingRequired, noteFormSchema, signFailure, switchChoices, switchTemplate, type NoteForm, type NoteSections, type NoteTemplate, type RecordingConsent, type SavePhase, type SignFailure } from '../domain/note';
+import { autosaveDelayMs, saveRetryDelayMs, defaultTargetSection, insertAt, inTemplateOrder, phraseKey, vitalNameKey, type NoteView, type PreviousNote, type VerifiedVital, missingRequired, noteFormSchema, signFailure, switchChoices, switchTemplate, type NoteForm, type NoteSections, type NoteTemplate, type RecordingConsent, type SavePhase, type SignFailure } from '../domain/note';
 import { fetchNote, fetchNoteAfterLeaving, fetchNoteCatalog, fetchPrefill, fetchPrevious, markLeftWithSave, saveNote, signNote, startReauth } from '../services/noteApi';
 import { createAutosaver } from '../services/noteAutosaver';
+import { complaintMark, complaintSection, complaintToPrefill, type ComplaintSource, type IntakeComplaint } from '../domain/complaint';
 import { forSave, unfinishedFindings } from '../domain/structured';
 
 // A save still on its way when the doctor left the consultation: coming back reads the note only after it (MDV-P1-089).
@@ -47,10 +48,14 @@ export function useNoteController(encounterId: string, canSign: boolean, timeZon
   const [tooLong, setTooLong] = useState(false);
   const cursor = useRef<{ id: string; start: number; end: number } | null>(null);
   const fields = useRef<Record<string, HTMLTextAreaElement | null>>({});
+  // MDV-P1-104: the chief complaint's source as the server last saved it, and the nurse's text put into a blank field (once, before that save).
+  const [savedComplaint, setSavedComplaint] = useState<{ source: ComplaintSource | null; text: string | undefined } | null>(null);
+  const [prefilled, setPrefilled] = useState<IntakeComplaint | null>(null);
+  const keepComplaint = (view: NoteView) => { setSavedComplaint({ source: view.chiefComplaintSource ?? null, text: view.sections[complaintSection] }); return view; };
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   // Every answer to a save goes into the query cache, also one that arrives after the doctor left the page.
   const [saver] = useState(() => createAutosaver({ save: (d, v, keepalive) => { if (keepalive) markLeftWithSave(encounterId, v); return saveNote(encounterId, d, v, keepalive); }, delayMs: autosaveDelayMs, retryMs: saveRetryDelayMs, onPhase: setPhase,
-    onSaved: view => { setSavedAt(new Date()); queryClient.setQueryData(['note', encounterId], view); } }));
+    onSaved: view => { setSavedAt(new Date()); keepComplaint(view); queryClient.setQueryData(['note', encounterId], view); } }));
   // MDV-P2-044: the recording consent is part of the note and saved with it; the checklist reads it with the visit's reconciliation.
   const [consent, setConsent] = useState<RecordingConsent | null>(null);
   const reconciliation = useQuery({ queryKey: ['reconciliation', encounterId], queryFn: () => fetchReconciliation(encounterId), retry: false, enabled: isDraft && canSign });
@@ -70,8 +75,24 @@ export function useNoteController(encounterId: string, canSign: boolean, timeZon
       form.reset({ sections: held.sections });
       setTemplateKey(held.templateKey);
       setConsent(held.recordingConsent ?? null);
+      setSavedComplaint({ source: held.chiefComplaintSource ?? null, text: held.sections[complaintSection] });
     }
   }, [held, form, saver]);
+
+  // MDV-P1-104: the nurse's chief complaint goes into a blank Chief complaint once, saved like typing so the server records where it came from.
+  // A complaint the doctor typed is never replaced; no complaint from the nurse leaves the field blank.
+  const offered = prefill.data?.chiefComplaint;
+  const offeredOnce = useRef(false);
+  useEffect(() => {
+    if (offeredOnce.current || !offered || !isDraft || !templateKey || !catalog.data) return;
+    offeredOnce.current = true;
+    const text = complaintToPrefill(form.getValues(`sections.${complaintSection}`), offered);
+    if (!text) return;
+    form.setValue(`sections.${complaintSection}`, text);
+    setPrefilled(offered);
+    queue(draft(form.getValues('sections')));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, when the note, its template and the offer are all loaded
+  }, [offered, isDraft, templateKey, catalog.data]);
 
   // Leaving the page saves what is typed, and so does a reload or a closed tab (pagehide, with keepalive); closing the tab warns while text is
   // unsaved; coming back online retries a failed save.
@@ -172,8 +193,14 @@ export function useNoteController(encounterId: string, canSign: boolean, timeZon
     },
   };
 
+  const mark = complaintMark(sections?.[complaintSection], savedComplaint, prefilled);
+
   return {
     form, assist, checklist, remaining,
+    complaintSource: mark && {
+      kind: mark.kind,
+      detail: mark.at ? (mark.byName ? t('note.complaintSource', { name: mark.byName, ...when(mark.at) }) : t('note.complaintSourceNoName', when(mark.at))) : null,
+    },
     // MDV-P2-041: the one page's section bar; worked out from the same form the guided steps edit.
     ticks: template && held ? sectionTicks({ template, sections, undecidedAi: held.undecidedAi ?? [], vitals: prefill.data?.vitals.length ?? 0, signed: !isDraft }) : null,
     consent,

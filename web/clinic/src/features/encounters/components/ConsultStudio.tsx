@@ -45,7 +45,7 @@ export default function ConsultStudio(p: Props) {
   if (p.loading) return <><p role="status">{t('noteEditor.loading')}</p>{p.finish}</>;
   if (p.loadFailed || !p.template || !p.templateKey || !p.ticks) return <><p role="alert" className="font-bold text-danger-700">{t(p.forbidden ? 'noteEditor.forbidden' : 'noteEditor.loadFailed')}</p>{p.finish}</>;
   const { template, ticks } = p;
-  const section = (s: (typeof template.sections)[number]) => <NoteSectionField key={s.id} section={s} register={p.register} readOnly={p.readOnly} answers={p.answers} onAnswers={p.onAnswers} />;
+  const section = (s: (typeof template.sections)[number]) => <NoteSectionField key={s.id} section={s} register={p.register} readOnly={p.readOnly} answers={p.answers} onAnswers={p.onAnswers} source={s.id === 'chiefComplaint' ? p.complaintSource : null} />;
   const field = (id: string) => template.sections.filter(s => s.id === id).map(section);
   const title = (id: StudioSection) => id === 'template' ? t(templateNameKey(template.key)) : t(`studio.section.${id}` as MessageKey);
   const done = p.checklist.filter(c => c.state !== 'todo').length;

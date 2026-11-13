@@ -81,6 +81,7 @@ journey('J3', {
   // confirms "no known allergies" on purpose and hands off; the card is Ready for doctor. The flag is put back for step 6, a clinic without the nurse step.
   5: async ({ page, browser }) => {
     const patient = syntheticPatient('Kavitha', 'Menon');
+    const complaint = 'Fever and sore throat for three days (synthetic)';
     await setNurseIntake(browser, true);
     try {
       await signIn(page, joseph);
@@ -93,6 +94,7 @@ journey('J3', {
       await signIn(nurse, nurseUser); // after the switch: the screens learn of it from the session
       await nurse.goto(board);
       await nurse.getByRole('article', { name: patient.name }).getByRole('link', { name: `Open intake for ${patient.name}` }).click();
+      await nurse.getByRole('textbox', { name: "Chief complaint, in the patient's words" }).fill(complaint);
       await nurse.getByRole('textbox', { name: 'Pulse' }).fill('72');
       await nurse.getByRole('button', { name: 'Save vitals' }).click();
       await expect(nurse.getByRole('button', { name: 'Save vitals' })).toBeEnabled(); // the save has finished
@@ -129,6 +131,20 @@ journey('J3', {
       await page.goto(board);
       await expect(page.getByRole('region', { name: /^Ready for doctor/ }).getByRole('article', { name: patient.name })).toBeVisible();
       await expectArabicAxeClean(browser, nurseUser, '/app/nurse');
+
+      // MDV-P1-104: the doctor opens the consultation and Chief complaint holds the nurse's words, marked from nurse intake; nobody types it twice.
+      const consult = await browser.newPage();
+      await signIn(consult, rao);
+      await consult.goto(board);
+      await consult.getByRole('button', { name: `Start consultation with ${patient.name}` }).click();
+      const leaveOpen = consult.getByRole('button', { name: 'Leave it open and start this one' }); // the shared database may hold another open consultation of Dr. Rao's
+      await expect.poll(async () => /\/app\/consult\//.test(consult.url()) || await leaveOpen.isVisible()).toBe(true);
+      if (await leaveOpen.isVisible()) await leaveOpen.click();
+      const field = consult.getByRole('region', { name: 'Consultation note' }).getByRole('textbox', { name: /^Chief complaint/ });
+      await expect(field).toHaveValue(complaint);
+      await expect(field).toHaveAccessibleDescription(/^From nurse intake/);
+      await expectNoAxeViolations(consult);
+      await consult.close();
     } finally {
       await setNurseIntake(browser, false);
     }

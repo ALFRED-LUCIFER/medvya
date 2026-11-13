@@ -24,7 +24,19 @@ public sealed record NoteAddendum(int VersionNo, int AmendsVersionNo, string Rea
 public sealed record NoteView(
     Guid EncounterId, string TemplateKey, int TemplateVersion, NoteStatus Status, bool Manual, IReadOnlyDictionary<string, string> Sections, int Version, DateTimeOffset? UpdatedAt,
     NoteSignature? Signature = null, IReadOnlyList<NoteAddendum>? Addenda = null, string? SignAsName = null, RecordingConsent? RecordingConsent = null, IReadOnlyList<string>? UndecidedAi = null,
-    string? SuggestedTemplateKey = null);
+    string? SuggestedTemplateKey = null, ComplaintSourceView? ChiefComplaintSource = null);
+
+/// <summary>
+/// MDV-P1-104: the chief complaint came from nurse intake (and the doctor may have changed it since). <see cref="ByName"/> and <see cref="At"/>
+/// are who saved it at intake and when; null when not known (intake saved before this was recorded, or the staff member can no longer be named).
+/// </summary>
+public sealed record ComplaintSourceView(ComplaintSource Source, string? ByName, DateTimeOffset? At);
+
+/// <summary>The chief complaint the nurse saved at this visit's intake (MDV-P1-104), offered to a blank Chief complaint. Who and when as above.</summary>
+public sealed record IntakeComplaint(string Text, string? ByName, DateTimeOffset? At);
+
+/// <summary>What the note may take from this visit's nurse intake: verified readings for Objective, and the chief complaint (null: none saved).</summary>
+public sealed record NotePrefill(IReadOnlyList<VerifiedVital> Vitals, IntakeComplaint? ChiefComplaint);
 
 /// <summary>An addendum to a signed note: the text and why it is added. Both are required.</summary>
 public sealed record AddNoteAddendum(string? Text, string? Reason);
@@ -117,9 +129,9 @@ public interface IConsultNotes
     /// <summary>
     /// The readings the doctor may add to Objective (MDV-P2-009): this visit's nurse-intake vitals, verified, and (when flagged) kept on purpose by
     /// the nurse; the latest of each kind. An empty list means nothing is verified: the section stays blank. Read access as for the note, audited
-    /// as <c>note.prefill</c> with the patient and no values.
+    /// as <c>note.prefill</c> with the patient and no values. With it, the chief complaint the nurse saved at this visit's intake (MDV-P1-104).
     /// </summary>
-    Task<IReadOnlyList<VerifiedVital>?> PrefillAsync(Guid encounterId, CancellationToken cancellationToken = default);
+    Task<NotePrefill?> PrefillAsync(Guid encounterId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Signed notes of the same patient, newest first, at most <see cref="MaxPrevious"/>, for the doctor to copy from (MDV-P2-009). Read access as for

@@ -48,7 +48,7 @@ public sealed class ConsultNoteService(
         return NoteTemplates.Suggest(patient.DateOfBirth, today, codes);
     }
 
-    public async Task<IReadOnlyList<VerifiedVital>?> PrefillAsync(Guid encounterId, CancellationToken cancellationToken = default)
+    public async Task<NotePrefill?> PrefillAsync(Guid encounterId, CancellationToken cancellationToken = default)
     {
         if (await db.Encounters.AsNoTracking().SingleOrDefaultAsync(e => e.Id == encounterId, cancellationToken) is not { } encounter) return null;
         await clinical.RequireAsync(encounter.PatientId, encounter.FacilityId, Capability.Patient360Chart, Leads, cancellationToken);
@@ -57,10 +57,16 @@ public sealed class ConsultNoteService(
         var rows = await db.Observations.AsNoTracking().Where(o => o.AppointmentId == encounter.AppointmentId && o.PatientId == encounter.PatientId
                 && o.Source == ChartSource.ClinicianVerified && o.VerifiedBy != null && (o.Flag == null || o.FlagKept))
             .GroupBy(o => o.Code).Select(g => g.OrderByDescending(o => o.TakenAt).ThenByDescending(o => o.Id).First()).ToListAsync(cancellationToken);
-        var names = await staff.DisplayNamesAsync([.. rows.Select(o => o.RecordedBy ?? o.VerifiedBy!.Value).Distinct()], cancellationToken);
+        // MDV-P1-104: the chief complaint the nurse saved at this visit's intake. No intake (nurse intake off, or not done): none, never guessed.
+        var intake = await IntakeComplaintAsync(encounter, cancellationToken);
+        var names = await staff.DisplayNamesAsync([.. rows.Select(o => o.RecordedBy ?? o.VerifiedBy!.Value).Concat(intake?.ChiefComplaintBy is { } nurse ? [nurse] : []).Distinct()], cancellationToken);
         await audit.WriteAsync(Event(PrefillAction, encounter, null), cancellationToken);
-        return [.. rows.OrderBy(o => o.Code).Select(o => new VerifiedVital(o.Code, o.ValueHundredths / 100m, Observation.Units(o.Code), o.TakenAt, o.Source, names.GetValueOrDefault(o.RecordedBy ?? o.VerifiedBy!.Value), o.Flag))];
+        return new([.. rows.OrderBy(o => o.Code).Select(o => new VerifiedVital(o.Code, o.ValueHundredths / 100m, Observation.Units(o.Code), o.TakenAt, o.Source, names.GetValueOrDefault(o.RecordedBy ?? o.VerifiedBy!.Value), o.Flag))],
+            intake is { ChiefComplaint: { } text } ? new IntakeComplaint(text, intake.ChiefComplaintBy is { } by ? names.GetValueOrDefault(by) : null, intake.ChiefComplaintAt) : null);
     }
+
+    Task<Intake?> IntakeComplaintAsync(Encounter encounter, CancellationToken cancellationToken) =>
+        db.Intakes.AsNoTracking().SingleOrDefaultAsync(i => i.AppointmentId == encounter.AppointmentId && i.PatientId == encounter.PatientId && i.ChiefComplaint != null, cancellationToken);
 
     public async Task<IReadOnlyList<PreviousNote>?> PreviousAsync(Guid encounterId, CancellationToken cancellationToken = default)
     {
@@ -100,7 +106,9 @@ public sealed class ConsultNoteService(
         {
             Id = Guid.CreateVersion7(), TenantId = TenantId, EncounterId = encounterId, NoteId = note!.Id, VersionNo = 1, TemplateKey = note.TemplateKey,
             TemplateVersion = note.TemplateVersion, Manual = note.Manual, Sections = note.Sections, SignedBy = me, SignedAt = now,
-            ContentHash = SignedNoteVersion.Hash(note.TemplateKey, note.TemplateVersion, note.Sections),
+            ChiefComplaintSource = note.ChiefComplaintSource, ChiefComplaintBy = note.ChiefComplaintBy, ChiefComplaintAt = note.ChiefComplaintAt,
+            ContentHash = SignedNoteVersion.Hash(note.TemplateKey, note.TemplateVersion, note.Sections,
+                complaintSource: note.ChiefComplaintSource is { } source ? (source, note.ChiefComplaintBy, note.ChiefComplaintAt) : null),
         };
         (note.Status, note.Version, note.UpdatedBy, note.UpdatedAt) = (NoteStatus.Signed, note.Version + 1, me, now);
         db.SignedNoteVersions.Add(signed);
@@ -242,10 +250,17 @@ public sealed class ConsultNoteService(
     async Task<NoteView> ViewAsync(ConsultNote note, CancellationToken cancellationToken, IReadOnlyList<SignedNoteVersion>? known = null)
     {
         var facilityId = await db.Encounters.AsNoTracking().Where(e => e.Id == note.EncounterId).Select(e => e.FacilityId).SingleAsync(cancellationToken);
-        if (note.Status != NoteStatus.Signed) return View(note) with { SignAsName = await SignAsAsync(facilityId, cancellationToken) };
+        if (note.Status != NoteStatus.Signed)
+            return View(note) with { SignAsName = await SignAsAsync(facilityId, cancellationToken), ChiefComplaintSource = await SourceAsync(note.ChiefComplaintSource, note.ChiefComplaintBy, note.ChiefComplaintAt, cancellationToken) };
         var versions = known ?? await db.SignedNoteVersions.AsNoTracking().Where(v => v.NoteId == note.Id).OrderBy(v => v.VersionNo).ToListAsync(cancellationToken);
-        return View(note, versions, await SignersAsync(facilityId, [.. versions.Select(v => v.SignedBy).Distinct()], cancellationToken));
+        // Signed: the source as signed (version 1), never the draft's.
+        var first = versions.FirstOrDefault(v => v.VersionNo == 1);
+        return View(note, versions, await SignersAsync(facilityId, [.. versions.Select(v => v.SignedBy).Distinct()], cancellationToken))
+            with { ChiefComplaintSource = await SourceAsync(first?.ChiefComplaintSource, first?.ChiefComplaintBy, first?.ChiefComplaintAt, cancellationToken) };
     }
+
+    async Task<ComplaintSourceView?> SourceAsync(ComplaintSource? source, Guid? by, DateTimeOffset? at, CancellationToken cancellationToken) =>
+        source is not { } s ? null : new(s, by is { } id ? (await staff.DisplayNamesAsync([id], cancellationToken)).GetValueOrDefault(id) : null, at);
 
     async Task<string> SignAsAsync(Guid facilityId, CancellationToken cancellationToken) =>
         (await SignersAsync(facilityId, [user.UserId ?? throw new InvalidOperationException("No user.")], cancellationToken)).Values.Single().Name;
@@ -295,7 +310,14 @@ public sealed class ConsultNoteService(
         }
         if (errors.Count > 0) throw new NoteValidationException(errors);
 
+        // MDV-P1-104: the server, not the editor, says whether the chief complaint came from intake. The intake is read only when it can matter.
+        var (before, after) = (note?.Sections.GetValueOrDefault(ComplaintSourceRule.Section), sections.GetValueOrDefault(ComplaintSourceRule.Section));
+        var intake = string.IsNullOrWhiteSpace(before) && !string.IsNullOrWhiteSpace(after) ? await IntakeComplaintAsync(encounter, cancellationToken) : null;
+        var complaintSource = ComplaintSourceRule.Next(before, note?.ChiefComplaintSource, after, intake?.ChiefComplaint);
         if (note is null) db.ConsultNotes.Add(note = new() { Id = Guid.CreateVersion7(), TenantId = TenantId, EncounterId = encounterId, Status = NoteStatus.Draft });
+        if (complaintSource is null) (note.ChiefComplaintBy, note.ChiefComplaintAt) = (null, null);
+        else if (complaintSource == ComplaintSource.NurseIntake && note.ChiefComplaintSource is null) (note.ChiefComplaintBy, note.ChiefComplaintAt) = (intake!.ChiefComplaintBy, intake.ChiefComplaintAt);
+        note.ChiefComplaintSource = complaintSource;
         (note.TemplateKey, note.TemplateVersion, note.Manual, note.Sections, note.RecordingConsent, note.Version, note.UpdatedBy, note.UpdatedAt) =
             (template!.Key, template.Version, command.Manual, sections, command.RecordingConsent, command.BaseVersion + 1, me, clock.GetUtcNow());
         try

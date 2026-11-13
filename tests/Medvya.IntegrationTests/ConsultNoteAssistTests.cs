@@ -141,10 +141,17 @@ public sealed class ConsultNoteAssistTests(PostgresFixture sql) : IClassFixture<
     public async Task OnlyTheTreatingDoctorReadsEitherOfferAndEachReadIsAuditedWithThePatientAndNoValues()
     {
         await h.Settings(h.Admin).SaveClinicalAccessAsync(ClinicalAccessPolicy.AssignedOnly);
-        await using (var db = sql.Encounters(h.Tenant)) { db.Observations.Add(Reading(ObservationCode.Pulse, 88)); await db.SaveChangesAsync(); }
+        await using (var db = sql.Encounters(h.Tenant))
+        {
+            db.Observations.Add(Reading(ObservationCode.Pulse, 88));
+            db.Intakes.Add(new Intake { Id = Guid.CreateVersion7(), TenantId = h.Tenant, FacilityId = h.Facility, PatientId = h.Patient, AppointmentId = appointment, ChiefComplaint = Complaint, ChiefComplaintBy = h.Nurse, ChiefComplaintAt = T0, UpdatedAt = T0 });
+            await db.SaveChangesAsync();
+        }
         foreach (var path in new[] { "prefill", "previous" })
         {
-            using (var colleague = await Client(h.SecondDoctor).GetAsync(U($"/v1/encounters/{encounter}/note/{path}"))) Assert.Equal(HttpStatusCode.Forbidden, colleague.StatusCode);
+            // MDV-P1-104: the nurse's complaint reaches only someone with clinical access to the encounter (its treating doctor here).
+            using (var colleague = await Client(h.SecondDoctor).GetAsync(U($"/v1/encounters/{encounter}/note/{path}")))
+                Assert.Equal((HttpStatusCode.Forbidden, false), (colleague.StatusCode, (await colleague.Content.ReadAsStringAsync()).Contains("sore throat", StringComparison.Ordinal)));
             using (var nurse = await Client(h.Nurse).GetAsync(U($"/v1/encounters/{encounter}/note/{path}"))) Assert.Equal(HttpStatusCode.Forbidden, nurse.StatusCode);
             using (var unknown = await Client(h.Doctor).GetAsync(U($"/v1/encounters/{Guid.NewGuid()}/note/{path}"))) Assert.Equal(HttpStatusCode.NotFound, unknown.StatusCode);
             using (var own = await Client(h.Doctor).GetAsync(U($"/v1/encounters/{encounter}/note/{path}"))) Assert.Equal(HttpStatusCode.OK, own.StatusCode);
@@ -157,5 +164,87 @@ public sealed class ConsultNoteAssistTests(PostgresFixture sql) : IClassFixture<
         Assert.All(allowed, r => Assert.Equal(h.Patient, r.PatientId));
         Assert.Equal(4, rows.Count(r => r.Outcome == AuditOutcome.Denied));
         Assert.DoesNotContain(allowed, r => JsonSerializer.Serialize(r).Contains("Pulse", StringComparison.Ordinal));
+        Assert.DoesNotContain(rows, r => JsonSerializer.Serialize(r).Contains("sore throat", StringComparison.Ordinal));
+    }
+
+    // MDV-P1-104: the nurse's chief complaint and the note's record of where its own came from.
+    const string Complaint = "Fever and sore throat for three days (synthetic)";
+
+    async Task NurseSavesComplaintAsync(string text)
+    {
+        using var saved = await Client(h.Nurse).PutAsJsonAsync(U($"/v1/intake/{appointment}"), new { chiefComplaint = text, vitals = Array.Empty<object>() });
+        Assert.True(saved.IsSuccessStatusCode, await saved.Content.ReadAsStringAsync());
+    }
+
+    async Task<JsonElement> SaveNoteAsync(int baseVersion, string complaint)
+    {
+        using var r = await Client(h.Doctor).PutAsJsonAsync(U($"/v1/encounters/{encounter}/note"), new { baseVersion, sections = new { chiefComplaint = complaint, assessment = "Synthetic assessment", plan = "Synthetic plan" }, recordingConsent = "Declined" });
+        Assert.True(r.IsSuccessStatusCode, await r.Content.ReadAsStringAsync());
+        return await Json(r);
+    }
+
+    static string? Source(JsonElement view) => view.GetProperty("chiefComplaintSource") is { ValueKind: JsonValueKind.Object } s ? s.GetProperty("source").GetString() : null;
+
+    [Fact]
+    public async Task TheNursesComplaintIsOfferedWithWhoAndWhenAndTheSignedNoteRecordsThatTheDoctorEditedIt()
+    {
+        await using (var identity = sql.Identity())
+        {
+            identity.Users.Add(new Medvya.Identity.Domain.StaffUser { Id = h.Nurse, Issuer = "test-idp", Subject = h.Nurse.ToString(), DisplayName = "Nurse Kavya (synthetic)" });
+            await identity.SaveChangesAsync();
+        }
+        await NurseSavesComplaintAsync(Complaint);
+
+        using (var r = await Client(h.Doctor).GetAsync(U($"/v1/encounters/{encounter}/note/prefill")))
+        {
+            var offered = (await Json(r)).GetProperty("chiefComplaint");
+            Assert.Equal(Complaint, offered.GetProperty("text").GetString());
+            Assert.Equal("Nurse Kavya (synthetic)", offered.GetProperty("byName").GetString());
+            Assert.Equal(h.Clock.GetUtcNow(), offered.GetProperty("at").GetDateTimeOffset());
+        }
+
+        var first = await SaveNoteAsync(0, Complaint);
+        Assert.Equal("NurseIntake", Source(first));
+        Assert.Equal("Nurse Kavya (synthetic)", first.GetProperty("chiefComplaintSource").GetProperty("byName").GetString());
+        Assert.Equal("EditedByDoctor", Source(await SaveNoteAsync(1, Complaint + ", worse at night")));
+
+        using var signed = await Client(h.Doctor, reauth: true).PostAsJsonAsync(U($"/v1/encounters/{encounter}/note/sign"), new { baseVersion = 2 });
+        Assert.True(signed.IsSuccessStatusCode, await signed.Content.ReadAsStringAsync());
+        Assert.Equal("EditedByDoctor", Source(await Json(signed)));
+        await using (var db = sql.Encounters(h.Tenant))
+        {
+            var row = await db.SignedNoteVersions.SingleAsync(v => v.EncounterId == encounter);
+            Assert.Equal((ComplaintSource.EditedByDoctor, h.Nurse, h.Clock.GetUtcNow()), (row.ChiefComplaintSource, row.ChiefComplaintBy, row.ChiefComplaintAt));
+            Assert.Equal(SignedNoteVersion.Hash(row.TemplateKey, row.TemplateVersion, row.Sections, complaintSource: (row.ChiefComplaintSource!.Value, row.ChiefComplaintBy, row.ChiefComplaintAt)), row.ContentHash);
+        }
+        // Tenant isolation: the complaint and the source stay inside this clinic, even with the EF filter off (row-level security).
+        await using var elsewhere = sql.Encounters(Guid.NewGuid());
+        Assert.Empty(await elsewhere.Intakes.IgnoreQueryFilters().ToListAsync());
+        Assert.Empty(await elsewhere.ConsultNotes.IgnoreQueryFilters().ToListAsync());
+    }
+
+    [Fact]
+    public async Task AComplaintTheDoctorTypedIsNeverReplacedOrMarkedWhenTheNurseSavesLater()
+    {
+        Assert.Null(Source(await SaveNoteAsync(0, "Cough since Monday (doctor, synthetic)")));
+        await NurseSavesComplaintAsync(Complaint);
+
+        using var r = await Client(h.Doctor).GetAsync(U($"/v1/encounters/{encounter}/note"));
+        var view = await Json(r);
+        Assert.Equal("Cough since Monday (doctor, synthetic)", view.GetProperty("sections").GetProperty("chiefComplaint").GetString());
+        Assert.Null(Source(view));
+        // Even the nurse's exact words over the doctor's own text are the doctor's choice, never marked as the nurse's.
+        Assert.Null(Source(await SaveNoteAsync(1, Complaint)));
+    }
+
+    [Fact]
+    public async Task WithNurseIntakeOffThereIsNoComplaintToOfferAndNothingIsMarked()
+    {
+        // Nurse intake is off by default: no intake row, so nothing is offered and the doctor's text is the doctor's own.
+        using var r = await Client(h.Doctor).GetAsync(U($"/v1/encounters/{encounter}/note/prefill"));
+        Assert.Equal(JsonValueKind.Null, (await Json(r)).GetProperty("chiefComplaint").ValueKind);
+        using var note = await Client(h.Doctor).GetAsync(U($"/v1/encounters/{encounter}/note"));
+        Assert.Null(Source(await Json(note)));
+        Assert.Null(Source(await SaveNoteAsync(0, Complaint)));
     }
 }

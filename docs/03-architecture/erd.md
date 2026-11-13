@@ -1546,13 +1546,13 @@ erDiagram
 | `CareGoals` | 11 | Id | tenant-scoped |
 | `CareTargets` | 8 | Id | tenant-scoped |
 | `ClinicalDocuments` | 16 | Id | tenant-scoped |
-| `ConsultNotes` | 12 | Id | tenant-scoped |
+| `ConsultNotes` | 15 | Id | tenant-scoped |
 | `DoctorNoteTemplates` | 3 | Id | tenant-scoped |
 | `Encounters` | 12 | Id | tenant-scoped |
 | `GeriatricAssessments` | 19 | Id | tenant-scoped |
 | `HistoryEntries` | 8 | Id | tenant-scoped |
 | `Immunisations` | 14 | Id | tenant-scoped |
-| `Intakes` | 12 | Id | tenant-scoped |
+| `Intakes` | 14 | Id | tenant-scoped |
 | `IntakeEscalations` | 9 | Id | tenant-scoped |
 | `MedicationDecisions` | 15 | Id | tenant-scoped |
 | `MedicationReconciliations` | 7 | Id | tenant-scoped |
@@ -1564,7 +1564,7 @@ erDiagram
 | `PregnancyRuledOuts` | 7 | Id | tenant-scoped |
 | `Problems` | 17 | Id | tenant-scoped |
 | `SignedNotePdfs` | 8 | Id | append-only ledger; tenant-scoped |
-| `SignedNoteVersions` | 14 | Id | append-only ledger; tenant-scoped |
+| `SignedNoteVersions` | 17 | Id | append-only ledger; tenant-scoped |
 
 <details><summary><code>encounters.Allergies</code> columns</summary>
 
@@ -1664,6 +1664,9 @@ erDiagram
 | Column | Type | Null | Links to |
 |---|---|---|---|
 | `Id` | guid |  |  |
+| `ChiefComplaintAt` | timestamptz | yes |  |
+| `ChiefComplaintBy` | guid | yes |  |
+| `ChiefComplaintSource` | character varying(20) |  |  |
 | `EncounterId` | guid |  | id of `encounters.Encounters` |
 | `Manual` | bool |  |  |
 | `RecordingConsent` | character varying(20) |  |  |
@@ -1776,6 +1779,8 @@ erDiagram
 | `Id` | guid |  |  |
 | `AppointmentId` | guid |  | id of `scheduling.Appointments` |
 | `ChiefComplaint` | character varying(500) |  |  |
+| `ChiefComplaintAt` | timestamptz | yes |  |
+| `ChiefComplaintBy` | guid | yes |  |
 | `FacilityId` | guid |  | id of `tenancy.Facilities` |
 | `HandedOffAt` | timestamptz | yes |  |
 | `HandedOffBy` | guid | yes | id of `identity.Users` |
@@ -2009,6 +2014,9 @@ erDiagram
 |---|---|---|---|
 | `Id` | guid |  |  |
 | `AmendsVersionId` | guid | yes | id of `encounters.SignedNoteVersions` |
+| `ChiefComplaintAt` | timestamptz | yes |  |
+| `ChiefComplaintBy` | guid | yes |  |
+| `ChiefComplaintSource` | character varying(20) |  |  |
 | `ContentHash` | character varying(64) |  |  |
 | `EncounterId` | guid |  | id of `encounters.Encounters` |
 | `Manual` | bool |  |  |

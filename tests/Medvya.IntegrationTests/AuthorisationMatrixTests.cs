@@ -490,6 +490,7 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.Nurse, new("GET", "/v1/formulary")), // Prescriptions & orders: X
         (Role.PracticeAdmin, new("GET", "/v1/order-sets")), // Prescriptions & orders: X (the admin reads them under settings)
         (Role.HospitalDoctor, new("POST", "/v1/settings/formulary", """{"generic":"Synthetic","strength":"1 mg","form":"Tablet","regClass":"None"}""")), // Staff, roles, integrations: X
+        (Role.HospitalDoctor, new("POST", "/v1/settings/formulary/brands", """{"rows":[{"brand":"Synthetic","generic":"Paracetamol","strength":"500 mg","form":"Tablet","allergyClass":"none"}]}""")),
         (Role.Receptionist, new("POST", "/v1/settings/order-sets", """{"name":"Synthetic","items":["HbA1c"]}""")),
         (Role.Receptionist, new("GET", "/v1/audit/access-log")), // Audit log: X
         (Role.Nurse, new("GET", "/v1/audit/access-log/patients/{patient}")),

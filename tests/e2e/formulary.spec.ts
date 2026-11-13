@@ -19,13 +19,23 @@ const starter = {
 async function open(page: Page, country: Country = 'IN', locale = 'en') {
   const added: Record<string, unknown>[] = [];
   const sets: { id: string; name: string; items: string[] }[] = [];
+  const brands: { brand: string; generic: string }[] = [];
   await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
   await page.route('**/v1/me/context', r => r.fulfill({ json: owner(country) }));
   await page.route('**/v1/notifications/inbox?*', r => r.fulfill({ json: { unread: 0, items: [] } }));
   await page.route('**/v1/settings/formulary?*', r => {
     const q = (new URL(r.request().url()).searchParams.get('q') ?? '').toLowerCase();
     const mine = added.map(a => item(String(a.generic), String(a.strength), String(a.form), String(a.regClass), [], 'ClinicAdded'));
-    return r.fulfill({ json: [...starter[country], ...mine].filter(i => i.generic.toLowerCase().includes(q)) });
+    const listed = [...starter[country], ...mine].map(i => ({ ...i, brands: brands.filter(b => b.generic === i.generic).map(b => b.brand) }));
+    return r.fulfill({ json: listed.filter(i => i.generic.toLowerCase().includes(q)) });
+  });
+  // MDV-P1-088: all rows or none; a row the server cannot resolve is named by its place (BrandsAdded, or problem details with a code a row).
+  await page.route('**/v1/settings/formulary/brands', r => {
+    const { rows } = r.request().postDataJSON() as { rows: { brand: string; generic: string }[] };
+    const errors = Object.fromEntries(rows.flatMap((row, i) => (starter[country].some(s => s.generic === row.generic) ? [] : [[`rows[${i}].generic`, ['not_listed']]])));
+    if (Object.keys(errors).length > 0) return r.fulfill({ status: 400, json: { errors } });
+    brands.push(...rows);
+    return r.fulfill({ json: { added: rows.length } });
   });
   await page.route('**/v1/settings/formulary', r => {
     const body = r.request().postDataJSON() as Record<string, unknown>;
@@ -44,7 +54,7 @@ async function open(page: Page, country: Country = 'IN', locale = 'en') {
     return r.fulfill({ json: sets });
   });
   await page.goto('/settings?tab=medicines');
-  return { added, sets };
+  return { added, sets, brands };
 }
 
 test('the list labels each class and what it prints, and a search narrows it', async ({ page }) => {
@@ -77,7 +87,7 @@ test('an admin adds a medicine, blanks stay blank, and a duplicate is refused in
   await page.getByRole('option', { name: 'Tablet' }).click();
   await page.getByLabel('Class', { exact: true }).click();
   await page.getByRole('option', { name: 'Schedule H', exact: true }).click();
-  await page.getByLabel('Brand names').fill('Amaryl, Glimy');
+  await page.getByRole('textbox', { name: 'Brand names' }).fill('Amaryl, Glimy');
   await page.getByRole('button', { name: 'Add medicine' }).click();
   await expect(page.getByText('Medicine added to your clinic list.')).toBeVisible();
   expect(added[0]).toMatchObject({ generic: 'Glimepiride', brands: ['Amaryl', 'Glimy'], regClass: 'ScheduleH', nationalCode: null, atc: null, defaultSig: null });
@@ -103,7 +113,48 @@ test('an admin builds an order set for the order composer', async ({ page }) => 
   await expect(page.getByRole('row', { name: /Diabetes review labs/ })).toContainText('HbA1c, Fasting glucose, Serum creatinine');
 });
 
+test('an admin pastes brand rows: every row is added or none, and a refused row is named', async ({ page }) => {
+  const { brands } = await open(page);
+  const rows = page.getByLabel('Brand rows');
+  const add = page.getByRole('button', { name: 'Add brands' });
+  await add.click();
+  await expect(page.getByRole('alert').filter({ hasText: 'Paste at least one row.' })).toBeVisible();
+  await rows.fill('Synthetic Para, Paracetamol, 500 mg, Tablet');
+  await add.click();
+  await expect(page.getByRole('alert').filter({ hasText: 'Row 1 needs five values: brand, generic name, strength, form and allergy class.' })).toBeVisible();
+  expect(brands).toEqual([]); // not sent
+
+  await rows.fill('Synthetic Para, Paracetamol, 500 mg, Tablet, none\nSynthetic X, Not in the list, 1 mg, Tablet, none');
+  await add.click();
+  const refusal = page.getByRole('alert').filter({ hasText: 'Nothing was added. Correct these rows and try again.' });
+  await expect(refusal).toContainText('Row 2: no medicine in your list has this generic name, strength and form. Add the medicine first.');
+  await expect(rows).toHaveAttribute('aria-invalid', 'true');
+  await expect(page.getByRole('row', { name: /Paracetamol/ })).not.toContainText('Synthetic Para'); // the good row was not added either
+
+  await rows.fill('Synthetic Para, Paracetamol, 500 mg, Tablet, none\n\nSynthetic Met\tMetformin\t500 mg\tTablet\tnone'); // commas, or tabs from a spreadsheet
+  await add.click();
+  await expect(page.getByRole('status').filter({ hasText: 'Brand names added: 2' })).toBeVisible();
+  await expect(refusal).toBeHidden();
+  expect(brands).toEqual([
+    { brand: 'Synthetic Para', generic: 'Paracetamol', strength: '500 mg', form: 'Tablet', allergyClass: 'none' },
+    { brand: 'Synthetic Met', generic: 'Metformin', strength: '500 mg', form: 'Tablet', allergyClass: 'none' },
+  ]);
+  await expect(page.getByRole('row', { name: /Paracetamol/ })).toContainText('Synthetic Para'); // the brand shows on the generic's row
+  await expect(rows).toHaveValue('');
+});
+
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
+for (const locale of ['en', 'ar'])
+  test(`axe finds no violations with brand rows refused (${locale})`, async ({ page }) => {
+    await open(page, locale === 'ar' ? 'AE' : 'IN', locale);
+    await page.getByLabel(locale === 'ar' ? 'صفوف الأسماء التجارية' : 'Brand rows').fill('Synthetic X, Not in the list, 1 mg, Tablet, none');
+    await page.getByRole('button', { name: locale === 'ar' ? 'إضافة الأسماء التجارية' : 'Add brands' }).click();
+    await expect(page.getByRole('alert').filter({ hasText: locale === 'ar' ? 'لم يُضف شيء.' : 'Nothing was added.' })).toBeVisible();
+    await page.addScriptTag({ path: axePath });
+    const violations = await page.evaluate(async () =>
+      (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations.map(v => `${v.id} (${v.nodes.length})`));
+    expect(violations).toEqual([]);
+  });
 for (const locale of ['en', 'ar'])
   test(`axe finds no violations on the medicines tab (${locale})`, async ({ page }) => {
     await open(page, locale === 'ar' ? 'AE' : 'IN', locale);

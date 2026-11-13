@@ -18,7 +18,7 @@ type Props = SafetyProps & {
   patient: AddMedicinePatient | null;
   open: boolean; encounterId: string | null; refused: boolean;
   onOpen: () => void; onClose: () => void;
-  search: UseFormReturn<{ medicine: string }>; results: Medicine[]; searching: boolean; noResults: boolean;
+  search: UseFormReturn<{ medicine: string }>; results: Medicine[]; searching: boolean; noResults: boolean; suggestions: Medicine[];
   medicine: Medicine | null; strengths: Medicine[]; onMedicine: (m: Medicine) => void;
   choice: Choice; onChoice: (c: Partial<Choice>) => void; instructionsInvalid: boolean;
   line: RxLine | null; quantity: number | 'pack' | null; saving: boolean;
@@ -93,9 +93,11 @@ function Body(p: Props & { language: PrintLanguage }) {
       </Field>
       {p.searching && <p role="status" className="text-sm text-muted-foreground">{t('rx.addMed.searching')}</p>}
       {p.noResults && <p role="status" className="text-sm">{t('rx.addMed.noResults')}</p>}
-      {p.results.length > 0 && (
-        <ul aria-label={t('rx.addMed.results')} className="flex flex-col gap-2">
-          {p.results.map(r => {
+      {/* MDV-P1-088: a name that matched nothing is answered with the closest formulary rows, which are checked as any other. */}
+      {p.suggestions.length > 0 && <h3 id="addmed-suggestions" className="text-sm font-bold">{t('rx.didYouMean')}</h3>}
+      {[p.results, p.suggestions].map((rows, suggested) => rows.length > 0 && (
+        <ul key={suggested} {...(suggested ? { 'aria-labelledby': 'addmed-suggestions' } : { 'aria-label': t('rx.addMed.results') })} className="flex flex-col gap-2">
+          {rows.map(r => {
             const picked = !!m && m.generic === r.generic && m.form === r.form;
             return (
               <li key={r.id}>
@@ -108,7 +110,7 @@ function Body(p: Props & { language: PrintLanguage }) {
             );
           })}
         </ul>
-      )}
+      ))}
 
       {m && <>
         <Picks id="addmed-strength" label={t('rx.addMed.strength')} options={p.strengths.map(s => s.id)} chosen={m.id}

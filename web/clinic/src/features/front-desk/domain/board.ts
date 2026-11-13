@@ -19,6 +19,8 @@ export type BoardCard = {
   /** Arrived without an appointment (MDV-P1-025); unscheduled = queued with no free slot (holds no slot). */
   walkIn?: boolean;
   unscheduled?: boolean;
+  /** Sex at birth, with the age a desk tells two patients of one name apart by (MDV-AUDIT-1105); absent when the record was not found. */
+  sex?: 'Female' | 'Male' | 'Other' | null;
 };
 export type Board = { facilityId: string; timeZone: string; date: string; now: string; cards: BoardCard[] };
 
@@ -60,6 +62,15 @@ export function groupByColumn(cards: BoardCard[]): Record<BoardColumn, BoardCard
 
 /** Visits the doctor's leave left without a slot (MDV-P1-012): they wait for the desk to move or cancel them, and leave the columns. */
 export const needsRebooking = (cards: BoardCard[]) => cards.filter(c => c.state === 'NeedsRebooking').sort((a, c) => Date.parse(a.start) - Date.parse(c.start));
+
+/** Whole years from a YYYY-MM-DD date of birth to the server's `now` (UTC dates); null without a date of birth. */
+export function ageYears(dateOfBirth: string | null, now: number): number | null {
+  if (!dateOfBirth) return null;
+  const [y, m, d] = dateOfBirth.split('-').map(Number) as [number, number, number];
+  const today = new Date(now);
+  const years = today.getUTCFullYear() - y;
+  return Math.max(0, today.getUTCMonth() + 1 < m || (today.getUTCMonth() + 1 === m && today.getUTCDate() < d) ? years - 1 : years);
+}
 
 /** Whole minutes since `since`, never negative (a device clock behind the server's). */
 export const minutesSince = (since: string, now: number) => Math.max(0, Math.floor((now - Date.parse(since)) / 60_000));

@@ -55,6 +55,24 @@ async function open(page: Page, locale = 'en') {
   await page.goto('/today');
 }
 
+// MDV-P2-059 AC2: the title and the actions sit in the 44 px PageHeader row and do not move when the day arrives; the day is secondary text.
+test('the title and the actions do not move while the day loads', async ({ page }) => {
+  await open(page);
+  await expect(page.getByRole('region', { name: "Today's visits" })).toBeVisible();
+  let release = () => {};
+  const held = new Promise<void>(r => { release = r; });
+  await page.route('**/v1/front-desk/board?*', async r => { await held; await r.fallback(); });
+  await page.reload();
+  const title = page.getByRole('heading', { level: 1, name: 'Today' }), mine = page.getByRole('button', { name: 'My patients' });
+  await expect(page.locator('main [data-slot=page-message][data-kind=busy]')).toBeVisible();
+  const before = [await title.boundingBox(), await mine.boundingBox()];
+  release();
+  await expect(page.getByRole('region', { name: "Today's visits" })).toBeVisible();
+  await expect(page.locator('main [data-slot=page-header-meta]')).not.toBeEmpty();
+  expect([await title.boundingBox(), await mine.boundingBox()]).toEqual(before);
+  expect((await page.locator('main [data-slot=page-header-row]').boundingBox())!.height).toBe(44);
+});
+
 test('Today shows my visits first, the clinic when toggled, and starts the consultation', async ({ page }) => {
   await open(page);
   const hero = page.getByRole('region', { name: 'Next patient' });

@@ -26,12 +26,13 @@ test('a formulary medicine gets a dose that autosaves and reads in the chosen pr
   await expect(metformin).toContainText('Fill in the dose to build the instruction.');
 
   await metformin.getByLabel('Dose').fill('1');
-  await pick(page, metformin, 'Unit', 'Tablet');
-  await pick(page, metformin, 'Route', 'By mouth');
+  // MDV-AUDIT-1094: a tablet starts with its unit and route, and the quantity follows dose x frequency x days.
+  await expect(metformin.getByRole('combobox', { name: 'Unit' })).toHaveText('Tablet');
+  await expect(metformin.getByRole('combobox', { name: 'Route' })).toHaveText('By mouth');
   await pick(page, metformin, 'How often', 'Twice a day (BD)');
   await pick(page, metformin, 'When', 'After food');
   await metformin.getByLabel('Days').fill('5');
-  await metformin.getByLabel('Quantity').fill('10');
+  await expect(metformin.getByLabel('Quantity')).toHaveValue('10');
   await expect(metformin.getByText('Saved')).toBeVisible();
   expect(calls.saved.at(-1)).toEqual({ dose: '1', doseUnit: 'tablet', route: 'oral', frequency: 'BD', timing: 'after_food', durationDays: 5, quantity: 10, instructions: null });
   await expect(metformin).toContainText('Instruction (English):');
@@ -56,7 +57,7 @@ test('an invalid dose is named and not saved; a switched-off line stays listed',
   await metformin.getByLabel('Days').fill('5'); // held back too: the line still has an invalid dose
   await metformin.getByLabel('Dose').fill('2');
   await expect(metformin.getByText('Saved')).toBeVisible();
-  expect(calls.saved).toEqual([{ dose: '2', doseUnit: null, route: null, frequency: null, timing: null, durationDays: 5, quantity: null, instructions: null }]);
+  expect(calls.saved).toEqual([{ dose: '2', doseUnit: 'tablet', route: 'oral', frequency: null, timing: null, durationDays: 5, quantity: null, instructions: null }]);
 
   await metformin.getByRole('switch', { name: 'Include Metformin' }).click();
   expect(calls.included).toEqual([{ included: false }]);

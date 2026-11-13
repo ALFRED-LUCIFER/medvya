@@ -101,8 +101,7 @@ public abstract partial class CountryRules
         var mobile = Phone(c.Mobile, "mobile", required: true, errors);
         var alternate = Phone(c.AlternatePhone, "alternatePhone", required: false, errors);
 
-        var email = string.IsNullOrWhiteSpace(c.Email) ? null : c.Email.Trim();
-        if (email is not null && (email.Length > 254 || !MailAddress.TryCreate(email, out _))) errors.Add(new("email", "format"));
+        var email = Email(c.Email, errors);
 
         var gender = Text(c.GenderIdentity, "genderIdentity", required: false, errors, 50);
         var language = Text(c.PreferredLanguage, "preferredLanguage", required: false, errors, 35);
@@ -134,12 +133,23 @@ public abstract partial class CountryRules
         return new(normalized, dob, estimated, warnings);
     }
 
-    /// <summary>Validates the details added later to complete a quick registration.</summary>
-    public (PatientAddress? Address, PayerInput? Payer, ValidContact? EmergencyContact) ValidateCompletion(PatientAddress? address, PayerInput? payer, ContactInput? emergencyContact)
+    static string? Email(string? value, List<ValidationError> errors)
+    {
+        var email = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+        if (email is not null && (email.Length > 254 || !MailAddress.TryCreate(email, out _))) errors.Add(new("email", "format"));
+        return email;
+    }
+
+    /// <summary>Validates the details added or corrected later (completing a quick registration, the desk's edit): the same rules as registration.</summary>
+    public (PatientAddress? Address, PayerInput? Payer, ValidContact? EmergencyContact, ContactChange? Contact) ValidateCompletion(
+        PatientAddress? address, PayerInput? payer, ContactInput? emergencyContact, ContactChange? contact = null)
     {
         var errors = new List<ValidationError>();
         var result = (address is null ? null : Address(address, errors), payer is null ? null : Payer(payer, errors),
-            emergencyContact is null ? null : Contact(emergencyContact, "emergencyContact", errors));
+            emergencyContact is null ? null : Contact(emergencyContact, "emergencyContact", errors),
+            contact is null ? null : new ContactChange(
+                contact.Mobile is null ? null : Phone(contact.Mobile, "mobile", required: true, errors),
+                Phone(contact.AlternatePhone, "alternatePhone", required: false, errors), Email(contact.Email, errors)));
         if (errors.Count > 0) throw new PatientValidationException(errors);
         return result;
     }

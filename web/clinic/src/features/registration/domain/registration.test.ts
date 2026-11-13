@@ -180,6 +180,12 @@ describe('completing a quick registration (MDV-P1-015)', () => {
     expect(completion('AE', { payerKind: 'PrivateInsurance', payerName: 'Synthetic Insurer' })).toEqual({ memberNumber: 'required' });
   });
 
+  it('edits the phones and email alone: checked by the country rules, only what was typed is sent (MDV-AUDIT-1101)', () => {
+    expect(completion('IN', { mobile: '+91 90000 00152' })).toEqual({});
+    expect(completion('IN', { mobile: '123', alternatePhone: '456', email: 'no-at-sign' })).toEqual({ mobile: 'format.phone', alternatePhone: 'format.phone', email: 'format.email' });
+    expect(toCompletionRequest({ ...emptyForm, mobile: ' +91 90000 00152 ' }, 'IN').contact).toEqual({ mobile: '+91 90000 00152', alternatePhone: null, email: null });
+  });
+
   it('sends only the address, the payer and the emergency contact', () => {
     expect(toCompletionRequest({ ...emptyForm, fullName: 'not sent', payerKind: 'SelfPay' }, 'IN')).toEqual({
       address: null, payer: { kind: 'SelfPay', payerName: null, plan: null, memberNumber: null, validTo: null, network: null }, emergencyContact: null,

@@ -7,8 +7,8 @@ export function useVisitsController(patientId: string) {
   return { visits: q.data?.visits ?? [], timeZone: q.data?.timeZone ?? 'UTC', loading: q.isPending, failed: q.isError };
 }
 
-/** The desk record's visit list: date and status only. */
+/** The desk record's visit list: date and status only; and the doctor's follow-up still to book, date and doctor only (MDV-P1-102). */
 export function useDeskVisitsController(facilityId: string, patientId: string) {
   const q = useQuery({ queryKey: ['desk-visits', facilityId, patientId], queryFn: () => fetchDeskVisits(facilityId, patientId), retry: false, refetchOnWindowFocus: false });
-  return { visits: q.data ?? [], loading: q.isPending, failed: q.isError };
+  return { visits: q.data?.visits ?? [], followUp: q.data?.followUp ?? null, loading: q.isPending, failed: q.isError };
 }

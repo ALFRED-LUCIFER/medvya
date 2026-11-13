@@ -11,6 +11,7 @@ import ProfilePanel from '../features/settings/components/ProfilePanel';
 import DataPanel from '../features/settings/components/DataPanel';
 import NotificationsPanel from '../features/settings/components/NotificationsPanel';
 import NurseIntakePanel from '../features/settings/components/NurseIntakePanel';
+import QueueRulePanel from '../features/settings/components/QueueRulePanel';
 import TermsPanel from '../features/settings/components/TermsPanel';
 import SettingsPage from '../features/settings/components/SettingsPage';
 import { settingsTabs, type SettingsTab } from '../features/settings/domain/settings';
@@ -21,6 +22,7 @@ import { useLocationChoice } from '../features/settings/hooks/useLocationChoice'
 import { useLocationsController } from '../features/settings/hooks/useLocationsController';
 import { useNotificationSettingsController } from '../features/settings/hooks/useNotificationSettingsController';
 import { useNurseIntakeController } from '../features/settings/hooks/useNurseIntakeController';
+import { useQueueRuleController } from '../features/settings/hooks/useQueueRuleController';
 import { useTermsController } from '../features/settings/hooks/useTermsController';
 import { useProfileController } from '../features/settings/hooks/useProfileController';
 import CustomRolesPanel from '../features/staff/components/CustomRolesPanel';
@@ -77,6 +79,7 @@ const Review = () => <AccessReviewPanel {...useAccessReviewController()} />;
 const AccessRequests = () => <AccessRequestsPanel {...useAccessRequestsController()} />;
 const ClinicalPolicy = () => <ClinicalPolicyPanel {...useClinicalPolicyController()} />;
 const NurseIntake = () => <NurseIntakePanel {...useNurseIntakeController()} />;
+const Queue = () => <QueueRulePanel {...useQueueRuleController()} />;
 
 function Staff({ facilityId }: { facilityId: string }) {
   const staff = useStaffController(facilityId);
@@ -95,6 +98,6 @@ export default function SettingsRoute({ facilityId, country }: { facilityId: str
   const [params, setParams] = useSearchParams();
   const asked = params.get('tab');
   const tab: SettingsTab = (settingsTabs as readonly string[]).includes(asked ?? '') ? (asked as SettingsTab) : 'profile';
-  const panels = { profile: <Profile />, locations: <Locations facilityId={facilityId} country={country} />, hours: <Hours facilityId={facilityId} />, holidays: <Holidays facilityId={facilityId} />, staff: <Staff facilityId={facilityId} />, nurse: <NurseIntake />, requests: <AccessRequests />, policy: <ClinicalPolicy />, review: <Review />, doctors: <Doctors facilityId={facilityId} />, medicines: <Medicines country={country} />, displays: <Displays facilityId={facilityId} />, audit: <Audit />, metrics: <Metrics facilityId={facilityId} />, terms: <Terms />, notifications: <Notifications />, data: <DataPanel country={country} accessLogPath="/settings?tab=audit" /> };
+  const panels = { profile: <Profile />, locations: <Locations facilityId={facilityId} country={country} />, hours: <Hours facilityId={facilityId} />, holidays: <Holidays facilityId={facilityId} />, staff: <Staff facilityId={facilityId} />, nurse: <NurseIntake />, queue: <Queue />, requests: <AccessRequests />, policy: <ClinicalPolicy />, review: <Review />, doctors: <Doctors facilityId={facilityId} />, medicines: <Medicines country={country} />, displays: <Displays facilityId={facilityId} />, audit: <Audit />, metrics: <Metrics facilityId={facilityId} />, terms: <Terms />, notifications: <Notifications />, data: <DataPanel country={country} accessLogPath="/settings?tab=audit" /> };
   return <SettingsPage tab={tab} onTab={next => setParams({ tab: next }, { replace: true })} panels={panels} />;
 }

@@ -21,6 +21,8 @@ type Props = {
   allergyFlags: Record<string, { state: AllergyState; abnormalVitals: boolean }>;
   /** A nurse's urgent reason by visit (appointment id), only for patients the clinician may treat. */
   escalations: Record<string, string>; escalationsFailed: boolean;
+  /** The visits with an open escalation, in queue order: pinned above Next patient (MDV-P1-103). */
+  escalated: BoardCard[];
   /** Patient 360 of a patient. */
   chartPath: (patientId: string) => string;
   loading: boolean; offline: boolean; online: boolean; live: LiveStatus; forbidden: boolean; failed: boolean; onRetry: () => void;
@@ -76,6 +78,7 @@ function Body(p: Props) {
   if (p.visits.length === 0) return <Message title={t('today.empty.title')} body={t(p.scope === 'mine' ? 'today.empty.mine' : 'today.empty.clinic')} />;
   return (
     <>
+      {p.escalated.length > 0 && <Escalated {...p} />}
       {p.next && <Hero {...p} card={p.next} />}
       <section aria-labelledby="today-list" className="flex flex-col gap-2">
         <h2 id="today-list" className="text-[15px] font-extrabold">{t('today.list')}</h2>
@@ -85,6 +88,32 @@ function Body(p: Props) {
   );
 }
 
+/** A nurse's escalation comes before Next patient (MDV-P1-103): the reason in words with an icon, never colour alone. */
+function Escalated(p: Props) {
+  const { t } = useI18n();
+  return (
+    <section aria-labelledby="today-escalated" className="flex flex-col gap-3 rounded-xl border-2 border-danger-border bg-danger-bg p-4">
+      <h2 id="today-escalated" className="inline-flex items-center gap-1.5 text-label text-danger-text"><Siren aria-hidden className="size-4" />{t('today.escalated.title')}</h2>
+      <ul className="flex flex-col gap-2">
+        {p.escalated.map(c => (
+          <li key={c.id} className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex min-w-0 flex-col gap-1.5">
+              <p className="text-subheading"><Token card={c} /><PatientLink {...p} card={c} /></p>
+              <Chips {...p} card={c} />
+            </div>
+            {canConsult(c.state) && <div className="[&_button]:min-w-40">{p.consultAction(c)}</div>}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/** The waiting-room token ("A-07"), the one the queue display calls; none before check-in. Isolated, so in Arabic it stays apart from a Latin name. */
+function Token({ card }: { card: BoardCard }) {
+  return card.token ? <><bdi className="font-mono text-mono tabular-nums">{card.token}</bdi>{' '}</> : null;
+}
+
 function Hero(p: Props & { card: BoardCard }) {
   const { t, formatTime } = useI18n();
   const c = p.card;
@@ -92,7 +121,7 @@ function Hero(p: Props & { card: BoardCard }) {
     <section aria-labelledby="today-next" className="flex flex-col gap-3 rounded-xl border-2 border-action-600 bg-card p-4">
       <h2 id="today-next" className="text-[13px] font-bold text-action-600">{t(c.state === 'InConsult' ? 'today.hero.current' : 'today.hero.next')}</h2>
       <div>
-        <p className="text-xl font-extrabold"><PatientLink {...p} card={c} /></p>
+        <p className="text-xl font-extrabold"><Token card={c} /><PatientLink {...p} card={c} /></p>
         <p className="text-sm text-muted-foreground">{formatTime(new Date(c.start), p.timeZone ?? undefined)}{' · '}{t(`reasonCategory.${c.reasonCategory}`)}</p>
       </div>
       <Chips {...p} card={c} />
@@ -136,7 +165,7 @@ function Visit(p: Props & { card: BoardCard }) {
       <div className="flex min-w-0 flex-col gap-1.5">
         <h3 id={nameId} className="text-sm font-bold">
           <span className="font-mono text-xs font-semibold text-muted-foreground">{formatTime(new Date(c.start), p.timeZone ?? undefined)}</span>{' '}
-          <PatientLink {...p} card={c} />{age !== null && <span className="font-normal text-muted-foreground">{' · '}{t('today.age', { years: age })}</span>}
+          <Token card={c} /><PatientLink {...p} card={c} />{age !== null && <span className="font-normal text-muted-foreground">{' · '}{t('today.age', { years: age })}</span>}
         </h3>
         <p className="text-xs text-muted-foreground">{[t(`reasonCategory.${c.reasonCategory}`), p.scope === 'clinic' ? c.calendarName : ''].filter(Boolean).join(' · ')}</p>
         <Chips {...p} card={c} />

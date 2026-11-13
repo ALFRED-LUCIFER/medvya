@@ -14,7 +14,7 @@ namespace Medvya.Scheduling.Infrastructure;
 /// shortcut: a wait is the token's place in its doctor's queue times the doctor's slot length; use the running-delay estimate
 /// of the clinic overview (MDV-P1-030) when it exists.
 /// </summary>
-public sealed class QueueService(SchedulingDbContext db, SchedulingContext context, ICurrentFacility facility) : IQueueService
+public sealed class QueueService(SchedulingDbContext db, SchedulingContext context, ICurrentFacility facility, QueueOrdering ordering) : IQueueService
 {
     const int MaxName = 60, MaxNext = 8, DefaultSlotMinutes = 15;
 
@@ -23,31 +23,33 @@ public sealed class QueueService(SchedulingDbContext db, SchedulingContext conte
     public async Task<QueueTv> TvAsync(CancellationToken cancellationToken = default)
     {
         var facilityId = facility.FacilityId ?? throw new SchedulingAccessDeniedException();
-        var (_, zone) = await context.FacilityAsync(facilityId, cancellationToken);
+        var (info, zone) = await context.FacilityAsync(facilityId, cancellationToken);
         var date = ScheduleRules.LocalDate(context.Now, zone);
-        var queue = await (
+        var queue = (await (
                 from t in db.QueueTokens.AsNoTracking()
                 join a in db.Appointments.AsNoTracking() on t.AppointmentId equals a.Id
                 where t.FacilityId == facilityId && t.Date == date && (Waiting.Contains(a.State) || a.State == AppointmentState.InConsult)
-                select new { t.Prefix, t.Number, a.CalendarId, a.State, a.Room, a.Start, a.ChangedAt })
-            .ToListAsync(cancellationToken);
+                select new { Visit = a, t.Prefix, t.Number })
+            .ToListAsync(cancellationToken)).ConvertAll(q => (q.Visit, Token: QueueToken.Format(q.Prefix, q.Number)));
         var names = (await context.CalendarsAsync(facilityId, cancellationToken)).ToDictionary(c => c.Id, c => c.Name);
         var slots = await db.Templates.AsNoTracking().Where(t => t.FacilityId == facilityId)
             .ToDictionaryAsync(t => t.CalendarId, t => t.SlotMinutes, cancellationToken);
+        var places = await ordering.PlacesAsync(queue.Select(q => q.Visit), info.Queue, cancellationToken);
 
         // Now: the latest call-in of each doctor, newest first.
-        var now = queue.Where(q => q.State == AppointmentState.InConsult).GroupBy(q => q.CalendarId)
-            .Select(g => g.MaxBy(q => q.ChangedAt)!).OrderByDescending(q => q.ChangedAt)
-            .Select(q => new QueueTvNow(QueueToken.Format(q.Prefix, q.Number), q.Room, names.GetValueOrDefault(q.CalendarId, ""))).ToList();
-        // Next: each doctor's waiting tokens in appointment order, after whoever is with the doctor now.
-        var next = queue.Where(q => Waiting.Contains(q.State)).GroupBy(q => q.CalendarId).SelectMany(g =>
+        var now = queue.Where(q => q.Visit.State == AppointmentState.InConsult).GroupBy(q => q.Visit.CalendarId)
+            .Select(g => g.MaxBy(q => q.Visit.ChangedAt)).OrderByDescending(q => q.Visit.ChangedAt)
+            .Select(q => new QueueTvNow(q.Token, q.Visit.Room, names.GetValueOrDefault(q.Visit.CalendarId, ""))).ToList();
+        // Next: each doctor's waiting tokens in the clinic's queue order (MDV-P1-103), after whoever is with the doctor now; each names its
+        // doctor, since a reassigned token keeps its letter.
+        var next = queue.Where(q => places.ContainsKey(q.Visit.Id)).GroupBy(q => q.Visit.CalendarId).SelectMany(g =>
             {
-                var busy = queue.Any(q => q.CalendarId == g.Key && q.State == AppointmentState.InConsult) ? 1 : 0;
+                var busy = queue.Any(q => q.Visit.CalendarId == g.Key && q.Visit.State == AppointmentState.InConsult) ? 1 : 0;
                 var minutes = slots.GetValueOrDefault(g.Key, DefaultSlotMinutes);
-                return g.OrderBy(q => q.Start).ThenBy(q => q.Number)
-                    .Select((q, place) => new QueueTvNext(QueueToken.Format(q.Prefix, q.Number), RoundUp((place + busy) * minutes)));
+                return g.OrderBy(q => places[q.Visit.Id]).Select((q, place) =>
+                    (Place: places[q.Visit.Id], Next: new QueueTvNext(q.Token, RoundUp((place + busy) * minutes), names.GetValueOrDefault(g.Key, ""))));
             })
-            .OrderBy(n => n.WaitMinutes).ThenBy(n => n.Token, StringComparer.Ordinal).Take(MaxNext).ToList();
+            .OrderBy(n => n.Next.WaitMinutes).ThenBy(n => n.Place).Take(MaxNext).Select(n => n.Next).ToList();
         return new(now, next);
     }
 

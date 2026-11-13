@@ -65,6 +65,12 @@ describe('reception board', () => {
     expect(groupByColumn([queued, early]).CheckedIn.map(c => c.id)).toEqual(['early', 'queued']);
   });
 
+  it('orders the waiting columns by the server\'s queue place, the order the doctor\'s day and the display share (MDV-P1-103)', () => {
+    const escalated = { ...card('escalated', 'WithNurse', '2026-10-19T11:20:00Z'), queuePlace: 1 }; // came last, escalated by the nurse
+    const first = { ...card('first', 'WithNurse', '2026-10-19T09:00:00Z'), queuePlace: 2 };
+    expect(groupByColumn([first, escalated]).WithNurse.map(c => c.id)).toEqual(['escalated', 'first']);
+  });
+
   it('lists visits moved off a doctor on leave in time order, outside the columns (MDV-P1-012)', () => {
     const cards = [card('b', 'NeedsRebooking', '2026-10-19T05:00:00Z'), card('a', 'NeedsRebooking', '2026-10-19T04:00:00Z'), card('c', 'Booked', '2026-10-19T03:00:00Z')];
     expect(needsRebooking(cards).map(c => c.id)).toEqual(['a', 'b']);

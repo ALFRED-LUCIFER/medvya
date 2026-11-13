@@ -6,7 +6,8 @@ import { fakeHub } from './support/fakeHub';
 // shapes the server sends (IQueueService.cs). The TV must make no request but its own: pairing, its queue and its hub.
 const token = `${'A'.repeat(40)}Synthetic_Display-Token1`; // 64 base64url characters, like a real display token
 const queue = (now: { token: string; room: string | null; doctor: string }[]) => ({
-  now, next: [{ token: 'A-08', waitMinutes: 10 }, { token: 'B-03', waitMinutes: 15 }, { token: 'A-09', waitMinutes: 25 }],
+  now, next: [{ token: 'A-08', waitMinutes: 10, doctor: 'Dr. Arjun Rao (synthetic)' }, { token: 'B-03', waitMinutes: 15, doctor: 'Dr. Sana Khan (synthetic)' },
+    { token: 'A-09', waitMinutes: 25, doctor: 'Dr. Sana Khan (synthetic)' }], // A-09 was reassigned: it keeps its letter, the display names its doctor (MDV-P1-103)
 });
 const called = [{ token: 'A-07', room: 'Room 3', doctor: 'Dr. Arjun Rao (synthetic)' }];
 
@@ -43,7 +44,7 @@ test('pairs from its link, then shows tokens, rooms, doctors and waits only', as
   await expect(page.getByRole('heading', { name: 'Now calling' })).toBeVisible();
   const now = page.getByRole('region', { name: 'Now calling' }).getByRole('listitem');
   await expect(now).toHaveText(/A-07\s*Room 3\s*Dr\. Arjun Rao \(synthetic\)/);
-  await expect(page.getByRole('region', { name: 'Next' }).getByRole('listitem')).toHaveText([/A-08\s*≈ 10 min/, /B-03\s*≈ 15 min/, /A-09\s*≈ 25 min/]);
+  await expect(page.getByRole('region', { name: 'Next' }).getByRole('listitem')).toHaveText([/A-08\s*Dr. Arjun Rao \(synthetic\) · ≈ 10 min/, /B-03\s*Dr. Sana Khan \(synthetic\) · ≈ 15 min/, /A-09\s*Dr. Sana Khan \(synthetic\) · ≈ 25 min/]); // the doctor per token (MDV-P1-103)
   await expect(page.getByText('Emergency? Tell the front desk immediately.')).toBeVisible();
   await expect(page.getByRole('status').filter({ hasText: 'Live updates' })).toHaveText('Live updates');
 

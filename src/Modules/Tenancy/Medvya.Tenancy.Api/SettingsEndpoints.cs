@@ -79,6 +79,10 @@ public static class SettingsEndpoints
         g.MapPut("/clinical-access", async ([FromBody] ClinicalAccessBody body, [FromServices] IPracticeSettings s, CancellationToken ct) =>
             Results.Ok(new ClinicalAccessBody(await s.SaveClinicalAccessAsync(body.Policy, ct))));
 
+        // The order arrived patients are seen in (MDV-P1-103): the doctor's day, the board and the queue display all follow it.
+        g.MapGet("/queue-rule", ([FromServices] IPracticeSettings s, CancellationToken ct) => s.GetQueueRuleAsync(ct));
+        g.MapPut("/queue-rule", ([FromBody] QueueRule body, [FromServices] IPracticeSettings s, CancellationToken ct) => s.SaveQueueRuleAsync(body, ct));
+
         // Nurse intake before the doctor (MDV-P2-007): a practice-wide switch, off until the owner turns it on. Changes are audited by the flag service.
         g.MapGet("/nurse-intake", async ([FromServices] IFeatureFlags flags, CancellationToken ct) => Results.Ok(new NurseIntakeBody(await flags.IsEnabledAsync(NurseIntakeFlag, ct))));
         g.MapPut("/nurse-intake", async ([FromBody] NurseIntakeBody body, [FromServices] IFeatureFlags flags, CancellationToken ct) =>

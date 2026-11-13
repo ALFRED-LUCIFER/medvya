@@ -730,6 +730,9 @@ namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("BookedFirst")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("ClinicalAccess")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
@@ -755,6 +758,13 @@ namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<string>("QueueOrder")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Arrival");
 
                     b.Property<string>("ResidencyRegion")
                         .IsRequired()

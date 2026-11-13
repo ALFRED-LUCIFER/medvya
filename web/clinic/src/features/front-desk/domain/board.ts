@@ -26,6 +26,8 @@ export type BoardCard = {
   withDoctor?: boolean;
   /** On a Done card: the doctor's follow-up still to book, date and doctor only (MDV-P1-102). */
   followUp?: FollowUpDue | null;
+  /** 1, 2, … in the clinic's queue order while the patient waits (MDV-P1-103): escalations first, then the clinic's rule; null otherwise. */
+  queuePlace?: number | null;
 };
 /** leftWithoutBeingSeen: today's patients who left before being seen; they are off the board and never in Done. */
 export type Board = { facilityId: string; timeZone: string; date: string; now: string; cards: BoardCard[]; leftWithoutBeingSeen?: number };
@@ -55,14 +57,20 @@ export const visibleColumns = (steps: VisitSteps, columns: Record<BoardColumn, B
 
 export const isBoardColumn = (state: AppointmentState): state is BoardColumn => (boardColumns as readonly string[]).includes(state);
 
+/** The server's queue order (MDV-P1-103), shared by the doctor's day, the board and the queue display; a card without a place goes after. */
+export const byQueuePlace = (a: BoardCard, b: BoardCard) =>
+  (a.queuePlace ?? Number.MAX_SAFE_INTEGER) - (b.queuePlace ?? Number.MAX_SAFE_INTEGER) || Date.parse(a.since) - Date.parse(b.since);
+const waitingColumns: readonly BoardColumn[] = ['CheckedIn', 'WithNurse', 'ReadyForDoctor'];
+
 /**
- * Cards per column: Booked by appointment time; every later column in the order patients entered it, so Checked in follows the
- * token order and a walk-in queued "now" with no slot does not jump ahead of patients who arrived earlier (MDV-P1-052).
+ * Cards per column: Booked by appointment time; the waiting columns in the clinic's queue order (MDV-P1-103), so they agree with the
+ * doctor's day and the queue display; the later columns in the order patients entered them.
  */
 export function groupByColumn(cards: BoardCard[]): Record<BoardColumn, BoardCard[]> {
   const groups = Object.fromEntries(boardColumns.map(c => [c, [] as BoardCard[]])) as Record<BoardColumn, BoardCard[]>;
   for (const card of cards) if (isBoardColumn(card.state)) groups[card.state].push(card);
-  for (const c of boardColumns) groups[c].sort((a, b) => c === 'Booked' ? Date.parse(a.start) - Date.parse(b.start) : Date.parse(a.since) - Date.parse(b.since));
+  for (const c of boardColumns)
+    groups[c].sort((a, b) => c === 'Booked' ? Date.parse(a.start) - Date.parse(b.start) : waitingColumns.includes(c) ? byQueuePlace(a, b) : Date.parse(a.since) - Date.parse(b.since));
   return groups;
 }
 

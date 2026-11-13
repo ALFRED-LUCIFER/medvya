@@ -362,3 +362,11 @@ public sealed class IntakeHandoffGate(EncountersDbContext db, IFeatureFlags flag
         !await flags.IsEnabledAsync(IntakeFlag.Key, cancellationToken)
         || await db.Intakes.AsNoTracking().AnyAsync(i => i.AppointmentId == appointmentId && i.HandedOffAt != null, cancellationToken);
 }
+
+/// <summary>Visits with an open nurse escalation (MDV-P1-103), as the escalation list reads them: open until a consultation starts. Ids only.</summary>
+public sealed class EscalatedVisits(EncountersDbContext db) : IEscalatedVisits
+{
+    public async Task<IReadOnlySet<Guid>> EscalatedAsync(IReadOnlyCollection<Guid> appointmentIds, CancellationToken cancellationToken = default) =>
+        (await db.IntakeEscalations.AsNoTracking().Where(e => appointmentIds.Contains(e.AppointmentId) && !db.Encounters.Any(x => x.AppointmentId == e.AppointmentId))
+            .Select(e => e.AppointmentId).Distinct().ToListAsync(cancellationToken)).ToHashSet();
+}

@@ -22,13 +22,13 @@ static class Locations
         if (existing is not null)
         {
             existing.Status = MembershipStatus.Active;
-            (existing.Role, existing.CustomRoleId) = (source.Role, source.CustomRoleId);
+            (existing.Role, existing.CustomRoleId, existing.IsOwner) = (source.Role, source.CustomRoleId, source.IsOwner);
             return existing;
         }
         var added = new Membership
         {
             Id = Guid.CreateVersion7(), TenantId = source.TenantId, UserId = source.UserId, FacilityId = facilityId, Role = source.Role,
-            Status = MembershipStatus.Active, CustomRoleId = source.CustomRoleId,
+            Status = MembershipStatus.Active, CustomRoleId = source.CustomRoleId, IsOwner = source.IsOwner, // the owner is the owner at every location (MDV-P1-107)
         };
         db.Memberships.Add(added);
         if (await db.DoctorProfiles.AsNoTracking().SingleOrDefaultAsync(p => p.MembershipId == source.Id, cancellationToken) is { } p)

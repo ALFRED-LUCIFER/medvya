@@ -33,7 +33,6 @@ const InvitationRoute = lazy(() => import('./InvitationRoute'));
 const RxVerifyRoute = lazy(() => import('./RxVerifyRoute'));
 const SharedRxRoute = lazy(() => import('./RxVerifyRoute').then(m => ({ default: m.SharedRxRoute })));
 const PaperVerifyRoute = lazy(() => import('./RxVerifyRoute').then(m => ({ default: m.PaperVerifyRoute })));
-const InviteColleagueRoute = lazy(() => import('./InviteColleagueRoute'));
 const SignUpRoute = lazy(() => import('./SignUpRoute'));
 const SignInRoute = lazy(() => import('./SignInRoute'));
 const OnboardingRoute = lazy(() => import('./OnboardingRoute'));
@@ -159,7 +158,7 @@ export default function App({ locale, onLocaleChange }: Props) {
                 canConsult={active.capabilities.Patient360Chart === 'Full'} steps={{ nurse: active.flags.includes('clinical.nurse-intake'), billing: active.flags.includes('billing.invoices') }}
                 intakePath={nursePath && active.capabilities.VitalsAllergiesEntry === 'Full' ? (id: string) => `${nursePath}/${id}` : null} />
             : i.id === 'nurse' ? <NurseQueueRoute facilityId={active.facilityId} online={online} nursePath={i.path} />
-            : i.id === 'settings' ? <SettingsRoute facilityId={active.facilityId} country={active.country ?? null} />
+            : i.id === 'settings' ? <SettingsRoute facilityId={active.facilityId} country={active.country ?? null} userId={shell.session?.user.id ?? ''} />
             // Until the patient chart exists (phase 2) the Patients menu opens the patient directory instead of a placeholder.
             : i.id === 'patients' && searchPath ? <Navigate to={searchPath} replace />
             : <ComingSoon title={t(`nav.${i.id}`)} phase={i.phase} />} />)}
@@ -168,7 +167,6 @@ export default function App({ locale, onLocaleChange }: Props) {
             <Route path={walkInPath} element={<WalkInRoute facilityId={active.facilityId} boardPath={pathOf('frontDesk')!} registerPath={`${registerPath}?mode=quick`} />} />}
           {waitlistPath && <Route path={waitlistPath} element={<WaitlistRoute facilityId={active.facilityId} boardPath={pathOf('frontDesk')!} />} />}
           {/* shortcut: reachable by URL only; the Staff screen and its navigation entry come with F-10 (MDV-P1-008). */}
-          {active.capabilities.StaffRolesIntegrations === 'Config' && <Route path="/admin/staff" element={<InviteColleagueRoute />} />}
           {/* The owner's onboarding request (ADR-016, MDV-P1-062): status, documents and Submit; the shell notice links here until approval. */}
           {active.capabilities.StaffRolesIntegrations === 'Config' && <Route path={organisationPath} element={<OrganisationRoute />} />}
           {/* D-04 clinic overview (MDV-P1-030): for everyone who sees the board; moving patients needs the full queue capability. */}

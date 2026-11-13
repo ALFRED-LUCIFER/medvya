@@ -48,19 +48,21 @@ public sealed class SessionControlTests(PostgresFixture sql) : IClassFixture<Pos
         return user;
     }
 
-    async Task<Guid> Member(StaffUser user, Guid tenant, Guid facility, Role role, MembershipStatus status = MembershipStatus.Active)
+    async Task<Guid> Member(StaffUser user, Guid tenant, Guid facility, Role role, MembershipStatus status = MembershipStatus.Active, bool owner = false)
     {
         await using var db = sql.Context(tenant);
-        var m = new Membership { Id = Guid.NewGuid(), TenantId = tenant, UserId = user.Id, FacilityId = facility, Role = role, Status = status };
+        var m = new Membership { Id = Guid.NewGuid(), TenantId = tenant, UserId = user.Id, FacilityId = facility, Role = role, Status = status, IsOwner = owner };
         db.Memberships.Add(m);
         await db.SaveChangesAsync();
         return m.Id;
     }
 
-    async Task<HttpClient> SignedIn(StaffUser user)
+    /// <param name="stepUp">Also the identity step-up, which an offboarding asks for (MDV-P1-107); the claim survives choosing a facility.</param>
+    async Task<HttpClient> SignedIn(StaffUser user, bool stepUp = true)
     {
         var browser = Browser();
         await StaffSignInTests.SignIn(browser, user.Subject);
+        if (stepUp) await StaffSignInTests.Reauth(browser, user.Subject);
         return browser;
     }
 
@@ -404,7 +406,7 @@ public sealed class SessionControlTests(PostgresFixture sql) : IClassFixture<Pos
         var admin = await Account("K. Lakshmi");
         var doctor = await Account("Dr. R. Menon");
         var other = await Account("Dr. S. Rao");
-        var adminMembership = await Member(admin, tenantA, facilityA, Role.PracticeAdmin);
+        var adminMembership = await Member(admin, tenantA, facilityA, Role.PracticeAdmin, owner: true);
         var doctorMembership = await Member(doctor, tenantA, facilityA, Role.HospitalDoctor);
         var soon = DateTimeOffset.UtcNow.AddDays(3);
         var future = await BookedVisitAsync(doctor.Id, facilityA, soon);
@@ -451,7 +453,7 @@ public sealed class SessionControlTests(PostgresFixture sql) : IClassFixture<Pos
         await Clinics();
         var admin = await Account("K. Lakshmi");
         var doctor = await Account("Dr. R. Menon");
-        var adminMembership = await Member(admin, tenantA, facilityA, Role.PracticeAdmin);
+        var adminMembership = await Member(admin, tenantA, facilityA, Role.PracticeAdmin, owner: true);
         var doctorMembership = await Member(doctor, tenantA, facilityA, Role.HospitalDoctor);
         var future = await BookedVisitAsync(doctor.Id, facilityA, DateTimeOffset.UtcNow.AddDays(3));
         using var adminBrowser = await SignedIn(admin);
@@ -556,7 +558,7 @@ public sealed class SessionControlTests(PostgresFixture sql) : IClassFixture<Pos
         }
         var admin = await Account("K. Lakshmi");
         var doctor = await Account("Dr. R. Menon");
-        var adminMembership = await Member(admin, tenantA, facilityA, Role.PracticeAdmin);
+        var adminMembership = await Member(admin, tenantA, facilityA, Role.PracticeAdmin, owner: true);
         var atAdyar = await Member(doctor, tenantA, facilityA, Role.HospitalDoctor);
         var atVelachery = await Member(doctor, tenantA, velachery, Role.HospitalDoctor);
         var soon = DateTimeOffset.UtcNow.AddDays(3);
@@ -584,7 +586,7 @@ public sealed class SessionControlTests(PostgresFixture sql) : IClassFixture<Pos
         await Clinics();
         var admin = await Account("K. Lakshmi");
         var doctor = await Account("Dr. R. Menon");
-        var adminMembership = await Member(admin, tenantA, facilityA, Role.PracticeAdmin);
+        var adminMembership = await Member(admin, tenantA, facilityA, Role.PracticeAdmin, owner: true);
         var doctorMembership = await Member(doctor, tenantA, facilityA, Role.HospitalDoctor);
         using var doctorBrowser = await SignedIn(doctor);
         await Choose(doctorBrowser, doctorMembership);
@@ -686,5 +688,122 @@ public sealed class SessionControlTests(PostgresFixture sql) : IClassFixture<Pos
         await Member(second, tenantA, facilityA, Role.PracticeAdmin);
         Assert.Equal(HttpStatusCode.OK, (await Send(adminBrowser, HttpMethod.Post, $"/v1/staff/{adminMembership}/offboard", new { reason = "Leaving" })).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, await ContextStatus(adminBrowser));
+    }
+
+    // MDV-P1-107 (F-30). AC1: on main before this change a practice admin's offboarding of the owner answered 200 and ended the owner's access (the code
+    // refused only the last administrator). SAFETY mutation check: drop the owner rule in StaffRoster.OffboardCoreAsync and this test fails.
+    [Fact]
+    public async Task OnlyAnOwnerOffboardsAnOwnerOrADoctorAndAPracticeAdminIsRefusedWithNothingChanged()
+    {
+        await Clinics();
+        var owner = await Account("Dr. Arjun Rao");
+        var admin = await Account("K. Lakshmi");
+        var doctor = await Account("Dr. S. Menon");
+        var ownerMembership = await Member(owner, tenantA, facilityA, Role.SoloDoctor, owner: true);
+        var adminMembership = await Member(admin, tenantA, facilityA, Role.PracticeAdmin);
+        var doctorMembership = await Member(doctor, tenantA, facilityA, Role.HospitalDoctor);
+        using var ownerBrowser = await SignedIn(owner);
+        await Choose(ownerBrowser, ownerMembership);
+        using var adminBrowser = await SignedIn(admin);
+        await Choose(adminBrowser, adminMembership);
+
+        foreach (var target in new[] { ownerMembership, doctorMembership })
+        {
+            using var refused = await Send(adminBrowser, HttpMethod.Post, $"/v1/staff/{target}/offboard", new { reason = "Synthetic" });
+            Assert.Equal((HttpStatusCode.Forbidden, "owner_only"), (refused.StatusCode, (await refused.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString()));
+        }
+        Assert.Equal(HttpStatusCode.OK, await ContextStatus(ownerBrowser));
+        await using (var db = sql.Context(tenantA))
+        {
+            Assert.Equal(2, await db.Memberships.CountAsync(m => (m.Id == ownerMembership || m.Id == doctorMembership) && m.Status == MembershipStatus.Active));
+            Assert.Equal(0, await db.SettingsChanges.CountAsync(c => c.Section == "staff.offboard"));
+        }
+        Assert.Equal(HttpStatusCode.OK, (await Send(ownerBrowser, HttpMethod.Post, $"/v1/staff/{doctorMembership}/offboard", new { reason = "Left the practice" })).StatusCode); // the control
+    }
+
+    // AC3. SAFETY mutation check: drop the last-owner rule and the first offboarding goes through.
+    [Fact]
+    public async Task ThePracticeAlwaysKeepsAnOwner()
+    {
+        await Clinics();
+        var owner = await Account("Dr. Arjun Rao");
+        var admin = await Account("K. Lakshmi");
+        var partner = await Account("Dr. Priya Nair");
+        var ownerMembership = await Member(owner, tenantA, facilityA, Role.SoloDoctor, owner: true);
+        await Member(admin, tenantA, facilityA, Role.PracticeAdmin); // not the last administrator: only the owner rule refuses
+        using var ownerBrowser = await SignedIn(owner);
+        await Choose(ownerBrowser, ownerMembership);
+
+        using var refused = await Send(ownerBrowser, HttpMethod.Post, $"/v1/staff/{ownerMembership}/offboard", new { reason = "Leaving" });
+        Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
+        Assert.Contains("last_owner", await refused.Content.ReadAsStringAsync());
+        Assert.Equal(HttpStatusCode.OK, await ContextStatus(ownerBrowser));
+
+        var partnerMembership = await Member(partner, tenantA, facilityA, Role.PracticeAdmin, owner: true);
+        Assert.Equal(HttpStatusCode.OK, (await Send(ownerBrowser, HttpMethod.Post, $"/v1/staff/{partnerMembership}/offboard", new { reason = "Left the partnership" })).StatusCode);
+        using var stillRefused = await Send(ownerBrowser, HttpMethod.Post, $"/v1/staff/{ownerMembership}/offboard", new { reason = "Leaving" });
+        Assert.Contains("last_owner", await stillRefused.Content.ReadAsStringAsync());
+    }
+
+    // AC4. SAFETY mutation check: drop the step-up check in StaffEndpoints and the first call offboards.
+    [Fact]
+    public async Task AnyOffboardingAsksForTheIdentityStepUpFirst()
+    {
+        await Clinics();
+        var owner = await Account("Dr. Arjun Rao");
+        var staff = await Account("A. Joseph");
+        var ownerMembership = await Member(owner, tenantA, facilityA, Role.SoloDoctor, owner: true);
+        var staffMembership = await Member(staff, tenantA, facilityA, Role.Receptionist);
+        using var ownerBrowser = await SignedIn(owner, stepUp: false);
+        await Choose(ownerBrowser, ownerMembership);
+
+        using var asked = await Send(ownerBrowser, HttpMethod.Post, $"/v1/staff/{staffMembership}/offboard", new { reason = "Left the practice" });
+        Assert.Equal((HttpStatusCode.Forbidden, "reauth_required"), (asked.StatusCode, (await asked.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString()));
+        await using (var db = sql.Context(tenantA))
+            Assert.Equal(MembershipStatus.Active, (await db.Memberships.SingleAsync(m => m.Id == staffMembership)).Status);
+
+        await StaffSignInTests.Reauth(ownerBrowser, owner.Subject);
+        Assert.Equal(HttpStatusCode.OK, (await Send(ownerBrowser, HttpMethod.Post, $"/v1/staff/{staffMembership}/offboard", new { reason = "Left the practice" })).StatusCode);
+    }
+
+    // AC5: a role changes in place; the next request has the new role's access, the old sessions end, and the audit row says who, when, from and to.
+    [Fact]
+    public async Task AnOwnerChangesAReceptionistToANurseInPlace()
+    {
+        await Clinics();
+        var owner = await Account("Dr. Arjun Rao");
+        var staff = await Account("A. Joseph");
+        var stranger = await Account("Someone Else");
+        var ownerMembership = await Member(owner, tenantA, facilityA, Role.SoloDoctor, owner: true);
+        var staffMembership = await Member(staff, tenantA, facilityA, Role.Receptionist);
+        var strangerMembership = await Member(stranger, tenantB, facilityB, Role.PracticeAdmin, owner: true);
+        using var staffBrowser = await SignedIn(staff);
+        await Choose(staffBrowser, staffMembership);
+        using var ownerBrowser = await SignedIn(owner);
+        await Choose(ownerBrowser, ownerMembership);
+        using var strangerBrowser = await SignedIn(stranger);
+        await Choose(strangerBrowser, strangerMembership);
+
+        // Another practice's administrator cannot reach the member (filters and row-level security), and an owner's role is not changed here.
+        Assert.Equal(HttpStatusCode.NotFound, (await Send(strangerBrowser, HttpMethod.Put, $"/v1/staff/{staffMembership}/role", new { role = "Nurse" })).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await Send(staffBrowser, HttpMethod.Put, $"/v1/staff/{staffMembership}/role", new { role = "PracticeAdmin" })).StatusCode);
+        using var ownerRole = await Send(ownerBrowser, HttpMethod.Put, $"/v1/staff/{ownerMembership}/role", new { role = "Nurse" });
+        Assert.Contains("not_assignable", await ownerRole.Content.ReadAsStringAsync());
+        Assert.Equal(HttpStatusCode.OK, await ContextStatus(staffBrowser));
+
+        Assert.Equal(HttpStatusCode.NoContent, (await Send(ownerBrowser, HttpMethod.Put, $"/v1/staff/{staffMembership}/role", new { role = "Nurse" })).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, await ContextStatus(staffBrowser)); // the old session ended
+        using var again = await SignedIn(staff);
+        await Choose(again, staffMembership);
+        var active = (await Context(again)).GetProperty("active");
+        Assert.Equal("Nurse", active.GetProperty("role").GetString());
+        Assert.Equal("Full", active.GetProperty("capabilities").GetProperty("VitalsAllergiesEntry").GetString());
+        Assert.Equal("Read", active.GetProperty("capabilities").GetProperty("RegisterBookPatients").GetString()); // a receptionist's was Full
+
+        await using var audit = sql.Audit(tenantA);
+        var row = await audit.Events.SingleAsync(e => e.Action == "staff.role.change");
+        Assert.Equal((owner.Id, staffMembership, "from:Receptionist;to:Nurse"), (row.ActorUserId, row.ResourceId!.Value, row.Detail));
+        await using var foreign = sql.Audit(tenantB);
+        Assert.Equal(0, await foreign.Events.CountAsync(e => e.Action == "staff.role.change"));
     }
 }

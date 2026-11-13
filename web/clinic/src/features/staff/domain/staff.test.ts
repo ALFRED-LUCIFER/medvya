@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addableRows, canOffboard, canResend, canReactivate, canSetLocations, locationsOf, permissionRows, reasonMissing, rebookingMissing, removesLocation, statusLabel, type RoleCatalogue, type StaffMember } from './staff';
+import { canChangeRole, isOwnerAmong, offboardBlock, roleOfValue, addableRows, canOffboard, canResend, canReactivate, canSetLocations, locationsOf, permissionRows, reasonMissing, rebookingMissing, removesLocation, statusLabel, type RoleCatalogue, type StaffMember } from './staff';
 
 const catalogue: RoleCatalogue = {
   builtIn: [
@@ -28,7 +28,7 @@ describe('permissionRows', () => {
 });
 
 describe('canOffboard', () => {
-  const base = { membershipId: 'm', userId: null, name: null, email: null, role: 'Nurse', customRoleId: null, customRoleName: null, facilityId: 'f', facilityName: 'F', mfa: 'enrolled', invitationId: null, invitationState: null, invitationExpiresAt: null } as const;
+  const base = { membershipId: 'm', userId: null, name: null, email: null, role: 'Nurse', customRoleId: null, customRoleName: null, facilityId: 'f', facilityName: 'F', mfa: 'enrolled', invitationId: null, invitationState: null, invitationExpiresAt: null, isOwner: false } as const;
   it('is offered for people who joined, not invitees or the already offboarded', () => {
     expect((['Active', 'Suspended', 'Invited', 'Offboarded'] as const).map(status => canOffboard({ ...base, status }))).toEqual([true, true, false, false]);
   });
@@ -52,12 +52,27 @@ describe('addableRows', () => {
 describe('offboarding and re-activation (#225)', () => {
   const m = (over: Partial<StaffMember>): StaffMember => ({
     membershipId: 'm', userId: 'u', name: null, email: null, role: 'Receptionist', customRoleId: null, customRoleName: null, facilityId: 'f', facilityName: 'Adyar',
-    status: 'Active', mfa: 'enrolled', invitationId: null, invitationState: null, invitationExpiresAt: null, ...over,
+    status: 'Active', mfa: 'enrolled', invitationId: null, invitationState: null, invitationExpiresAt: null, isOwner: false, ...over,
   });
   it('asks a doctor\'s offboarding what happens to their patients, and nobody else\'s', () => {
     expect(rebookingMissing(m({ role: 'HospitalDoctor' }), { reason: 'x', rebooking: null })).toBe(true);
     expect(rebookingMissing(m({ role: 'SoloDoctor' }), { reason: 'x', rebooking: 'call' })).toBe(false);
     expect(rebookingMissing(m({ role: 'Receptionist' }), { reason: 'x', rebooking: null })).toBe(false);
+  });
+  // MDV-P1-107: the server refuses the same; these only decide what the row offers.
+  it('offers Offboard on an owner or a doctor only to an owner, and never on your own row', () => {
+    const owner = m({ userId: 'o', role: 'SoloDoctor', isOwner: true }), doctor = m({ userId: 'd', role: 'HospitalDoctor' }), desk = m({ userId: 'r' });
+    expect([owner, doctor, desk].map(x => offboardBlock(x, 'admin', false))).toEqual(['owner', 'doctor', null]);
+    expect([owner, doctor, desk].map(x => offboardBlock(x, 'o', true))).toEqual(['self', null, null]);
+    expect(isOwnerAmong([owner, desk], 'o')).toBe(true);
+    expect(isOwnerAmong([owner, desk], 'r')).toBe(false);
+  });
+  it('changes the role in place of staff the table assigns, never an owner, a doctor or oneself', () => {
+    expect([m({ userId: 'r' }), m({ userId: 'o', isOwner: true, role: 'PracticeAdmin' }), m({ userId: 'd', role: 'HospitalDoctor' }), m({ userId: 'me' }), m({ userId: 'x', status: 'Offboarded' })]
+      .map(x => canChangeRole(x, 'me'))).toEqual([true, false, false, false, false]);
+    const catalogue = { builtIn: [], custom: [{ id: 'c1', name: 'Front desk lead', baseRole: 'Receptionist' as const, capabilities: [] }] };
+    expect([roleOfValue(catalogue, 'builtIn:Nurse'), roleOfValue(catalogue, 'custom:c1'), roleOfValue(catalogue, 'builtIn:SoloDoctor'), roleOfValue(catalogue, 'custom:zz')])
+      .toEqual([{ role: 'Nurse', customRoleId: null }, { role: 'Receptionist', customRoleId: 'c1' }, null, null]);
   });
   it('brings back only someone offboarded who had joined', () => {
     expect(canReactivate(m({ status: 'Offboarded' }))).toBe(true);
@@ -69,7 +84,7 @@ describe('offboarding and re-activation (#225)', () => {
 describe('locations (MDV-P1-071)', () => {
   const row = (membershipId: string, userId: string | null, facilityId: string, status: StaffMember['status'] = 'Active'): StaffMember => ({
     membershipId, userId, name: null, email: null, role: 'Receptionist', customRoleId: null, customRoleName: null, facilityId, facilityName: facilityId,
-    status, mfa: 'enrolled', invitationId: null, invitationState: null, invitationExpiresAt: null,
+    status, mfa: 'enrolled', invitationId: null, invitationState: null, invitationExpiresAt: null, isOwner: false,
   });
   const rows = [row('1', 'u', 'adyar'), row('2', 'u', 'velachery'), row('3', 'u', 'mylapore', 'Offboarded'), row('4', 'v', 'adyar')];
   it('lists the active locations of the same person only', () => {

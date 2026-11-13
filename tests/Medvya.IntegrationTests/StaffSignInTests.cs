@@ -234,7 +234,7 @@ public sealed class StaffSignInTests(PostgresFixture sql) : IClassFixture<Postgr
     }
 
     /// <summary>The step-up (MDV-P2-012): POST /bff/reauth, the provider, then the callback; returns the callback response.</summary>
-    static async Task<HttpResponseMessage> Reauth(HttpClient browser, string subject)
+    internal static async Task<HttpResponseMessage> Reauth(HttpClient browser, string subject)
     {
         using var start = new HttpRequestMessage(HttpMethod.Post, new Uri("/bff/reauth", UriKind.Relative)) { Content = JsonContent.Create(new { returnUrl = "/consult/x" }) };
         start.Headers.Add(StaffAuthentication.CsrfHeader, "1");

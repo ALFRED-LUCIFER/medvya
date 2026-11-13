@@ -4911,5 +4911,22 @@
   "followUpDue.reason.PatientDeclined": "Patient declined",
   "followUpDue.reason.BookedElsewhere": "Already booked another way",
   "followUpDue.reason.NotReachable": "Could not reach the patient",
-  "followUpDue.reason.Other": "Other"
+  "followUpDue.reason.Other": "Other",
+  "staff.changeRole": "Change role",
+  "staff.changeRoleNamed": "Change role for {name}",
+  "staff.changeRoleTitle": "Change the role of {name}",
+  "staff.changeRoleIntro": "The new role applies at once. They are signed out now and sign in again with it. The change is recorded in the audit log.",
+  "staff.changeRoleTo": "New role",
+  "staff.changeRoleConfirm": "Change role",
+  "staff.changeRoleError.lastAdmin": "This is the last person who manages staff. Give someone else that role first.",
+  "staff.changeRoleError.failed": "Could not change the role. Try again.",
+  "staff.notice.role": "Role changed. They were signed out and sign in again with the new role.",
+  "staff.offboardBlocked.self": "You cannot offboard yourself.",
+  "staff.offboardBlocked.owner": "Only an owner can offboard an owner.",
+  "staff.offboardBlocked.doctor": "Only an owner can offboard a doctor.",
+  "staff.offboardError.reauth": "Confirm your identity first, then press Offboard again. Nothing has changed.",
+  "staff.offboardError.ownerOnly": "Only an owner can offboard an owner or a doctor.",
+  "staff.offboardError.lastOwner": "The practice needs an owner, and this is the last one.",
+  "staff.stepUp": "Confirm your identity",
+  "staff.stepUpFailed": "Could not start the identity check. Try again."
 }

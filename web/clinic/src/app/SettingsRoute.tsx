@@ -81,23 +81,23 @@ const ClinicalPolicy = () => <ClinicalPolicyPanel {...useClinicalPolicyControlle
 const NurseIntake = () => <NurseIntakePanel {...useNurseIntakeController()} />;
 const Queue = () => <QueueRulePanel {...useQueueRuleController()} />;
 
-function Staff({ facilityId }: { facilityId: string }) {
+function Staff({ facilityId, userId }: { facilityId: string; userId: string }) {
   const staff = useStaffController(facilityId);
   const table = useStaffTableController(staff.staff);
   const roles = useCustomRolesController();
   return (
     <>
-      <StaffPanel {...staff} {...table} />
+      <StaffPanel {...staff} {...table} currentUserId={userId} />
       {!staff.loading && !staff.failed && <CustomRolesPanel catalogue={staff.catalogue} {...roles} />}
     </>
   );
 }
 
 /** Composition only: Settings (F-08) with its tab in the address (?tab=hours), so a tab can be linked and survives a reload. */
-export default function SettingsRoute({ facilityId, country }: { facilityId: string; country: 'IN' | 'AE' | null }) {
+export default function SettingsRoute({ facilityId, country, userId }: { facilityId: string; country: 'IN' | 'AE' | null; userId: string }) {
   const [params, setParams] = useSearchParams();
   const asked = params.get('tab');
   const tab: SettingsTab = (settingsTabs as readonly string[]).includes(asked ?? '') ? (asked as SettingsTab) : 'profile';
-  const panels = { profile: <Profile />, locations: <Locations facilityId={facilityId} country={country} />, hours: <Hours facilityId={facilityId} />, holidays: <Holidays facilityId={facilityId} />, staff: <Staff facilityId={facilityId} />, nurse: <NurseIntake />, queue: <Queue />, requests: <AccessRequests />, policy: <ClinicalPolicy />, review: <Review />, doctors: <Doctors facilityId={facilityId} />, medicines: <Medicines country={country} />, displays: <Displays facilityId={facilityId} />, audit: <Audit />, metrics: <Metrics facilityId={facilityId} />, terms: <Terms />, notifications: <Notifications />, data: <DataPanel country={country} accessLogPath="/settings?tab=audit" /> };
+  const panels = { profile: <Profile />, locations: <Locations facilityId={facilityId} country={country} />, hours: <Hours facilityId={facilityId} />, holidays: <Holidays facilityId={facilityId} />, staff: <Staff facilityId={facilityId} userId={userId} />, nurse: <NurseIntake />, queue: <Queue />, requests: <AccessRequests />, policy: <ClinicalPolicy />, review: <Review />, doctors: <Doctors facilityId={facilityId} />, medicines: <Medicines country={country} />, displays: <Displays facilityId={facilityId} />, audit: <Audit />, metrics: <Metrics facilityId={facilityId} />, terms: <Terms />, notifications: <Notifications />, data: <DataPanel country={country} accessLogPath="/settings?tab=audit" /> };
   return <SettingsPage tab={tab} onTab={next => setParams({ tab: next }, { replace: true })} panels={panels} />;
 }

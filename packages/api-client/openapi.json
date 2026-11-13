@@ -4184,7 +4184,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/AnonymousTypeOfGuidAndGuidAndstringAndstringAndRoleAndGuidAndstringAndGuidAndstringAndstringAndstringAndGuidAndstringAndDateTimeOffset"
+                    "$ref": "#/components/schemas/AnonymousTypeOfGuidAndGuidAndstringAndstringAndRoleAndGuidAndstringAndGuidAndstringAndstringAndstringAndGuidAndstringAndDateTimeOffsetAndboolean"
                   }
                 }
               }
@@ -4365,6 +4365,39 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/Reactivate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/staff/{membershipId}/role": {
+      "put": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "membershipId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeRole"
               }
             }
           },
@@ -7702,7 +7735,7 @@
           null
         ]
       },
-      "AnonymousTypeOfGuidAndGuidAndstringAndstringAndRoleAndGuidAndstringAndGuidAndstringAndstringAndstringAndGuidAndstringAndDateTimeOffset": {
+      "AnonymousTypeOfGuidAndGuidAndstringAndstringAndRoleAndGuidAndstringAndGuidAndstringAndstringAndstringAndGuidAndstringAndDateTimeOffsetAndboolean": {
         "required": [
           "membershipId",
           "userId",
@@ -7717,7 +7750,8 @@
           "mfa",
           "invitationId",
           "invitationState",
-          "invitationExpiresAt"
+          "invitationExpiresAt",
+          "isOwner"
         ],
         "type": "object",
         "properties": {
@@ -7801,6 +7835,9 @@
               "string"
             ],
             "format": "date-time"
+          },
+          "isOwner": {
+            "type": "boolean"
           }
         }
       },
@@ -8446,6 +8483,32 @@
           "DiabeticFootExam",
           null
         ]
+      },
+      "ChangeRole": {
+        "required": [
+          "role",
+          "customRoleId"
+        ],
+        "type": "object",
+        "properties": {
+          "role": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Role"
+              }
+            ]
+          },
+          "customRoleId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
       },
       "CheckIn": {
         "type": "object",

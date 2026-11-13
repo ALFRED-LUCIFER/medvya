@@ -9,7 +9,7 @@ import type { Location } from '../../settings/domain/settings';
 import { Field } from '../../settings/components/Field';
 import { Section } from '../../settings/components/Section';
 import { staffColumns, type StaffColumn } from '../domain/staffTable';
-import { assignableRoles, canOffboard, canSetLocations, locationsOf, canReactivate, canResend, canRevoke, isDoctor, permissionRows, statusLabel, type AddStaffForm, type LocationsForm, type OffboardForm, type ReactivateForm, type RoleCatalogue, type RoleChoice, type StaffMember, type Step } from '../domain/staff';
+import { canChangeRole, isOwnerAmong, offboardBlock, roleValue, assignableRoles, canOffboard, canSetLocations, locationsOf, canReactivate, canResend, canRevoke, isDoctor, permissionRows, statusLabel, type AddStaffForm, type LocationsForm, type OffboardForm, type ReactivateForm, type RoleCatalogue, type RoleChoice, type StaffMember, type Step } from '../domain/staff';
 
 type Props = {
   rows: StaffMember[];
@@ -23,12 +23,24 @@ type Props = {
   choice: RoleChoice | null;
   form: UseFormReturn<AddStaffForm>;
   canContinue: boolean;
-  notice: 'invited' | 'resent' | 'revoked' | 'offboarded' | 'reactivated' | 'locations' | null;
+  notice: 'invited' | 'resent' | 'revoked' | 'offboarded' | 'reactivated' | 'locations' | 'role' | null;
+  /** The signed-in user: no Offboard or Change role on their own row (MDV-P1-107). */
+  currentUserId: string;
   openVisits: number;
   offboarding: StaffMember | null;
   offboardForm: UseFormReturn<OffboardForm>;
   offboardWorking: boolean;
-  offboardError: 'lastAdmin' | 'failed' | null;
+  offboardError: 'reauth' | 'ownerOnly' | 'lastOwner' | 'lastAdmin' | 'failed' | null;
+  stepUpFailed: boolean;
+  onStepUp: () => void;
+  changing: StaffMember | null;
+  newRole: string;
+  changeRoleWorking: boolean;
+  changeRoleError: 'lastAdmin' | 'failed' | null;
+  onChangeRole: (member: StaffMember) => void;
+  onNewRole: (value: string) => void;
+  onChangeRoleSubmit: FormEventHandler<HTMLFormElement>;
+  onChangeRoleCancel: () => void;
   onOffboard: (member: StaffMember) => void;
   onOffboardSubmit: FormEventHandler<HTMLFormElement>;
   onOffboardCancel: () => void;
@@ -78,6 +90,7 @@ export default function StaffPanel(p: Props) {
     { choice: { kind: 'doctor' }, name: t('role.HospitalDoctor'), description: t('staff.roleDesc.Doctor') },
   ];
   const stepIndex = p.step ? stepOrder.indexOf(p.step) : -1;
+  const iAmOwner = isOwnerAmong(p.rows, p.currentUserId);
 
   return (
     <div className="flex flex-col gap-4">
@@ -101,6 +114,7 @@ export default function StaffPanel(p: Props) {
             <TableBody>
               {p.rows.map(m => {
                 const who = m.name ?? m.email ?? '';
+                const blocked = canOffboard(m) ? offboardBlock(m, p.currentUserId, iAmOwner) : null;
                 return (
                   <TableRow key={m.membershipId}>
                     <TableHead scope="row">{who}</TableHead>
@@ -117,7 +131,10 @@ export default function StaffPanel(p: Props) {
                         {canRevoke(m) && <Button type="button" variant="outline" className="min-w-11" disabled={p.working} aria-label={t('staff.revokeNamed', { name: who })} onClick={() => p.onRevoke(m.invitationId!)}>{t('staff.revoke')}</Button>}
                         {canSetLocations(m) && p.locations.length > 1 && <Button type="button" variant="outline" className="min-w-11" disabled={p.working || !!p.locating} aria-label={t('staff.locationsNamed', { name: who })} onClick={() => p.onLocations(m)}>{t('staff.locations')}</Button>}
                         {canReactivate(m) && <Button type="button" variant="outline" className="min-w-11" disabled={p.working || !!p.reactivating} aria-label={t('staff.reactivateNamed', { name: who })} onClick={() => p.onReactivate(m)}>{t('staff.reactivate')}</Button>}
-                        {canOffboard(m) && <Button type="button" variant="outline" className="min-w-11" disabled={p.working || !!p.offboarding} aria-label={t('staff.offboardNamed', { name: who })} onClick={() => p.onOffboard(m)}>{t('staff.offboard')}</Button>}
+                        {canChangeRole(m, p.currentUserId) && <Button type="button" variant="outline" className="min-w-11" disabled={p.working || !!p.changing} aria-label={t('staff.changeRoleNamed', { name: who })} onClick={() => p.onChangeRole(m)}>{t('staff.changeRole')}</Button>}
+                        {canOffboard(m) && !blocked && <Button type="button" variant="outline" className="min-w-11" disabled={p.working || !!p.offboarding} aria-label={t('staff.offboardNamed', { name: who })} onClick={() => p.onOffboard(m)}>{t('staff.offboard')}</Button>}
+                        {/* MDV-P1-107: no Offboard where this user may not offboard; the reason in words instead. The server refuses the same. */}
+                        {blocked && <span className="text-caption text-muted-foreground">{t(`staff.offboardBlocked.${blocked}`)}</span>}
                       </span>
                     </TableCell>
                   </TableRow>
@@ -148,6 +165,8 @@ export default function StaffPanel(p: Props) {
               </fieldset>
             )}
             {p.offboardError && <p role="alert" className={fieldError}>{t(`staff.offboardError.${p.offboardError}`)}</p>}
+            {p.offboardError === 'reauth' && <Button type="button" variant="outline" className="self-start" onClick={p.onStepUp}>{t('staff.stepUp')}</Button>}
+            {p.stepUpFailed && <p role="alert" className={fieldError}>{t('staff.stepUpFailed')}</p>}
             <div className="flex flex-wrap gap-2">
               <Button type="submit" variant="destructive" loading={p.offboardWorking}>{t('staff.offboardConfirm')}</Button>
               <Button type="button" variant="outline" onClick={p.onOffboardCancel}>{t('settings.cancel')}</Button>
@@ -188,6 +207,27 @@ export default function StaffPanel(p: Props) {
           </Section>
         );
       })()}
+
+      {p.changing && (
+        <Section title={t('staff.changeRoleTitle', { name: p.changing.name ?? p.changing.email ?? '' })} intro={t('staff.changeRoleIntro')}>
+          <form noValidate onSubmit={p.onChangeRoleSubmit} className="flex flex-col gap-4">
+            <Field id="staff-change-role" label={t('staff.changeRoleTo')}>
+              <Select value={p.newRole} onValueChange={p.onNewRole}>
+                <SelectTrigger id="staff-change-role" className="w-full"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {assignableRoles.map(r => <SelectItem key={r} value={`builtIn:${r}`}>{t(`role.${r}`)}</SelectItem>)}
+                  {p.catalogue.custom.map(c => <SelectItem key={c.id} value={`custom:${c.id}`}>{c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </Field>
+            {p.changeRoleError && <p role="alert" className={fieldError}>{t(`staff.changeRoleError.${p.changeRoleError}`)}</p>}
+            <div className="flex flex-wrap gap-2">
+              <Button type="submit" loading={p.changeRoleWorking} disabled={p.newRole === roleValue(p.changing)}>{t('staff.changeRoleConfirm')}</Button>
+              <Button type="button" variant="outline" onClick={p.onChangeRoleCancel}>{t('settings.cancel')}</Button>
+            </div>
+          </form>
+        </Section>
+      )}
 
       {p.reactivating && (
         <Section title={t('staff.reactivateTitle', { name: p.reactivating.name ?? p.reactivating.email ?? '' })} intro={t('staff.reactivateIntro')}>

@@ -16,9 +16,10 @@ import { closePregnancy, counselDangerSigns, recordPregnancyReadings, ruleOutPre
 export function usePregnancyController(patientId: string, data: Patient360 | null, canManage: boolean, canRecord: boolean) {
   const queryClient = useQueryClient();
   const [form, setForm] = useState<PregnancyForm | null>(null);
-  const startForm = useForm<StartForm>({ resolver: zodResolver(startSchema), defaultValues: {} });
-  const closeForm = useForm<CloseForm>({ resolver: zodResolver(closeSchema) });
-  const readingsForm = useForm<ReadingsForm>({ resolver: zodResolver(readingsSchema), defaultValues: {} });
+  // shouldFocusError: false, because the error summary takes focus after a failed save.
+  const startForm = useForm<StartForm>({ resolver: zodResolver(startSchema), defaultValues: {}, shouldFocusError: false });
+  const closeForm = useForm<CloseForm>({ resolver: zodResolver(closeSchema), shouldFocusError: false });
+  const readingsForm = useForm<ReadingsForm>({ resolver: zodResolver(readingsSchema), defaultValues: {}, shouldFocusError: false });
   const write = useMutation({
     mutationFn: (run: () => Promise<PregnancyStatus>) => run(),
     onSuccess: async () => {

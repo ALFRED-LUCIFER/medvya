@@ -1,8 +1,8 @@
 import { useI18n } from '@medvya/i18n';
-import { Button, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
+import { Button, ErrorSummary, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
 import { CalendarClock, CircleAlert, CircleCheck, CircleDashed, HeartPulse, TriangleAlert } from 'lucide-react';
 import type { FormEventHandler, ReactNode } from 'react';
-import type { UseFormReturn } from 'react-hook-form';
+import type { FieldErrors, UseFormReturn } from 'react-hook-form';
 import type { ContactState, OpenPregnancy, PregnancyStatus } from '../domain/chart';
 import { gestation, gpal, outcomes, type CloseForm, type PregnancyForm as Form, type PregnancyProblem, type ReadingsForm, type StartForm } from '../domain/pregnancy';
 
@@ -134,31 +134,49 @@ function Stat({ label, value, note }: { label: string; value: ReactNode; note: s
   );
 }
 
-function Field({ id, label, invalid, children }: { id: string; label: string; invalid: boolean; children: ReactNode }) {
+type FieldName = keyof StartForm | keyof ReadingsForm | keyof CloseForm;
+
+/** What is wrong with one field, in words that name what to enter: a missing value says which, anything else asks to check it. */
+function useFieldError(errors: FieldErrors) {
   const { t } = useI18n();
-  return (
-    <div className="flex flex-col gap-1.5">
-      <Label htmlFor={id}>{label}</Label>
-      {children}
-      {invalid && <p className="text-sm font-bold">{t('pregnancy.fieldInvalid')}</p>}
-    </div>
-  );
+  return (name: FieldName) => {
+    const e = errors[name];
+    if (!e) return undefined;
+    return e.message === 'required' && (name === 'lmp' || name === 'scanWeeks' || name === 'fundalHeightCm') ? t(`pregnancy.error.required.${name}`)
+      : name === 'outcome' ? t('pregnancy.error.required.outcome') : t('pregnancy.fieldInvalid');
+  };
+}
+
+/** After a failed save: the fields in error, each linked to its control; it takes focus once per submit. */
+function Summary({ form, names, className }: {
+  form: UseFormReturn<StartForm> | UseFormReturn<ReadingsForm> | UseFormReturn<CloseForm>; names: readonly FieldName[]; className?: string;
+}) {
+  const { t } = useI18n();
+  const { errors, submitCount } = form.formState;
+  const error = useFieldError(errors);
+  const list = names.flatMap(name => {
+    const message = error(name);
+    return message ? [{ id: `pregnancy-${name}`, label: t(`pregnancy.field.${name}`), message }] : [];
+  });
+  return <ErrorSummary title={t('field.errorSummary')} focusKey={submitCount} errors={list} className={className} />;
 }
 
 function StartFields({ p }: { p: Props }) {
   const { t } = useI18n();
   const { register, formState: { errors } } = p.startForm;
+  const error = useFieldError(errors);
   const num = (name: 'scanWeeks' | 'scanDays' | 'gravida' | 'para' | 'abortions' | 'living') => (
-    <Field id={`pregnancy-${name}`} label={t(`pregnancy.field.${name}`)} invalid={!!errors[name]}>
-      <Input id={`pregnancy-${name}`} type="number" inputMode="numeric" className="w-28" aria-invalid={!!errors[name]} {...register(name)} />
+    <Field id={`pregnancy-${name}`} label={t(`pregnancy.field.${name}`)} error={error(name)}>
+      <Input type="number" inputMode="numeric" className="w-28" {...register(name)} />
     </Field>
   );
   return (
-    <form onSubmit={p.onStart} className="flex flex-col gap-3">
+    <form noValidate onSubmit={p.onStart} className="flex flex-col gap-3">
+      <Summary form={p.startForm} names={['lmp', 'scanDate', 'scanWeeks', 'scanDays', 'gravida', 'para', 'abortions', 'living']} />
       <div className="flex flex-wrap gap-3">
         {(['lmp', 'scanDate'] as const).map(name => (
-          <Field key={name} id={`pregnancy-${name}`} label={t(`pregnancy.field.${name}`)} invalid={!!errors[name]}>
-            <Input id={`pregnancy-${name}`} type="date" className="w-44" aria-invalid={!!errors[name]} {...register(name)} />
+          <Field key={name} id={`pregnancy-${name}`} label={t(`pregnancy.field.${name}`)} error={error(name)}>
+            <Input type="date" className="w-44" {...register(name)} />
           </Field>
         ))}
         {num('scanWeeks')}{num('scanDays')}
@@ -173,12 +191,14 @@ function StartFields({ p }: { p: Props }) {
 function ReadingsFields({ p }: { p: Props }) {
   const { t } = useI18n();
   const { register, formState: { errors } } = p.readingsForm;
+  const error = useFieldError(errors);
   return (
-    <form onSubmit={p.onReadings} className="flex flex-col gap-3">
+    <form noValidate onSubmit={p.onReadings} className="flex flex-col gap-3">
+      <Summary form={p.readingsForm} names={['fundalHeightCm', 'fetalHeartRate']} />
       <div className="flex flex-wrap gap-3">
         {(['fundalHeightCm', 'fetalHeartRate'] as const).map(name => (
-          <Field key={name} id={`pregnancy-${name}`} label={t(`pregnancy.field.${name}`)} invalid={!!errors[name]}>
-            <Input id={`pregnancy-${name}`} type="number" inputMode="decimal" step="0.1" className="w-32" aria-invalid={!!errors[name]} {...register(name)} />
+          <Field key={name} id={`pregnancy-${name}`} label={t(`pregnancy.field.${name}`)} error={error(name)}>
+            <Input type="number" inputMode="decimal" step="0.1" className="w-32" {...register(name)} />
           </Field>
         ))}
       </div>
@@ -190,14 +210,16 @@ function ReadingsFields({ p }: { p: Props }) {
 
 function CloseFields({ p }: { p: Props }) {
   const { t } = useI18n();
+  const error = useFieldError(p.closeForm.formState.errors);
   return (
-    <form onSubmit={p.onClose} className="flex flex-wrap items-end gap-3">
-      <Field id="pregnancy-outcome" label={t('pregnancy.field.outcome')} invalid={!!p.closeForm.formState.errors.outcome}>
-        <Select value={p.closeForm.watch('outcome') || undefined} onValueChange={v => p.closeForm.setValue('outcome', v as CloseForm['outcome'], { shouldValidate: true })}>
-          <SelectTrigger id="pregnancy-outcome" className="w-56"><SelectValue placeholder={t('pregnancy.outcomePlaceholder')} /></SelectTrigger>
-          <SelectContent>{outcomes.map(o => <SelectItem key={o} value={o}>{t(`pregnancy.outcome.${o}`)}</SelectItem>)}</SelectContent>
-        </Select>
-      </Field>
+    <form noValidate onSubmit={p.onClose} className="flex flex-wrap items-end gap-3">
+      <Summary form={p.closeForm} names={['outcome']} className="basis-full" />
+      <Select value={p.closeForm.watch('outcome') || undefined} onValueChange={v => p.closeForm.setValue('outcome', v as CloseForm['outcome'], { shouldValidate: true })}>
+        <Field id="pregnancy-outcome" label={t('pregnancy.field.outcome')} required error={error('outcome')}>
+          <SelectTrigger className="w-56"><SelectValue placeholder={t('pregnancy.outcomePlaceholder')} /></SelectTrigger>
+        </Field>
+        <SelectContent>{outcomes.map(o => <SelectItem key={o} value={o}>{t(`pregnancy.outcome.${o}`)}</SelectItem>)}</SelectContent>
+      </Select>
       <Actions p={p} />
     </form>
   );

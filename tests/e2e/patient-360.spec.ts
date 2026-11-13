@@ -340,7 +340,16 @@ test('MDV-P2-034: an open pregnancy shows gestation, due date and its method, G 
   await page.route('**/v1/patients/p-1/pregnancy/readings', r => { sent.push(r.request().postDataJSON()); return r.fulfill({ json: pregnant.pregnancy }); });
   await card.getByRole('button', { name: 'Record fundal height and fetal heart' }).click();
   await card.getByRole('button', { name: 'Save' }).click();
-  await expect(card.getByText('Check this value.')).toBeVisible(); // nothing entered: refused before it is sent
+  // Nothing entered: refused before it is sent. MDV-P2-058: focus goes to the error summary; the message names what to enter and is linked to the field.
+  const summary = card.getByRole('group', { name: 'There is a problem' });
+  await expect(summary).toBeFocused();
+  await expect(summary.getByRole('link')).toHaveText(['Fundal height (cm): Enter the fundal height or the fetal heart rate.']);
+  await expect(card.getByRole('spinbutton', { name: 'Fundal height (cm)' })).toHaveAccessibleDescription('Enter the fundal height or the fetal heart rate.');
+  await page.addScriptTag({ path: axePath });
+  expect(await card.evaluate(async el =>
+    (await (window as unknown as { axe: { run: (c: Element) => Promise<{ violations: { id: string }[] }> } }).axe.run(el)).violations.map(v => v.id))).toEqual([]);
+  await summary.getByRole('link').click();
+  await expect(card.getByRole('spinbutton', { name: 'Fundal height (cm)' })).toBeFocused();
   await card.getByRole('spinbutton', { name: 'Fundal height (cm)' }).fill('24');
   await card.getByRole('button', { name: 'Save' }).click();
   await expect(card.getByRole('button', { name: 'Close pregnancy' })).toBeVisible();
@@ -363,7 +372,8 @@ test('MDV-P2-034: a doctor starts a pregnancy; a nurse records "not pregnant" bu
   await expect(card.getByRole('button', { name: 'Start pregnancy' })).toHaveAttribute('data-variant', 'outline');
   await card.getByRole('button', { name: 'Start pregnancy' }).click();
   await card.getByRole('button', { name: 'Save' }).click();
-  await expect(card.getByText('Check this value.').first()).toBeVisible();
+  await expect(card.getByRole('group', { name: 'There is a problem' })).toBeFocused();
+  await expect(card.getByLabel('Last menstrual period')).toHaveAccessibleDescription('Enter the last menstrual period or the dating scan date.');
   await card.getByLabel('Last menstrual period').fill('2026-05-19');
   await card.getByRole('spinbutton', { name: 'Gravida' }).fill('2');
   await card.getByRole('button', { name: 'Save' }).click();
@@ -393,4 +403,11 @@ for (const [locale, title] of [['en', 'Pregnancy'], ['ar', 'الحمل']] as con
     const violations = await card.evaluate(async el =>
       (await (window as unknown as { axe: { run: (c: Element) => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run(el)).violations.map(v => `${v.id} (${v.nodes.length})`));
     expect(violations).toEqual([]);
+
+    // MDV-P2-058: with the error summary and a field error showing, the card is still axe clean.
+    await card.getByRole('button', { name: locale === 'en' ? 'Record fundal height and fetal heart' : 'تسجيل ارتفاع قاع الرحم ونبض الجنين' }).click();
+    await card.getByRole('button', { name: locale === 'en' ? 'Save' : 'حفظ' }).click();
+    await expect(card.locator('[data-slot=error-summary]')).toBeFocused();
+    expect(await card.evaluate(async el =>
+      (await (window as unknown as { axe: { run: (c: Element) => Promise<{ violations: { id: string }[] }> } }).axe.run(el)).violations.map(v => v.id))).toEqual([]);
   });

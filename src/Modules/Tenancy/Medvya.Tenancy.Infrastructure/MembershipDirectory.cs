@@ -17,15 +17,30 @@ public sealed class MembershipDirectory(string connectionString, ICurrentUser us
 {
     sealed class NoTenant : ICurrentTenant { public Guid? TenantId => null; }
 
+    public async Task<bool> HasEndedMembershipAsync(CancellationToken cancellationToken = default)
+    {
+        if (user.UserId is not { } userId) return false;
+        await using var connection = await OpenForUser(connectionString, userId, cancellationToken);
+        await using var db = new TenancyDbContext(new DbContextOptionsBuilder<TenancyDbContext>().UseNpgsql(connection).Options, new NoTenant());
+        // Layer 2 shows this connection only its own membership rows; the filter here repeats it by hand.
+        return await db.Memberships.IgnoreQueryFilters().AnyAsync(
+            m => m.UserId == userId && (m.Status == MembershipStatus.Suspended || m.Status == MembershipStatus.Offboarded), cancellationToken);
+    }
+
+    // A connection that carries the user and no tenant: the only kind that reads across tenants.
+    static async Task<NpgsqlConnection> OpenForUser(string connectionString, Guid userId, CancellationToken cancellationToken)
+    {
+        var connection = await PostgresDataSources.For(connectionString).OpenConnectionAsync(cancellationToken);
+        await using var cmd = new NpgsqlCommand("SELECT set_config('medvya.user_id', @user, false)", connection);
+        cmd.Parameters.AddWithValue("user", userId.ToString());
+        await cmd.ExecuteNonQueryAsync(cancellationToken);
+        return connection;
+    }
+
     public async Task<IReadOnlyList<MembershipChoice>> ForCurrentUserAsync(CancellationToken cancellationToken = default)
     {
         if (user.UserId is not { } userId) return [];
-        await using var connection = await PostgresDataSources.For(connectionString).OpenConnectionAsync(cancellationToken);
-        await using (var cmd = new NpgsqlCommand("SELECT set_config('medvya.user_id', @user, false)", connection))
-        {
-            cmd.Parameters.AddWithValue("user", userId.ToString());
-            await cmd.ExecuteNonQueryAsync(cancellationToken);
-        }
+        await using var connection = await OpenForUser(connectionString, userId, cancellationToken);
         await using var db = new TenancyDbContext(new DbContextOptionsBuilder<TenancyDbContext>().UseNpgsql(connection).Options, new NoTenant());
         // The tenant query filters (layer 1) need a current tenant, which this connection deliberately has none of; the same rule
         // is applied here by hand (this user, active only) and enforced by the database (layer 2), as the RLS tests prove.

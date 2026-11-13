@@ -38,6 +38,11 @@ describe('lastUsedFirst and toSession (MDV-P1-059)', () => {
     expect(s.lastMembershipId).toBe('besant');
     expect(toSession(me).lastMembershipId).toBeNull();
   });
+
+  it('knows access ended only when the server says so (F-05b); older servers mean "never had a clinic"', () => {
+    expect(toSession({ ...me, accessEnded: true }).accessEnded).toBe(true);
+    expect(toSession(me).accessEnded).toBe(false);
+  });
 });
 
 describe('signInSchema', () => {

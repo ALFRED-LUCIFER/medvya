@@ -27,6 +27,8 @@ export type ActiveMembership = {
 /** /v1/me/context (contract agreed with MDV-P0-012). Older servers send only `user`: that means "no active facility". */
 export type MeContext = {
   user: { id: string; displayName: string }; memberships?: Membership[]; active?: ActiveMembership | null;
+  /** Set by the server when the user has no active membership but lost one (suspended, offboarded): F-05b, not the setup wizard. */
+  accessEnded?: boolean;
   /** The membership the user last worked at (from their own sessions, MDV-P1-059); always one of `memberships`. */
   lastMembershipId?: string | null;
 };
@@ -37,6 +39,7 @@ export type Session = {
   /** Last used first, then as the server sent them. */
   memberships: Membership[];
   lastMembershipId: string | null;
+  accessEnded: boolean;
   active: (ActiveMembership & { facilityName: string }) | null;
 };
 
@@ -49,10 +52,10 @@ export function lastUsedFirst(memberships: Membership[], lastId: string | null |
 export function toSession(me: MeContext): Session {
   const lastMembershipId = me.lastMembershipId ?? null;
   const memberships = lastUsedFirst(me.memberships ?? [], lastMembershipId);
-  const a = me.active;
-  if (!a) return { user: me.user, memberships, lastMembershipId, active: null };
+  const a = me.active, accessEnded = me.accessEnded ?? false;
+  if (!a) return { user: me.user, memberships, lastMembershipId, accessEnded, active: null };
   return {
-    user: me.user, memberships, lastMembershipId,
+    user: me.user, memberships, lastMembershipId, accessEnded,
     active: {
       ...a, capabilities: a.capabilities ?? {}, flags: a.flags ?? [],
       facilityName: memberships.find(m => m.id === a.membershipId)?.facilityName ?? '',

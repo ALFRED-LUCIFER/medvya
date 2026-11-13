@@ -46,6 +46,7 @@
   "state.sessionExpired.cta": "تسجيل الدخول مرة أخرى",
   "state.noAccess.body": "أنت مسجّل الدخول في {facility}. هذا السجل يتبع منشأة أخرى.",
   "state.noAccess.cta": "طلب صلاحية الوصول",
+  "state.removed.body": "انتهت صلاحية وصولك إلى هذه العيادة. إذا كنت تعتقد أن هذا خطأ، فاسأل مالك العيادة.",
   "state.notFound.title": "الصفحة غير موجودة",
   "state.notFound.body": "قد يكون الرابط قديمًا. لم يتم تغيير أي شيء.",
   "state.notFound.cta": "الانتقال إلى صفحتي الرئيسية",

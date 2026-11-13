@@ -47,6 +47,7 @@
   "state.sessionExpired.cta": "फिर से साइन इन करें",
   "state.noAccess.body": "आप {facility} में साइन इन हैं। यह रिकॉर्ड किसी अन्य सुविधा का है।",
   "state.noAccess.cta": "पहुँच का अनुरोध करें",
+  "state.removed.body": "इस क्लिनिक तक आपकी पहुँच समाप्त हो गई है। यदि आपको लगता है कि यह गलती है, तो प्रैक्टिस के मालिक से पूछें।",
   "state.notFound.title": "पेज नहीं मिला",
   "state.notFound.body": "लिंक पुराना हो सकता है। कुछ भी बदला नहीं गया है।",
   "state.notFound.cta": "मेरे शुरुआती पेज पर जाएँ",

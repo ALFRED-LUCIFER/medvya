@@ -49,7 +49,7 @@ test('from the consultation: search, strength, how often, when, how long and ins
 
   await p.getByRole('button', { name: 'Add to prescription' }).click();
   await expect(p).toBeHidden();
-  const added = page.getByRole('list', { name: 'Medicines to prescribe' }).getByRole('listitem', { name: 'Atorvastatin' });
+  const added = page.getByRole('region', { name: 'Medicines to prescribe' }).getByRole('row', { name: 'Atorvastatin' });
   await expect(added).toHaveCount(1);
   expect(lines.filter(l => l.included).map(l => l.formularyItemId)).toEqual(['fi-ator-20']);
 });

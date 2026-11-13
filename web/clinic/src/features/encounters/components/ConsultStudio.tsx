@@ -20,6 +20,8 @@ type Props = NoteEditorProps & {
   plan?: ReactNode;
   /** Vitals, weight and allergies recorded by the doctor (MDV audit P0-2), composed in by the route. */
   entry?: ReactNode;
+  /** Finish visit, kept beside Sign in the one bar at the foot of the note (MDV audit P1-04); absent once the consultation has ended. */
+  finish?: ReactNode;
 };
 
 const heading = (id: StudioSection) => `studio-${id}`;
@@ -39,8 +41,9 @@ export default function ConsultStudio(p: Props) {
   // Arriving from "Plan change" (MDV-P2-037): focus the Plan once the note is there.
   const ready = !p.loading && !!p.template && !!p.ticks;
   useEffect(() => { if (ready && window.location.hash === `#${planHeading}`) document.getElementById(planHeading)?.focus(); }, [ready]);
-  if (p.loading) return <p role="status">{t('noteEditor.loading')}</p>;
-  if (p.loadFailed || !p.template || !p.templateKey || !p.ticks) return <p role="alert" className="font-bold text-danger-700">{t(p.forbidden ? 'noteEditor.forbidden' : 'noteEditor.loadFailed')}</p>;
+  // Finish visit stays reachable when the note cannot be shown: the doctor can always end the consultation.
+  if (p.loading) return <><p role="status">{t('noteEditor.loading')}</p>{p.finish}</>;
+  if (p.loadFailed || !p.template || !p.templateKey || !p.ticks) return <><p role="alert" className="font-bold text-danger-700">{t(p.forbidden ? 'noteEditor.forbidden' : 'noteEditor.loadFailed')}</p>{p.finish}</>;
   const { template, ticks } = p;
   const section = (s: (typeof template.sections)[number]) => <NoteSectionField key={s.id} section={s} register={p.register} readOnly={p.readOnly} answers={p.answers} onAnswers={p.onAnswers} />;
   const field = (id: string) => template.sections.filter(s => s.id === id).map(section);
@@ -65,10 +68,7 @@ export default function ConsultStudio(p: Props) {
         <div className="flex min-w-0 flex-col gap-4">
           {!p.readOnly && <Numbered id="vitals" title={numbered}>
             {p.assist && p.assist.vitals.length > 0
-              ? <>
-                <VitalList vitals={p.assist.vitals} />
-                <div><Button variant="outline" className="min-h-11" onClick={p.assist.onInsertVitals}>{t('noteAssist.vitals.insert')}</Button></div>
-              </>
+              ? <div><Button variant="outline" className="min-h-11" onClick={p.assist.onInsertVitals}>{t('noteAssist.vitals.insert')}</Button></div>
               : <p className="text-sm text-muted-foreground">{t('noteAssist.vitals.empty')}</p>}
             {p.entry}
           </Numbered>}
@@ -83,15 +83,26 @@ export default function ConsultStudio(p: Props) {
           <Numbered id="exam" title={numbered}>{field('examination')}{field('objective')}</Numbered>
           <Numbered id="assessment" title={numbered}>{field('assessment')}</Numbered>
           <Numbered id="plan" title={numbered}>{field('plan')}{p.plan}</Numbered>
-          <Numbered id="sign" title={numbered}>
+          {/* One bar that stays at the foot of the screen while the note is long: Sign is the primary, Finish visit is beside it. */}
+          <Numbered id="sign" title={numbered} bar>
             <SignedBanner signed={p.readOnly} versionNo={p.signature?.versionNo ?? 1} />
             {p.signature && <SignedLine signature={p.signature} timeZone={p.timeZone} />}
             {!p.readOnly && !p.canSign && <p className="text-sm text-muted-foreground">{t('noteSign.onlyDoctor')}</p>}
-            {!p.readOnly && <SignNote canSign={p.canSign} remaining={p.remaining} patient={p.patient} doctorName={p.signAsName} signing={p.signing} confirming={p.confirming}
-              problem={p.signProblem} onRequest={p.onRequestSign} onCancel={p.onCancelSign} onConfirm={p.onConfirmSign} />}
+            <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
+              {!p.readOnly && <SignNote canSign={p.canSign} remaining={p.remaining} patient={p.patient} doctorName={p.signAsName} signing={p.signing} confirming={p.confirming}
+                problem={p.signProblem} onRequest={p.onRequestSign} onCancel={p.onCancelSign} onConfirm={p.onConfirmSign} />}
+              {p.finish}
+            </div>
           </Numbered>
         </div>
         <aside aria-label={t('studio.panel.label')} className="flex flex-col gap-3 rounded-xl border bg-card p-3 lg:sticky lg:top-16">
+          {/* The nurse's readings stay beside the note, each with the nurse's flag in an icon and words (MDV-1090). */}
+          {!p.readOnly && p.assist && p.assist.vitals.length > 0 && (
+            <section aria-labelledby="studio-vitals" className="flex flex-col gap-1 text-sm">
+              <h4 id="studio-vitals" className="font-bold">{t('studio.chart.vitals')}</h4>
+              <VitalList vitals={p.assist.vitals} />
+            </section>
+          )}
           <Tabs value={panel} onValueChange={v => p.onPanel(v as StudioPanel)}>
             <TabsList className="h-auto w-full gap-1 rounded-xl border bg-card p-1">
               {showAssist && <TabsTrigger value="assist" className="min-h-11 flex-1 font-bold text-foreground underline-offset-8 data-[state=active]:underline">{t('studio.panel.assist')}</TabsTrigger>}
@@ -99,7 +110,7 @@ export default function ConsultStudio(p: Props) {
               {p.checklist.length > 0 && <TabsTrigger value="check" className="min-h-11 flex-1 font-bold text-foreground underline-offset-8 data-[state=active]:underline">{t('studio.panel.check', { done, total: p.checklist.length })}</TabsTrigger>}
             </TabsList>
             {showAssist && <TabsContent value="assist"><NoteAssist assist={p.assist!} template={template} timeZone={p.timeZone} showVitals={false} /></TabsContent>}
-            <TabsContent value="chart"><ChartSummary {...p.chart} /></TabsContent>
+            <TabsContent value="chart"><ChartSummary {...p.chart} timeZone={p.timeZone} /></TabsContent>
             {p.checklist.length > 0 && <TabsContent value="check"><SignChecklist items={p.checklist} /></TabsContent>}
           </Tabs>
         </aside>
@@ -132,9 +143,9 @@ function SectionBar({ sections, ticks, title }: { sections: readonly StudioSecti
   );
 }
 
-function Numbered({ id, title, children }: { id: StudioSection; title: (id: StudioSection) => string; children: ReactNode }) {
+function Numbered({ id, title, bar, children }: { id: StudioSection; title: (id: StudioSection) => string; bar?: boolean; children: ReactNode }) {
   return (
-    <div className="flex flex-col gap-3 rounded-xl border bg-card p-4">
+    <div className={bar ? 'sticky bottom-0 z-10 flex flex-col gap-2 rounded-xl border bg-card p-3 shadow-lg' : 'flex flex-col gap-3 rounded-xl border bg-card p-4'}>
       <h3 id={heading(id)} tabIndex={-1} className="scroll-mt-20 font-extrabold focus:outline-none focus-visible:outline-2 focus-visible:outline-ring">
         {title(id)}
       </h3>
@@ -144,12 +155,13 @@ function Numbered({ id, title, children }: { id: StudioSection; title: (id: Stud
 }
 
 /** The chart at a glance while writing: active problems and medicines, as Patient 360 words them. */
-function ChartSummary({ data, loading, failed }: Props['chart']) {
-  const { t } = useI18n();
+function ChartSummary({ data, loading, failed, timeZone }: Props['chart'] & { timeZone: string | undefined }) {
+  const { t, formatDate } = useI18n();
   if (failed) return <p role="alert" className="text-sm font-bold text-danger-700">{t('patient360.loadFailed')}</p>;
   if (loading || !data) return <p role="status" className="text-sm">{t('patient360.loading')}</p>;
   const problems = data.problems.filter(x => x.status === 'Active');
   const medicines = data.medicines.filter(x => x.state === 'Active');
+  const past = data.recentEncounters.filter(x => x.status === 'Ended'); // the open one is this visit
   return (
     <div className="flex flex-col gap-3 text-sm">
       <div>
@@ -161,6 +173,11 @@ function ChartSummary({ data, loading, failed }: Props['chart']) {
         <h4 className="font-bold">{t('patient360.medicines')}</h4>
         {medicines.length === 0 ? <p className="text-muted-foreground">{t('patient360.medicines.empty')}</p>
           : <ul className="list-disc ps-5">{medicines.map((x, i) => <li key={i}>{x.dose ? `${x.name} ${x.dose}` : x.name}</li>)}</ul>}
+      </div>
+      <div>
+        <h4 className="font-bold">{t('studio.chart.recent')}</h4>
+        {past.length === 0 ? <p className="text-muted-foreground">{t('studio.chart.recent.none')}</p>
+          : <ul className="list-disc ps-5">{past.map(x => <li key={x.id}>{formatDate(new Date(x.startedAt), timeZone)}</li>)}</ul>}
       </div>
     </div>
   );

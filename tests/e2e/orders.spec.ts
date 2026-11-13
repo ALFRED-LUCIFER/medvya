@@ -1,6 +1,7 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
 import { mockOrders } from './support/orders';
+import { openPart } from './support/disclosure';
 
 // MDV-P2-018 (E-05): the doctor composes investigation orders as drafts, switches one off, places the rest on purpose, and prints the slip.
 // CI has no API: endpoints are mocked in the shapes the server sends. Drafts-until-placed, one audit row per call, no ordering by anything
@@ -10,6 +11,7 @@ const orderRow = (page: Page, name: string) => page.getByRole('row', { name: new
 test('orders stay drafts until Place orders, a switched-off test is not placed, and the slip shows the placed ones', async ({ page }) => {
   const { calls } = await mockOrders(page);
   await page.goto('/consult/e-1');
+  await openPart(page, 'Orders');
   await expect(page.getByText('No tests added yet.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Place orders' })).toBeDisabled();
 
@@ -79,6 +81,7 @@ test('the paper check says the slip is genuine, from whom and how many tests, an
 test('an order set adds its tests as drafts', async ({ page }) => {
   const { calls } = await mockOrders(page);
   await page.goto('/consult/e-1');
+  await openPart(page, 'Orders');
   await page.getByRole('combobox', { name: 'Order set' }).click();
   await page.getByRole('option', { name: 'Diabetes review labs' }).click();
   await page.getByRole('button', { name: 'Add its tests' }).click();
@@ -89,9 +92,27 @@ test('an order set adds its tests as drafts', async ({ page }) => {
 test('an ended consultation shows its orders and cannot change them', async ({ page }) => {
   await mockOrders(page, { ended: true });
   await page.goto('/consult/e-1');
+  await openPart(page, 'Orders');
   await expect(page.getByText('This consultation has ended. Orders can be read and the slip printed, not changed.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Place orders' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Add test' })).toHaveCount(0);
+});
+
+test('orders stay in a closed part of the consultation until the doctor opens it', async ({ page }) => {
+  await mockOrders(page);
+  await page.goto('/consult/e-1');
+  await expect(page.getByRole('region', { name: 'Patient identity' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Orders' })).toBeHidden();
+  await openPart(page, 'Orders');
+  await expect(page.getByRole('region', { name: 'Orders' })).toBeVisible();
+});
+
+test('orders already placed are open without a click, so none is hidden from the doctor', async ({ page }) => {
+  const { orders } = await mockOrders(page);
+  orders.push({ id: 'o-1', kind: 'Lab', name: 'HbA1c', note: null, state: 'Ordered', destination: 'Metro Diagnostics', orderedAt: '2026-10-19T04:50:00Z' });
+  await page.goto('/consult/e-1');
+  await expect(page.getByRole('region', { name: 'Orders' })).toBeVisible();
+  await expect(page.getByText('HbA1c')).toBeVisible();
 });
 
 test('a role that may not order sees no orders panel', async ({ page }) => {
@@ -110,6 +131,7 @@ for (const locale of ['en', 'ar'])
     await page.route('**/v1/papers/verify', r => r.fulfill({ json: { kind: 'InvestigationSlip', issuedAt: '2026-10-19T04:50:00Z', timeZone: 'Asia/Kolkata', clinic: 'Iyer Family Clinic · Adyar', doctor: 'Dr. Arjun Rao (synthetic)', items: 2 } }));
     for (const path of ['/consult/e-1', '/consult/e-1/slip', '/verify/paper/synthetic-token']) {
       await page.goto(path);
+      if (path === '/consult/e-1') await openPart(page, locale === 'ar' ? 'الطلبات' : 'Orders');
       await expect(path.endsWith('slip') ? page.getByRole('article')
         : path.startsWith('/verify') ? page.getByRole('heading', { name: locale === 'ar' ? 'التحقق من المستند' : 'Document check' })
         : page.getByRole('region', { name: locale === 'ar' ? 'الطلبات' : 'Orders' })).toBeVisible();

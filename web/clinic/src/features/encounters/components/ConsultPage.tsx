@@ -50,14 +50,20 @@ export default function ConsultPage(p: Props) {
       )}
       {!ended && <p className="text-sm text-muted-foreground">{t('consult.leaveNote')}</p>}
       {p.children}
-      {!ended && (
+      {/* On the one page, Finish visit sits in the bar beside Sign (the route composes it into the note); the guided steps keep it here. */}
+      {!ended && p.view === 'steps' && (
         <div className="flex flex-wrap items-center gap-3 border-t pt-4">
-          <Button variant="outline" className="min-h-11" loading={p.ending} onClick={p.onEnd}>{t('consult.end')}</Button>
+          <EndConsultation ending={p.ending} onEnd={p.onEnd} />
         </div>
       )}
       {p.endFailed && <p role="alert" className="font-bold text-danger-700">{t('consult.endFailed')}</p>}
     </div>
   );
+}
+
+export function EndConsultation({ ending, onEnd }: { ending: boolean; onEnd: () => void }) {
+  const { t } = useI18n();
+  return <Button variant="outline" className="min-h-11" loading={ending} onClick={onEnd}>{t('consult.end')}</Button>;
 }
 
 function Message({ title, body, boardPath }: { title: string; body?: string; boardPath: string }) {

@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { expect, type Page } from '@playwright/test';
 import { journey } from '../journeys/storyboard';
+import { openPart } from '../support/disclosure';
 import { choosePatient, expectArabicAxeClean, expectNoAxeViolations, setNurseIntake, signIn, watchUrls } from './support';
 
 // MDV-P0-023: journey J2 (returning diabetic patient, docs/02-design/journeys.md) through the real stack. Steps not built yet
@@ -144,7 +145,7 @@ journey('J2', {
     const rx = page.getByRole('region', { name: 'Prescription' });
     await rx.getByLabel('Medicine', { exact: true }).fill('Metformin');
     await rx.getByRole('list', { name: 'Formulary matches' }).getByRole('button', { name: /^Add Metformin 500 mg/ }).click();
-    const line = rx.getByRole('list', { name: 'Medicines to prescribe' }).getByRole('listitem').first();
+    const line = rx.getByRole('region', { name: 'Medicines to prescribe' }).getByRole('row', { name: 'Metformin' });
     await line.getByLabel('Dose', { exact: true }).fill('1');
     for (const [field, option] of [['Unit', 'Tablet'], ['Route', 'By mouth'], ['How often', 'Twice a day (BD)']] as const) {
       await line.getByRole('combobox', { name: field, exact: true }).click();
@@ -159,6 +160,7 @@ journey('J2', {
     await rx.getByRole('button', { name: 'Authorise prescription' }).click();
     await expect(rx.getByRole('status').filter({ hasText: 'Authorised' })).toHaveText(/^Authorised · version 1 · RX-[0-9A-F]{8}$/);
 
+    await openPart(page, 'Orders');
     const orders = page.getByRole('region', { name: 'Orders' });
     await expect(orders).not.toContainText('Ordered'); // authorising the prescription placed nothing
     await orders.getByLabel('Test', { exact: true }).fill('HbA1c');
@@ -312,9 +314,9 @@ journey('J2', {
 
     await page.goto(studioPath); // the server holds the draft: the consultation shows the line, and the amoxicillin one (not included) is not listed
     const rx = page.getByRole('region', { name: 'Prescription' });
-    const lines = rx.getByRole('list', { name: 'Medicines to prescribe' });
-    await expect(lines.getByRole('listitem', { name: /^Metformin/ })).toHaveCount(1);
-    await expect(lines.getByRole('listitem', { name: /^Amoxicillin/ })).toHaveCount(0);
+    const lines = rx.getByRole('region', { name: 'Medicines to prescribe' });
+    await expect(lines.getByRole('row', { name: /^Metformin/ })).toHaveCount(1);
+    await expect(lines.getByRole('row', { name: /^Amoxicillin/ })).toHaveCount(0); // a removed line is not listed (#1095)
     await expectArabicAxeClean(browser, rao, chartPath);
     // The formulary search carries the typed medicine name (GET /v1/formulary?q=, by design), so medicine names are not in this list.
     expect(watch.leaks(['Meera', 'Iyer', '1972-03-12', 'DQ-10-4482', 'Penicillin'])).toEqual([]);

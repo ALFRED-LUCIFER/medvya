@@ -3,7 +3,7 @@ import type { UseFormReturn } from 'react-hook-form';
 import { Link } from 'react-router';
 import { CircleAlert, CircleSlash, TrendingDown, CircleX, FilePen, History, Plus, Printer, ShieldCheck, Trash2, UserRound } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, ClinicalAlert, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
+import { Button, buttonVariants, ClinicalAlert, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@medvya/ui';
 import { isCurrent, type AuthoriseProblem, type RxAuthorisationState } from '../domain/authorisation';
 import { describedBy, fieldError } from '../../settings/components/fieldStyles';
 import { Field } from '../../settings/components/Field';
@@ -50,6 +50,8 @@ type Props = SafetyProps & {
 };
 
 const none = 'none';
+/** The columns after the medicine, in the order the dose is said. */
+const sigFields = ['dose', 'doseUnit', 'route', 'frequency', 'timing', 'durationDays', 'quantity', 'instructions'] as const;
 const sourceIcon = { AddedByYou: UserRound, AddedByColleague: UserRound, ChartReconciliation: History } as const;
 
 /**
@@ -81,9 +83,16 @@ export default function PrescriptionPanel(p: Props) {
       {status && <p role="status">{status}</p>}
 
       {prescribed.length > 0 && (
-        <ul aria-label={t('rx.listLabel')} className="flex flex-col gap-4">
-          {prescribed.map(l => <Line key={l.id} line={l} {...p} />)}
-        </ul>
+        <Table label={t('rx.listLabel')} className="min-w-[1000px]">
+          <TableHeader>
+            <TableRow>
+              <TableHead scope="col">{t('rx.col.medicine')}</TableHead>
+              {sigFields.map(f => <TableHead key={f} scope="col">{t(`rx.field.${f}`)}</TableHead>)}
+              <TableHead scope="col"><span className="sr-only">{t('rx.removeShort')}</span></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>{prescribed.map(l => <Line key={l.id} line={l} {...p} />)}</TableBody>
+        </Table>
       )}
 
       {stopped.length > 0 && (
@@ -224,46 +233,52 @@ function Line({ line, ended, busy, language, checks, draftOf, saveOf, invalidOf,
   const save = saveOf(id);
   const locked = ended;
   const fieldId = (f: SigField) => `rx-${id}-${f}`;
-  const text = (f: 'dose' | 'durationDays' | 'quantity' | 'instructions', className = '') => (
-    <Field id={fieldId(f)} label={t(`rx.field.${f}`)} error={invalid.includes(f) ? t(`rx.invalid.${f}`) : null} className={className}>
-      <Input id={fieldId(f)} className="h-11" autoComplete="off" inputMode={f === 'dose' ? 'decimal' : f === 'instructions' ? undefined : 'numeric'} disabled={locked} value={draft[f]}
+  // One row per medicine: each control is named by its column header, and a wrong value is said under it.
+  const text = (f: 'dose' | 'durationDays' | 'quantity' | 'instructions') => (
+    <TableCell key={f} className="align-top">
+      <Input id={fieldId(f)} aria-label={t(`rx.field.${f}`)} className={`h-11 ${f === 'instructions' ? 'min-w-48' : 'w-20'}`} autoComplete="off" inputMode={f === 'dose' ? 'decimal' : f === 'instructions' ? undefined : 'numeric'} disabled={locked} value={draft[f]}
         {...describedBy(fieldId(f), invalid.includes(f))} onChange={e => onField(line, f, e.target.value)} />
-    </Field>
+      {invalid.includes(f) && <p id={`${fieldId(f)}-error`} role="alert" className={`${fieldError} mt-1 max-w-48`}>{t(`rx.invalid.${f}`)}</p>}
+    </TableCell>
   );
   const pick = (f: 'doseUnit' | 'route' | 'frequency' | 'timing', options: { value: string; label: string }[]) => (
-    <Field id={fieldId(f)} label={t(`rx.field.${f}`)}>
+    <TableCell key={f} className="align-top">
       <Select value={draft[f] || none} disabled={locked} onValueChange={v => onField(line, f, v === none ? '' : v)}>
-        <SelectTrigger id={fieldId(f)} className="h-11 w-full"><SelectValue /></SelectTrigger>
+        <SelectTrigger id={fieldId(f)} aria-label={t(`rx.field.${f}`)} className="h-11 w-32"><SelectValue /></SelectTrigger>
         <SelectContent>
           <SelectItem value={none}>{t('rx.notGiven')}</SelectItem>
           {options.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
         </SelectContent>
       </Select>
-    </Field>
+    </TableCell>
   );
+  const cells = {
+    dose: text('dose'), durationDays: text('durationDays'), quantity: text('quantity'), instructions: text('instructions'),
+    doseUnit: pick('doseUnit', doseUnits.map(c => ({ value: c, label: t(`rx.doseUnit.${c}`) }))),
+    route: pick('route', routes.map(c => ({ value: c, label: t(`rx.route.${c}`) }))),
+    frequency: pick('frequency', frequencies.map(c => ({ value: c, label: t(`rx.frequency.${c}`) }))),
+    timing: pick('timing', timings.map(c => ({ value: c, label: t(`rx.timing.${c}`) }))),
+  };
 
   return (
-    <li aria-label={line.medicine} className="flex flex-col gap-3 rounded-lg border p-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="font-bold">{line.medicine}</span>
-        {(line.strength || line.form) && <span className="text-sm">{[line.strength, line.form].filter(Boolean).join(' · ')}</span>}
-        <SourceChip line={line} />
-        {checks && line.included && <SafetyChip state={lineSafety(checks, id)} />}
-        {!ended && <Button variant="outline" className="ms-auto min-h-11" disabled={busy} aria-label={t('rx.remove', { name: line.medicine })} onClick={() => onInclude(id, false)}><Trash2 aria-hidden className="size-4" />{t('rx.removeShort')}</Button>}
-      </div>
-      {line.freeText && <ClinicalAlert severity="attention">{t('rx.freeTextWarning')}</ClinicalAlert>}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {text('dose')}
-        {pick('doseUnit', doseUnits.map(c => ({ value: c, label: t(`rx.doseUnit.${c}`) })))}
-        {pick('route', routes.map(c => ({ value: c, label: t(`rx.route.${c}`) })))}
-        {pick('frequency', frequencies.map(c => ({ value: c, label: t(`rx.frequency.${c}`) })))}
-        {pick('timing', timings.map(c => ({ value: c, label: t(`rx.timing.${c}`) })))}
-        {text('durationDays')}
-        {text('quantity')}
-        {text('instructions', 'sm:col-span-2 lg:col-span-1')}
-      </div>
-      <Sig line={line} language={language} />
-      {save && save !== 'invalid' && <p role="status" className={save === 'saving' || save === 'saved' ? 'text-sm text-muted-foreground' : fieldError}>{t(save === 'saving' || save === 'saved' ? `rx.save.${save}` : `rx.error.${save}`)}</p>}
-    </li>
+    <TableRow aria-label={line.medicine}>
+      <TableHead scope="row" className="min-w-56 whitespace-normal align-top">
+        <span className="flex flex-wrap items-center gap-2">
+          <span className="font-bold">{line.medicine}</span>
+          {(line.strength || line.form) && <span className="text-sm font-normal">{[line.strength, line.form].filter(Boolean).join(' · ')}</span>}
+        </span>
+        <span className="mt-1 flex flex-wrap items-center gap-2">
+          <SourceChip line={line} />
+          {checks && line.included && <SafetyChip state={lineSafety(checks, id)} />}
+        </span>
+        {line.freeText && <span className="mt-2 block font-normal"><ClinicalAlert severity="attention">{t('rx.freeTextWarning')}</ClinicalAlert></span>}
+        <span className="mt-1 block font-normal"><Sig line={line} language={language} /></span>
+        {save && save !== 'invalid' && <span role="status" className={`mt-1 block ${save === 'saving' || save === 'saved' ? 'text-sm font-normal text-muted-foreground' : fieldError}`}>{t(save === 'saving' || save === 'saved' ? `rx.save.${save}` : `rx.error.${save}`)}</span>}
+      </TableHead>
+      {sigFields.map(f => cells[f])}
+      <TableCell className="align-top">
+        {!ended && <Button variant="outline" className="min-h-11" disabled={busy} aria-label={t('rx.remove', { name: line.medicine })} onClick={() => onInclude(id, false)}><Trash2 aria-hidden className="size-4" />{t('rx.removeShort')}</Button>}
+      </TableCell>
+    </TableRow>
   );
 }

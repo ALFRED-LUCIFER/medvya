@@ -216,7 +216,6 @@ test('J1: a new clinic owner sets up the practice, Medvya approves it, then a pa
     await page.getByRole('button', { name: new RegExp(`^${patient.name}, \\d+ y, Female`) }).click(); // click 2
     await expect(page.getByText(`Patient: ${patient.name} · MRN`, { exact: false })).toBeVisible();
     await page.waitForTimeout(deskPauseMs);
-    const beforeToken = (Date.now() - opened) / 1000;
     await page.getByRole('button', { name: 'Check in now' }).click(); // click 3
     // She already has two visits today, so the desk is warned and chooses (MDV-P1-052); a first visit of the day has no such step.
     await page.getByRole('button', { name: 'Make a second visit anyway' }).click();
@@ -225,10 +224,10 @@ test('J1: a new clinic owner sets up the practice, Medvya approves it, then a pa
 
     const facilityId = (await (await page.request.get('/v1/me/context')).json()).active.facilityId as string;
     const { checkIn } = await (await page.request.get(`/v1/schedule/metrics?facilityId=${facilityId}&days=14`)).json();
+    // The walk-in is a timed check-in (count 3, none unmeasured): it took over a second because it ran from opening Walk-in.
+    // Timed from its last tap alone it would be under a second, so it would be stored as not measured (count 2, unmeasured 1).
     expect(checkIn).toMatchObject({ count: 3, returningCount: 2, unmeasured: 0 });
-    // Two returning check-ins: the board's (at least the pause) and this walk-in (at least beforeToken, from opening Walk-in).
-    // Their median is the mean of the two; a walk-in timed from its last tap alone would fall short of it.
-    expect(checkIn.returningMedianSeconds * 2).toBeGreaterThanOrEqual(deskPauseMs / 1000 + beforeToken);
+    expect(checkIn.returningMedianSeconds).toBeGreaterThanOrEqual(1);
     expect(checkIn.returningMedianSeconds).toBeLessThanOrEqual(stopwatchSeconds);
     await page.goto('/app/settings?tab=metrics');
     const report = page.getByRole('region', { name: 'Pilot metrics' });

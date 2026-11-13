@@ -89,7 +89,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P1-044](P1-front-desk/MDV-P1-044.md) | Legal review of privacy notice, ToS, DPA and consent wording (DPDP India; UAE health data) | P1 | wk 4–6 | 60% |
 | [MDV-P1-045](P1-front-desk/MDV-P1-045.md) | Register India DLT sender ID and SMS templates (and UAE SMS sender if applicable) | P1 | wk 4–6 | 62% |
 
-## Week 5 · 23 Nov 2026 – 27 Nov 2026 · load 13.8 dev-days ⚠ over capacity
+## Week 5 · 23 Nov 2026 – 27 Nov 2026 · load 14.8 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -103,6 +103,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P1-043](P1-front-desk/MDV-P1-043.md) | Sign pilot agreements with two partner clinics | P1 | wk 4–6 | 60% |
 | [MDV-P1-044](P1-front-desk/MDV-P1-044.md) | Legal review of privacy notice, ToS, DPA and consent wording (DPDP India; UAE health data) | P1 | wk 4–6 | 60% |
 | [MDV-P1-045](P1-front-desk/MDV-P1-045.md) | Register India DLT sender ID and SMS templates (and UAE SMS sender if applicable) | P1 | wk 4–6 | 62% |
+| [MDV-P1-074](P1-front-desk/MDV-P1-074.md) | Keep Azure logs flowing all day: PostgreSQL audit and connection logs must not exhaust the Log Analytics daily cap | P1 | wk 5–5 | 70% |
 
 ## Week 6 · 30 Nov 2026 – 04 Dec 2026 · load 22.8 dev-days ⚠ over capacity
 

@@ -417,6 +417,48 @@ test('J2.5 (note assist, MDV-P2-009) E-04 · Doctor: a quick phrase and an earli
   expect(mock.puts.at(-1)!.sections.plan).toContain('copied from the note of 02 Sept 2026');
 });
 
+// MDV-P1-104 (J3 step 5 → J2): the nurse's chief complaint in the doctor's note. Wording awaits the pilot doctor (validation plan question 8).
+const fromNurse = { text: 'Fever and sore throat for three days (synthetic)', byName: nurse, at };
+
+test('MDV-P1-104 E-04 · Doctor: a blank Chief complaint holds the nurse\'s text, marked from nurse intake, and says edited once the doctor changes it', async ({ page }) => {
+  const mock = await open(page);
+  mock.chiefComplaint = fromNurse;
+  await page.reload();
+  const complaint = note(page).getByRole('textbox', { name: /^Chief complaint/ });
+  await expect(complaint).toHaveValue(fromNurse.text);
+  await expect(complaint).toHaveAccessibleDescription(`From nurse intake Saved by ${nurse} · 19 Oct 2026 10:05`); // a screen reader hears the source on focus
+  await expect(note(page).getByRole('status')).toHaveText('Saved'); // saved like typing, so the server records the source
+  expect(mock.puts.at(-1)!.sections.chiefComplaint).toBe(fromNurse.text);
+  expect(mock.note.chiefComplaintSource?.source).toBe('NurseIntake');
+  await complaint.fill(`${fromNurse.text}, worse at night`);
+  await expect(complaint).toHaveAccessibleDescription(/^From nurse intake · edited by the doctor/);
+  await expect.poll(() => mock.note.chiefComplaintSource?.source).toBe('EditedByDoctor');
+  await expect(note(page).getByRole('status')).toHaveText('Saved');
+  await expect(complaint).toHaveAccessibleDescription(/^From nurse intake · edited by the doctor/); // the server's answer keeps the mark
+});
+
+test('MDV-P1-104 E-04 · Doctor: a complaint the doctor already typed is never replaced or marked', async ({ page }) => {
+  const mock = await open(page, { version: 1, sections: { chiefComplaint: 'Cough since Monday (doctor, synthetic)' } });
+  mock.chiefComplaint = fromNurse;
+  await page.reload();
+  await expect(note(page).getByRole('textbox', { name: /^Chief complaint/ })).toHaveValue('Cough since Monday (doctor, synthetic)');
+  await expect(note(page).getByText('From nurse intake')).toHaveCount(0);
+  expect(mock.puts).toEqual([]);
+});
+
+test('MDV-P1-104 E-04 · Doctor: no complaint from the nurse (or nurse intake off) leaves Chief complaint blank, nothing guessed', async ({ page }) => {
+  const mock = await open(page);
+  await expect(note(page).getByRole('region', { name: 'Add to the note' })).toBeVisible(); // the offer has been read
+  await expect(note(page).getByRole('textbox', { name: /^Chief complaint/ })).toHaveValue('');
+  await expect(note(page).getByText('From nurse intake')).toHaveCount(0);
+  expect(mock.puts).toEqual([]);
+});
+
+test('MDV-P1-104 E-04 · Doctor: the signed note shows the source it was signed with', async ({ page }) => {
+  await open(page, { version: 3, status: 'Signed', sections: { chiefComplaint: `${fromNurse.text}, worse`, plan: 'x' }, chiefComplaintSource: { source: 'EditedByDoctor', byName: nurse, at } });
+  await expect(note(page).getByText('From nurse intake · edited by the doctor')).toBeVisible();
+});
+
 test('a signed note offers nothing to add', async ({ page }) => {
   await open(page, { version: 2, status: 'Signed', sections: { plan: 'x' } });
   await expect(note(page).getByRole('region', { name: 'Add to the note' })).toHaveCount(0);
@@ -442,7 +484,10 @@ for (const locale of ['en', 'ar'])
 
 for (const locale of ['en', 'ar'])
   test(`axe finds no violations on the note (${locale}); targets are 44 px`, async ({ page }) => {
-    await open(page, { sections: { plan: 'x' }, version: 1 }, locale);
+    const mock = await open(page, { sections: { plan: 'x' }, version: 1 }, locale);
+    mock.chiefComplaint = fromNurse; // MDV-P1-104: with the nurse-intake mark on Chief complaint
+    await page.reload();
+    await expect(page.locator('#note-chiefComplaint-source')).toContainText(locale === 'ar' ? 'من استقبال التمريض' : 'From nurse intake');
     await page.getByText(locale === 'ar' ? 'قوالبي' : 'My templates', { exact: true }).click();
     await expect(page.getByRole('region', { name: locale === 'ar' ? 'المراجعة والتوقيع' : 'Review and sign' })).toBeVisible(); // the checklist with items to do
     await expect(page.locator('textarea').first()).toBeVisible();

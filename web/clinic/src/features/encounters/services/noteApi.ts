@@ -1,6 +1,7 @@
 import { apiFetch } from '../../api/services/apiClient';
 import { ApiError, csrf, post, send } from '../../schedule/services/scheduleApi';
 import type { AddendumForm, NoteCatalog, NoteDraft, NoteView, PreviousNote, VerifiedVital } from '../domain/note';
+import type { IntakeComplaint } from '../domain/complaint';
 
 const put = <T>(url: string, body: unknown) =>
   send<T>(url, { method: 'PUT', headers: { 'X-Medvya-Csrf': '1', 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -11,8 +12,8 @@ export const fetchNote = (encounterId: string) => send<NoteView>(`/v1/encounters
 export const saveNote = (encounterId: string, draft: NoteDraft, baseVersion: number) =>
   put<NoteView>(`/v1/encounters/${encounterId}/note`, { templateKey: draft.templateKey, manual: true, recordingConsent: draft.recordingConsent, baseVersion, sections: Object.fromEntries(Object.entries(draft.sections).filter(([, v]) => v.trim())) });
 
-// What the doctor may copy into the note (MDV-P2-009): verified intake vitals of this visit, and earlier signed notes of the patient. Each read is audited.
-export const fetchPrefill = (encounterId: string) => send<{ vitals: VerifiedVital[] }>(`/v1/encounters/${encounterId}/note/prefill`);
+// What the doctor may copy into the note (MDV-P2-009): verified intake vitals of this visit (and the nurse's chief complaint, MDV-P1-104), and earlier signed notes of the patient. Each read is audited.
+export const fetchPrefill = (encounterId: string) => send<{ vitals: VerifiedVital[]; chiefComplaint: IntakeComplaint | null }>(`/v1/encounters/${encounterId}/note/prefill`);
 export const fetchPrevious = (encounterId: string) => send<{ notes: PreviousNote[] }>(`/v1/encounters/${encounterId}/note/previous`);
 
 // Note templates (MDV-P2-025).

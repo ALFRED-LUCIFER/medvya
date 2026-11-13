@@ -192,6 +192,7 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
             e.Property(x => x.Sections).HasColumnType("jsonb").HasConversion(
                 v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null), v => JsonSerializer.Deserialize<Dictionary<string, string>>(v, (JsonSerializerOptions?)null)!);
             e.Property(x => x.RecordingConsent).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.ChiefComplaintSource).HasConversion<string>().HasMaxLength(20);
             e.Property(x => x.Version).IsConcurrencyToken();
             e.HasIndex(x => new { x.TenantId, x.EncounterId }).IsUnique(); // one draft note per encounter, even for two simultaneous first saves
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
@@ -202,6 +203,7 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
             e.Property(x => x.TemplateKey).HasMaxLength(50);
             e.Property(x => x.ContentHash).HasMaxLength(64);
             e.Property(x => x.Reason).HasMaxLength(SignedNoteVersion.MaxReasonLength);
+            e.Property(x => x.ChiefComplaintSource).HasConversion<string>().HasMaxLength(20);
             e.Property(x => x.Sections).HasColumnType("jsonb").HasConversion(
                 v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null), v => JsonSerializer.Deserialize<Dictionary<string, string>>(v, (JsonSerializerOptions?)null)!);
             e.HasIndex(x => new { x.TenantId, x.NoteId, x.VersionNo }).IsUnique(); // one signature per note: a second concurrent sign loses here

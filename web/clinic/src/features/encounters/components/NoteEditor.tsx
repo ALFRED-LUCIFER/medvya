@@ -3,7 +3,7 @@ import { useI18n } from '@medvya/i18n';
 import type { ChecklistItem } from '../domain/checklist';
 import type { NoteSignature, NoteTemplate, RecordingConsent, SavePhase, SignPatient } from '../domain/note';
 import NoteAssist, { type Assist } from './NoteAssist';
-import { NoteSectionField, SaveState, SignedBanner, TemplatePicker, type StructuredProps } from './NoteParts';
+import { NoteSectionField, SaveState, SignedBanner, TemplatePicker, type SectionSource, type StructuredProps } from './NoteParts';
 import { SignChecklist, SignedLine, SignNote, type SignProblem } from './NoteSign';
 import RecordingConsentChoice from './RecordingConsentChoice';
 
@@ -25,6 +25,8 @@ export type NoteEditorProps = StructuredProps & {
   consent: RecordingConsent | null; onConsent: (value: RecordingConsent) => void;
   /** Empty without Sign or once signed. */
   checklist: ChecklistItem[]; remaining: number;
+  /** MDV-P1-104: the chief complaint came from nurse intake (null: the doctor's own, or blank). */
+  complaintSource: SectionSource | null;
 };
 
 /** E-04: the consultation note. Sections come from the template; saving is automatic and its state is always shown. Read-only once not a draft. */
@@ -46,7 +48,7 @@ export default function NoteEditor(p: NoteEditorProps) {
       {!p.readOnly && <SaveState phase={p.phase} reloading={p.reloading} onRetry={p.onRetry} onReapply={p.onReapply} />}
       {p.assist && <NoteAssist assist={p.assist} template={p.template} timeZone={p.timeZone} />}
       <div className="flex flex-col gap-4">
-        {p.template.sections.map(s => <NoteSectionField key={s.id} section={s} register={p.register} readOnly={p.readOnly} answers={p.answers} onAnswers={p.onAnswers} />)}
+        {p.template.sections.map(s => <NoteSectionField key={s.id} section={s} register={p.register} readOnly={p.readOnly} answers={p.answers} onAnswers={p.onAnswers} source={s.id === 'chiefComplaint' ? p.complaintSource : null} />)}
       </div>
       {!p.readOnly && (
         <>

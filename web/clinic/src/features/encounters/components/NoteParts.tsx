@@ -1,22 +1,33 @@
 import { useEffect, useRef } from 'react';
 import type { UseFormRegisterReturn } from 'react-hook-form';
 import { useI18n } from '@medvya/i18n';
-import { Button, Dialog, DialogContent, DialogDescription, DialogTitle, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea } from '@medvya/ui';
+import { Button, Dialog, DialogContent, DialogDescription, DialogTitle, Input, Label, ProvenanceTag, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea } from '@medvya/ui';
 import { maxSectionLength, sectionLabelKey, templateNameKey, type NoteSection, type NoteTemplate, type SavePhase } from '../domain/note';
 import { answeredItems, answerLabelKey, answersFor, isStructured, itemLabelKey, needsNote, parseAnswers, toggle, writeAnswers } from '../domain/structured';
 
 // The pieces both consultation views share (the guided steps and the one page, MDV-P2-041), so both edit the same note the same way.
 
-/** One template section: its label, whether it is required, and the text area the form and the autosave own. */
-export function SectionField({ section, register, readOnly }: { section: NoteSection; register: (id: string) => UseFormRegisterReturn; readOnly: boolean }) {
+/** MDV-P1-104: where a section's text came from (the chief complaint from nurse intake), with who saved it there and when in words. */
+export type SectionSource = { kind: 'nurse' | 'nurseEdited'; detail: string | null };
+
+/** One template section: its label, whether it is required, where its text came from, and the text area the form and the autosave own. */
+export function SectionField({ section, register, readOnly, source }: { section: NoteSection; register: (id: string) => UseFormRegisterReturn; readOnly: boolean; source?: SectionSource | null }) {
   const { t } = useI18n();
+  const sourceId = `note-${section.id}-source`;
   return (
     <div className="flex flex-col gap-1.5">
       <Label htmlFor={`note-${section.id}`}>
         {t(sectionLabelKey(section.id))}
         {section.required && <span className="ms-2 text-sm font-normal text-muted-foreground">{t('noteEditor.required')}</span>}
       </Label>
-      <Textarea id={`note-${section.id}`} className="min-h-24" maxLength={maxSectionLength} readOnly={readOnly} aria-required={section.required} {...register(section.id)} />
+      {/* Read with the field (aria-describedby), so a screen reader hears the source on focus. */}
+      {source && (
+        <p id={sourceId} className="flex flex-wrap items-center gap-2">
+          <ProvenanceTag source={source.kind} />
+          {source.detail && <span className="text-caption text-muted-foreground">{source.detail}</span>}
+        </p>
+      )}
+      <Textarea id={`note-${section.id}`} className="min-h-24" maxLength={maxSectionLength} readOnly={readOnly} aria-required={section.required} aria-describedby={source ? sourceId : undefined} {...register(section.id)} />
     </div>
   );
 }
@@ -24,10 +35,10 @@ export function SectionField({ section, register, readOnly }: { section: NoteSec
 export type StructuredProps = { answers: (id: string) => string; onAnswers: (id: string, text: string) => void };
 
 /** A template section of either kind: a text area, or the review of systems / examination by system (MDV-P2-042). */
-export function NoteSectionField(p: { section: NoteSection; register: (id: string) => UseFormRegisterReturn; readOnly: boolean } & StructuredProps) {
+export function NoteSectionField(p: { section: NoteSection; register: (id: string) => UseFormRegisterReturn; readOnly: boolean; source?: SectionSource | null } & StructuredProps) {
   return isStructured(p.section)
     ? <StructuredField section={p.section} text={p.answers(p.section.id)} readOnly={p.readOnly} onChange={text => p.onAnswers(p.section.id, text)} />
-    : <SectionField section={p.section} register={p.register} readOnly={p.readOnly} />;
+    : <SectionField section={p.section} register={p.register} readOnly={p.readOnly} source={p.source} />;
 }
 
 /**

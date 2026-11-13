@@ -84,7 +84,9 @@ public sealed class IntakeService(
                 Source = ChartSource.ClinicianVerified, RecordedBy = me, VerifiedBy = me, TakenAt = now,
             });
         }
-        if (complaint is not null) row.ChiefComplaint = complaint.Length == 0 ? null : complaint;
+        // Who and when only on a change: saving the same words again (with a new reading) keeps the time the nurse wrote them.
+        if (complaint is not null && (complaint.Length == 0 ? null : complaint) is var next && next != row.ChiefComplaint)
+            (row.ChiefComplaint, row.ChiefComplaintBy, row.ChiefComplaintAt) = (next, next is null ? null : me, next is null ? null : now);
         row.UpdatedAt = now;
         await db.SaveChangesAsync(cancellationToken);
         await audit.WriteAsync(Event(RecordAction, visit), tx.GetDbTransaction(), cancellationToken);

@@ -23,6 +23,29 @@ public enum NoteStatus { Draft, Signed }
 public enum RecordingConsent { Agreed, Declined, Withdrawn }
 
 /// <summary>
+/// Where the note's chief complaint came from (MDV-P1-104): the nurse's intake text as saved, or that text since changed by the doctor.
+/// No source (null): the doctor's own text.
+/// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter<ComplaintSource>))]
+public enum ComplaintSource { NurseIntake, EditedByDoctor }
+
+/// <summary>The source of the chief complaint after a save. The server decides it from the text, never from what the client claims.</summary>
+public static class ComplaintSourceRule
+{
+    public const string Section = "chiefComplaint";
+
+    /// <summary>
+    /// Blank: no source. Unchanged: the source stays. Filled into a blank field with exactly the intake's text: from nurse intake. Any other change
+    /// to text that came from intake: edited by the doctor. Anything else is the doctor's own. Remove a branch and ComplaintSourceRuleTests fails.
+    /// </summary>
+    public static ComplaintSource? Next(string? previous, ComplaintSource? source, string? text, string? intake) =>
+        string.IsNullOrWhiteSpace(text) ? null
+        : text == previous ? source
+        : string.IsNullOrWhiteSpace(previous) && text == intake ? ComplaintSource.NurseIntake
+        : source is null ? null : ComplaintSource.EditedByDoctor;
+}
+
+/// <summary>
 /// CONSULT NOTE (MDV-P2-009): the one draft note of an encounter, written on a pinned template version. <see cref="Sections"/> are keyed by the
 /// template's section ids; a blank is absent, never guessed. The patient is the encounter's, so a patient merge needs nothing here.
 /// </summary>
@@ -46,6 +69,10 @@ public sealed class ConsultNote
     /// shortcut: nothing writes it before AI drafting (MDV-P3-011, MDV-P3-012 add and resolve entries); a save never changes it.
     /// </summary>
     [Classification(DataClass.Internal)] public string[] UndecidedAi { get; set; } = [];
+    /// <summary>MDV-P1-104: where the chief complaint came from and, from intake, who saved it there and when.</summary>
+    [Classification(DataClass.Internal)] public ComplaintSource? ChiefComplaintSource { get; set; }
+    [Classification(DataClass.Internal)] public Guid? ChiefComplaintBy { get; set; }
+    [Classification(DataClass.Internal)] public DateTimeOffset? ChiefComplaintAt { get; set; }
     /// <summary>Concurrency token and the ETag the editor sends back: 1 on the first save, +1 on every save.</summary>
     [Classification(DataClass.Internal)] public int Version { get; set; }
     [Classification(DataClass.Internal)] public Guid UpdatedBy { get; set; }
@@ -81,15 +108,22 @@ public sealed class SignedNoteVersion
     [Classification(DataClass.Internal)] public Guid? AmendsVersionId { get; init; }
     /// <summary>An addendum: why it was added, null on version 1.</summary>
     [Classification(DataClass.SensitiveHealth)] public string? Reason { get; init; }
+    /// <summary>MDV-P1-104: the chief complaint's source as signed (version 1 only), covered by <see cref="ContentHash"/>.</summary>
+    [Classification(DataClass.Internal)] public ComplaintSource? ChiefComplaintSource { get; init; }
+    [Classification(DataClass.Internal)] public Guid? ChiefComplaintBy { get; init; }
+    [Classification(DataClass.Internal)] public DateTimeOffset? ChiefComplaintAt { get; init; }
 
     /// <summary>
     /// Canonical text: template key and version, then the sections in key order (JSON escapes are fixed, so the bytes are stable); an addendum
-    /// adds its amends link and reason. These two columns came after the ledger chain was set up, so the chain does not cover them: this hash does.
+    /// adds its amends link and reason, and a chief complaint from intake its source (MDV-P1-104). These columns came after the ledger chain was
+    /// set up, so the chain does not cover them: this hash does. A note without them hashes as before.
     /// </summary>
-    public static string Hash(string templateKey, int templateVersion, IReadOnlyDictionary<string, string> sections, Guid? amendsVersionId = null, string? reason = null) =>
+    public static string Hash(string templateKey, int templateVersion, IReadOnlyDictionary<string, string> sections, Guid? amendsVersionId = null, string? reason = null,
+        (ComplaintSource Source, Guid? By, DateTimeOffset? At)? complaintSource = null) =>
         Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(
             $"{templateKey}@{templateVersion}|{JsonSerializer.Serialize(new SortedDictionary<string, string>(sections.ToDictionary(s => s.Key, s => s.Value), StringComparer.Ordinal))}"
-            + (amendsVersionId is null ? "" : $"|amends:{amendsVersionId}|reason:{JsonSerializer.Serialize(reason)}"))));
+            + (amendsVersionId is null ? "" : $"|amends:{amendsVersionId}|reason:{JsonSerializer.Serialize(reason)}")
+            + (complaintSource is var (source, by, at) ? $"|complaintSource:{source}:{by}:{at?.ToUnixTimeMilliseconds()}" : ""))));
 }
 
 /// <summary>

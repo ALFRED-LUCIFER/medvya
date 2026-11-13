@@ -286,6 +286,16 @@ namespace Medvya.Encounters.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<DateTimeOffset?>("ChiefComplaintAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ChiefComplaintBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ChiefComplaintSource")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
                     b.Property<Guid>("EncounterId")
                         .HasColumnType("uuid");
 
@@ -600,6 +610,12 @@ namespace Medvya.Encounters.Infrastructure.Persistence.Migrations
                     b.Property<string>("ChiefComplaint")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
+
+                    b.Property<DateTimeOffset?>("ChiefComplaintAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ChiefComplaintBy")
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("FacilityId")
                         .HasColumnType("uuid");
@@ -1244,6 +1260,16 @@ namespace Medvya.Encounters.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid?>("AmendsVersionId")
                         .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("ChiefComplaintAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ChiefComplaintBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ChiefComplaintSource")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.Property<string>("ContentHash")
                         .IsRequired()

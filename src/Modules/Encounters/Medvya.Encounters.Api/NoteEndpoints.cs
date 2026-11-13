@@ -27,7 +27,7 @@ public static class NoteEndpoints
             .AuditedByUseCase("note.read", "note", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
         // MDV-P2-009: what the doctor may copy into the note. Same capability and care-relationship check as the note; one audit row per read, no values.
         note.MapGet("/prefill", async (Guid encounterId, [FromServices] IConsultNotes service, CancellationToken ct) =>
-                await service.PrefillAsync(encounterId, ct) is { } vitals ? Results.Ok(new { vitals }) : Results.NotFound())
+                await service.PrefillAsync(encounterId, ct) is { } prefill ? Results.Ok(prefill) : Results.NotFound())
             .AuditedByUseCase("note.prefill", "note", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
         note.MapGet("/previous", async (Guid encounterId, [FromServices] IConsultNotes service, CancellationToken ct) =>
                 await service.PreviousAsync(encounterId, ct) is { } notes ? Results.Ok(new { notes }) : Results.NotFound())

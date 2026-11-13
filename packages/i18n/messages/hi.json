@@ -3552,6 +3552,8 @@
   "rx.check.alert.DuplicateChart": "दोहरा इलाज: {medicine} + {other} (चार्ट में) · {kind}।",
   "rx.check.alert.DoseAboveMaximum": "वयस्क अधिकतम से अधिक खुराक: {medicine} {daily} प्रतिदिन (अधिकतम {max})।",
   "rx.check.alert.AllergiesNotRecorded": "इस मरीज़ की एलर्जी दर्ज नहीं है, इसलिए एलर्जी जाँच नहीं हो सकी। मरीज़ से पूछकर दर्ज करें।",
+  "rx.check.alert.FreeTextAllergy": "इनके विरुद्ध जाँच नहीं हुई: {allergies}। {medicine} खुले शब्दों में लिखी गई।",
+  "rx.check.alert.FreeTextAllergy.notRecorded": "{medicine} खुले शब्दों में लिखी गई। इस मरीज़ की एलर्जी दर्ज नहीं है, इसलिए एलर्जी जाँच नहीं हो सकी। मरीज़ से पूछकर दर्ज करें।",
   "rx.check.alert.Pregnancy": "गर्भावस्था: {measure} सप्ताह पर {medicine}। {rule}",
   "rx.check.alert.Kidney": "गुर्दे की कार्यक्षमता: eGFR {measure} के साथ {medicine}। {rule}",
   "rx.check.alert.OlderAdult": "बुज़ुर्ग, {measure} वर्ष: {medicine}। {rule}",

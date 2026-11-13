@@ -3562,6 +3562,8 @@
   "rx.check.alert.DuplicateChart": "Duplicate therapy: {medicine} + {other} (on the chart) · {kind}.",
   "rx.check.alert.DoseAboveMaximum": "Dose above the adult maximum: {medicine} {daily} a day (maximum {max}).",
   "rx.check.alert.AllergiesNotRecorded": "Allergies are not recorded for this patient, so the allergy check could not run. Ask the patient and record them.",
+  "rx.check.alert.FreeTextAllergy": "Not checked against: {allergies}. {medicine} was typed as free text.",
+  "rx.check.alert.FreeTextAllergy.notRecorded": "{medicine} was typed as free text. Allergies are not recorded for this patient, so the allergy check could not run. Ask the patient and record them.",
   "rx.check.alert.Pregnancy": "Pregnancy: {medicine} at {measure} weeks. {rule}",
   "rx.check.alert.Kidney": "Kidney function: {medicine} with eGFR {measure}. {rule}",
   "rx.check.alert.OlderAdult": "Older adult, {measure} years: {medicine}. {rule}",

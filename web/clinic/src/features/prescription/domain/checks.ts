@@ -4,7 +4,7 @@ import { z } from 'zod';
 // The server runs every check; the screen only puts the result into words.
 export type Severity = 'Severe' | 'Moderate';
 export type AlertKind =
-  | 'Allergy' | 'CrossSensitivity' | 'Interaction' | 'Duplicate' | 'DoseAboveMaximum' | 'AllergiesNotRecorded' | 'Pregnancy' | 'ChildDose' | 'Kidney' | 'OlderAdult';
+  | 'Allergy' | 'CrossSensitivity' | 'Interaction' | 'Duplicate' | 'DoseAboveMaximum' | 'AllergiesNotRecorded' | 'Pregnancy' | 'ChildDose' | 'Kidney' | 'OlderAdult' | 'FreeTextAllergy';
 export type NotCheckedReason = 'FreeText' | 'NoIngredientCode' | 'NotOnFormulary' | 'DoseNotChecked' | 'NoRecentWeight' | 'NoEgfr' | 'PregnancyNotRecorded';
 export type SafetyAlert = {
   key: string; kind: AlertKind; severity: Severity; itemId: string | null; medicine: string | null; other: string | null; otherOnChart: boolean;

@@ -37,7 +37,7 @@ public static class AuditedEndpoint
         {
             var http = ctx.HttpContext;
             if (http.RequestServices.GetRequiredService<ICurrentTenant>().TenantId is not { } tenantId)
-                return Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "No facility context");
+                return await RefuseWithoutTenantAsync(http, metadata);
 
             object? result;
             try
@@ -102,7 +102,7 @@ public static class AuditedEndpoint
         {
             var http = ctx.HttpContext;
             if (http.RequestServices.GetRequiredService<ICurrentTenant>().TenantId is not { } tenantId)
-                return Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "No facility context");
+                return await RefuseWithoutTenantAsync(http, metadata);
             var result = await next(ctx);
             if (OutcomeOf(result) is var outcome and not AuditOutcome.Allowed) await WriteAsync(http, metadata, tenantId, outcome);
             return result;
@@ -121,6 +121,38 @@ public static class AuditedEndpoint
 
     public static IServiceCollection AddDeniedAccessAudit(this IServiceCollection services) =>
         services.AddSingleton<IAuthorizationMiddlewareResultHandler, AuditDeniedAccess>();
+
+    /// <summary>A caller with no facility is refused 403, and the refusal is recorded in the platform chain (a signed-in caller only: an anonymous 401 is not written, so a scan cannot fill the ledger).</summary>
+    internal static async Task<IResult> RefuseWithoutTenantAsync(HttpContext http, AuditedEndpointMetadata metadata)
+    {
+        await WritePlatformAsync(http, metadata);
+        return Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "No facility context");
+    }
+
+    internal static Task WritePlatformAsync(HttpContext http, AuditedEndpointMetadata metadata) =>
+        WritePlatformAsync(http, metadata.Action, metadata.ResourceType, metadata.Purpose);
+
+    /// <summary>
+    /// Records a Denied event, for a signed-in caller only, in the platform chain. The same user's identical refusal (same action and path) is
+    /// written once a minute, so a client that keeps calling with no facility cannot flood the one chain; the first is always written, and only
+    /// after it succeeded does the window start (fail closed).
+    /// </summary>
+    // shortcut: the platform chain is read only through the database (the review login); a console reader comes with the platform console (MDV-P1-064).
+    public static async Task WritePlatformAsync(HttpContext http, string action, string resourceType, string purpose, Guid? resourceId = null, AuditOutcome outcome = AuditOutcome.Denied)
+    {
+        var services = http.RequestServices;
+        if (services.GetRequiredService<ICurrentUser>().UserId is not { } user) return;
+        var windows = services.GetRequiredService<AuditWindow>();
+        var key = AuditWindow.Key(PlatformTenant.Id, user, action, http.Request.Path);
+        if (windows.Covered(key)) return;
+        await services.GetRequiredService<IPlatformAuditLog>().WriteAsync(new AuditEvent
+        {
+            Id = Guid.CreateVersion7(), TenantId = PlatformTenant.Id, ActorUserId = user, Action = action, ResourceType = resourceType, ResourceId = resourceId,
+            Purpose = purpose, Outcome = outcome, OccurredAt = DateTimeOffset.UtcNow,
+            ClientIp = http.Connection.RemoteIpAddress?.ToString(), CorrelationId = http.TraceIdentifier,
+        }, http.RequestAborted);
+        windows.Record(key, TimeSpan.FromMinutes(1));
+    }
 
     internal static Task WriteAsync(HttpContext http, AuditedEndpointMetadata metadata, Guid tenantId, AuditOutcome outcome)
     {
@@ -145,8 +177,8 @@ public static class AuditedEndpoint
 }
 
 /// <summary>
-/// Records a forbidden request to an <c>.Audited()</c> (or <c>.AuditRefusals()</c>) endpoint, then answers as ASP.NET Core would (403). Only signed-in callers
-/// inside a tenant leave an event: an audit row belongs to a tenant, and anonymous calls are refused before any tenant is known.
+/// Records a forbidden request to an <c>.Audited()</c> (or <c>.AuditRefusals()</c>) endpoint, then answers as ASP.NET Core would (403). Signed-in callers leave an
+/// event, in their tenant's chain or, with no facility chosen, in the platform chain. Anonymous 401s are not written (a scan must not fill the ledger).
 /// </summary>
 public sealed class AuditDeniedAccess : IAuthorizationMiddlewareResultHandler
 {
@@ -156,10 +188,13 @@ public sealed class AuditDeniedAccess : IAuthorizationMiddlewareResultHandler
     {
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(authorizeResult);
-        if (authorizeResult.Forbidden
-            && Of(context.GetEndpoint()) is { } metadata
-            && context.RequestServices.GetRequiredService<ICurrentTenant>().TenantId is { } tenantId)
-            await AuditedEndpoint.WriteAsync(context, metadata, tenantId, AuditOutcome.Denied);
+        if (authorizeResult.Forbidden && Of(context.GetEndpoint()) is { } metadata)
+        {
+            if (context.RequestServices.GetRequiredService<ICurrentTenant>().TenantId is { } tenantId)
+                await AuditedEndpoint.WriteAsync(context, metadata, tenantId, AuditOutcome.Denied);
+            else
+                await AuditedEndpoint.WritePlatformAsync(context, metadata); // signed in but no facility chosen yet
+        }
         await fallback.HandleAsync(next, context, policy, authorizeResult);
     }
 

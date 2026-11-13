@@ -4,7 +4,8 @@ import { z } from 'zod';
 // and waits only: never a patient's name, initials, MRN or reason.
 export type QueueTv = {
   now: { token: string; room: string | null; doctor: string }[];
-  next: { token: string; waitMinutes: number }[];
+  /** doctor: whose queue the token waits in; a reassigned token keeps its letter (MDV-P1-103). */
+  next: { token: string; waitMinutes: number; doctor: string }[];
 };
 
 /** A display token from the link's fragment: base64url of 16 tenant bytes and 32 random bytes (64 characters). */

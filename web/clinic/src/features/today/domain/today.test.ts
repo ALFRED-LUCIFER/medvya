@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { BoardCard } from '../../front-desk/domain/board';
-import { ageOn, MAX_FLAGS, nextPatient, patientIdsOf, todayVisits } from './today';
+import { ageOn, escalatedVisits, MAX_FLAGS, nextPatient, patientIdsOf, todayVisits } from './today';
 
 const card = (id: string, calendarId: string, state: BoardCard['state'], start: string, since = start): BoardCard => ({
   id, reference: id, patientId: `p-${id}`, patientName: id, dateOfBirth: null, registrationIncomplete: false, calendarId, calendarName: calendarId,
@@ -14,6 +14,22 @@ describe('todayVisits', () => {
     expect(todayVisits(cards, 'mine', 'me').map(c => c.id)).toEqual(['a', 'b']);
     expect(todayVisits(cards, 'clinic', 'me').map(c => c.id)).toEqual(['a', 'c', 'b']);
   });
+  // MDV-P1-103: the waiting patients follow the server's queue place (as the board and the display do), not their slot times.
+  it('puts the consultation first, then the waiting patients by queue place, then the booked by time, then the rest', () => {
+    const day = [
+      card('done', 'me', 'Done', '2026-10-19T03:00:00Z'), card('booked', 'me', 'Booked', '2026-10-19T03:30:00Z'),
+      { ...card('walkIn', 'me', 'CheckedIn', '2026-10-19T13:30:00Z'), queuePlace: 1 }, { ...card('ready', 'me', 'ReadyForDoctor', '2026-10-19T04:00:00Z'), queuePlace: 2 },
+      card('consult', 'me', 'InConsult', '2026-10-19T05:00:00Z'),
+    ];
+    expect(todayVisits(day, 'mine', 'me').map(c => c.id)).toEqual(['consult', 'walkIn', 'ready', 'booked', 'done']);
+  });
+});
+
+describe('escalatedVisits', () => {
+  it('pins the visits a nurse escalated, until the consultation starts', () => {
+    const visits = [card('a', 'me', 'WithNurse', '2026-10-19T04:00:00Z'), card('b', 'me', 'ReadyForDoctor', '2026-10-19T04:00:00Z'), card('c', 'me', 'InConsult', '2026-10-19T04:00:00Z')];
+    expect(escalatedVisits(visits, { b: 'Fever (synthetic)', c: 'Older (synthetic)' }).map(c => c.id)).toEqual(['b']);
+  });
 });
 
 describe('nextPatient', () => {
@@ -21,6 +37,7 @@ describe('nextPatient', () => {
     const waiting = [card('w2', 'me', 'ReadyForDoctor', '2026-10-19T04:00:00Z', '2026-10-19T04:20:00Z'), card('w1', 'me', 'ReadyForDoctor', '2026-10-19T04:10:00Z', '2026-10-19T04:10:00Z'),
       card('b', 'me', 'Booked', '2026-10-19T03:00:00Z')];
     expect(nextPatient(waiting)?.id).toBe('w1');
+    expect(nextPatient([{ ...waiting[0]!, queuePlace: 1 }, { ...waiting[1]!, queuePlace: 2 }])?.id).toBe('w2'); // the clinic's queue order first
     expect(nextPatient([...waiting, card('c', 'me', 'InConsult', '2026-10-19T03:30:00Z')])?.id).toBe('c');
     expect(nextPatient([waiting[2]!, card('b0', 'me', 'Booked', '2026-10-19T02:00:00Z')])?.id).toBe('b0');
     expect(nextPatient([card('d', 'me', 'Done', '2026-10-19T03:00:00Z')])).toBeNull();

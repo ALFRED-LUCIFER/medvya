@@ -13,6 +13,10 @@ public sealed class Tenant
     [Classification(DataClass.Internal)] public int IdleTimeoutMinutes { get; set; } = 15;
     /// <summary>Which clinicians treat the facility's patients (MDV-P2-024); a setting of the practice owner.</summary>
     [Classification(DataClass.Internal)] public ClinicalAccessPolicy ClinicalAccess { get; set; }
+    /// <summary>The order arrived patients are seen in (MDV-P1-103); a setting of the practice owner.</summary>
+    [Classification(DataClass.Internal)] public QueueOrder QueueOrder { get; set; }
+    /// <summary>Booked patients go before walk-ins, whatever <see cref="QueueOrder"/> says (MDV-P1-103).</summary>
+    [Classification(DataClass.Internal)] public bool BookedFirst { get; set; }
     /// <summary>When the practice was created; the first quarterly access review is due a quarter later (#912). Tenants older than the column read 0001-01-01.</summary>
     [Classification(DataClass.Internal)] public DateTimeOffset CreatedAt { get; init; }
     /// <summary>Where the organisation stands in Medvya's review (ADR-016); the server gates capabilities on it. Changed only through <see cref="IOrganisationState"/>.</summary>

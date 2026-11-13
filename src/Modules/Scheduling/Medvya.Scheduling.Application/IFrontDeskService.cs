@@ -13,7 +13,7 @@ namespace Medvya.Scheduling.Application;
 public sealed record BoardCard(
     Guid Id, string Reference, Guid PatientId, string PatientName, DateOnly? DateOfBirth, bool RegistrationIncomplete,
     Guid CalendarId, string CalendarName, VisitType VisitType, ReasonCategory ReasonCategory,
-    DateTimeOffset Start, DateTimeOffset End, AppointmentState State, DateTimeOffset Since, string? Room, string? Token, bool WalkIn = false, bool Unscheduled = false, string? Sex = null, bool WithDoctor = false, FollowUpDue? FollowUp = null);
+    DateTimeOffset Start, DateTimeOffset End, AppointmentState State, DateTimeOffset Since, string? Room, string? Token, bool WalkIn = false, bool Unscheduled = false, string? Sex = null, bool WithDoctor = false, FollowUpDue? FollowUp = null, int? QueuePlace = null);
 
 /// <summary>
 /// Today's board (P-01) of one facility: every visit of the facility-local day that is not cancelled, a no-show or left without

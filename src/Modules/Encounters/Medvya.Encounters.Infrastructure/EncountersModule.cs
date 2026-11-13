@@ -43,6 +43,7 @@ public static class EncountersModule
             .AddScoped<IConsultNotes, ConsultNoteService>()
             .AddScoped<Medvya.Scheduling.Application.IHandoffGate, IntakeHandoffGate>()
             .AddScoped<Medvya.Scheduling.Application.IOpenConsultations, OpenConsultations>()
+            .AddScoped<Medvya.Scheduling.Application.IEscalatedVisits, EscalatedVisits>()
             .AddScoped<Medvya.Tenancy.Application.ICareRelationshipSource, EncounterCareRelationship>()
             .AddScoped<Medvya.Patients.Application.IPatientMergeParticipant, EncounterMergeParticipant>();
     }

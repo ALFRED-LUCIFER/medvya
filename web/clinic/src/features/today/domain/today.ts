@@ -1,22 +1,32 @@
-import { isBoardColumn, type BoardCard } from '../../front-desk/domain/board';
+import { byQueuePlace, isBoardColumn, type BoardCard } from '../../front-desk/domain/board';
 
 /** D-01 Today shows the doctor's own visits by default and the whole clinic (D-04) when toggled. */
 export type Scope = 'mine' | 'clinic';
 
-/** A doctor's calendar id is their user id (as the clinic overview's "mine" reads it). Visits the leave left without a slot are not today's. */
-export const todayVisits = (cards: BoardCard[], scope: Scope, userId: string): BoardCard[] =>
-  cards.filter(c => isBoardColumn(c.state) && (scope === 'clinic' || c.calendarId === userId)).sort((a, b) => Date.parse(a.start) - Date.parse(b.start));
+// The day reads top down: who is with the doctor, the waiting patients in the clinic's queue order, the booked ones by time, then the rest.
+const stage = (c: BoardCard) => (c.state === 'InConsult' ? 0 : c.queuePlace != null ? 1 : c.state === 'Booked' ? 2 : 3);
 
-/** Who the hero offers: the consultation in progress, then the longest-waiting arrived patient, then the earliest booked one. */
+/**
+ * A doctor's calendar id is their user id (as the clinic overview's "mine" reads it). Visits the leave left without a slot are not today's.
+ * Waiting patients follow the server's queue place (MDV-P1-103), so the day agrees with the board and the queue display.
+ */
+export const todayVisits = (cards: BoardCard[], scope: Scope, userId: string): BoardCard[] =>
+  cards.filter(c => isBoardColumn(c.state) && (scope === 'clinic' || c.calendarId === userId)).sort((a, b) =>
+    stage(a) - stage(b) || (stage(a) === 1 ? byQueuePlace(a, b) : stage(a) === 2 ? Date.parse(a.start) - Date.parse(b.start) : Date.parse(a.since) - Date.parse(b.since)));
+
+/** Who the hero offers: the consultation in progress, then the first ready patient in queue order, then those still with the nurse or checked in, then the earliest booked. */
 const heroOrder = ['InConsult', 'ReadyForDoctor', 'WithNurse', 'CheckedIn', 'Booked'] as const;
 export function nextPatient(visits: BoardCard[]): BoardCard | null {
   for (const state of heroOrder) {
-    const key = (c: BoardCard) => Date.parse(state === 'Booked' ? c.start : c.since);
-    const first = visits.filter(v => v.state === state).sort((a, b) => key(a) - key(b))[0];
+    const first = visits.filter(v => v.state === state).sort((a, b) => state === 'Booked' ? Date.parse(a.start) - Date.parse(b.start) : byQueuePlace(a, b))[0];
     if (first) return first;
   }
   return null;
 }
+
+/** Visits a nurse escalated (MDV-P1-103), pinned above Next patient in queue order until the consultation starts. */
+export const escalatedVisits = (visits: BoardCard[], escalations: Record<string, string>): BoardCard[] =>
+  visits.filter(v => escalations[v.id] && v.state !== 'InConsult');
 
 /** Whole years on `day` (YYYY-MM-DD, the facility's today); null when the date of birth is unknown. */
 export function ageOn(dateOfBirth: string | null, day: string): number | null {

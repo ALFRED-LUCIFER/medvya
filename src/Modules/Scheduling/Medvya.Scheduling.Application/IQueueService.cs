@@ -10,8 +10,8 @@ public sealed record QueueTv(IReadOnlyList<QueueTvNow> Now, IReadOnlyList<QueueT
 /// <summary>A token called in: where to go and to whom. Room is null when the doctor's session has none.</summary>
 public sealed record QueueTvNow(string Token, string? Room, string Doctor);
 
-/// <summary>A waiting token and about how many minutes until it is called.</summary>
-public sealed record QueueTvNext(string Token, int WaitMinutes);
+/// <summary>A waiting token, about how many minutes until it is called, and the doctor whose queue it is in (it may have been reassigned, MDV-P1-103).</summary>
+public sealed record QueueTvNext(string Token, int WaitMinutes, string Doctor);
 
 /// <summary>Adds a TV for the facility; Name says where it hangs ("Waiting room TV").</summary>
 public sealed class CreateDisplay

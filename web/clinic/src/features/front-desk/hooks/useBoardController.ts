@@ -69,8 +69,9 @@ export function useBoardController(facilityId: string, online: boolean) {
     endForm.reset(emptyCancel);
   };
 
+  // A moved card keeps its queue place until the refetch brings the server's (MDV-P1-103).
   const replace = (card: BoardCard) => {
-    queryClient.setQueryData<Snapshot>(key, old => old && { ...old, board: { ...old.board, cards: old.board.cards.map(c => (c.id === card.id ? card : c)) } });
+    queryClient.setQueryData<Snapshot>(key, old => old && { ...old, board: { ...old.board, cards: old.board.cards.map(c => (c.id === card.id ? { ...card, queuePlace: c.queuePlace } : c)) } });
     void queryClient.invalidateQueries({ queryKey: key });
   };
   const fail = (id: string, e: unknown) => {

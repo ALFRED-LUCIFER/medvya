@@ -111,6 +111,11 @@ journey('J3', {
       await nurse.getByRole('textbox', { name: 'Reason for the doctor' }).fill('Synthetic chest pain on arrival');
       await nurse.getByRole('button', { name: 'Send urgent item' }).click();
       await expect(visit).toContainText('Nurse escalation: Synthetic chest pain on arrival', { timeout: 2_000 });
+      // MDV-P1-103: the escalated patient is pinned above Next (or Current) patient, with the reason in words.
+      const pinned = doctor.getByRole('region', { name: 'Escalated by the nurse' });
+      await expect(pinned.getByRole('listitem').filter({ hasText: patient.name })).toContainText('Nurse escalation: Synthetic chest pain on arrival');
+      const next = doctor.getByRole('region', { name: /^(Next|Current) patient$/ });
+      if (await next.count()) expect((await pinned.boundingBox())!.y).toBeLessThan((await next.boundingBox())!.y);
       await expectNoAxeViolations(doctor);
       await doctor.close();
 

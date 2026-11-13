@@ -51,6 +51,8 @@ public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options,
             // The column default is Approved so tenants that exist when the state arrives stay open (MDV-P1-068); new tenants always set it.
             e.Property(x => x.State).HasConversion<string>().HasMaxLength(20).HasDefaultValue(OrganisationState.Approved).HasSentinel((OrganisationState)(-1));
             e.Property(x => x.ClinicalAccess).HasConversion<string>().HasMaxLength(30).HasDefaultValue(ClinicalAccessPolicy.AllFacilityClinicians).HasSentinel((ClinicalAccessPolicy)(-1));
+            // Arrival keeps the order the board and the clinic overview already used for clinics that exist when the rule arrives (MDV-P1-103).
+            e.Property(x => x.QueueOrder).HasConversion<string>().HasMaxLength(20).HasDefaultValue(QueueOrder.Arrival).HasSentinel((QueueOrder)(-1));
             e.ToTable(t => { t.HasCheckConstraint("CK_Tenants_IdleTimeoutMinutes", "\"IdleTimeoutMinutes\" BETWEEN 1 AND 480"); t.HasTrigger("TR_Tenants_Index"); });
             e.HasQueryFilter(x => x.Id == CurrentTenantId);
         });

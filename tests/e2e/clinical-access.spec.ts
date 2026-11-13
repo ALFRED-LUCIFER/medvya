@@ -16,7 +16,8 @@ const pending = () => [
 ];
 
 async function open(page: Page, { locale = 'en', path = '/settings?tab=requests', refuse = '' } = {}) {
-  const state = { requests: pending(), policy: 'AllFacilityClinicians', decisions: [] as { url: string; body: string; csrf: string | undefined }[], saved: [] as string[], intake: false, intakeSaves: [] as boolean[], contextLoads: 0 };
+  const state = { requests: pending(), policy: 'AllFacilityClinicians', decisions: [] as { url: string; body: string; csrf: string | undefined }[], saved: [] as string[], intake: false, intakeSaves: [] as boolean[], contextLoads: 0,
+    queue: { order: 'Arrival', bookedFirst: false }, queueSaves: [] as unknown[] };
   await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
   await page.route('**/v1/me/context', r => {
     state.contextLoads++;
@@ -28,6 +29,13 @@ async function open(page: Page, { locale = 'en', path = '/settings?tab=requests'
       state.intakeSaves.push(state.intake);
     }
     return r.fulfill({ json: { enabled: state.intake } });
+  });
+  await page.route('**/v1/settings/queue-rule', r => {
+    if (r.request().method() === 'PUT') {
+      state.queue = JSON.parse(r.request().postData() ?? '{}') as typeof state.queue;
+      state.queueSaves.push(state.queue);
+    }
+    return r.fulfill({ json: state.queue });
   });
   await page.route('**/v1/settings/locations', r => r.fulfill({ json: [{ id: facility, name: 'Adyar (synthetic)', address: null, timeZone: 'Asia/Kolkata' }] }));
   await page.route('**/v1/staff', r => r.fulfill({ json: [] }));
@@ -101,6 +109,20 @@ test('the owner turns nurse intake on', async ({ page }) => {
   await expect.poll(() => state.contextLoads).toBeGreaterThan(loads);
 });
 
+// MDV-P1-103: the owner chooses the queue rule in Settings -> Clinical (the server allows only an owner or practice admin and audits it).
+// Clinics start on arrival order, the order the board already used.
+test('the owner chooses the queue order', async ({ page }) => {
+  const state = await open(page, { path: '/settings?tab=queue' });
+  const queue = page.getByRole('region', { name: 'Queue order' });
+  await expect(queue.getByRole('radio', { name: /^Arrival order/ })).toBeChecked();
+  await expect(queue).toContainText('A patient the nurse escalates to the doctor always goes first.');
+  await queue.getByRole('radio', { name: /^Appointment order/ }).check();
+  await queue.getByRole('checkbox', { name: 'Booked patients go before walk-ins' }).check();
+  await queue.getByRole('button', { name: 'Save changes' }).click();
+  await expect(queue.getByRole('status')).toHaveText('Saved.');
+  expect(state.queueSaves).toEqual([{ order: 'Appointment', bookedFirst: true }]);
+});
+
 test('the bell points the owner at the request', async ({ page }) => {
   await open(page, { path: '/schedule' });
   await page.getByRole('button', { name: 'Notifications, 1 unread' }).click();
@@ -120,6 +142,20 @@ for (const locale of ['en', 'ar'])
       await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
       await expect(queue.getByRole('combobox').first()).toHaveText('يوم واحد');
     }
+    for (const b of await queue.getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await page.addScriptTag({ path: axePath });
+    const violations = await page.evaluate(async () =>
+      (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations
+        .map(v => `${v.id} (${v.nodes.length})`));
+    expect(violations).toEqual([]);
+  });
+
+for (const locale of ['en', 'ar'])
+  test(`axe finds no violations on the queue order (${locale}); 44 px targets`, async ({ page }) => {
+    await open(page, { locale, path: '/settings?tab=queue' });
+    const queue = page.getByRole('region', { name: locale === 'ar' ? 'ترتيب الدور' : 'Queue order' });
+    await expect(queue.getByRole('radio')).toHaveCount(3);
+    if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
     for (const b of await queue.getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
     await page.addScriptTag({ path: axePath });
     const violations = await page.evaluate(async () =>

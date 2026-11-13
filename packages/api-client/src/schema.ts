@@ -4451,6 +4451,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/settings/queue-rule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["QueueRule"];
+                    };
+                };
+            };
+        };
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["QueueRule"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["QueueRule"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/settings/nurse-intake": {
         parameters: {
             query?: never;
@@ -8935,6 +8993,8 @@ export interface components {
             /** @default false */
             withDoctor: boolean;
             followUp?: null | components["schemas"]["FollowUpDue"];
+            /** Format: int32 */
+            queuePlace?: null | number | string;
         };
         /** @enum {unknown} */
         BodyPosition: "Lying" | "Standing" | null;
@@ -9570,6 +9630,12 @@ export interface components {
              */
             version: number | string;
         };
+        /** @enum {unknown} */
+        QueueOrder: "Arrival" | "Token" | "Appointment";
+        QueueRule: {
+            order: components["schemas"]["QueueOrder"];
+            bookedFirst: boolean;
+        };
         QueueTv: {
             now: components["schemas"]["QueueTvNow"][];
             next: components["schemas"]["QueueTvNext"][];
@@ -9578,6 +9644,7 @@ export interface components {
             token: string;
             /** Format: int32 */
             waitMinutes: number | string;
+            doctor: string;
         };
         QueueTvNow: {
             token: string;

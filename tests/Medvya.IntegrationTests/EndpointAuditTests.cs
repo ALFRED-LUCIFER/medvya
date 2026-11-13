@@ -72,6 +72,8 @@ public sealed class EndpointAuditTests(PostgresFixture sql) : IClassFixture<Post
         "GET /v1/settings/clinical-access", // the clinic's policy (MDV-P2-024), no patient data
         "PUT /v1/settings/clinical-access", // audited with before/after (settings.clinical_access.update), no patient data
         "GET /v1/settings/nurse-intake", // the clinic's switch, no patient data
+        "GET /v1/settings/queue-rule", // MDV-P1-103: the clinic's queue rule, no patient data
+        "PUT /v1/settings/queue-rule", // audited with before/after (settings.queue_rule.update), no patient data
         "GET /v1/note-templates/", // MDV-P2-025: templates and the doctor's own choice, no patient data (NoteTemplateTests)
         "PUT /v1/note-templates/mine",
         "PUT /v1/settings/nurse-intake", // audited by the flag service (flag.enable / flag.disable), no patient data

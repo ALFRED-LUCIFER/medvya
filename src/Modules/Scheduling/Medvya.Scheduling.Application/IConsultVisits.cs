@@ -62,3 +62,13 @@ public interface IOpenConsultations
     /// <summary>The ids, of those given, with an open consultation in this tenant.</summary>
     Task<IReadOnlySet<Guid>> OpenAsync(IReadOnlyCollection<Guid> appointmentIds, CancellationToken cancellationToken = default);
 }
+
+/// <summary>
+/// Which visits a nurse has escalated to the doctor (MDV-P1-103), asked of the module that owns the intake: an open escalation goes to the
+/// head of the queue on every screen until the consultation starts. Ids only; the reason stays with its owner.
+/// </summary>
+public interface IEscalatedVisits
+{
+    /// <summary>The ids, of those given, with an open escalation in this tenant.</summary>
+    Task<IReadOnlySet<Guid>> EscalatedAsync(IReadOnlyCollection<Guid> appointmentIds, CancellationToken cancellationToken = default);
+}

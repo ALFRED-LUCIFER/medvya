@@ -65,6 +65,23 @@ public sealed class IntakeEndpointTests(PostgresFixture sql) : IClassFixture<Pos
     }
 
     [Fact]
+    public async Task WithTheSwitchOffTheIntakeRoutesDoNotExistAndTurningItOnNeedsNoRedeploy()
+    {
+        await FlagAsync(true);
+        var visit = await WithNurseAsync();
+        await FlagAsync(false);
+
+        using (var read = await Client(h.Nurse).GetAsync(U($"/v1/intake/{visit}"))) Assert.Equal(HttpStatusCode.NotFound, read.StatusCode);
+        using (var write = await Client(h.Nurse).PutAsJsonAsync(U($"/v1/intake/{visit}"), new { vitals = new[] { new { kind = "Pulse", value = 70 } } }))
+            Assert.Equal(HttpStatusCode.NotFound, write.StatusCode);
+        using (var desk = await Client(h.Reception).GetAsync(U($"/v1/intake/{visit}")))
+            Assert.Equal(HttpStatusCode.Forbidden, desk.StatusCode); // the role check still comes first
+
+        await FlagAsync(true);
+        using (var on = await Client(h.Nurse).GetAsync(U($"/v1/intake/{visit}"))) Assert.Equal(HttpStatusCode.OK, on.StatusCode);
+    }
+
+    [Fact]
     public async Task TheNurseWorksTheIntakeEndToEndAndOthersAreRefused()
     {
         await FlagAsync(true);

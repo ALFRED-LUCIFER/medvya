@@ -22,11 +22,11 @@ public static class IntakeEndpoints
 {
     /// <summary>
     /// Nurse intake (MDV-P2-007). Signed in with "Vitals and allergies entry" at Full; the use case then checks clinical access to the patient at the visit's facility and writes the audit event with the patient.
-    /// Ids only in paths; nothing about the patient in a URL.
+    /// Ids only in paths; nothing about the patient in a URL. With the practice's nurse-intake switch off the routes answer 404 (MDV-P0-028).
     /// </summary>
     public static IEndpointRouteBuilder MapIntakeEndpoints(this IEndpointRouteBuilder app)
     {
-        var intake = app.MapGroup("/v1/intake").RequireCapability(Capability.VitalsAllergiesEntry, Access.Full);
+        var intake = app.MapGroup("/v1/intake").RequireCapability(Capability.VitalsAllergiesEntry, Access.Full).RequireFeature(IntakeFlag.Key);
 
         intake.MapGet("/{appointmentId:guid}", Screen).AuditedByUseCase("intake.read", "intake", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
         intake.MapPut("/{appointmentId:guid}", async (Guid appointmentId, [FromBody] RecordIntake? body, [FromServices] IIntake service, CancellationToken ct) =>

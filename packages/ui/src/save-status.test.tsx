@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import axe from 'axe-core';
-import { SaveStatus, StickyActionBar, type SaveState } from './index';
+import { cn, SaveStatus, StickyActionBar, type SaveState } from './index';
 
 afterEach(cleanup);
 
@@ -36,6 +36,13 @@ describe('SaveStatus (MDV-P1-082)', () => {
     // Opacity only: no slide or zoom class that would move the text.
     expect(region.innerHTML).toContain('fade-in');
     expect(region.innerHTML).not.toMatch(/slide-in|zoom-in/);
+  });
+});
+
+describe('cn', () => {
+  it('keeps a type token beside a text colour, and lets a later type token replace it', () => {
+    expect(cn('text-body text-muted-foreground')).toBe('text-body text-muted-foreground');
+    expect(cn('text-label text-danger-text', 'text-caption')).toBe('text-danger-text text-caption');
   });
 });
 

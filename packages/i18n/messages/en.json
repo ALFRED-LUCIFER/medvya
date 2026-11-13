@@ -57,6 +57,8 @@
   "session.signIn": "Sign in",
   "session.signOut": "Sign out",
   "session.signedInAs": "Signed in as {name}",
+  "field.required": "(required)",
+  "field.optional": "(optional)",
   "session.failed": "Sign-in did not complete. Try again, or ask your clinic admin if it keeps happening.",
   "session.failedMfa": "Medvya needs a second sign-in step, such as the Microsoft Authenticator app or a code by text message. This sign-in did not use one.",
   "session.failedMfa.how": "Add a second step to your Microsoft account, then sign in again.",

@@ -56,6 +56,8 @@
   "session.signIn": "تسجيل الدخول",
   "session.signOut": "تسجيل الخروج",
   "session.signedInAs": "تم تسجيل الدخول باسم {name}",
+  "field.required": "(مطلوب)",
+  "field.optional": "(اختياري)",
   "session.failed": "لم يكتمل تسجيل الدخول. حاول مرة أخرى، أو اسأل مسؤول العيادة إذا تكرر ذلك.",
   "session.failedMfa": "يتطلب Medvya خطوة ثانية لتسجيل الدخول، مثل تطبيق Microsoft Authenticator أو رمز برسالة نصية. لم يستخدم تسجيل الدخول هذا أيًا منها.",
   "session.failedMfa.how": "أضف خطوة ثانية إلى حساب Microsoft الخاص بك، ثم سجّل الدخول مرة أخرى.",

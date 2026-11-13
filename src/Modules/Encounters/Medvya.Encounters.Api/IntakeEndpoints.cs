@@ -22,11 +22,12 @@ public static class IntakeEndpoints
 {
     /// <summary>
     /// Nurse intake (MDV-P2-007). Signed in with "Vitals and allergies entry" at Full; the use case then checks clinical access to the patient at the visit's facility and writes the audit event with the patient.
-    /// Ids only in paths; nothing about the patient in a URL. With the practice's nurse-intake switch off the routes answer 404 (MDV-P0-028).
+    /// Ids only in paths; nothing about the patient in a URL. The read, vitals and allergy routes also serve the doctor's consultation entry (audit P0-2),
+    /// so they work with the practice's nurse-intake switch off; the nurse-only escalate, medicines and handoff routes then answer 404 (MDV-P0-028).
     /// </summary>
     public static IEndpointRouteBuilder MapIntakeEndpoints(this IEndpointRouteBuilder app)
     {
-        var intake = app.MapGroup("/v1/intake").RequireCapability(Capability.VitalsAllergiesEntry, Access.Full).RequireFeature(IntakeFlag.Key);
+        var intake = app.MapGroup("/v1/intake").RequireCapability(Capability.VitalsAllergiesEntry, Access.Full);
 
         intake.MapGet("/{appointmentId:guid}", Screen).AuditedByUseCase("intake.read", "intake", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
         intake.MapPut("/{appointmentId:guid}", async (Guid appointmentId, [FromBody] RecordIntake? body, [FromServices] IIntake service, CancellationToken ct) =>
@@ -40,7 +41,7 @@ public static class IntakeEndpoints
             .AuditedByUseCase("intake.keep", "intake", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
         intake.MapPost("/{appointmentId:guid}/escalate", async (Guid appointmentId, [FromBody] EscalateIntake? body, [FromServices] IIntake service, CancellationToken ct) =>
                 await service.EscalateAsync(appointmentId, body ?? new EscalateIntake(null), ct) is { } view ? Results.Ok(view) : Results.NotFound())
-            .AuditedByUseCase("intake.escalate", "intake", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
+            .AuditedByUseCase("intake.escalate", "intake", AuditPurpose.Treatment).AddEndpointFilter(MapErrors).RequireFeature(IntakeFlag.Key);
         // Allergies and patient-reported medicines (MDV-P2-008). The handoff below is impossible until every allergy has a status.
         intake.MapPost("/{appointmentId:guid}/allergies", async (Guid appointmentId, [FromBody] AddAllergy? body, [FromServices] IIntake service, CancellationToken ct) =>
                 await service.AddAllergyAsync(appointmentId, body ?? new AddAllergy(null, null, null), ct) is { } view ? Results.Ok(view) : Results.NotFound())
@@ -53,10 +54,10 @@ public static class IntakeEndpoints
             .AuditedByUseCase("intake.allergy.none", "intake", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
         intake.MapPost("/{appointmentId:guid}/medicines", async (Guid appointmentId, [FromBody] AddMedicine? body, [FromServices] IIntake service, CancellationToken ct) =>
                 await service.AddMedicineAsync(appointmentId, body ?? new AddMedicine(null, null, null, false), ct) is { } view ? Results.Ok(view) : Results.NotFound())
-            .AuditedByUseCase("intake.medicine.add", "intake", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
+            .AuditedByUseCase("intake.medicine.add", "intake", AuditPurpose.Treatment).AddEndpointFilter(MapErrors).RequireFeature(IntakeFlag.Key);
         intake.MapPost("/{appointmentId:guid}/handoff", async (Guid appointmentId, [FromServices] IIntake service, CancellationToken ct) =>
                 await service.HandOffAsync(appointmentId, ct) is { } view ? Results.Ok(view) : Results.NotFound())
-            .AuditedByUseCase("intake.handoff", "intake", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
+            .AuditedByUseCase("intake.handoff", "intake", AuditPurpose.Treatment).AddEndpointFilter(MapErrors).RequireFeature(IntakeFlag.Key);
 
         // The treating doctor's urgent items (feeds Today, MDV-P2-002): a doctor's capability, not the nurse's.
         app.MapGroup("/v1/intake-escalations").RequireCapability(Capability.Patient360Chart, Access.Full)

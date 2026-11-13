@@ -33,11 +33,11 @@ const sizeTokens = ['w-topbar', 'w-topbar-phone', 'w-rail', 'w-sidebar', 'w-head
 const widthTokens = ['max-w-page', 'max-w-reading', 'max-w-measure', 'max-w-form', 'max-w-panel', 'max-w-panel-chart'];
 
 // Shows what the browser computed, so the specimen measures the token rather than restating it.
-function Measured({ className, read, children }: { className: string; read: (s: CSSStyleDeclaration) => string; children?: ReactNode }) {
+function Measured({ name, className = name, read, children }: { name: string; className?: string; read: (s: CSSStyleDeclaration) => string; children?: ReactNode }) {
   const [value, setValue] = useState('');
   return (
     <div className="flex flex-wrap items-baseline gap-3">
-      <code className="w-56 shrink-0 text-xs">{className}</code>
+      <code className="w-56 shrink-0 text-xs">{name}</code>
       <span className="w-44 shrink-0 text-xs text-muted-foreground tabular-nums">{value}</span>
       <div ref={el => { if (el) setValue(read(getComputedStyle(el))); }} className={className}>{children}</div>
     </div>
@@ -83,22 +83,22 @@ export default function UiGallery({ switcher }: { switcher: ReactNode }) {
       </Section>
       <section className="flex flex-col gap-3">
         <h2 className="text-lg font-bold">Type tokens</h2>
-        {typeTokens.map(c => <Measured key={c} className={c} read={s => `${s.fontSize} / ${s.lineHeight} · ${s.fontWeight}`}>Meera Iyer · DQ-10-4482 · ميرا</Measured>)}
+        {typeTokens.map(c => <Measured key={c} name={c} read={s => `${s.fontSize} / ${s.lineHeight} · ${s.fontWeight}`}>Meera Iyer · DQ-10-4482 · ميرا</Measured>)}
       </section>
       <section className="flex flex-col gap-3">
         <h2 className="text-lg font-bold">Spacing scale and layout sizes</h2>
-        {[...spaceTokens, ...sizeTokens].map(c => <Measured key={c} className={`${c} h-4 shrink-0 bg-brand-700`} read={s => s.width} />)}
+        {[...spaceTokens, ...sizeTokens].map(c => <Measured key={c} name={c} className={`${c} h-4 shrink-0 bg-brand-700`} read={s => s.width} />)}
       </section>
       <section className="flex flex-col gap-3">
         <h2 className="text-lg font-bold">Widths</h2>
-        {widthTokens.map(c => <Measured key={c} className={c} read={s => s.maxWidth}>{c}</Measured>)}
-        <Measured className="hidden wide:block" read={s => s.display}>Shown from the wide breakpoint (1024 px)</Measured>
+        {widthTokens.map(c => <Measured key={c} name={c} read={s => s.maxWidth}>{c}</Measured>)}
+        <Measured name="wide:block" className="hidden wide:block" read={s => s.display}>Shown from the wide breakpoint (1024 px)</Measured>
       </section>
       <section className="flex flex-col gap-3">
         <h2 className="text-lg font-bold">Radius, elevation and motion</h2>
         {['rounded-sm', 'rounded-md', 'rounded-lg', 'rounded-full', 'shadow-popover', 'shadow-dialog'].map(c =>
-          <Measured key={c} className={`${c} size-11 shrink-0 border bg-card`} read={s => (c.startsWith('shadow') ? 'elevation' : s.borderRadius)} />)}
-        <Measured className="transition-colors duration-fast ease-out" read={s => `${s.transitionDuration} ${s.transitionTimingFunction}`}>duration-fast ease-out</Measured>
+          <Measured key={c} name={c} className={`${c} size-11 shrink-0 border bg-card`} read={s => (c.startsWith('shadow') ? 'elevation' : s.borderRadius)} />)}
+        <Measured name="duration-fast ease-out" className="transition-colors duration-fast ease-out" read={s => `${s.transitionDuration} ${s.transitionTimingFunction}`}>Motion</Measured>
       </section>
     </main>
   );

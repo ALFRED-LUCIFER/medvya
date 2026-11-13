@@ -2,20 +2,20 @@ import * as React from "react"
 import { cn } from "#lib/utils"
 import { Switch as SwitchPrimitive } from "radix-ui"
 
-// The button is a 44 px target around the 32 px track; the negative margins keep the layout the size of the track (MDV-P1-077).
+// Focus uses the global 2px ring from styles.css on the 44 px button. The button is a 44 px target around the 32 px track; the negative margins keep the layout the size of the track (MDV-P1-077).
 function Switch({ className, ...props }: React.ComponentProps<typeof SwitchPrimitive.Root>) {
   return (
     <SwitchPrimitive.Root
       data-slot="switch"
       className={cn(
-        "peer group/switch -mx-1.5 -my-[0.8rem] inline-flex size-11 shrink-0 items-center justify-center rounded-full outline-none disabled:cursor-not-allowed",
+        "peer group/switch -mx-1.5 -my-[0.8rem] inline-flex size-11 shrink-0 items-center justify-center rounded-full disabled:cursor-not-allowed",
         className
       )}
       {...props}
     >
       <span
         data-slot="switch-track"
-        className="inline-flex h-[1.15rem] w-8 items-center rounded-full border border-transparent shadow-xs transition-colors group-focus-visible/switch:border-ring group-focus-visible/switch:ring-[3px] group-focus-visible/switch:ring-ring/50 group-disabled/switch:opacity-50 group-data-[state=checked]/switch:bg-primary group-data-[state=unchecked]/switch:bg-input dark:group-data-[state=unchecked]/switch:bg-input/80"
+        className="inline-flex h-[1.15rem] w-8 items-center rounded-full border border-transparent shadow-xs transition-colors group-disabled/switch:opacity-50 group-data-[state=checked]/switch:bg-primary group-data-[state=unchecked]/switch:bg-input dark:group-data-[state=unchecked]/switch:bg-input/80"
       >
         <SwitchPrimitive.Thumb
           data-slot="switch-thumb"

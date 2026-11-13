@@ -1106,7 +1106,7 @@ for (const locale of ['en', 'ar'] as const) {
     expect(bodies).toEqual([{ facilityId: 'f-1', date: null }]);
 
     await page.emulateMedia({ media: 'print' });
-    const sections = page.getByRole('region');
+    const sections = page.getByRole('region').filter({ has: page.getByRole('heading', { level: 2 }) }); // the doctor pages, not the table regions inside them
     await expect(sections).toHaveCount(2);
     await expect(sections.first()).toContainText('Meera');
     await expect(sections.first()).toContainText('09:00'); // facility time, not New York

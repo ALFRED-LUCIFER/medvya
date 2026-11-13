@@ -58,7 +58,7 @@ export default function ApprovalDetail({ vm, operator }: { vm: DetailVm; operato
       <section aria-labelledby="approvals-docs" className="flex flex-col gap-2">
         <h3 id="approvals-docs" className="text-base font-bold">{t('platform.approvals.docs.title')}</h3>
         <p className="text-sm text-muted-foreground">{t('platform.approvals.docs.manual')}</p>
-        <Table label={t('platform.approvals.docs.title')}>
+        <Table label={t('platform.approvals.docs.tableLabel')}>
           <TableHeader>
             <TableRow>
               <TableHead>{t('platform.approvals.docs.document')}</TableHead>
@@ -126,7 +126,7 @@ export default function ApprovalDetail({ vm, operator }: { vm: DetailVm; operato
       <section aria-labelledby="approvals-history" className="flex flex-col gap-2">
         <h3 id="approvals-history" className="text-base font-bold">{t('platform.approvals.history.title')}</h3>
         {d.history.length === 0 ? <p className="text-sm text-muted-foreground">{t('platform.approvals.history.empty')}</p> : (
-          <Table label={t('platform.approvals.history.title')}>
+          <Table label={t('platform.approvals.history.tableLabel')}>
             <TableHeader>
               <TableRow>
                 <TableHead>{t('platform.audit.when')}</TableHead>

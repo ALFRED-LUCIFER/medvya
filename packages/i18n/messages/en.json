@@ -2811,6 +2811,7 @@
   "intake.action.keep": "Keep this value",
   "intake.action.keepFor": "Keep this value: {name}",
   "intake.save": "Save vitals",
+  "intake.record": "Record vitals and weight",
   "intake.error.value": "Enter a number with at most one decimal place, or leave it blank.",
   "intake.error.implausible": "This value is not possible. Check the reading and measure again.",
   "intake.error.too_precise": "Enter at most one decimal place.",

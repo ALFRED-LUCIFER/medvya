@@ -24,10 +24,14 @@ public sealed class FormularyService(PrescribingDbContext db, IStaffAccess staff
         var country = await CountryAsync(cancellationToken);
         var rules = FormularyRules.For(country);
         IQueryable<FormularyItem> items = db.FormularyItems.AsNoTracking().Where(i => i.Country == country && i.Active);
-        var q = Escape(query?.Trim() ?? "");
-        var (contains, starts) = ($"%{q}%", $"{q}%"); // blank matches everything; a generic that starts with the text comes first
-        items = items.Where(i => EF.Functions.ILike(i.Generic, contains) || i.Brands.Any(b => EF.Functions.ILike(b, contains)));
-        var rows = await items.OrderByDescending(i => EF.Functions.ILike(i.Generic, starts)).ThenBy(i => i.Generic).ThenBy(i => i.Strength).ThenBy(i => i.Form)
+        var text = query?.Trim() ?? "";
+        var q = Escape(text);
+        var (contains, starts) = ($"%{q}%", $"{q}%"); // blank matches everything
+        // MDV-AUDIT-1093: a short term ("az") matches only names that start with it, so look-alikes inside a word (gliclazide) stay out; from 3 characters it also matches inside a name.
+        var pattern = text.Length < 3 ? starts : contains;
+        items = items.Where(i => EF.Functions.ILike(i.Generic, pattern) || i.Brands.Any(b => EF.Functions.ILike(b, pattern)));
+        // A generic or a brand that starts with the text comes first.
+        var rows = await items.OrderByDescending(i => EF.Functions.ILike(i.Generic, starts) || i.Brands.Any(b => EF.Functions.ILike(b, starts))).ThenBy(i => i.Generic).ThenBy(i => i.Strength).ThenBy(i => i.Form)
             .Take(Math.Clamp(limit, 1, MaxLimit)).ToListAsync(cancellationToken);
         return rows.Select(i => View(i, rules)).ToList();
     }

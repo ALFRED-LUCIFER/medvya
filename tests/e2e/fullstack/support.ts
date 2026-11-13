@@ -17,8 +17,12 @@ export async function signIn(page: Page, user: RegExp, locale: 'en' | 'ar' = 'en
   await page.getByRole('main').getByRole('textbox').press('Enter');
   await page.getByRole('link', { name: user }).click();
   await page.waitForURL(/\/app\/(choose-facility|front-desk|schedule)/);
-  if (page.url().includes('choose-facility')) await page.getByText(/\(synthetic\) · /).first().click();
-  await expect(page.getByRole('navigation').first()).toBeVisible();
+  // With one clinic the app chooses it itself (UX-08) and the picker never shows, so wait for either, and click only a picker that is there.
+  const picker = page.getByText(/\(synthetic\) · /).first();
+  const navigation = page.getByRole('navigation').first();
+  await expect(picker.or(navigation).first()).toBeVisible();
+  if (await picker.isVisible()) await picker.click();
+  await expect(navigation).toBeVisible();
 }
 
 export async function expectNoAxeViolations(page: Page) {

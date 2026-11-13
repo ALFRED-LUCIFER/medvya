@@ -441,6 +441,8 @@ public sealed class RxAuthorisationTests(PostgresFixture sql, AzuriteFixture blo
         foreach (var i in Enumerable.Range(1, 12)) await PrescribeAsync("Cetirizine", Twice with { Instructions = $"Synthetic note {i}" }); // more than one A5 page
         foreach (var alert in (await h.Get<IPrescriptions>(h.Doctor).CheckAsync(encounter))!.Alerts.Where(a => a.Severity == RxSeverity.Severe))
             await h.Get<IPrescriptions>(h.Doctor).OverrideAsync(encounter, new OverrideRxAlert(alert.Key, "Synthetic reason"));
+        await h.Get<IProblemList>(h.Doctor).AddAsync(encounter, new AddProblem(null, "Hypertension (synthetic)", ProblemVerification.Provisional, null));
+        await h.Get<IFollowUps>(h.Doctor).SetAsync(encounter, new SetFollowUp("P2W"));
         using (var ok = await AuthoriseAsync(h.Doctor)) Assert.Equal(HttpStatusCode.OK, ok.StatusCode);
 
         var hashes = new List<string>();
@@ -450,6 +452,8 @@ public sealed class RxAuthorisationTests(PostgresFixture sql, AzuriteFixture blo
             Assert.Equal(HttpStatusCode.OK, r.StatusCode);
             Assert.Equal("application/pdf", r.Content.Headers.ContentType?.MediaType);
             var bytes = await r.Content.ReadAsByteArrayAsync();
+            Assert.Equal("%PDF-", Encoding.ASCII.GetString(bytes, 0, 5)); // a real PDF, not an error body (MDV-AUDIT-1098)
+            Assert.True(bytes.Length > 5_000, $"{paper.Name}: {bytes.Length} bytes");
             var hash = Convert.ToHexStringLower(SHA256.HashData(bytes));
             Assert.Equal(hash, r.Headers.GetValues("X-Content-SHA256").Single());
             hashes.Add(hash);
@@ -467,6 +471,11 @@ public sealed class RxAuthorisationTests(PostgresFixture sql, AzuriteFixture blo
             foreach (var expected in new[] { "1. Metformin 500 mg Tablet", "Take 1 tablet by mouth twice a day after food", "Schedule H drug. Warning", "Allergies: no known allergies" })
                 Assert.Contains(expected, text, StringComparison.Ordinal);
             Assert.Contains("https://clinic.test/app/verify/rx/", text.Replace(" ", "", StringComparison.Ordinal), StringComparison.Ordinal); // A5 wraps the long link
+            var packed = text.Replace(" ", "", StringComparison.Ordinal); // wrapping may break a line anywhere
+            foreach (var expected in new[] { "IyerFamilyClinic(synthetic)·Adyar(synthetic)", "Diagnosis:Hypertension(synthetic)(provisional)", "Follow-up:onorafter", "Signature:____", "Authorisedby" })
+                Assert.Contains(expected, packed, StringComparison.Ordinal);
+            Assert.Matches(@"·Age\d+·MRN", packed);
+            Assert.DoesNotMatch("[0-9a-f]{64}", packed); // the content hash is on the QR verify page, not on the patient's copy (MDV-AUDIT-1097)
             Assert.True(pages[^1].Shapes > 200, "the QR code is drawn"); // a version 5+ code has hundreds of dark modules
         }
         await using (var db = sql.Prescribing(h.Tenant))
@@ -560,6 +569,7 @@ public sealed class RxAuthorisationTests(PostgresFixture sql, AzuriteFixture blo
         var body = await r.Content.ReadAsStringAsync();
         var view = JsonDocument.Parse(body).RootElement;
         Assert.Equal(("Valid", "Dr. Arjun Rao (synthetic)", 1), (view.GetProperty("status").GetString(), view.GetProperty("doctor").GetString(), view.GetProperty("lines").GetInt32()));
+        Assert.Matches("^[0-9a-f]{64}$", view.GetProperty("contentHash").GetString()); // the hash moved here from the patient's copy
         foreach (var phi in new[] { "Meera", "000001", "1972", "Metformin", h.Patient.ToString() })
             Assert.DoesNotContain(phi, body, StringComparison.OrdinalIgnoreCase);
 

@@ -67,6 +67,11 @@ public sealed class FormularyTests(PostgresFixture sql) : IClassFixture<Postgres
         Assert.True((await Doctor(india).SearchAsync(null, 25)).Count is > 0 and <= 25); // blank lists the first ones
         Assert.Equal(2, (await Doctor(india).SearchAsync("Atorvastatin", 25)).Count); // strength options come back as separate rows
         Assert.Single(await Doctor(india).SearchAsync("a", 1)); // the limit holds
+        // MDV-AUDIT-1093: a short term matches names that start with it only; "az" must not bring gliclazide or omeprazole.
+        var short2 = (await Doctor(india).SearchAsync("az", 25)).Select(r => r.Generic).ToList();
+        Assert.Contains("Azithromycin", short2);
+        Assert.All(short2, g => Assert.StartsWith("az", g, StringComparison.OrdinalIgnoreCase));
+        Assert.Contains("Gliclazide", (await Doctor(india).SearchAsync("clazi", 25)).Select(r => r.Generic)); // three characters or more also match inside a name
     }
 
     [Fact]

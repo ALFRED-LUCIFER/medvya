@@ -6,6 +6,7 @@ import { ApiError } from '../../schedule/services/scheduleApi';
 import { overrideSchema } from '../domain/checks';
 import { startReauth } from '../../encounters/services/noteApi';
 import { authoriseProblem, type AuthoriseProblem } from '../domain/authorisation';
+import { withDefaults } from '../domain/addMedicine';
 import { freeTextSchema, invalidFields, problemOf, toDraft, type PrintLanguage, type RxLine, type RxProblem, type SaveState, type SigDraft, type SigField } from '../domain/prescription';
 import {
   addFreeText, addFromFormulary, authorise, cancelPrescription, fetchAuthorisation, fetchChecks, fetchPrescription, includeLine, overrideAlert, saveSig, searchMedicines,
@@ -126,7 +127,8 @@ export function usePrescriptionController(encounterId: string) {
     onField: (line: RxLine, field: SigField, value: string) => {
       const id = line.id;
       if (!id) return;
-      const draft = { ...draftOf(line), [field]: value };
+      const before = draftOf(line);
+      const draft = withDefaults(line, before, { ...before, [field]: value }, field);
       setDrafts(d => ({ ...d, [id]: draft }));
       const waiting = pending.current.get(id);
       if (waiting) clearTimeout(waiting.timer);

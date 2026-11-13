@@ -85,7 +85,10 @@ public sealed record RxPrintLine(bool Discontinue, string Medicine, string? Stre
 public sealed record RxPrintView(
     RxAuthorisationView Authorisation, string Clinic, string TimeZone, string Doctor, string? Qualifications, string LicenceNumber, string LicenceAuthority,
     SlipPatient Patient, ChartAllergies Allergies, IReadOnlyList<string> AllergySubstances, IReadOnlyList<RxPrintLine> Lines, string VerifyUrl, IReadOnlyList<string> Qr,
-    int LayoutVersion, RxAdviceView? Advice = null);
+    int LayoutVersion, RxAdviceView? Advice = null, int PatientAge = 0, IReadOnlyList<RxDiagnosis>? Diagnoses = null, DateOnly? FollowUpOn = null);
+
+/// <summary>A diagnosis recorded in the consultation; a provisional one prints marked so, never as a confirmed diagnosis.</summary>
+public sealed record RxDiagnosis(string Description, bool Provisional);
 
 /// <summary>The advice for the patient (MDV-P2-043). Blank text is none.</summary>
 public sealed record SetRxAdvice(string? Text);
@@ -103,8 +106,8 @@ public sealed record RxPdf(byte[] Content, string Sha256);
 [JsonConverter(typeof(JsonStringEnumConverter<RxValidity>))]
 public enum RxValidity { Valid, Replaced, Cancelled }
 
-/// <summary>What the QR verify page shows (MDV-P2-017): validity, the paper's number and date, who issued it, and how many lines it has. No patient data.</summary>
-public sealed record RxVerifyView(RxValidity Status, string Number, int VersionNo, DateTimeOffset AuthorisedAt, string TimeZone, string Clinic, string Doctor, int Lines);
+/// <summary>What the QR verify page shows (MDV-P2-017): validity, the paper's number and date, who issued it, how many lines it has and the SHA-256 of the authorised lines. No patient data.</summary>
+public sealed record RxVerifyView(RxValidity Status, string Number, int VersionNo, DateTimeOffset AuthorisedAt, string TimeZone, string Clinic, string Doctor, int Lines, string ContentHash);
 
 /// <summary>The current print layout's version and when the signed-in doctor approved it as their own (null: not yet).</summary>
 public sealed record RxLayoutView(int LayoutVersion, DateTimeOffset? ApprovedAt);

@@ -77,6 +77,27 @@ test('a possible match appears while typing, blocks save until resolved, and the
   expect(saves[0]!.postDataJSON()).toMatchObject({ quick: true, fullName: 'Deepak Nair', duplicates: { decision: 'NotSamePerson', candidateIds: [existingId] } });
 });
 
+test('Book appointment carries the new patient (MDV-AUDIT-1102)', async ({ page }) => {
+  await desk(page);
+  await typeDeepak(page);
+  await page.getByRole('button', { name: 'Not the same person · continue' }).click();
+  await page.getByRole('button', { name: 'Register patient' }).click();
+  await expect(page.getByRole('link', { name: 'Book appointment' })).toHaveAttribute('href', /\/schedule\?patient=5e1d0001-0004-4000-8000-000000000099$/);
+});
+
+test('an unfinished registration survives opening another menu item and is restored, not lost (MDV-AUDIT-1103)', async ({ page }) => {
+  const { saves } = await desk(page);
+  await typeDeepak(page);
+  await page.getByRole('link', { name: 'Front desk' }).click();
+  await expect(page).toHaveURL(/\/front-desk/);
+  await page.getByRole('link', { name: 'Register patient' }).first().click();
+  await expect(page.getByText('Your unfinished registration was restored.')).toBeVisible();
+  await expect(page.getByLabel('Full name')).toHaveValue('Deepak Nair');
+  await page.getByRole('button', { name: 'Start again' }).click();
+  await expect(page.getByLabel('Full name')).toHaveValue('');
+  expect(saves).toHaveLength(0); // the draft lived in memory only, nothing was sent
+});
+
 test('a merge review request is sent as the decision; "Use existing record" registers nothing', async ({ page }) => {
   const { saves } = await desk(page);
   await typeDeepak(page);

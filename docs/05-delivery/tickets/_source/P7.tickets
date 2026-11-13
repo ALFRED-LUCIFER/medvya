@@ -93,6 +93,7 @@ ac:
 - Deactivating a user in the hospital IdP removes Medvya access within the SCIM cycle.
 - Role alone never grants another facility (tests).
 - Expired grants end access automatically.
+- An SSO-enforced tenant hides the one-time-code options and shows "Hospital staff? Sign in with SSO", chosen by a verified email domain or a tenant link without a lookup that reveals which organisations exist (moved from MDV-P0-011).
 
 === MDV-P7-005
 title: Hospital integration console: connection tiles for HIS, LIS, ABDM/HIE, SSO, messaging (H-01)

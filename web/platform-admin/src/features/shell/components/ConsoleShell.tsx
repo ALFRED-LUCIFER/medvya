@@ -61,7 +61,8 @@ export default function ConsoleShell({ displayName, role, items, languageSwitche
         </div>
       </nav>
       <div className="flex min-w-0 flex-col">
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-card px-4 py-2">
+        {/* 48 px, like the clinic's top bar: the page title row then starts at the same height on every console page (MDV-P2-059). */}
+        <header className="flex min-h-12 flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b bg-card px-4 py-0.5">
           <p className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
             <ShieldCheck className="size-4 shrink-0" aria-hidden />
             {t('platform.policy.short')}

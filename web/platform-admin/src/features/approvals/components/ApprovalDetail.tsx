@@ -2,7 +2,7 @@ import { Ban, Check, Eye, MessageSquareWarning, Play, X } from 'lucide-react';
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { useI18n, type MessageKey } from '@medvya/i18n';
-import { Button, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState } from '@medvya/ui';
+import { Button, Card, EmptyState, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState } from '@medvya/ui';
 import ReasonPanel from '../../shell/components/ReasonPanel';
 import type { ReasonForm } from '../../team/domain/team';
 import { isDestructive, isDocumentKind, sizeLabel, taxCheck, type Action, type Detail, type DocumentView, type EmailPreview } from '../domain/approvals';
@@ -23,7 +23,7 @@ const icons: Record<Action, typeof Check> = { approve: Check, 'request-changes':
 export default function ApprovalDetail({ vm, operator }: { vm: DetailVm; operator: string }) {
   const { t, formatDate, formatTime } = useI18n();
   const when = (iso: string) => `${formatDate(new Date(iso))} ${formatTime(new Date(iso))}`;
-  if (!vm.selected) return <p id="approvals-detail" className="rounded-lg border border-dashed border-border p-6 text-muted-foreground">{t('platform.approvals.choose')}</p>;
+  if (!vm.selected) return <EmptyState id="approvals-detail">{t('platform.approvals.choose')}</EmptyState>;
   if (vm.state !== 'ready' || !vm.detail)
     return <TableState state={vm.state === 'ready' ? 'error' : vm.state} messages={{ loading: t('platform.state.loading'), error: t(vm.notFound ? 'platform.approvals.error.gone' : 'platform.state.error'), empty: '' }}><></></TableState>;
   const d = vm.detail;
@@ -45,15 +45,14 @@ export default function ApprovalDetail({ vm, operator }: { vm: DetailVm; operato
         {d.reason && <p className="text-sm"><span className="font-semibold">{t('platform.approvals.lastReason')}</span> {d.reason}</p>}
       </header>
 
-      <section aria-labelledby="approvals-profile" className="flex flex-col gap-2 rounded-lg border border-border bg-card p-4">
-        <h3 id="approvals-profile" className="text-base font-bold">{t('platform.approvals.profile.title')}</h3>
+      <Card size="item" title={t('platform.approvals.profile.title')}>
         <dl className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
           {profile.map(([label, value]) => (
             <div key={label}><dt className="text-sm text-muted-foreground">{t(label)}</dt><dd dir="auto" className="font-semibold break-words">{value ?? t('platform.approvals.notGiven')}</dd></div>
           ))}
         </dl>
         <p className="text-sm font-semibold">{t(`platform.approvals.check.tax.${tax}` as MessageKey)}</p>
-      </section>
+      </Card>
 
       <section aria-labelledby="approvals-docs" className="flex flex-col gap-2">
         <h3 id="approvals-docs" className="text-base font-bold">{t('platform.approvals.docs.title')}</h3>
@@ -113,13 +112,13 @@ export default function ApprovalDetail({ vm, operator }: { vm: DetailVm; operato
           </ReasonPanel>
         )}
         {vm.sent && (
-          <div role="status" className="flex flex-col gap-2 rounded-lg border border-border bg-card p-4">
+          <Card size="item" role="status">
             <p className="font-semibold">{t('platform.approvals.sent.done')}</p>
             <p className="text-sm text-muted-foreground">{t('platform.approvals.sent.preview')}</p>
             <p className="font-semibold">{vm.sent.subject}</p>
             <p className="text-sm whitespace-pre-line">{vm.sent.body}</p>
             <Button variant="ghost" className="self-start" onClick={vm.onDismissSent}>{t('platform.link.done')}</Button>
-          </div>
+          </Card>
         )}
       </section>
 

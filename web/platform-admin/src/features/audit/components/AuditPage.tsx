@@ -1,6 +1,6 @@
 import { Download } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState } from '@medvya/ui';
+import { Button, PageContainer, PageHeader, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState } from '@medvya/ui';
 import ReasonPanel from '../../shell/components/ReasonPanel';
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
@@ -20,14 +20,9 @@ type Props = {
 export default function AuditPage({ vm }: Props) {
   const { t, formatDate, formatTime } = useI18n();
   return (
-    <>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-extrabold">{t('platform.audit.title')}</h1>
-          <p className="text-sm text-muted-foreground">{t('platform.audit.lead')}</p>
-        </div>
-        {vm.canExport && <Button variant="outline" onClick={vm.onStartExport}><Download aria-hidden />{t('platform.audit.export')}</Button>}
-      </div>
+    <PageContainer>
+      <PageHeader title={t('platform.audit.title')} description={t('platform.audit.lead')}
+        actions={vm.canExport && <Button variant="outline" onClick={vm.onStartExport}><Download aria-hidden />{t('platform.audit.export')}</Button>} />
       {vm.exporting && (
         <ReasonPanel title={t('platform.audit.exportTitle')} form={vm.form} confirmLabel={t('platform.audit.exportConfirm')} busy={vm.exportBusy}
           problem={vm.exportFailed ? t('platform.error.failed') : null} onConfirm={vm.onExport} onCancel={vm.onCancelExport}>
@@ -57,6 +52,6 @@ export default function AuditPage({ vm }: Props) {
         </Table>
       </TableState>
       {vm.hasMore && <Button variant="outline" className="self-start" onClick={vm.onLoadMore} loading={vm.loadingMore}>{t('platform.audit.more')}</Button>}
-    </>
+    </PageContainer>
   );
 }

@@ -77,12 +77,7 @@
     "web/clinic/src/features/session/components/FacilityPicker.tsx": 1,
     "web/clinic/src/features/session/components/SessionExpiredPage.tsx": 1,
     "web/clinic/src/features/session/components/SignInPage.tsx": 1,
-    "web/clinic/src/features/timeline/components/TimelinePage.tsx": 2,
-    "web/platform-admin/src/features/approvals/components/ApprovalsPage.tsx": 1,
-    "web/platform-admin/src/features/audit/components/AuditPage.tsx": 1,
-    "web/platform-admin/src/features/overview/components/OverviewPage.tsx": 1,
-    "web/platform-admin/src/features/session/components/SignInPage.tsx": 1,
-    "web/platform-admin/src/features/team/components/TeamPage.tsx": 1
+    "web/clinic/src/features/timeline/components/TimelinePage.tsx": 2
   },
   "inlineCard": {
     "web/clinic/src/features/child-health/components/ChildHealthCard.tsx": 2,
@@ -142,13 +137,7 @@
     "web/clinic/src/features/today/components/DoctorTodayPage.tsx": 3,
     "web/clinic/src/features/visits/components/DeskVisits.tsx": 1,
     "web/clinic/src/features/visits/components/VisitsCard.tsx": 1,
-    "web/clinic/src/features/waitlist/components/WaitlistPage.tsx": 3,
-    "web/platform-admin/src/features/approvals/components/ApprovalDetail.tsx": 2,
-    "web/platform-admin/src/features/approvals/components/DocumentViewer.tsx": 1,
-    "web/platform-admin/src/features/overview/components/OverviewPage.tsx": 1,
-    "web/platform-admin/src/features/shell/components/ConsoleShell.tsx": 1,
-    "web/platform-admin/src/features/shell/components/ReasonPanel.tsx": 1,
-    "web/platform-admin/src/features/team/components/TeamPage.tsx": 2
+    "web/clinic/src/features/waitlist/components/WaitlistPage.tsx": 3
   },
   "localMessage": {
     "web/clinic/src/features/documents/components/DocumentsPage.tsx": 1,

@@ -18,7 +18,7 @@ export function useAuditController(canExport: boolean) {
     getNextPageParam: last => (last.length === pageSize ? last[last.length - 1] : undefined),
   });
   const [exporting, setExporting] = useState(false);
-  const form = useForm<ReasonForm>({ resolver: zodResolver(reasonForm), defaultValues: { reason: '' } });
+  const form = useForm<ReasonForm>({ resolver: zodResolver(reasonForm), defaultValues: { reason: '' }, shouldFocusError: false });
   const run = useMutation({
     mutationFn: ({ reason }: ReasonForm) => exportAudit(reason),
     onSuccess: () => { setExporting(false); form.reset(); void client.invalidateQueries({ queryKey: auditKey }); },

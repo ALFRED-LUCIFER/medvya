@@ -1,7 +1,7 @@
 import { useId, type FormEventHandler, type ReactNode } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { useI18n, type MessageKey } from '@medvya/i18n';
-import { Button, Card, Label, Textarea } from '@medvya/ui';
+import { Button, Card, ErrorSummary, Field, Textarea } from '@medvya/ui';
 
 type Props = {
   title: string;
@@ -21,18 +21,17 @@ type Props = {
 export default function ReasonPanel({ title, children, form, confirmLabel, destructive, busy, problem, onConfirm, onCancel }: Props) {
   const { t } = useI18n();
   const id = useId();
-  const error = form.formState.errors.reason?.message;
+  const code = form.formState.errors.reason?.message;
+  const error = code ? t(`platform.error.${code}` as MessageKey) : undefined;
   return (
     <Card title={title}>
       {children}
       <form onSubmit={onConfirm} noValidate className="flex flex-col gap-3">
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor={id}>{t('platform.reason.label')}</Label>
-          <Textarea id={id} rows={2} aria-invalid={error ? true : undefined} aria-describedby={`${id}-hint`} {...form.register('reason')} />
-          <p id={`${id}-hint`} className={error ? 'text-sm font-semibold text-danger-700' : 'text-sm text-muted-foreground'}>
-            {error ? t(`platform.error.${error}` as MessageKey) : t('platform.reason.hint')}
-          </p>
-        </div>
+        <ErrorSummary title={t('field.errorSummary')} focusKey={form.formState.submitCount}
+          errors={error ? [{ id, label: t('platform.reason.label'), message: error }] : []} />
+        <Field id={id} label={t('platform.reason.label')} required hint={t('platform.reason.hint')} error={error}>
+          <Textarea rows={2} {...form.register('reason')} />
+        </Field>
         {problem && <p role="alert" className="text-sm font-semibold text-danger-700">{problem}</p>}
         <div className="flex flex-wrap gap-2">
           <Button type="submit" variant={destructive ? 'destructive' : 'default'} loading={busy}>{confirmLabel}</Button>

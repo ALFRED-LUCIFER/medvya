@@ -81,7 +81,8 @@ test('a reviewer opens a request, reads a document in the private viewer, approv
   await expect(page.getByLabel('Reason (saved in the audit log)')).toHaveValue('Documents checked and in order.'); // preset wording, editable
   await page.getByLabel('Reason (saved in the audit log)').fill('no');
   await page.getByRole('button', { name: 'Approve and email the owner' }).click();
-  await expect(page.getByText('Give a reason of at least 5 characters.')).toBeVisible();
+  await expect(page.getByRole('group', { name: 'There is a problem' })).toBeFocused(); // MDV-P2-058
+  await expect(page.getByLabel('Reason (saved in the audit log)')).toHaveAccessibleDescription(/Give a reason of at least 5 characters\./);
   expect(api.posts).toEqual([]);
   await page.getByLabel('Reason (saved in the audit log)').fill('Registration certificate and GSTIN checked');
   await page.getByRole('button', { name: 'Approve and email the owner' }).click();

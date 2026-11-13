@@ -15,8 +15,8 @@ export function useTeamController() {
   const [pending, setPending] = useState<PendingAction | null>(null);
   const [issued, setIssued] = useState<ShownLink | null>(null);
   const [copied, setCopied] = useState(false);
-  const inviteFormState = useForm<InviteForm>({ resolver: zodResolver(inviteForm), defaultValues: { displayName: '', email: '', role: 'Support', accessEndsOn: '', reason: '' } });
-  const reasonFormState = useForm<ReasonForm>({ resolver: zodResolver(reasonForm), defaultValues: { reason: '' } });
+  const inviteFormState = useForm<InviteForm>({ resolver: zodResolver(inviteForm), defaultValues: { displayName: '', email: '', role: 'Support', accessEndsOn: '', reason: '' }, shouldFocusError: false });
+  const reasonFormState = useForm<ReasonForm>({ resolver: zodResolver(reasonForm), defaultValues: { reason: '' }, shouldFocusError: false });
   const refresh = () => client.invalidateQueries({ queryKey: teamKey });
   const show = (link: IssuedLink, purpose: 'invite' | 'recover') => { setCopied(false); setIssued({ ...link, url: linkUrl(pageOrigin(), link.token), purpose }); };
 

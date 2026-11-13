@@ -25,7 +25,7 @@ export function useApprovalsController(role: PlatformRole) {
   const [viewing, setViewing] = useState<{ doc: DocumentView; url: string; contentType: string; openedAt: Date } | null>(null);
   const [viewerFailed, setViewerFailed] = useState(false);
   const [opening, setOpening] = useState<string | null>(null);
-  const reason = useForm<ReasonForm>({ resolver: zodResolver(reasonForm), defaultValues: { reason: '' } });
+  const reason = useForm<ReasonForm>({ resolver: zodResolver(reasonForm), defaultValues: { reason: '' }, shouldFocusError: false });
 
   const queue = useQuery({ queryKey: queueKey(filter), queryFn: () => fetchQueue(filter) });
   const detail = useQuery({ queryKey: detailKey(tenantId ?? ''), queryFn: () => fetchDetail(tenantId!), enabled: Boolean(tenantId) });

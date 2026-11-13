@@ -62,7 +62,7 @@ journey('J3', {
     const secondLocation = { ...reception, active: { ...reception.active, facilityId: 'f-2' } };
     const meeraId = '5e1d0001-0004-4000-8000-000000000001';
     await page.route('**/v1/me/context', r => r.fulfill({ json: secondLocation }));
-    await page.route('**/v1/patients/search**', r => r.fulfill({ json: { matchedOn: 'Name', items: [{ id: meeraId, initials: 'MI', ageYears: 54, ageEstimated: false, sexAtBirth: 'Female', mrnTail: '4482', status: 'Complete' }], page: 1, pageSize: 20, total: 1 } }));
+    await page.route('**/v1/patients/search**', r => r.fulfill({ json: { matchedOn: 'Name', items: [{ id: meeraId, initials: 'MI', fullName: 'Meera Iyer (synthetic)', ageYears: 54, ageEstimated: false, sexAtBirth: 'Female', mrnTail: '4482', mobileTail: '0101', status: 'Complete' }], page: 1, pageSize: 20, total: 1 } }));
     await page.route(`**/v1/patients/${meeraId}`, r => r.fulfill({ json: { id: meeraId, mrn: '004482', fullName: 'Meera Iyer (synthetic)', arabicName: null, dateOfBirth: '1972-03-12', dateOfBirthEstimated: false,
       ageYears: 54, sexAtBirth: 'Female', genderIdentity: null, preferredLanguage: 'Tamil', nationality: 'IN', mobile: '+919000000101', alternatePhone: null, email: null, status: 'Complete', registeredOn: '2026-01-01',
       address: null, identifiers: [], payer: null } }));
@@ -71,7 +71,7 @@ journey('J3', {
     const search = page.getByRole('searchbox', { name: 'Name, MRN, phone or ID' });
     await search.fill('meera');
     await search.press('Enter');
-    await page.getByRole('link', { name: /M I, 54 y, Female, MRN ending 4482/ }).click();
+    await page.getByRole('link', { name: /Meera Iyer \(synthetic\), 54 y, Female, MRN ending 4482/ }).click();
     await expect(page.getByRole('heading', { name: 'Meera Iyer (synthetic)', level: 1 })).toBeVisible();
   },
   // MDV-P1-072: the same desk checks in a patient registered at the first location; the visit is at the second one.

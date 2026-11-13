@@ -38,7 +38,7 @@ test('a weekly series: the review shows the conflict, the desk moves it, four vi
   await test.step('the same time next week is already booked for another patient', async () => {
     await page.goto(`/app/schedule?date=${days.taken}`);
     await slot(page, time).click();
-    await choosePatient(page, 'Meera', /^M I, 54 y, Female/);
+    await choosePatient(page, 'Meera', /^Meera Iyer \(synthetic\), 54 y, Female/);
     await bookingPanel(page).getByRole('button', { name: 'Confirm booking' }).click();
     await expect(bookingPanel(page)).toContainText('Appointment booked');
   });
@@ -46,7 +46,7 @@ test('a weekly series: the review shows the conflict, the desk moves it, four vi
   await test.step('review a weekly series of four: the second week shows its conflict before anything is booked', async () => {
     await page.goto('/app/schedule');
     await slot(page, time).click();
-    const panel = await choosePatient(page, patient.mobile, /^K P, \d+ y, Female/);
+    const panel = await choosePatient(page, patient.mobile, new RegExp(`^${patient.name}, \\d+ y, Female`));
     await panel.locator('summary').click(); // UX-10: repeating is folded until asked
     await panel.getByLabel('Number of visits').fill('4');
     await panel.getByRole('button', { name: 'Review series' }).click();

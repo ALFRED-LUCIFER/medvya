@@ -165,7 +165,7 @@ test('J1: a new clinic owner sets up the practice, Medvya approves it, then a pa
     await page.getByRole('link', { name: 'Schedule' }).first().click();
     // The clock is fixed and the first visit took the first free slot, so the first free slot now is later: this visit is the returning one.
     await page.getByRole('list', { name: /Arjun Menon/ }).getByRole('button', { name: /^Book / }).first().click();
-    const panel = await choosePatient(page, patient.mobile, /^L I, \d+ y, Female/);
+    const panel = await choosePatient(page, patient.mobile, new RegExp(`^${patient.name}, \\d+ y, Female`));
     await expect(panel).toContainText(`${patient.name} · MRN`);
     await panel.getByRole('button', { name: 'Confirm booking' }).click();
     await expect(panel).toContainText('Appointment booked');

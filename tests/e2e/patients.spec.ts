@@ -13,8 +13,8 @@ const receptionist = {
 };
 const meeraId = '5e1d0001-0004-4000-8000-000000000001';
 const rows = [
-  { id: meeraId, initials: 'MI', ageYears: 54, ageEstimated: false, sexAtBirth: 'Female', mrnTail: '4482', status: 'Complete' },
-  { id: '5e1d0001-0004-4000-8000-000000000002', initials: 'DN', ageYears: 47, ageEstimated: true, sexAtBirth: 'Male', mrnTail: '4483', status: 'Incomplete' },
+  { id: meeraId, initials: 'MI', fullName: 'Meera Iyer (synthetic)', ageYears: 54, ageEstimated: false, sexAtBirth: 'Female', mrnTail: '4482', mobileTail: '0101', status: 'Complete' },
+  { id: '5e1d0001-0004-4000-8000-000000000002', initials: 'DN', fullName: 'Deepak Nair (synthetic)', ageYears: 47, ageEstimated: true, sexAtBirth: 'Male', mrnTail: '4483', mobileTail: '0201', status: 'Incomplete' },
 ];
 const meera = {
   id: meeraId, mrn: 'DQ-10-4482', fullName: 'Meera Iyer (synthetic)', arabicName: null, dateOfBirth: '1972-03-12', dateOfBirthEstimated: false,
@@ -46,7 +46,7 @@ const found = (body: SearchBody) => ({
   json: { matchedOn: body.query ? 'Name' : 'Directory', items: body.query === 'nobody' ? [] : rows, page: body.page, pageSize: 20, total: body.query === 'nobody' ? 0 : 2 },
 });
 
-test('the desk finds a patient from the header, sees only initials and opens the record', async ({ page }) => {
+test('the desk finds a patient from the header, sees the full name and opens the record', async ({ page }) => {
   const searches = await deskWith(page, found);
   await page.goto('/front-desk');
   await page.getByRole('link', { name: 'Search patients' }).click();
@@ -66,11 +66,12 @@ test('the desk finds a patient from the header, sees only initials and opens the
   expect(page.url()).not.toContain('meera');
 
   const results = page.getByRole('main').getByRole('table');
-  await expect(results).not.toContainText('Meera');
-  await expect(page.getByRole('link', { name: /M I, 54 y, Female, MRN ending 4482/ })).toBeVisible();
-  await expect(page.getByRole('link', { name: /D N, about 47 y, Male, MRN ending 4483.*incomplete registration/ })).toBeVisible();
+  await expect(results).toContainText('Meera Iyer (synthetic)'); // MDV-AUDIT-1100: the name, with the phone and MRN tails, tells similar rows apart
+  await expect(results).not.toContainText('+91'); // never the whole phone number
+  await expect(page.getByRole('link', { name: /Meera Iyer \(synthetic\), 54 y, Female, MRN ending 4482, phone ending 0101/ })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Deepak Nair \(synthetic\), about 47 y, Male, MRN ending 4483, phone ending 0201.*incomplete registration/ })).toBeVisible();
 
-  await page.getByRole('link', { name: /M I, 54 y/ }).click();
+  await page.getByRole('link', { name: /Meera Iyer \(synthetic\), 54 y/ }).click();
   await expect(page).toHaveURL(`/patients/directory/${meeraId}`);
   await expect(page.getByRole('heading', { name: 'Meera Iyer (synthetic)', level: 1 })).toBeVisible();
   await expect(page.getByText('+919000000101')).toBeVisible();
@@ -125,7 +126,7 @@ test('keyboard only: search, then open the first result', async ({ page }) => {
   for (let i = 0; i < 3; i++) await page.keyboard.press('Tab'); // the three filters
   await page.keyboard.press('Tab'); // the results table's scroll area (focusable so a wide table scrolls by keyboard)
   await page.keyboard.press('Tab');
-  await expect(page.getByRole('link', { name: /M I, 54 y/ })).toBeFocused();
+  await expect(page.getByRole('link', { name: /Meera Iyer \(synthetic\), 54 y/ })).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(page.getByRole('heading', { name: 'Meera Iyer (synthetic)' })).toBeVisible();
 });

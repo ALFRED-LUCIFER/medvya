@@ -110,7 +110,7 @@ test.describe('the booking drawer on a tablet', () => {
     await tabTo(page, panel.getByRole('searchbox', { name: 'Name, MRN, phone or ID' }));
     await page.keyboard.type('Iyer');
     await page.keyboard.press('Enter');
-    const row = panel.getByRole('button', { name: /M I, 54 y, Female, MRN ending 0012/ });
+    const row = panel.getByRole('button', { name: /Meera Iyer \(synthetic\), 54 y, Female, MRN 0012/ });
     await tabTo(page, row);
     await page.keyboard.press('Enter');
     await expect(panel).toContainText('Meera Iyer (synthetic) · MRN 000012');

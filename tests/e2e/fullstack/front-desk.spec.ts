@@ -55,7 +55,7 @@ test('front desk: register, book, check in, see the board, cancel', async ({ pag
     await expect(rao(page)).toBeVisible();
     await expectNoAxeViolations(page);
     await rao(page).getByRole('button', { name: /^Book / }).first().click();
-    const panel = await choosePatient(page, patient.mobile, /^K P, \d+ y, Female/);
+    const panel = await choosePatient(page, patient.mobile, new RegExp(`^${patient.name}, \\d+ y, Female`));
     await expect(panel).toContainText(`${patient.name} · MRN`);
     const booking = page.waitForRequest(r => r.method() === 'POST' && new URL(r.url()).pathname === '/v1/appointments');
     const booked = page.waitForResponse(r => r.request().method() === 'POST' && new URL(r.url()).pathname === '/v1/appointments');
@@ -91,7 +91,7 @@ test('front desk: register, book, check in, see the board, cancel', async ({ pag
     await page.getByRole('link', { name: 'Schedule' }).first().click();
     const slots = rao(page).getByRole('button', { name: /^Book / });
     await slots.first().click();
-    const panel = await choosePatient(page, patient.mobile, /^K P, \d+ y, Female/);
+    const panel = await choosePatient(page, patient.mobile, new RegExp(`^${patient.name}, \\d+ y, Female`));
     await panel.getByRole('button', { name: 'Confirm booking' }).click();
     await expect(panel).toContainText('Appointment booked');
     await panel.getByRole('button', { name: 'Done' }).click();

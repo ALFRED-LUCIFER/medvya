@@ -157,7 +157,7 @@ export async function calendar(page: Page, locale = 'en') {
   await page.route('**/v1/slot-holds', r => r.fulfill({ json: { id: 'h-1', facilityId: 'f-1', calendarId: 'd-1', visitType: 'FollowUp', start: at('09:20'), end: at('09:40'), expiresAt: at('08:02') } }));
   await page.route('**/v1/slot-holds/h-1', r => r.fulfill({ status: 204 }));
   await page.route('**/v1/patients/search**', r => r.fulfill({ json: { matchedOn: 'Name', page: 1, pageSize: 20, total: 1,
-    items: [{ id: meera, initials: 'MI', ageYears: 54, ageEstimated: false, sexAtBirth: 'Female', mrnTail: '0012', status: 'Complete' }] } }));
+    items: [{ id: meera, initials: 'MI', fullName: 'Meera Iyer (synthetic)', ageYears: 54, ageEstimated: false, sexAtBirth: 'Female', mrnTail: '0012', mobileTail: '0101', status: 'Complete' }] } }));
   await page.route(`**/v1/schedule/patients/${meera}?*`, r => r.fulfill({ json: { id: meera, fullName: 'Meera Iyer (synthetic)', mrn: '000012' } }));
   await page.route('**/v1/appointments', r => {
     bookings.push(r.request().postDataJSON());

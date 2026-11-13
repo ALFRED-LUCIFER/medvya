@@ -98,10 +98,11 @@ public sealed record PatientSearch(string CountryCode, string? Query, DirectoryF
 }
 
 /// <summary>
-/// A privacy-safe result row (MDV-P1-018): initials, age, sex and the MRN tail only. Full demographics need the record opened,
-/// which is audited.
+/// A result row for staff who register and book patients (MDV-P1-018, MDV-AUDIT-1100): the full name, age, sex, the MRN tail and the phone tail, enough
+/// to tell two people apart without opening either record (each opening is audited). The rest of the demographics need the record opened.
+/// The doctor's ⌘K lookup is a different endpoint and still shows initials only.
 /// </summary>
-public sealed record PatientSearchRow(Guid Id, string Initials, int AgeYears, bool AgeEstimated, SexAtBirth SexAtBirth, string MrnTail, RegistrationStatus Status);
+public sealed record PatientSearchRow(Guid Id, string Initials, string FullName, int AgeYears, bool AgeEstimated, SexAtBirth SexAtBirth, string MrnTail, string MobileTail, RegistrationStatus Status);
 
 public sealed record PatientSearchResult(SearchKind MatchedOn, IReadOnlyList<PatientSearchRow> Items, int Page, int PageSize, int Total);
 

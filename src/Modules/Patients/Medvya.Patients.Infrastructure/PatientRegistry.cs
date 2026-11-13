@@ -169,20 +169,20 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
             ? patients.OrderByDescending(p => EF.Functions.Like(EF.Property<string>(p, SearchKey), phrase + "%") || EF.Functions.Like(EF.Property<string>(p, SearchKey), "% " + phrase + "%"))
                 .ThenByDescending(p => EF.Functions.TrigramsSimilarity(EF.Property<string>(p, SearchKey), phrase)).ThenBy(p => p.FullName).ThenBy(p => p.Id)
             : patients.OrderByDescending(p => p.RegisteredAt).ThenBy(p => p.Id);
-        var shown = ordered.Select(p => new { p.Id, p.FullName, p.DateOfBirth, p.DateOfBirthEstimated, p.SexAtBirth, p.Mrn, p.Status, p.CountryCode });
-        List<(Guid Id, string FullName, DateOnly DateOfBirth, bool DateOfBirthEstimated, SexAtBirth SexAtBirth, string Mrn, RegistrationStatus Status, string CountryCode)> rows;
+        var shown = ordered.Select(p => new { p.Id, p.FullName, p.DateOfBirth, p.DateOfBirthEstimated, p.SexAtBirth, p.Mrn, p.Mobile, p.Status, p.CountryCode });
+        List<(Guid Id, string FullName, DateOnly DateOfBirth, bool DateOfBirthEstimated, SexAtBirth SexAtBirth, string Mrn, string Mobile, RegistrationStatus Status, string CountryCode)> rows;
         if (fuzzy)
         {
             // One pass over the organisation's rows instead of a count and a page: the filter is the cost. Matches beyond the paging limit are not counted.
             var all = await shown.Take(PatientSearch.MaxPage * PatientSearch.PageSize).ToListAsync(cancellationToken);
             total = all.Count;
-            rows = [.. all.Skip((search.Page - 1) * PatientSearch.PageSize).Take(PatientSearch.PageSize).Select(p => (p.Id, p.FullName, p.DateOfBirth, p.DateOfBirthEstimated, p.SexAtBirth, p.Mrn, p.Status, p.CountryCode))];
+            rows = [.. all.Skip((search.Page - 1) * PatientSearch.PageSize).Take(PatientSearch.PageSize).Select(p => (p.Id, p.FullName, p.DateOfBirth, p.DateOfBirthEstimated, p.SexAtBirth, p.Mrn, p.Mobile, p.Status, p.CountryCode))];
         }
         else
             rows = [.. (await shown.Skip((search.Page - 1) * PatientSearch.PageSize).Take(PatientSearch.PageSize).ToListAsync(cancellationToken))
-                .Select(p => (p.Id, p.FullName, p.DateOfBirth, p.DateOfBirthEstimated, p.SexAtBirth, p.Mrn, p.Status, p.CountryCode))];
-        var items = rows.Select(p => new PatientSearchRow(p.Id, Initials(p.FullName), CountryRules.AgeOn(CountryRules.For(p.CountryCode).Today(now), p.DateOfBirth),
-            p.DateOfBirthEstimated, p.SexAtBirth, Tail(p.Mrn), p.Status)).ToList();
+                .Select(p => (p.Id, p.FullName, p.DateOfBirth, p.DateOfBirthEstimated, p.SexAtBirth, p.Mrn, p.Mobile, p.Status, p.CountryCode))];
+        var items = rows.Select(p => new PatientSearchRow(p.Id, Initials(p.FullName), p.FullName, CountryRules.AgeOn(CountryRules.For(p.CountryCode).Today(now), p.DateOfBirth),
+            p.DateOfBirthEstimated, p.SexAtBirth, Tail(p.Mrn), p.Mobile.Length <= 4 ? p.Mobile : p.Mobile[^4..], p.Status)).ToList();
         return new(term.Kind, items, search.Page, PatientSearch.PageSize, total);
     }
 

@@ -166,7 +166,7 @@ public sealed class EncounterTests(PostgresFixture sql) : IClassFixture<Postgres
         h.Clock.Advance(TimeSpan.FromDays(1));
         Assert.Equal("not_today", (await Assert.ThrowsAsync<VisitTransitionException>(() => Encounters(h.Doctor).StartAsync(new StartEncounter(visit)))).Code);
         Assert.Equal(0, await EncounterRowsAsync());
-        Assert.Equal(AppointmentState.CheckedIn, (await VisitAsync(visit)).State);
+        Assert.Equal(AppointmentState.ReadyForDoctor, (await VisitAsync(visit)).State);
     }
 
     [Fact]
@@ -190,7 +190,7 @@ public sealed class EncounterTests(PostgresFixture sql) : IClassFixture<Postgres
 
         var refused = await Assert.ThrowsAsync<OpenEncounterException>(() => Encounters(h.Doctor).StartAsync(new StartEncounter(deepak)));
         Assert.Equal(open!.Id, refused.EncounterId);
-        Assert.Equal(AppointmentState.CheckedIn, (await VisitAsync(deepak)).State);
+        Assert.Equal(AppointmentState.ReadyForDoctor, (await VisitAsync(deepak)).State);
 
         var second = await Encounters(h.Doctor).StartAsync(new StartEncounter(deepak, LeaveOpen: true));
         Assert.Equal(h.SecondPatient, second!.PatientId);

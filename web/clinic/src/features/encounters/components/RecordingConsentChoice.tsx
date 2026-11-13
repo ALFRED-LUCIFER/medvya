@@ -1,5 +1,5 @@
 import { useI18n } from '@medvya/i18n';
-import { recordingConsents, type RecordingConsent } from '../domain/note';
+import { recordingAvailable, recordingConsents, type RecordingConsent } from '../domain/note';
 
 type Props = { value: RecordingConsent | null; readOnly: boolean; onChange: (value: RecordingConsent) => void };
 
@@ -9,6 +9,7 @@ type Props = { value: RecordingConsent | null; readOnly: boolean; onChange: (val
  */
 export default function RecordingConsentChoice({ value, readOnly, onChange }: Props) {
   const { t } = useI18n();
+  if (!recordingAvailable && !(readOnly && value)) return null;
   // A signed note shows the answer it was signed with, as words: radios would read as something still to choose (MDV audit UX-11).
   if (readOnly) return value && <p><span className="font-bold">{t('recordingConsent.legend')}</span>{': '}{t(`recordingConsent.${value}`)}</p>;
   const offered = recordingConsents.filter(c => c !== 'Withdrawn' || value === 'Agreed' || value === 'Withdrawn');

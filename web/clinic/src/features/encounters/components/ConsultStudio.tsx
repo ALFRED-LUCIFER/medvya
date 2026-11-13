@@ -3,9 +3,9 @@ import { Circle, CircleCheck } from 'lucide-react';
 import { useI18n, type MessageKey } from '@medvya/i18n';
 import { Button, Tabs, TabsContent, TabsList, TabsTrigger } from '@medvya/ui';
 import type { Patient360 } from '../../patient360/domain/chart';
-import { checklistIds, studioSections, templateOwnSections, type StudioSection } from '../domain/checklist';
+import { studioSections, templateOwnSections, type StudioSection } from '../domain/checklist';
 import { planHeading, type StudioPanel } from '../domain/encounter';
-import { templateNameKey } from '../domain/note';
+import { recordingAvailable, templateNameKey } from '../domain/note';
 import NoteAssist, { VitalList } from './NoteAssist';
 import type { NoteEditorProps } from './NoteEditor';
 import { NoteSectionField, SaveState, SignedBanner, TemplatePicker } from './NoteParts';
@@ -60,7 +60,7 @@ export default function ConsultStudio(p: Props) {
       </div>
       <div className="flex flex-col gap-2">
         <RecordingConsentChoice value={p.consent} readOnly={p.readOnly} onChange={p.onConsent} />
-        {!p.readOnly && p.consent && <p className="text-sm font-bold">{t(`studio.consent.${p.consent}`)}</p>}
+        {!p.readOnly && recordingAvailable && p.consent && <p className="text-sm font-bold">{t(`studio.consent.${p.consent}`)}</p>}
         {!p.readOnly && <p className="text-sm text-muted-foreground">{t('noteEditor.manualBanner')}</p>}
       </div>
       <SectionBar sections={shown} ticks={p.readOnly ? null : ticks} title={title} />
@@ -107,7 +107,7 @@ export default function ConsultStudio(p: Props) {
             <TabsList className="h-auto w-full gap-1 rounded-xl border bg-card p-1">
               {showAssist && <TabsTrigger value="assist" className="min-h-11 flex-1 font-bold text-foreground underline-offset-8 data-[state=active]:underline">{t('studio.panel.assist')}</TabsTrigger>}
               <TabsTrigger value="chart" className="min-h-11 flex-1 font-bold text-foreground underline-offset-8 data-[state=active]:underline">{t('studio.panel.chart')}</TabsTrigger>
-              {p.checklist.length > 0 && <TabsTrigger value="check" className="min-h-11 flex-1 font-bold text-foreground underline-offset-8 data-[state=active]:underline">{t('studio.panel.check', { done, total: checklistIds.length })}</TabsTrigger>}
+              {p.checklist.length > 0 && <TabsTrigger value="check" className="min-h-11 flex-1 font-bold text-foreground underline-offset-8 data-[state=active]:underline">{t('studio.panel.check', { done, total: p.checklist.length })}</TabsTrigger>}
             </TabsList>
             {showAssist && <TabsContent value="assist"><NoteAssist assist={p.assist!} template={template} timeZone={p.timeZone} showVitals={false} /></TabsContent>}
             <TabsContent value="chart"><ChartSummary {...p.chart} timeZone={p.timeZone} /></TabsContent>

@@ -1,9 +1,9 @@
 import type { FormEventHandler, ReactNode } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { Link } from 'react-router';
-import { CircleAlert, CircleSlash, TrendingDown, CircleX, FilePen, History, Plus, Printer, ShieldCheck, UserRound } from 'lucide-react';
+import { CircleAlert, CircleSlash, TrendingDown, CircleX, FilePen, History, Plus, Printer, ShieldCheck, Trash2, UserRound } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, ClinicalAlert, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Switch, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@medvya/ui';
+import { Button, buttonVariants, ClinicalAlert, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@medvya/ui';
 import { isCurrent, type AuthoriseProblem, type RxAuthorisationState } from '../domain/authorisation';
 import { describedBy, fieldError } from '../../settings/components/fieldStyles';
 import { Field } from '../../settings/components/Field';
@@ -61,10 +61,11 @@ const sourceIcon = { AddedByYou: UserRound, AddedByColleague: UserRound, ChartRe
  */
 export default function PrescriptionPanel(p: Props) {
   const { t } = useI18n();
-  const prescribed = p.lines.filter(l => l.kind === 'Prescribe');
+  // A removed line (switched off on the server, kept for the record) is not shown: only the lines that would be prescribed.
+  const prescribed = p.lines.filter(l => l.kind === 'Prescribe' && l.included);
   // Stops, changes and tapers follow the reconciliation (MDV-P2-011, MDV-P2-043): read here, decided there.
   const stopped = p.lines.filter(l => l.kind !== 'Prescribe');
-  const status = p.loading ? t('rx.loading') : p.failed ? t('rx.loadFailed') : p.lines.length === 0 ? t('rx.empty') : null;
+  const status = p.loading ? t('rx.loading') : p.failed ? t('rx.loadFailed') : prescribed.length === 0 && stopped.length === 0 ? t('rx.empty') : null;
 
   return (
     <Section title={t('rx.title')} intro={t(p.ended ? 'rx.ended' : 'rx.intro')}>
@@ -87,7 +88,7 @@ export default function PrescriptionPanel(p: Props) {
             <TableRow>
               <TableHead scope="col">{t('rx.col.medicine')}</TableHead>
               {sigFields.map(f => <TableHead key={f} scope="col">{t(`rx.field.${f}`)}</TableHead>)}
-              <TableHead scope="col"><span className="sr-only">{t('rx.col.include')}</span></TableHead>
+              <TableHead scope="col"><span className="sr-only">{t('rx.removeShort')}</span></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>{prescribed.map(l => <Line key={l.id} line={l} {...p} />)}</TableBody>
@@ -230,7 +231,7 @@ function Line({ line, ended, busy, language, checks, draftOf, saveOf, invalidOf,
   const draft = draftOf(line);
   const invalid = invalidOf(line);
   const save = saveOf(id);
-  const locked = ended || !line.included;
+  const locked = ended;
   const fieldId = (f: SigField) => `rx-${id}-${f}`;
   // One row per medicine: each control is named by its column header, and a wrong value is said under it.
   const text = (f: 'dose' | 'durationDays' | 'quantity' | 'instructions') => (
@@ -269,7 +270,6 @@ function Line({ line, ended, busy, language, checks, draftOf, saveOf, invalidOf,
         <span className="mt-1 flex flex-wrap items-center gap-2">
           <SourceChip line={line} />
           {checks && line.included && <SafetyChip state={lineSafety(checks, id)} />}
-          {!line.included && <span className="text-sm font-bold">{t('rx.notIncluded')}</span>}
         </span>
         {line.freeText && <span className="mt-2 block font-normal"><ClinicalAlert severity="attention">{t('rx.freeTextWarning')}</ClinicalAlert></span>}
         <span className="mt-1 block font-normal"><Sig line={line} language={language} /></span>
@@ -277,7 +277,7 @@ function Line({ line, ended, busy, language, checks, draftOf, saveOf, invalidOf,
       </TableHead>
       {sigFields.map(f => cells[f])}
       <TableCell className="align-top">
-        {!ended && <Switch checked={line.included} disabled={busy} aria-label={t('rx.include', { name: line.medicine })} onCheckedChange={on => onInclude(id, on)} />}
+        {!ended && <Button variant="outline" className="min-h-11" disabled={busy} aria-label={t('rx.remove', { name: line.medicine })} onClick={() => onInclude(id, false)}><Trash2 aria-hidden className="size-4" />{t('rx.removeShort')}</Button>}
       </TableCell>
     </TableRow>
   );

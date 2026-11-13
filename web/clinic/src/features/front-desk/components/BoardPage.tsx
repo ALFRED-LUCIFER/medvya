@@ -196,7 +196,7 @@ function Card({ card, board, steps, now, failedVisitIds, canMove, online, confir
         {card.registrationIncomplete && <FrontDeskTag kind="incomplete" />}
         {card.token && <FrontDeskTag kind="token" text={t('board.token', { token: card.token })} />}
       </div>
-      {state === 'CheckedIn' && <FrontDeskTag kind="waiting" text={t('board.waiting', { minutes: minutesSince(card.since, now) })} />}
+      {(state === 'CheckedIn' || state === 'ReadyForDoctor') && <FrontDeskTag kind="waiting" text={t('board.waiting', { minutes: minutesSince(card.since, now) })} />}
       {card.room && state === 'InConsult' && <FrontDeskTag kind="room" text={t('board.room', { room: card.room })} />}
 
       {canMove && confirming ? (

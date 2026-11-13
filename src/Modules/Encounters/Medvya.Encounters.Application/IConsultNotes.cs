@@ -90,11 +90,10 @@ public interface IConsultNotes
 
     /// <summary>
     /// Signs (MDV-P2-012): Sign on Clinical notes with a care relationship, a re-authentication in the last 5 minutes, every required section
-    /// filled, the recording consent recorded and no AI draft or suggestion undecided (MDV-P2-044). Freezes version 1. Signing a signed note again returns it unchanged.
+    /// filled and no AI draft or suggestion undecided (MDV-P2-044). Freezes version 1. Signing a signed note again returns it unchanged.
     /// </summary>
     /// <exception cref="ReauthRequiredException"/>
-    /// <exception cref="NoteValidationException">A required section is blank (code <c>required</c> on <c>sections.&lt;id&gt;</c>), the consent is not
-    /// recorded (<c>required</c> on <c>recordingConsent</c>) or an AI draft is undecided (<c>undecided</c> on <c>undecidedAi</c>).</exception>
+    /// <exception cref="NoteValidationException">A required section is blank (code <c>required</c> on <c>sections.&lt;id&gt;</c>) or an AI draft is undecided (<c>undecided</c> on <c>undecidedAi</c>).</exception>
     /// <exception cref="StaleNoteException"/>
     Task<NoteView?> SignAsync(Guid encounterId, SignNote command, CancellationToken cancellationToken = default);
 

@@ -32,7 +32,7 @@ Each step: who acts, on which screen, and what changes. 🔒 = clinician approva
 | 9 | E-01 | Doctor | One-page chart | Penicillin allergy in the banner; summary, vitals and labs, history on one page. |  |
 | 10 | E-05 | Doctor | Add medicine from the chart | Goes on the open consultation's draft; amoxicillin blocked by the penicillin allergy. | 🔒 |
 | 11 | E-04 | Doctor | One-page consultation | Seven numbered sections; Sign locked until the checklist is complete. | 🔒 |
-| 12 | E-06 | Doctor | Sign | Step-up, then signed v1 and read-only: only what was signed shows (no section left "To do", the recording consent in words). | 🔒 |
+| 12 | E-06 | Doctor | Sign | Step-up, then signed v1 and read-only: only what was signed shows (no section left "To do"). | 🔒 |
 
 ## J3 · Busy reception → nurse handoff — Front desk · M1–M2
 

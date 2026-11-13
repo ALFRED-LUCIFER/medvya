@@ -187,31 +187,23 @@ test('checklist: an assessment with no diagnosis on the problem list is not Done
 });
 
 // MDV-P2-044: the checklist is worked out from the note, the banner and the reconciliation; the server holds the consent and AI gates as well.
-test('checklist: Sign stays locked until the recording consent is recorded; each item and the count are in words', async ({ page }) => {
+test('checklist: no recording consent step or row until recording exists, and Sign needs none; each item is in words', async ({ page }) => {
   const mock = await open(page, { version: 1, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' } });
   mock.reauthed = true;
   const sign = note(page).getByRole('button', { name: 'Sign note' });
-  await expect(sign).toBeDisabled();
-  await expect(sign).toHaveAccessibleDescription('1 item still needs your review before signing');
+  await expect(sign).toBeEnabled();
+  await expect(sign).toHaveAccessibleDescription('Everything reviewed. Ready to sign.');
   const checklist = note(page).getByRole('region', { name: 'Review and sign' });
   await expect(checklist.getByRole('listitem')).toHaveText([
     'Identity confirmed (name and date of birth)Done', 'Allergies reconciledDone', 'Medicines reconciledDone',
-    'Recording consent recordedTo do', 'History reviewedDone', 'Every AI suggestion accepted or dismissedDone', 'Diagnoses reviewedDone', 'Plan reviewedDone',
+    'History reviewedDone', 'Every AI suggestion accepted or dismissedDone', 'Diagnoses reviewedDone', 'Plan reviewedDone',
   ]);
-  const consent = note(page).getByRole('group', { name: 'Recording consent for this visit' });
-  await expect(consent.getByRole('radio')).toHaveCount(2); // withdrawn only once the patient had agreed
-  await consent.getByRole('radio', { name: 'Patient agreed to recording' }).check();
-  await expect(consent.getByRole('radio', { name: 'Consent withdrawn during the visit' })).toBeVisible();
-  await consent.getByRole('radio', { name: 'Consent withdrawn during the visit' }).check();
-  await expect.poll(() => mock.puts.at(-1)?.recordingConsent).toBe('Withdrawn'); // saved with the note by the autosave
-  await expect(sign).toBeEnabled();
-  await expect(sign).toHaveAccessibleDescription('Everything reviewed. Ready to sign.');
+  await expect(note(page).getByRole('group', { name: 'Recording consent for this visit' })).toHaveCount(0); // MDV-AUDIT-1092
   await sign.click();
   await page.getByRole('dialog').getByRole('button', { name: 'Sign as Dr Asha Raman (synthetic)' }).click();
   await expect(note(page)).toContainText('SIGNED v1 · read-only');
-  // Signed (MDV audit UX-11): the answer it was signed with, in words; no radios that read as something still to choose.
   await expect(note(page).getByRole('radio')).toHaveCount(0);
-  await expect(note(page)).toContainText('Recording consent for this visit: Consent withdrawn during the visit');
+  await expect(note(page)).not.toContainText('Recording consent for this visit');
 });
 
 test('checklist: an undecided AI draft and an unconfirmed reconciliation lock Sign', async ({ page }) => {

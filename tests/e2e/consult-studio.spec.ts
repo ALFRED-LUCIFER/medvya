@@ -38,20 +38,19 @@ const axe = async (page: Page) => {
     (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: { target: string[] }[] }[] }> } }).axe.run()).violations.map(v => `${v.id} (${v.nodes.map(n => n.target.join(' ')).join(', ')})`));
 };
 
-test('opens on one page: the consent first, a section bar of seven numbered sections, and the side panel beside them', async ({ page }) => {
+test('opens on one page: no recording consent step, a section bar of seven numbered sections, and the side panel beside them', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await open(page, { templateKey: 'diabetes-review' });
   await expect(page.getByRole('region', { name: 'Patient identity' })).toContainText('Amoxicillin'); // the patient strip with the allergies
   await expect(page.getByRole('button', { name: 'One page' })).toHaveAttribute('aria-pressed', 'true');
   await expect(bar(page).getByRole('link')).toHaveText(['1 · VitalsTo do', '2 · HistoryTo do', '3 · Diabetes reviewTo do', '4 · ExaminationTo do', '5 · AssessmentTo do', '6 · PlanTo do', '7 · Review and signTo do']);
-  const consent = note(page).getByRole('group', { name: 'Recording consent for this visit' });
-  expect((await consent.boundingBox())!.y).toBeLessThan((await bar(page).boundingBox())!.y); // the consent comes first
+  await expect(note(page).getByRole('group', { name: 'Recording consent for this visit' })).toHaveCount(0); // MDV-AUDIT-1092: nothing is recorded yet
   await expect(note(page).getByRole('heading', { name: '3 · Diabetes review' })).toBeVisible();
   await expect(note(page).getByLabel('Self-monitoring')).toBeVisible(); // the template's own sections sit in its numbered section
   const panel = note(page).getByRole('complementary', { name: 'Consultation tools' });
   const sections = note(page).getByRole('heading', { name: '1 · Vitals' });
   expect((await panel.boundingBox())!.y).toBeLessThan((await sections.boundingBox())!.y + 200); // two columns: the panel is beside, not below
-  await expect(panel.getByRole('tab')).toHaveText(['Assist', 'Chart', 'Checklist 4/8']);
+  await expect(panel.getByRole('tab')).toHaveText(['Assist', 'Chart', 'Checklist 4/7']);
 });
 
 test('Sign note and End consultation are one bar that stays on screen however long the note is (MDV audit P1-04)', async ({ page }) => {
@@ -81,36 +80,18 @@ test('a section bar link moves focus to its section; a section is ticked in word
 test('switching to the guided steps and back keeps every typed word and saves the same note', async ({ page }) => {
   const mock = await open(page);
   await note(page).getByLabel('Chief complaint').fill('Thirst (synthetic)');
-  await note(page).getByRole('radio', { name: 'Patient declined: I type the note' }).check();
   await note(page).getByLabel('Plan').fill('Diet advice'); // typed, the switch comes before the autosave delay
   await page.getByRole('button', { name: 'Guided steps' }).click();
   await expect(note(page).getByRole('navigation', { name: 'Note sections' })).toHaveCount(0);
   await expect(note(page).getByLabel('Chief complaint')).toHaveValue('Thirst (synthetic)');
   await expect(note(page).getByLabel('Plan')).toHaveValue('Diet advice');
-  await expect(note(page).getByRole('radio', { name: 'Patient declined: I type the note' })).toBeChecked();
   await note(page).getByLabel('Assessment').fill('Review (synthetic)');
   await page.getByRole('button', { name: 'One page' }).click();
   await expect(note(page).getByLabel('Assessment')).toHaveValue('Review (synthetic)');
-  await expect.poll(() => mock.puts.at(-1)).toMatchObject({ recordingConsent: 'Declined', sections: { chiefComplaint: 'Thirst (synthetic)', plan: 'Diet advice', assessment: 'Review (synthetic)' } });
+  await expect.poll(() => mock.puts.at(-1)).toMatchObject({ sections: { chiefComplaint: 'Thirst (synthetic)', plan: 'Diet advice', assessment: 'Review (synthetic)' } });
   await page.reload(); // the choice of view is remembered on this device; the note is the server's
   await expect(page.getByRole('button', { name: 'One page' })).toHaveAttribute('aria-pressed', 'true');
   await expect(note(page).getByLabel('Plan')).toHaveValue('Diet advice');
-});
-
-test('declined consent hides Assist and keeps the manual note; agreed shows it', async ({ page }) => {
-  await open(page);
-  const panel = note(page).getByRole('complementary', { name: 'Consultation tools' });
-  await expect(panel.getByRole('region', { name: 'Add to the note' })).toBeVisible();
-  await note(page).getByRole('radio', { name: 'Patient declined: I type the note' }).check();
-  await expect(note(page)).toContainText('Typing mode: Assist is off for this visit.');
-  await expect(panel.getByRole('tab', { name: 'Assist' })).toHaveCount(0);
-  await expect(panel.getByRole('region', { name: 'Add to the note' })).toHaveCount(0);
-  await expect(panel.getByRole('tab', { name: 'Chart', selected: true })).toBeVisible();
-  await expect(panel).toContainText('Type 2 diabetes (synthetic)'); // the chart is read once its tab shows
-  await expect(note(page).getByLabel('Plan')).toBeEditable(); // the manual note path as today
-  await note(page).getByRole('radio', { name: 'Patient agreed to recording' }).check();
-  await panel.getByRole('tab', { name: 'Assist' }).click();
-  await expect(panel.getByRole('region', { name: 'Add to the note' })).toBeVisible();
 });
 
 test('the chart tab summarises active problems and medicines; the checklist tab is the review-and-sign checklist', async ({ page }) => {
@@ -119,8 +100,11 @@ test('the chart tab summarises active problems and medicines; the checklist tab 
   await panel.getByRole('tab', { name: 'Chart' }).click();
   await expect(panel).toContainText('Type 2 diabetes (synthetic)');
   await expect(panel).toContainText('Metformin 500 mg');
-  await panel.getByRole('tab', { name: 'Checklist 7/8' }).click();
-  await expect(panel.getByRole('region', { name: 'Review and sign' }).getByRole('listitem').filter({ hasText: 'Recording consent recorded' })).toContainText('To do');
+  await panel.getByRole('tab', { name: 'Checklist 7/7' }).click();
+  const items = panel.getByRole('region', { name: 'Review and sign' }).getByRole('listitem');
+  await expect(items).toHaveCount(7);
+  await expect(items.filter({ hasText: 'Recording consent' })).toHaveCount(0); // MDV-AUDIT-1092: no row until recording exists
+  await expect(items.filter({ hasText: 'To do' })).toHaveCount(0);
 });
 
 test('verified vitals go into Objective from the Vitals section only on request; sign from section 7', async ({ page }) => {

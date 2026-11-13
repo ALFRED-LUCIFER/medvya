@@ -228,29 +228,16 @@ public sealed class SignNoteTests(PostgresFixture sql) : IClassFixture<PostgresF
         Assert.Equal((NoteStatus.Draft, 0), ((await NoteAsync()).Status, await SignedRowsAsync()));
     }
 
+    // MDV-AUDIT-1092: nothing is recorded before MDV-P3, so signing never asks for a recording consent; an answer sent anyway is still kept.
     [Fact]
-    public async Task AnUnrecordedRecordingConsentBlocksSigningAndEachAnswerIsKept()
+    public async Task AnUnrecordedRecordingConsentDoesNotBlockSigningAndAnAnswerSentIsKept()
     {
         var version = await SaveDraftAsync(Complete, recordingConsent: null);
-        using (var blocked = await SignAsync(h.Doctor, version))
-        {
-            Assert.Equal(HttpStatusCode.BadRequest, blocked.StatusCode);
-            var errors = (await Json(blocked)).GetProperty("errors");
-            Assert.Equal("required", errors.GetProperty("recordingConsent")[0].GetString());
-            Assert.False(errors.TryGetProperty("undecidedAi", out _));
-        }
-        Assert.Equal((NoteStatus.Draft, 0, (RecordingConsent?)null), ((await NoteAsync()).Status, await SignedRowsAsync(), (await NoteAsync()).RecordingConsent));
-        foreach (var answer in new[] { "Agreed", "Withdrawn" })
-        {
-            version = await SaveDraftAsync(Complete, version, answer);
-            using var read = await Client(h.Doctor).GetAsync(U($"/v1/encounters/{encounter}/note"));
-            Assert.Equal(answer, (await Json(read)).GetProperty("recordingConsent").GetString());
-        }
         using (var bad = await Client(h.Doctor).PutAsJsonAsync(U($"/v1/encounters/{encounter}/note"), new { baseVersion = version, sections = Complete, recordingConsent = 7 }))
             Assert.Equal(HttpStatusCode.BadRequest, bad.StatusCode); // not one of the three answers
         using var signed = await SignAsync(h.Doctor, version);
-        Assert.True(signed.IsSuccessStatusCode, await signed.Content.ReadAsStringAsync()); // withdrawn is a recorded answer: the doctor typed the rest
-        Assert.Equal(RecordingConsent.Withdrawn, (await NoteAsync()).RecordingConsent);
+        Assert.True(signed.IsSuccessStatusCode, await signed.Content.ReadAsStringAsync());
+        Assert.Null((await NoteAsync()).RecordingConsent);
     }
 
     [Fact]

@@ -87,10 +87,11 @@ test('India: full registration in steps, with Aadhaar last 4 only, the PIN rule 
   await expect(page.getByRole('switch', { name: 'Treatment' })).toBeChecked();
   await expect(page.getByRole('switch', { name: 'Health tips and offers' })).not.toBeChecked();
   await expect(page.getByRole('switch', { name: 'Link to ABHA' })).not.toBeChecked();
-  // MDV-AUDIT-1106: SMS reminders start on (the desk asks); WhatsApp and email start off.
-  await expect(page.getByRole('switch', { name: 'SMS' })).toBeChecked();
+  // MDV-AUDIT-1106: no reminder channel is pre-ticked (consent is the patient's to give); the desk ticks SMS and WhatsApp.
+  await expect(page.getByRole('switch', { name: 'SMS' })).not.toBeChecked();
   await expect(page.getByRole('switch', { name: 'Email' })).not.toBeChecked();
   await expect(page.getByRole('switch', { name: 'WhatsApp' })).not.toBeChecked();
+  await page.getByRole('switch', { name: 'SMS' }).click();
   await page.getByRole('switch', { name: 'WhatsApp' }).click();
   await next(page);
 

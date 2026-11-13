@@ -239,7 +239,7 @@ describe('family, emergency contact and guardian (MDV-P1-020)', () => {
 
 describe('consents (MDV-P1-019)', () => {
   it('always grants treatment and records every other choice as its own decision, declined ones too', () => {
-    const set = toRegisterRequest({ ...deepak, consentWhatsApp: true }, 'IN', false, null).consents;
+    const set = toRegisterRequest({ ...deepak, consentWhatsApp: true, consentSms: true }, 'IN', false, null).consents;
     expect(set.policyVersion).toBe(consentPolicyVersion);
     expect(set.decisions.map(d => `${d.type}${d.channel ? `/${d.channel}` : ''}=${d.granted}`)).toEqual([
       'Treatment=true', 'Reminders/WhatsApp=true', 'Reminders/Sms=true', 'Reminders/Email=false', 'InformationExchange=false', 'Portal=true', 'Marketing=false']);
@@ -250,7 +250,7 @@ describe('consents (MDV-P1-019)', () => {
     expect(emptyForm.consentMarketing).toBe(false);
   });
 
-  it('starts with SMS reminders on and every other reminder channel off (MDV-AUDIT-1106)', () => {
-    expect([emptyForm.consentSms, emptyForm.consentEmail, emptyForm.consentWhatsApp]).toEqual([true, false, false]);
+  it('starts with every reminder channel off until the patient ticks one (MDV-AUDIT-1106)', () => {
+    expect([emptyForm.consentSms, emptyForm.consentEmail, emptyForm.consentWhatsApp]).toEqual([false, false, false]);
   });
 });

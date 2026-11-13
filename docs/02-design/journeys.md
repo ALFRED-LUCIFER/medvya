@@ -95,4 +95,4 @@ Which steps run in the browser against the real stack (`pnpm e2e:fullstack`: rea
 | J5 | none | 1 MDV-P2-018 (green in the mocked spec `journeys/j5.spec.ts`; on the real stack once the seeded doctor's licence is attested by the owner (ADR-016; until MDV-P1-065 lands, verified by Medvya operations)) · 2 MDV-P4-014 · 3, 5 MDV-P4-015 · 4 MDV-P4-018 · 6 MDV-P4-019 · 7 MDV-P4-016 |
 | J6 | none | 1 MDV-P7-002 · 2 to 5 MDV-P7-006 · 6 MDV-P7-008 |
 
-Clinical advisor sign-off (MDV-P0-023, R0 exit criterion 1): not recorded yet.
+Clinical advisor sign-off (MDV-P1-073, moved from MDV-P0-023; R0 exit criterion 1): not recorded yet.

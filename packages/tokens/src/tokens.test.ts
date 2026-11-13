@@ -16,8 +16,18 @@ describe('design tokens', () => {
 
   it('every CSS colour has the same value in the native theme', () => {
     const cssColors = [...read('tokens.css').matchAll(/--color-([\w-]+):\s*(#[0-9a-fA-F]{6})/g)];
-    expect(cssColors.length).toBe(Object.keys(source.color).length);
+    expect(cssColors.length).toBe(Object.keys(source.color).length + Object.keys(source.tone).length * 3);
     for (const [, name, hex] of cssColors) expect((theme.color as Record<string, string>)[camel(name!)]).toBe(hex);
+  });
+
+  it('gives each of the seven tones a text, background and border colour from the palette, and a written meaning', () => {
+    expect(Object.keys(theme.tone).sort()).toEqual(['ai', 'brand', 'danger', 'info', 'neutral', 'success', 'warning']);
+    for (const [name, roles] of Object.entries(source.tone as Record<string, Record<string, string>>)) {
+      expect(Object.keys(roles), name).toEqual(['text', 'bg', 'border']);
+      for (const [role, ref] of Object.entries(roles)) expect((theme.tone as Record<string, Record<string, string>>)[name]![role]).toBe(source.color[ref]);
+      expect(source.notes[`tone-${name}`], name).toBeTruthy();
+    }
+    expect(() => render({ ...source, tone: { danger: { text: 'no-such-colour', bg: 'danger-50', border: 'danger-500' } } })).toThrow(/no-such-colour/);
   });
 
   it('body-large is 16 px on a 24 px line, so a phone browser does not zoom on focus', () => {

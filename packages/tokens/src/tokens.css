@@ -57,6 +57,45 @@
   --color-border: #dfe7ed;
   --color-input: #76899c; /* boundary of inputs, selects, textareas, outline buttons: ≥ 3:1 on every surface (tested) */
   --color-ring: #2563eb;
+  --color-white: #ffffff;
+  --color-danger-800: #8a1626;
+  --color-danger-500: #c83a4b;
+  --color-danger-200: #f3b9c0;
+  --color-danger-25: #fff7f8;
+  --color-warning-800: #7a4710;
+  --color-warning-500: #b7791f;
+  --color-warning-200: #efd5a6;
+  --color-success-800: #07774f; /* success text on a tint: #087f5b is 4.42:1 on #e6f4ef and fails AA */
+  --color-success-100: #e6f4ef;
+  --color-info-700: #1d4ed8;
+  --color-info-300: #93b4f5;
+  --color-ai-300: #a897e8;
+  --color-sage-700: #3e6a4d; /* closed-loop "contacted" only */
+  --color-sage-50: #eef4ef;
+  --color-ink-200: #cbd6e0;
+  --color-ink-100: #edf1f5;
+  --color-disabled: #e6ecf1; /* disabled button fill (grey, not opacity) */
+  --color-danger-text: #8a1626; /* allergy, critical, blocked, destructive; never emphasis or branding */
+  --color-danger-bg: #fdecee;
+  --color-danger-border: #c83a4b;
+  --color-warning-text: #7a4710; /* uncertain, attention, incomplete, not checked; never "error" */
+  --color-warning-bg: #fdf5e7;
+  --color-warning-border: #b7791f;
+  --color-success-text: #07774f; /* confirmed, done, signed; never primary buttons */
+  --color-success-bg: #e6f4ef;
+  --color-success-border: #087f5b;
+  --color-info-text: #1d4ed8; /* booked, in progress, neutral system state */
+  --color-info-bg: #eff4ff;
+  --color-info-border: #2563eb;
+  --color-brand-text: #0f766e; /* the one next action; the active navigation item; never status */
+  --color-brand-bg: #e7f6f4;
+  --color-brand-border: #0e9384;
+  --color-ai-text: #5b3fc4; /* provisional AI output only (dashed); never anything a clinician accepted */
+  --color-ai-bg: #f2effc;
+  --color-ai-border: #7155d8;
+  --color-neutral-text: #334e68; /* everything else */
+  --color-neutral-bg: #f1f5f8;
+  --color-neutral-border: #76899c;
   --radius: 10px;
   --radius-sm: 6px; /* chips */
   --radius-md: 10px; /* controls */

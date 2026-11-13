@@ -7,14 +7,14 @@ import { cn } from "#lib/utils"
 // Medvya buttons (Handoff §1): 44px minimum target, bold label, disabled shows a grey fill rather than opacity.
 // Focus uses the global 2px ring from styles.css.
 const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-bold whitespace-nowrap transition-colors disabled:pointer-events-none disabled:bg-[#e6ecf1] disabled:text-ink-400 disabled:border-transparent [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-bold whitespace-nowrap transition-colors disabled:pointer-events-none disabled:bg-disabled disabled:text-ink-400 disabled:border-transparent [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
         default: "bg-primary text-primary-foreground hover:bg-brand-800",
         outline: "border border-input bg-card text-foreground hover:bg-accent",
         ai: "bg-ai-600 text-white hover:bg-ai-700",
-        destructive: "bg-destructive text-destructive-foreground hover:bg-[#8a1626]",
+        destructive: "bg-destructive text-destructive-foreground hover:bg-danger-800",
         // The pressed state of a toggle or the current view (aria-pressed / aria-current): a thick border, never a second primary colour (MDV audit UX-03).
         selected: "border-2 border-primary bg-brand-50 text-brand-900 hover:bg-brand-50",
         ghost: "text-foreground hover:bg-accent",

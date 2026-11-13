@@ -10,70 +10,70 @@ import { Button } from '#components/ui/button';
 
 // Every clinical state is icon + words + colour, never colour alone (Foundations §01).
 // Values come from Handoff §1 and Foundations §04; see docs/02-design.
-// Deviation: success text on the #E6F4EF tint is #07774F, not #087F5B (4.42:1 fails WCAG AA; 4.93:1 passes).
-// Colours stay in these tables (applied inline) so the contrast test checks exactly what renders.
-const okOnTint = '#07774F';
+// Colours are tone tokens (packages/tokens, MDV-P1-080), or a named palette colour where a look differs from its tone's pair today.
+// They stay in these tables (applied inline) so the contrast test checks exactly what renders.
+const okOnTint = 'var(--color-success-text)';
 export type Look = { label: MessageKey; icon: LucideIcon; bg: string; fg: string; border?: string };
 
 export const statusLooks = {
-  ordered:   { label: 'status.ordered', icon: Send, bg: '#EFF4FF', fg: '#1D4ED8' },
-  collected: { label: 'status.collected', icon: Pipette, bg: '#EFF4FF', fg: '#1D4ED8' },
-  received:  { label: 'status.received', icon: Inbox, bg: '#FDF5E7', fg: '#7A4710' },
-  reviewed:  { label: 'status.reviewed', icon: Eye, bg: '#E7F6F4', fg: '#0F766E' },
-  contacted: { label: 'status.contacted', icon: Phone, bg: '#EEF4EF', fg: '#3E6A4D' },
-  delivered: { label: 'status.delivered', icon: MessageSquareCheck, bg: '#F1F5F8', fg: '#506579' },
-  completed: { label: 'status.completed', icon: CircleCheck, bg: '#087F5B', fg: '#FFFFFF' },
+  ordered:   { label: 'status.ordered', icon: Send, bg: 'var(--color-info-bg)', fg: 'var(--color-info-text)' },
+  collected: { label: 'status.collected', icon: Pipette, bg: 'var(--color-info-bg)', fg: 'var(--color-info-text)' },
+  received:  { label: 'status.received', icon: Inbox, bg: 'var(--color-warning-bg)', fg: 'var(--color-warning-text)' },
+  reviewed:  { label: 'status.reviewed', icon: Eye, bg: 'var(--color-brand-bg)', fg: 'var(--color-brand-text)' },
+  contacted: { label: 'status.contacted', icon: Phone, bg: 'var(--color-sage-50)', fg: 'var(--color-sage-700)' },
+  delivered: { label: 'status.delivered', icon: MessageSquareCheck, bg: 'var(--color-neutral-bg)', fg: 'var(--color-ink-600)' },
+  completed: { label: 'status.completed', icon: CircleCheck, bg: 'var(--color-success-700)', fg: 'var(--color-white)' },
 } satisfies Record<string, Look>;
 
 export const provenanceLooks = {
-  ai:       { label: 'ai.badge', icon: Sparkles, bg: '#F2EFFC', fg: '#5B3FC4', border: '1px dashed #A897E8' },
-  verified: { label: 'provenance.verified', icon: BadgeCheck, bg: '#E6F4EF', fg: okOnTint },
-  patient:  { label: 'provenance.patient', icon: User, bg: '#F1F5F8', fg: '#334E68' },
-  his:      { label: 'provenance.his', icon: ArrowLeftRight, bg: '#EFF4FF', fg: '#1D4ED8' },
-  imported: { label: 'provenance.imported', icon: Upload, bg: '#EDF1F5', fg: '#334E68' },
-  signed:   { label: 'provenance.signed', icon: Lock, bg: '#102A43', fg: '#FFFFFF' },
+  ai:       { label: 'ai.badge', icon: Sparkles, bg: 'var(--color-ai-bg)', fg: 'var(--color-ai-text)', border: '1px dashed var(--color-ai-300)' },
+  verified: { label: 'provenance.verified', icon: BadgeCheck, bg: 'var(--color-success-bg)', fg: okOnTint },
+  patient:  { label: 'provenance.patient', icon: User, bg: 'var(--color-neutral-bg)', fg: 'var(--color-neutral-text)' },
+  his:      { label: 'provenance.his', icon: ArrowLeftRight, bg: 'var(--color-info-bg)', fg: 'var(--color-info-text)' },
+  imported: { label: 'provenance.imported', icon: Upload, bg: 'var(--color-ink-100)', fg: 'var(--color-neutral-text)' },
+  signed:   { label: 'provenance.signed', icon: Lock, bg: 'var(--color-brand-950)', fg: 'var(--color-white)' },
 } satisfies Record<string, Look>;
 
 export const alertLooks = {
-  critical:  { label: 'alert.critical', icon: CircleAlert, bg: '#FDECEE', fg: '#8A1626', border: '1px solid #F3B9C0' },
-  attention: { label: 'alert.attention', icon: TriangleAlert, bg: '#FDF5E7', fg: '#7A4710', border: '1px solid #EFD5A6' },
-  info:      { label: 'alert.info', icon: Info, bg: '#F7FAFC', fg: '#334E68', border: '1px solid #DFE7ED' },
+  critical:  { label: 'alert.critical', icon: CircleAlert, bg: 'var(--color-danger-bg)', fg: 'var(--color-danger-text)', border: '1px solid var(--color-danger-200)' },
+  attention: { label: 'alert.attention', icon: TriangleAlert, bg: 'var(--color-warning-bg)', fg: 'var(--color-warning-text)', border: '1px solid var(--color-warning-200)' },
+  info:      { label: 'alert.info', icon: Info, bg: 'var(--color-surface)', fg: 'var(--color-neutral-text)', border: '1px solid var(--color-line)' },
 } satisfies Record<string, Look>;
 
 export const recordingLooks = {
-  recording: { label: 'recording.rec', icon: Pause, bg: '#B42333', fg: '#FFFFFF' }, // icon unused: the blinking dot is the shape cue
-  paused:    { label: 'recording.paused', icon: Pause, bg: '#FDF5E7', fg: '#7A4710' },
-  declined:  { label: 'recording.declined', icon: CircleMinus, bg: '#EDF1F5', fg: '#334E68' },
-  given:     { label: 'recording.given', icon: CircleCheck, bg: '#E6F4EF', fg: okOnTint },
-  notAsked:  { label: 'recording.notAsked', icon: CircleHelp, bg: '#FDF5E7', fg: '#7A4710' },
+  recording: { label: 'recording.rec', icon: Pause, bg: 'var(--color-danger-700)', fg: 'var(--color-white)' }, // icon unused: the blinking dot is the shape cue
+  paused:    { label: 'recording.paused', icon: Pause, bg: 'var(--color-warning-bg)', fg: 'var(--color-warning-text)' },
+  declined:  { label: 'recording.declined', icon: CircleMinus, bg: 'var(--color-ink-100)', fg: 'var(--color-neutral-text)' },
+  given:     { label: 'recording.given', icon: CircleCheck, bg: 'var(--color-success-bg)', fg: okOnTint },
+  notAsked:  { label: 'recording.notAsked', icon: CircleHelp, bg: 'var(--color-warning-bg)', fg: 'var(--color-warning-text)' },
 } satisfies Record<string, Look>;
 
 // Schedule (P-04): time and appointment states. Hatching (unavailable) or a dashed border is the shape cue beside icon and words.
 export const scheduleLooks = {
   // Rendered as a hatch of the muted and line tokens; bg is the darker stop, so the contrast test checks the worst case.
   unavailable: { label: 'schedule.state.unavailable', icon: Ban, bg: 'var(--color-line)', fg: 'var(--color-ink-600)' },
-  held: { label: 'schedule.state.held', icon: Hourglass, bg: '#FDF5E7', fg: '#7A4710' },
-  booked: { label: 'schedule.state.Booked', icon: CalendarCheck, bg: '#FFFFFF', fg: '#1D4ED8', border: '1px solid #2563EB' },
-  checkedIn: { label: 'schedule.state.CheckedIn', icon: UserCheck, bg: '#EFF4FF', fg: '#1D4ED8', border: '1px solid #93B4F5' },
-  inRoom: { label: 'schedule.state.InConsult', icon: DoorOpen, bg: '#E7F6F4', fg: '#0F766E', border: '1px solid #0E9384' },
-  completed: { label: 'schedule.state.Done', icon: CircleCheck, bg: '#F1F5F8', fg: '#506579', border: '1px solid #CBD6E0' },
-  noShow: { label: 'schedule.state.NoShow', icon: CalendarX, bg: '#FFF7F8', fg: '#8A1626', border: '1px dashed #C83A4B' },
-  cancelled: { label: 'schedule.state.Cancelled', icon: CircleX, bg: '#F7FAFC', fg: '#506579', border: '1px dashed #8296A8' },
-  needsRebooking: { label: 'schedule.state.NeedsRebooking', icon: CalendarClock, bg: '#FDF5E7', fg: '#7A4710', border: '1px dashed #B7791F' },
+  held: { label: 'schedule.state.held', icon: Hourglass, bg: 'var(--color-warning-bg)', fg: 'var(--color-warning-text)' },
+  booked: { label: 'schedule.state.Booked', icon: CalendarCheck, bg: 'var(--color-white)', fg: 'var(--color-info-text)', border: '1px solid var(--color-info-border)' },
+  checkedIn: { label: 'schedule.state.CheckedIn', icon: UserCheck, bg: 'var(--color-info-bg)', fg: 'var(--color-info-text)', border: '1px solid var(--color-info-300)' },
+  inRoom: { label: 'schedule.state.InConsult', icon: DoorOpen, bg: 'var(--color-brand-bg)', fg: 'var(--color-brand-text)', border: '1px solid var(--color-brand-border)' },
+  completed: { label: 'schedule.state.Done', icon: CircleCheck, bg: 'var(--color-neutral-bg)', fg: 'var(--color-ink-600)', border: '1px solid var(--color-ink-200)' },
+  noShow: { label: 'schedule.state.NoShow', icon: CalendarX, bg: 'var(--color-danger-25)', fg: 'var(--color-danger-text)', border: '1px dashed var(--color-danger-border)' },
+  cancelled: { label: 'schedule.state.Cancelled', icon: CircleX, bg: 'var(--color-surface)', fg: 'var(--color-ink-600)', border: '1px dashed var(--color-ink-400)' },
+  needsRebooking: { label: 'schedule.state.NeedsRebooking', icon: CalendarClock, bg: 'var(--color-warning-bg)', fg: 'var(--color-warning-text)', border: '1px dashed var(--color-warning-border)' },
 } satisfies Record<string, Look>;
 
 // Reception board (P-01): nonclinical tags on visit cards. The reason is only ever its category.
 export const frontDeskLooks = {
-  reason: { label: 'board.tag.reason', icon: Tag, bg: '#F1F5F8', fg: '#334E68' },
-  incomplete: { label: 'board.tag.incomplete', icon: TriangleAlert, bg: '#FDF5E7', fg: '#7A4710' },
-  messageFailed: { label: 'board.tag.messageFailed', icon: MessageSquareWarning, bg: '#FFF7F8', fg: '#8A1626', border: '1px solid #C83A4B' }, // a message to the patient failed (MDV-P1-034)
-  walkIn: { label: 'board.tag.walkIn', icon: Footprints, bg: '#EFF4FF', fg: '#1D4ED8' }, // "Walk-in" (MDV-P1-025)
-  waiting: { label: 'board.waiting', icon: Hourglass, bg: '#FFFFFF', fg: '#7A4710' },
-  room: { label: 'board.room', icon: DoorOpen, bg: '#E7F6F4', fg: '#0F766E' },
-  token: { label: 'board.token', icon: Ticket, bg: '#EFF4FF', fg: '#1D4ED8' },
-  live: { label: 'board.live.live', icon: Radio, bg: '#E6F4EF', fg: okOnTint },
-  connecting: { label: 'board.live.connecting', icon: RefreshCw, bg: '#F1F5F8', fg: '#334E68' },
-  paused: { label: 'board.live.paused', icon: WifiOff, bg: '#FDF5E7', fg: '#7A4710' },
+  reason: { label: 'board.tag.reason', icon: Tag, bg: 'var(--color-neutral-bg)', fg: 'var(--color-neutral-text)' },
+  incomplete: { label: 'board.tag.incomplete', icon: TriangleAlert, bg: 'var(--color-warning-bg)', fg: 'var(--color-warning-text)' },
+  messageFailed: { label: 'board.tag.messageFailed', icon: MessageSquareWarning, bg: 'var(--color-danger-25)', fg: 'var(--color-danger-text)', border: '1px solid var(--color-danger-border)' }, // a message to the patient failed (MDV-P1-034)
+  walkIn: { label: 'board.tag.walkIn', icon: Footprints, bg: 'var(--color-info-bg)', fg: 'var(--color-info-text)' }, // "Walk-in" (MDV-P1-025)
+  waiting: { label: 'board.waiting', icon: Hourglass, bg: 'var(--color-white)', fg: 'var(--color-warning-text)' },
+  room: { label: 'board.room', icon: DoorOpen, bg: 'var(--color-brand-bg)', fg: 'var(--color-brand-text)' },
+  token: { label: 'board.token', icon: Ticket, bg: 'var(--color-info-bg)', fg: 'var(--color-info-text)' },
+  live: { label: 'board.live.live', icon: Radio, bg: 'var(--color-success-bg)', fg: okOnTint },
+  connecting: { label: 'board.live.connecting', icon: RefreshCw, bg: 'var(--color-neutral-bg)', fg: 'var(--color-neutral-text)' },
+  paused: { label: 'board.live.paused', icon: WifiOff, bg: 'var(--color-warning-bg)', fg: 'var(--color-warning-text)' },
 } satisfies Record<string, Look>;
 
 const paint = (look: Look): CSSProperties => ({ backgroundColor: look.bg, color: look.fg, border: look.border });
@@ -142,9 +142,9 @@ export type BannerPatient = {
 // Unicode first-strong isolate + non-breaking spaces: keeps Latin IDs and dates intact (order and line) inside Arabic sentences.
 const iso = (v: string) => `\u2068${v.replaceAll(' ', '\u00A0')}\u2069`;
 
-const allergyLook: Look = { label: 'banner.allergy', icon: PillIcon, bg: '#FDECEE', fg: '#8A1626' };
-const noAllergyLook: Look = { label: 'banner.noAllergies', icon: PillIcon, bg: '#F1F5F8', fg: '#334E68' };
-const unknownAllergyLook: Look = { label: 'banner.allergiesNotRecorded', icon: CircleHelp, bg: '#FDF5E7', fg: '#7A4710' };
+const allergyLook: Look = { label: 'banner.allergy', icon: PillIcon, bg: 'var(--color-danger-bg)', fg: 'var(--color-danger-text)' };
+const noAllergyLook: Look = { label: 'banner.noAllergies', icon: PillIcon, bg: 'var(--color-neutral-bg)', fg: 'var(--color-neutral-text)' };
+const unknownAllergyLook: Look = { label: 'banner.allergiesNotRecorded', icon: CircleHelp, bg: 'var(--color-warning-bg)', fg: 'var(--color-warning-text)' };
 
 /** Fixed patient identity banner for every clinical screen (Foundations §04). Allergies never collapse. */
 export function IdentityBanner({ patient }: { patient: BannerPatient }) {
@@ -166,17 +166,17 @@ export function IdentityBanner({ patient }: { patient: BannerPatient }) {
             text={t('banner.allergy', { name: iso(a.name), status: t(`banner.allergy.${a.status}`) })} />)}
       {patient.consent && <RecordingPill state={patient.consent} />}
       {patient.encounter && <p className="text-[13px] text-muted-foreground">{patient.encounter}</p>}
-      {patient.synthetic && <span className="rounded-sm bg-[#FDF5E7] px-2 py-1 font-mono text-[10px] font-semibold text-warning-700">{t('banner.synthetic')}</span>}
+      {patient.synthetic && <span className="rounded-sm bg-warning-bg px-2 py-1 font-mono text-[10px] font-semibold text-warning-700">{t('banner.synthetic')}</span>}
     </section>
   );
 }
 
 export const systemStates = {
-  sessionExpired: { title: 'state.sessionExpired.title', body: 'state.sessionExpired.body', cta: 'state.sessionExpired.cta', icon: Clock, color: '#334E68' },
-  noAccess:       { title: 'err.403', body: 'state.noAccess.body', cta: 'state.noAccess.cta', icon: Ban, color: '#8A1626' },
-  removed:        { title: 'err.403', body: 'state.removed.body', cta: 'session.signOut', icon: Ban, color: '#8A1626' },
-  notFound:       { title: 'state.notFound.title', body: 'state.notFound.body', cta: 'state.notFound.cta', icon: SearchX, color: '#334E68' },
-  offline:        { title: 'state.offline.title', body: 'state.offline.body', cta: 'state.offline.cta', icon: WifiOff, color: '#975A16' },
+  sessionExpired: { title: 'state.sessionExpired.title', body: 'state.sessionExpired.body', cta: 'state.sessionExpired.cta', icon: Clock, color: 'var(--color-neutral-text)' },
+  noAccess:       { title: 'err.403', body: 'state.noAccess.body', cta: 'state.noAccess.cta', icon: Ban, color: 'var(--color-danger-text)' },
+  removed:        { title: 'err.403', body: 'state.removed.body', cta: 'session.signOut', icon: Ban, color: 'var(--color-danger-text)' },
+  notFound:       { title: 'state.notFound.title', body: 'state.notFound.body', cta: 'state.notFound.cta', icon: SearchX, color: 'var(--color-neutral-text)' },
+  offline:        { title: 'state.offline.title', body: 'state.offline.body', cta: 'state.offline.cta', icon: WifiOff, color: 'var(--color-warning-700)' },
 } satisfies Record<string, { title: MessageKey; body: MessageKey; cta: MessageKey; icon: LucideIcon; color: string }>;
 
 /** F-05 system states: one message, one action, announced to assistive technology. */

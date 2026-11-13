@@ -46,6 +46,8 @@ export const RULES = {
     count: matches(/\btext-\[[\d.]+(?:px|rem|em)\]/g),
   },
   // Colours come from the tokens: no hex in a class name (bg-[#…]) or a string ('#…') (MDV-P1-080).
+  // At zero since MDV-P1-080, so any hex in packages/ui fails CI.
+  // shortcut: stays here, not in oxlint, because oxlint 1.90 has no no-restricted-syntax; move it when oxlint can express it.
   rawHexLibrary: { in: f => f.startsWith(LIBRARY), count: matches(HEX) },
   rawHexApps: { in: inApps, count: matches(HEX) },
   // Columns change at the named tiers, not at the 360 px sm: step (MDV-P2-057).

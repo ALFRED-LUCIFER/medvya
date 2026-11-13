@@ -2,9 +2,8 @@ import { useId, type FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { CircleAlert, CircleCheck, CircleHelp, ShieldCheck, TriangleAlert, type LucideIcon } from 'lucide-react';
 import { useI18n, type MessageKey } from '@medvya/i18n';
-import { Button, ClinicalAlert, Input } from '@medvya/ui';
-import { describedBy, fieldError } from '../../settings/components/fieldStyles';
-import { Field } from '../../settings/components/Field';
+import { Button, ClinicalAlert, Field, Input } from '@medvya/ui';
+import { fieldError } from '../../settings/components/fieldStyles';
 import { amountOf, kgOf, lookOf, mlOf, type LineSafety, type RxChecks, type SafetyAlert, type WeightDose } from '../domain/checks';
 
 export type SafetyProps = {
@@ -108,7 +107,7 @@ export default function SafetyChecks(p: SafetyProps) {
                 {!given && a.severity === 'Severe' && !p.ended && (p.overriding === a.key ? (
                   <form noValidate onSubmit={p.onReason} className="flex flex-col gap-2">
                     <Field id={reasonId} label={t('rx.check.reason')} hint={t('rx.check.reasonHint')} error={error && t('rx.check.reasonRequired')}>
-                      <Input id={reasonId} autoComplete="off" {...describedBy(reasonId, !!error, true)} {...p.reasonForm.register('reason')} />
+                      <Input autoComplete="off" {...p.reasonForm.register('reason')} />
                     </Field>
                     <div className="flex flex-wrap gap-2">
                       <Button type="submit" disabled={p.busy}>{t('rx.check.record')}</Button>

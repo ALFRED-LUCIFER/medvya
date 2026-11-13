@@ -2,9 +2,8 @@ import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { CircleCheck } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, Textarea } from '@medvya/ui';
-import { describedBy, fieldError } from '../../settings/components/fieldStyles';
-import { Field } from '../../settings/components/Field';
+import { Button, Field, Textarea } from '@medvya/ui';
+import { fieldError } from '../../settings/components/fieldStyles';
 import { Section } from '../../settings/components/Section';
 import { allergyClasses, type BrandProblem, type BrandRowsForm } from '../domain/formulary';
 
@@ -24,8 +23,9 @@ export default function BrandsPanel(p: Props) {
     <Section title={t('formulary.brands.title')} intro={t('formulary.brands.intro')}>
       <form noValidate onSubmit={p.onSubmit} className="flex flex-col gap-4">
         <Field id="brand-rows" label={t('formulary.brands.rows')} hint={t('formulary.brands.rows.hint', { classes: allergyClasses.join(', ') })}>
-          <Textarea id="brand-rows" rows={8} dir="auto" autoComplete="off" spellCheck={false}
-            {...describedBy('brand-rows', refused, true)} {...p.form.register('rows')} />
+          {/* The refusal lists rows, so it sits below the field instead of in Field's one-line error; the control still points at it. */}
+          <Textarea rows={8} dir="auto" autoComplete="off" spellCheck={false} {...p.form.register('rows')}
+            {...(refused && { 'aria-invalid': true, 'aria-describedby': 'brand-rows-hint brand-rows-error' })} />
         </Field>
         {refused && (
           <div id="brand-rows-error" role="alert" className={`flex flex-col gap-1 ${fieldError}`}>

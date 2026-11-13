@@ -1,7 +1,6 @@
 import { Download, X } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState } from '@medvya/ui';
-import { Field } from '../../settings/components/Field';
+import { Button, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState } from '@medvya/ui';
 import { Section } from '../../settings/components/Section';
 import { fieldError } from '../../settings/components/fieldStyles';
 import { PatientPicker, type PatientSearchView } from '../../schedule/components/BookingPanel';
@@ -34,30 +33,30 @@ export default function AuditLogPanel(p: Props) {
   return (
     <Section title={t('audit.title')} intro={t('audit.intro')}>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field id="audit-actor" label={t('audit.staff')}>
-          <Select value={p.filters.actor} onValueChange={v => p.onFilters({ actor: v })}>
-            <SelectTrigger id="audit-actor" className="w-full"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value={all}>{t('audit.everyone')}</SelectItem>
-              {p.people.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </Field>
-        <Field id="audit-action" label={t('audit.action')}>
-          <Select value={p.filters.action} onValueChange={v => p.onFilters({ action: v })}>
-            <SelectTrigger id="audit-action" className="w-full"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value={patientRecords}>{t('audit.patientRecords')}</SelectItem>
-              <SelectItem value={all}>{t('audit.anyAction')}</SelectItem>
-              {p.actions.map(a => <SelectItem key={a} value={a}>{actionName(a)}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </Field>
+        <Select value={p.filters.actor} onValueChange={v => p.onFilters({ actor: v })}>
+          <Field id="audit-actor" label={t('audit.staff')}>
+            <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+          </Field>
+          <SelectContent>
+            <SelectItem value={all}>{t('audit.everyone')}</SelectItem>
+            {p.people.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={p.filters.action} onValueChange={v => p.onFilters({ action: v })}>
+          <Field id="audit-action" label={t('audit.action')}>
+            <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+          </Field>
+          <SelectContent>
+            <SelectItem value={patientRecords}>{t('audit.patientRecords')}</SelectItem>
+            <SelectItem value={all}>{t('audit.anyAction')}</SelectItem>
+            {p.actions.map(a => <SelectItem key={a} value={a}>{actionName(a)}</SelectItem>)}
+          </SelectContent>
+        </Select>
         <Field id="audit-from" label={t('audit.from')}>
-          <Input id="audit-from" type="date" value={p.filters.from} max={p.filters.to || undefined} onChange={e => p.onFilters({ from: e.target.value })} />
+          <Input type="date" value={p.filters.from} max={p.filters.to || undefined} onChange={e => p.onFilters({ from: e.target.value })} />
         </Field>
         <Field id="audit-to" label={t('audit.to')}>
-          <Input id="audit-to" type="date" value={p.filters.to} min={p.filters.from || undefined} onChange={e => p.onFilters({ to: e.target.value })} />
+          <Input type="date" value={p.filters.to} min={p.filters.from || undefined} onChange={e => p.onFilters({ to: e.target.value })} />
         </Field>
       </div>
 

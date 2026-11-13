@@ -2,10 +2,8 @@ import type { FormEventHandler, ReactNode } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { CircleAlert, CircleCheck, FileDown, MessageSquare } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, Input, PageHeader } from '@medvya/ui';
+import { Button, Field, Input, PageHeader } from '@medvya/ui';
 import AuthFrame from '../../session/components/AuthFrame';
-import { describedBy } from '../../settings/components/fieldStyles';
-import { Field } from '../../settings/components/Field';
 import type { CodeForm, OpenProblem } from '../domain/share';
 
 type Props = {
@@ -33,7 +31,7 @@ export default function SharedRxPage(p: Props) {
         {p.codeSent && <p role="status" className="flex items-center gap-2"><CircleCheck aria-hidden className="size-4 shrink-0" />{t('sharedRx.codeSent')}</p>}
         <form className="flex flex-wrap items-end gap-3" onSubmit={p.onOpen} noValidate>
           <Field id="shared-rx-code" label={t('sharedRx.code')} error={invalid ? t('sharedRx.codeInvalid') : null} className="min-w-48">
-            <Input id="shared-rx-code" inputMode="numeric" autoComplete="one-time-code" dir="ltr" maxLength={6} {...describedBy('shared-rx-code', invalid)} {...p.form.register('code')} />
+            <Input inputMode="numeric" autoComplete="one-time-code" dir="ltr" maxLength={6} {...p.form.register('code')} />
           </Field>
           <Button type="submit" loading={p.opening}><FileDown aria-hidden className="size-4" />{t('sharedRx.open')}</Button>
         </form>

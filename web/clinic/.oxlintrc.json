@@ -27,6 +27,7 @@
         "src/features/**"
       ],
       "rules": {
+        "medvya-ui/no-local-field": "error",
         "react/forbid-elements": [
           "error",
           {

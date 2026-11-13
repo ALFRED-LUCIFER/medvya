@@ -2,9 +2,8 @@ import type { FormEventHandler } from 'react';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 import { CircleAlert, CircleCheck, CircleX, Send } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState } from '@medvya/ui';
-import { describedBy, fieldError } from '../../settings/components/fieldStyles';
-import { Field } from '../../settings/components/Field';
+import { Button, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState } from '@medvya/ui';
+import { fieldError } from '../../settings/components/fieldStyles';
 import { shareColumns, shareTargets, type DispensedForm, type RxShare, type ShareForm, type ShareProblem } from '../domain/share';
 
 type Props = {
@@ -32,20 +31,20 @@ export default function RxSharePanel(p: Props) {
       <h2 id="rx-share" className="font-extrabold">{t('rxShare.title')}</h2>
       <p className="text-sm">{t('rxShare.intro')}</p>
       <form className="flex flex-wrap items-end gap-3" onSubmit={p.onShare} noValidate>
-        <Field id="rx-share-target" label={t('rxShare.to')} className="min-w-56">
-          <Controller control={p.shareForm.control} name="target" render={({ field }) => (
-            <Select value={field.value} onValueChange={field.onChange}>
-              <SelectTrigger id="rx-share-target" className="w-full"><SelectValue /></SelectTrigger>
-              <SelectContent>{shareTargets.map(s => <SelectItem key={s} value={s}>{t(`rxShare.target.${s}`)}</SelectItem>)}</SelectContent>
-            </Select>
-          )} />
-        </Field>
+        <Controller control={p.shareForm.control} name="target" render={({ field }) => (
+          <Select value={field.value} onValueChange={field.onChange}>
+            <Field id="rx-share-target" label={t('rxShare.to')} className="min-w-56">
+              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+            </Field>
+            <SelectContent>{shareTargets.map(s => <SelectItem key={s} value={s}>{t(`rxShare.target.${s}`)}</SelectItem>)}</SelectContent>
+          </Select>
+        )} />
         {target === 'Pharmacy' && <>
           <Field id="rx-share-pharmacy" label={t('rxShare.pharmacyName')} error={errors.pharmacyName && t('rxShare.error.pharmacyName')} className="min-w-56">
-            <Input id="rx-share-pharmacy" {...describedBy('rx-share-pharmacy', !!errors.pharmacyName)} {...p.shareForm.register('pharmacyName')} />
+            <Input {...p.shareForm.register('pharmacyName')} />
           </Field>
           <Field id="rx-share-email" label={t('rxShare.pharmacyEmail')} error={errors.pharmacyEmail && t('rxShare.error.pharmacyEmail')} className="min-w-56">
-            <Input id="rx-share-email" type="email" dir="ltr" {...describedBy('rx-share-email', !!errors.pharmacyEmail)} {...p.shareForm.register('pharmacyEmail')} />
+            <Input type="email" dir="ltr" {...p.shareForm.register('pharmacyEmail')} />
           </Field>
         </>}
         <Button type="submit" loading={p.busy}><Send aria-hidden className="size-4" />{t('rxShare.send')}</Button>
@@ -87,10 +86,10 @@ export default function RxSharePanel(p: Props) {
       {p.dispensing && (
         <form className="flex flex-wrap items-end gap-3" aria-label={t('rxShare.dispensedTitle')} onSubmit={p.onDispensed} noValidate>
           <Field id="rx-dispensed-at" label={t('rxShare.dispensedWhen')} error={p.dispensedForm.formState.errors.dispensedAt && t('rxShare.error.dispensedAt')} className="min-w-56">
-            <Input id="rx-dispensed-at" type="datetime-local" {...describedBy('rx-dispensed-at', !!p.dispensedForm.formState.errors.dispensedAt)} {...p.dispensedForm.register('dispensedAt')} />
+            <Input type="datetime-local" {...p.dispensedForm.register('dispensedAt')} />
           </Field>
           <Field id="rx-dispensed-ref" label={t('rxShare.pharmacyRef')} className="min-w-56">
-            <Input id="rx-dispensed-ref" dir="ltr" {...p.dispensedForm.register('pharmacyRef')} />
+            <Input dir="ltr" {...p.dispensedForm.register('pharmacyRef')} />
           </Field>
           <Button type="submit" loading={p.busy}>{t('rxShare.saveDispensed')}</Button>
           <Button type="button" variant="outline" onClick={() => p.onDispensing(null)}>{t('rxShare.close')}</Button>

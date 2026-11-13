@@ -2,8 +2,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { FileDown, Printer, ShieldCheck } from 'lucide-react';
 import { ltr, useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, PageHeader, PageMessage, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
-import { Field } from '../../settings/components/Field';
+import { Button, buttonVariants, Field, PageHeader, PageMessage, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
 import { qrCells, secondLanguages, type RxLayout, type RxPrint, type RxPrintLine, type SecondLanguage } from '../domain/authorisation';
 import { directionOf } from '../domain/prescription';
 
@@ -40,12 +39,12 @@ export default function RxPrintPage(p: Props) {
   return (
     <div className="flex max-w-[720px] flex-col gap-4">
       <div className="flex flex-wrap items-end gap-3 print:hidden">
-        <Field id="rx-second" label={t('rxPrint.second')} className="min-w-56">
-          <Select value={p.second} onValueChange={l => p.onSecond(l as SecondLanguage)}>
-            <SelectTrigger id="rx-second" className="w-full"><SelectValue /></SelectTrigger>
-            <SelectContent>{secondLanguages.map(l => <SelectItem key={l} value={l}>{l === 'none' ? t('rxPrint.secondNone') : t(`rx.lang.${l}`)}</SelectItem>)}</SelectContent>
-          </Select>
-        </Field>
+        <Select value={p.second} onValueChange={l => p.onSecond(l as SecondLanguage)}>
+          <Field id="rx-second" label={t('rxPrint.second')} className="min-w-56">
+            <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+          </Field>
+          <SelectContent>{secondLanguages.map(l => <SelectItem key={l} value={l}>{l === 'none' ? t('rxPrint.secondNone') : t(`rx.lang.${l}`)}</SelectItem>)}</SelectContent>
+        </Select>
         <Button onClick={p.onPrint}><Printer aria-hidden className="size-4" />{t('rxPrint.print')}</Button>
         {(['A4', 'A5'] as const).map(paper => (
           <Button key={paper} variant="outline" loading={p.downloading === paper} disabled={p.downloading !== null} onClick={() => p.onPdf(paper)}>

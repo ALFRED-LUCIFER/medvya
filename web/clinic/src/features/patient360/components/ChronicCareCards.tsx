@@ -1,10 +1,9 @@
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { ltr, useI18n } from '@medvya/i18n';
-import { Button, Card, Input } from '@medvya/ui';
+import { Button, Card, Field, Input } from '@medvya/ui';
 import { CircleAlert, CircleCheck, CircleMinus } from 'lucide-react';
-import { Field } from '../../settings/components/Field';
-import { describedBy, fieldError } from '../../settings/components/fieldStyles';
+import { fieldError } from '../../settings/components/fieldStyles';
 import {
   checkKindOf, gapKey, type CareError, type CareGap, type CareTarget, type CheckForm, type ChronicCare, type GapOutcome, type GoalForm, type ProgressForm,
   type TargetCode, type TargetForm,
@@ -76,8 +75,7 @@ function Targets(p: Props) {
               {p.canDecide && (p.editing === x.code ? (
                 <form noValidate onSubmit={p.onSubmitTarget} aria-label={t('chronicCare.target.form', { measure })} className="flex flex-col gap-2">
                   <Field id={`target-${x.code}`} label={t('chronicCare.target.limitLabel', { measure, unit: x.unit })} error={message(p.targetForm.formState.errors.limit?.message)}>
-                    <Input id={`target-${x.code}`} inputMode="decimal" dir="ltr" autoComplete="off"
-                      {...describedBy(`target-${x.code}`, !!p.targetForm.formState.errors.limit)} {...p.targetForm.register('limit')} />
+                    <Input inputMode="decimal" dir="ltr" autoComplete="off" {...p.targetForm.register('limit')} />
                   </Field>
                   {p.targetFailed && <p role="alert" className={fieldError}>{t('chronicCare.target.failed')}</p>}
                   <div className="flex flex-wrap gap-2">
@@ -142,7 +140,7 @@ function Gaps(p: Props) {
                 {kind && p.checking === k && (
                   <form noValidate onSubmit={p.onSubmitCheck(g)} aria-label={t('chronicCare.check.form', { gap: name })} className="flex flex-col gap-2">
                     <Field id={`check-${g.rule}`} label={t('chronicCare.check.doneOn')} error={errors.doneOn?.message && t(`chronicCare.error.${errors.doneOn.message as CareError}`)}>
-                      <Input id={`check-${g.rule}`} type="date" dir="ltr" {...describedBy(`check-${g.rule}`, !!errors.doneOn)} {...p.checkForm.register('doneOn')} />
+                      <Input type="date" dir="ltr" {...p.checkForm.register('doneOn')} />
                     </Field>
                     {p.checkFailed && <p role="alert" className={fieldError}>{t('chronicCare.check.failed')}</p>}
                     <div className="flex flex-wrap gap-2">
@@ -183,8 +181,7 @@ function Goals(p: Props) {
               {p.canDecide && (p.moving === g.id ? (
                 <form noValidate onSubmit={p.onSubmitMove} aria-label={t('chronicCare.goals.moveFor', { goal: g.text })} className="flex flex-col gap-2">
                   <Field id={`goal-${g.id}`} label={t('chronicCare.goals.progressLabel')} error={message(p.progressForm.formState.errors.progress?.message)}>
-                    <Input id={`goal-${g.id}`} inputMode="numeric" dir="ltr" autoComplete="off"
-                      {...describedBy(`goal-${g.id}`, !!p.progressForm.formState.errors.progress)} {...p.progressForm.register('progress')} />
+                    <Input inputMode="numeric" dir="ltr" autoComplete="off" {...p.progressForm.register('progress')} />
                   </Field>
                   {p.progressFailed && <p role="alert" className={fieldError}>{t('chronicCare.goals.failed')}</p>}
                   <div className="flex flex-wrap gap-2">
@@ -202,13 +199,13 @@ function Goals(p: Props) {
       {p.canDecide && (p.adding ? (
         <form noValidate onSubmit={p.onSubmitGoal} aria-label={t('chronicCare.goals.form')} className="flex flex-col gap-3 border-t pt-3">
           <Field id="goal-text" label={t('chronicCare.goals.text')} error={message(gErrors.text?.message)}>
-            <Input id="goal-text" {...describedBy('goal-text', !!gErrors.text)} {...p.goalForm.register('text')} />
+            <Input {...p.goalForm.register('text')} />
           </Field>
           <Field id="goal-target" label={t('chronicCare.goals.target')} error={message(gErrors.target?.message)}>
-            <Input id="goal-target" {...describedBy('goal-target', !!gErrors.target)} {...p.goalForm.register('target')} />
+            <Input {...p.goalForm.register('target')} />
           </Field>
           <Field id="goal-progress" label={t('chronicCare.goals.progressLabel')} error={message(gErrors.progress?.message)}>
-            <Input id="goal-progress" inputMode="numeric" dir="ltr" autoComplete="off" {...describedBy('goal-progress', !!gErrors.progress)} {...p.goalForm.register('progress')} />
+            <Input inputMode="numeric" dir="ltr" autoComplete="off" {...p.goalForm.register('progress')} />
           </Field>
           {p.goalFailed && <p role="alert" className={fieldError}>{t('chronicCare.goals.failed')}</p>}
           <div className="flex flex-wrap gap-2">

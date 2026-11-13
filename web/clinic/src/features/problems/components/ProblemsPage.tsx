@@ -3,12 +3,10 @@ import { Controller, type UseFormReturn } from 'react-hook-form';
 import { Link } from 'react-router';
 import { CircleCheck, CircleHelp, MessageCircle } from 'lucide-react';
 import { ltr, useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState } from '@medvya/ui';
+import { Button, buttonVariants, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState } from '@medvya/ui';
 import type { ClinicalRefusal } from '../../clinical-access/domain/clinicalAccess';
 import type { EncounterBanner } from '../../encounters/domain/encounter';
 import IdentityBanner from '../../encounters/components/IdentityBanner';
-import { Field } from '../../settings/components/Field';
-import { describedBy } from '../../settings/components/fieldStyles';
 import { statuses, verificationKey, verifications, type AddDraft, type CodeSet, type DiagnosisCode, type EditDraft, type Problem, type ProblemList, type ProblemRow } from '../domain/problems';
 
 type Props = {
@@ -83,8 +81,10 @@ function AddForm(p: Props) {
           <Button type="button" variant="outline" size="sm" onClick={p.onClearPick}>{t('problems.add.clearCode')}</Button>
         </div>
       ) : (
-        <Field id="problem-search" label={t('problems.add.search')} hint={t('problems.add.searchHint')}>
-          <Input id="problem-search" type="search" autoComplete="off" value={p.search} onChange={e => p.onSearch(e.target.value)} {...describedBy('problem-search', false, true)} />
+        <div className="flex flex-col gap-2">
+          <Field id="problem-search" label={t('problems.add.search')} hint={t('problems.add.searchHint')}>
+            <Input type="search" autoComplete="off" value={p.search} onChange={e => p.onSearch(e.target.value)} />
+          </Field>
           {p.search.trim() !== '' && (p.results.length === 0
             ? <p role="status" className="text-sm">{t('problems.add.noResults')}</p>
             : <ul aria-label={t('problems.add.results')} className="flex flex-col gap-1">
@@ -92,22 +92,22 @@ function AddForm(p: Props) {
                   <li key={c.code}><Button type="button" variant="ghost" className="w-full justify-start text-start" onClick={() => p.onPick(c)}><span className="font-bold">{ltr(c.code)}</span>{` · ${c.title}`}</Button></li>
                 ))}
               </ul>)}
-        </Field>
+        </div>
       )}
       <div className="grid gap-3 sm:grid-cols-3">
         <Field id="problem-description" label={t('problems.add.description')} hint={t(p.picked ? 'problems.add.descriptionFromCode' : 'problems.add.descriptionHint')} error={errors.description ? t('problems.add.descriptionRequired') : null}>
-          <Input id="problem-description" autoComplete="off" maxLength={200} placeholder={p.picked?.title} {...describedBy('problem-description', !!errors.description, true)} {...p.addForm.register('description')} />
+          <Input autoComplete="off" maxLength={200} placeholder={p.picked?.title} {...p.addForm.register('description')} />
         </Field>
-        <Field id="problem-verification" label={t('problems.col.verification')}>
-          <Controller control={p.addForm.control} name="verification" render={({ field }) => (
-            <Select value={field.value} onValueChange={field.onChange}>
-              <SelectTrigger id="problem-verification" className="w-full"><SelectValue /></SelectTrigger>
-              <SelectContent>{verifications.map(v => <SelectItem key={v} value={v}>{t(`problems.verification.${v}`)}</SelectItem>)}</SelectContent>
-            </Select>
-          )} />
-        </Field>
+        <Controller control={p.addForm.control} name="verification" render={({ field }) => (
+          <Select value={field.value} onValueChange={field.onChange}>
+            <Field id="problem-verification" label={t('problems.col.verification')}>
+              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+            </Field>
+            <SelectContent>{verifications.map(v => <SelectItem key={v} value={v}>{t(`problems.verification.${v}`)}</SelectItem>)}</SelectContent>
+          </Select>
+        )} />
         <Field id="problem-onset" label={t('problems.col.onset')}>
-          <Input id="problem-onset" type="date" {...p.addForm.register('onsetOn')} />
+          <Input type="date" {...p.addForm.register('onsetOn')} />
         </Field>
       </div>
       <div><Button type="submit" loading={p.adding} disabled={!p.online}>{t('problems.add.submit')}</Button></div>
@@ -124,24 +124,24 @@ function EditRow(p: Props & { row: ProblemRow }) {
         <form noValidate onSubmit={p.onSaveEdit} aria-label={t('problems.editFor', { name: row.description })} className="flex flex-col gap-3">
           <p className="font-bold">{row.code ? `${row.code} · ${row.description}` : row.description}</p>
           <div className="grid gap-3 sm:grid-cols-3">
-            <Field id={`edit-verification-${row.id}`} label={t('problems.col.verification')}>
-              <Controller control={p.editForm.control} name="verification" render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger id={`edit-verification-${row.id}`} className="w-full"><SelectValue /></SelectTrigger>
-                  <SelectContent>{verifications.map(v => <SelectItem key={v} value={v}>{t(`problems.verification.${v}`)}</SelectItem>)}</SelectContent>
-                </Select>
-              )} />
-            </Field>
-            <Field id={`edit-status-${row.id}`} label={t('problems.col.status')}>
-              <Controller control={p.editForm.control} name="status" render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger id={`edit-status-${row.id}`} className="w-full"><SelectValue /></SelectTrigger>
-                  <SelectContent>{statuses.map(s => <SelectItem key={s} value={s}>{t(`problems.status.${s}`)}</SelectItem>)}</SelectContent>
-                </Select>
-              )} />
-            </Field>
+            <Controller control={p.editForm.control} name="verification" render={({ field }) => (
+              <Select value={field.value} onValueChange={field.onChange}>
+                <Field id={`edit-verification-${row.id}`} label={t('problems.col.verification')}>
+                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                </Field>
+                <SelectContent>{verifications.map(v => <SelectItem key={v} value={v}>{t(`problems.verification.${v}`)}</SelectItem>)}</SelectContent>
+              </Select>
+            )} />
+            <Controller control={p.editForm.control} name="status" render={({ field }) => (
+              <Select value={field.value} onValueChange={field.onChange}>
+                <Field id={`edit-status-${row.id}`} label={t('problems.col.status')}>
+                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                </Field>
+                <SelectContent>{statuses.map(s => <SelectItem key={s} value={s}>{t(`problems.status.${s}`)}</SelectItem>)}</SelectContent>
+              </Select>
+            )} />
             <Field id={`edit-onset-${row.id}`} label={t('problems.col.onset')}>
-              <Input id={`edit-onset-${row.id}`} type="date" {...p.editForm.register('onsetOn')} />
+              <Input type="date" {...p.editForm.register('onsetOn')} />
             </Field>
           </div>
           <div className="flex gap-2">

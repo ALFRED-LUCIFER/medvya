@@ -123,47 +123,47 @@ export default function PatientRecord(props: Props) {
       )}
 
       <Section title={t('patients.record.identity')}>
-        <Field label={t('patients.record.dob')}>{dob}</Field>
-        <Field label={t('patients.record.sex')}>{t(`patients.sex.${p.sexAtBirth}`)}</Field>
-        <Field label={t('patients.record.gender')}>{gender ? t(`registration.gender.${gender}`) : p.genderIdentity ?? none}</Field>
-        <Field label={t('patients.record.language')}>{p.preferredLanguage ? named('language', p.preferredLanguage) : none}</Field>
-        <Field label={t('patients.record.nationality')}>{p.nationality ? named('region', p.nationality) : none}</Field>
+        <Detail label={t('patients.record.dob')}>{dob}</Detail>
+        <Detail label={t('patients.record.sex')}>{t(`patients.sex.${p.sexAtBirth}`)}</Detail>
+        <Detail label={t('patients.record.gender')}>{gender ? t(`registration.gender.${gender}`) : p.genderIdentity ?? none}</Detail>
+        <Detail label={t('patients.record.language')}>{p.preferredLanguage ? named('language', p.preferredLanguage) : none}</Detail>
+        <Detail label={t('patients.record.nationality')}>{p.nationality ? named('region', p.nationality) : none}</Detail>
         {/* A calendar date in the facility's country time zone, from the server; never re-derived from a UTC instant. */}
-        <Field label={t('patients.record.registered')}>{date(p.registeredOn)}</Field>
+        <Detail label={t('patients.record.registered')}>{date(p.registeredOn)}</Detail>
       </Section>
 
       <Section title={t('patients.record.identifiers')}>
-        {p.identifiers.length === 0 ? <Field label={t('patients.record.identifiers')}>{none}</Field>
+        {p.identifiers.length === 0 ? <Detail label={t('patients.record.identifiers')}>{none}</Detail>
           : p.identifiers.map(i => (
-            <Field key={i.scheme} label={t(`patients.scheme.${i.scheme}`)}>
+            <Detail key={i.scheme} label={t(`patients.scheme.${i.scheme}`)}>
               <Ltr>{full(i.scheme) ?? masked(i.lastFour)}</Ltr>
               {i.expiresOn && <span className="ms-1 text-muted-foreground">{t('patients.record.expires', { date: date(i.expiresOn) })}</span>}
-            </Field>
+            </Detail>
           ))}
       </Section>
 
       <Section title={t('patients.record.contact')}>
-        <Field label={t('patients.record.mobile')}><Ltr>{p.mobile}</Ltr></Field>
-        <Field label={t('patients.record.alternate')}>{p.alternatePhone ? <Ltr>{p.alternatePhone}</Ltr> : none}</Field>
-        <Field label={t('patients.record.email')}>{p.email ? <Ltr>{p.email}</Ltr> : none}</Field>
-        <Field label={t('patients.record.address')}>{address ? <bdi>{addressLines(address).join(', ')}</bdi> : none}</Field>
+        <Detail label={t('patients.record.mobile')}><Ltr>{p.mobile}</Ltr></Detail>
+        <Detail label={t('patients.record.alternate')}>{p.alternatePhone ? <Ltr>{p.alternatePhone}</Ltr> : none}</Detail>
+        <Detail label={t('patients.record.email')}>{p.email ? <Ltr>{p.email}</Ltr> : none}</Detail>
+        <Detail label={t('patients.record.address')}>{address ? <bdi>{addressLines(address).join(', ')}</bdi> : none}</Detail>
       </Section>
 
       <Section title={t('patients.record.contacts')}>
-        <Field label={t('patients.record.emergencyContact')}>{p.emergencyContact ? contact(p.emergencyContact) : none}</Field>
-        <Field label={t('patients.record.guardian')}>{p.guardian ? contact(p.guardian) : none}</Field>
+        <Detail label={t('patients.record.emergencyContact')}>{p.emergencyContact ? contact(p.emergencyContact) : none}</Detail>
+        <Detail label={t('patients.record.guardian')}>{p.guardian ? contact(p.guardian) : none}</Detail>
       </Section>
 
       <Section title={t('patients.record.payer')}>
         {p.payer ? <>
-          <Field label={t('patients.record.payerKind')}>{t(`patients.payer.${p.payer.kind}`)}</Field>
-          {p.payer.payerName && <Field label={t('patients.record.payerName')}><bdi>{p.payer.payerName}</bdi></Field>}
-          {p.payer.plan && <Field label={t('patients.record.plan')}><bdi>{p.payer.plan}</bdi></Field>}
+          <Detail label={t('patients.record.payerKind')}>{t(`patients.payer.${p.payer.kind}`)}</Detail>
+          {p.payer.payerName && <Detail label={t('patients.record.payerName')}><bdi>{p.payer.payerName}</bdi></Detail>}
+          {p.payer.plan && <Detail label={t('patients.record.plan')}><bdi>{p.payer.plan}</bdi></Detail>}
           {p.payer.memberNumberLastFour && (
-            <Field label={t('patients.record.memberNumber')}><Ltr>{props.revealed?.memberNumber ?? masked(p.payer.memberNumberLastFour)}</Ltr></Field>
+            <Detail label={t('patients.record.memberNumber')}><Ltr>{props.revealed?.memberNumber ?? masked(p.payer.memberNumberLastFour)}</Ltr></Detail>
           )}
-          {p.payer.validTo && <Field label={t('patients.record.validTo')}>{date(p.payer.validTo)}</Field>}
-        </> : <Field label={t('patients.record.payerKind')}>{t('patients.record.payerMissing')}</Field>}
+          {p.payer.validTo && <Detail label={t('patients.record.validTo')}>{date(p.payer.validTo)}</Detail>}
+        </> : <Detail label={t('patients.record.payerKind')}>{t('patients.record.payerMissing')}</Detail>}
       </Section>
 
       <section aria-labelledby="consents-title" className="rounded-xl border bg-card p-4">
@@ -247,7 +247,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
+function Detail({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex min-w-0 flex-col">
       <dt className="text-xs font-bold text-muted-foreground">{label}</dt>

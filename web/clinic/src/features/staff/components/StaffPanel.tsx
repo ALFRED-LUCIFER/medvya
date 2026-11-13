@@ -1,14 +1,11 @@
 import { ChevronDown, Lock, Plus } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import {
-  Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, Input, Table, TableBody, TableCell, TableHead, TableHeader, TablePagination, TableRow, TableState, Textarea,
-} from '@medvya/ui';
+import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, Field, Input, Table, TableBody, TableCell, TableHead, TableHeader, TablePagination, TableRow, TableState, Textarea } from '@medvya/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
-import { describedBy, fieldError } from '../../settings/components/fieldStyles';
+import { fieldError } from '../../settings/components/fieldStyles';
 import type { Location } from '../../settings/domain/settings';
-import { Field } from '../../settings/components/Field';
 import { Section } from '../../settings/components/Section';
 import type { TableView } from '../../table/domain/tableSort';
 import { staffActions, staffColumns, type StaffAction, type StaffSortColumn } from '../domain/staffTable';
@@ -176,7 +173,7 @@ export default function StaffPanel(p: Props) {
         <Section title={t('staff.offboardTitle', { name: p.offboarding.name ?? p.offboarding.email ?? '' })} intro={t('staff.offboardIntro')}>
           <form noValidate onSubmit={p.onOffboardSubmit} className="flex flex-col gap-4">
             <Field id="staff-offboard-reason" label={t('staff.offboardReason')} error={p.offboardForm.formState.errors.reason && t('staff.offboardReasonRequired')}>
-              <Textarea id="staff-offboard-reason" autoFocus rows={3} maxLength={500} {...describedBy('staff-offboard-reason', !!p.offboardForm.formState.errors.reason)} {...p.offboardForm.register('reason')} />
+              <Textarea autoFocus rows={3} maxLength={500} {...p.offboardForm.register('reason')} />
             </Field>
             {isDoctor(p.offboarding) && (
               <fieldset className="flex flex-col gap-2" aria-describedby={p.offboardForm.formState.errors.rebooking ? 'staff-offboard-rebooking-error' : undefined}>
@@ -221,7 +218,7 @@ export default function StaffPanel(p: Props) {
               </fieldset>
               {removing && (
                 <Field id="staff-locations-reason" label={t('staff.offboardReason')} hint={t('staff.locationsReasonHint')} error={p.locationsForm.formState.errors.reason && t('staff.offboardReasonRequired')}>
-                  <Textarea id="staff-locations-reason" rows={3} maxLength={500} {...describedBy('staff-locations-reason', !!p.locationsForm.formState.errors.reason)} {...p.locationsForm.register('reason')} />
+                  <Textarea rows={3} maxLength={500} {...p.locationsForm.register('reason')} />
                 </Field>
               )}
               {p.locationsError && <p role="alert" className={fieldError}>{t(`staff.locationsError.${p.locationsError}`)}</p>}
@@ -237,15 +234,15 @@ export default function StaffPanel(p: Props) {
       {p.changing && (
         <Section title={t('staff.changeRoleTitle', { name: p.changing.name ?? p.changing.email ?? '' })} intro={t('staff.changeRoleIntro')}>
           <form noValidate onSubmit={p.onChangeRoleSubmit} className="flex flex-col gap-4">
-            <Field id="staff-change-role" label={t('staff.changeRoleTo')}>
-              <Select value={p.newRole} onValueChange={p.onNewRole}>
-                <SelectTrigger id="staff-change-role" className="w-full"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {assignableRoles.map(r => <SelectItem key={r} value={`builtIn:${r}`}>{t(`role.${r}`)}</SelectItem>)}
-                  {p.catalogue.custom.map(c => <SelectItem key={c.id} value={`custom:${c.id}`}>{c.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </Field>
+            <Select value={p.newRole} onValueChange={p.onNewRole}>
+              <Field id="staff-change-role" label={t('staff.changeRoleTo')}>
+                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+              </Field>
+              <SelectContent>
+                {assignableRoles.map(r => <SelectItem key={r} value={`builtIn:${r}`}>{t(`role.${r}`)}</SelectItem>)}
+                {p.catalogue.custom.map(c => <SelectItem key={c.id} value={`custom:${c.id}`}>{c.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
             {p.changeRoleError && <p role="alert" className={fieldError}>{t(`staff.changeRoleError.${p.changeRoleError}`)}</p>}
             <div className="flex flex-wrap gap-2">
               <Button type="submit" loading={p.changeRoleWorking} disabled={p.newRole === roleValue(p.changing)}>{t('staff.changeRoleConfirm')}</Button>
@@ -259,7 +256,7 @@ export default function StaffPanel(p: Props) {
         <Section title={t('staff.reactivateTitle', { name: p.reactivating.name ?? p.reactivating.email ?? '' })} intro={t('staff.reactivateIntro')}>
           <form noValidate onSubmit={p.onReactivateSubmit} className="flex flex-col gap-4">
             <Field id="staff-reactivate-reason" label={t('staff.offboardReason')} error={p.reactivateForm.formState.errors.reason && t('staff.offboardReasonRequired')}>
-              <Textarea id="staff-reactivate-reason" rows={3} maxLength={500} {...describedBy('staff-reactivate-reason', !!p.reactivateForm.formState.errors.reason)} {...p.reactivateForm.register('reason')} />
+              <Textarea rows={3} maxLength={500} {...p.reactivateForm.register('reason')} />
             </Field>
             {p.reactivateError && <p role="alert" className={fieldError}>{t(`staff.reactivateError.${p.reactivateError}`)}</p>}
             <div className="flex flex-wrap gap-2">
@@ -288,14 +285,14 @@ export default function StaffPanel(p: Props) {
             {p.step === 'scope' && (
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field id="staff-email" label={t('staff.email')} error={errors.email && t('settings.error.email')}>
-                  <Input id="staff-email" type="email" autoComplete="off" {...describedBy('staff-email', !!errors.email)} {...p.form.register('email')} />
+                  <Input type="email" autoComplete="off" {...p.form.register('email')} />
                 </Field>
-                <Field id="staff-facility" label={t('staff.facility')} hint={t('staff.hoursNote')}>
-                  <Select value={p.form.watch('facilityId')} onValueChange={v => p.form.setValue('facilityId', v, { shouldValidate: true })}>
-                    <SelectTrigger id="staff-facility" className="w-full"><SelectValue /></SelectTrigger>
-                    <SelectContent>{p.locations.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}</SelectContent>
-                  </Select>
-                </Field>
+                <Select value={p.form.watch('facilityId')} onValueChange={v => p.form.setValue('facilityId', v, { shouldValidate: true })}>
+                  <Field id="staff-facility" label={t('staff.facility')} hint={t('staff.hoursNote')}>
+                    <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                  </Field>
+                  <SelectContent>{p.locations.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}</SelectContent>
+                </Select>
                 {p.locations.length > 1 && (
                   <fieldset className="flex flex-col gap-2 sm:col-span-2">
                     <legend className="mb-1 font-bold">{t('staff.alsoAt')}</legend>

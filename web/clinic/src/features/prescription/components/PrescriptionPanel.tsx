@@ -3,10 +3,9 @@ import type { UseFormReturn } from 'react-hook-form';
 import { Link } from 'react-router';
 import { CircleAlert, CircleSlash, TrendingDown, CircleX, FilePen, History, Plus, Printer, ShieldCheck, Trash2, UserRound } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, ClinicalAlert, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@medvya/ui';
+import { Button, buttonVariants, ClinicalAlert, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@medvya/ui';
 import { isCurrent, type AuthoriseProblem, type RxAuthorisationState } from '../domain/authorisation';
 import { describedBy, fieldError } from '../../settings/components/fieldStyles';
-import { Field } from '../../settings/components/Field';
 import { Section } from '../../settings/components/Section';
 import { lineSafety } from '../domain/checks';
 import SafetyChecks, { SafetyChip, type SafetyProps } from './SafetyChecks';
@@ -72,12 +71,12 @@ export default function PrescriptionPanel(p: Props) {
   return (
     <Section title={t('rx.title')} intro={t(p.ended ? 'rx.ended' : 'rx.intro')}>
       <div className="flex flex-wrap items-end gap-3">
-        <Field id="rx-language" label={t('rx.language')} className="min-w-56">
-          <Select value={p.language} onValueChange={v => p.onLanguage(v as PrintLanguage)}>
-            <SelectTrigger id="rx-language" className="w-full"><SelectValue /></SelectTrigger>
-            <SelectContent>{printLanguages.map(l => <SelectItem key={l} value={l}>{t(`rx.lang.${l}`)}</SelectItem>)}</SelectContent>
-          </Select>
-        </Field>
+        <Select value={p.language} onValueChange={v => p.onLanguage(v as PrintLanguage)}>
+          <Field id="rx-language" label={t('rx.language')} className="min-w-56">
+            <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+          </Field>
+          <SelectContent>{printLanguages.map(l => <SelectItem key={l} value={l}>{t(`rx.lang.${l}`)}</SelectItem>)}</SelectContent>
+        </Select>
         <AuthorisationState state={p.authorisation} />
         {!p.ended && p.addMedicine}
       </div>
@@ -124,7 +123,7 @@ export default function PrescriptionPanel(p: Props) {
         <form noValidate onSubmit={p.onAddFreeText} className="flex flex-col gap-3 border-t pt-4">
           <h3 className="font-bold">{t('rx.add.title')}</h3>
           <Field id="rx-medicine" label={t('rx.add.search')} hint={t('rx.add.hint')} error={p.add.formState.errors.medicine && t('rx.error.required')}>
-            <Input id="rx-medicine" autoComplete="off" {...describedBy('rx-medicine', !!p.add.formState.errors.medicine, true)} {...p.add.register('medicine')} />
+            <Input autoComplete="off" {...p.add.register('medicine')} />
           </Field>
           {p.suggestions.length > 0 && <h4 id="rx-suggestions" className="text-sm font-bold">{t('rx.didYouMean')}</h4>}
           {[p.results, p.suggestions].map((rows, suggested) => rows.length > 0 && (
@@ -185,7 +184,7 @@ function Authorise(p: Props) {
       {current && p.cancelling && (
         <form noValidate onSubmit={p.onCancel} className="flex flex-col gap-2">
           <Field id="rx-cancel-reason" label={t('rx.auth.cancelReason')} hint={t('rx.auth.cancelHint')} error={reasonError && t('rx.auth.cancelReasonRequired')}>
-            <Input id="rx-cancel-reason" autoComplete="off" {...describedBy('rx-cancel-reason', !!reasonError, true)} {...p.cancelForm.register('reason')} />
+            <Input autoComplete="off" {...p.cancelForm.register('reason')} />
           </Field>
           <div className="flex flex-wrap gap-2">
             <Button type="submit" loading={p.cancelPending}>{t('rx.auth.cancelConfirm')}</Button>

@@ -3525,6 +3525,8 @@
   "rx.check.alert.DuplicateChart": "علاج مكرر: {medicine} + {other} (في الملف) · {kind}.",
   "rx.check.alert.DoseAboveMaximum": "جرعة أعلى من الحد الأقصى للبالغين: {medicine} {daily} يوميًا (الحد الأقصى {max}).",
   "rx.check.alert.AllergiesNotRecorded": "الحساسية غير مسجّلة لهذا المريض، لذلك تعذّر فحص الحساسية. اسأل المريض وسجّلها.",
+  "rx.check.alert.FreeTextAllergy": "لم يُفحص مقابل: {allergies}. {medicine} مكتوب نصًا حرًا.",
+  "rx.check.alert.FreeTextAllergy.notRecorded": "{medicine} مكتوب نصًا حرًا. الحساسية غير مسجّلة لهذا المريض، لذلك تعذّر فحص الحساسية. اسأل المريض وسجّلها.",
   "rx.check.alert.Pregnancy": "الحمل: {medicine} في الأسبوع {measure}. {rule}",
   "rx.check.alert.Kidney": "وظائف الكلى: {medicine} مع eGFR {measure}. {rule}",
   "rx.check.alert.OlderAdult": "مريض مسن، {measure} سنة: {medicine}. {rule}",

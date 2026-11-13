@@ -205,6 +205,132 @@ public sealed class RxAuthorisationTests(PostgresFixture sql, AzuriteFixture blo
         Assert.Equal(HttpStatusCode.OK, ok.StatusCode);
     }
 
+    /// <summary>The second patient (nothing on the chart) in a new consultation, with these allergies recorded. One open consultation at a time.</summary>
+    async Task SecondPatientAsync(params string[] allergies)
+    {
+        await h.Get<IEncounters>(h.Doctor).EndAsync(encounter);
+        var visit = await h.BookAsync(11, patient: h.SecondPatient);
+        await h.FrontDesk(h.Reception).CheckInAsync(visit.Id, new CheckIn());
+        encounter = (await h.Get<IEncounters>(h.Doctor).StartAsync(new StartEncounter(visit.Id)))!.Id;
+        await RecordAllergiesAsync(allergies);
+    }
+
+    async Task RecordAllergiesAsync(params string[] allergies)
+    {
+        await using var db = sql.Encounters(h.Tenant);
+        // A second apart: the chart lists allergies in the order they were recorded.
+        db.Allergies.AddRange(allergies.Select((a, i) => new Allergy
+        {
+            Id = Guid.CreateVersion7(), TenantId = h.Tenant, PatientId = h.SecondPatient, Kind = AllergyKind.Substance, Substance = a, Status = AllergyStatus.Confirmed,
+            Source = ChartSource.ClinicianVerified, RecordedAt = h.Clock.GetUtcNow().AddSeconds(i),
+        }));
+        await db.SaveChangesAsync();
+    }
+
+    /// <summary>A typed medicine with a complete instruction, added by the doctor.</summary>
+    async Task<Guid> TypeAsync(string medicine)
+    {
+        var rx = h.Get<IPrescriptions>(h.Doctor);
+        var line = (await rx.AddAsync(encounter, new AddRxLine(null, medicine, null, null)))!.Single(l => l.Medicine == medicine).Id!.Value;
+        await rx.UpdateAsync(line, Twice);
+        return line;
+    }
+
+    // MDV-P1-087 (audit finding F-01). SAFETY mutation check: remove the FreeTextAllergy alert from SafetyRules.Evaluate and this fails (a typed
+    // penicillin brand is authorised for a patient allergic to penicillin with no reason asked).
+    [Fact]
+    public async Task AFreeTextMedicineForAnAllergicPatientNeedsAReasonThatIsStoredAuditedAndPrinted()
+    {
+        const string medicine = "Augmentin 625 Duo", reason = "Tolerated co-amoxiclav in 2024, patient confirms (synthetic)";
+        await SecondPatientAsync("Penicillin", "Sulfa");
+        var line = await TypeAsync(medicine);
+        using (var refused = await AuthoriseAsync(h.Doctor))
+        {
+            Assert.Equal(HttpStatusCode.Conflict, refused.StatusCode);
+            var body = await refused.Content.ReadAsStringAsync();
+            Assert.Contains("unresolved_alerts", body, StringComparison.Ordinal);
+            // The refusal is a code: no medicine and no allergy leaves in it.
+            Assert.DoesNotContain("Augmentin", body, StringComparison.Ordinal);
+            Assert.DoesNotContain("Penicillin", body, StringComparison.Ordinal);
+        }
+        Assert.Empty(await AuthorisedAsync());
+
+        var rx = h.Get<IPrescriptions>(h.Doctor);
+        var check = (await rx.CheckAsync(encounter))!;
+        var alert = Assert.Single(check.Alerts);
+        Assert.Equal((RxAlertKind.FreeTextAllergy, RxSeverity.Severe, line, medicine, "Penicillin, Sulfa"), (alert.Kind, alert.Severity, alert.ItemId, alert.Medicine, alert.Substance));
+        Assert.Contains(check.NotChecked, n => n.Id == line && n.Reason == NotCheckedReason.FreeText); // the honest "not checked" note stays
+
+        await rx.OverrideAsync(encounter, new OverrideRxAlert(alert.Key, reason));
+        // An allergy recorded after the reason is a new finding: the reason given before did not cover it.
+        h.Clock.Advance(TimeSpan.FromMinutes(1));
+        await RecordAllergiesAsync("Latex");
+        using (var again = await AuthoriseAsync(h.Doctor))
+            Assert.Equal((HttpStatusCode.Conflict, "unresolved_alerts"), (again.StatusCode, await Code(again)));
+        var wider = Assert.Single((await rx.CheckAsync(encounter))!.Alerts);
+        Assert.Equal("Penicillin, Sulfa, Latex", wider.Substance);
+        Assert.NotEqual(alert.Key, wider.Key);
+        await rx.OverrideAsync(encounter, new OverrideRxAlert(wider.Key, reason));
+
+        using (var ok = await AuthoriseAsync(h.Doctor)) Assert.Equal(HttpStatusCode.OK, ok.StatusCode);
+        // Stored with the line (the frozen version), on the print view and on the PDF.
+        Assert.Equal(reason, Assert.Single(Assert.Single(await AuthorisedAsync()).Lines).Reason);
+        using (var print = await Client(h.Doctor).GetAsync(U($"/v1/encounters/{encounter}/prescription/print")))
+            Assert.Equal(reason, (await Json(print)).GetProperty("lines")[0].GetProperty("reason").GetString());
+        using (var pdf = await PdfAsync())
+            Assert.Contains("Tolerated co-amoxiclav in 2024", PdfPages.Read(await pdf.Content.ReadAsByteArrayAsync(), PlainPdf.A4.Margin)[0].Text, StringComparison.Ordinal);
+
+        // Audited: each reason's event names its row (which holds the reason) and the alert kind. Codes and ids only: no medicine, allergy or reason text.
+        await using var db = sql.Prescribing(h.Tenant);
+        var rows = await db.RxAlertOverrides.AsNoTracking().ToListAsync();
+        Assert.Equal(2, rows.Count);
+        Assert.All(rows, o => Assert.Equal((RxAlertKind.FreeTextAllergy, reason, h.Doctor), (o.Kind, o.Reason, o.OverriddenBy)));
+        Assert.All(rows, o => Assert.Contains(line.ToString(), o.AlertKey, StringComparison.Ordinal));
+        var events = await AuditAsync(PrescriptionService.OverrideAction);
+        Assert.Equal(rows.Select(o => (Guid?)o.Id).Order(), events.Select(e => e.ResourceId).Order());
+        Assert.All(events, e => Assert.Equal(($"kind:FreeTextAllergy;rules:{SafetyRules.Version}", (Guid?)h.SecondPatient), (e.Detail, e.PatientId)));
+        await using var audit = sql.Audit(h.Tenant);
+        Assert.DoesNotContain(await audit.Events.Select(e => e.Detail).ToListAsync(), d => d is not null && (d.Contains("Augmentin", StringComparison.OrdinalIgnoreCase)
+            || d.Contains("Penicillin", StringComparison.OrdinalIgnoreCase) || d.Contains("Tolerated", StringComparison.OrdinalIgnoreCase)));
+    }
+
+    // MDV-P1-087. SAFETY mutation check: raise the FreeTextAllergy alert only when allergies are listed and this fails.
+    [Fact]
+    public async Task AFreeTextMedicineWithAllergiesNotRecordedNeedsItsOwnReason()
+    {
+        await SecondPatientAsync();
+        var line = await TypeAsync("Augmentin 625 Duo");
+        var rx = h.Get<IPrescriptions>(h.Doctor);
+        var alerts = (await rx.CheckAsync(encounter))!.Alerts;
+        Assert.Equal([RxAlertKind.AllergiesNotRecorded, RxAlertKind.FreeTextAllergy], alerts.Select(a => a.Kind));
+        var typed = alerts[1];
+        Assert.Equal((RxSeverity.Severe, (Guid?)line, (string?)null), (typed.Severity, typed.ItemId, typed.Substance));
+
+        // The reason for "allergies not recorded" does not cover the typed line.
+        await rx.OverrideAsync(encounter, new OverrideRxAlert("allergies:not_recorded", "Patient unconscious, no relative present (synthetic)"));
+        using (var refused = await AuthoriseAsync(h.Doctor))
+            Assert.Equal((HttpStatusCode.Conflict, "unresolved_alerts"), (refused.StatusCode, await Code(refused)));
+        Assert.Empty(await AuthorisedAsync());
+
+        await rx.OverrideAsync(encounter, new OverrideRxAlert(typed.Key, "Only antibiotic in stock, given under observation (synthetic)"));
+        using var ok = await AuthoriseAsync(h.Doctor);
+        Assert.Equal(HttpStatusCode.OK, ok.StatusCode);
+        Assert.Equal("Only antibiotic in stock, given under observation (synthetic)", Assert.Single(Assert.Single(await AuthorisedAsync()).Lines).Reason);
+    }
+
+    // MDV-P1-087: with "no known allergies" confirmed there is nothing to check a typed medicine against, so no reason is asked.
+    [Fact]
+    public async Task AFreeTextMedicineWithNoKnownAllergiesAsksNoReason()
+    {
+        var line = await TypeAsync("Augmentin 625 Duo");
+        var check = (await h.Get<IPrescriptions>(h.Doctor).CheckAsync(encounter))!;
+        Assert.Equal((ChartAllergies.NoKnownAllergies, 0), (check.Allergies, check.Alerts.Count));
+        Assert.Contains(check.NotChecked, n => n.Id == line && n.Reason == NotCheckedReason.FreeText);
+        using var ok = await AuthoriseAsync(h.Doctor);
+        Assert.Equal(HttpStatusCode.OK, ok.StatusCode);
+        Assert.Null(Assert.Single(Assert.Single(await AuthorisedAsync()).Lines).Reason);
+    }
+
     // SAFETY mutation check: drop the care-relationship check (RequireAsync in AuthoriseAsync) and the colleague case fails.
     [Fact]
     public async Task OnlyADoctorWithACareRelationshipAndALicenceAuthorises()

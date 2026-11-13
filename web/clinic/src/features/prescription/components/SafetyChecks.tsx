@@ -33,7 +33,7 @@ const weightText = (t: T, d: WeightDose) => t(d.doseTenthsMl === null ? 'rx.chec
 });
 
 /** The alert in words with its evidence, for example "Allergy: Penicillin · verified. Amoxicillin: penicillin class." */
-function alertText(t: T, a: SafetyAlert, doses: WeightDose[]): string {
+function alertText(t: T, a: SafetyAlert, { weightDoses: doses, allergies }: RxChecks): string {
   const base = { medicine: a.medicine ?? '', other: a.other ?? '' };
   const status = words(t, 'rx.check.status', a.allergyStatus);
   const amount = (mcg: number | null) => amountText(t, mcg);
@@ -49,6 +49,11 @@ function alertText(t: T, a: SafetyAlert, doses: WeightDose[]): string {
       return t('rx.check.alert.DoseAboveMaximum', { ...base, daily: amount(a.dailyMicrograms), max: amount(a.maxDailyMicrograms) });
     case 'AllergiesNotRecorded':
       return t('rx.check.alert.AllergiesNotRecorded');
+    case 'FreeTextAllergy':
+      // MDV-P1-087: a typed medicine cannot be matched to an allergy; the server lists every recorded allergy. With none to name, the reason is
+      // said: allergies not recorded, or (every entry marked "not an allergy") only that the line went unchecked.
+      if (a.substance !== null) return t('rx.check.alert.FreeTextAllergy', { ...base, allergies: a.substance });
+      return t(allergies === 'NotRecorded' ? 'rx.check.alert.FreeTextAllergy.notRecorded' : 'rx.check.missed.FreeText', base);
     case 'Pregnancy':
     case 'Kidney':
     case 'OlderAdult':
@@ -98,7 +103,7 @@ export default function SafetyChecks(p: SafetyProps) {
             const given = c.overrides.find(o => o.key === a.key);
             return (
               <li key={a.key} className="flex flex-col gap-2">
-                <ClinicalAlert severity={lookOf(a, !!given)}>{`${t(`rx.check.severity.${a.severity}`)} · ${alertText(t, a, c.weightDoses)}`}</ClinicalAlert>
+                <ClinicalAlert severity={lookOf(a, !!given)}>{`${t(`rx.check.severity.${a.severity}`)} · ${alertText(t, a, c)}`}</ClinicalAlert>
                 {given && <p className="text-sm">{t('rx.check.overridden', { reason: given.reason })}</p>}
                 {!given && a.severity === 'Severe' && !p.ended && (p.overriding === a.key ? (
                   <form noValidate onSubmit={p.onReason} className="flex flex-col gap-2">

@@ -2,14 +2,16 @@ import type { FormEventHandler } from 'react';
 import type { FieldError, UseFormReturn } from 'react-hook-form';
 import { CircleCheck } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, Input, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState, Textarea } from '@medvya/ui';
+import { Button, Input, Table, TableBody, TableCell, TableHead, TableHeader, TablePagination, TableRow, TableState, Textarea } from '@medvya/ui';
 import { describedBy, fieldError } from '../../settings/components/fieldStyles';
 import { Field } from '../../settings/components/Field';
 import { Section } from '../../settings/components/Section';
+import type { TableView } from '../../table/domain/tableSort';
 import type { OrderSet, OrderSetForm, ProblemCode } from '../domain/formulary';
 
 type Props = {
   sets: OrderSet[];
+  table: TableView<OrderSet, 'name'>;
   loading: boolean;
   failed: boolean;
   form: UseFormReturn<OrderSetForm>;
@@ -30,16 +32,21 @@ export default function OrderSetsPanel(p: Props) {
     <div className="flex flex-col gap-4">
       <Section title={t('orderSets.title')} intro={t('orderSets.intro')}>
         <TableState state={tableState} messages={{ loading: t('formulary.loading'), error: t('formulary.loadFailed'), empty: t('orderSets.empty') }}>
-          <Table label={t('orderSets.tableLabel')} className="min-w-[480px]">
+          {/* Compact: a reference list read with a mouse (DESIGN.md, Density). */}
+          <Table label={t('orderSets.tableLabel')} density="compact" stacked status={p.table.status} className="md:min-w-[480px]">
             <TableHeader>
-              <TableRow><TableHead scope="col">{t('orderSets.col.name')}</TableHead><TableHead scope="col">{t('orderSets.col.items')}</TableHead></TableRow>
+              <TableRow>
+                <TableHead scope="col" sort={p.table.sortOf('name')} onSort={() => p.table.onSort('name')}>{t('orderSets.col.name')}</TableHead>
+                <TableHead scope="col">{t('orderSets.col.items')}</TableHead>
+              </TableRow>
             </TableHeader>
             <TableBody>
-              {p.sets.map(s => (
-                <TableRow key={s.id}><TableHead scope="row">{s.name}</TableHead><TableCell>{s.items.join(', ')}</TableCell></TableRow>
+              {p.table.rows.map(s => (
+                <TableRow key={s.id}><TableHead scope="row">{s.name}</TableHead><TableCell label={t('orderSets.col.items')}>{s.items.join(', ')}</TableCell></TableRow>
               ))}
             </TableBody>
           </Table>
+          <TablePagination page={p.table.page} pageCount={p.table.pageCount} onPage={p.table.onPage} />
         </TableState>
       </Section>
 

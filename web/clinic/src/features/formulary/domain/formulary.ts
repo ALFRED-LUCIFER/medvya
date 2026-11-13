@@ -45,6 +45,9 @@ export const formularySort = {
 export type FormularySortColumn = keyof typeof formularySort;
 export const isFormularySortable = (c: FormularyColumn): c is FormularySortColumn => c in formularySort;
 
+/** Order sets sort by name, the column people look for; the label of each column is `orderSets.col.<key>`. */
+export const orderSetSort = { name: (s: OrderSet) => s.name };
+
 const optional = (max: number) => z.string().trim().max(max);
 
 export const medicineSchema = z.object({

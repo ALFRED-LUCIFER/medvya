@@ -345,6 +345,17 @@ public sealed class SessionControlTests(PostgresFixture sql) : IClassFixture<Pos
     }
 
     [Fact]
+    public async Task SigningOutBeforeChoosingAFacilityIsAuditedInThePlatformChain()
+    {
+        await Clinics();
+        var user = await Account("R. Menon");
+        using var browser = Browser();
+        await StaffSignInTests.SignIn(browser, user.Subject);
+        Assert.Equal(HttpStatusCode.OK, (await Send(browser, HttpMethod.Post, "/bff/logout")).StatusCode);
+        Assert.Equal(["auth.signout"], await AuditActions(Medvya.Audit.Domain.PlatformTenant.Id, user.Id));
+    }
+
+    [Fact]
     public async Task ACookieCopiedBeforeASwitchOrSignOutNoLongerWorks()
     {
         await Clinics();

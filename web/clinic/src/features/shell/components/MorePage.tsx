@@ -9,11 +9,11 @@ import { navIcons } from './navIcons';
 type Props = {
   displayName: string; role: Role; facilityName: string;
   groups: { group: NavGroup; items: NavItem[] }[];
-  languageSwitcher: ReactNode; signingOut: boolean; canSwitchFacility: boolean; onSignOut: () => void;
+  languageSwitcher: ReactNode; signingOut: boolean; canSwitchFacility: boolean; onSignOut: () => void; devicesPath: string;
 };
 
 /** Mobile "More" tab: every screen this role may open, plus account and language (the sidebar's job on wider screens). */
-export default function MorePage({ displayName, role, facilityName, groups, languageSwitcher, signingOut, canSwitchFacility, onSignOut }: Props) {
+export default function MorePage({ displayName, role, facilityName, groups, languageSwitcher, signingOut, canSwitchFacility, onSignOut, devicesPath }: Props) {
   const { t } = useI18n();
   return (
     <PageContainer width="form" className="gap-5">
@@ -23,6 +23,7 @@ export default function MorePage({ displayName, role, facilityName, groups, lang
         <p className="text-sm text-muted-foreground">{t('shell.roleAtFacility', { role: t(`role.${role}`), facility: facilityName })}</p>
       </div>
       {canSwitchFacility && <Link to="/choose-facility" className={buttonVariants({ variant: 'outline', className: 'min-h-12' })}>{t('session.switchFacility')}</Link>}
+      <Link to={devicesPath} className={buttonVariants({ variant: 'outline', className: 'min-h-12' })}>{t('myDevices.link')}</Link>
       {groups.map(g => (
         <section key={g.group} className="flex flex-col gap-1">
           <h2 className="text-xs font-bold tracking-[.09em] text-muted-foreground uppercase">{t(`nav.group.${g.group}`)}</h2>

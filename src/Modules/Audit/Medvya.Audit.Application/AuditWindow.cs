@@ -5,7 +5,7 @@ namespace Medvya.Audit.Application;
 /// <summary>
 /// Remembers that a user's identical read was just audited, so a screen that refetches every few seconds leaves one row per
 /// window instead of one per call. Only Allowed reads may be skipped, and only after the window's first row was written
-/// successfully (fail closed); Denied, NotFound and Rejected answers are always written by the caller.
+/// successfully (fail closed); Denied, NotFound and Rejected answers on a tenant's endpoints are always written by the caller (the platform chain's no-facility refusals use a window too).
 /// </summary>
 // shortcut: per-instance memory, so a restart or a second API instance writes one extra row per window; move the window into
 // the database (or a shared cache) before running more than one instance (MDV-P0-007).

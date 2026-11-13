@@ -167,6 +167,27 @@ public class LedgerDigestTests(PostgresFixture sql) : IClassFixture<PostgresFixt
         Assert.Equal(0, await digests.VerifyAsync());
         Assert.DoesNotContain(log.Entries, e => e.Level >= LogLevel.Warning);
     }
+
+    [Fact]
+    public async Task ThePlatformChainIsDigestedAndVerifiedLikeATenantsChain()
+    {
+        var platform = new Medvya.Audit.Infrastructure.PlatformAuditLog(sql.ConnectionString);
+        Task Write() => platform.WriteAsync(new Medvya.Audit.Domain.AuditEvent
+        {
+            Id = Guid.CreateVersion7(), Action = "patient.read", ResourceType = "patient", Purpose = "treatment", OccurredAt = DateTimeOffset.UtcNow,
+            TenantId = Guid.NewGuid(), Outcome = Medvya.Audit.Domain.AuditOutcome.Denied, // the tenant id is ignored: it lands in the platform chain
+        });
+        await Write();
+        var (store, log) = (new MemoryDigestStore(), new CapturingLogger<LedgerDigests>());
+        var digests = new LedgerDigests(sql.ConnectionString, LedgerChainTests.Key, store, TimeProvider.System, log);
+
+        await digests.PublishAsync();
+        Assert.Contains(Medvya.Audit.Domain.PlatformTenant.Id.ToString(), Encoding.UTF8.GetString(Assert.Single(store.Blobs).Value));
+
+        await Write();
+        Assert.Equal(0, await digests.VerifyAsync());
+        Assert.DoesNotContain(log.Entries, e => e.Level >= LogLevel.Warning);
+    }
 }
 
 /// <summary>A missing digest (MDV-P0-042): a warning in a new environment, an alert once the database records that one was published.</summary>

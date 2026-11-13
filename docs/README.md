@@ -17,6 +17,7 @@ These docs were built from the Claude Design project **"DOQVI UI mockups and fou
 | [04-security-compliance](04-security-compliance) | 12-layer database security, security by layer, data residency, consent model, retention, India/UAE regulatory notes |
 | [05-delivery](05-delivery) | Release process, environments, feature flags, versioning, Definition of Ready/Done, ticket conventions and confidence scale |
 | [06-gap-analysis](06-gap-analysis) | What a clinic would still miss (outside history, legacy migration, doctor/reception gaps, voice assistant), with priorities and phases |
+| [product-ux-audit](product-ux-audit/00-executive-verdict.md) | The 13 Nov 2026 product UX audit: 47 findings, rulings, design-system blueprint, backlog and ticket map, pilot validation plan, concept. Turned into epic MDV-P1-E12 ([ux-programme](05-delivery/ux-programme.md)). Real-app screenshots are kept outside git |
 | [adr](adr) | Architecture decision records (ADR-001 stack, ADR-002 launch market, and others proposed by the PRD) |
 
 Delivery tickets live in [`../tickets/`](05-delivery/tickets): Jira-style, one folder per phase. Each ticket has acceptance criteria, source traceability and a confidence level.

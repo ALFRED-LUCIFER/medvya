@@ -1,0 +1,735 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Medvya workspace concept (design proposal, synthetic data)</title>
+<style>
+/*FONT*/
+:root{
+  --brand-950:#102A43;--brand-700:#0F766E;--brand-50:#E7F6F4;--action:#2563EB;--action-50:#EFF4FF;
+  --ink:#142536;--ink-2:#506579;--line:#DFE7ED;--line-2:#C9D5DE;--canvas:#F7FAFC;--card:#fff;--sunk:#EEF3F7;
+  --danger:#B42333;--danger-50:#FDECEE;--warn:#8A5112;--warn-50:#FDF5E7;--ok:#087F5B;--ok-50:#E7F6F4;
+  --row:40px;--ctl:36px;--gap:12px;--r:8px;
+  --rail:76px;--top:48px;--strip:56px;--foot:56px;
+  font-family:"Manrope",system-ui,sans-serif;font-size:14px;line-height:20px;color:var(--ink);
+}
+:root[data-touch="1"]{--row:48px;--ctl:44px;--gap:14px;--foot:64px}
+@media (any-pointer:coarse){:root{--row:48px;--ctl:44px;--gap:14px;--foot:64px}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0;background:var(--canvas)}
+body{display:flex;flex-direction:column}
+::selection{background:#BFE5DF;color:var(--ink)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--action);outline-offset:2px;border-radius:6px}
+.num{font-variant-numeric:tabular-nums}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;letter-spacing:.01em}
+svg.i{width:16px;height:16px;flex:none;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+
+/* demo bar: outside the product, explains the concept */
+.demo{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:6px 12px;background:#0B1E30;color:#DCE7F0;font-size:12.5px}
+.demo b{color:#fff;font-weight:700}
+.demo .seg{display:inline-flex;background:#17324B;border-radius:8px;padding:2px}
+.demo .seg button{border:0;background:none;color:#C5D5E2;padding:5px 12px;border-radius:6px;font-weight:600;min-height:30px}
+.demo .seg button[aria-pressed="true"]{background:#fff;color:var(--brand-950)}
+.demo label{display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+.demo .sp{flex:1}
+
+.app{display:grid;grid-template-columns:var(--rail) 1fr;grid-template-rows:var(--top) 1fr;flex:1;min-height:0}
+.rail{grid-row:1/3;background:var(--brand-950);display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:4px}
+.rail .logo{width:32px;height:32px;border-radius:8px;background:var(--brand-700);color:#fff;font-weight:800;display:grid;place-items:center;margin-bottom:8px}
+.rail button{width:64px;min-height:52px;border:0;border-radius:8px;background:none;color:#C5D3E0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;position:relative;font-size:11px;line-height:13px;font-weight:600;padding:4px 2px}
+.rail button svg{width:20px;height:20px}
+.rail button:hover{background:#17324B;color:#fff}
+.rail button[aria-current]{background:#17324B;color:#fff}
+.rail button[aria-current]::before{content:"";position:absolute;inset-inline-start:-6px;top:10px;bottom:10px;width:3px;border-radius:2px;background:#2BB3A3}
+.rail .sp{flex:1}
+.top{display:flex;align-items:center;gap:var(--gap);padding:0 16px;background:var(--card);border-bottom:1px solid var(--line);min-width:0}
+.top .clinic{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top .clinic small{font-weight:500;color:var(--ink-2);margin-inline-start:8px}
+.search{flex:1;max-width:460px;display:flex;align-items:center;gap:8px;height:34px;padding:0 10px;border:1px solid var(--line-2);border-radius:8px;background:var(--canvas);color:var(--ink-2)}
+.search input{border:0;background:none;outline:0;flex:1;min-width:0}
+.search kbd{font:inherit;font-size:11.5px;border:1px solid var(--line-2);border-radius:4px;padding:0 5px;background:#fff}
+.top .sp{flex:1}
+.icon-btn{width:var(--ctl);height:var(--ctl);border:0;border-radius:8px;background:none;display:grid;place-items:center;color:var(--ink-2);position:relative}
+.icon-btn:hover{background:var(--sunk);color:var(--ink)}
+.icon-btn .dot{position:absolute;top:7px;inset-inline-end:7px;width:8px;height:8px;border-radius:50%;background:var(--danger);border:2px solid #fff}
+.acct{display:flex;align-items:center;gap:8px;border:0;background:none;height:var(--ctl);padding:0 6px;border-radius:8px}
+.acct:hover{background:var(--sunk)}
+.acct .av{width:28px;height:28px;border-radius:50%;background:var(--brand-950);color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center}
+.menu{position:absolute;inset-inline-end:12px;top:calc(var(--top) + 46px);z-index:30;width:220px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 32px -12px rgba(16,42,67,.35);padding:6px;display:none}
+.menu.open{display:block}
+.menu button{display:flex;gap:8px;align-items:center;width:100%;height:var(--ctl);border:0;background:none;border-radius:6px;padding:0 8px;text-align:start}
+.menu button:hover{background:var(--sunk)}
+main{min-height:0;min-width:0;overflow:hidden;position:relative}
+.view{display:none;height:100%}
+.view.on{display:flex;flex-direction:column}
+
+/* shared atoms */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:var(--ctl);padding:0 12px;border-radius:8px;border:1px solid var(--line-2);background:#fff;font-weight:600;white-space:nowrap}
+.btn:hover{background:var(--canvas)}
+.btn.pri{background:var(--brand-700);border-color:var(--brand-700);color:#fff}
+.btn.pri:hover{background:#0B5F58}
+.btn.pri[disabled]{background:#C9D5DE;border-color:#C9D5DE;color:#fff;cursor:not-allowed}
+.btn.sm{height:calc(var(--ctl) - 6px);padding:0 10px;font-size:13px}
+.btn.ghost{border-color:transparent;background:none;color:var(--action)}
+.chip{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:600;background:var(--sunk);color:var(--ink-2);white-space:nowrap}
+.chip.danger{background:var(--danger-50);color:var(--danger)}
+.chip.warn{background:var(--warn-50);color:var(--warn)}
+.chip.ok{background:var(--ok-50);color:var(--ok)}
+.chip.info{background:var(--action-50);color:#1D4ED8}
+.chip svg{width:13px;height:13px}
+.token{font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:.01em}
+h2{font-size:13px;line-height:18px;margin:0;font-weight:700;color:var(--ink-2);text-transform:none}
+.field{width:100%;border:1px solid var(--line-2);border-radius:8px;background:#fff;padding:8px 10px;min-height:var(--ctl)}
+.field:hover{border-color:#9FB2C2}
+textarea.field{resize:vertical;min-height:64px;font-size:16px;line-height:24px;display:block}
+.note-n{position:absolute;z-index:20;width:22px;height:22px;border-radius:50%;background:#7155D8;color:#fff;font-size:11.5px;font-weight:800;display:none;place-items:center;border:2px solid #fff;cursor:help}
+:root[data-notes="1"] .note-n{display:grid}
+.note-n:hover::after,.note-n:focus::after{content:attr(data-tip);position:absolute;top:26px;inset-inline-start:0;width:260px;background:#231942;color:#fff;font-size:12px;font-weight:500;line-height:17px;padding:8px 10px;border-radius:8px;white-space:normal;text-align:start;z-index:40}
+.note-n.r:hover::after,.note-n.r:focus::after{inset-inline-start:auto;inset-inline-end:0}
+
+/* ---------- doctor: consultation workspace ---------- */
+.strip{display:flex;align-items:center;gap:14px;min-height:var(--strip);padding:6px 16px;background:#fff;border-bottom:1px solid var(--line);position:relative;flex-wrap:wrap}
+.strip .who{display:flex;align-items:baseline;gap:10px;min-width:0}
+.strip .who b{font-size:18px;line-height:26px;font-weight:800;white-space:nowrap}
+.strip .who span{color:var(--ink-2);white-space:nowrap}
+.allergy{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:6px;background:var(--danger);color:#fff;font-weight:700;white-space:nowrap}
+.strip .meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.strip .sp{flex:1}
+.timer{color:var(--ink-2);white-space:nowrap}
+.work{flex:1;min-height:0;display:grid;grid-template-columns:200px minmax(0,1fr) 340px}
+.queue{border-inline-end:1px solid var(--line);background:#fff;overflow:auto;padding:10px 8px}
+.queue h2{padding:2px 8px 8px}
+.q{display:grid;grid-template-columns:44px 1fr;gap:2px 8px;align-items:center;width:100%;border:0;background:none;text-align:start;padding:6px 8px;border-radius:8px;min-height:var(--row)}
+.q:hover{background:var(--canvas)}
+.q[aria-current]{background:var(--brand-50)}
+.q .token{color:var(--brand-700)}
+.q small{grid-column:2;color:var(--ink-2);font-size:12px;line-height:16px}
+.q .flag{color:var(--danger);font-weight:700}
+.note{overflow:auto;padding:0 20px 16px;scroll-behavior:smooth;position:relative}
+.secnav{position:sticky;top:0;z-index:5;display:flex;gap:2px;background:var(--canvas);padding:8px 0;border-bottom:1px solid var(--line);margin-bottom:12px;overflow-x:auto}
+.secnav a{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 10px;border-radius:6px;color:var(--ink-2);text-decoration:none;font-weight:600;white-space:nowrap}
+.secnav a:hover{background:var(--sunk);color:var(--ink)}
+.secnav a .st{width:14px;height:14px;border-radius:50%;border:1.75px solid #9FB2C2;display:grid;place-items:center}
+.secnav a.done .st{background:var(--ok);border-color:var(--ok)}
+.secnav a.done .st::after{content:"";width:6px;height:3px;border:solid #fff;border-width:0 0 1.75px 1.75px;transform:rotate(-45deg) translateY(-1px)}
+.sec{max-width:860px;margin:0 0 16px;scroll-margin-top:52px;position:relative}
+.sec>header{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.sec>header h2{font-size:15px;line-height:22px;margin:0;font-weight:800;color:var(--ink)}
+.sec>header .src{color:var(--ink-2);font-size:12px}
+.vitals{display:flex;flex-wrap:wrap;gap:6px}
+.vital{display:flex;align-items:baseline;gap:6px;border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 10px}
+.vital span{color:var(--ink-2);font-size:12px}
+.vital b{font-weight:800;font-variant-numeric:tabular-nums}
+.vital.hi{border-color:#E8C48A;background:var(--warn-50)}
+.vital.hi i{font-style:normal;color:var(--warn);font-size:12px;font-weight:700}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.lbl{display:flex;justify-content:space-between;font-weight:600;font-size:13px;margin:0 0 4px}
+.lbl em{font-style:normal;font-weight:500;color:var(--ink-2)}
+.dx{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+table.rx{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+table.rx th{font-size:12px;color:var(--ink-2);font-weight:600;text-align:start;padding:6px 10px;background:var(--canvas);border-bottom:1px solid var(--line)}
+table.rx td{padding:0 10px;height:var(--row);border-bottom:1px solid var(--line);vertical-align:middle}
+table.rx tr:last-child td{border-bottom:0}
+table.rx td b{font-weight:700}
+table.rx .x{width:var(--ctl);height:var(--ctl);border:0;background:none;border-radius:6px;color:var(--ink-2)}
+table.rx .x:hover{background:var(--danger-50);color:var(--danger)}
+.addrx{display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap}
+.addrx input{max-width:260px}
+.block{display:none;margin-top:8px;border:1px solid #E9A7AE;background:var(--danger-50);color:#7A1220;border-radius:8px;padding:10px 12px;gap:10px;align-items:flex-start}
+.block.on{display:flex}
+.block.ack{border-color:#E8C48A;background:var(--warn-50);color:#5E3A0C}
+.block b{display:block}
+.fu{display:flex;gap:6px;flex-wrap:wrap}
+.fu button[aria-pressed="true"]{background:var(--brand-50);border-color:var(--brand-700);color:var(--brand-700)}
+.ctx{border-inline-start:1px solid var(--line);background:#fff;display:flex;flex-direction:column;min-height:0}
+.tabs{display:flex;border-bottom:1px solid var(--line);padding:0 8px}
+.tabs button{border:0;background:none;height:40px;padding:0 10px;font-weight:600;color:var(--ink-2);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs button[aria-selected="true"]{color:var(--brand-700);border-bottom-color:var(--brand-700)}
+.pane{display:none;overflow:auto;padding:12px 14px;flex:1}
+.pane.on{display:block}
+.pane h2{margin:14px 0 6px}
+.pane h2:first-child{margin-top:0}
+.kv{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px solid var(--line)}
+.kv:last-child{border-bottom:0}
+.kv span{color:var(--ink-2)}
+.kv b{font-weight:700}
+.kv>:first-child{text-align:start}
+.kv>:last-child{text-align:end}
+.visit{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:8px}
+.visit small{color:var(--ink-2)}
+.check{display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--line)}
+.check .st{margin-top:2px;width:16px;height:16px;border-radius:50%;border:1.75px solid #9FB2C2;flex:none}
+.check.done .st{background:var(--ok);border-color:var(--ok)}
+.check.done{color:var(--ink-2)}
+.foot{display:flex;align-items:center;gap:12px;min-height:var(--foot);padding:8px 16px;background:#fff;border-top:1px solid var(--line);position:relative}
+.foot .save{display:flex;align-items:center;gap:6px;color:var(--ink-2)}
+.foot .save .pulse{width:8px;height:8px;border-radius:50%;background:var(--ok)}
+.foot .save.saving .pulse{background:var(--warn);animation:pulse .9s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.35}}
+.foot .sp{flex:1}
+.foot .todo{border:0;background:none;color:var(--warn);font-weight:700;display:flex;gap:6px;align-items:center;height:var(--ctl);border-radius:6px;padding:0 8px}
+.foot .todo.ready{color:var(--ok)}
+.ctx-toggle{display:none}
+.nextpill{display:none}
+dialog{border:0;border-radius:12px;padding:0;width:min(440px,calc(100vw - 32px));box-shadow:0 24px 60px -20px rgba(16,42,67,.5)}
+dialog::backdrop{background:rgba(16,42,67,.45)}
+dialog .d{padding:20px}
+dialog h2{margin:0 0 4px;font-size:18px;line-height:26px;color:var(--ink)}
+dialog .idbox{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:12px 0;background:var(--canvas)}
+dialog .acts{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+.signed{display:none;align-items:center;gap:8px;padding:8px 12px;background:var(--ok-50);color:var(--ok);font-weight:700;border-bottom:1px solid #BFE5DF}
+.signed.on{display:flex}
+.is-signed .x,.is-signed .addrx{display:none}
+
+/* ---------- reception: queue-first desk ---------- */
+.deskbar{display:flex;gap:10px;align-items:center;padding:10px 16px;background:#fff;border-bottom:1px solid var(--line);flex-wrap:wrap;position:relative}
+.deskbar .find{flex:1;min-width:240px;max-width:520px;display:flex;align-items:center;gap:8px;height:var(--ctl);padding:0 10px;border:1px solid var(--line-2);border-radius:8px}
+.deskbar .find input{border:0;outline:0;flex:1;min-width:0;background:none}
+.deskbar .sp{flex:1}
+.match{display:none;position:absolute;top:calc(100% - 4px);inset-inline-start:16px;width:min(520px,calc(100% - 32px));z-index:10;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 16px 36px -16px rgba(16,42,67,.4);padding:6px}
+.match.on{display:block}
+.match .m{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:8px;min-height:var(--row)}
+.match .m:hover{background:var(--canvas)}
+.match .m div{flex:1;min-width:0}
+.match .m small{display:block;color:var(--ink-2);font-size:12px}
+.filters{display:flex;gap:6px;padding:8px 16px;overflow-x:auto;border-bottom:1px solid var(--line);background:var(--canvas);position:relative}
+.filters button{display:inline-flex;align-items:center;gap:8px;height:32px;padding:0 12px;border-radius:999px;border:1px solid var(--line-2);background:#fff;font-weight:600;white-space:nowrap}
+.filters button b{font-variant-numeric:tabular-nums;font-weight:800}
+.filters button[aria-pressed="true"]{background:var(--brand-950);border-color:var(--brand-950);color:#fff}
+.desk{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 300px}
+.list{overflow:auto;position:relative}
+table.q2{width:100%;border-collapse:collapse;background:#fff}
+table.q2 th{position:sticky;top:0;z-index:2;background:var(--canvas);font-size:12px;color:var(--ink-2);font-weight:600;text-align:start;padding:6px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+table.q2 td{padding:0 12px;height:var(--row);border-bottom:1px solid var(--line);white-space:nowrap}
+table.q2 td.name{white-space:normal;min-width:180px}
+table.q2 td.name b{font-weight:700}
+table.q2 td.name small{color:var(--ink-2);margin-inline-start:6px}
+table.q2 tr.grp td{height:30px;background:var(--sunk);font-weight:800;font-size:12.5px;color:var(--ink-2)}
+table.q2.grouped th:nth-child(3),table.q2.grouped tr:not(.grp) td:nth-child(3){display:none}
+table.q2 tr.moved td{animation:moved 1.2s ease-out}
+@keyframes moved{from{background:#D9F2EE}to{background:#fff}}
+@media (prefers-reduced-motion:reduce){table.q2 tr.moved td{animation:none}.foot .save.saving .pulse{animation:none}.note{scroll-behavior:auto}}
+.wait.late{color:var(--danger);font-weight:700}
+.side{border-inline-start:1px solid var(--line);background:#fff;overflow:auto;padding:12px 14px;position:relative}
+.doc{padding:8px 0;border-bottom:1px solid var(--line)}
+.doc .r{display:flex;justify-content:space-between;gap:8px}
+.doc small{color:var(--ink-2)}
+.bar{height:6px;border-radius:3px;background:var(--sunk);margin-top:6px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--brand-700)}
+.bar i.late{background:var(--warn)}
+
+/* ---------- owner: today at a glance ---------- */
+.own{overflow:auto;padding:16px 20px 24px}
+.ownhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.ownhead h1{font-size:20px;line-height:28px;margin:0;font-weight:800}
+.ownhead .fresh{color:var(--ink-2)}
+.ownhead .sp{flex:1}
+.ownhead select{height:var(--ctl);border:1px solid var(--line-2);border-radius:8px;background:#fff;padding:0 8px}
+.flow{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));border:1px solid var(--line);border-radius:10px;background:#fff;overflow:hidden;margin-bottom:16px;position:relative}
+.flow div{padding:10px 14px;border-inline-end:1px solid var(--line)}
+.flow div:last-child{border:0}
+.flow div span{display:block;color:var(--ink-2);font-size:12.5px}
+.flow b{font-size:22px;line-height:30px;font-weight:800;font-variant-numeric:tabular-nums}
+.flow small{color:var(--ink-2)}
+.flow .na b{font-size:15px;color:var(--ink-2);font-weight:700}
+.owngrid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:16px}
+.panel{background:#fff;border:1px solid var(--line);border-radius:10px;position:relative}
+.panel>header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--line)}
+.panel>header h2{margin:0;font-size:15px;line-height:22px;font-weight:800;color:var(--ink)}
+.act{display:flex;align-items:center;gap:10px;padding:0 14px;min-height:calc(var(--row) + 8px);border-bottom:1px solid var(--line)}
+.act:last-child{border:0}
+.act div{flex:1;min-width:0}
+.act small{display:block;color:var(--ink-2);font-size:12.5px}
+.act .sev{width:8px;height:8px;border-radius:50%;flex:none;background:var(--warn)}
+.act .sev.hi{background:var(--danger)}
+table.docs{width:100%;border-collapse:collapse}
+table.docs th{font-size:12px;color:var(--ink-2);font-weight:600;text-align:end;padding:6px 14px;border-bottom:1px solid var(--line)}
+table.docs th:first-child,table.docs td:first-child{text-align:start}
+table.docs td{padding:0 14px;height:var(--row);border-bottom:1px solid var(--line);text-align:end;font-variant-numeric:tabular-nums}
+table.docs tr:last-child td{border:0}
+.empty{padding:16px 14px;color:var(--ink-2)}
+.empty b{display:block;color:var(--ink)}
+
+/* ---------- responsive: tablet landscape, tablet portrait, phone ---------- */
+@media (max-width:1180px){
+  .work{grid-template-columns:minmax(0,1fr) 320px}
+  .queue{display:none}
+  .nextpill{display:inline-flex}
+  .desk{grid-template-columns:minmax(0,1fr) 260px}
+}
+@media (max-width:860px){
+  .work{grid-template-columns:minmax(0,1fr)}
+  .ctx{position:absolute;inset-block:0;inset-inline-end:0;width:min(360px,92vw);z-index:15;box-shadow:-16px 0 40px -20px rgba(16,42,67,.45);transform:translateX(105%);transition:transform .18s cubic-bezier(.2,.8,.2,1)}
+  [dir=rtl] .ctx{transform:translateX(-105%)}
+  .ctx.open{transform:none}
+  .ctx-toggle{display:inline-flex}
+  .two{grid-template-columns:1fr}
+  .desk{grid-template-columns:minmax(0,1fr)}
+  .side{display:none}
+  .owngrid{grid-template-columns:1fr}
+  .flow{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .flow div:nth-child(3){border-inline-end:0}
+  .flow div:nth-child(-n+3){border-bottom:1px solid var(--line)}
+  .top .clinic small,.search kbd{display:none}
+  .strip .room,.strip .timer,.strip .sp{display:none}
+  .strip .nextpill{margin-inline-start:auto}
+  .foot .pv span{display:none}
+  table.q2 .opt{display:none}
+}
+@media (max-width:560px){
+  .app{grid-template-columns:1fr;grid-template-rows:var(--top) 1fr 56px}
+  .rail{grid-row:3;flex-direction:row;justify-content:space-around;padding:0 4px}
+  .rail .logo,.rail .sp{display:none}
+  .rail button[aria-current]::before{inset:auto 10px -2px 10px;width:auto;height:3px}
+  .rail button{min-height:48px}
+  .search{display:none}
+  .strip .who b{font-size:15px}
+  .note{padding:0 12px 12px}
+  table.rx th:nth-child(3),table.rx td:nth-child(3){display:none}
+  .foot .save span{display:none}
+  table.q2 th:nth-child(3),table.q2 tr:not(.grp) td:nth-child(3){display:none}
+  table.q2 td,table.q2 th{padding-inline:8px}
+  table.q2 td.name{min-width:0}
+  .demo .hint{display:none}
+}
+@media (prefers-reduced-motion:reduce){.ctx{transition:none}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.4 3.2-5.5 6.5-5.5s5.900 2.100 6.500 5.500M16 4.800a3.500 3.500 0 010 6.400M18 14.800c1.900.7 3.100 2.500 3.500 5.200"/></symbol>
+  <symbol id="i-desk" viewBox="0 0 24 24"><path d="M4 13v-1a8 8 0 0116 0v1"/><rect x="2.500" y="13" width="4" height="6" rx="1.500"/><rect x="17.500" y="13" width="4" height="6" rx="1.500"/><path d="M19.500 19c0 1.700-2 2.500-5 2.500"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+  <symbol id="i-set" viewBox="0 0 24 24"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.500"/><path d="M20 20l-4.200-4.200"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0112 0v5l1.500 2h-15zM10 20.500h4"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3.500l9.500 16.500h-19zM12 10v4.500M12 17.500v.01"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.500l4.500 4.500L19 7.500"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.500"/><path d="M12 7.500V12l3 2"/></symbol>
+  <symbol id="i-panel" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></symbol>
+  <symbol id="i-print" viewBox="0 0 24 24"><path d="M7 8V4h10v4M7 17H5a2 2 0 01-2-2v-5a2 2 0 012-2h14a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="7" y="14" width="10" height="6" rx="1"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.500"/><path d="M3.500 12h17M12 3.500c2.500 2.500 2.500 14.500 0 17M12 3.500c-2.500 2.500-2.500 14.500 0 17"/></symbol>
+  <symbol id="i-out" viewBox="0 0 24 24"><path d="M10 4H6a2 2 0 00-2 2v12a2 2 0 002 2h4M15 8l4 4-4 4M19 12H9"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></symbol>
+</svg>
+
+<div class="demo" role="region" aria-label="Concept controls (not part of the product)">
+  <b>Medvya workspace concept</b><span class="hint">design proposal · synthetic data · no backend</span>
+  <span class="sp"></span>
+  <span class="seg" role="group" aria-label="Role">
+    <button data-role="doctor" aria-pressed="true">Doctor</button><button data-role="desk" aria-pressed="false">Receptionist</button><button data-role="owner" aria-pressed="false">Owner</button>
+  </span>
+  <label><input type="checkbox" id="t-notes"> Show audit notes</label>
+  <label><input type="checkbox" id="t-touch"> Touch sizing</label>
+</div>
+
+<div class="app">
+  <nav class="rail" aria-label="Main">
+    <div class="logo" aria-hidden="true">M</div>
+    <button data-go="doctor" aria-label="My day and consultation" aria-current="page"><svg class="i"><use href="#i-cal"/></svg><span>My day</span></button>
+    <button data-go="desk" aria-label="Front desk"><svg class="i"><use href="#i-desk"/></svg><span>Front desk</span></button>
+    <button aria-label="Patients"><svg class="i"><use href="#i-users"/></svg><span>Patients</span></button>
+    <button data-go="owner" aria-label="Clinic today"><svg class="i"><use href="#i-chart"/></svg><span>Clinic</span></button>
+    <span class="sp"></span>
+    <button aria-label="Practice settings"><svg class="i"><use href="#i-set"/></svg><span>Settings</span></button>
+  </nav>
+  <header class="top">
+    <div class="clinic">Adyar clinic<small>Tue 3 Nov · 10:42</small></div>
+    <label class="search"><svg class="i"><use href="#i-search"/></svg><span class="sr">Search patients</span><input placeholder="Name, phone, MRN or token"><kbd>Ctrl K</kbd></label>
+    <span class="sp"></span>
+    <button class="icon-btn" aria-label="Notifications, 1 unread"><svg class="i"><use href="#i-bell"/></svg><span class="dot"></span></button>
+    <button class="acct" id="acct" aria-haspopup="menu" aria-expanded="false"><span class="av" id="acct-av">AR</span><span id="acct-name">Dr. Arjun Rao</span></button>
+    <span class="note-n r" style="top:34px;inset-inline-end:150px" tabindex="0" data-n="1"></span>
+  </header>
+  <div class="menu" id="menu" role="menu">
+    <button role="menuitem"><svg class="i"><use href="#i-globe"/></svg>Language: English</button>
+    <button role="menuitem"><svg class="i"><use href="#i-lock"/></svg>My devices</button>
+    <button role="menuitem"><svg class="i"><use href="#i-out"/></svg>Sign out</button>
+  </div>
+
+  <main id="main">
+    <!-- ================= DOCTOR ================= -->
+    <section class="view on" id="v-doctor" aria-label="Consultation">
+      <h1 class="sr">Consultation: Meera Iyer</h1>
+      <div class="strip" role="region" aria-label="Patient identity">
+        <div class="who"><b>Meera Iyer</b><span class="num">54 y · Female</span><span class="mono">DQ-10-4482</span><span class="num">DOB 12 Mar 1972</span></div>
+        <span class="allergy"><svg class="i"><use href="#i-alert"/></svg>Allergy: Penicillin (rash)</span>
+        <div class="meta"><span class="chip ok"><svg class="i"><use href="#i-check"/></svg>Consent given</span><span class="chip">Token <span class="token">&nbsp;A-04</span></span><span class="chip room">Room 3 · Diabetes review</span></div>
+        <span class="sp"></span>
+        <button class="btn sm nextpill" title="Your waiting patients">Next <span class="token">A-07</span> · 3 waiting</button>
+        <span class="timer num"><svg class="i" style="vertical-align:-3px"><use href="#i-clock"/></svg> 06:12</span>
+        <button class="btn sm ctx-toggle" id="ctx-toggle" aria-expanded="false"><svg class="i"><use href="#i-panel"/></svg>Chart</button>
+        <span class="note-n" style="top:42px;inset-inline-start:10px" tabindex="0" data-n="2"></span>
+      </div>
+      <div class="signed" id="signed" role="status"><svg class="i"><use href="#i-lock"/></svg>Signed v1 by Dr. Arjun Rao at 10:48 · read-only. Corrections are added as an addendum.</div>
+      <div class="work">
+        <aside class="queue" aria-label="My queue">
+          <h2>My queue · 3 waiting</h2>
+          <button class="q" aria-current="true"><span class="token">A-04</span><span><b>In this room</b></span><small>In consult · 6 min</small></button>
+          <button class="q"><span class="token">A-07</span><span>62 F</span><small><span class="flag">Nurse flag</span> · waiting 9 min</small></button>
+          <button class="q"><span class="token">A-05</span><span>43 F</span><small>Waiting 14 min · walk-in</small></button>
+          <button class="q"><span class="token">A-08</span><span>40 F</span><small>Waiting 4 min · walk-in</small></button>
+          <h2 style="margin-top:14px">To finish · 2</h2>
+          <button class="q"><span class="token" style="color:var(--warn)">A-02</span><span>Note to sign</span><small>From 10:00</small></button>
+          <button class="q"><span class="token" style="color:var(--warn)">A-01</span><span>Prescription to authorise</span><small>From 09:40</small></button>
+          <span class="note-n" style="top:6px;inset-inline-end:6px;inset-inline-start:auto" tabindex="0" data-n="3"></span>
+        </aside>
+
+        <div class="note" id="note">
+          <nav class="secnav" aria-label="Note sections">
+            <a href="#s-vitals" class="done"><span class="st"></span>Vitals</a>
+            <a href="#s-history" id="n-history"><span class="st"></span>History</a>
+            <a href="#s-exam" id="n-exam"><span class="st"></span>Exam</a>
+            <a href="#s-assess" id="n-assess"><span class="st"></span>Assessment</a>
+            <a href="#s-rx" id="n-rx"><span class="st"></span>Prescription</a>
+            <a href="#s-plan" id="n-plan"><span class="st"></span>Plan &amp; follow-up</a>
+          </nav>
+          <span class="note-n" style="top:8px;inset-inline-end:8px" tabindex="0" data-n="4"></span>
+
+          <section class="sec" id="s-vitals">
+            <header><h2>Vitals</h2><span class="src">Nurse S. Thomas · 10:31</span></header>
+            <div class="vitals">
+              <div class="vital hi"><span>BP</span><b>148/92</b><i>High</i></div>
+              <div class="vital"><span>Pulse</span><b>78</b></div>
+              <div class="vital"><span>SpO₂</span><b>98%</b></div>
+              <div class="vital"><span>Temp</span><b>36.8 °C</b></div>
+              <div class="vital"><span>Weight</span><b>71 kg</b></div>
+              <div class="vital"><span>BMI</span><b>27.4</b></div>
+              <div class="vital"><span>RBS</span><b>186 mg/dL</b></div>
+            </div>
+          </section>
+
+          <section class="sec" id="s-history">
+            <header><h2>History</h2></header>
+            <div class="two">
+              <div><label class="lbl" for="f-cc">Chief complaint <em>required</em></label><textarea class="field" id="f-cc" rows="2" data-req="n-history">Increased thirst for two weeks</textarea></div>
+              <div><label class="lbl" for="f-hpi">History of present illness</label><textarea class="field" id="f-hpi" rows="2"></textarea></div>
+            </div>
+          </section>
+
+          <section class="sec" id="s-exam">
+            <header><h2>Examination</h2></header>
+            <textarea class="field" id="f-exam" rows="2" aria-label="Examination findings" data-req="n-exam" placeholder="Findings. Vitals above are already part of the note."></textarea>
+          </section>
+
+          <section class="sec" id="s-assess">
+            <header><h2>Assessment</h2></header>
+            <textarea class="field" id="f-assess" rows="2" aria-label="Assessment" data-req="n-assess"></textarea>
+            <div class="dx" aria-label="Diagnoses"><span class="chip info">E11.9 Type 2 diabetes · existing</span><span class="chip info">I10 Hypertension · existing</span><button class="btn sm ghost"><svg class="i"><use href="#i-plus"/></svg>Add diagnosis</button></div>
+          </section>
+
+          <section class="sec" id="s-rx">
+            <header><h2>Prescription</h2><span class="src">Draft · generic names print first</span></header>
+            <table class="rx">
+              <thead><tr><th>Medicine</th><th>Dose</th><th>Route</th><th>Frequency</th><th>Duration</th><th><span class="sr">Remove</span></th></tr></thead>
+              <tbody id="rx-body">
+                <tr><td><b>Metformin 500 mg</b> tablet</td><td>1 tablet</td><td>By mouth</td><td>Twice a day, after food</td><td>30 days</td><td><button class="x" aria-label="Remove Metformin"><svg class="i"><use href="#i-x"/></svg></button></td></tr>
+              </tbody>
+            </table>
+            <div class="addrx">
+              <label class="sr" for="rx-in">Add medicine</label>
+              <input class="field" id="rx-in" list="rx-list" placeholder="Search the formulary (try amoxicillin, or a brand)">
+              <datalist id="rx-list"><option value="Amlodipine 5 mg"><option value="Amoxicillin 500 mg"><option value="Atorvastatin 10 mg"><option value="Paracetamol 500 mg"></datalist>
+              <button class="btn sm" id="rx-add"><svg class="i"><use href="#i-plus"/></svg>Add</button>
+              <button class="btn sm ghost">Repeat last prescription</button>
+            </div>
+            <div class="block" id="rx-block" role="alert"><svg class="i"><use href="#i-alert"/></svg><div><b>Not added: amoxicillin is a penicillin.</b>Meera Iyer has a recorded penicillin allergy (rash, patient reported). Choose another medicine, or correct the allergy record first.</div></div>
+            <div class="block ack" id="rx-free" role="alert"><svg class="i"><use href="#i-alert"/></svg><div><b><span id="rx-free-name"></span> is not in the formulary, so it was not checked.</b>Not checked against: <b style="display:inline">Penicillin allergy</b>, interactions or dose. Pick the generic if you can.<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" id="rx-free-ok">I checked it myself: add as free text</button><button class="btn sm ghost" id="rx-free-no">Cancel</button></div></div></div>
+            <span class="note-n" style="top:-4px;inset-inline-end:0" tabindex="0" data-n="5"></span>
+          </section>
+
+          <section class="sec" id="s-plan">
+            <header><h2>Plan and follow-up</h2></header>
+            <div class="two">
+              <div><label class="lbl" for="f-plan">Plan <em>required</em></label><textarea class="field" id="f-plan" rows="2" data-req="n-plan"></textarea></div>
+              <div><label class="lbl" for="f-adv">Advice for the patient <em>prints in Tamil</em></label><textarea class="field" id="f-adv" rows="2"></textarea></div>
+            </div>
+            <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;align-items:center">
+              <span class="lbl" style="margin:0">Tests</span><span class="chip info">HbA1c</span><span class="chip info">Lipid profile</span><button class="btn sm ghost"><svg class="i"><use href="#i-plus"/></svg>Order test</button>
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;align-items:center">
+              <span class="lbl" style="margin:0">Follow-up</span>
+              <span class="fu" id="fu"><button class="btn sm" aria-pressed="false">2 weeks</button><button class="btn sm" aria-pressed="false">1 month</button><button class="btn sm" aria-pressed="false">3 months</button></span>
+            </div>
+          </section>
+        </div>
+
+        <aside class="ctx" id="ctx" aria-label="Patient chart">
+          <div class="tabs" role="tablist">
+            <button role="tab" aria-selected="true" data-pane="p-chart">Chart</button>
+            <button role="tab" aria-selected="false" data-pane="p-visits">Past visits</button>
+            <button role="tab" aria-selected="false" data-pane="p-check" id="tab-check">Checklist</button>
+          </div>
+          <div class="pane on" id="p-chart" role="tabpanel">
+            <h2>Allergies</h2>
+            <div class="kv"><b>Penicillin</b><span>Rash · patient reported</span></div>
+            <h2>Active medicines</h2>
+            <div class="kv"><b>Metformin 500 mg</b><span>BD · since Aug 2025</span></div>
+            <div class="kv"><b>Atorvastatin 10 mg</b><span>At night · <span style="color:var(--warn);font-weight:700">patient says stopped</span></span></div>
+            <h2>Problems</h2>
+            <div class="kv"><b>Type 2 diabetes</b><span>Since 2019</span></div>
+            <div class="kv"><b>Hypertension</b><span>Since 2022</span></div>
+            <h2>Recent results</h2>
+            <div class="kv"><span>HbA1c · 14 Aug</span><b class="num" style="color:var(--warn)">7.9% High</b></div>
+            <div class="kv"><span>Creatinine · 14 Aug</span><b class="num">0.8 mg/dL</b></div>
+            <div class="kv"><span>BP trend</span><b class="num">132/84 → 140/88 → 148/92</b></div>
+          </div>
+          <div class="pane" id="p-visits" role="tabpanel">
+            <div class="visit"><b>14 Aug 2026 · Dr. Arjun Rao</b><br><small>Diabetes review. HbA1c 7.9%. Metformin continued, diet advice. Follow-up 3 months.</small></div>
+            <div class="visit"><b>02 May 2026 · Dr. Arjun Rao</b><br><small>Fever, 3 days. Viral. Paracetamol. Recovered.</small></div>
+            <div class="visit"><b>11 Feb 2026 · Dr. S. Menon</b><br><small>BP review. Lifestyle advice. No medicine change.</small></div>
+          </div>
+          <div class="pane" id="p-check" role="tabpanel">
+            <div class="check done"><span class="st"></span>Identity confirmed at check-in</div>
+            <div class="check done"><span class="st"></span>Allergies reviewed</div>
+            <div class="check done" data-c="n-history"><span class="st"></span>Chief complaint written</div>
+            <div class="check" data-c="n-exam"><span class="st"></span>Examination written</div>
+            <div class="check" data-c="n-assess"><span class="st"></span>Assessment written</div>
+            <div class="check" data-c="n-plan"><span class="st"></span>Plan written</div>
+            <div class="check" data-c="n-rx"><span class="st"></span>Statin conflict resolved (chart active, patient says stopped)<button class="btn sm" id="resolve" style="margin-inline-start:auto">Resolve</button></div>
+          </div>
+          <span class="note-n" style="top:46px;inset-inline-end:8px" tabindex="0" data-n="6"></span>
+        </aside>
+      </div>
+      <div class="foot">
+        <div class="save" id="save" role="status"><span class="pulse"></span><span id="save-t">Saved 10:42</span></div>
+        <span class="sp"></span>
+        <button class="todo" id="todo">4 to finish before signing</button>
+        <button class="btn pv" aria-label="Preview prescription"><svg class="i"><use href="#i-print"/></svg><span>Preview prescription</span></button>
+        <button class="btn pri" id="sign" disabled>Review and sign</button>
+        <span class="note-n" style="top:-10px;inset-inline-end:200px" tabindex="0" data-n="7"></span>
+      </div>
+    </section>
+
+    <!-- ================= RECEPTION ================= -->
+    <section class="view" id="v-desk" aria-label="Front desk">
+      <h1 class="sr">Front desk</h1>
+      <div class="deskbar">
+        <label class="find"><svg class="i"><use href="#i-search"/></svg><span class="sr">Find or add a patient</span><input id="find" placeholder="Phone, name, MRN or token. Try 90000" autocomplete="off"></label>
+        <button class="btn pri" id="walkin"><svg class="i"><use href="#i-plus"/></svg>Walk-in</button>
+        <button class="btn">Book appointment</button>
+        <span class="sp"></span>
+        <button class="btn sm" id="undo" hidden>Undo last move</button><span class="chip ok">Live</span>
+        <div class="match" id="match">
+          <div class="m"><div><b>Meera Iyer</b> · 54 F<small class="mono">DOB 12 Mar 1972 · DQ-10-4482 · phone ··0101 · last visit 14 Aug</small></div><button class="btn sm pri" data-ci="Meera Iyer" data-dob="12 Mar 1972">Check in</button></div>
+          <div class="m"><div><b>Deepak Nair</b> · 47 M<small class="mono">DOB 20 May 1979 · DQ-10-4483 · phone ··0102 · booked 11:20</small></div><button class="btn sm pri" data-ci="Deepak Nair" data-dob="20 May 1979">Check in</button></div>
+          <div class="m"><div>No match? <small>Quick registration needs name, phone, date of birth and sex.</small></div><button class="btn sm">Register new</button></div>
+        </div>
+        <span class="note-n" style="top:40px;inset-inline-start:24px" tabindex="0" data-n="8"></span>
+      </div>
+      <div class="filters" role="group" aria-label="Filter by status" id="filters">
+        <button aria-pressed="true" data-f="all">All today <b id="c-all">9</b></button>
+        <button aria-pressed="false" data-f="booked">Booked <b id="c-booked">2</b></button>
+        <button aria-pressed="false" data-f="waiting">Waiting <b id="c-waiting">4</b></button>
+        <button aria-pressed="false" data-f="nurse">With nurse <b id="c-nurse">1</b></button>
+        <button aria-pressed="false" data-f="consult">In consult <b id="c-consult">1</b></button>
+        <button aria-pressed="false" data-f="done">Done <b id="c-done">1</b></button>
+        <span class="note-n" style="top:4px;inset-inline-end:10px" tabindex="0" data-n="9"></span>
+      </div>
+      <div class="desk">
+        <div class="list">
+          <table class="q2" id="q2">
+            <thead><tr><th>Token</th><th>Patient</th><th>Status</th><th class="opt">Time</th><th>Waiting</th><th class="opt">Doctor</th><th><span class="sr">Next step</span></th></tr></thead>
+            <tbody id="q2-body"></tbody>
+          </table>
+        </div>
+        <aside class="side" aria-label="Doctors now">
+          <h2>Doctors now</h2>
+          <div class="doc"><div class="r"><b>Dr. Arjun Rao</b><span class="num">3 waiting</span></div><small>Room 3 · in consult 6 min · longest wait 14 min</small><div class="bar"><i style="width:60%"></i></div></div>
+          <div class="doc"><div class="r"><b>Dr. S. Menon</b><span class="num">1 waiting</span></div><small>Room 2 · running 25 min late</small><div class="bar"><i class="late" style="width:25%"></i></div></div>
+          <h2 style="margin-top:14px">Needs the desk</h2>
+          <div class="doc"><b>5 registrations incomplete</b><br><small>Finish while patients wait. Address and ID are missing.</small></div>
+          <div class="doc"><b>1 on the waitlist</b><br><small>A 17:20 slot opened with Dr. Rao.</small></div>
+          <span class="note-n" style="top:8px;inset-inline-end:8px" tabindex="0" data-n="10"></span>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ================= OWNER ================= -->
+    <section class="view" id="v-owner" aria-label="Clinic today">
+      <div class="own">
+        <div class="ownhead">
+          <h1>Clinic today</h1><span class="fresh num">Updated 10:42 · live</span><span class="sp"></span>
+          <select aria-label="Date"><option>Today, Tue 3 Nov</option><option>Yesterday</option><option>Last 7 days</option></select>
+          <select aria-label="Doctor"><option>All doctors</option><option>Dr. Arjun Rao</option><option>Dr. S. Menon</option></select>
+        </div>
+        <div class="flow">
+          <div><span>Booked</span><b>14</b><br><small>6 still to arrive</small></div>
+          <div><span>Arrived</span><b>9</b><br><small>5 walk-ins</small></div>
+          <div><span>Waiting now</span><b>4</b><br><small>longest 14 min</small></div>
+          <div><span>Seen</span><b>3</b><br><small>median consult 9 min</small></div>
+          <div><span>No-show</span><b>1</b><br><small>of 8 past their time</small></div>
+          <div class="na"><span>Collections</span><b>Not tracked yet</b><br><small>Billing is switched off</small></div>
+          <span class="note-n" style="top:-8px;inset-inline-end:10px" tabindex="0" data-n="11"></span>
+        </div>
+        <div class="owngrid">
+          <div class="panel">
+            <header><h2>Needs attention</h2><span class="chip warn">4 open</span></header>
+            <div class="act"><span class="sev hi"></span><div><b>Dr. S. Menon is running 25 min late</b><small>1 patient waiting, 3 more booked before 13:00</small></div><button class="btn sm">Move patients</button></div>
+            <div class="act"><span class="sev hi"></span><div><b>2 notes unsigned since yesterday</b><small>Dr. Arjun Rao · the prescriptions cannot be shared until signed</small></div><button class="btn sm">Remind</button></div>
+            <div class="act"><span class="sev"></span><div><b>5 registrations incomplete</b><small>Walk-ins from this morning</small></div><button class="btn sm">Open list</button></div>
+            <div class="act"><span class="sev"></span><div><b>1 no-show at 09:40</b><small>Rahul Menon · no reminder was delivered</small></div><button class="btn sm">Call or rebook</button></div>
+            <span class="note-n" style="top:-8px;inset-inline-end:10px" tabindex="0" data-n="12"></span>
+          </div>
+          <div class="panel">
+            <header><h2>Doctors</h2><span class="fresh" style="color:var(--ink-2)">today</span></header>
+            <table class="docs">
+              <thead><tr><th>Doctor</th><th>Seen</th><th>Waiting</th><th>Median consult</th><th>Median wait</th></tr></thead>
+              <tbody>
+                <tr><td><b>Dr. Arjun Rao</b></td><td>3</td><td>3</td><td>9 min</td><td>11 min</td></tr>
+                <tr><td><b>Dr. S. Menon</b></td><td>0</td><td>1</td><td>No data yet</td><td>25 min</td></tr>
+              </tbody>
+            </table>
+            <div class="empty"><b>Revenue and outstanding payments</b>These appear when billing is switched on. Nothing is shown as zero in the meantime.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<dialog id="dlg" aria-labelledby="dlg-h">
+  <div class="d">
+    <h2 id="dlg-h">Sign this note?</h2>
+    <div>Signing makes the note and prescription read-only. You confirm you reviewed every section.</div>
+    <div class="idbox"><b>Meera Iyer</b> · 54 y · Female<br><span class="mono">DQ-10-4482</span> · DOB 12 Mar 1972<br><span style="color:var(--danger);font-weight:700">Allergy: Penicillin</span> · 1 medicine · 2 tests · follow-up <span id="dlg-fu">not set</span></div>
+    <div class="acts"><button class="btn" id="dlg-no">Go back</button><button class="btn pri" id="dlg-yes">Sign as Dr. Arjun Rao</button></div>
+  </div>
+</dialog>
+
+<script>
+// Notes link each proposed change to audit findings (IDs from 04-evidence-backed-findings.md).
+const NOTES = /*NOTES*/{
+  1:"F-18, F-22 · Top bar: clinic, search, alerts and one account menu. Language, My devices and Sign out move into the menu. The rail keeps a label under every icon.",
+  2:"F-02, F-19 · One patient strip that never scrolls away, the same on every clinical screen. The allergy is a solid labelled block.",
+  3:"F-07 · The doctor's queue by token, escalations first, with unfinished notes and prescriptions. Tokens and ages only: the patient in the room can see this screen.",
+  4:"F-11, F-03 · One scrolling note with section anchors and completion marks. Diagnoses are added here, with no trip to another page.",
+  5:"F-01, F-11 · Prescription sits in the note flow. A formulary conflict blocks the line in words. Free text needs an acknowledgement that names the allergy.",
+  6:"F-11 · Chart context stays beside the note: allergies, medicines, problems, results, past visits. A drawer on tablets.",
+  7:"F-10, F-04, F-09 · The footer is part of the layout, so it never covers a field. It says what is left, then signs. Sign and authorise stay separate acts.",
+  8:"F-08 · One box finds a returning patient by phone. Rows show date of birth and last visit, and check-in asks to confirm the date of birth.",
+  9:"F-12, F-14 · Status counts are the filters. A grouped list shows the doctor on every row and fits twelve patients on a tablet. To be tested with the receptionist against the board.",
+  10:"F-05, F-12 · Undo for the last move. Doctor load and desk jobs sit beside the queue, not above it.",
+  11:"F-29 · Counts from data that exists today. Billing is off, so collections say so. No invented zeros.",
+  12:"F-29, F-04 · Each alert names the problem and offers the action. No wall of KPI cards."
+}/*END*/;
+document.querySelectorAll('.note-n').forEach(n=>{n.textContent=n.dataset.n;n.dataset.tip=NOTES[n.dataset.n];n.setAttribute('aria-label','Audit note '+n.dataset.n+': '+NOTES[n.dataset.n]);});
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const root=document.documentElement;
+$('#t-notes').onchange=e=>root.dataset.notes=e.target.checked?'1':'';
+$('#t-touch').onchange=e=>root.dataset.touch=e.target.checked?'1':'';
+const people={doctor:['AR','Dr. Arjun Rao'],desk:['AJ','A. Joseph'],owner:['KL','K. Lakshmi']};
+function show(role){
+  $$('.view').forEach(v=>v.classList.toggle('on',v.id==='v-'+role));
+  $$('.demo [data-role]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.role===role));
+  $$('.rail [data-go]').forEach(b=>b.dataset.go===role?b.setAttribute('aria-current','page'):b.removeAttribute('aria-current'));
+  $('#acct-av').textContent=people[role][0];$('#acct-name').textContent=people[role][1];
+}
+$$('.demo [data-role]').forEach(b=>b.onclick=()=>show(b.dataset.role));
+$$('.rail [data-go]').forEach(b=>b.onclick=()=>show(b.dataset.go));
+$('#acct').onclick=()=>{const o=$('#menu').classList.toggle('open');$('#acct').setAttribute('aria-expanded',o)};
+document.addEventListener('click',e=>{if(!e.target.closest('#acct,#menu'))$('#menu').classList.remove('open');if(!e.target.closest('.deskbar'))$('#match').classList.remove('on')});
+
+// ---- doctor ----
+$$('.tabs [role=tab]').forEach(t=>t.onclick=()=>{$$('.tabs [role=tab]').forEach(x=>x.setAttribute('aria-selected',x===t));$$('.pane').forEach(p=>p.classList.toggle('on',p.id===t.dataset.pane));});
+$('#ctx-toggle').onclick=()=>{const o=$('#ctx').classList.toggle('open');$('#ctx-toggle').setAttribute('aria-expanded',o)};
+const done={'n-history':true,'n-exam':false,'n-assess':false,'n-plan':false,'n-rx':false};
+let signed=false,saveT;
+function refresh(){
+  for(const k in done){$('#'+k)?.classList.toggle('done',done[k]);$$(`[data-c="${k}"]`).forEach(c=>c.classList.toggle('done',done[k]));}
+  const left=Object.values(done).filter(v=>!v).length;
+  const todo=$('#todo');todo.textContent=left?`${left} to finish before signing`:'Everything reviewed';todo.classList.toggle('ready',!left);
+  $('#tab-check').textContent=left?`Checklist · ${left}`:'Checklist';
+  $('#sign').disabled=left>0||signed;
+}
+$$('textarea[data-req]').forEach(t=>t.addEventListener('input',()=>{done[t.dataset.req]=t.value.trim().length>0;refresh();}));
+$$('#v-doctor textarea, #rx-in').forEach(t=>t.addEventListener('input',()=>{const s=$('#save');s.classList.add('saving');$('#save-t').textContent='Saving…';clearTimeout(saveT);saveT=setTimeout(()=>{s.classList.remove('saving');$('#save-t').textContent='Saved just now';},700);}));
+$('#resolve').onclick=e=>{done['n-rx']=true;e.target.remove();refresh();};
+$('#todo').onclick=()=>{$('#ctx').classList.add('open');$('#tab-check').click();};
+function addRx(free){
+  const v=$('#rx-in').value.trim();if(!v)return;
+  if(/amoxi|penicill|ampicill/i.test(v)){$('#rx-block').classList.add('on');return;}
+  $('#rx-block').classList.remove('on');
+  const known=[...$('#rx-list').options].some(o=>o.value.toLowerCase()===v.toLowerCase());
+  if(!known&&!free){$('#rx-free-name').textContent=v;$('#rx-free').classList.add('on');return;}
+  $('#rx-free').classList.remove('on');
+  const tr=document.createElement('tr');
+  tr.innerHTML=`<td><b></b></td><td>1 tablet</td><td>By mouth</td><td>Once a day</td><td>30 days</td><td><button class="x"><svg class="i"><use href="#i-x"/></svg></button></td>`;
+  tr.querySelector('b').textContent=v;if(!known)tr.querySelector('td').insertAdjacentHTML('beforeend',' <span class="chip warn">Free text · not checked</span>');tr.querySelector('.x').setAttribute('aria-label','Remove '+v);
+  $('#rx-body').append(tr);$('#rx-in').value='';
+}
+$('#rx-add').onclick=()=>addRx();$('#rx-in').addEventListener('keydown',e=>{if(e.key==='Enter')addRx()});
+$('#rx-free-ok').onclick=()=>addRx(true);$('#rx-free-no').onclick=()=>{$('#rx-free').classList.remove('on');$('#rx-in').value='';};
+$('#rx-body').addEventListener('click',e=>{const x=e.target.closest('.x');if(x&&!signed)x.closest('tr').remove()});
+$$('#fu button').forEach(b=>b.onclick=()=>{$$('#fu button').forEach(x=>x.setAttribute('aria-pressed',x===b));$('#dlg-fu').textContent='in '+b.textContent;});
+$('#sign').onclick=()=>$('#dlg').showModal();
+$('#dlg-no').onclick=()=>$('#dlg').close();
+$('#dlg-yes').onclick=()=>{signed=true;$('#dlg').close();$('#v-doctor').classList.add('is-signed');$('#signed').classList.add('on');$$('#v-doctor textarea, #rx-in').forEach(t=>t.readOnly=true);$('#sign').textContent='Signed';refresh();$('#save-t').textContent='Signed 10:48';};
+refresh();
+
+// ---- reception ----
+const order=['waiting','nurse','consult','booked','done'];
+const label={booked:'Booked',waiting:'Waiting for doctor',nurse:'With nurse',consult:'In consult',done:'Done'};
+const next={booked:'Check in',waiting:'Call in',nurse:'Intake done',consult:'',done:''};
+const after={booked:'waiting',waiting:'consult',nurse:'waiting'};
+let rows=[
+  {t:'A-04',n:'Meera Iyer',d:'54 F',s:'consult',time:'10:40',w:0,doc:'Dr. Rao'},
+  {t:'A-07',n:'Kavitha Menon',d:'62 F',s:'waiting',time:'Walk-in',w:9,doc:'Dr. Rao',flag:'Nurse flag'},
+  {t:'A-05',n:'Anjali Varma',d:'43 F',s:'waiting',time:'Walk-in',w:14,doc:'Dr. Rao',inc:1},
+  {t:'A-08',n:'Revathi Krishnan',d:'40 F',s:'waiting',time:'Walk-in',w:4,doc:'Dr. Rao',inc:1},
+  {t:'A-09',n:'Sowmya Raghavan',d:'39 F',s:'waiting',time:'Walk-in',w:27,doc:'Dr. Menon',inc:1},
+  {t:'A-06',n:'Meenakshi Sundaram',d:'29 F',s:'nurse',time:'Walk-in',w:6,doc:'Dr. Rao',inc:1},
+  {t:'',n:'Deepak Nair',d:'47 M',s:'booked',time:'11:20',w:0,doc:'Dr. Rao'},
+  {t:'',n:'Fatima Khan',d:'38 F',s:'booked',time:'11:40',w:0,doc:'Dr. Menon'},
+  {t:'A-01',n:'Kavya Pillai',d:'54 F',s:'done',time:'10:00',w:0,doc:'Dr. Rao'},
+];
+let filter='all',tok=10,moved=null;
+function draw(){
+  const body=$('#q2-body');body.innerHTML='';$('#q2').classList.toggle('grouped',filter==='all');
+  for(const s of order){
+    const list=rows.filter(r=>r.s===s&&(filter==='all'||filter===s));if(!list.length)continue;
+    if(filter==='all'){const g=document.createElement('tr');g.className='grp';g.innerHTML=`<td colspan="7">${label[s]} · ${list.length}</td>`;body.append(g);}
+    for(const r of list){
+      const tr=document.createElement('tr');if(r===moved)tr.className='moved';
+      const late=r.w>=20;
+      tr.innerHTML=`<td class="token">${r.t||'<span style="color:var(--ink-2);font-weight:500">none yet</span>'}</td>
+        <td class="name"><b></b><small>${r.d}</small> ${r.flag?'<span class="chip danger">'+r.flag+'</span>':''} ${r.inc?'<span class="chip warn">Registration incomplete</span>':''}</td>
+        <td><span class="chip ${s==='done'?'ok':s==='consult'?'info':''}">${label[s]}</span></td>
+        <td class="opt num">${r.time}</td>
+        <td class="num wait ${late?'late':''}">${r.w&&s!=='done'&&s!=='consult'?r.w+' min'+(late?' · long':''):''}</td>
+        <td class="opt">${r.doc}</td>
+        <td style="text-align:end">${next[s]?`<button class="btn sm ${s==='booked'?'pri':''}">${next[s]}</button>`:''}</td>`;
+      tr.querySelector('b').textContent=r.n;
+      const b=tr.querySelector('button');if(b)b.onclick=()=>step(r);
+      body.append(tr);
+    }
+  }
+  if(!body.children.length)body.innerHTML='<tr><td colspan="7" style="height:96px;color:var(--ink-2)">No patients with this status right now.</td></tr>';
+  $('#c-all').textContent=rows.length;
+  for(const [id,s] of [['booked','booked'],['waiting','waiting'],['nurse','nurse'],['consult','consult'],['done','done']])$('#c-'+id).textContent=rows.filter(r=>r.s===s).length;
+  moved=null;
+}
+let last=null;
+function step(r){last={r,s:r.s,t:r.t,w:r.w};$('#undo').hidden=false;if(r.s==='booked'){r.t='A-'+String(tok++).padStart(2,'0');r.w=1}r.s=after[r.s];moved=r;draw();}
+$$('#filters button').forEach(b=>b.onclick=()=>{filter=b.dataset.f;$$('#filters button').forEach(x=>x.setAttribute('aria-pressed',x===b));draw();});
+$('#find').addEventListener('input',e=>$('#match').classList.toggle('on',e.target.value.trim().length>=3));
+$('#match').addEventListener('click',e=>{const b=e.target.closest('[data-ci]');if(!b)return;
+  if(!b.dataset.ok){b.dataset.ok=1;b.textContent='Confirm: born '+b.dataset.dob;e.stopPropagation();return;}
+  delete b.dataset.ok;b.textContent='Check in';
+  let r=rows.find(x=>x.n===b.dataset.ci&&x.s==='booked');
+  if(!r){r={t:'',n:b.dataset.ci,d:'54 F',s:'booked',time:'Walk-in',w:0,doc:'Dr. Rao'};rows.push(r);}
+  step(r);$('#match').classList.remove('on');$('#find').value='';});
+$('#walkin').onclick=()=>{$('#find').focus();$('#match').classList.add('on');};
+$('#undo').onclick=()=>{if(!last)return;Object.assign(last.r,{s:last.s,t:last.t,w:last.w});moved=last.r;last=null;$('#undo').hidden=true;draw();};
+draw();
+</script>
+</body>
+</html>

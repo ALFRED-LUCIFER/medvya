@@ -1,0 +1,615 @@
+doctor|375|today|/app/today|h1=Today · Tuesday, 3 November 2026|docH=2358|ovf=false|<24=8|<44=10/26|axe=|1655ms|
+doctor|375|patient-360|/app/patients/5e1d0001-0004-4000-8000-000000000001|h1=Patient 360|docH=5129|ovf=false|<24=0|<44=1/42|axe=|1689ms|
+doctor|375|patient-timeline|/app/patients/5e1d0001-0004-4000-8000-000000000001/timeline|h1=Timeline|docH=1825|ovf=false|<24=0|<44=1/26|axe=|1599ms|
+doctor|375|consult|/app/consult/01a1d400-8c17-7d5e-94c3-40c10b20ce3e|h1=Meera Iyer (synthetic)|docH=4941|ovf=false|<24=14|<44=15/73|axe=|1766ms|
+doctor|375|consult-medicines|/app/consult/01a1d400-8c17-7d5e-94c3-40c10b20ce3e/medicines|h1=Meera Iyer (synthetic)|docH=830|ovf=false|<24=0|<44=1/10|axe=|1575ms|
+doctor|375|consult-problems|/app/consult/01a1d400-8c17-7d5e-94c3-40c10b20ce3e/problems|h1=Meera Iyer (synthetic)|docH=812|ovf=false|<24=0|<44=1/9|axe=|1585ms|
+doctor|375|consult-note-print|/app/consult/01a1d400-8c17-7d5e-94c3-40c10b20ce3e/note/print|h1=null|docH=812|ovf=false|<24=0|<44=1/8|axe=page-has-heading-one:moderate:1|1539ms|
+doctor|375|consult-rx-print|/app/consult/01a1d400-8c17-7d5e-94c3-40c10b20ce3e/rx/print|h1=Iyer Family Clinic (synthetic) · Adyar (synthetic)|docH=1968|ovf=false|<24=1|<44=2/19|axe=|1660ms|
+doctor|375|consult-slip|/app/consult/01a1d400-8c17-7d5e-94c3-40c10b20ce3e/slip|h1=Investigation slip|docH=812|ovf=false|<24=0|<44=1/11|axe=|1547ms|
+doctor|375|nurse-queue|/app/nurse|h1=Page not found|docH=812|ovf=false|<24=0|<44=1/9|axe=|1525ms|
+doctor|375|front-desk|/app/front-desk|h1=Reception board · Tuesday, 3 November 2026|docH=2469|ovf=false|<24=0|<44=1/25|axe=|1619ms|
+doctor|375|front-desk-overview|/app/front-desk/overview|h1=Reception board|docH=2106|ovf=false|<24=0|<44=1/20|axe=|1635ms|
+doctor|375|walk-in|/app/front-desk/walk-in|h1=Walk-in|docH=1010|ovf=false|<24=3|<44=4/20|axe=|1569ms|
+doctor|375|waitlist|/app/front-desk/waitlist|h1=Waitlist|docH=1398|ovf=false|<24=10|<44=11/28|axe=|1567ms|
+doctor|375|schedule|/app/schedule|h1=Tuesday, 3 November 2026|docH=1889|ovf=false|<24=0|<44=1/31|axe=|1598ms|
+doctor|375|schedule-leave|/app/schedule/leave|h1=Leave and schedule exceptions|docH=1182|ovf=false|<24=2|<44=3/17|axe=|1573ms|
+doctor|375|register-patient|/app/patients/new|h1=Register new patient|docH=2080|ovf=false|<24=7|<44=8/31|axe=|1596ms|
+doctor|375|register-quick|/app/patients/new?mode=quick|h1=Register new patient|docH=1666|ovf=false|<24=5|<44=6/20|axe=|1571ms|
+doctor|375|patients-directory|/app/patients/directory|h1=Patients|docH=1516|ovf=false|<24=0|<44=1/24|axe=|1588ms|
+doctor|375|patients-merge|/app/patients/directory/merge|h1=Merge review|docH=812|ovf=false|<24=0|<44=1/10|axe=|1518ms|
+doctor|375|patient-record|/app/patients/directory/5e1d0001-0004-4000-8000-000000000001|h1=Meera Iyer (synthetic)|docH=2623|ovf=false|<24=0|<44=1/24|axe=|1588ms|
+doctor|375|patient-record-incomplete|/app/patients/directory/01a1d401-6448-7a16-ba65-ebee8e32a4cc|h1=Meenakshi Sundarameejh|docH=2611|ovf=false|<24=0|<44=1/24|axe=|1586ms|
+doctor|375|patient-complete-registration|/app/patients/directory/01a1d401-6448-7a16-ba65-ebee8e32a4cc/complete|h1=Complete or edit details|docH=2106|ovf=false|<24=3|<44=4/26|axe=|1576ms|
+doctor|375|patient-documents|/app/patients/5e1d0001-0004-4000-8000-000000000001/docs|h1=Meera Iyer (synthetic)|docH=854|ovf=false|<24=0|<44=1/14|axe=|1583ms|
+doctor|375|settings-profile|/app/settings?tab=profile|h1=Practice settings|docH=1544|ovf=false|<24=1|<44=2/29|axe=|1591ms|
+doctor|375|settings-locations|/app/settings?tab=locations|h1=Practice settings|docH=1650|ovf=false|<24=1|<44=2/30|axe=|1575ms|
+doctor|375|settings-hours|/app/settings?tab=hours|h1=Practice settings|docH=4169|ovf=false|<24=7|<44=8/80|axe=|1614ms|
+doctor|375|settings-holidays|/app/settings?tab=holidays|h1=Practice settings|docH=922|ovf=false|<24=0|<44=1/23|axe=|1583ms|
+doctor|375|settings-staff|/app/settings?tab=staff|h1=Practice settings|docH=1523|ovf=false|<24=0|<44=1/26|axe=|1577ms|
+doctor|375|settings-nurse|/app/settings?tab=nurse|h1=Practice settings|docH=812|ovf=false|<24=1|<44=2/16|axe=|1552ms|
+doctor|375|settings-requests|/app/settings?tab=requests|h1=Practice settings|docH=812|ovf=false|<24=0|<44=1/18|axe=|1559ms|
+doctor|375|settings-policy|/app/settings?tab=policy|h1=Practice settings|docH=1024|ovf=false|<24=2|<44=3/21|axe=|1548ms|
+doctor|375|settings-review|/app/settings?tab=review|h1=Practice settings|docH=1812|ovf=false|<24=0|<44=1/25|axe=|1565ms|
+doctor|375|settings-doctors|/app/settings?tab=doctors|h1=Practice settings|docH=1696|ovf=false|<24=0|<44=1/20|axe=|1575ms|
+doctor|375|settings-medicines|/app/settings?tab=medicines|h1=Practice settings|docH=4200|ovf=false|<24=2|<44=3/30|axe=|1647ms|
+doctor|375|settings-displays|/app/settings?tab=displays|h1=Practice settings|docH=838|ovf=false|<24=0|<44=1/22|axe=|1595ms|
+doctor|375|settings-audit|/app/settings?tab=audit|h1=Practice settings|docH=5548|ovf=false|<24=0|<44=1/27|axe=|1787ms|
+doctor|375|settings-metrics|/app/settings?tab=metrics|h1=Practice settings|docH=2032|ovf=false|<24=1|<44=2/27|axe=|1578ms|
+doctor|375|settings-terms|/app/settings?tab=terms|h1=Practice settings|docH=1106|ovf=false|<24=0|<44=1/21|axe=|1592ms|
+doctor|375|settings-notifications|/app/settings?tab=notifications|h1=Practice settings|docH=3085|ovf=false|<24=14|<44=15/31|axe=|1577ms|
+doctor|375|settings-data|/app/settings?tab=data|h1=Practice settings|docH=1522|ovf=false|<24=0|<44=1/19|axe=|1574ms|
+doctor|375|admin-staff|/app/admin/staff|h1=Invite a colleague|docH=812|ovf=false|<24=2|<44=3/14|axe=|1531ms|
+doctor|375|organisation|/app/organisation|h1=Onboarding request|docH=812|ovf=false|<24=0|<44=1/8|axe=|1539ms|404 GET /v1/organisation/request;Failed to load resource: the server responded with a status of 404 (Not Found)
+doctor|375|my-devices|/app/account/devices|h1=My devices|docH=1604|ovf=false|<24=0|<44=1/25|axe=|1591ms|
+doctor|375|more|/app/more|h1=More|docH=955|ovf=false|<24=0|<44=1/17|axe=|1545ms|
+doctor|375|not-found|/app/no-such-page|h1=Page not found|docH=812|ovf=false|<24=0|<44=1/9|axe=|1516ms|
+doctor|768|today|/app/today|h1=Today · Tuesday, 3 November 2026|docH=1781|ovf=false|<24=8|<44=10/29|axe=|1682ms|
+doctor|768|patient-360|/app/patients/5e1d0001-0004-4000-8000-000000000001|h1=Patient 360|docH=4029|ovf=false|<24=0|<44=1/45|axe=|1723ms|
+doctor|768|patient-timeline|/app/patients/5e1d0001-0004-4000-8000-000000000001/timeline|h1=Timeline|docH=1337|ovf=false|<24=0|<44=1/29|axe=|1602ms|
+doctor|768|consult|/app/consult/01a1d400-8c17-7d5e-94c3-40c10b20ce3e|h1=Meera Iyer (synthetic)|docH=4241|ovf=false|<24=14|<44=15/76|axe=|1797ms|
+doctor|768|consult-medicines|/app/consult/01a1d400-8c17-7d5e-94c3-40c10b20ce3e/medicines|h1=Meera Iyer (synthetic)|docH=1024|ovf=false|<24=0|<44=1/13|axe=|1546ms|
+doctor|768|consult-problems|/app/consult/01a1d400-8c17-7d5e-94c3-40c10b20ce3e/problems|h1=Meera Iyer (synthetic)|docH=1024|ovf=false|<24=0|<44=1/12|axe=|1584ms|
+doctor|768|consult-note-print|/app/consult/01a1d400-8c17-7d5e-94c3-40c10b20ce3e/note/print|h1=null|docH=1024|ovf=false|<24=0|<44=1/11|axe=page-has-heading-one:moderate:1|1561ms|
+doctor|768|consult-rx-print|/app/consult/01a1d400-8c17-7d5e-94c3-40c10b20ce3e/rx/print|h1=Iyer Family Clinic (synthetic) · Adyar (synthetic)|docH=1476|ovf=false|<24=1|<44=2/22|axe=|1662ms|
+doctor|768|consult-slip|/app/consult/01a1d400-8c17-7d5e-94c3-40c10b20ce3e/slip|h1=Investigation slip|docH=1024|ovf=false|<24=0|<44=1/14|axe=|1543ms|
+doctor|768|nurse-queue|/app/nurse|h1=Page not found|docH=1024|ovf=false|<24=0|<44=1/12|axe=|1530ms|
+doctor|768|front-desk|/app/front-desk|h1=Reception board · Tuesday, 3 November 2026|docH=2220|ovf=false|<24=0|<44=1/28|axe=|1620ms|
+doctor|768|front-desk-overview|/app/front-desk/overview|h1=Reception board|docH=1620|ovf=false|<24=0|<44=1/23|axe=|1591ms|
+doctor|768|walk-in|/app/front-desk/walk-in|h1=Walk-in|docH=1024|ovf=false|<24=3|<44=4/23|axe=|1540ms|
+doctor|768|waitlist|/app/front-desk/waitlist|h1=Waitlist|docH=1024|ovf=false|<24=10|<44=11/31|axe=|1570ms|
+doctor|768|schedule|/app/schedule|h1=Tuesday, 3 November 2026|docH=1300|ovf=false|<24=0|<44=1/33|axe=|1609ms|
+doctor|768|schedule-leave|/app/schedule/leave|h1=Leave and schedule exceptions|docH=1024|ovf=false|<24=2|<44=3/20|axe=|1569ms|
+doctor|768|register-patient|/app/patients/new|h1=Register new patient|docH=1544|ovf=false|<24=7|<44=8/34|axe=|1600ms|
+doctor|768|register-quick|/app/patients/new?mode=quick|h1=Register new patient|docH=1270|ovf=false|<24=5|<44=6/23|axe=|1566ms|
+doctor|768|patients-directory|/app/patients/directory|h1=Patients|docH=1268|ovf=false|<24=0|<44=1/27|axe=|1607ms|
+doctor|768|patients-merge|/app/patients/directory/merge|h1=Merge review|docH=1024|ovf=false|<24=0|<44=1/13|axe=|1521ms|
+doctor|768|patient-record|/app/patients/directory/5e1d0001-0004-4000-8000-000000000001|h1=Meera Iyer (synthetic)|docH=2327|ovf=false|<24=0|<44=1/27|axe=|1612ms|
+doctor|768|patient-record-incomplete|/app/patients/directory/01a1d401-6448-7a16-ba65-ebee8e32a4cc|h1=Meenakshi Sundarameejh|docH=2355|ovf=false|<24=0|<44=1/27|axe=|1620ms|
+doctor|768|patient-complete-registration|/app/patients/directory/01a1d401-6448-7a16-ba65-ebee8e32a4cc/complete|h1=Complete or edit details|docH=1566|ovf=false|<24=3|<44=4/29|axe=|1597ms|
+doctor|768|patient-documents|/app/patients/5e1d0001-0004-4000-8000-000000000001/docs|h1=Meera Iyer (synthetic)|docH=1024|ovf=false|<24=0|<44=1/17|axe=|1550ms|
+doctor|768|settings-profile|/app/settings?tab=profile|h1=Practice settings|docH=1294|ovf=false|<24=1|<44=2/32|axe=|1631ms|
+doctor|768|settings-locations|/app/settings?tab=locations|h1=Practice settings|docH=1324|ovf=false|<24=1|<44=2/33|axe=|1615ms|
+doctor|768|settings-hours|/app/settings?tab=hours|h1=Practice settings|docH=3055|ovf=false|<24=7|<44=8/83|axe=|1623ms|
+doctor|768|settings-holidays|/app/settings?tab=holidays|h1=Practice settings|docH=1024|ovf=false|<24=0|<44=1/26|axe=|1574ms|
+doctor|768|settings-staff|/app/settings?tab=staff|h1=Practice settings|docH=1299|ovf=false|<24=0|<44=1/29|axe=|1628ms|
+doctor|768|settings-nurse|/app/settings?tab=nurse|h1=Practice settings|docH=1024|ovf=false|<24=1|<44=2/19|axe=|1542ms|
+doctor|768|settings-requests|/app/settings?tab=requests|h1=Practice settings|docH=1024|ovf=false|<24=0|<44=1/21|axe=|1557ms|
+doctor|768|settings-policy|/app/settings?tab=policy|h1=Practice settings|docH=1024|ovf=false|<24=2|<44=3/24|axe=|1552ms|
+doctor|768|settings-review|/app/settings?tab=review|h1=Practice settings|docH=1032|ovf=false|<24=0|<44=1/28|axe=|1610ms|
+doctor|768|settings-doctors|/app/settings?tab=doctors|h1=Practice settings|docH=1300|ovf=false|<24=0|<44=1/23|axe=|1588ms|
+doctor|768|settings-medicines|/app/settings?tab=medicines|h1=Practice settings|docH=3800|ovf=false|<24=2|<44=3/33|axe=|1715ms|
+doctor|768|settings-displays|/app/settings?tab=displays|h1=Practice settings|docH=1024|ovf=false|<24=0|<44=1/25|axe=|1552ms|
+doctor|768|settings-audit|/app/settings?tab=audit|h1=Practice settings|docH=5272|ovf=false|<24=0|<44=1/30|axe=|1732ms|
+doctor|768|settings-metrics|/app/settings?tab=metrics|h1=Practice settings|docH=1400|ovf=false|<24=1|<44=2/30|axe=|1610ms|
+doctor|768|settings-terms|/app/settings?tab=terms|h1=Practice settings|docH=1024|ovf=false|<24=0|<44=1/24|axe=|1532ms|
+doctor|768|settings-notifications|/app/settings?tab=notifications|h1=Practice settings|docH=2545|ovf=false|<24=14|<44=15/34|axe=|1600ms|
+doctor|768|settings-data|/app/settings?tab=data|h1=Practice settings|docH=1066|ovf=false|<24=0|<44=1/22|axe=|1594ms|
+doctor|768|admin-staff|/app/admin/staff|h1=Invite a colleague|docH=1024|ovf=false|<24=2|<44=3/17|axe=|1556ms|
+doctor|768|organisation|/app/organisation|h1=Onboarding request|docH=1024|ovf=false|<24=0|<44=1/11|axe=|1540ms|404 GET /v1/organisation/request;Failed to load resource: the server responded with a status of 404 (Not Found)
+doctor|768|my-devices|/app/account/devices|h1=My devices|docH=1569|ovf=false|<24=0|<44=1/29|axe=|1605ms|
+doctor|768|more|/app/more|h1=More|docH=1024|ovf=false|<24=0|<44=1/20|axe=|1547ms|
+doctor|768|not-found|/app/no-such-page|h1=Page not found|docH=1024|ovf=false|<24=0|<44=1/12|axe=|1528ms|
+doctor|1024|today|/app/today|h1=Today · Tuesday, 3 November 2026|docH=1495|ovf=false|<24=8|<44=10/29|axe=|1685ms|
+doctor|1024|patient-360|/app/patients/5e1d0001-0004-4000-8000-000000000001|h1=Patient 360|docH=3805|ovf=false|<24=0|<44=1/45|axe=|1685ms|
+doctor|1024|patient-timeline|/app/patients/5e1d0001-0004-4000-8000-000000000001/timeline|h1=Timeline|docH=1285|ovf=false|<24=0|<44=1/29|axe=|1630ms|
+doctor|1024|consult|/app/consult/01a1d400-8c17-7d5e-94c3-40c10b20ce3e|h1=Meera Iyer (synthetic)|docH=4093|ovf=false|<24=14|<44=15/76|axe=|1742ms|
+doctor|1024|consult-medicines|/app/consult/01a1d400-8c17-7d5e-94c3-40c10b20ce3e/medicines|h1=Meera Iyer (synthetic)|docH=768|ovf=false|<24=0|<44=1/13|axe=|1563ms|
+doctor|1024|consult-problems|/app/consult/01a1d400-8c17-7d5e-94c3-40c10b20ce3e/problems|h1=Meera Iyer (synthetic)|docH=768|ovf=false|<24=0|<44=1/12|axe=|1552ms|
+doctor|1024|consult-note-print|/app/consult/01a1d400-8c17-7d5e-94c3-40c10b20ce3e/note/print|h1=null|docH=768|ovf=false|<24=0|<44=1/11|axe=page-has-heading-one:moderate:1|1571ms|
+doctor|1024|consult-rx-print|/app/consult/01a1d400-8c17-7d5e-94c3-40c10b20ce3e/rx/print|h1=Iyer Family Clinic (synthetic) · Adyar (synthetic)|docH=1356|ovf=false|<24=1|<44=2/22|axe=|1680ms|
+doctor|1024|consult-slip|/app/consult/01a1d400-8c17-7d5e-94c3-40c10b20ce3e/slip|h1=Investigation slip|docH=768|ovf=false|<24=0|<44=1/14|axe=|1542ms|
+doctor|1024|nurse-queue|/app/nurse|h1=Page not found|docH=768|ovf=false|<24=0|<44=1/12|axe=|1559ms|
+doctor|1024|front-desk|/app/front-desk|h1=Reception board · Tuesday, 3 November 2026|docH=2168|ovf=false|<24=0|<44=1/28|axe=|1651ms|
+doctor|1024|front-desk-overview|/app/front-desk/overview|h1=Reception board|docH=1536|ovf=false|<24=0|<44=1/23|axe=|1609ms|
+doctor|1024|walk-in|/app/front-desk/walk-in|h1=Walk-in|docH=768|ovf=false|<24=3|<44=4/23|axe=|1563ms|
+doctor|1024|waitlist|/app/front-desk/waitlist|h1=Waitlist|docH=962|ovf=false|<24=10|<44=11/31|axe=|1621ms|
+doctor|1024|schedule|/app/schedule|h1=Tuesday, 3 November 2026|docH=1022|ovf=false|<24=0|<44=1/33|axe=|1607ms|
+doctor|1024|schedule-leave|/app/schedule/leave|h1=Leave and schedule exceptions|docH=804|ovf=false|<24=2|<44=3/20|axe=|1538ms|
+doctor|1024|register-patient|/app/patients/new|h1=Register new patient|docH=1504|ovf=false|<24=7|<44=8/34|axe=|1612ms|
+doctor|1024|register-quick|/app/patients/new?mode=quick|h1=Register new patient|docH=1210|ovf=false|<24=5|<44=6/23|axe=|1595ms|
+doctor|1024|patients-directory|/app/patients/directory|h1=Patients|docH=1076|ovf=false|<24=0|<44=1/27|axe=|1608ms|
+doctor|1024|patients-merge|/app/patients/directory/merge|h1=Merge review|docH=768|ovf=false|<24=0|<44=1/13|axe=|1518ms|
+doctor|1024|patient-record|/app/patients/directory/5e1d0001-0004-4000-8000-000000000001|h1=Meera Iyer (synthetic)|docH=2327|ovf=false|<24=0|<44=1/27|axe=|1635ms|
+doctor|1024|patient-record-incomplete|/app/patients/directory/01a1d401-6448-7a16-ba65-ebee8e32a4cc|h1=Meenakshi Sundarameejh|docH=2331|ovf=false|<24=0|<44=1/27|axe=|1622ms|
+doctor|1024|patient-complete-registration|/app/patients/directory/01a1d401-6448-7a16-ba65-ebee8e32a4cc/complete|h1=Complete or edit details|docH=1526|ovf=false|<24=3|<44=4/29|axe=|1600ms|
+doctor|1024|patient-documents|/app/patients/5e1d0001-0004-4000-8000-000000000001/docs|h1=Meera Iyer (synthetic)|docH=768|ovf=false|<24=0|<44=1/17|axe=|1589ms|
+doctor|1024|settings-profile|/app/settings?tab=profile|h1=Practice settings|docH=1226|ovf=false|<24=1|<44=2/32|axe=|1599ms|
+doctor|1024|settings-locations|/app/settings?tab=locations|h1=Practice settings|docH=1208|ovf=false|<24=1|<44=2/33|axe=|1620ms|
+doctor|1024|settings-hours|/app/settings?tab=hours|h1=Practice settings|docH=2247|ovf=false|<24=7|<44=8/83|axe=|1642ms|
+doctor|1024|settings-holidays|/app/settings?tab=holidays|h1=Practice settings|docH=768|ovf=false|<24=0|<44=1/26|axe=|1618ms|
+doctor|1024|settings-staff|/app/settings?tab=staff|h1=Practice settings|docH=1299|ovf=false|<24=0|<44=1/29|axe=|1573ms|
+doctor|1024|settings-nurse|/app/settings?tab=nurse|h1=Practice settings|docH=768|ovf=false|<24=1|<44=2/19|axe=|1496ms|
+doctor|1024|settings-requests|/app/settings?tab=requests|h1=Practice settings|docH=768|ovf=false|<24=0|<44=1/21|axe=|1513ms|
+doctor|1024|settings-policy|/app/settings?tab=policy|h1=Practice settings|docH=768|ovf=false|<24=2|<44=3/24|axe=|1539ms|
+doctor|1024|settings-review|/app/settings?tab=review|h1=Practice settings|docH=1008|ovf=false|<24=0|<44=1/28|axe=|1618ms|
+doctor|1024|settings-doctors|/app/settings?tab=doctors|h1=Practice settings|docH=1180|ovf=false|<24=0|<44=1/23|axe=|1589ms|
+doctor|1024|settings-medicines|/app/settings?tab=medicines|h1=Practice settings|docH=3260|ovf=false|<24=2|<44=3/33|axe=|1653ms|
+doctor|1024|settings-displays|/app/settings?tab=displays|h1=Practice settings|docH=768|ovf=false|<24=0|<44=1/25|axe=|1559ms|
+doctor|1024|settings-audit|/app/settings?tab=audit|h1=Practice settings|docH=5196|ovf=false|<24=0|<44=1/30|axe=|1775ms|
+doctor|1024|settings-metrics|/app/settings?tab=metrics|h1=Practice settings|docH=1288|ovf=false|<24=1|<44=2/30|axe=|1610ms|
+doctor|1024|settings-terms|/app/settings?tab=terms|h1=Practice settings|docH=768|ovf=false|<24=0|<44=1/24|axe=|1567ms|
+doctor|1024|settings-notifications|/app/settings?tab=notifications|h1=Practice settings|docH=2441|ovf=false|<24=14|<44=15/34|axe=|1607ms|
+doctor|1024|settings-data|/app/settings?tab=data|h1=Practice settings|docH=1042|ovf=false|<24=0|<44=1/22|axe=|1556ms|
+doctor|1024|admin-staff|/app/admin/staff|h1=Invite a colleague|docH=768|ovf=false|<24=2|<44=3/17|axe=|1571ms|
+doctor|1024|organisation|/app/organisation|h1=Onboarding request|docH=768|ovf=false|<24=0|<44=1/11|axe=|1549ms|404 GET /v1/organisation/request;Failed to load resource: the server responded with a status of 404 (Not Found)
+doctor|1024|my-devices|/app/account/devices|h1=My devices|docH=1638|ovf=false|<24=0|<44=1/30|axe=|1628ms|
+doctor|1024|more|/app/more|h1=More|docH=875|ovf=false|<24=0|<44=1/20|axe=|1548ms|
+doctor|1024|not-found|/app/no-such-page|h1=Page not found|docH=768|ovf=false|<24=0|<44=1/12|axe=|1528ms|
+doctor|1440|today|/app/today|h1=Today · Tuesday, 3 November 2026|docH=1410|ovf=false|<24=8|<44=10/30|axe=|1719ms|
+doctor|1440|patient-360|/app/patients/5e1d0001-0004-4000-8000-000000000001|h1=Patient 360|docH=3241|ovf=false|<24=0|<44=1/46|axe=|1729ms|
+doctor|1440|patient-timeline|/app/patients/5e1d0001-0004-4000-8000-000000000001/timeline|h1=Timeline|docH=1119|ovf=false|<24=0|<44=1/30|axe=|1613ms|
+doctor|1440|consult|/app/consult/01a1d400-8c17-7d5e-94c3-40c10b20ce3e|h1=Meera Iyer (synthetic)|docH=3611|ovf=false|<24=14|<44=15/77|axe=|1748ms|
+doctor|1440|consult-medicines|/app/consult/01a1d400-8c17-7d5e-94c3-40c10b20ce3e/medicines|h1=Meera Iyer (synthetic)|docH=900|ovf=false|<24=0|<44=1/14|axe=|1623ms|
+doctor|1440|consult-problems|/app/consult/01a1d400-8c17-7d5e-94c3-40c10b20ce3e/problems|h1=Meera Iyer (synthetic)|docH=900|ovf=false|<24=0|<44=1/13|axe=|1575ms|
+doctor|1440|consult-note-print|/app/consult/01a1d400-8c17-7d5e-94c3-40c10b20ce3e/note/print|h1=null|docH=900|ovf=false|<24=0|<44=1/12|axe=page-has-heading-one:moderate:1|1535ms|
+doctor|1440|consult-rx-print|/app/consult/01a1d400-8c17-7d5e-94c3-40c10b20ce3e/rx/print|h1=Iyer Family Clinic (synthetic) · Adyar (synthetic)|docH=1356|ovf=false|<24=1|<44=2/23|axe=|1647ms|
+doctor|1440|consult-slip|/app/consult/01a1d400-8c17-7d5e-94c3-40c10b20ce3e/slip|h1=Investigation slip|docH=900|ovf=false|<24=0|<44=1/15|axe=|1545ms|
+doctor|1440|nurse-queue|/app/nurse|h1=Page not found|docH=900|ovf=false|<24=0|<44=1/13|axe=|1546ms|
+doctor|1440|front-desk|/app/front-desk|h1=Reception board · Tuesday, 3 November 2026|docH=2074|ovf=false|<24=0|<44=1/29|axe=|1692ms|
+doctor|1440|front-desk-overview|/app/front-desk/overview|h1=Reception board|docH=1440|ovf=false|<24=0|<44=1/24|axe=|1651ms|
+doctor|1440|walk-in|/app/front-desk/walk-in|h1=Walk-in|docH=900|ovf=false|<24=3|<44=4/24|axe=|1592ms|
+doctor|1440|waitlist|/app/front-desk/waitlist|h1=Waitlist|docH=922|ovf=false|<24=10|<44=11/32|axe=|1637ms|
+doctor|1440|schedule|/app/schedule|h1=Tuesday, 3 November 2026|docH=992|ovf=false|<24=0|<44=1/34|axe=|1638ms|
+doctor|1440|schedule-leave|/app/schedule/leave|h1=Leave and schedule exceptions|docH=900|ovf=false|<24=2|<44=3/21|axe=|1557ms|
+doctor|1440|register-patient|/app/patients/new|h1=Register new patient|docH=1040|ovf=false|<24=7|<44=8/35|axe=|1628ms|
+doctor|1440|register-quick|/app/patients/new?mode=quick|h1=Register new patient|docH=900|ovf=false|<24=5|<44=6/24|axe=|1595ms|
+doctor|1440|patients-directory|/app/patients/directory|h1=Patients|docH=1056|ovf=false|<24=0|<44=1/28|axe=|1631ms|
+doctor|1440|patients-merge|/app/patients/directory/merge|h1=Merge review|docH=900|ovf=false|<24=0|<44=1/14|axe=|1556ms|
+doctor|1440|patient-record|/app/patients/directory/5e1d0001-0004-4000-8000-000000000001|h1=Meera Iyer (synthetic)|docH=2267|ovf=false|<24=0|<44=1/28|axe=|1621ms|
+doctor|1440|patient-record-incomplete|/app/patients/directory/01a1d401-6448-7a16-ba65-ebee8e32a4cc|h1=Meenakshi Sundarameejh|docH=2295|ovf=false|<24=0|<44=1/28|axe=|1607ms|
+doctor|1440|patient-complete-registration|/app/patients/directory/01a1d401-6448-7a16-ba65-ebee8e32a4cc/complete|h1=Complete or edit details|docH=1502|ovf=false|<24=3|<44=4/30|axe=|1611ms|
+doctor|1440|patient-documents|/app/patients/5e1d0001-0004-4000-8000-000000000001/docs|h1=Meera Iyer (synthetic)|docH=900|ovf=false|<24=0|<44=1/18|axe=|1558ms|
+doctor|1440|settings-profile|/app/settings?tab=profile|h1=Practice settings|docH=1226|ovf=false|<24=1|<44=2/33|axe=|1603ms|
+doctor|1440|settings-locations|/app/settings?tab=locations|h1=Practice settings|docH=1208|ovf=false|<24=1|<44=2/34|axe=|1615ms|
+doctor|1440|settings-hours|/app/settings?tab=hours|h1=Practice settings|docH=2227|ovf=false|<24=7|<44=8/84|axe=|1655ms|
+doctor|1440|settings-holidays|/app/settings?tab=holidays|h1=Practice settings|docH=900|ovf=false|<24=0|<44=1/27|axe=|1591ms|
+doctor|1440|settings-staff|/app/settings?tab=staff|h1=Practice settings|docH=1275|ovf=false|<24=0|<44=1/30|axe=|1612ms|
+doctor|1440|settings-nurse|/app/settings?tab=nurse|h1=Practice settings|docH=900|ovf=false|<24=1|<44=2/20|axe=|1558ms|
+doctor|1440|settings-requests|/app/settings?tab=requests|h1=Practice settings|docH=900|ovf=false|<24=0|<44=1/22|axe=|1549ms|
+doctor|1440|settings-policy|/app/settings?tab=policy|h1=Practice settings|docH=900|ovf=false|<24=2|<44=3/25|axe=|1545ms|
+doctor|1440|settings-review|/app/settings?tab=review|h1=Practice settings|docH=1008|ovf=false|<24=0|<44=1/29|axe=|1617ms|
+doctor|1440|settings-doctors|/app/settings?tab=doctors|h1=Practice settings|docH=1180|ovf=false|<24=0|<44=1/24|axe=|1637ms|
+doctor|1440|settings-medicines|/app/settings?tab=medicines|h1=Practice settings|docH=3196|ovf=false|<24=2|<44=3/34|axe=|1681ms|
+doctor|1440|settings-displays|/app/settings?tab=displays|h1=Practice settings|docH=900|ovf=false|<24=0|<44=1/26|axe=|1611ms|
+doctor|1440|settings-audit|/app/settings?tab=audit|h1=Practice settings|docH=4192|ovf=false|<24=0|<44=1/31|axe=|1797ms|
+doctor|1440|settings-metrics|/app/settings?tab=metrics|h1=Practice settings|docH=1264|ovf=false|<24=1|<44=2/31|axe=|1617ms|
+doctor|1440|settings-terms|/app/settings?tab=terms|h1=Practice settings|docH=900|ovf=false|<24=0|<44=1/25|axe=|1582ms|
+doctor|1440|settings-notifications|/app/settings?tab=notifications|h1=Practice settings|docH=2373|ovf=false|<24=14|<44=15/35|axe=|1619ms|
+doctor|1440|settings-data|/app/settings?tab=data|h1=Practice settings|docH=1042|ovf=false|<24=0|<44=1/23|axe=|1610ms|
+doctor|1440|admin-staff|/app/admin/staff|h1=Invite a colleague|docH=900|ovf=false|<24=2|<44=3/18|axe=|1548ms|
+doctor|1440|organisation|/app/organisation|h1=Onboarding request|docH=900|ovf=false|<24=0|<44=1/12|axe=|1553ms|404 GET /v1/organisation/request;Failed to load resource: the server responded with a status of 404 (Not Found)
+doctor|1440|my-devices|/app/account/devices|h1=My devices|docH=1683|ovf=false|<24=0|<44=1/32|axe=|1684ms|
+doctor|1440|more|/app/more|h1=More|docH=900|ovf=false|<24=0|<44=1/21|axe=|1567ms|
+doctor|1440|not-found|/app/no-such-page|h1=Page not found|docH=900|ovf=false|<24=0|<44=1/13|axe=|1550ms|
+doctor|1920|today|/app/today|h1=Today · Tuesday, 3 November 2026|docH=1410|ovf=false|<24=8|<44=10/30|axe=|1732ms|
+doctor|1920|patient-360|/app/patients/5e1d0001-0004-4000-8000-000000000001|h1=Patient 360|docH=3157|ovf=false|<24=0|<44=1/46|axe=|1736ms|
+doctor|1920|patient-timeline|/app/patients/5e1d0001-0004-4000-8000-000000000001/timeline|h1=Timeline|docH=1119|ovf=false|<24=0|<44=1/30|axe=|1643ms|
+doctor|1920|consult|/app/consult/01a1d400-8c17-7d5e-94c3-40c10b20ce3e|h1=Meera Iyer (synthetic)|docH=3561|ovf=false|<24=14|<44=15/77|axe=|1821ms|
+doctor|1920|consult-medicines|/app/consult/01a1d400-8c17-7d5e-94c3-40c10b20ce3e/medicines|h1=Meera Iyer (synthetic)|docH=1080|ovf=false|<24=0|<44=1/14|axe=|1731ms|
+doctor|1920|consult-problems|/app/consult/01a1d400-8c17-7d5e-94c3-40c10b20ce3e/problems|h1=Meera Iyer (synthetic)|docH=1080|ovf=false|<24=0|<44=1/13|axe=|1570ms|
+doctor|1920|consult-note-print|/app/consult/01a1d400-8c17-7d5e-94c3-40c10b20ce3e/note/print|h1=null|docH=1080|ovf=false|<24=0|<44=1/12|axe=page-has-heading-one:moderate:1|1596ms|
+doctor|1920|consult-rx-print|/app/consult/01a1d400-8c17-7d5e-94c3-40c10b20ce3e/rx/print|h1=Iyer Family Clinic (synthetic) · Adyar (synthetic)|docH=1356|ovf=false|<24=1|<44=2/23|axe=|1700ms|
+doctor|1920|consult-slip|/app/consult/01a1d400-8c17-7d5e-94c3-40c10b20ce3e/slip|h1=Investigation slip|docH=1080|ovf=false|<24=0|<44=1/15|axe=|1588ms|
+doctor|1920|nurse-queue|/app/nurse|h1=Page not found|docH=1080|ovf=false|<24=0|<44=1/13|axe=|1584ms|
+doctor|1920|front-desk|/app/front-desk|h1=Reception board · Tuesday, 3 November 2026|docH=1843|ovf=false|<24=0|<44=1/29|axe=|1679ms|
+doctor|1920|front-desk-overview|/app/front-desk/overview|h1=Reception board|docH=1440|ovf=false|<24=0|<44=1/24|axe=|1654ms|
+doctor|1920|walk-in|/app/front-desk/walk-in|h1=Walk-in|docH=1080|ovf=false|<24=3|<44=4/24|axe=|1609ms|
+doctor|1920|waitlist|/app/front-desk/waitlist|h1=Waitlist|docH=1080|ovf=false|<24=10|<44=11/32|axe=|1618ms|
+doctor|1920|schedule|/app/schedule|h1=Tuesday, 3 November 2026|docH=1116|ovf=false|<24=0|<44=1/34|axe=|1635ms|
+doctor|1920|schedule-leave|/app/schedule/leave|h1=Leave and schedule exceptions|docH=1080|ovf=false|<24=2|<44=3/21|axe=|1611ms|
+doctor|1920|register-patient|/app/patients/new|h1=Register new patient|docH=1080|ovf=false|<24=7|<44=8/35|axe=|1641ms|
+doctor|1920|register-quick|/app/patients/new?mode=quick|h1=Register new patient|docH=1080|ovf=false|<24=5|<44=6/24|axe=|1586ms|
+doctor|1920|patients-directory|/app/patients/directory|h1=Patients|docH=1080|ovf=false|<24=0|<44=1/28|axe=|1613ms|
+doctor|1920|patients-merge|/app/patients/directory/merge|h1=Merge review|docH=1080|ovf=false|<24=0|<44=1/14|axe=|1573ms|
+doctor|1920|patient-record|/app/patients/directory/5e1d0001-0004-4000-8000-000000000001|h1=Meera Iyer (synthetic)|docH=2267|ovf=false|<24=0|<44=1/28|axe=|1656ms|
+doctor|1920|patient-record-incomplete|/app/patients/directory/01a1d401-6448-7a16-ba65-ebee8e32a4cc|h1=Meenakshi Sundarameejh|docH=2295|ovf=false|<24=0|<44=1/28|axe=|1647ms|
+doctor|1920|patient-complete-registration|/app/patients/directory/01a1d401-6448-7a16-ba65-ebee8e32a4cc/complete|h1=Complete or edit details|docH=1502|ovf=false|<24=3|<44=4/30|axe=|1628ms|
+doctor|1920|patient-documents|/app/patients/5e1d0001-0004-4000-8000-000000000001/docs|h1=Meera Iyer (synthetic)|docH=1080|ovf=false|<24=0|<44=1/18|axe=|1612ms|
+doctor|1920|settings-profile|/app/settings?tab=profile|h1=Practice settings|docH=1226|ovf=false|<24=1|<44=2/33|axe=|1622ms|
+doctor|1920|settings-locations|/app/settings?tab=locations|h1=Practice settings|docH=1208|ovf=false|<24=1|<44=2/34|axe=|1640ms|
+doctor|1920|settings-hours|/app/settings?tab=hours|h1=Practice settings|docH=2227|ovf=false|<24=7|<44=8/84|axe=|1658ms|
+doctor|1920|settings-holidays|/app/settings?tab=holidays|h1=Practice settings|docH=1080|ovf=false|<24=0|<44=1/27|axe=|1595ms|
+doctor|1920|settings-staff|/app/settings?tab=staff|h1=Practice settings|docH=1275|ovf=false|<24=0|<44=1/30|axe=|1633ms|
+doctor|1920|settings-nurse|/app/settings?tab=nurse|h1=Practice settings|docH=1080|ovf=false|<24=1|<44=2/20|axe=|1565ms|
+doctor|1920|settings-requests|/app/settings?tab=requests|h1=Practice settings|docH=1080|ovf=false|<24=0|<44=1/22|axe=|1574ms|
+doctor|1920|settings-policy|/app/settings?tab=policy|h1=Practice settings|docH=1080|ovf=false|<24=2|<44=3/25|axe=|1587ms|
+doctor|1920|settings-review|/app/settings?tab=review|h1=Practice settings|docH=1080|ovf=false|<24=0|<44=1/29|axe=|1620ms|
+doctor|1920|settings-doctors|/app/settings?tab=doctors|h1=Practice settings|docH=1180|ovf=false|<24=0|<44=1/24|axe=|1641ms|
+doctor|1920|settings-medicines|/app/settings?tab=medicines|h1=Practice settings|docH=3196|ovf=false|<24=2|<44=3/34|axe=|1698ms|
+doctor|1920|settings-displays|/app/settings?tab=displays|h1=Practice settings|docH=1080|ovf=false|<24=0|<44=1/26|axe=|1574ms|
+doctor|1920|settings-audit|/app/settings?tab=audit|h1=Practice settings|docH=4192|ovf=false|<24=0|<44=1/31|axe=|1786ms|
+doctor|1920|settings-metrics|/app/settings?tab=metrics|h1=Practice settings|docH=1264|ovf=false|<24=1|<44=2/31|axe=|1613ms|
+doctor|1920|settings-terms|/app/settings?tab=terms|h1=Practice settings|docH=1080|ovf=false|<24=0|<44=1/25|axe=|1588ms|
+doctor|1920|settings-notifications|/app/settings?tab=notifications|h1=Practice settings|docH=2373|ovf=false|<24=14|<44=15/35|axe=|1652ms|
+doctor|1920|settings-data|/app/settings?tab=data|h1=Practice settings|docH=1080|ovf=false|<24=0|<44=1/23|axe=|1597ms|
+doctor|1920|admin-staff|/app/admin/staff|h1=Invite a colleague|docH=1080|ovf=false|<24=2|<44=3/18|axe=|1545ms|
+doctor|1920|organisation|/app/organisation|h1=Onboarding request|docH=1080|ovf=false|<24=0|<44=1/12|axe=|1517ms|404 GET /v1/organisation/request;Failed to load resource: the server responded with a status of 404 (Not Found)
+doctor|1920|my-devices|/app/account/devices|h1=My devices|docH=1752|ovf=false|<24=0|<44=1/33|axe=|1656ms|
+doctor|1920|more|/app/more|h1=More|docH=1080|ovf=false|<24=0|<44=1/21|axe=|1572ms|
+doctor|1920|not-found|/app/no-such-page|h1=Page not found|docH=1080|ovf=false|<24=0|<44=1/13|axe=|1500ms|
+receptionist|375|front-desk|/app/front-desk|h1=Reception board · Tuesday, 3 November 2026|docH=2219|ovf=false|<24=0|<44=1/18|axe=|1612ms|
+receptionist|375|front-desk-overview|/app/front-desk/overview|h1=Reception board|docH=1764|ovf=false|<24=0|<44=1/19|axe=|1703ms|
+receptionist|375|walk-in|/app/front-desk/walk-in|h1=Walk-in|docH=1010|ovf=false|<24=3|<44=4/19|axe=|1661ms|
+receptionist|375|waitlist|/app/front-desk/waitlist|h1=Waitlist|docH=1398|ovf=false|<24=10|<44=11/27|axe=|1702ms|
+receptionist|375|schedule|/app/schedule|h1=Tuesday, 3 November 2026|docH=3304|ovf=false|<24=0|<44=1/49|axe=|1617ms|
+receptionist|375|schedule-leave|/app/schedule/leave|h1=Leave and schedule exceptions|docH=812|ovf=false|<24=0|<44=1/8|axe=|1641ms|
+receptionist|375|register-patient|/app/patients/new|h1=Register new patient|docH=2080|ovf=false|<24=7|<44=8/30|axe=|1426ms|
+receptionist|375|register-quick|/app/patients/new?mode=quick|h1=Register new patient|docH=1666|ovf=false|<24=5|<44=6/19|axe=|1355ms|
+receptionist|375|patients-directory|/app/patients/directory|h1=Patients|docH=1516|ovf=false|<24=0|<44=1/23|axe=|1875ms|
+receptionist|375|patients-merge|/app/patients/directory/merge|h1=Merge review|docH=812|ovf=false|<24=0|<44=1/9|axe=|1805ms|
+receptionist|375|patient-record|/app/patients/directory/5e1d0001-0004-4000-8000-000000000001|h1=Meera Iyer (synthetic)|docH=2623|ovf=false|<24=0|<44=1/23|axe=|1874ms|
+receptionist|375|patient-record-incomplete|/app/patients/directory/01a1d401-6448-7a16-ba65-ebee8e32a4cc|h1=Meenakshi Sundarameejh|docH=2611|ovf=false|<24=0|<44=1/23|axe=|1885ms|
+receptionist|375|patient-complete-registration|/app/patients/directory/01a1d401-6448-7a16-ba65-ebee8e32a4cc/complete|h1=Complete or edit details|docH=2106|ovf=false|<24=3|<44=4/25|axe=|1707ms|
+receptionist|375|patient-documents|/app/patients/5e1d0001-0004-4000-8000-000000000001/docs|h1=Meera Iyer (synthetic)|docH=906|ovf=false|<24=0|<44=1/13|axe=|1831ms|
+receptionist|375|today-denied|/app/today|h1=Page not found|docH=812|ovf=false|<24=0|<44=1/8|axe=|1499ms|
+receptionist|375|settings-denied|/app/settings|h1=Page not found|docH=812|ovf=false|<24=0|<44=1/8|axe=|1499ms|
+receptionist|375|patient-360-denied|/app/patients/5e1d0001-0004-4000-8000-000000000001|h1=Page not found|docH=812|ovf=false|<24=0|<44=1/8|axe=|1529ms|
+receptionist|375|consult-denied|/app/consult/01a1d400-8c17-7d5e-94c3-40c10b20ce3e|h1=Page not found|docH=812|ovf=false|<24=0|<44=1/8|axe=|1523ms|
+receptionist|375|my-devices|/app/account/devices|h1=My devices|docH=1121|ovf=false|<24=0|<44=1/17|axe=|1855ms|
+receptionist|375|more|/app/more|h1=More|docH=812|ovf=false|<24=0|<44=1/13|axe=|1528ms|
+receptionist|375|not-found|/app/no-such-page|h1=Page not found|docH=812|ovf=false|<24=0|<44=1/8|axe=|1523ms|
+receptionist|768|front-desk|/app/front-desk|h1=Reception board · Tuesday, 3 November 2026|docH=1970|ovf=false|<24=0|<44=1/19|axe=|1675ms|
+receptionist|768|front-desk-overview|/app/front-desk/overview|h1=Reception board|docH=1386|ovf=false|<24=0|<44=1/20|axe=|1720ms|
+receptionist|768|walk-in|/app/front-desk/walk-in|h1=Walk-in|docH=1024|ovf=false|<24=3|<44=4/20|axe=|1668ms|
+receptionist|768|waitlist|/app/front-desk/waitlist|h1=Waitlist|docH=1024|ovf=false|<24=10|<44=11/28|axe=|1669ms|
+receptionist|768|schedule|/app/schedule|h1=Tuesday, 3 November 2026|docH=1300|ovf=false|<24=0|<44=1/49|axe=|1630ms|
+receptionist|768|schedule-leave|/app/schedule/leave|h1=Leave and schedule exceptions|docH=1024|ovf=false|<24=0|<44=1/9|axe=|1648ms|
+receptionist|768|register-patient|/app/patients/new|h1=Register new patient|docH=1544|ovf=false|<24=7|<44=8/31|axe=|1387ms|
+receptionist|768|register-quick|/app/patients/new?mode=quick|h1=Register new patient|docH=1270|ovf=false|<24=5|<44=6/20|axe=|1380ms|
+receptionist|768|patients-directory|/app/patients/directory|h1=Patients|docH=1268|ovf=false|<24=0|<44=1/24|axe=|1910ms|
+receptionist|768|patients-merge|/app/patients/directory/merge|h1=Merge review|docH=1024|ovf=false|<24=0|<44=1/10|axe=|1850ms|
+receptionist|768|patient-record|/app/patients/directory/5e1d0001-0004-4000-8000-000000000001|h1=Meera Iyer (synthetic)|docH=2327|ovf=false|<24=0|<44=1/24|axe=|1903ms|
+receptionist|768|patient-record-incomplete|/app/patients/directory/01a1d401-6448-7a16-ba65-ebee8e32a4cc|h1=Meenakshi Sundarameejh|docH=2355|ovf=false|<24=0|<44=1/24|axe=|1895ms|
+receptionist|768|patient-complete-registration|/app/patients/directory/01a1d401-6448-7a16-ba65-ebee8e32a4cc/complete|h1=Complete or edit details|docH=1566|ovf=false|<24=3|<44=4/26|axe=|1708ms|
+receptionist|768|patient-documents|/app/patients/5e1d0001-0004-4000-8000-000000000001/docs|h1=Meera Iyer (synthetic)|docH=1024|ovf=false|<24=0|<44=1/14|axe=|1857ms|
+receptionist|768|today-denied|/app/today|h1=Page not found|docH=1024|ovf=false|<24=0|<44=1/9|axe=|1533ms|
+receptionist|768|settings-denied|/app/settings|h1=Page not found|docH=1024|ovf=false|<24=0|<44=1/9|axe=|1535ms|
+receptionist|768|patient-360-denied|/app/patients/5e1d0001-0004-4000-8000-000000000001|h1=Page not found|docH=1024|ovf=false|<24=0|<44=1/9|axe=|1540ms|
+receptionist|768|consult-denied|/app/consult/01a1d400-8c17-7d5e-94c3-40c10b20ce3e|h1=Page not found|docH=1024|ovf=false|<24=0|<44=1/9|axe=|1522ms|
+receptionist|768|my-devices|/app/account/devices|h1=My devices|docH=1086|ovf=false|<24=0|<44=1/19|axe=|1904ms|
+receptionist|768|more|/app/more|h1=More|docH=1024|ovf=false|<24=0|<44=1/14|axe=|1546ms|
+receptionist|768|not-found|/app/no-such-page|h1=Page not found|docH=1024|ovf=false|<24=0|<44=1/9|axe=|1537ms|
+receptionist|1024|front-desk|/app/front-desk|h1=Reception board · Tuesday, 3 November 2026|docH=1918|ovf=false|<24=0|<44=1/19|axe=|1651ms|
+receptionist|1024|front-desk-overview|/app/front-desk/overview|h1=Reception board|docH=1302|ovf=false|<24=0|<44=1/20|axe=|1754ms|
+receptionist|1024|walk-in|/app/front-desk/walk-in|h1=Walk-in|docH=768|ovf=false|<24=3|<44=4/20|axe=|1698ms|
+receptionist|1024|waitlist|/app/front-desk/waitlist|h1=Waitlist|docH=962|ovf=false|<24=10|<44=11/28|axe=|1701ms|
+receptionist|1024|schedule|/app/schedule|h1=Tuesday, 3 November 2026|docH=1022|ovf=false|<24=0|<44=1/49|axe=|1628ms|
+receptionist|1024|schedule-leave|/app/schedule/leave|h1=Leave and schedule exceptions|docH=768|ovf=false|<24=0|<44=1/9|axe=|1660ms|
+receptionist|1024|register-patient|/app/patients/new|h1=Register new patient|docH=1504|ovf=false|<24=7|<44=8/31|axe=|1428ms|
+receptionist|1024|register-quick|/app/patients/new?mode=quick|h1=Register new patient|docH=1210|ovf=false|<24=5|<44=6/20|axe=|1431ms|
+receptionist|1024|patients-directory|/app/patients/directory|h1=Patients|docH=1076|ovf=false|<24=0|<44=1/24|axe=|1925ms|
+receptionist|1024|patients-merge|/app/patients/directory/merge|h1=Merge review|docH=768|ovf=false|<24=0|<44=1/10|axe=|1842ms|
+receptionist|1024|patient-record|/app/patients/directory/5e1d0001-0004-4000-8000-000000000001|h1=Meera Iyer (synthetic)|docH=2327|ovf=false|<24=0|<44=1/24|axe=|1903ms|
+receptionist|1024|patient-record-incomplete|/app/patients/directory/01a1d401-6448-7a16-ba65-ebee8e32a4cc|h1=Meenakshi Sundarameejh|docH=2331|ovf=false|<24=0|<44=1/24|axe=|1924ms|
+receptionist|1024|patient-complete-registration|/app/patients/directory/01a1d401-6448-7a16-ba65-ebee8e32a4cc/complete|h1=Complete or edit details|docH=1526|ovf=false|<24=3|<44=4/26|axe=|1691ms|
+receptionist|1024|patient-documents|/app/patients/5e1d0001-0004-4000-8000-000000000001/docs|h1=Meera Iyer (synthetic)|docH=768|ovf=false|<24=0|<44=1/14|axe=|1877ms|
+receptionist|1024|today-denied|/app/today|h1=Page not found|docH=768|ovf=false|<24=0|<44=1/9|axe=|1520ms|
+receptionist|1024|settings-denied|/app/settings|h1=Page not found|docH=768|ovf=false|<24=0|<44=1/9|axe=|1548ms|
+receptionist|1024|patient-360-denied|/app/patients/5e1d0001-0004-4000-8000-000000000001|h1=Page not found|docH=768|ovf=false|<24=0|<44=1/9|axe=|1538ms|
+receptionist|1024|consult-denied|/app/consult/01a1d400-8c17-7d5e-94c3-40c10b20ce3e|h1=Page not found|docH=768|ovf=false|<24=0|<44=1/9|axe=|1521ms|
+receptionist|1024|my-devices|/app/account/devices|h1=My devices|docH=1155|ovf=false|<24=0|<44=1/20|axe=|1912ms|
+receptionist|1024|more|/app/more|h1=More|docH=768|ovf=false|<24=0|<44=1/14|axe=|1518ms|
+receptionist|1024|not-found|/app/no-such-page|h1=Page not found|docH=768|ovf=false|<24=0|<44=1/9|axe=|1515ms|
+receptionist|1440|front-desk|/app/front-desk|h1=Reception board · Tuesday, 3 November 2026|docH=1824|ovf=false|<24=0|<44=1/20|axe=|1710ms|
+receptionist|1440|front-desk-overview|/app/front-desk/overview|h1=Reception board|docH=1206|ovf=false|<24=0|<44=1/21|axe=|1715ms|
+receptionist|1440|walk-in|/app/front-desk/walk-in|h1=Walk-in|docH=900|ovf=false|<24=3|<44=4/21|axe=|1651ms|
+receptionist|1440|waitlist|/app/front-desk/waitlist|h1=Waitlist|docH=922|ovf=false|<24=10|<44=11/29|axe=|1767ms|
+receptionist|1440|schedule|/app/schedule|h1=Tuesday, 3 November 2026|docH=992|ovf=false|<24=0|<44=1/50|axe=|1618ms|
+receptionist|1440|schedule-leave|/app/schedule/leave|h1=Leave and schedule exceptions|docH=900|ovf=false|<24=0|<44=1/10|axe=|1687ms|
+receptionist|1440|register-patient|/app/patients/new|h1=Register new patient|docH=1040|ovf=false|<24=7|<44=8/32|axe=|1435ms|
+receptionist|1440|register-quick|/app/patients/new?mode=quick|h1=Register new patient|docH=900|ovf=false|<24=5|<44=6/21|axe=|1423ms|
+receptionist|1440|patients-directory|/app/patients/directory|h1=Patients|docH=1056|ovf=false|<24=0|<44=1/25|axe=|1917ms|
+receptionist|1440|patients-merge|/app/patients/directory/merge|h1=Merge review|docH=900|ovf=false|<24=0|<44=1/11|axe=|1837ms|
+receptionist|1440|patient-record|/app/patients/directory/5e1d0001-0004-4000-8000-000000000001|h1=Meera Iyer (synthetic)|docH=2267|ovf=false|<24=0|<44=1/25|axe=|1915ms|
+receptionist|1440|patient-record-incomplete|/app/patients/directory/01a1d401-6448-7a16-ba65-ebee8e32a4cc|h1=Meenakshi Sundarameejh|docH=2295|ovf=false|<24=0|<44=1/25|axe=|1931ms|
+receptionist|1440|patient-complete-registration|/app/patients/directory/01a1d401-6448-7a16-ba65-ebee8e32a4cc/complete|h1=Complete or edit details|docH=1502|ovf=false|<24=3|<44=4/27|axe=|1745ms|
+receptionist|1440|patient-documents|/app/patients/5e1d0001-0004-4000-8000-000000000001/docs|h1=Meera Iyer (synthetic)|docH=900|ovf=false|<24=0|<44=1/15|axe=|1821ms|
+receptionist|1440|today-denied|/app/today|h1=Page not found|docH=900|ovf=false|<24=0|<44=1/10|axe=|1539ms|
+receptionist|1440|settings-denied|/app/settings|h1=Page not found|docH=900|ovf=false|<24=0|<44=1/10|axe=|1543ms|
+receptionist|1440|patient-360-denied|/app/patients/5e1d0001-0004-4000-8000-000000000001|h1=Page not found|docH=900|ovf=false|<24=0|<44=1/10|axe=|1524ms|
+receptionist|1440|consult-denied|/app/consult/01a1d400-8c17-7d5e-94c3-40c10b20ce3e|h1=Page not found|docH=900|ovf=false|<24=0|<44=1/10|axe=|1556ms|
+receptionist|1440|my-devices|/app/account/devices|h1=My devices|docH=1200|ovf=false|<24=0|<44=1/22|axe=|1912ms|
+receptionist|1440|more|/app/more|h1=More|docH=900|ovf=false|<24=0|<44=1/15|axe=|1517ms|
+receptionist|1440|not-found|/app/no-such-page|h1=Page not found|docH=900|ovf=false|<24=0|<44=1/10|axe=|1544ms|
+receptionist|1920|front-desk|/app/front-desk|h1=Reception board · Tuesday, 3 November 2026|docH=1593|ovf=false|<24=0|<44=1/20|axe=|1687ms|
+receptionist|1920|front-desk-overview|/app/front-desk/overview|h1=Reception board|docH=1206|ovf=false|<24=0|<44=1/21|axe=|1754ms|
+receptionist|1920|walk-in|/app/front-desk/walk-in|h1=Walk-in|docH=1080|ovf=false|<24=3|<44=4/21|axe=|1677ms|
+receptionist|1920|waitlist|/app/front-desk/waitlist|h1=Waitlist|docH=1080|ovf=false|<24=10|<44=11/29|axe=|1682ms|
+receptionist|1920|schedule|/app/schedule|h1=Tuesday, 3 November 2026|docH=1116|ovf=false|<24=0|<44=1/50|axe=|1634ms|
+receptionist|1920|schedule-leave|/app/schedule/leave|h1=Leave and schedule exceptions|docH=1080|ovf=false|<24=0|<44=1/10|axe=|1670ms|
+receptionist|1920|register-patient|/app/patients/new|h1=Register new patient|docH=1080|ovf=false|<24=7|<44=8/32|axe=|1445ms|
+receptionist|1920|register-quick|/app/patients/new?mode=quick|h1=Register new patient|docH=1080|ovf=false|<24=5|<44=6/21|axe=|1372ms|
+receptionist|1920|patients-directory|/app/patients/directory|h1=Patients|docH=1080|ovf=false|<24=0|<44=1/25|axe=|1900ms|
+receptionist|1920|patients-merge|/app/patients/directory/merge|h1=Merge review|docH=1080|ovf=false|<24=0|<44=1/11|axe=|1892ms|
+receptionist|1920|patient-record|/app/patients/directory/5e1d0001-0004-4000-8000-000000000001|h1=Meera Iyer (synthetic)|docH=2267|ovf=false|<24=0|<44=1/25|axe=|1933ms|
+receptionist|1920|patient-record-incomplete|/app/patients/directory/01a1d401-6448-7a16-ba65-ebee8e32a4cc|h1=Meenakshi Sundarameejh|docH=2295|ovf=false|<24=0|<44=1/25|axe=|1924ms|
+receptionist|1920|patient-complete-registration|/app/patients/directory/01a1d401-6448-7a16-ba65-ebee8e32a4cc/complete|h1=Complete or edit details|docH=1502|ovf=false|<24=3|<44=4/27|axe=|1744ms|
+receptionist|1920|patient-documents|/app/patients/5e1d0001-0004-4000-8000-000000000001/docs|h1=Meera Iyer (synthetic)|docH=1080|ovf=false|<24=0|<44=1/15|axe=|1903ms|
+receptionist|1920|today-denied|/app/today|h1=Page not found|docH=1080|ovf=false|<24=0|<44=1/10|axe=|1585ms|
+receptionist|1920|settings-denied|/app/settings|h1=Page not found|docH=1080|ovf=false|<24=0|<44=1/10|axe=|1568ms|
+receptionist|1920|patient-360-denied|/app/patients/5e1d0001-0004-4000-8000-000000000001|h1=Page not found|docH=1080|ovf=false|<24=0|<44=1/10|axe=|1586ms|
+receptionist|1920|consult-denied|/app/consult/01a1d400-8c17-7d5e-94c3-40c10b20ce3e|h1=Page not found|docH=1080|ovf=false|<24=0|<44=1/10|axe=|1595ms|
+receptionist|1920|my-devices|/app/account/devices|h1=My devices|docH=1269|ovf=false|<24=0|<44=1/23|axe=|1905ms|
+receptionist|1920|more|/app/more|h1=More|docH=1080|ovf=false|<24=0|<44=1/15|axe=|1610ms|
+receptionist|1920|not-found|/app/no-such-page|h1=Page not found|docH=1080|ovf=false|<24=0|<44=1/10|axe=|1548ms|
+nurse|375|today|/app/today|h1=Reception board · Tuesday, 3 November 2026|docH=2115|ovf=false|<24=0|<44=1/16|axe=|1644ms|
+nurse|375|nurse-queue|/app/nurse|h1=Page not found|docH=812|ovf=false|<24=0|<44=1/9|axe=|1528ms|
+nurse|375|front-desk|/app/front-desk|h1=Reception board · Tuesday, 3 November 2026|docH=2115|ovf=false|<24=0|<44=1/16|axe=|1611ms|
+nurse|375|front-desk-overview|/app/front-desk/overview|h1=Reception board|docH=1764|ovf=false|<24=0|<44=1/20|axe=|1738ms|
+nurse|375|schedule|/app/schedule|h1=Tuesday, 3 November 2026|docH=2594|ovf=false|<24=0|<44=1/26|axe=|1595ms|
+nurse|375|patients-directory|/app/patients/directory|h1=Patients|docH=1516|ovf=false|<24=0|<44=1/24|axe=|1906ms|
+nurse|375|patient-360|/app/patients/5e1d0001-0004-4000-8000-000000000001|h1=Patient 360|docH=4845|ovf=false|<24=0|<44=1/34|axe=|1800ms|
+nurse|375|patient-timeline|/app/patients/5e1d0001-0004-4000-8000-000000000001/timeline|h1=Timeline|docH=1737|ovf=false|<24=0|<44=1/24|axe=|1736ms|
+nurse|375|consult|/app/consult/01a1d400-8c17-7d5e-94c3-40c10b20ce3e|h1=Meera Iyer (synthetic)|docH=812|ovf=false|<24=0|<44=1/11|axe=|1726ms|403 GET /v1/note-templates;Failed to load resource: the server responded with a status of 403 (Forbidden);403 GET /v1/encounters/01a1d400-8c17-7d5e-94c3-40c10b20ce3e/note
+nurse|375|register-denied|/app/patients/new|h1=Register patient|docH=812|ovf=false|<24=0|<44=1/8|axe=|1509ms|
+nurse|375|settings-denied|/app/settings|h1=Page not found|docH=812|ovf=false|<24=0|<44=1/9|axe=|1531ms|
+nurse|375|my-devices|/app/account/devices|h1=My devices|docH=812|ovf=false|<24=0|<44=1/11|axe=|1814ms|
+nurse|375|more|/app/more|h1=More|docH=816|ovf=false|<24=0|<44=1/15|axe=|1539ms|
+nurse|375|not-found|/app/no-such-page|h1=Page not found|docH=812|ovf=false|<24=0|<44=1/9|axe=|1546ms|
+nurse|768|today|/app/today|h1=Reception board · Tuesday, 3 November 2026|docH=1910|ovf=false|<24=0|<44=1/17|axe=|1678ms|
+nurse|768|nurse-queue|/app/nurse|h1=Page not found|docH=1024|ovf=false|<24=0|<44=1/10|axe=|1511ms|
+nurse|768|front-desk|/app/front-desk|h1=Reception board · Tuesday, 3 November 2026|docH=1910|ovf=false|<24=0|<44=1/17|axe=|1617ms|
+nurse|768|front-desk-overview|/app/front-desk/overview|h1=Reception board|docH=1386|ovf=false|<24=0|<44=1/21|axe=|1694ms|
+nurse|768|schedule|/app/schedule|h1=Tuesday, 3 November 2026|docH=1190|ovf=false|<24=0|<44=1/27|axe=|1619ms|
+nurse|768|patients-directory|/app/patients/directory|h1=Patients|docH=1268|ovf=false|<24=0|<44=1/25|axe=|1903ms|
+nurse|768|patient-360|/app/patients/5e1d0001-0004-4000-8000-000000000001|h1=Patient 360|docH=3833|ovf=false|<24=0|<44=1/35|axe=|1856ms|
+nurse|768|patient-timeline|/app/patients/5e1d0001-0004-4000-8000-000000000001/timeline|h1=Timeline|docH=1337|ovf=false|<24=0|<44=1/25|axe=|1733ms|
+nurse|768|consult|/app/consult/01a1d400-8c17-7d5e-94c3-40c10b20ce3e|h1=Meera Iyer (synthetic)|docH=1024|ovf=false|<24=0|<44=1/12|axe=|1735ms|403 GET /v1/note-templates;Failed to load resource: the server responded with a status of 403 (Forbidden);403 GET /v1/encounters/01a1d400-8c17-7d5e-94c3-40c10b20ce3e/note
+nurse|768|register-denied|/app/patients/new|h1=Register patient|docH=1024|ovf=false|<24=0|<44=1/9|axe=|1520ms|
+nurse|768|settings-denied|/app/settings|h1=Page not found|docH=1024|ovf=false|<24=0|<44=1/10|axe=|1520ms|
+nurse|768|my-devices|/app/account/devices|h1=My devices|docH=1024|ovf=false|<24=0|<44=1/13|axe=|1847ms|
+nurse|768|more|/app/more|h1=More|docH=1024|ovf=false|<24=0|<44=1/16|axe=|1514ms|
+nurse|768|not-found|/app/no-such-page|h1=Page not found|docH=1024|ovf=false|<24=0|<44=1/10|axe=|1488ms|
+nurse|1024|today|/app/today|h1=Reception board · Tuesday, 3 November 2026|docH=1862|ovf=false|<24=0|<44=1/17|axe=|1611ms|
+nurse|1024|nurse-queue|/app/nurse|h1=Page not found|docH=768|ovf=false|<24=0|<44=1/10|axe=|1497ms|
+nurse|1024|front-desk|/app/front-desk|h1=Reception board · Tuesday, 3 November 2026|docH=1862|ovf=false|<24=0|<44=1/17|axe=|1665ms|
+nurse|1024|front-desk-overview|/app/front-desk/overview|h1=Reception board|docH=1302|ovf=false|<24=0|<44=1/21|axe=|1712ms|
+nurse|1024|schedule|/app/schedule|h1=Tuesday, 3 November 2026|docH=860|ovf=false|<24=0|<44=1/27|axe=|1656ms|
+nurse|1024|patients-directory|/app/patients/directory|h1=Patients|docH=1076|ovf=false|<24=0|<44=1/25|axe=|1923ms|
+nurse|1024|patient-360|/app/patients/5e1d0001-0004-4000-8000-000000000001|h1=Patient 360|docH=3697|ovf=false|<24=0|<44=1/35|axe=|1802ms|
+nurse|1024|patient-timeline|/app/patients/5e1d0001-0004-4000-8000-000000000001/timeline|h1=Timeline|docH=1285|ovf=false|<24=0|<44=1/25|axe=|1734ms|
+nurse|1024|consult|/app/consult/01a1d400-8c17-7d5e-94c3-40c10b20ce3e|h1=Meera Iyer (synthetic)|docH=768|ovf=false|<24=0|<44=1/12|axe=|1749ms|403 GET /v1/note-templates;Failed to load resource: the server responded with a status of 403 (Forbidden);403 GET /v1/encounters/01a1d400-8c17-7d5e-94c3-40c10b20ce3e/note
+nurse|1024|register-denied|/app/patients/new|h1=Register patient|docH=768|ovf=false|<24=0|<44=1/9|axe=|1538ms|
+nurse|1024|settings-denied|/app/settings|h1=Page not found|docH=768|ovf=false|<24=0|<44=1/10|axe=|1540ms|
+nurse|1024|my-devices|/app/account/devices|h1=My devices|docH=768|ovf=false|<24=0|<44=1/12|axe=|1820ms|
+nurse|1024|more|/app/more|h1=More|docH=768|ovf=false|<24=0|<44=1/16|axe=|1536ms|
+nurse|1024|not-found|/app/no-such-page|h1=Page not found|docH=768|ovf=false|<24=0|<44=1/10|axe=|1504ms|
+nurse|1440|today|/app/today|h1=Reception board · Tuesday, 3 November 2026|docH=1768|ovf=false|<24=0|<44=1/18|axe=|1662ms|
+nurse|1440|nurse-queue|/app/nurse|h1=Page not found|docH=900|ovf=false|<24=0|<44=1/11|axe=|1515ms|
+nurse|1440|front-desk|/app/front-desk|h1=Reception board · Tuesday, 3 November 2026|docH=1768|ovf=false|<24=0|<44=1/18|axe=|1588ms|
+nurse|1440|front-desk-overview|/app/front-desk/overview|h1=Reception board|docH=1206|ovf=false|<24=0|<44=1/22|axe=|1736ms|
+nurse|1440|schedule|/app/schedule|h1=Tuesday, 3 November 2026|docH=936|ovf=false|<24=0|<44=1/28|axe=|1602ms|
+nurse|1440|patients-directory|/app/patients/directory|h1=Patients|docH=1056|ovf=false|<24=0|<44=1/26|axe=|1920ms|
+nurse|1440|patient-360|/app/patients/5e1d0001-0004-4000-8000-000000000001|h1=Patient 360|docH=3189|ovf=false|<24=0|<44=1/36|axe=|1831ms|
+nurse|1440|patient-timeline|/app/patients/5e1d0001-0004-4000-8000-000000000001/timeline|h1=Timeline|docH=1119|ovf=false|<24=0|<44=1/26|axe=|1756ms|
+nurse|1440|consult|/app/consult/01a1d400-8c17-7d5e-94c3-40c10b20ce3e|h1=Meera Iyer (synthetic)|docH=900|ovf=false|<24=0|<44=1/13|axe=|1711ms|403 GET /v1/note-templates;Failed to load resource: the server responded with a status of 403 (Forbidden);403 GET /v1/encounters/01a1d400-8c17-7d5e-94c3-40c10b20ce3e/note
+nurse|1440|register-denied|/app/patients/new|h1=Register patient|docH=900|ovf=false|<24=0|<44=1/10|axe=|1511ms|
+nurse|1440|settings-denied|/app/settings|h1=Page not found|docH=900|ovf=false|<24=0|<44=1/11|axe=|1496ms|
+nurse|1440|my-devices|/app/account/devices|h1=My devices|docH=900|ovf=false|<24=0|<44=1/14|axe=|1871ms|
+nurse|1440|more|/app/more|h1=More|docH=900|ovf=false|<24=0|<44=1/17|axe=|1541ms|
+nurse|1440|not-found|/app/no-such-page|h1=Page not found|docH=900|ovf=false|<24=0|<44=1/11|axe=|1539ms|
+nurse|1920|today|/app/today|h1=Reception board · Tuesday, 3 November 2026|docH=1593|ovf=false|<24=0|<44=1/18|axe=|1693ms|
+nurse|1920|nurse-queue|/app/nurse|h1=Page not found|docH=1080|ovf=false|<24=0|<44=1/11|axe=|1534ms|
+nurse|1920|front-desk|/app/front-desk|h1=Reception board · Tuesday, 3 November 2026|docH=1593|ovf=false|<24=0|<44=1/18|axe=|1645ms|
+nurse|1920|front-desk-overview|/app/front-desk/overview|h1=Reception board|docH=1206|ovf=false|<24=0|<44=1/22|axe=|1743ms|
+nurse|1920|schedule|/app/schedule|h1=Tuesday, 3 November 2026|docH=1116|ovf=false|<24=0|<44=1/28|axe=|1644ms|
+nurse|1920|patients-directory|/app/patients/directory|h1=Patients|docH=1080|ovf=false|<24=0|<44=1/26|axe=|1912ms|
+nurse|1920|patient-360|/app/patients/5e1d0001-0004-4000-8000-000000000001|h1=Patient 360|docH=3105|ovf=false|<24=0|<44=1/36|axe=|1835ms|
+nurse|1920|patient-timeline|/app/patients/5e1d0001-0004-4000-8000-000000000001/timeline|h1=Timeline|docH=1119|ovf=false|<24=0|<44=1/26|axe=|1751ms|
+nurse|1920|consult|/app/consult/01a1d400-8c17-7d5e-94c3-40c10b20ce3e|h1=Meera Iyer (synthetic)|docH=1080|ovf=false|<24=0|<44=1/13|axe=|1739ms|403 GET /v1/note-templates;Failed to load resource: the server responded with a status of 403 (Forbidden);403 GET /v1/encounters/01a1d400-8c17-7d5e-94c3-40c10b20ce3e/note
+nurse|1920|register-denied|/app/patients/new|h1=Register patient|docH=1080|ovf=false|<24=0|<44=1/10|axe=|1548ms|
+nurse|1920|settings-denied|/app/settings|h1=Page not found|docH=1080|ovf=false|<24=0|<44=1/11|axe=|1575ms|
+nurse|1920|my-devices|/app/account/devices|h1=My devices|docH=1080|ovf=false|<24=0|<44=1/18|axe=|1884ms|
+nurse|1920|more|/app/more|h1=More|docH=1080|ovf=false|<24=0|<44=1/17|axe=|1572ms|
+nurse|1920|not-found|/app/no-such-page|h1=Page not found|docH=1080|ovf=false|<24=0|<44=1/11|axe=|1570ms|
+practice-admin|375|front-desk|/app/front-desk|h1=Reception board · Tuesday, 3 November 2026|docH=1897|ovf=false|<24=0|<44=1/11|axe=|1632ms|
+practice-admin|375|schedule|/app/schedule|h1=Tuesday, 3 November 2026|docH=3304|ovf=false|<24=0|<44=1/49|axe=|1624ms|
+practice-admin|375|schedule-leave|/app/schedule/leave|h1=Leave and schedule exceptions|docH=1182|ovf=false|<24=2|<44=3/16|axe=|1596ms|
+practice-admin|375|register-patient|/app/patients/new|h1=Register new patient|docH=2080|ovf=false|<24=7|<44=8/30|axe=|1600ms|
+practice-admin|375|patients-directory|/app/patients/directory|h1=Patients|docH=1516|ovf=false|<24=0|<44=1/23|axe=|1658ms|
+practice-admin|375|settings-profile|/app/settings?tab=profile|h1=Practice settings|docH=1544|ovf=false|<24=1|<44=2/28|axe=|1584ms|
+practice-admin|375|settings-locations|/app/settings?tab=locations|h1=Practice settings|docH=1650|ovf=false|<24=1|<44=2/29|axe=|1583ms|
+practice-admin|375|settings-hours|/app/settings?tab=hours|h1=Practice settings|docH=4169|ovf=false|<24=7|<44=8/79|axe=|1630ms|
+practice-admin|375|settings-holidays|/app/settings?tab=holidays|h1=Practice settings|docH=922|ovf=false|<24=0|<44=1/22|axe=|1554ms|
+practice-admin|375|settings-staff|/app/settings?tab=staff|h1=Practice settings|docH=1523|ovf=false|<24=0|<44=1/25|axe=|1581ms|
+practice-admin|375|settings-nurse|/app/settings?tab=nurse|h1=Practice settings|docH=812|ovf=false|<24=1|<44=2/15|axe=|1529ms|
+practice-admin|375|settings-requests|/app/settings?tab=requests|h1=Practice settings|docH=812|ovf=false|<24=0|<44=1/17|axe=|1554ms|
+practice-admin|375|settings-policy|/app/settings?tab=policy|h1=Practice settings|docH=1024|ovf=false|<24=2|<44=3/20|axe=|1576ms|
+practice-admin|375|settings-review|/app/settings?tab=review|h1=Practice settings|docH=1812|ovf=false|<24=0|<44=1/24|axe=|1604ms|
+practice-admin|375|settings-doctors|/app/settings?tab=doctors|h1=Practice settings|docH=1696|ovf=false|<24=0|<44=1/19|axe=|1579ms|
+practice-admin|375|settings-medicines|/app/settings?tab=medicines|h1=Practice settings|docH=4200|ovf=false|<24=2|<44=3/29|axe=|1665ms|
+practice-admin|375|settings-displays|/app/settings?tab=displays|h1=Practice settings|docH=838|ovf=false|<24=0|<44=1/21|axe=|1612ms|
+practice-admin|375|settings-audit|/app/settings?tab=audit|h1=Practice settings|docH=5548|ovf=false|<24=0|<44=1/26|axe=|1754ms|
+practice-admin|375|settings-metrics|/app/settings?tab=metrics|h1=Practice settings|docH=2032|ovf=false|<24=1|<44=2/26|axe=|1588ms|
+practice-admin|375|settings-terms|/app/settings?tab=terms|h1=Practice settings|docH=1106|ovf=false|<24=0|<44=1/20|axe=|1570ms|
+practice-admin|375|settings-notifications|/app/settings?tab=notifications|h1=Practice settings|docH=3085|ovf=false|<24=14|<44=15/30|axe=|1618ms|
+practice-admin|375|settings-data|/app/settings?tab=data|h1=Practice settings|docH=1522|ovf=false|<24=0|<44=1/18|axe=|1562ms|
+practice-admin|375|admin-staff|/app/admin/staff|h1=Invite a colleague|docH=812|ovf=false|<24=2|<44=3/13|axe=|1547ms|
+practice-admin|375|organisation|/app/organisation|h1=Onboarding request|docH=812|ovf=false|<24=0|<44=1/7|axe=|1539ms|404 GET /v1/organisation/request;Failed to load resource: the server responded with a status of 404 (Not Found)
+practice-admin|375|patient-360-denied|/app/patients/5e1d0001-0004-4000-8000-000000000001|h1=Page not found|docH=812|ovf=false|<24=0|<44=1/8|axe=|1540ms|
+practice-admin|375|my-devices|/app/account/devices|h1=My devices|docH=812|ovf=false|<24=0|<44=1/8|axe=|1485ms|
+practice-admin|375|more|/app/more|h1=More|docH=816|ovf=false|<24=0|<44=1/14|axe=|1506ms|
+practice-admin|375|not-found|/app/no-such-page|h1=Page not found|docH=812|ovf=false|<24=0|<44=1/8|axe=|1498ms|
+practice-admin|768|front-desk|/app/front-desk|h1=Reception board · Tuesday, 3 November 2026|docH=1700|ovf=false|<24=0|<44=1/13|axe=|1600ms|
+practice-admin|768|schedule|/app/schedule|h1=Tuesday, 3 November 2026|docH=1300|ovf=false|<24=0|<44=1/50|axe=|1576ms|
+practice-admin|768|schedule-leave|/app/schedule/leave|h1=Leave and schedule exceptions|docH=1024|ovf=false|<24=2|<44=3/18|axe=|1532ms|
+practice-admin|768|register-patient|/app/patients/new|h1=Register new patient|docH=1544|ovf=false|<24=7|<44=8/32|axe=|1554ms|
+practice-admin|768|patients-directory|/app/patients/directory|h1=Patients|docH=1268|ovf=false|<24=0|<44=1/25|axe=|1576ms|
+practice-admin|768|settings-profile|/app/settings?tab=profile|h1=Practice settings|docH=1294|ovf=false|<24=1|<44=2/30|axe=|1545ms|
+practice-admin|768|settings-locations|/app/settings?tab=locations|h1=Practice settings|docH=1324|ovf=false|<24=1|<44=2/31|axe=|1546ms|
+practice-admin|768|settings-hours|/app/settings?tab=hours|h1=Practice settings|docH=3055|ovf=false|<24=7|<44=8/81|axe=|1605ms|
+practice-admin|768|settings-holidays|/app/settings?tab=holidays|h1=Practice settings|docH=1024|ovf=false|<24=0|<44=1/24|axe=|1535ms|
+practice-admin|768|settings-staff|/app/settings?tab=staff|h1=Practice settings|docH=1299|ovf=false|<24=0|<44=1/27|axe=|1556ms|
+practice-admin|768|settings-nurse|/app/settings?tab=nurse|h1=Practice settings|docH=1024|ovf=false|<24=1|<44=2/17|axe=|1493ms|
+practice-admin|768|settings-requests|/app/settings?tab=requests|h1=Practice settings|docH=1024|ovf=false|<24=0|<44=1/19|axe=|1491ms|
+practice-admin|768|settings-policy|/app/settings?tab=policy|h1=Practice settings|docH=1024|ovf=false|<24=2|<44=3/22|axe=|1529ms|
+practice-admin|768|settings-review|/app/settings?tab=review|h1=Practice settings|docH=1032|ovf=false|<24=0|<44=1/26|axe=|1546ms|
+practice-admin|768|settings-doctors|/app/settings?tab=doctors|h1=Practice settings|docH=1300|ovf=false|<24=0|<44=1/21|axe=|1543ms|
+practice-admin|768|settings-medicines|/app/settings?tab=medicines|h1=Practice settings|docH=3800|ovf=false|<24=2|<44=3/31|axe=|1612ms|
+practice-admin|768|settings-displays|/app/settings?tab=displays|h1=Practice settings|docH=1024|ovf=false|<24=0|<44=1/23|axe=|1532ms|
+practice-admin|768|settings-audit|/app/settings?tab=audit|h1=Practice settings|docH=5272|ovf=false|<24=0|<44=1/28|axe=|1663ms|
+practice-admin|768|settings-metrics|/app/settings?tab=metrics|h1=Practice settings|docH=1400|ovf=false|<24=1|<44=2/28|axe=|1556ms|
+practice-admin|768|settings-terms|/app/settings?tab=terms|h1=Practice settings|docH=1024|ovf=false|<24=0|<44=1/22|axe=|1516ms|
+practice-admin|768|settings-notifications|/app/settings?tab=notifications|h1=Practice settings|docH=2545|ovf=false|<24=14|<44=15/32|axe=|1551ms|
+practice-admin|768|settings-data|/app/settings?tab=data|h1=Practice settings|docH=1066|ovf=false|<24=0|<44=1/20|axe=|1526ms|
+practice-admin|768|admin-staff|/app/admin/staff|h1=Invite a colleague|docH=1024|ovf=false|<24=2|<44=3/15|axe=|1540ms|
+practice-admin|768|organisation|/app/organisation|h1=Onboarding request|docH=1024|ovf=false|<24=0|<44=1/9|axe=|1486ms|404 GET /v1/organisation/request;Failed to load resource: the server responded with a status of 404 (Not Found)
+practice-admin|768|patient-360-denied|/app/patients/5e1d0001-0004-4000-8000-000000000001|h1=Page not found|docH=1024|ovf=false|<24=0|<44=1/10|axe=|1501ms|
+practice-admin|768|my-devices|/app/account/devices|h1=My devices|docH=1024|ovf=false|<24=0|<44=1/11|axe=|1491ms|
+practice-admin|768|more|/app/more|h1=More|docH=1024|ovf=false|<24=0|<44=1/16|axe=|1508ms|
+practice-admin|768|not-found|/app/no-such-page|h1=Page not found|docH=1024|ovf=false|<24=0|<44=1/10|axe=|1521ms|
+practice-admin|1024|front-desk|/app/front-desk|h1=Reception board · Tuesday, 3 November 2026|docH=1648|ovf=false|<24=0|<44=1/13|axe=|1583ms|
+practice-admin|1024|schedule|/app/schedule|h1=Tuesday, 3 November 2026|docH=1022|ovf=false|<24=0|<44=1/50|axe=|1581ms|
+practice-admin|1024|schedule-leave|/app/schedule/leave|h1=Leave and schedule exceptions|docH=804|ovf=false|<24=2|<44=3/18|axe=|1568ms|
+practice-admin|1024|register-patient|/app/patients/new|h1=Register new patient|docH=1504|ovf=false|<24=7|<44=8/32|axe=|1561ms|
+practice-admin|1024|patients-directory|/app/patients/directory|h1=Patients|docH=1076|ovf=false|<24=0|<44=1/25|axe=|1580ms|
+practice-admin|1024|settings-profile|/app/settings?tab=profile|h1=Practice settings|docH=1226|ovf=false|<24=1|<44=2/30|axe=|1548ms|
+practice-admin|1024|settings-locations|/app/settings?tab=locations|h1=Practice settings|docH=1208|ovf=false|<24=1|<44=2/31|axe=|1547ms|
+practice-admin|1024|settings-hours|/app/settings?tab=hours|h1=Practice settings|docH=2247|ovf=false|<24=7|<44=8/81|axe=|1621ms|
+practice-admin|1024|settings-holidays|/app/settings?tab=holidays|h1=Practice settings|docH=768|ovf=false|<24=0|<44=1/24|axe=|1533ms|
+practice-admin|1024|settings-staff|/app/settings?tab=staff|h1=Practice settings|docH=1299|ovf=false|<24=0|<44=1/27|axe=|1542ms|
+practice-admin|1024|settings-nurse|/app/settings?tab=nurse|h1=Practice settings|docH=768|ovf=false|<24=1|<44=2/17|axe=|1556ms|
+practice-admin|1024|settings-requests|/app/settings?tab=requests|h1=Practice settings|docH=768|ovf=false|<24=0|<44=1/19|axe=|1509ms|
+practice-admin|1024|settings-policy|/app/settings?tab=policy|h1=Practice settings|docH=768|ovf=false|<24=2|<44=3/22|axe=|1530ms|
+practice-admin|1024|settings-review|/app/settings?tab=review|h1=Practice settings|docH=1008|ovf=false|<24=0|<44=1/26|axe=|1545ms|
+practice-admin|1024|settings-doctors|/app/settings?tab=doctors|h1=Practice settings|docH=1180|ovf=false|<24=0|<44=1/21|axe=|1541ms|
+practice-admin|1024|settings-medicines|/app/settings?tab=medicines|h1=Practice settings|docH=3260|ovf=false|<24=2|<44=3/31|axe=|1613ms|
+practice-admin|1024|settings-displays|/app/settings?tab=displays|h1=Practice settings|docH=768|ovf=false|<24=0|<44=1/23|axe=|1534ms|
+practice-admin|1024|settings-audit|/app/settings?tab=audit|h1=Practice settings|docH=5196|ovf=false|<24=0|<44=1/28|axe=|1698ms|
+practice-admin|1024|settings-metrics|/app/settings?tab=metrics|h1=Practice settings|docH=1288|ovf=false|<24=1|<44=2/28|axe=|1556ms|
+practice-admin|1024|settings-terms|/app/settings?tab=terms|h1=Practice settings|docH=768|ovf=false|<24=0|<44=1/22|axe=|1499ms|
+practice-admin|1024|settings-notifications|/app/settings?tab=notifications|h1=Practice settings|docH=2441|ovf=false|<24=14|<44=15/32|axe=|1571ms|
+practice-admin|1024|settings-data|/app/settings?tab=data|h1=Practice settings|docH=1042|ovf=false|<24=0|<44=1/20|axe=|1527ms|
+practice-admin|1024|admin-staff|/app/admin/staff|h1=Invite a colleague|docH=768|ovf=false|<24=2|<44=3/15|axe=|1503ms|
+practice-admin|1024|organisation|/app/organisation|h1=Onboarding request|docH=768|ovf=false|<24=0|<44=1/9|axe=|1501ms|404 GET /v1/organisation/request;Failed to load resource: the server responded with a status of 404 (Not Found)
+practice-admin|1024|patient-360-denied|/app/patients/5e1d0001-0004-4000-8000-000000000001|h1=Page not found|docH=768|ovf=false|<24=0|<44=1/10|axe=|1499ms|
+practice-admin|1024|my-devices|/app/account/devices|h1=My devices|docH=768|ovf=false|<24=0|<44=1/12|axe=|1508ms|
+practice-admin|1024|more|/app/more|h1=More|docH=768|ovf=false|<24=0|<44=1/16|axe=|1504ms|
+practice-admin|1024|not-found|/app/no-such-page|h1=Page not found|docH=768|ovf=false|<24=0|<44=1/10|axe=|1502ms|
+practice-admin|1440|front-desk|/app/front-desk|h1=Reception board · Tuesday, 3 November 2026|docH=1554|ovf=false|<24=0|<44=1/14|axe=|1636ms|
+practice-admin|1440|schedule|/app/schedule|h1=Tuesday, 3 November 2026|docH=992|ovf=false|<24=0|<44=1/51|axe=|1576ms|
+practice-admin|1440|schedule-leave|/app/schedule/leave|h1=Leave and schedule exceptions|docH=900|ovf=false|<24=2|<44=3/19|axe=|1539ms|
+practice-admin|1440|register-patient|/app/patients/new|h1=Register new patient|docH=1040|ovf=false|<24=7|<44=8/33|axe=|1569ms|
+practice-admin|1440|patients-directory|/app/patients/directory|h1=Patients|docH=1056|ovf=false|<24=0|<44=1/26|axe=|1585ms|
+practice-admin|1440|settings-profile|/app/settings?tab=profile|h1=Practice settings|docH=1226|ovf=false|<24=1|<44=2/31|axe=|1529ms|
+practice-admin|1440|settings-locations|/app/settings?tab=locations|h1=Practice settings|docH=1208|ovf=false|<24=1|<44=2/32|axe=|1564ms|
+practice-admin|1440|settings-hours|/app/settings?tab=hours|h1=Practice settings|docH=2227|ovf=false|<24=7|<44=8/82|axe=|1604ms|
+practice-admin|1440|settings-holidays|/app/settings?tab=holidays|h1=Practice settings|docH=900|ovf=false|<24=0|<44=1/25|axe=|1539ms|
+practice-admin|1440|settings-staff|/app/settings?tab=staff|h1=Practice settings|docH=1275|ovf=false|<24=0|<44=1/28|axe=|1557ms|
+practice-admin|1440|settings-nurse|/app/settings?tab=nurse|h1=Practice settings|docH=900|ovf=false|<24=1|<44=2/18|axe=|1514ms|
+practice-admin|1440|settings-requests|/app/settings?tab=requests|h1=Practice settings|docH=900|ovf=false|<24=0|<44=1/20|axe=|1513ms|
+practice-admin|1440|settings-policy|/app/settings?tab=policy|h1=Practice settings|docH=900|ovf=false|<24=2|<44=3/23|axe=|1518ms|
+practice-admin|1440|settings-review|/app/settings?tab=review|h1=Practice settings|docH=1008|ovf=false|<24=0|<44=1/27|axe=|1544ms|
+practice-admin|1440|settings-doctors|/app/settings?tab=doctors|h1=Practice settings|docH=1180|ovf=false|<24=0|<44=1/22|axe=|1562ms|
+practice-admin|1440|settings-medicines|/app/settings?tab=medicines|h1=Practice settings|docH=3196|ovf=false|<24=2|<44=3/32|axe=|1632ms|
+practice-admin|1440|settings-displays|/app/settings?tab=displays|h1=Practice settings|docH=900|ovf=false|<24=0|<44=1/24|axe=|1539ms|
+practice-admin|1440|settings-audit|/app/settings?tab=audit|h1=Practice settings|docH=4192|ovf=false|<24=0|<44=1/29|axe=|1746ms|
+practice-admin|1440|settings-metrics|/app/settings?tab=metrics|h1=Practice settings|docH=1264|ovf=false|<24=1|<44=2/29|axe=|1570ms|
+practice-admin|1440|settings-terms|/app/settings?tab=terms|h1=Practice settings|docH=900|ovf=false|<24=0|<44=1/23|axe=|1540ms|
+practice-admin|1440|settings-notifications|/app/settings?tab=notifications|h1=Practice settings|docH=2373|ovf=false|<24=14|<44=15/33|axe=|1594ms|
+practice-admin|1440|settings-data|/app/settings?tab=data|h1=Practice settings|docH=1042|ovf=false|<24=0|<44=1/21|axe=|1526ms|
+practice-admin|1440|admin-staff|/app/admin/staff|h1=Invite a colleague|docH=900|ovf=false|<24=2|<44=3/16|axe=|1509ms|
+practice-admin|1440|organisation|/app/organisation|h1=Onboarding request|docH=900|ovf=false|<24=0|<44=1/10|axe=|1502ms|404 GET /v1/organisation/request;Failed to load resource: the server responded with a status of 404 (Not Found)
+practice-admin|1440|patient-360-denied|/app/patients/5e1d0001-0004-4000-8000-000000000001|h1=Page not found|docH=900|ovf=false|<24=0|<44=1/11|axe=|1506ms|
+practice-admin|1440|my-devices|/app/account/devices|h1=My devices|docH=900|ovf=false|<24=0|<44=1/13|axe=|1526ms|
+practice-admin|1440|more|/app/more|h1=More|docH=900|ovf=false|<24=0|<44=1/17|axe=|1552ms|
+practice-admin|1440|not-found|/app/no-such-page|h1=Page not found|docH=900|ovf=false|<24=0|<44=1/11|axe=|1545ms|
+practice-admin|1920|front-desk|/app/front-desk|h1=Reception board · Tuesday, 3 November 2026|docH=1323|ovf=false|<24=0|<44=1/14|axe=|1696ms|
+practice-admin|1920|schedule|/app/schedule|h1=Tuesday, 3 November 2026|docH=1116|ovf=false|<24=0|<44=1/51|axe=|1673ms|
+practice-admin|1920|schedule-leave|/app/schedule/leave|h1=Leave and schedule exceptions|docH=1080|ovf=false|<24=2|<44=3/19|axe=|1604ms|
+practice-admin|1920|register-patient|/app/patients/new|h1=Register new patient|docH=1080|ovf=false|<24=7|<44=8/33|axe=|1599ms|
+practice-admin|1920|patients-directory|/app/patients/directory|h1=Patients|docH=1080|ovf=false|<24=0|<44=1/26|axe=|1642ms|
+practice-admin|1920|settings-profile|/app/settings?tab=profile|h1=Practice settings|docH=1226|ovf=false|<24=1|<44=2/31|axe=|1626ms|
+practice-admin|1920|settings-locations|/app/settings?tab=locations|h1=Practice settings|docH=1208|ovf=false|<24=1|<44=2/32|axe=|1606ms|
+practice-admin|1920|settings-hours|/app/settings?tab=hours|h1=Practice settings|docH=2227|ovf=false|<24=7|<44=8/82|axe=|1654ms|
+practice-admin|1920|settings-holidays|/app/settings?tab=holidays|h1=Practice settings|docH=1080|ovf=false|<24=0|<44=1/25|axe=|1579ms|
+practice-admin|1920|settings-staff|/app/settings?tab=staff|h1=Practice settings|docH=1275|ovf=false|<24=0|<44=1/28|axe=|1628ms|
+practice-admin|1920|settings-nurse|/app/settings?tab=nurse|h1=Practice settings|docH=1080|ovf=false|<24=1|<44=2/18|axe=|1573ms|
+practice-admin|1920|settings-requests|/app/settings?tab=requests|h1=Practice settings|docH=1080|ovf=false|<24=0|<44=1/20|axe=|1575ms|
+practice-admin|1920|settings-policy|/app/settings?tab=policy|h1=Practice settings|docH=1080|ovf=false|<24=2|<44=3/23|axe=|1619ms|
+practice-admin|1920|settings-review|/app/settings?tab=review|h1=Practice settings|docH=1080|ovf=false|<24=0|<44=1/27|axe=|1606ms|
+practice-admin|1920|settings-doctors|/app/settings?tab=doctors|h1=Practice settings|docH=1180|ovf=false|<24=0|<44=1/22|axe=|1601ms|
+practice-admin|1920|settings-medicines|/app/settings?tab=medicines|h1=Practice settings|docH=3196|ovf=false|<24=2|<44=3/32|axe=|1692ms|
+practice-admin|1920|settings-displays|/app/settings?tab=displays|h1=Practice settings|docH=1080|ovf=false|<24=0|<44=1/24|axe=|1607ms|
+practice-admin|1920|settings-audit|/app/settings?tab=audit|h1=Practice settings|docH=3180|ovf=false|<24=0|<44=1/29|axe=|1722ms|
+practice-admin|1920|settings-metrics|/app/settings?tab=metrics|h1=Practice settings|docH=1264|ovf=false|<24=1|<44=2/29|axe=|1625ms|
+practice-admin|1920|settings-terms|/app/settings?tab=terms|h1=Practice settings|docH=1080|ovf=false|<24=0|<44=1/23|axe=|1589ms|
+practice-admin|1920|settings-notifications|/app/settings?tab=notifications|h1=Practice settings|docH=2373|ovf=false|<24=14|<44=15/33|axe=|1618ms|
+practice-admin|1920|settings-data|/app/settings?tab=data|h1=Practice settings|docH=1080|ovf=false|<24=0|<44=1/21|axe=|1564ms|
+practice-admin|1920|admin-staff|/app/admin/staff|h1=Invite a colleague|docH=1080|ovf=false|<24=2|<44=3/16|axe=|1555ms|
+practice-admin|1920|organisation|/app/organisation|h1=Onboarding request|docH=1080|ovf=false|<24=0|<44=1/10|axe=|1545ms|404 GET /v1/organisation/request;Failed to load resource: the server responded with a status of 404 (Not Found)
+practice-admin|1920|patient-360-denied|/app/patients/5e1d0001-0004-4000-8000-000000000001|h1=Page not found|docH=1080|ovf=false|<24=0|<44=1/11|axe=|1569ms|
+practice-admin|1920|my-devices|/app/account/devices|h1=My devices|docH=1080|ovf=false|<24=0|<44=1/14|axe=|1557ms|
+practice-admin|1920|more|/app/more|h1=More|docH=1080|ovf=false|<24=0|<44=1/17|axe=|1574ms|
+practice-admin|1920|not-found|/app/no-such-page|h1=Page not found|docH=1080|ovf=false|<24=0|<44=1/11|axe=|1568ms|
+care-coordinator|375|today|/app/today|h1=Reception board · Tuesday, 3 November 2026|docH=1845|ovf=false|<24=0|<44=1/10|axe=|1572ms|
+care-coordinator|375|front-desk|/app/front-desk|h1=Reception board · Tuesday, 3 November 2026|docH=1845|ovf=false|<24=0|<44=1/10|axe=|1594ms|
+care-coordinator|375|schedule|/app/schedule|h1=Tuesday, 3 November 2026|docH=2594|ovf=false|<24=0|<44=1/26|axe=|1590ms|
+care-coordinator|375|patient-360|/app/patients/5e1d0001-0004-4000-8000-000000000001|h1=Patient 360|docH=4693|ovf=false|<24=0|<44=1/27|axe=|1779ms|
+care-coordinator|375|more|/app/more|h1=More|docH=816|ovf=false|<24=0|<44=1/15|axe=|1568ms|
+care-coordinator|768|today|/app/today|h1=Reception board · Tuesday, 3 November 2026|docH=1640|ovf=false|<24=0|<44=1/11|axe=|1635ms|
+care-coordinator|768|front-desk|/app/front-desk|h1=Reception board · Tuesday, 3 November 2026|docH=1640|ovf=false|<24=0|<44=1/11|axe=|1607ms|
+care-coordinator|768|schedule|/app/schedule|h1=Tuesday, 3 November 2026|docH=1190|ovf=false|<24=0|<44=1/27|axe=|1636ms|
+care-coordinator|768|patient-360|/app/patients/5e1d0001-0004-4000-8000-000000000001|h1=Patient 360|docH=3741|ovf=false|<24=0|<44=1/28|axe=|1806ms|
+care-coordinator|768|more|/app/more|h1=More|docH=1024|ovf=false|<24=0|<44=1/16|axe=|1537ms|
+care-coordinator|1024|today|/app/today|h1=Reception board · Tuesday, 3 November 2026|docH=1592|ovf=false|<24=0|<44=1/11|axe=|1651ms|
+care-coordinator|1024|front-desk|/app/front-desk|h1=Reception board · Tuesday, 3 November 2026|docH=1592|ovf=false|<24=0|<44=1/11|axe=|1599ms|
+care-coordinator|1024|schedule|/app/schedule|h1=Tuesday, 3 November 2026|docH=860|ovf=false|<24=0|<44=1/27|axe=|1626ms|
+care-coordinator|1024|patient-360|/app/patients/5e1d0001-0004-4000-8000-000000000001|h1=Patient 360|docH=3637|ovf=false|<24=0|<44=1/28|axe=|1858ms|
+care-coordinator|1024|more|/app/more|h1=More|docH=768|ovf=false|<24=0|<44=1/16|axe=|1527ms|
+care-coordinator|1440|today|/app/today|h1=Reception board · Tuesday, 3 November 2026|docH=1498|ovf=false|<24=0|<44=1/12|axe=|1670ms|
+care-coordinator|1440|front-desk|/app/front-desk|h1=Reception board · Tuesday, 3 November 2026|docH=1498|ovf=false|<24=0|<44=1/12|axe=|1605ms|
+care-coordinator|1440|schedule|/app/schedule|h1=Tuesday, 3 November 2026|docH=936|ovf=false|<24=0|<44=1/28|axe=|1598ms|
+care-coordinator|1440|patient-360|/app/patients/5e1d0001-0004-4000-8000-000000000001|h1=Patient 360|docH=3129|ovf=false|<24=0|<44=1/29|axe=|1848ms|
+care-coordinator|1440|more|/app/more|h1=More|docH=900|ovf=false|<24=0|<44=1/17|axe=|1525ms|
+care-coordinator|1920|today|/app/today|h1=Reception board · Tuesday, 3 November 2026|docH=1323|ovf=false|<24=0|<44=1/12|axe=|1678ms|
+care-coordinator|1920|front-desk|/app/front-desk|h1=Reception board · Tuesday, 3 November 2026|docH=1323|ovf=false|<24=0|<44=1/12|axe=|1630ms|
+care-coordinator|1920|schedule|/app/schedule|h1=Tuesday, 3 November 2026|docH=1116|ovf=false|<24=0|<44=1/28|axe=|1633ms|
+care-coordinator|1920|patient-360|/app/patients/5e1d0001-0004-4000-8000-000000000001|h1=Patient 360|docH=3045|ovf=false|<24=0|<44=1/29|axe=|1859ms|
+care-coordinator|1920|more|/app/more|h1=More|docH=1080|ovf=false|<24=0|<44=1/17|axe=|1551ms|
+hospital-doctor|375|today|/app/today|h1=Today · Tuesday, 3 November 2026|docH=936|ovf=false|<24=1|<44=3/14|axe=|1909ms|
+hospital-doctor|375|front-desk|/app/front-desk|h1=Reception board · Tuesday, 3 November 2026|docH=2147|ovf=false|<24=0|<44=1/18|axe=|1620ms|
+hospital-doctor|375|schedule|/app/schedule|h1=Tuesday, 3 November 2026|docH=1711|ovf=false|<24=0|<44=1/31|axe=|1569ms|
+hospital-doctor|375|patient-360|/app/patients/5e1d0001-0004-4000-8000-000000000001|h1=Patient 360|docH=5129|ovf=false|<24=0|<44=1/42|axe=|1806ms|
+hospital-doctor|375|more|/app/more|h1=More|docH=865|ovf=false|<24=0|<44=1/16|axe=|1531ms|
+hospital-doctor|768|today|/app/today|h1=Today · Tuesday, 3 November 2026|docH=1024|ovf=false|<24=1|<44=3/16|axe=|1926ms|
+hospital-doctor|768|front-desk|/app/front-desk|h1=Reception board · Tuesday, 3 November 2026|docH=1950|ovf=false|<24=0|<44=1/20|axe=|1677ms|
+hospital-doctor|768|schedule|/app/schedule|h1=Tuesday, 3 November 2026|docH=1300|ovf=false|<24=0|<44=1/32|axe=|1588ms|
+hospital-doctor|768|patient-360|/app/patients/5e1d0001-0004-4000-8000-000000000001|h1=Patient 360|docH=4029|ovf=false|<24=0|<44=1/44|axe=|1839ms|
+hospital-doctor|768|more|/app/more|h1=More|docH=1024|ovf=false|<24=0|<44=1/18|axe=|1520ms|
+hospital-doctor|1024|today|/app/today|h1=Today · Tuesday, 3 November 2026|docH=768|ovf=false|<24=1|<44=3/16|axe=|1931ms|
+hospital-doctor|1024|front-desk|/app/front-desk|h1=Reception board · Tuesday, 3 November 2026|docH=1898|ovf=false|<24=0|<44=1/20|axe=|1684ms|
+hospital-doctor|1024|schedule|/app/schedule|h1=Tuesday, 3 November 2026|docH=1022|ovf=false|<24=0|<44=1/32|axe=|1589ms|
+hospital-doctor|1024|patient-360|/app/patients/5e1d0001-0004-4000-8000-000000000001|h1=Patient 360|docH=3805|ovf=false|<24=0|<44=1/44|axe=|1850ms|
+hospital-doctor|1024|more|/app/more|h1=More|docH=785|ovf=false|<24=0|<44=1/18|axe=|1535ms|
+hospital-doctor|1440|today|/app/today|h1=Today · Tuesday, 3 November 2026|docH=900|ovf=false|<24=1|<44=3/17|axe=|1901ms|
+hospital-doctor|1440|front-desk|/app/front-desk|h1=Reception board · Tuesday, 3 November 2026|docH=1804|ovf=false|<24=0|<44=1/21|axe=|1634ms|
+hospital-doctor|1440|schedule|/app/schedule|h1=Tuesday, 3 November 2026|docH=992|ovf=false|<24=0|<44=1/33|axe=|1588ms|
+hospital-doctor|1440|patient-360|/app/patients/5e1d0001-0004-4000-8000-000000000001|h1=Patient 360|docH=3241|ovf=false|<24=0|<44=1/45|axe=|1855ms|
+hospital-doctor|1440|more|/app/more|h1=More|docH=900|ovf=false|<24=0|<44=1/19|axe=|1542ms|
+hospital-doctor|1920|today|/app/today|h1=Today · Tuesday, 3 November 2026|docH=1080|ovf=false|<24=1|<44=3/17|axe=|1913ms|
+hospital-doctor|1920|front-desk|/app/front-desk|h1=Reception board · Tuesday, 3 November 2026|docH=1573|ovf=false|<24=0|<44=1/21|axe=|1691ms|
+hospital-doctor|1920|schedule|/app/schedule|h1=Tuesday, 3 November 2026|docH=1116|ovf=false|<24=0|<44=1/33|axe=|1612ms|
+hospital-doctor|1920|patient-360|/app/patients/5e1d0001-0004-4000-8000-000000000001|h1=Patient 360|docH=3157|ovf=false|<24=0|<44=1/45|axe=|1869ms|
+hospital-doctor|1920|more|/app/more|h1=More|docH=1080|ovf=false|<24=0|<44=1/19|axe=|1558ms|
+hospital-it|375|settings|/app/settings|h1=Practice settings|docH=1544|ovf=false|<24=1|<44=2/24|axe=|1606ms|
+hospital-it|375|settings-audit|/app/settings?tab=audit|h1=Practice settings|docH=5548|ovf=false|<24=0|<44=1/22|axe=|1714ms|
+hospital-it|375|more|/app/more|h1=More|docH=812|ovf=false|<24=0|<44=1/7|axe=|1539ms|
+hospital-it|375|front-desk-denied|/app/front-desk|h1=Page not found|docH=812|ovf=false|<24=0|<44=1/4|axe=|1514ms|
+hospital-it|768|settings|/app/settings|h1=Practice settings|docH=1294|ovf=false|<24=1|<44=2/26|axe=|1579ms|
+hospital-it|768|settings-audit|/app/settings?tab=audit|h1=Practice settings|docH=5272|ovf=false|<24=0|<44=1/24|axe=|1745ms|
+hospital-it|768|more|/app/more|h1=More|docH=1024|ovf=false|<24=0|<44=1/9|axe=|1537ms|
+hospital-it|768|front-desk-denied|/app/front-desk|h1=Page not found|docH=1024|ovf=false|<24=0|<44=1/6|axe=|1546ms|
+hospital-it|1024|settings|/app/settings|h1=Practice settings|docH=1226|ovf=false|<24=1|<44=2/26|axe=|1612ms|
+hospital-it|1024|settings-audit|/app/settings?tab=audit|h1=Practice settings|docH=5196|ovf=false|<24=0|<44=1/24|axe=|1762ms|
+hospital-it|1024|more|/app/more|h1=More|docH=768|ovf=false|<24=0|<44=1/9|axe=|1523ms|
+hospital-it|1024|front-desk-denied|/app/front-desk|h1=Page not found|docH=768|ovf=false|<24=0|<44=1/6|axe=|1541ms|
+hospital-it|1440|settings|/app/settings|h1=Practice settings|docH=1226|ovf=false|<24=1|<44=2/27|axe=|1625ms|
+hospital-it|1440|settings-audit|/app/settings?tab=audit|h1=Practice settings|docH=4204|ovf=false|<24=0|<44=1/25|axe=|1806ms|
+hospital-it|1440|more|/app/more|h1=More|docH=900|ovf=false|<24=0|<44=1/10|axe=|1582ms|
+hospital-it|1440|front-desk-denied|/app/front-desk|h1=Page not found|docH=900|ovf=false|<24=0|<44=1/7|axe=|1539ms|
+hospital-it|1920|settings|/app/settings|h1=Practice settings|docH=1226|ovf=false|<24=1|<44=2/27|axe=|1662ms|
+hospital-it|1920|settings-audit|/app/settings?tab=audit|h1=Practice settings|docH=4204|ovf=false|<24=0|<44=1/25|axe=|1799ms|
+hospital-it|1920|more|/app/more|h1=More|docH=1080|ovf=false|<24=0|<44=1/10|axe=|1588ms|
+hospital-it|1920|front-desk-denied|/app/front-desk|h1=Page not found|docH=1080|ovf=false|<24=0|<44=1/7|axe=|1538ms|

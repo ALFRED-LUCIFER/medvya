@@ -1,0 +1,10 @@
+{
+ "patient": {
+  "name": "Bhavani Subramanianheae",
+  "mobile": "+91 90000 07404",
+  "digits": "07404",
+  "dob": "1954-01-13"
+ },
+ "intakeUrl": "http://localhost:5391/app/nurse/01a1d41a-20af-73a2-8123-5ba5d33abf21",
+ "consultPath": "/consult/01a1d41b-041d-738b-a90b-cf1706f02d1a"
+}

@@ -74,7 +74,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P0-041](P0-foundation/MDV-P0-041.md) | Postgres hardening from the security review: narrower grants, DataKeys protection, stable ledger hash, destructive-migration gate | P0 | wk 3–3 | 75% |
 | [MDV-P0-042](P0-foundation/MDV-P0-042.md) | Make the Azure dev environment actually run on PostgreSQL: app settings, Entra token connection, migration runner in the deploy workflow, immutable ledger-digests container | P0 | wk 3–4 | 60% |
 
-## Week 4 · 16 Nov 2026 – 20 Nov 2026 · load 12.1 dev-days ⚠ over capacity
+## Week 4 · 16 Nov 2026 – 20 Nov 2026 · load 22.2 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -88,8 +88,18 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P1-043](P1-front-desk/MDV-P1-043.md) | Sign pilot agreements with two partner clinics | P1 | wk 4–6 | 60% |
 | [MDV-P1-044](P1-front-desk/MDV-P1-044.md) | Legal review of privacy notice, ToS, DPA and consent wording (DPDP India; UAE health data) | P1 | wk 4–6 | 60% |
 | [MDV-P1-045](P1-front-desk/MDV-P1-045.md) | Register India DLT sender ID and SMS templates (and UAE SMS sender if applicable) | P1 | wk 4–6 | 62% |
+| [MDV-P1-075](P1-front-desk/MDV-P1-075.md) | Design rules: write PRODUCT.md and DESIGN.md from the audit blueprint and amend AGENTS.md section 4 | P1 | wk 4–4 | 85% |
+| [MDV-P1-076](P1-front-desk/MDV-P1-076.md) | Guardrails: lint rules and a CI count that may only fall, so shared patterns stop drifting | P1 | wk 4–4 | 80% |
+| [MDV-P1-077](P1-front-desk/MDV-P1-077.md) | Library defaults: 44 px Input, Select and Textarea, a required Table label, and 44 px hit areas for Switch | P1 | wk 4–4 | 88% |
+| [MDV-P1-079](P1-front-desk/MDV-P1-079.md) | Tokens: nine type sizes, the spacing scale, page and panel widths, the 1024 tier, density and two motion values | P1 | wk 4–5 | 80% |
+| [MDV-P1-087](P1-front-desk/MDV-P1-087.md) | A free-text medicine needs a reason before authorising when the patient has, or may have, an allergy | P1 | wk 4–4 | 78% |
+| [MDV-P1-088](P1-front-desk/MDV-P1-088.md) | Load the pilot clinic's brand names into the formulary, mapped to generic and class; offer generic matches for typed text | P1 | wk 4–6 | 60% |
+| [MDV-P1-089](P1-front-desk/MDV-P1-089.md) | The note always shows what the server holds; the last keystrokes survive a page change and a reload | P1 | wk 4–4 | 75% |
+| [MDV-P1-091](P1-front-desk/MDV-P1-091.md) | The signing checklist reports only what happened: no Identity confirmed tick the doctor did not make | P1 | wk 4–4 | 80% |
+| [MDV-P1-105](P1-front-desk/MDV-P1-105.md) | Redeploy Azure dev from main, capture it again at 768 and 375 px, and mark its synthetic patients | P1 | wk 4–4 | 85% |
+| [MDV-P1-108](P1-front-desk/MDV-P1-108.md) | UX validation sessions with the pilot doctor, nurse, receptionist and owner: the 21 decisions, the brand list, the training date and the device check | P1 | wk 4–6 | 55% |
 
-## Week 5 · 23 Nov 2026 – 27 Nov 2026 · load 14.8 dev-days ⚠ over capacity
+## Week 5 · 23 Nov 2026 – 27 Nov 2026 · load 32.2 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -104,8 +114,21 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P1-044](P1-front-desk/MDV-P1-044.md) | Legal review of privacy notice, ToS, DPA and consent wording (DPDP India; UAE health data) | P1 | wk 4–6 | 60% |
 | [MDV-P1-045](P1-front-desk/MDV-P1-045.md) | Register India DLT sender ID and SMS templates (and UAE SMS sender if applicable) | P1 | wk 4–6 | 62% |
 | [MDV-P1-074](P1-front-desk/MDV-P1-074.md) | Keep Azure logs flowing all day: PostgreSQL audit and connection logs must not exhaust the Log Analytics daily cap | P1 | wk 5–5 | 70% |
+| [MDV-P1-078](P1-front-desk/MDV-P1-078.md) | Codemod: delete about 350 redundant control-height patches (merges alone), then give radios, checkboxes and name-link rows a 44 px target | P1 | wk 5–5 | 82% |
+| [MDV-P1-079](P1-front-desk/MDV-P1-079.md) | Tokens: nine type sizes, the spacing scale, page and panel widths, the 1024 tier, density and two motion values | P1 | wk 4–5 | 80% |
+| [MDV-P1-080](P1-front-desk/MDV-P1-080.md) | Tone tokens: one colour pair per meaning; no raw hex left in the shared library; the contrast test reads the tokens | P1 | wk 5–5 | 80% |
+| [MDV-P1-081](P1-front-desk/MDV-P1-081.md) | PatientBanner in the shared library: full, strip and desk variants, shown in the gallery | P1 | wk 5–6 | 72% |
+| [MDV-P1-082](P1-front-desk/MDV-P1-082.md) | StickyActionBar as a layout footer and SaveStatus, in the shared library | P1 | wk 5–5 | 85% |
+| [MDV-P1-084](P1-front-desk/MDV-P1-084.md) | Shell components in the library: AccountMenu, the labelled rail item, PageHeader with back and meta slots, and Tooltip | P1 | wk 5–6 | 82% |
+| [MDV-P1-086](P1-front-desk/MDV-P1-086.md) | Page components in the library: Card and Section, PageMessage and EmptyState, SegmentedControl, SplitLayout and Sheet | P1 | wk 5–6 | 80% |
+| [MDV-P1-088](P1-front-desk/MDV-P1-088.md) | Load the pilot clinic's brand names into the formulary, mapped to generic and class; offer generic matches for typed text | P1 | wk 4–6 | 60% |
+| [MDV-P1-090](P1-front-desk/MDV-P1-090.md) | Ending or signing with an unfinished prescription or order asks first; unfinished ones show on the doctor's day | P1 | wk 5–5 | 68% |
+| [MDV-P1-100](P1-front-desk/MDV-P1-100.md) | Front desk: undo the last move, Left without being seen, cancel a checked-in visit; the desk cannot close a visit under the doctor | P1 | wk 5–6 | 65% |
+| [MDV-P1-101](P1-front-desk/MDV-P1-101.md) | Patient picker rows show date of birth and last visit, and mark possible duplicates | P1 | wk 5–5 | 75% |
+| [MDV-P1-104](P1-front-desk/MDV-P1-104.md) | The nurse's chief complaint prefills the doctor's note, marked from nurse intake | P1 | wk 5–5 | 72% |
+| [MDV-P1-108](P1-front-desk/MDV-P1-108.md) | UX validation sessions with the pilot doctor, nurse, receptionist and owner: the 21 decisions, the brand list, the training date and the device check | P1 | wk 4–6 | 55% |
 
-## Week 6 · 30 Nov 2026 – 04 Dec 2026 · load 22.8 dev-days ⚠ over capacity
+## Week 6 · 30 Nov 2026 – 04 Dec 2026 · load 41.8 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -127,8 +150,22 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P1-045](P1-front-desk/MDV-P1-045.md) | Register India DLT sender ID and SMS templates (and UAE SMS sender if applicable) | P1 | wk 4–6 | 62% |
 | [MDV-P1-046](P1-front-desk/MDV-P1-046.md) | Start UAE regulator onboarding applications early (risk mitigation) | P1 | wk 6–8 | 55% |
 | [MDV-P1-073](P1-front-desk/MDV-P1-073.md) | Clinical advisor walks the six journeys and signs off (moved from MDV-P0-023) | P1 | wk 6–6 | 60% |
+| [MDV-P1-081](P1-front-desk/MDV-P1-081.md) | PatientBanner in the shared library: full, strip and desk variants, shown in the gallery | P1 | wk 5–6 | 72% |
+| [MDV-P1-083](P1-front-desk/MDV-P1-083.md) | Chip, Tag and Banner in the shared library, with tone, icon and size; the allergy has one look | P1 | wk 6–6 | 75% |
+| [MDV-P1-084](P1-front-desk/MDV-P1-084.md) | Shell components in the library: AccountMenu, the labelled rail item, PageHeader with back and meta slots, and Tooltip | P1 | wk 5–6 | 82% |
+| [MDV-P1-085](P1-front-desk/MDV-P1-085.md) | Field and ErrorSummary in the shared library: one label, hint, error and required convention; a summary that takes focus | P1 | wk 6–6 | 82% |
+| [MDV-P1-086](P1-front-desk/MDV-P1-086.md) | Page components in the library: Card and Section, PageMessage and EmptyState, SegmentedControl, SplitLayout and Sheet | P1 | wk 5–6 | 80% |
+| [MDV-P1-088](P1-front-desk/MDV-P1-088.md) | Load the pilot clinic's brand names into the formulary, mapped to generic and class; offer generic matches for typed text | P1 | wk 4–6 | 60% |
+| [MDV-P1-092](P1-front-desk/MDV-P1-092.md) | Pinned patient strip and layout footer on the consultation, its sub-pages, nurse intake and the patient record | P1 | wk 6–6 | 75% |
+| [MDV-P1-093](P1-front-desk/MDV-P1-093.md) | App shell: one account menu, a 48 px top bar and a labelled rail from 768 to 1279 px | P1 | wk 6–6 | 82% |
+| [MDV-P1-096](P1-front-desk/MDV-P1-096.md) | A screen the role may not open says so, with a button to the start page | P1 | wk 6–6 | 88% |
+| [MDV-P1-100](P1-front-desk/MDV-P1-100.md) | Front desk: undo the last move, Left without being seen, cancel a checked-in visit; the desk cannot close a visit under the doctor | P1 | wk 5–6 | 65% |
+| [MDV-P1-102](P1-front-desk/MDV-P1-102.md) | The doctor's follow-up reaches the front desk: Follow-up due on the Done card and the desk record, with Book | P1 | wk 6–6 | 78% |
+| [MDV-P1-103](P1-front-desk/MDV-P1-103.md) | One queue rule for the clinic: the doctor's day follows it, shows tokens and puts nurse escalations first | P1 | wk 6–7 | 68% |
+| [MDV-P1-106](P1-front-desk/MDV-P1-106.md) | Check-in time is measured from opening Walk-in to the token, so the pilot metric cannot read 0 s, target met | P1 | wk 6–6 | 75% |
+| [MDV-P1-108](P1-front-desk/MDV-P1-108.md) | UX validation sessions with the pilot doctor, nurse, receptionist and owner: the 21 decisions, the brand list, the training date and the device check | P1 | wk 4–6 | 55% |
 
-## Week 7 · 07 Dec 2026 – 11 Dec 2026 · load 18.2 dev-days ⚠ over capacity
+## Week 7 · 07 Dec 2026 – 11 Dec 2026 · load 28.2 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -144,8 +181,13 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P1-028](P1-front-desk/MDV-P1-028.md) | Reception board with visit columns and one-tap check-in | P1 | wk 7–8 | 82% |
 | [MDV-P1-032](P1-front-desk/MDV-P1-032.md) | Email confirmations and 24 h / 2 h reminders via SendGrid and Hangfire | P1 | wk 7–8 | 86% |
 | [MDV-P1-046](P1-front-desk/MDV-P1-046.md) | Start UAE regulator onboarding applications early (risk mitigation) | P1 | wk 6–8 | 55% |
+| [MDV-P1-094](P1-front-desk/MDV-P1-094.md) | Consultation workspace layout: section anchors, vitals in one row, prescription after assessment, diagnosis inline, chart panel beside the note | P1 | wk 7–8 | 62% |
+| [MDV-P1-095](P1-front-desk/MDV-P1-095.md) | Front-desk board: one header row, a one-line workload strip, pinned column headers and the doctor on the card | P1 | wk 7–7 | 75% |
+| [MDV-P1-097](P1-front-desk/MDV-P1-097.md) | Schedule day view opens at the current time; the past collapses into one row | P1 | wk 7–7 | 82% |
+| [MDV-P1-103](P1-front-desk/MDV-P1-103.md) | One queue rule for the clinic: the doctor's day follows it, shows tokens and puts nurse escalations first | P1 | wk 6–7 | 68% |
+| [MDV-P1-107](P1-front-desk/MDV-P1-107.md) | Staff: only an owner can offboard an owner, step-up on any offboarding, change a role in place; link or remove /admin/staff | P1 | wk 7–7 | 65% |
 
-## Week 8 · 14 Dec 2026 – 18 Dec 2026 · load 15.9 dev-days ⚠ over capacity
+## Week 8 · 14 Dec 2026 – 18 Dec 2026 · load 21.4 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -160,8 +202,11 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P1-034](P1-front-desk/MDV-P1-034.md) | Notification centre for staff (D-03), push-safe content | P1 | wk 8–8 | 85% |
 | [MDV-P1-035](P1-front-desk/MDV-P1-035.md) | Practice access log for owners (F-12): who opened which record and when | P1 | wk 8–8 | 84% |
 | [MDV-P1-046](P1-front-desk/MDV-P1-046.md) | Start UAE regulator onboarding applications early (risk mitigation) | P1 | wk 6–8 | 55% |
+| [MDV-P1-094](P1-front-desk/MDV-P1-094.md) | Consultation workspace layout: section anchors, vitals in one row, prescription after assessment, diagnosis inline, chart panel beside the note | P1 | wk 7–8 | 62% |
+| [MDV-P1-098](P1-front-desk/MDV-P1-098.md) | Phone rule: under 768 px clinical writes say Open this on a tablet or computer | P1 | wk 8–8 | 65% |
+| [MDV-P1-099](P1-front-desk/MDV-P1-099.md) | Queue in the consultation: tokens and ages only, escalations first, and a Next button on tablets | P1 | wk 8–8 | 62% |
 
-## Week 9 · 21 Dec 2026 – 25 Dec 2026 · load 14.9 dev-days ⚠ over capacity
+## Week 9 · 21 Dec 2026 – 25 Dec 2026 · load 21.7 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -178,8 +223,13 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P2-023](P2-doctor-workspace/MDV-P2-023.md) | Define and operate the organisation onboarding review process (documents, SLA, rejection reasons, suspension) | P2 | wk 9–9 | 70% |
 | [MDV-P2-024](P2-doctor-workspace/MDV-P2-024.md) | Clinical authorisation: care relationship and purpose checks, request access for clinics | P2 | wk 9–10 | 84% |
 | [MDV-P2-029](P2-doctor-workspace/MDV-P2-029.md) | Encounters start race: a second start that loses the race answers with the winner's encounter | P2 | wk 9–9 | 95% |
+| [MDV-P2-046](P2-doctor-workspace/MDV-P2-046.md) | Token slip: a small printable slip and Reprint; the display names the doctor per token after a reassignment | P2 | wk 9–9 | 70% |
+| [MDV-P2-047](P2-doctor-workspace/MDV-P2-047.md) | After the identity step-up the doctor returns to the section that asked, with focus on its button | P2 | wk 9–9 | 70% |
+| [MDV-P2-048](P2-doctor-workspace/MDV-P2-048.md) | Nurse intake: one confirmation for all flagged readings, and a correction with a reason until the doctor starts | P2 | wk 9–10 | 60% |
+| [MDV-P2-050](P2-doctor-workspace/MDV-P2-050.md) | Audit log: every action has a plain name; the default view is chart opens and changes | P2 | wk 9–9 | 85% |
+| [MDV-P5-053](P5-commercial-launch/MDV-P5-053.md) | Fix the Expo bundling error, then run the same UX audit on the mobile apps in a simulator | P5 | wk 9–9 | 70% |
 
-## Week 10 · 28 Dec 2026 – 01 Jan 2027 · load 11.4 dev-days ⚠ over capacity
+## Week 10 · 28 Dec 2026 – 01 Jan 2027 · load 14.7 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -192,6 +242,8 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P2-021](P2-doctor-workspace/MDV-P2-021.md) | Clinical safety case and hazard log with a named clinical safety reviewer | P2 | wk 9–10 | 78% |
 | [MDV-P2-022](P2-doctor-workspace/MDV-P2-022.md) | Legal review of clinical data processing before the first real note | P2 | wk 9–11 | 62% |
 | [MDV-P2-024](P2-doctor-workspace/MDV-P2-024.md) | Clinical authorisation: care relationship and purpose checks, request access for clinics | P2 | wk 9–10 | 84% |
+| [MDV-P2-048](P2-doctor-workspace/MDV-P2-048.md) | Nurse intake: one confirmation for all flagged readings, and a correction with a reason until the doctor starts | P2 | wk 9–10 | 60% |
+| [MDV-P2-049](P2-doctor-workspace/MDV-P2-049.md) | Signed note print: vitals, allergies and diagnoses by default, and a page heading | P2 | wk 10–10 | 65% |
 
 ## Week 11 · 04 Jan 2027 – 08 Jan 2027 · load 23.9 dev-days ⚠ over capacity
 
@@ -209,7 +261,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P2-022](P2-doctor-workspace/MDV-P2-022.md) | Legal review of clinical data processing before the first real note | P2 | wk 9–11 | 62% |
 | [MDV-P2-025](P2-doctor-workspace/MDV-P2-025.md) | Note template engine and specialty template pack for the partner clinics | P2 | wk 11–12 | 85% |
 
-## Week 12 · 11 Jan 2027 – 15 Jan 2027 · load 41.5 dev-days ⚠ over capacity
+## Week 12 · 11 Jan 2027 – 15 Jan 2027 · load 50.0 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -239,8 +291,12 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P2-014](P2-doctor-workspace/MDV-P2-014.md) | Country formulary and order sets: India (Schedule H/H1/X) and UAE drug codes, admin add medicine (F-13) | P2 | wk 11–12 | 62% |
 | [MDV-P2-015](P2-doctor-workspace/MDV-P2-015.md) | Prescription composer with dose builder and add-medicine-while-prescribing (E-05, E-11) | P2 | wk 12–13 | 84% |
 | [MDV-P2-025](P2-doctor-workspace/MDV-P2-025.md) | Note template engine and specialty template pack for the partner clinics | P2 | wk 11–12 | 85% |
+| [MDV-P2-051](P2-doctor-workspace/MDV-P2-051.md) | Navigation names in one batch: My day, Front desk, one Patient record with tabs, Register patient as a button | P2 | wk 12–12 | 68% |
+| [MDV-P2-052](P2-doctor-workspace/MDV-P2-052.md) | Front desk: a list view as a third view beside By status and By doctor; the receptionist chooses the default | P2 | wk 12–13 | 65% |
+| [MDV-P2-053](P2-doctor-workspace/MDV-P2-053.md) | Clinic today for the owner: five counts the system can stand behind and a needs-attention list | P2 | wk 12–12 | 68% |
+| [MDV-P2-059](P2-doctor-workspace/MDV-P2-059.md) | Adopt PageHeader, Card and Section, PageMessage and EmptyState across the clinic app and the platform console | P2 | wk 12–13 | 75% |
 
-## Week 13 · 18 Jan 2027 – 22 Jan 2027 · load 36.1 dev-days ⚠ over capacity
+## Week 13 · 18 Jan 2027 – 22 Jan 2027 · load 47.3 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -263,13 +319,19 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P2-016](P2-doctor-workspace/MDV-P2-016.md) | Allergy and interaction safety checks before authorisation | P2 | wk 13–13 | 70% |
 | [MDV-P2-017](P2-doctor-workspace/MDV-P2-017.md) | Rx authorisation (separate from note), server-side multilingual printed Rx A4/A5 with hash and QR verify (E-10) | P2 | wk 13–14 | 82% |
 | [MDV-P2-018](P2-doctor-workspace/MDV-P2-018.md) | Investigation orders composer with Draft → Ordered states (E-05) | P2 | wk 13–13 | 84% |
+| [MDV-P2-052](P2-doctor-workspace/MDV-P2-052.md) | Front desk: a list view as a third view beside By status and By doctor; the receptionist chooses the default | P2 | wk 12–13 | 65% |
+| [MDV-P2-054](P2-doctor-workspace/MDV-P2-054.md) | Tables: one controller for sort and paging, stacked rows on phones, and compact density for four reference tables only | P2 | wk 13–14 | 68% |
+| [MDV-P2-055](P2-doctor-workspace/MDV-P2-055.md) | Settings sub-navigation and small copy and state fixes: walk-in column name, Terms status, nurse-intake switch, organisation page | P2 | wk 13–13 | 78% |
+| [MDV-P2-057](P2-doctor-workspace/MDV-P2-057.md) | Apply the type and width tokens: stray font sizes removed, body weight 500, page maximum 1,600 px, reading width, no sm:grid-cols | P2 | wk 13–13 | 70% |
+| [MDV-P2-059](P2-doctor-workspace/MDV-P2-059.md) | Adopt PageHeader, Card and Section, PageMessage and EmptyState across the clinic app and the platform console | P2 | wk 12–13 | 75% |
+| [MDV-P2-060](P2-doctor-workspace/MDV-P2-060.md) | Adopt Chip, Tag, Banner and SegmentedControl in features: one chip vocabulary, one view switch | P2 | wk 13–14 | 75% |
 | [MDV-P3-001](P3-ai-scribe/MDV-P3-001.md) | Spike: Azure AI Speech and Azure OpenAI in-region capability check and ADR for speech/LLM providers | P3 | wk 13–13 | 70% |
 | [MDV-P3-002](P3-ai-scribe/MDV-P3-002.md) | Consent templates and recording policy administration (H-09) | P3 | wk 13–13 | 82% |
 | [MDV-P3-003](P3-ai-scribe/MDV-P3-003.md) | Per-encounter recording consent with device selection; decline goes straight to manual note (A-02, E-04) | P3 | wk 13–14 | 86% |
 | [MDV-P3-022](P3-ai-scribe/MDV-P3-022.md) | AI vendor DPA, no-training guarantee and regional processing confirmed per country | P3 | wk 13–15 | 75% |
 | [MDV-P3-023](P3-ai-scribe/MDV-P3-023.md) | Legal review of recording consent in each market | P3 | wk 13–14 | 60% |
 
-## Week 14 · 25 Jan 2027 – 29 Jan 2027 · load 24.0 dev-days ⚠ over capacity
+## Week 14 · 25 Jan 2027 – 29 Jan 2027 · load 34.7 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -289,6 +351,11 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P2-020](P2-doctor-workspace/MDV-P2-020.md) | Share Rx with patient/pharmacy (e-Rx PDF/link) and pharmacy dispatch record (E-10) | P2 | wk 14–14 | 70% |
 | [MDV-P2-026](P2-doctor-workspace/MDV-P2-026.md) | Doctor and nurse training (30 min each) and R2 materials | P2 | wk 14–14 | 88% |
 | [MDV-P2-027](P2-doctor-workspace/MDV-P2-027.md) | Print, accessibility and zoom verification across clinical screens | P2 | wk 14–14 | 90% |
+| [MDV-P2-054](P2-doctor-workspace/MDV-P2-054.md) | Tables: one controller for sort and paging, stacked rows on phones, and compact density for four reference tables only | P2 | wk 13–14 | 68% |
+| [MDV-P2-056](P2-doctor-workspace/MDV-P2-056.md) | Truthful status and small motion: an Updated mark on live board changes, skeletons, an offline strip, named transition properties | P2 | wk 14–14 | 75% |
+| [MDV-P2-058](P2-doctor-workspace/MDV-P2-058.md) | Move the forms to Field and ErrorSummary, one feature at a time: registration first | P2 | wk 14–14 | 75% |
+| [MDV-P2-060](P2-doctor-workspace/MDV-P2-060.md) | Adopt Chip, Tag, Banner and SegmentedControl in features: one chip vocabulary, one view switch | P2 | wk 13–14 | 75% |
+| [MDV-P2-061](P2-doctor-workspace/MDV-P2-061.md) | Patient record and list chrome found only in the reviewers' reports: empty sections collapse, one-row filters, sideways scrolling inside tables | P2 | wk 14–14 | 72% |
 | [MDV-P3-003](P3-ai-scribe/MDV-P3-003.md) | Per-encounter recording consent with device selection; decline goes straight to manual note (A-02, E-04) | P3 | wk 13–14 | 86% |
 | [MDV-P3-005](P3-ai-scribe/MDV-P3-005.md) | Capture on phone (mobile web) or desktop mic with timer, pause, consent indicator and warnings (A-03, X-01) | P3 | wk 14–15 | 80% |
 | [MDV-P3-007](P3-ai-scribe/MDV-P3-007.md) | Azure Service Bus and .NET AI worker skeleton without database credentials (scoped job + callback) | P3 | wk 14–15 | 85% |
@@ -449,7 +516,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P4-031](P4-clinic-operations/MDV-P4-031.md) | Invoice and receipt formats reviewed by a chartered accountant (India) and tax adviser (UAE) | P4 | wk 21–23 | 65% |
 | [MDV-P5-001](P5-commercial-launch/MDV-P5-001.md) | Design the 11 new P5 screens (N-04 … N-14) before build | P5 | wk 22–24 | 60% |
 
-## Week 24 · 05 Apr 2027 – 09 Apr 2027 · load 10.1 dev-days ⚠ over capacity
+## Week 24 · 05 Apr 2027 – 09 Apr 2027 · load 14.1 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -460,6 +527,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P4-030](P4-clinic-operations/MDV-P4-030.md) | Clinic reports and owner dashboard: appointments, no-shows, revenue, follow-up completion, note time saved (H-07) | P4 | wk 24–25 | 80% |
 | [MDV-P5-001](P5-commercial-launch/MDV-P5-001.md) | Design the 11 new P5 screens (N-04 … N-14) before build | P5 | wk 22–24 | 60% |
 | [MDV-P5-002](P5-commercial-launch/MDV-P5-002.md) | Migration: read-only source connection via self-hosted integration runtime (Oracle, SQL Server, MySQL, CSV/Excel) (N-04) | P5 | wk 24–25 | 65% |
+| [MDV-P5-054](P5-commercial-launch/MDV-P5-054.md) | Later: date and time pickers and a combobox in the app language; dark and high contrast only after the tone tokens | P5 | wk 24–24 | 55% |
 
 ## Week 25 · 12 Apr 2027 – 16 Apr 2027 · load 9.3 dev-days ⚠ over capacity
 

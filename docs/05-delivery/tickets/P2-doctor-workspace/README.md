@@ -8,9 +8,9 @@
 **Day one:** Open Doctor Today, see the patient chart, record vitals, write and sign a note, and print a prescription, without AI.  
 **Goal:** A doctor completes a full visit, from chart to signed note and prescription, in Medvya. This is also the fallback that AI must never break.
 
-**Tickets:** 45 · **Estimate:** 98 dev-days vs **35 working days** in the window (OVER by 63 days: needs scope trade-off or overlap) · **Average confidence:** 81%
+**Tickets:** 61 · **Estimate:** 137 dev-days vs **35 working days** in the window (OVER by 102 days: needs scope trade-off or overlap) · **Average confidence:** 79%
 
-**Status:** To do 45
+**Status:** To do 61
 
 ## Epics
 
@@ -35,9 +35,14 @@
 | [MDV-P2-023](MDV-P2-023.md) | To do | Define and operate the organisation onboarding review process (documents, SLA, rejection reasons, suspension) | Chore | MUST | P2-05 | — | 0.5 | 9–9 | 21 Dec → 25 Dec 2026 | 70% Medium |
 | [MDV-P2-024](MDV-P2-024.md) | To do | Clinical authorisation: care relationship and purpose checks, request access for clinics | Task | MUST | P2-02 | — | 2 | 9–10 | 21 Dec → 01 Jan 2027 | 84% Medium |
 | [MDV-P2-029](MDV-P2-029.md) | To do | Encounters start race: a second start that loses the race answers with the winner's encounter | Task | MUST | P2-04 | — | 0.5 | 9–9 | 21 Dec → 25 Dec 2026 | 95% High |
+| [MDV-P2-046](MDV-P2-046.md) | To do | Token slip: a small printable slip and Reprint; the display names the doctor per token after a reassignment | Story | SHOULD | P1-08 | P-05 | 2 | 9–9 | 21 Dec → 25 Dec 2026 | 70% Medium |
+| [MDV-P2-047](MDV-P2-047.md) | To do | After the identity step-up the doctor returns to the section that asked, with focus on its button | Story | SHOULD | P2-06, P0-03 | E-05 | 1 | 9–9 | 21 Dec → 25 Dec 2026 | 70% Medium |
+| [MDV-P2-048](MDV-P2-048.md) | To do | Nurse intake: one confirmation for all flagged readings, and a correction with a reason until the doctor starts | Story | SHOULD | P2-03 | N-01 | 2.5 | 9–10 | 21 Dec → 01 Jan 2027 | 60% Low |
+| [MDV-P2-050](MDV-P2-050.md) | To do | Audit log: every action has a plain name; the default view is chart opens and changes | Story | SHOULD | P1-10 | F-12 | 1 | 9–9 | 21 Dec → 25 Dec 2026 | 85% High |
 | [MDV-P2-003](MDV-P2-003.md) | To do | Privacy-safe global search (⌘K) with care-relationship check and "Request access" | Story | MUST | P2-01 | D-02 | 2 | 10–10 | 28 Dec → 01 Jan 2027 | 88% High |
 | [MDV-P2-004](MDV-P2-004.md) | To do | Patient 360 (E-01): banner with identity and allergies always visible; problems, medicines, vitals trends | Story | MUST | P2-02 | E-01 | 3 | 10–11 | 28 Dec → 08 Jan 2027 | 85% High |
 | [MDV-P2-007](MDV-P2-007.md) | To do | Nurse intake queue and vitals with out-of-range re-measure and escalation (N-01) | Story | MUST | P2-03 | N-01 | 3 | 10–11 | 28 Dec → 08 Jan 2027 | 88% High |
+| [MDV-P2-049](MDV-P2-049.md) | To do | Signed note print: vitals, allergies and diagnoses by default, and a page heading | Story | SHOULD | P2-05 | E-06 | 2 | 10–10 | 28 Dec → 01 Jan 2027 | 65% Medium |
 | [MDV-P2-005](MDV-P2-005.md) | To do | Longitudinal timeline and trends with source labels and filters (E-02) | Story | MUST | P2-02 | E-02 | 2.5 | 11–11 | 04 Jan → 08 Jan 2027 | 86% High |
 | [MDV-P2-006](MDV-P2-006.md) | To do | Documents: upload, malware scan, secure viewer with time-limited links, scan to patient file (E-03) | Story | MUST | P2-07, P2-02 | E-03 | 3 | 11–12 | 04 Jan → 15 Jan 2027 | 82% Medium |
 | [MDV-P2-008](MDV-P2-008.md) | To do | Allergy verification and patient-reported medicines with handoff to the doctor (N-01) | Story | MUST | P2-03 | N-01 | 2 | 11–11 | 04 Jan → 08 Jan 2027 | 90% High |
@@ -48,14 +53,25 @@
 | [MDV-P2-011](MDV-P2-011.md) | To do | Medication reconciliation: chart vs patient-reported vs other source, keep / change / stop (E-07) | Story | MUST | P2-04 | E-07 | 2.5 | 12–12 | 11 Jan → 15 Jan 2027 | 86% High |
 | [MDV-P2-012](MDV-P2-012.md) | To do | Sign and finalise: immutable signed note v1 with re-authentication (E-06) | Story | MUST | P2-05 | E-06 | 2.5 | 12–13 | 11 Jan → 22 Jan 2027 | 90% High |
 | [MDV-P2-015](MDV-P2-015.md) | To do | Prescription composer with dose builder and add-medicine-while-prescribing (E-05, E-11) | Story | MUST | P2-06 | E-05, E-11 | 3 | 12–13 | 11 Jan → 22 Jan 2027 | 84% Medium |
+| [MDV-P2-051](MDV-P2-051.md) | To do | Navigation names in one batch: My day, Front desk, one Patient record with tabs, Register patient as a button | Story | SHOULD | P2-01, P2-02 | D-01, E-01, P-01 | 3 | 12–12 | 11 Jan → 15 Jan 2027 | 68% Medium |
+| [MDV-P2-052](MDV-P2-052.md) | To do | Front desk: a list view as a third view beside By status and By doctor; the receptionist chooses the default | Story | SHOULD | P1-08 | P-01 | 3 | 12–13 | 11 Jan → 22 Jan 2027 | 65% Medium |
+| [MDV-P2-053](MDV-P2-053.md) | To do | Clinic today for the owner: five counts the system can stand behind and a needs-attention list | Story | SHOULD | P1-08 | D-04 | 2.5 | 12–12 | 11 Jan → 15 Jan 2027 | 68% Medium |
+| [MDV-P2-059](MDV-P2-059.md) | To do | Adopt PageHeader, Card and Section, PageMessage and EmptyState across the clinic app and the platform console | Task | SHOULD | P0-07 | — | 3 | 12–13 | 11 Jan → 22 Jan 2027 | 75% Medium |
 | [MDV-P2-013](MDV-P2-013.md) | To do | Addenda, version history and print/PDF of the signed note (E-06) | Story | MUST | P2-05 | E-06 | 2 | 13–13 | 18 Jan → 22 Jan 2027 | 88% High |
 | [MDV-P2-016](MDV-P2-016.md) | To do | Allergy and interaction safety checks before authorisation | Story | MUST | P2-06 | E-11 | 3 | 13–13 | 18 Jan → 22 Jan 2027 | 70% Medium |
 | [MDV-P2-017](MDV-P2-017.md) | To do | Rx authorisation (separate from note), server-side multilingual printed Rx A4/A5 with hash and QR verify (E-10) | Story | MUST | P2-06 | E-10 | 3 | 13–14 | 18 Jan → 29 Jan 2027 | 82% Medium |
 | [MDV-P2-018](MDV-P2-018.md) | To do | Investigation orders composer with Draft → Ordered states (E-05) | Story | MUST | P2-06 | E-05 | 2 | 13–13 | 18 Jan → 22 Jan 2027 | 84% Medium |
+| [MDV-P2-054](MDV-P2-054.md) | To do | Tables: one controller for sort and paging, stacked rows on phones, and compact density for four reference tables only | Story | SHOULD | P0-07 | — | 4 | 13–14 | 18 Jan → 29 Jan 2027 | 68% Medium |
+| [MDV-P2-055](MDV-P2-055.md) | To do | Settings sub-navigation and small copy and state fixes: walk-in column name, Terms status, nurse-intake switch, organisation page | Story | SHOULD | P1-02 | F-08 | 2 | 13–13 | 18 Jan → 22 Jan 2027 | 78% Medium |
+| [MDV-P2-057](MDV-P2-057.md) | To do | Apply the type and width tokens: stray font sizes removed, body weight 500, page maximum 1,600 px, reading width, no sm:grid-cols | Task | SHOULD | P0-07 | — | 3 | 13–13 | 18 Jan → 22 Jan 2027 | 70% Medium |
+| [MDV-P2-060](MDV-P2-060.md) | To do | Adopt Chip, Tag, Banner and SegmentedControl in features: one chip vocabulary, one view switch | Task | SHOULD | P0-07 | — | 2.5 | 13–14 | 18 Jan → 29 Jan 2027 | 75% Medium |
 | [MDV-P2-019](MDV-P2-019.md) | To do | Referrals out and in with status (E-09) | Story | MUST | P2-06 | E-09 | 2 | 14–14 | 25 Jan → 29 Jan 2027 | 80% Medium |
 | [MDV-P2-020](MDV-P2-020.md) | To do | Share Rx with patient/pharmacy (e-Rx PDF/link) and pharmacy dispatch record (E-10) | Story | MUST | P2-06 | E-10 | 1.5 | 14–14 | 25 Jan → 29 Jan 2027 | 70% Medium |
 | [MDV-P2-026](MDV-P2-026.md) | To do | Doctor and nurse training (30 min each) and R2 materials | Chore | MUST | P2-03, P2-05 | — | 1 | 14–14 | 25 Jan → 29 Jan 2027 | 88% High |
 | [MDV-P2-027](MDV-P2-027.md) | To do | Print, accessibility and zoom verification across clinical screens | Task | MUST | P2-05, P2-06 | — | 1 | 14–14 | 25 Jan → 29 Jan 2027 | 90% High |
+| [MDV-P2-056](MDV-P2-056.md) | To do | Truthful status and small motion: an Updated mark on live board changes, skeletons, an offline strip, named transition properties | Story | COULD | P0-07 | — | 2.5 | 14–14 | 25 Jan → 29 Jan 2027 | 75% Medium |
+| [MDV-P2-058](MDV-P2-058.md) | To do | Move the forms to Field and ErrorSummary, one feature at a time: registration first | Story | SHOULD | P1-05 | P-02 | 3 | 14–14 | 25 Jan → 29 Jan 2027 | 75% Medium |
+| [MDV-P2-061](MDV-P2-061.md) | To do | Patient record and list chrome found only in the reviewers' reports: empty sections collapse, one-row filters, sideways scrolling inside tables | Story | COULD | P2-02 | E-01 | 2 | 14–14 | 25 Jan → 29 Jan 2027 | 72% Medium |
 | [MDV-P2-028](MDV-P2-028.md) | To do | R2 pilot, exit gate review (≥ 20 signed visits per doctor) and release notes | Gate | MUST | P2-05 | — | 1.5 | 15–15 | 01 Feb → 05 Feb 2027 | 72% Medium |
 | [MDV-P2-030](MDV-P2-030.md) | To do | Import the 12 Nov 2026 design (one-page chart, one-page consultation, Add medicine) and plan the upgrade epic | Task | MUST | P2-02, P2-04 | — | 0.5 | 15–15 | 01 Feb → 05 Feb 2027 | 95% High |
 | [MDV-P2-031](MDV-P2-031.md) | To do | More vitals and key labs on the chart, each flagged against its reference range | Story | MUST | P2-02, P2-03 | E-01, N-01 | 2 | 15–15 | 01 Feb → 05 Feb 2027 | 85% High |

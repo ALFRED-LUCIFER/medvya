@@ -10,6 +10,8 @@ export { Tabs, TabsContent, TabsList, TabsTrigger } from '#components/ui/tabs';
 export { Dialog, DialogTrigger, DialogContent, DialogTitle, DialogDescription } from '#components/ui/dialog';
 export { Switch } from '#components/ui/switch';
 export { ChoiceRow } from '#components/ui/choice-row';
+export { StickyActionBar } from '#components/ui/sticky-action-bar';
+export { SaveStatus, type SaveState } from '#components/ui/save-status';
 export { Chip, toneClasses, type Tone, type ChipProps } from '#components/ui/chip';
 export { Tag, type TagProps } from '#components/ui/tag';
 export { Banner, type BannerProps } from '#components/ui/banner';

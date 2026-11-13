@@ -105,6 +105,12 @@ test('errors appear under the field and are announced; a server error keeps the 
   await expect(page.locator('#fullName-error')).toHaveText('This is required.');
   await expect(page.locator('#specialties-error')).toHaveText('This is required.');
   await expect(page.getByText('Some fields need your attention. Correct them to continue.')).toBeVisible();
+  // MDV-P2-058: focus is on the error summary; its links name the fields and focus them.
+  const summary = page.getByRole('group', { name: 'There is a problem' });
+  await expect(summary).toBeFocused();
+  await expect(summary.getByRole('link').first()).toHaveText('What are you registering?: This is required.');
+  await summary.getByRole('link', { name: /^Full name: / }).click();
+  await expect(page.getByLabel('Full name')).toBeFocused();
 
   await page.getByLabel('Full name').fill('Arjun Rao (synthetic)');
   await page.getByLabel('Practice name').fill('Rao Clinic (synthetic)');
@@ -119,6 +125,7 @@ test('errors appear under the field and are announced; a server error keeps the 
   await page.getByLabel('I confirm this registration is my own and that it is valid.').check();
   await page.getByRole('button', { name: 'Continue' }).click();
   await expect(page.locator('#number-error')).toHaveText('Check the format.');
+  await expect(summary).toBeFocused(); // the server's refusal moves focus to the summary too
   await expect(page.getByRole('heading', { level: 1, name: 'Tell us about your practice.' })).toBeVisible();
 });
 
@@ -214,5 +221,43 @@ test('axe finds no violations on the ready screen (ar)', async ({ page }) => {
   await page.goto('/onboarding');
   await page.getByRole('button', { name: 'أنهِ التجهيز' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Rao Clinic (synthetic) جاهزة.' })).toBeVisible();
+  expect(await axe(page)).toEqual([]);
+});
+
+// MDV-P2-058: a refused Continue focuses the error summary, in view on a phone and a desktop, axe clean with the errors showing; most answers
+// are required, so the optional ones are marked "(optional)" and nothing else is.
+for (const locale of ['en', 'ar'])
+  for (const width of [375, 1440])
+    test(`a refused Continue focuses the error summary (${locale}, ${width}px)`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 800 });
+      await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
+      await mockOnboarding(page, { step: 1, data: {} });
+      await page.goto('/onboarding');
+      const optional = locale === 'en' ? '(optional)' : '(اختياري)';
+      await expect(page.locator('label[for=taxId]')).toContainText(optional);
+      await expect(page.locator('label[for=fullName]')).not.toContainText(optional);
+      expect(await page.locator('main label, main legend').allTextContents()).not.toContainEqual(expect.stringContaining('*'));
+      await page.locator('form button[type=submit]').click();
+      const summary = page.getByRole('group', { name: locale === 'en' ? 'There is a problem' : 'توجد مشكلة' });
+      await expect(summary).toBeFocused();
+      await expect(summary).toBeInViewport();
+      const links = summary.getByRole('link');
+      for (let i = 0; i < await links.count(); i++) {
+        const id = (await links.nth(i).getAttribute('href'))!.slice(1);
+        await links.nth(i).click();
+        await expect(page.locator(`[id="${id}"]`)).toBeFocused();
+      }
+      expect(await axe(page)).toEqual([]);
+    });
+
+test('sign-up: a refused Continue focuses the error summary, and each link focuses its field', async ({ page }) => {
+  await page.route('**/v1/me/context', r => r.fulfill({ status: 401 }));
+  await page.goto('/signup?country=IN');
+  await page.getByRole('button', { name: 'Continue' }).click();
+  const summary = page.getByRole('group', { name: 'There is a problem' });
+  await expect(summary).toBeFocused();
+  await expect(summary.getByRole('link')).toHaveCount(2);
+  await summary.getByRole('link').nth(1).click();
+  await expect(page.locator('#signup-city')).toBeFocused();
   expect(await axe(page)).toEqual([]);
 });

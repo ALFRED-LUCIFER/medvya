@@ -2,9 +2,10 @@ import type { ReactNode } from 'react';
 import { useWatch, type UseFormReturn } from 'react-hook-form';
 import { ArrowLeft, ArrowRight, Check, LifeBuoy } from 'lucide-react';
 import { useI18n, type Country } from '@medvya/i18n';
-import { Button, Card, PageHeader } from '@medvya/ui';
+import { Button, Card, FieldMarks, PageHeader } from '@medvya/ui';
 import { preview, skippable, stepIds, type FinishResult, type Rules, type WizardForm } from '../domain/onboarding';
 import BookingPreview from './BookingPreview';
+import { StepErrorSummary } from './Fields';
 import { HoursStep, PatientsStep, PaymentsStep, PracticeStep, TeamStep } from './OnboardingSteps';
 import ReadyScreen from './ReadyScreen';
 
@@ -19,6 +20,8 @@ type Props = {
   last: boolean;
   saveState: 'idle' | 'saving' | 'saved' | 'failed';
   problem: 'check' | 'finish' | 'later' | null;
+  /** Changes once per failed Continue: the error summary takes focus then. */
+  errorFocusKey: number;
   working: boolean;
   done: FinishResult | null;
   homeLabel: 'today' | 'frontDesk';
@@ -95,7 +98,9 @@ export default function OnboardingWizard(p: Props) {
                 {/* The eyebrow is the step counter, not a menu item. */}
                 <PageHeader className="[&_h1]:whitespace-normal" eyebrow={t('onboarding.eyebrow', { n: index + 1, name })} title={t(`onboarding.${id}.title`)}
                   description={t(`onboarding.${id}.intro`)} />
-                {body}
+                <StepErrorSummary form={form} step={step} country={country} currency={rules.currency} focusKey={p.errorFocusKey} />
+                {/* Most answers are required, so the optional ones are marked in words (DESIGN.md Forms). */}
+                <FieldMarks mark="optional">{body}</FieldMarks>
                 <div className="flex flex-wrap items-center gap-3 border-t pt-4">
                   {index > 0 && <Button type="button" variant="outline" onClick={p.onBack}><ArrowLeft className="size-4 rtl:rotate-180" aria-hidden />{t('onboarding.back')}</Button>}
                   <p aria-live="polite" className="text-sm text-muted-foreground">

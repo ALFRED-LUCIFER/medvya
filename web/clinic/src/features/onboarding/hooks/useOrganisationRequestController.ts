@@ -21,7 +21,7 @@ export function useOrganisationRequestController() {
 
   const [pickProblem, setPickProblem] = useState<{ kind: DocumentKind; problem: FileProblem } | null>(null);
   const upload = useMutation({ mutationFn: (v: { kind: DocumentKind; file: File }) => uploadDocument(v.kind, v.file), onSuccess: refresh });
-  const form = useForm<ItContactForm>({ resolver: zodResolver(itContactSchema), values: { name: data?.itContactName ?? '', email: data?.itContactEmail ?? '' } });
+  const form = useForm<ItContactForm>({ resolver: zodResolver(itContactSchema), values: { name: data?.itContactName ?? '', email: data?.itContactEmail ?? '' }, shouldFocusError: false }); // the error summary takes focus
   const contact = useMutation({ mutationFn: saveItContact, onSuccess: refresh });
   const submit = useMutation({ mutationFn: submitRequest, onSuccess: refresh });
   const startNew = useMutation({ mutationFn: startNewRequest, onSuccess: refresh });

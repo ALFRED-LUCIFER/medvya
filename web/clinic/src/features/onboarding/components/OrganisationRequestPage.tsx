@@ -2,7 +2,7 @@ import { CircleCheck, CircleDashed, Info } from 'lucide-react';
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, Card, Input, Label, PageContainer, PageHeader } from '@medvya/ui';
+import { Button, buttonVariants, Card, ErrorSummary, Field, FieldMarks, Input, Label, PageContainer, PageHeader } from '@medvya/ui';
 import { uploadErrorKey, type DocumentKind, type FileProblem, type ItContactForm, type OrganisationRequest, type RequestError } from '../domain/organisationRequest';
 
 type Props = {
@@ -37,6 +37,12 @@ const error = 'text-sm font-semibold text-danger-700';
 export default function OrganisationRequestPage(p: Props) {
   const { t } = useI18n();
   const { errors } = p.form.formState;
+  const nameError = errors.name && t(`onboarding.error.${errors.name.message === 'tooLong' ? 'tooLong' : 'required'}`);
+  const emailError = errors.email && t(`onboarding.error.${errors.email.message === 'format' ? 'format' : 'required'}`);
+  const contactErrors = [
+    ...(nameError ? [{ id: 'it-name', label: t('orgRequest.it.name'), message: nameError }] : []),
+    ...(emailError ? [{ id: 'it-email', label: t('orgRequest.it.email'), message: emailError }] : []),
+  ];
   // Every state keeps the page heading (UX-08): a loading or refused page is never a bare sentence.
   if (p.loading || !p.request) {
     return (
@@ -107,16 +113,16 @@ export default function OrganisationRequestPage(p: Props) {
         <form noValidate onSubmit={p.onContact} className="grid gap-4 sm:grid-cols-2">
           <fieldset className="contents" disabled={!p.editable}>
             <legend className="mb-1 text-lg font-bold sm:col-span-2">{t('orgRequest.it.legend')}</legend>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="it-name">{t('orgRequest.it.name')}</Label>
-              <Input id="it-name" autoComplete="off" aria-invalid={errors.name ? true : undefined} aria-describedby={errors.name ? 'it-name-error' : undefined} {...p.form.register('name')} />
-              {errors.name && <p id="it-name-error" role="alert" className={error}>{t(`onboarding.error.${errors.name.message === 'tooLong' ? 'tooLong' : 'required'}`)}</p>}
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="it-email">{t('orgRequest.it.email')}</Label>
-              <Input id="it-email" type="email" dir="ltr" autoComplete="off" aria-invalid={errors.email ? true : undefined} aria-describedby={errors.email ? 'it-email-error' : undefined} {...p.form.register('email')} />
-              {errors.email && <p id="it-email-error" role="alert" className={error}>{t(`onboarding.error.${errors.email.message === 'format' ? 'format' : 'required'}`)}</p>}
-            </div>
+            <ErrorSummary title={t('field.errorSummary')} focusKey={p.form.formState.submitCount} className="sm:col-span-2" errors={contactErrors} />
+            {/* Both are required, so neither carries a mark (FieldMarks "optional"). */}
+            <FieldMarks mark="optional">
+              <Field id="it-name" label={t('orgRequest.it.name')} required error={nameError}>
+                <Input autoComplete="off" {...p.form.register('name')} />
+              </Field>
+              <Field id="it-email" label={t('orgRequest.it.email')} required error={emailError}>
+                <Input type="email" dir="ltr" autoComplete="off" {...p.form.register('email')} />
+              </Field>
+            </FieldMarks>
             <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
               <Button type="submit" variant="outline" loading={p.savingContact}>{t('orgRequest.it.save')}</Button>
               {p.contactSaved && <span role="status" className="flex items-center gap-1.5 text-sm font-semibold"><CircleCheck className="size-4" aria-hidden />{t('orgRequest.it.saved')}</span>}

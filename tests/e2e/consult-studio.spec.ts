@@ -220,6 +220,10 @@ for (const locale of ['en', 'ar']) {
     mock = await open(page, { version: 1, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' }, recordingConsent: 'Declined' }, locale,
       () => (mock?.noKnownAllergies ? { state: 'NoKnownAllergies', allergies: [] } : { state: 'NotRecorded', allergies: [] }));
     const vitals = page.locator('#studio-vitals').locator('..');
+    // MDV-AUDIT-1091: the optional readings are folded; the allergy check (substance and reaction) is never folded.
+    await expect(vitals.getByRole('textbox')).toHaveCount(2);
+    expect(await axe(page)).toEqual([]);
+    await vitals.locator('summary').click();
     await expect(vitals.getByRole('textbox')).toHaveCount(10); // eight readings, the allergy substance and reaction
     if (locale === 'en') {
       const sign = note(page).getByRole('button', { name: 'Sign note' });

@@ -61,7 +61,8 @@ public sealed record AppointmentView(
     VisitType VisitType, DateTimeOffset Start, DateTimeOffset End, AppointmentState State, ReasonCategory ReasonCategory, BookingChannel Channel,
     bool WalkIn = false, bool Unscheduled = false);
 
-public sealed record PatientView(Guid Id, string FullName, string Mrn);
+/// <summary><paramref name="HasVisited"/>: the patient has been checked in at least once, so a booking is a follow-up rather than a first consultation (UX-10).</summary>
+public sealed record PatientView(Guid Id, string FullName, string Mrn, bool HasVisited = false);
 
 /// <summary>One visit on the desk's patient record (MDV-1088): when and what state, never a reason or anything clinical.</summary>
 public sealed record DeskVisit(Guid AppointmentId, DateTimeOffset Start, AppointmentState State);

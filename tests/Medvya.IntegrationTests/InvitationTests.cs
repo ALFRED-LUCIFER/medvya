@@ -343,6 +343,25 @@ public sealed partial class InvitationTests(PostgresFixture sql) : IClassFixture
     }
 
     [Fact]
+    public async Task AnAcceptanceThatCannotBeAuditedDoesNotHappen()
+    {
+        var (_, token) = await InviteReceptionist();
+        var invitations = new Invitations(sql.Context(tenantA), new PostgresFixture.FixedTenant(tenantA), new FixedUser(null), new DownLog(), outbox, Options.Create(new InvitationOptions()), null!);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => invitations.AcceptAsync(token, Guid.NewGuid()));
+
+        // Rolled back with the audit write (MDV-P0-017): the link still works and the seat is still only invited.
+        await using var db = sql.Context(tenantA);
+        Assert.Equal(1, await db.Memberships.CountAsync(m => m.Status == MembershipStatus.Invited));
+        Assert.Null(await db.Invitations.Select(i => i.AcceptedAt).SingleAsync());
+    }
+
+    sealed class DownLog : Medvya.Audit.Application.IAuditLog
+    {
+        public Task WriteAsync(Medvya.Audit.Domain.AuditEvent e, CancellationToken ct) => throw new InvalidOperationException("audit store down");
+        public Task WriteAsync(Medvya.Audit.Domain.AuditEvent e, System.Data.Common.DbTransaction t, CancellationToken ct) => throw new InvalidOperationException("audit store down");
+    }
+
+    [Fact]
     public async Task InvitationsAreIsolatedPerTenantEvenWithQueryFiltersOff()
     {
         await InviteReceptionist();

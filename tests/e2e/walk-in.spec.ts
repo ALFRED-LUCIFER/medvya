@@ -23,7 +23,7 @@ const column = (calendarId: string, name: string, hours = [{ start: ist('09:00')
 
 type Calls = { walkIns: Request[]; checkIns: Request[] };
 
-async function desk(page: Page, { locale = 'en', walkInAnswer = (_: { calendarId: string | null }) => ({ status: 200, json: {} as unknown }) } = {}) {
+async function desk(page: Page, { locale = 'en', walkInAnswer = (_: { calendarId: string | null }) => ({ status: 200, json: {} as unknown }), checkedInState = 'CheckedIn' } = {}) {
   const calls: Calls = { walkIns: [], checkIns: [] };
   let board: unknown[] = [];
   await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
@@ -50,7 +50,7 @@ async function desk(page: Page, { locale = 'en', walkInAnswer = (_: { calendarId
   });
   await page.route('**/v1/appointments/*/check-in', r => {
     calls.checkIns.push(r.request());
-    Object.assign(board[0] as object, { state: 'CheckedIn', since: ist('10:32'), token: 'A-02' });
+    Object.assign(board[0] as object, { state: checkedInState, since: ist('10:32'), token: 'A-02' });
     return r.fulfill({ json: board[0] });
   });
   await page.route('**/v1/front-desk/board?*', r => r.fulfill({ json: { facilityId: 'f-1', timeZone: 'Asia/Kolkata', date: '2026-10-19', now: ist('10:44'), cards: board } }));
@@ -81,7 +81,7 @@ test('a new walk-in is quick-registered and checked in within a minute, then wai
   await expect(page.getByText('Patient: Arjun Nair (synthetic) · MRN 000777')).toBeVisible();
   await page.getByRole('button', { name: 'Check in now' }).click(); // click 5: a new walk-in is still 5 clicks (limit 6), none added
   await expect(page.getByRole('heading', { name: 'Arjun Nair (synthetic) is checked in' })).toBeVisible();
-  await expect(page.getByText('Walk-in with Dr. Arjun Rao (synthetic) at 10:40.', { exact: false })).toBeVisible();
+  await expect(page.getByText('Walk-in with Dr. Arjun Rao (synthetic) at 10:40. The patient now waits in the Checked in column of the board.')).toBeVisible();
   await expect(page.getByText('Token A-02')).toBeVisible(); // MDV-P1-052: the token is on the success screen, not only on the board
   expect(Date.now() - started).toBeLessThan(60_000);
 
@@ -123,6 +123,21 @@ test('with no free slot today the desk chooses a doctor and the patient is queue
   // Arrived with the patient already chosen and no Walk-in opened before: the start was not seen, so not measured, never ~0 s (MDV-P1-106).
   expect(calls.checkIns[0]!.postDataJSON()).toEqual({ elapsedMs: null });
 });
+
+// MDV-P2-055 AC1: with nurse intake off the server's check-in lands the card in Ready for doctor; the message names that column.
+for (const [locale, column] of [['en', 'The patient now waits in the Ready for doctor column of the board.'], ['ar', 'ينتظر المريض الآن في عمود «جاهز للطبيب» على اللوحة.']] as const)
+  test(`with nurse intake off the success message names Ready for doctor, the column the card is really in, axe clean (${locale})`, async ({ page }) => {
+    await desk(page, { locale, checkedInState: 'ReadyForDoctor' });
+    await page.goto(`/front-desk/walk-in?patient=${patientId}`);
+    await expect(page.locator('main [role=status]').first()).toBeVisible(); // the patient lookup has answered
+    await page.locator('form button[type=submit]').click();
+    const done = page.locator('main [role=status]').filter({ has: page.locator('h1') });
+    await expect(done).toContainText(column);
+    await expect(done).not.toContainText(locale === 'en' ? 'Checked in column' : 'تم تسجيل الوصول»');
+    expect(await page.evaluate(() => document.documentElement.dir)).toBe(locale === 'ar' ? 'rtl' : 'ltr');
+    await page.addScriptTag({ path: createRequire(import.meta.url).resolve('axe-core/axe.min.js') });
+    expect(await page.evaluate(async () => (await (window as unknown as { axe: { run: () => Promise<{ violations: unknown[] }> } }).axe.run()).violations)).toEqual([]);
+  });
 
 // MDV-P1-052: a second walk-in for a patient who already has an open visit today is a warning first, then a deliberate choice.
 test('the same patient checked in again is warned before a second visit is made', async ({ page }) => {

@@ -118,10 +118,88 @@ public class AuditLedgerTests(PostgresFixture sql) : IClassFixture<PostgresFixtu
     }
 
     [Fact]
+    public async Task ARefusalWithNoTenantIsRecordedInThePlatformChainAndNoPracticeCanReadIt()
+    {
+        var before = await PlatformCount();
+        await using var app = App(null, s => s.AddAuditModule(sql.ConnectionString));
+        Assert.Equal(HttpStatusCode.Forbidden, (await app.GetTestClient().GetAsync($"/patients/{Guid.NewGuid()}")).StatusCode);
+
+        await using var platform = sql.Audit(PlatformTenant.Id);
+        Assert.Equal(before + 1, await platform.Events.CountAsync());
+        var row = await platform.Events.OrderByDescending(e => e.OccurredAt).FirstAsync();
+        Assert.Equal(("patient.read", AuditOutcome.Denied), (row.Action, row.Outcome));
+        Assert.Null(row.PatientId); // nothing is known about a patient the caller was never allowed near
+        await using var practice = sql.Audit(tenantA);
+        Assert.DoesNotContain(await practice.Events.IgnoreQueryFilters().ToListAsync(), e => e.TenantId == PlatformTenant.Id); // row-level security
+
+        await using var conn = new NpgsqlConnection(sql.ConnectionString);
+        await conn.OpenAsync();
+        await using var verify = new NpgsqlCommand("SELECT audit.verify_chain(@tenant)", conn);
+        verify.Parameters.AddWithValue("tenant", PlatformTenant.Id);
+        Assert.True(await verify.ExecuteScalarAsync() is DBNull);
+    }
+
+    [Fact]
+    public async Task AnAnonymousCallLeavesNoPlatformRow()
+    {
+        var before = await PlatformCount();
+        await using var app = App(null, s => s.AddAuditModule(sql.ConnectionString), signedIn: false);
+        Assert.Equal(HttpStatusCode.Forbidden, (await app.GetTestClient().GetAsync($"/patients/{Guid.NewGuid()}")).StatusCode);
+        Assert.Equal(before, await PlatformCount());
+    }
+
+    [Fact]
+    public async Task APolicyRefusalWithNoTenantIsRecordedInThePlatformChain()
+    {
+        var before = await PlatformCount();
+        var builder = WebApplication.CreateBuilder();
+        builder.WebHost.UseTestServer();
+        builder.Services.AddSingleton<ICurrentTenant>(new PostgresFixture.FixedTenant(null)).AddSingleton<ICurrentUser>(new FixedUser());
+        builder.Services.AddAuditModule(sql.ConnectionString).AddDeniedAccessAudit();
+        builder.Services.AddAuthentication("t").AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, SignedInScheme>("t", null); // signed in, so refused (403), not challenged (401)
+        builder.Services.AddAuthorization(o => o.AddPolicy("never", p => p.RequireAssertion(_ => false)));
+        await using var app = builder.Build();
+        app.MapGet("/refused", () => "synthetic").Audited("patient.read", "patient").RequireAuthorization("never");
+        await app.StartAsync();
+
+        using var client = app.GetTestClient();
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync("/refused")).StatusCode);
+        await client.GetAsync("/refused"); // the same refusal again inside the window leaves no second row (no flooding)
+        Assert.Equal(before + 1, await PlatformCount());
+    }
+
+    [Fact]
+    public async Task APlatformAuditWriteThatFailsStopsTheRequest()
+    {
+        await using var app = App(null, s => s.AddAuditModule(sql.ConnectionString).AddSingleton<IPlatformAuditLog, DownPlatformLog>());
+        await Assert.ThrowsAsync<InvalidOperationException>(() => app.GetTestClient().GetAsync($"/patients/{Guid.NewGuid()}"));
+    }
+
+    sealed class SignedInScheme(Microsoft.Extensions.Options.IOptionsMonitor<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions> options, Microsoft.Extensions.Logging.ILoggerFactory logger, System.Text.Encodings.Web.UrlEncoder encoder)
+        : Microsoft.AspNetCore.Authentication.AuthenticationHandler<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions>(options, logger, encoder)
+    {
+        protected override Task<Microsoft.AspNetCore.Authentication.AuthenticateResult> HandleAuthenticateAsync() =>
+            Task.FromResult(Microsoft.AspNetCore.Authentication.AuthenticateResult.Success(new Microsoft.AspNetCore.Authentication.AuthenticationTicket(
+                new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity("t")), "t")));
+    }
+
+    sealed class DownPlatformLog : IPlatformAuditLog
+    {
+        public Task WriteAsync(AuditEvent auditEvent, CancellationToken ct) => throw new InvalidOperationException("audit store down");
+    }
+
+    async Task<int> PlatformCount()
+    {
+        await using var platform = sql.Audit(PlatformTenant.Id);
+        return await platform.Events.CountAsync();
+    }
+
+    [Fact]
     public async Task AuditedEndpointFailsClosed()
     {
-        await using var noTenant = App(null, s => s.AddScoped<IAuditLog, ThrowingLog>());
+        await using var noTenant = App(null, s => s.AddAuditModule(sql.ConnectionString));
         Assert.Equal(HttpStatusCode.Forbidden, (await noTenant.GetTestClient().GetAsync($"/patients/{Guid.NewGuid()}")).StatusCode);
+        Assert.False(handlerRan);
 
         await using var broken = App(tenantA, s => s.AddScoped<IAuditLog, ThrowingLog>());
         // A read with the audit store down: the request fails and no answer (no patient data) leaves. The row is written once the
@@ -139,12 +217,12 @@ public class AuditLedgerTests(PostgresFixture sql) : IClassFixture<PostgresFixtu
         public Task WriteAsync(AuditEvent auditEvent, System.Data.Common.DbTransaction transaction, CancellationToken ct) => throw new InvalidOperationException("audit store down");
     }
 
-    WebApplication App(Guid? tenant, Action<IServiceCollection> audit)
+    WebApplication App(Guid? tenant, Action<IServiceCollection> audit, bool signedIn = true)
     {
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
         builder.Services.AddSingleton<ICurrentTenant>(new PostgresFixture.FixedTenant(tenant));
-        builder.Services.AddSingleton<ICurrentUser>(new FixedUser());
+        builder.Services.AddSingleton<ICurrentUser>(new FixedUser(signedIn));
         audit(builder.Services);
         var app = builder.Build();
         app.MapGet("/patients/{patientId}", () => { handlerRan = true; return "synthetic"; }).Audited("patient.read", "patient", patientRouteKey: "patientId");
@@ -152,5 +230,5 @@ public class AuditLedgerTests(PostgresFixture sql) : IClassFixture<PostgresFixtu
         return app;
     }
 
-    sealed class FixedUser : ICurrentUser { public Guid? UserId { get; } = Guid.NewGuid(); }
+    sealed class FixedUser(bool signedIn = true) : ICurrentUser { public Guid? UserId { get; } = signedIn ? Guid.NewGuid() : null; }
 }

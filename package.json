@@ -15,6 +15,7 @@
     "load:desk": "MEDVYA_LOAD=1 dotnet test tests/Medvya.IntegrationTests --filter FullyQualifiedName~DeskLoadTests",
     "check:contract": "tools/check-contract.sh",
     "check:synthetic": "node tools/check-synthetic/check.mjs",
+    "check:ui-drift": "node tools/check-ui-drift/check.mjs",
     "test": "pnpm -r test",
     "e2e": "pnpm --filter e2e e2e",
     "e2e:fullstack": "pnpm --filter e2e e2e:fullstack"

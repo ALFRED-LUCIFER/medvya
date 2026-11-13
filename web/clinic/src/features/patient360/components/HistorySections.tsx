@@ -1,5 +1,5 @@
 import { ltr, useI18n } from '@medvya/i18n';
-import { Button, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea } from '@medvya/ui';
+import { Button, Card, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea } from '@medvya/ui';
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import type { HistoryEntry, HistorySection } from '../domain/chart';
@@ -18,8 +18,7 @@ type Props = {
 export default function HistorySections(p: Props) {
   const { t } = useI18n();
   return (
-    <section aria-label={t('history.title')} className="flex flex-col gap-4 rounded-xl border bg-card p-4">
-      <h2 className="text-base font-extrabold">{t('history.title')}</h2>
+    <Card title={t('history.title')}>
       {p.problem && <p role="alert" className="font-bold">{t(`history.problem.${p.problem}`)}</p>}
       {/* A compact two-column list (UX-09): each section is a short tile with its own Edit; the one being edited takes the full width. */}
       <ul className="grid gap-3 md:grid-cols-2">
@@ -41,7 +40,7 @@ export default function HistorySections(p: Props) {
         </li>
         {p.sections.map(s => <Section key={s.section} view={s} p={p} />)}
       </ul>
-    </section>
+    </Card>
   );
 }
 

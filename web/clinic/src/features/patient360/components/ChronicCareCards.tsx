@@ -1,7 +1,7 @@
-import type { FormEventHandler, ReactNode } from 'react';
+import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { ltr, useI18n } from '@medvya/i18n';
-import { Button, Input } from '@medvya/ui';
+import { Button, Card, Input } from '@medvya/ui';
 import { CircleAlert, CircleCheck, CircleMinus } from 'lucide-react';
 import { Field } from '../../settings/components/Field';
 import { describedBy, fieldError } from '../../settings/components/fieldStyles';
@@ -40,15 +40,6 @@ export default function ChronicCareCards(p: Props) {
       <Gaps {...p} />
       <Goals {...p} />
     </>
-  );
-}
-
-function Card({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section aria-label={title} className="flex flex-col gap-3 rounded-xl border bg-card p-4">
-      <h2 className="text-base font-extrabold">{title}</h2>
-      {children}
-    </section>
   );
 }
 

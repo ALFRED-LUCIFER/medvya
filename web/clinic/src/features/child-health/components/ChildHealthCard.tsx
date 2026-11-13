@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 import { ltr, useI18n } from '@medvya/i18n';
-import { Button, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea } from '@medvya/ui';
+import { Button, Card, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea } from '@medvya/ui';
 import { CircleAlert, CircleCheck, CircleHelp, Clock, CircleX } from 'lucide-react';
 import { describedBy } from '../../settings/components/fieldStyles';
 import { answerers, answers, bandState, openDoses, type ChildHealth, type DoseDraft, type DoseState, type MilestoneAnswer, type MilestoneAnswerer, type MilestoneKey, type Problem } from '../domain/childHealth';
@@ -35,11 +35,7 @@ export default function ChildHealthCard(p: Props) {
   const v = p.view;
   return (
     <div className="grid gap-4 md:grid-cols-2">
-      <section aria-labelledby="imm-title" className="flex flex-col gap-3 rounded-xl border bg-card p-4">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 id="imm-title" className="text-base font-extrabold">{t('childHealth.immunisations')}</h2>
-          <span className="text-sm text-muted-foreground">{t('childHealth.schedule', { name: ltr(v.schedule) })}</span>
-        </div>
+      <Card title={t('childHealth.immunisations')} intro={t('childHealth.schedule', { name: ltr(v.schedule) })}>
         {!v.signedOff && <p className="text-sm text-muted-foreground">{t('childHealth.scheduleDraft')}</p>}
         <ul className="flex flex-col gap-3">
           {v.bands.map(b => {
@@ -66,9 +62,8 @@ export default function ChildHealthCard(p: Props) {
         </ul>
         {p.canRecord && <DoseForm {...p} view={v} />}
         {p.problem && <p role="alert" className="font-bold text-danger-700">{t(`childHealth.error.${p.problem}`)}</p>}
-      </section>
-      <section aria-labelledby="miles-title" className="flex flex-col gap-3 rounded-xl border bg-card p-4">
-        <h2 id="miles-title" className="text-base font-extrabold">{v.milestones ? t('childHealth.milestonesFor', { band: t(`childHealth.milestoneBand.${v.milestones.key}`) }) : t('childHealth.milestones')}</h2>
+      </Card>
+      <Card title={v.milestones ? t('childHealth.milestonesFor', { band: t(`childHealth.milestoneBand.${v.milestones.key}`) }) : t('childHealth.milestones')}>
         {!v.milestones ? <p className="text-muted-foreground">{t('childHealth.milestones.none')}</p> : (
           <>
             {!v.milestones.signedOff && <p className="text-sm text-muted-foreground">{t('childHealth.milestonesDraft')}</p>}
@@ -104,7 +99,7 @@ export default function ChildHealthCard(p: Props) {
             </ul>
           </>
         )}
-      </section>
+      </Card>
     </div>
   );
 }

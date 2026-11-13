@@ -20,6 +20,13 @@ describe('Card and Section', () => {
     void <Card size="large" />;
   });
 
+  it('a titled section Card is a region named by its title; item cards, Sections and untitled cards are not, and an aria-label wins', () => {
+    render(<><Card title="Visits">x</Card><Section title="History">y</Section><Card>z</Card><Card size="item" title="A-07">v</Card><Card title="Upload" aria-label="Upload a document">w</Card></>);
+    expect(screen.getByRole('region', { name: 'Visits' })).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Upload a document' })).toBeTruthy();
+    expect(screen.getAllByRole('region')).toHaveLength(2);
+  });
+
   it('flags a bordered Card nested in a Card in development, and not a Section in a Card', () => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     const { container } = render(<Card title="Outer"><Section title="Inner section">ok</Section></Card>);

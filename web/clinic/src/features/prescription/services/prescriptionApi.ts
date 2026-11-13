@@ -13,7 +13,7 @@ export const addFromFormulary = (encounterId: string, formularyItemId: string) =
 export const addFreeText = (encounterId: string, medicine: string) => post<RxLine[]>(`/v1/encounters/${encounterId}/prescription/items`, { medicine: medicine.trim() });
 export const saveSig = (itemId: string, draft: SigDraft) => put<RxLine[]>(`/v1/prescription-items/${itemId}`, toSigBody(draft));
 export const includeLine = (itemId: string, included: boolean) => put<RxLine[]>(`/v1/prescription-items/${itemId}/included`, { included });
-export const searchMedicines = (query: string) => send<Medicine[]>(`/v1/formulary?${new URLSearchParams({ q: query, limit: '8' })}`);
+export const searchMedicines = (query: string, limit = 8) => send<Medicine[]>(`/v1/formulary?${new URLSearchParams({ q: query, limit: String(limit) })}`);
 // Safety checks (MDV-P2-016): the alert key and the doctor's reason travel in the body.
 export const fetchChecks = (encounterId: string) => send<RxChecks>(`/v1/encounters/${encounterId}/prescription/checks`);
 export const overrideAlert = (encounterId: string, key: string, reason: string) =>

@@ -130,6 +130,70 @@ test('from the chart with an open consultation, the line goes on that consultati
 });
 
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
+const axe = async (page: Page) => {
+  await page.addScriptTag({ path: axePath });
+  return page.evaluate(async () =>
+    (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations.map(v => `${v.id} (${v.nodes.length})`));
+};
+
+// MDV-P1-088: the clinic gave the generic's row a brand name (Augmentin is the ticket's example pair, a fixture, not a reviewed list).
+const withBrand = [...formulary, medicine('fi-coamox', 'Amoxicillin and clavulanate', '625 mg', 'Tablet', ['Augmentin'])];
+// The server checks the generic's row whichever name found it (RxAuthorisationTests proves the alert and the refusal to authorise).
+const brandChecksOf = (lines: RxLine[]) => {
+  const line = lines.find(l => l.formularyItemId === 'fi-coamox' && l.included);
+  return clearChecks({ allergies: 'Listed', alerts: line ? [{ ...penicillinAlert(line.id!), medicine: 'Amoxicillin and clavulanate' }] : [], unresolved: line ? 1 : 0 });
+};
+
+test('a search by brand offers the generic\'s row with the brand shown, and a penicillin allergy blocks it as it does the generic', async ({ page }) => {
+  const { calls } = await mockPrescription(page, { formulary: withBrand, checksOf: brandChecksOf });
+  await page.goto('/consult/e-1');
+  await page.getByRole('region', { name: 'Prescription' }).getByRole('button', { name: 'Add medicine' }).click();
+  const p = panel(page);
+  await p.getByLabel('Search medicine').fill('Augmentin');
+  const row = p.getByRole('list', { name: 'Medicines found' }).getByRole('button');
+  await expect(row).toHaveText(/Amoxicillin and clavulanate · Tablet.*Brands: Augmentin/);
+  await p.getByLabel('Search medicine').fill('gmentin'); // never inside a word
+  await expect(p.getByText('No medicine found in the formulary.')).toBeVisible();
+  await p.getByLabel('Search medicine').fill('augm');
+  await row.click();
+  await expect.poll(() => calls.added).toEqual([{ formularyItemId: 'fi-coamox' }]); // the generic's own formulary row, so its checks
+  await choose(p, 'How often', '1-0-1 · twice a day');
+  await choose(p, 'When', 'After food');
+  await choose(p, 'For how long', '5 days');
+  await expect(p.getByText('A serious finding blocks this medicine.', { exact: false })).toBeVisible();
+  await expect(p.getByText(/Severe · /)).toBeVisible();
+  await expect(p.getByRole('button', { name: 'Add to prescription' })).toBeDisabled();
+});
+
+for (const locale of ['en', 'ar'])
+  test(`a name that matches nothing is answered with the closest formulary rows, with no axe violation (${locale})`, async ({ page }) => {
+    const { calls } = await mockPrescription(page, { locale, formulary: withBrand, checksOf: brandChecksOf });
+    await page.goto('/consult/e-1');
+    const ar = locale === 'ar';
+    await page.getByRole('button', { name: ar ? 'إضافة دواء' : 'Add medicine' }).click();
+    const p = panel(page, ar ? 'إضافة دواء' : 'Add medicine');
+    await p.getByLabel(ar ? 'ابحث عن دواء' : 'Search medicine').fill('Augmentn');
+    await expect(p.getByText(ar ? 'لم يُعثر على دواء في قائمة الأدوية.' : 'No medicine found in the formulary.')).toBeVisible();
+    const suggested = p.getByRole('list', { name: ar ? 'هل تقصد' : 'Did you mean' }).getByRole('button');
+    await expect(suggested).toHaveText(/Amoxicillin and clavulanate/); // the one closest row; Amoxicillin shares too little
+    expect(await axe(page)).toEqual([]);
+    await suggested.click(); // a suggestion is a formulary row: it is staged and checked as any other
+    await expect.poll(() => calls.added).toEqual([{ formularyItemId: 'fi-coamox' }]);
+    await expect(p.getByRole('group', { name: ar ? 'التركيز' : 'Strength' }).getByRole('button')).toHaveText('625 mg');
+  });
+
+test('in the composer the closest formulary rows are offered above Add as free text', async ({ page }) => {
+  const { calls } = await mockPrescription(page, { formulary: withBrand, checksOf: brandChecksOf });
+  await page.goto('/consult/e-1');
+  const rx = page.getByRole('region', { name: 'Prescription' });
+  await rx.getByLabel('Medicine', { exact: true }).fill('Amoxicilin'); // one letter short
+  const suggested = rx.getByRole('list', { name: 'Did you mean' }).getByRole('button');
+  await expect(suggested).toHaveText([/Amoxicillin 500 mg Capsule/, /Amoxicillin and clavulanate 625 mg Tablet/]);
+  const freeText = rx.getByRole('button', { name: 'Add as free text' });
+  expect((await suggested.last().boundingBox())!.y).toBeLessThan((await freeText.boundingBox())!.y);
+  await suggested.first().click();
+  await expect.poll(() => calls.added).toEqual([{ formularyItemId: 'fi-amox' }]);
+});
 for (const locale of ['en', 'ar'])
   test(`axe finds no violations in the Add medicine panel with a blocking finding (${locale})`, async ({ page }) => {
     await mockPrescription(page, { locale, formulary, checksOf });

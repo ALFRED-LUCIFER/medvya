@@ -81,6 +81,37 @@ public sealed class FormularyEndpointTests(PostgresFixture sql) : IClassFixture<
         Assert.False(await audit.Events.AnyAsync(e => e.Action == "formulary.add")); // nothing was added, so nothing is recorded as done
     }
 
+    /// <summary>MDV-P1-088. SAFETY (mutation check: move the brands route out of the admin group and the doctor's 403 fails).</summary>
+    [Fact]
+    public async Task TheAdminAddsBrandsInBulkAnEmployedDoctorDoesNotAndABadRowIsA400NamingTheRow()
+    {
+        var rows = new { rows = (object[])[new { brand = "Synthetic Mox", generic = "Amoxicillin", strength = "500 mg", form = "Capsule", allergyClass = "penicillins" }] };
+        // The solo doctor runs the practice, so manages its list as the admin does (StaffPolicies.ManageStaff); an employed doctor does not.
+        foreach (var user in new[] { h.SecondDoctor, h.Nurse, h.Reception })
+        {
+            using var refused = await Client(user).PostAsJsonAsync(U("/v1/settings/formulary/brands"), rows);
+            Assert.Equal(HttpStatusCode.Forbidden, refused.StatusCode);
+        }
+        using (var bad = await Client(h.Admin).PostAsJsonAsync(U("/v1/settings/formulary/brands"),
+            new { rows = (object[])[rows.rows[0], new { brand = "Synthetic X", generic = "Not listed", strength = "1 mg", form = "Tablet", allergyClass = "none" }] }))
+        {
+            Assert.Equal(HttpStatusCode.BadRequest, bad.StatusCode);
+            Assert.Equal("not_listed", (await bad.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("errors").GetProperty("rows[1].generic")[0].GetString());
+        }
+        using (var empty = await Client(h.Admin).PostAsync(U("/v1/settings/formulary/brands"), new StringContent("null", System.Text.Encoding.UTF8, "application/json")))
+            Assert.Equal(HttpStatusCode.BadRequest, empty.StatusCode);
+        using (var ok = await Client(h.Admin).PostAsJsonAsync(U("/v1/settings/formulary/brands"), rows))
+        {
+            Assert.Equal(HttpStatusCode.OK, ok.StatusCode);
+            Assert.Equal(1, (await ok.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("added").GetInt32());
+        }
+        using var found = await Client(h.Doctor).GetAsync(U("/v1/formulary?q=synthetic%20mox"));
+        var row = (await found.Content.ReadFromJsonAsync<JsonElement>())[0];
+        Assert.Equal(("Amoxicillin", "Synthetic Mox"), (row.GetProperty("generic").GetString(), row.GetProperty("brands")[0].GetString()));
+        await using var audit = sql.Audit(h.Tenant);
+        Assert.Equal(1, await audit.Events.CountAsync(e => e.Action == "formulary.brands.add" && e.ActorUserId == h.Admin && e.Detail == "brands:1"));
+    }
+
     [Fact]
     public async Task OrderSetsAreBuiltByTheAdminAndReadByTheDoctor()
     {

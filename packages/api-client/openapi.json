@@ -5859,6 +5859,34 @@
         }
       }
     },
+    "/v1/settings/formulary/brands": {
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AddBrands"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/v1/settings/order-sets": {
       "get": {
         "tags": [
@@ -6986,6 +7014,23 @@
           }
         }
       },
+      "AddBrands": {
+        "required": [
+          "rows"
+        ],
+        "type": "object",
+        "properties": {
+          "rows": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/BrandRow"
+            }
+          }
+        }
+      },
       "AddCareGoal": {
         "required": [
           "text",
@@ -8099,6 +8144,48 @@
               "type": "string",
               "format": "date-time"
             }
+          }
+        }
+      },
+      "BrandRow": {
+        "required": [
+          "brand",
+          "generic",
+          "strength",
+          "form",
+          "allergyClass"
+        ],
+        "type": "object",
+        "properties": {
+          "brand": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "generic": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "strength": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "form": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "allergyClass": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

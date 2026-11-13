@@ -22,6 +22,8 @@ type Props = SafetyProps & {
   failed: boolean;
   add: UseFormReturn<{ medicine: string }>;
   results: Medicine[];
+  /** "Did you mean" (MDV-P1-088): the closest formulary rows for a typed name that matched nothing. */
+  suggestions: Medicine[];
   searching: boolean;
   language: PrintLanguage; onLanguage: (l: PrintLanguage) => void;
   problem: RxProblem | null;
@@ -124,9 +126,10 @@ export default function PrescriptionPanel(p: Props) {
           <Field id="rx-medicine" label={t('rx.add.search')} hint={t('rx.add.hint')} error={p.add.formState.errors.medicine && t('rx.error.required')}>
             <Input id="rx-medicine" className="h-11" autoComplete="off" {...describedBy('rx-medicine', !!p.add.formState.errors.medicine, true)} {...p.add.register('medicine')} />
           </Field>
-          {p.results.length > 0 && (
-            <ul aria-label={t('rx.add.results')} className="flex flex-col gap-2">
-              {p.results.map(m => (
+          {p.suggestions.length > 0 && <h4 id="rx-suggestions" className="text-sm font-bold">{t('rx.didYouMean')}</h4>}
+          {[p.results, p.suggestions].map((rows, suggested) => rows.length > 0 && (
+            <ul key={suggested} {...(suggested ? { 'aria-labelledby': 'rx-suggestions' } : { 'aria-label': t('rx.add.results') })} className="flex flex-col gap-2">
+              {rows.map(m => (
                 <li key={m.id}>
                   <Button type="button" variant="outline" className="min-h-11 w-full justify-start" disabled={p.busy} onClick={() => p.onAddMedicine(m.id)}>
                     <Plus aria-hidden className="size-4" />{t('rx.add.medicine', { generic: m.generic, strength: m.strength, form: m.form })}
@@ -134,7 +137,7 @@ export default function PrescriptionPanel(p: Props) {
                 </li>
               ))}
             </ul>
-          )}
+          ))}
           {p.searching && <p role="status" className="text-sm text-muted-foreground">{t('rx.add.searching')}</p>}
           <Button type="submit" variant="outline" className="min-h-11 self-start" disabled={p.busy}>{t('rx.add.freeText')}</Button>
         </form>

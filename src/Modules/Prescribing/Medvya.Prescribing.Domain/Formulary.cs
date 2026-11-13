@@ -37,6 +37,20 @@ public sealed class FormularyItem
     [Classification(DataClass.Internal)] public DateTimeOffset? AddedAt { get; init; }
 }
 
+/// <summary>
+/// A brand name the clinic gave a formulary medicine (MDV-P1-088). The brand is a name for that row, never a medicine of its own: a line
+/// prescribed by brand is the generic's row, so it is checked exactly as the generic is. The row may be a starter one; the brand is the clinic's.
+/// </summary>
+public sealed class FormularyBrand
+{
+    [Classification(DataClass.Internal)] public Guid Id { get; init; }
+    [Classification(DataClass.Internal)] public Guid TenantId { get; init; }
+    [Classification(DataClass.Internal)] public Guid FormularyItemId { get; init; }
+    [Classification(DataClass.Internal)] public string Name { get; init; } = "";
+    [Classification(DataClass.Internal)] public Guid? AddedBy { get; init; }
+    [Classification(DataClass.Internal)] public DateTimeOffset AddedAt { get; init; }
+}
+
 /// <summary>A named list of investigations the doctor orders together, such as "Diabetes review labs" (MDV-P2-014; used by the order composer, MDV-P2-018).</summary>
 public sealed class OrderSet
 {

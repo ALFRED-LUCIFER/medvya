@@ -38,6 +38,8 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         await MarkTheirsAsync();
         (ownVisit, ownEncounter) = await InConsultationAsync(h);
         theirs = await TheirIdsAsync();
+        // On, so the intake routes reach their use case: with it off the feature gate's 404 would hide whether isolation holds.
+        await h.Get<IFeatureFlags>(h.Admin).SetAsync(IntakeFlag.Key, true, "clinical-team", "Nurse intake (synthetic test)");
         factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b
             .UseSetting("ConnectionStrings:Medvya", sql.ConnectionString)
             .UseSetting("RateLimiting:PermitsPerMinute", "100000")

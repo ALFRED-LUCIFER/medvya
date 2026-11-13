@@ -148,6 +148,8 @@ public sealed class EndpointAuditTests(PostgresFixture sql) : IClassFixture<Post
             if (role == Role.SoloDoctor)
                 db.DoctorLicences.Add(new DoctorLicence { MembershipId = membership.Id, TenantId = tenant, Authority = "TNMC", Number = "84213", SubmittedAt = DateTimeOffset.UtcNow });
         }
+        // Feature-gated routes (nurse intake) answer 404 before the audit filter when their flag is off; on, so they are enumerated too.
+        db.FeatureFlags.Add(new FeatureFlag { Id = Guid.NewGuid(), TenantId = tenant, Key = "clinical.nurse-intake", Enabled = true, Owner = "clinical-team", Description = "Nurse intake (synthetic test)", CreatedAt = DateTimeOffset.UtcNow, ChangedAt = DateTimeOffset.UtcNow });
         await db.SaveChangesAsync();
     }
 

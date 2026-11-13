@@ -3,7 +3,6 @@ import type { Locale } from '@medvya/i18n';
 import { I18nProvider, useI18n } from '@medvya/i18n';
 import { SystemState } from '@medvya/ui';
 import { Navigate, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router';
-import UiGallery from '../dev/UiGallery';
 import OfflineBanner from '../features/connectivity/components/OfflineBanner';
 import { useConnectivityController } from '../features/connectivity/hooks/useConnectivityController';
 import LoadErrorBoundary from '../features/errors/components/LoadErrorBoundary';
@@ -20,12 +19,15 @@ import MorePage from '../features/shell/components/MorePage';
 import ShellMessage, { ComingSoon } from '../features/shell/components/ShellMessage';
 import { allows, homeItem, patientDirectory } from '../features/shell/domain/navigation';
 import { useShellController } from '../features/shell/hooks/useShellController';
-import FrontDeskRoute from './FrontDeskRoute';
 import GlobalSearchRoute from './GlobalSearchRoute';
 import NotificationsRoute from './NotificationsRoute';
-import { NurseIntakeRoute, NurseQueueRoute } from './NurseRoutes';
 import ScheduleRoute from './ScheduleRoute';
 
+// Not on the schedule's first render (MDV-P1-023, 2.5 s budget): the component gallery, the front desk and the nurse screens load when opened.
+const FrontDeskRoute = lazy(() => import('./FrontDeskRoute'));
+const UiGallery = lazy(() => import('../dev/UiGallery'));
+const NurseQueueRoute = lazy(() => import('./NurseRoutes').then(m => ({ default: m.NurseQueueRoute })));
+const NurseIntakeRoute = lazy(() => import('./NurseRoutes').then(m => ({ default: m.NurseIntakeRoute })));
 // Loaded on demand: invitations bring the form stack (React Hook Form, Zod) that most sessions never need.
 const InvitationRoute = lazy(() => import('./InvitationRoute'));
 const RxVerifyRoute = lazy(() => import('./RxVerifyRoute'));

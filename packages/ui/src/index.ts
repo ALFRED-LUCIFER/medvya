@@ -10,6 +10,7 @@ export { Tabs, TabsContent, TabsList, TabsTrigger } from '#components/ui/tabs';
 export { Dialog, DialogTrigger, DialogContent, DialogTitle, DialogDescription } from '#components/ui/dialog';
 export { Switch } from '#components/ui/switch';
 export { ChoiceRow } from '#components/ui/choice-row';
+export { PatientBanner, AllergyBlock, bannerFields, allergiesInWords, type AllergyState, type BannerAllergy, type BannerClinical, type BannerDeskPatient, type BannerIdentity } from '#components/ui/patient-banner';
 export { Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow, TableState, type SortDirection } from '#components/ui/table';
 export { Card, Section, type CardProps } from '#components/ui/card';
 export { PageMessage, EmptyState, type PageMessageProps } from '#components/ui/page-message';

@@ -127,22 +127,26 @@ export function TemplatePicker(p: PickerProps) {
   );
 }
 
-/** Never colour alone: each state has words. A failure or conflict is an alert; the text stays on screen either way. */
-export function SaveState({ phase, reloading, onRetry, onReapply }: { phase: SavePhase; reloading: boolean; onRetry: () => void; onReapply: () => void }) {
+/**
+ * Never colour alone: each state has words, and "Saved" appears only once the server has answered, with the time (MDV-P1-089). One status
+ * element carries saving, saved and not saved, so each change is read out politely. A conflict is an alert; the text stays on screen either way.
+ */
+export function SaveState({ phase, savedAt, reloading, onRetry, onReapply }: { phase: SavePhase; savedAt: string | null; reloading: boolean; onRetry: () => void; onReapply: () => void }) {
   const { t } = useI18n();
-  if (phase === 'failed') return (
-    <div role="alert" className="flex flex-wrap items-center gap-3 font-bold text-danger-700">
-      <span>{t('noteEditor.save.failed')}</span>
-      <Button variant="outline" onClick={onRetry}>{t('noteEditor.save.retry')}</Button>
-    </div>
-  );
   if (phase === 'conflict') return (
     <div role="alert" className="flex flex-wrap items-center gap-3 font-bold text-danger-700">
       <span>{t('noteEditor.save.conflict')}</span>
       <Button variant="outline" loading={reloading} onClick={onReapply}>{t('noteEditor.save.reapply')}</Button>
     </div>
   );
-  return <p role="status" className="text-sm text-muted-foreground">{t(`noteEditor.save.${phase}`)}</p>;
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      <p role="status" className={phase === 'failed' ? 'font-bold text-danger-700' : 'text-sm text-muted-foreground'}>
+        {phase === 'saved' ? t('noteEditor.save.saved', { time: savedAt ?? '' }) : t(`noteEditor.save.${phase}`)}
+      </p>
+      {phase === 'failed' && <Button variant="outline" onClick={onRetry}>{t('noteEditor.save.retry')}</Button>}
+    </div>
+  );
 }
 
 /**

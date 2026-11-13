@@ -3259,7 +3259,9 @@ export interface paths {
         post?: never;
         delete: {
             parameters: {
-                query?: never;
+                query?: {
+                    reason?: components["schemas"]["FollowUpDismissReason"];
+                };
                 header?: never;
                 path: {
                     id: string;
@@ -8932,6 +8934,7 @@ export interface components {
             sex?: null | string;
             /** @default false */
             withDoctor: boolean;
+            followUp?: null | components["schemas"]["FollowUpDue"];
         };
         /** @enum {unknown} */
         BodyPosition: "Lying" | "Standing" | null;
@@ -9261,6 +9264,17 @@ export interface components {
             reason: null | string;
             /** Format: uuid */
             documentId: null | string;
+        };
+        /** @enum {unknown} */
+        FollowUpDismissReason: "PatientDeclined" | "BookedElsewhere" | "NotReachable" | "Other" | null;
+        FollowUpDue: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date */
+            dueOn: string;
+            /** Format: uuid */
+            calendarId: null | string;
+            calendarName: null | string;
         };
         FrontDeskBoard: {
             /** Format: uuid */

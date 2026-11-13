@@ -8,12 +8,12 @@ namespace Medvya.Scheduling.Application;
 /// when the visit entered its current state (the "Waiting 12 min" timer); Room is where the patient was called in to; Token is
 /// the waiting-room token issued at check-in (MDV-P1-031). Sex is the record's sex at birth (Female, Male, Other), with the date of birth
 /// the age and sex a desk tells two patients of one name apart by. WithDoctor: a consultation is open for the visit, so it ends by the
-/// doctor's End and the desk has no action on it (MDV-P1-100).
+/// doctor's End and the desk has no action on it (MDV-P1-100). FollowUp: on a Done card, the doctor's follow-up still to book (MDV-P1-102).
 /// </summary>
 public sealed record BoardCard(
     Guid Id, string Reference, Guid PatientId, string PatientName, DateOnly? DateOfBirth, bool RegistrationIncomplete,
     Guid CalendarId, string CalendarName, VisitType VisitType, ReasonCategory ReasonCategory,
-    DateTimeOffset Start, DateTimeOffset End, AppointmentState State, DateTimeOffset Since, string? Room, string? Token, bool WalkIn = false, bool Unscheduled = false, string? Sex = null, bool WithDoctor = false);
+    DateTimeOffset Start, DateTimeOffset End, AppointmentState State, DateTimeOffset Since, string? Room, string? Token, bool WalkIn = false, bool Unscheduled = false, string? Sex = null, bool WithDoctor = false, FollowUpDue? FollowUp = null);
 
 /// <summary>
 /// Today's board (P-01) of one facility: every visit of the facility-local day that is not cancelled, a no-show or left without

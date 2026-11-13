@@ -68,9 +68,19 @@ public interface IWaitlistService
     /// <exception cref="SlotUnavailableException">No open offer ("no_offer"), the offer ran out ("offer_expired"), or the slot is gone.</exception>
     Task<AppointmentView> AcceptAsync(Guid id, CancellationToken cancellationToken = default);
 
-    /// <summary>Takes the patient off the list, releasing any held slot.</summary>
-    Task RemoveAsync(Guid id, CancellationToken cancellationToken = default);
+    /// <summary>Takes the patient off the list, releasing any held slot. A doctor's follow-up is dismissed with a reason, kept in the audit row (MDV-P1-102).</summary>
+    Task RemoveAsync(Guid id, FollowUpDismissReason? reason = null, CancellationToken cancellationToken = default);
 }
+
+/// <summary>
+/// A doctor's follow-up still to book (MDV-P1-102), as the desk sees it on the board's Done card and the desk record: the waitlist entry to book or
+/// dismiss, the day from which it is due and the doctor. Deliberately no period, reason, note or anything clinical (a test fails if a field is added).
+/// </summary>
+public sealed record FollowUpDue(Guid Id, DateOnly DueOn, Guid? CalendarId, string? CalendarName);
+
+/// <summary>Why the desk took a doctor's follow-up off its list without booking it (MDV-P1-102). A code, never words, so the audit row holds no patient text.</summary>
+[System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<FollowUpDismissReason>))]
+public enum FollowUpDismissReason { PatientDeclined, BookedElsewhere, NotReachable, Other }
 
 /// <summary>A consultation's follow-up as the waitlist holds it: the period chosen, the day from which a slot suits, and where the desk is with it.</summary>
 public sealed record FollowUpBooking(string Period, DateOnly DueOn, WaitlistState State);

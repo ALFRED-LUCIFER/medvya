@@ -45,6 +45,8 @@ POST   /v1/waitlist/{id}/accept|decline             # accept books the held slot
 DELETE /v1/waitlist/{id}                            # off the list, any hold released
 POST   /v1/appointments/{id}/check-in              # P1-028; a repeat returns the visit unchanged
 POST   /v1/appointments/{id}/status                # next board column only (state machine), else 409
+POST   /v1/appointments/{id}/undo                  # the caller's own last move, within 30 s, else 409 (MDV-P1-100)
+POST   /v1/appointments/{id}/left                  # left without being seen, with a reason (MDV-P1-100)
 POST   /v1/appointments/{id}/reassign  {calendarId, reason}   # P1-030: a waiting visit to another doctor today; reason is a code
 GET    /v1/front-desk/overview?facilityId=         # P1-030 D-04: doctors (counts per state, delay, next) and the waiting room
 GET    /v1/front-desk/board?facilityId=            # P-01 today, nonclinical; SignalR hub for live updates (P1-029)

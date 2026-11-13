@@ -29,6 +29,12 @@ export const reassignVisit = (appointmentId: string, calendarId: string, reason:
 
 export const moveVisit = (appointmentId: string, state: BoardColumn) => post<BoardCard>(`/v1/appointments/${appointmentId}/status`, { state });
 
+/** Undo this desk's last move of the visit; `state` is the state that move left it in, so the server refuses if it has moved since (MDV-P1-100). */
+export const undoMove = (appointmentId: string, state: BoardColumn) => post<BoardCard>(`/v1/appointments/${appointmentId}/undo`, { state });
+
+/** The patient left before being seen: a reason code and an optional note in the body, never in the URL. */
+export const markLeft = (appointmentId: string, reason: string, note: string) => post<unknown>(`/v1/appointments/${appointmentId}/left`, { reason, note: note || null });
+
 /** Milliseconds on a monotonic clock, for timing a check-in. */
 export const monotonicNow = () => performance.now();
 

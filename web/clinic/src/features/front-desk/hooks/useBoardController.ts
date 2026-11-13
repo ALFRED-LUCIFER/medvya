@@ -1,14 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { workload } from '../domain/overview';
-import { groupByColumn, moveError, serverNow, type Board, type BoardCard, type BoardColumn, type LiveStatus, type MoveError } from '../domain/board';
-import { ApiError } from '../../schedule/services/scheduleApi';
+import { canUndo, groupByColumn, isBoardColumn, moveError, serverNow, undoWindowMs, type Board, type BoardCard, type BoardColumn, type EndKind, type LiveStatus, type MoveError, type Notice } from '../domain/board';
+import { cancelSchema, emptyCancel, type CancelForm } from '../../schedule/domain/changes';
+import { ApiError, cancelAppointment } from '../../schedule/services/scheduleApi';
 import { sessionQueryKey } from '../../session/hooks/useSessionController';
 import { watchBoard } from '../services/boardLive';
-import { checkIn, fetchBoard, fetchFailedVisits, monotonicNow, moveVisit } from '../services/frontDeskApi';
+import { checkIn, fetchBoard, fetchFailedVisits, markLeft, monotonicNow, moveVisit, undoMove } from '../services/frontDeskApi';
 
 type Snapshot = { board: Board; fetchedAt: number };
 type Move = { id: string; state: BoardColumn };
+type Ending = { card: BoardCard; kind: EndKind | null };
 
 /** Wait timers move on every half minute; nothing animates, so reduced motion is unaffected. */
 const tickMs = 30_000;
@@ -18,6 +22,8 @@ const tickMs = 30_000;
  * check (name and date of birth) and "Confirm arrival" checks in; the time between them is sent for the exit-gate median.
  * Changes elsewhere arrive over the board hub and trigger a refetch; after a drop the board refetches once rejoined, and
  * while not live it refreshes every 30 s, so a move is never lost or shown twice (the board is always replaced whole).
+ * After a move the status line offers Undo for 30 seconds or until the next change here; a waiting card's menu ends the visit as
+ * left without being seen or cancelled, with a reason (MDV-P1-100). The server decides each of them again.
  */
 export function useBoardController(facilityId: string, online: boolean) {
   const queryClient = useQueryClient();
@@ -48,6 +54,20 @@ export function useBoardController(facilityId: string, online: boolean) {
 
   const [confirming, setConfirming] = useState<{ id: string; startedAt: number } | null>(null);
   const [failure, setFailure] = useState<{ id: string; error: MoveError } | null>(null);
+  const [notice, setNotice] = useState<Notice | null>(null);
+  useEffect(() => {
+    if (!notice?.undo) return undefined;
+    const timer = setTimeout(() => setNotice(n => n && { ...n, undo: false }), undoWindowMs);
+    return () => clearTimeout(timer);
+  }, [notice]);
+  const [ending, setEnding] = useState<Ending | null>(null);
+  const [endFailed, setEndFailed] = useState(false);
+  const endForm = useForm<CancelForm>({ resolver: zodResolver(cancelSchema), defaultValues: emptyCancel });
+  const closeEnd = () => {
+    setEnding(null);
+    setEndFailed(false);
+    endForm.reset(emptyCancel);
+  };
 
   const replace = (card: BoardCard) => {
     queryClient.setQueryData<Snapshot>(key, old => old && { ...old, board: { ...old.board, cards: old.board.cards.map(c => (c.id === card.id ? card : c)) } });
@@ -63,13 +83,39 @@ export function useBoardController(facilityId: string, online: boolean) {
 
   const arrive = useMutation({
     mutationFn: ({ id, elapsedMs }: { id: string; elapsedMs: number }) => checkIn(id, elapsedMs),
-    onSuccess: card => { setConfirming(null); replace(card); },
+    onSuccess: card => { setConfirming(null); setNotice(null); replace(card); },
     onError: (e, { id }) => fail(id, e),
   });
   const move = useMutation({
     mutationFn: ({ id, state }: Move) => moveVisit(id, state),
-    onSuccess: replace,
+    onMutate: ({ id }) => query.data?.board.cards.find(c => c.id === id)?.state, // where it was, to know whether the move can be undone
+    onSuccess: (card, { state }, from) => {
+      replace(card);
+      setNotice({ kind: 'moved', id: card.id, name: card.patientName, state, undo: from !== undefined && isBoardColumn(from) && canUndo(from, state) });
+    },
     onError: (e, { id }) => fail(id, e),
+  });
+  const undo = useMutation({
+    mutationFn: (n: Notice) => undoMove(n.id, n.state),
+    onSuccess: (card, n) => {
+      replace(card);
+      setNotice({ ...n, kind: 'undone', state: card.state as BoardColumn, undo: false });
+    },
+    onError: (e, n) => { setNotice(null); fail(n.id, e); },
+  });
+  const end = useMutation({
+    mutationFn: ({ ending: { card, kind }, form }: { ending: Ending; form: CancelForm }) => (kind === 'left' ? markLeft : cancelAppointment)(card.id, form.reason, form.note),
+    onSuccess: (_, { ending: { card, kind } }) => {
+      setNotice({ kind: kind!, id: card.id, name: card.patientName, state: card.state as BoardColumn, undo: false });
+      closeEnd();
+      void queryClient.invalidateQueries({ queryKey: key });
+    },
+    onError: (e, { ending: { card } }) => {
+      // Moved on elsewhere (a 409 with a code): close and say so on the card. Anything else keeps the form and what was typed.
+      if (moveError(e instanceof ApiError ? e.code : undefined) === 'failed') return setEndFailed(true);
+      closeEnd();
+      fail(card.id, e);
+    },
   });
 
   const snapshot = query.data;
@@ -105,6 +151,29 @@ export function useBoardController(facilityId: string, online: boolean) {
       setFailure(null);
       move.mutate({ id, state });
     },
+    /** What this desk last did, for the status line; `undo` while the move can still be undone. */
+    notice,
+    undoing: undo.isPending,
+    onUndo: () => {
+      setFailure(null);
+      if (notice?.undo) undo.mutate(notice);
+    },
+    /** The card whose visit is being ended from its menu; kind null while the desk still chooses between left and cancel. */
+    ending,
+    endForm,
+    endWorking: end.isPending,
+    endFailed,
+    onStartEnd: (card: BoardCard, kind: EndKind | null) => {
+      setFailure(null);
+      setEnding({ card, kind });
+    },
+    onEndKind: (kind: EndKind) => setEnding(e => e && { ...e, kind }),
+    onEndReason: (reason: CancelForm['reason']) => endForm.setValue('reason', reason, { shouldValidate: endForm.formState.isSubmitted }),
+    onConfirmEnd: () => {
+      setEndFailed(false);
+      void endForm.handleSubmit(form => ending?.kind && end.mutate({ ending, form }))();
+    },
+    onCancelEnd: closeEnd,
   };
 }
 

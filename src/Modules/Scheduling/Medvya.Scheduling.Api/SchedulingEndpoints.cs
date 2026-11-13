@@ -114,6 +114,10 @@ public static class SchedulingEndpoints
         appointments.MapPost("/{appointmentId:guid}/no-show", (Guid appointmentId, [FromServices] IBookingService service, CancellationToken ct) =>
                 service.MarkNoShowAsync(appointmentId, ct))
             .AuditedWriteWithErrors(SchedulingAudit.NoShow, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment);
+        // The patient arrived and left before being seen (MDV-P1-100): a queue action with a reason, apart from cancel and no-show.
+        appointments.MapPost("/{appointmentId:guid}/left", (Guid appointmentId, CancelAppointment command, [FromServices] IBookingService service, CancellationToken ct) =>
+                service.MarkLeftAsync(appointmentId, command, ct))
+            .AuditedWriteWithErrors(SchedulingAudit.Left, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment);
         // The visit's moves for the appointment panel (MDV-P1-024): names, slots and times, no patient data.
         appointments.MapGet("/{appointmentId:guid}/history", (Guid appointmentId, [FromServices] IBookingService service, CancellationToken ct) =>
                 service.HistoryAsync(appointmentId, ct))
@@ -128,6 +132,10 @@ public static class SchedulingEndpoints
         appointments.MapPost("/{appointmentId:guid}/status", (Guid appointmentId, MoveVisit command, [FromServices] IFrontDeskService service, CancellationToken ct) =>
                 service.MoveAsync(appointmentId, command, ct))
             .AuditedWriteWithErrors(SchedulingAudit.Status, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment);
+        // Undo the caller's own last move within 30 seconds (MDV-P1-100); later, or after anyone's next move, a 409.
+        appointments.MapPost("/{appointmentId:guid}/undo", (Guid appointmentId, UndoMove command, [FromServices] IFrontDeskService service, CancellationToken ct) =>
+                service.UndoAsync(appointmentId, command, ct))
+            .AuditedWriteWithErrors(SchedulingAudit.Undo, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment);
 
         // Waitlist (MDV-P1-027): the use cases need full booking access at the entry's facility. An offer holds a slot and messages the patient; accepting books it.
         var waitlist = app.MapGroup("/v1/waitlist").RequireAuthorization();

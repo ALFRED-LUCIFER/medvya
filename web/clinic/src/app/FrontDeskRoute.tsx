@@ -12,6 +12,8 @@ import { useBoardController } from '../features/front-desk/hooks/useBoardControl
 
 type Props = {
   facilityId: string; online: boolean; canMove: boolean;
+  /** May cancel a visit from the board's card menu: full "Register / book patients" (the server checks again). */
+  canCancel: boolean;
   /** Register patient, when this role may register (from the navigation). */
   registerPath: string | null;
   /** Walk-in (MDV-P1-025), when this role may book and check in. */
@@ -35,7 +37,7 @@ export function Consult({ card, online }: { card: BoardCard; online: boolean }) 
 }
 
 /** Composition only: the board controller for the active facility, fed to the presentational P-01 page. */
-export default function FrontDeskRoute({ facilityId, online, canMove, registerPath, walkInPath, waitlistPath, billingPath, canConsult: doctor, intakePath, steps }: Props) {
+export default function FrontDeskRoute({ facilityId, online, canMove, canCancel, registerPath, walkInPath, waitlistPath, billingPath, canConsult: doctor, intakePath, steps }: Props) {
   const { t } = useI18n();
   const board = useBoardController(facilityId, online);
   const register = registerPath || walkInPath ? <>
@@ -51,5 +53,5 @@ export default function FrontDeskRoute({ facilityId, online, canMove, registerPa
     ? <Link to={intakePath(card.id)} className={buttonVariants({ variant: 'outline', className: 'mt-1 min-h-11 whitespace-normal' })}
         aria-label={t('intake.queue.openFor', { name: card.patientName || t('board.unknownPatient') })}>{t('intake.queue.open')}</Link>
     : null) : undefined;
-  return <BoardPage {...board} steps={steps} canMove={canMove} registerAction={register} paymentAction={payment} overviewAction={waitlist} views={<FrontDeskViews boardPath="/front-desk" doctorsPath="/front-desk/overview" />} consultAction={consultAction} nurseStep={nurseStep} />;
+  return <BoardPage {...board} steps={steps} canMove={canMove} canCancel={canCancel} registerAction={register} paymentAction={payment} overviewAction={waitlist} views={<FrontDeskViews boardPath="/front-desk" doctorsPath="/front-desk/overview" />} consultAction={consultAction} nurseStep={nurseStep} />;
 }

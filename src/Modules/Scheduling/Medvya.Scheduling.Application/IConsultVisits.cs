@@ -52,3 +52,13 @@ public interface IHandoffGate
     /// <summary>True when the visit may move on from the nurse without the nurse handing it off (the gate is off for this tenant, or it was handed off).</summary>
     Task<bool> MayMoveOnAsync(Guid appointmentId, CancellationToken cancellationToken = default);
 }
+
+/// <summary>
+/// Which visits have a consultation open (MDV-P1-100), asked of the module that owns consultations. While one is open the visit is the
+/// doctor's: the desk can neither close it nor undo it back to the queue, and its card reads "With the doctor".
+/// </summary>
+public interface IOpenConsultations
+{
+    /// <summary>The ids, of those given, with an open consultation in this tenant.</summary>
+    Task<IReadOnlySet<Guid>> OpenAsync(IReadOnlyCollection<Guid> appointmentIds, CancellationToken cancellationToken = default);
+}

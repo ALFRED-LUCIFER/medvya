@@ -2347,6 +2347,46 @@
         }
       }
     },
+    "/v1/appointments/{appointmentId}/left": {
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "appointmentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelAppointment"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppointmentChip"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/appointments/{appointmentId}/history": {
       "get": {
         "tags": [
@@ -2487,6 +2527,46 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/MoveVisit"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoardCard"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/appointments/{appointmentId}/undo": {
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "appointmentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UndoMove"
               }
             }
           },
@@ -7853,7 +7933,8 @@
           "Done",
           "Cancelled",
           "NoShow",
-          "NeedsRebooking"
+          "NeedsRebooking",
+          "LeftWithoutBeingSeen"
         ]
       },
       "AppointmentView": {
@@ -8066,6 +8147,10 @@
               "null",
               "string"
             ]
+          },
+          "withDoctor": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -9495,6 +9580,15 @@
             "items": {
               "$ref": "#/components/schemas/BoardCard"
             }
+          },
+          "leftWithoutBeingSeen": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
           }
         }
       },
@@ -12773,6 +12867,21 @@
           "Closed",
           "Leave"
         ]
+      },
+      "UndoMove": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AppointmentState"
+              }
+            ]
+          }
+        }
       },
       "UpdateCareGoal": {
         "required": [

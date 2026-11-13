@@ -169,4 +169,67 @@ journey('J3', {
     await expect(waiting).toContainText(/Dr\. S\. Menon/);
     await expectArabicAxeClean(browser, joseph, '/app/front-desk/overview');
   },
+  // MDV-P1-100 (F-05): a wrong Call in is undone from the status line within 30 seconds; the card is back with the same token.
+  10: async ({ page }) => {
+    const patient = syntheticPatient('Nandini', 'Shankar');
+    await signIn(page, joseph);
+    await walkIn(page, patient, rao);
+    await page.goto(board);
+    const ready = page.getByRole('region', { name: /^Ready for doctor/ }).getByRole('article', { name: patient.name });
+    const token = await ready.getByText(/^Token [A-Z]-\d+$/).textContent();
+    await ready.getByRole('button', { name: 'Call in' }).click();
+    await expect(page.getByRole('region', { name: /^In consult/ }).getByRole('article', { name: patient.name })).toBeVisible();
+    await page.getByRole('button', { name: 'Undo' }).click();
+    await expect(ready.getByText(token!, { exact: true })).toBeVisible();
+    await expect(page.getByRole('status').filter({ hasText: 'Undone' })).toContainText(`${patient.name} is back in Ready for doctor`);
+    await page.reload(); // the server holds the undo
+    await expect(ready).toBeVisible();
+    await expectNoAxeViolations(page);
+  },
+  // MDV-P1-100: a walk-in who leaves is marked from the card menu with a reason; the card leaves the board and the shared waiting room.
+  11: async ({ page, browser }) => {
+    const patient = syntheticPatient('Kavitha', 'Murali');
+    await signIn(page, joseph);
+    await walkIn(page, patient, rao);
+    await page.goto(board);
+    await page.getByRole('button', { name: `More for ${patient.name}` }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Left without being seen' }).click();
+    const form = page.getByRole('dialog', { name: `${patient.name} left without being seen` });
+    await form.getByRole('combobox', { name: 'Reason' }).click();
+    await page.getByRole('option', { name: 'Patient asked to cancel' }).click();
+    await expectNoAxeViolations(page);
+    await form.getByRole('button', { name: 'Mark as left' }).click();
+    await expect(page.getByRole('article', { name: patient.name })).toHaveCount(0);
+    await expect(page.getByText(/^Left without being seen today: \d+$/)).toBeVisible();
+    await page.goto('/app/front-desk/overview');
+    await expect(page.getByRole('region', { name: /^Waiting room/ }).getByRole('row').filter({ hasText: patient.name })).toHaveCount(0);
+    await expectArabicAxeClean(browser, joseph, board);
+  },
+  // MDV-P1-100: with the doctor's consultation open the desk card reads "With the doctor"; a direct close is refused with 409.
+  12: async ({ page, browser }) => {
+    const patient = syntheticPatient('Geetha', 'Balan');
+    await signIn(page, joseph);
+    await walkIn(page, patient, rao);
+    const doctor = await browser.newPage();
+    await signIn(doctor, rao);
+    await doctor.goto(board);
+    await doctor.getByRole('button', { name: `Start consultation with ${patient.name}` }).click();
+    // The shared database may hold another open consultation of Dr. Rao's (one open per doctor): keep it open and start this one.
+    const leaveOpen = doctor.getByRole('button', { name: 'Leave it open and start this one' });
+    const opened = async () => /\/app\/consult\//.test(doctor.url()) || await leaveOpen.isVisible();
+    await expect.poll(opened).toBe(true);
+    if (await leaveOpen.isVisible()) await leaveOpen.click();
+    await expect(doctor).toHaveURL(/\/app\/consult\/[0-9a-f-]{36}$/);
+
+    await page.goto(board);
+    const card = page.getByRole('region', { name: /^In consult/ }).getByRole('article', { name: patient.name });
+    await expect(card.getByText('With the doctor')).toBeVisible();
+    await expect(card.getByRole('button')).toHaveCount(0);
+    const id = (await card.getAttribute('aria-labelledby'))!.replace('board-card-', '');
+    const close = await page.request.post(`/v1/appointments/${id}/status`, { headers: { 'X-Medvya-Csrf': '1' }, data: { state: 'Done' } });
+    expect(close.status()).toBe(409);
+    expect((await close.json()).code).toBe('with_doctor');
+    await expectNoAxeViolations(page);
+    await doctor.close();
+  },
 });

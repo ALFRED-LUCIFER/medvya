@@ -154,7 +154,7 @@ public sealed class BookingService(
         {
             var (dayStart, dayEnd) = ScheduleRules.DayBounds(today, zone);
             if (await db.Appointments.AsNoTracking().AnyAsync(a => a.FacilityId == command.FacilityId && a.PatientId == patient.Id && a.Start >= dayStart && a.Start < dayEnd
-                    && a.State != AppointmentState.Done && a.State != AppointmentState.Cancelled && a.State != AppointmentState.NoShow && a.State != AppointmentState.NeedsRebooking,
+                    && a.State != AppointmentState.Done && a.State != AppointmentState.Cancelled && a.State != AppointmentState.NoShow && a.State != AppointmentState.NeedsRebooking && a.State != AppointmentState.LeftWithoutBeingSeen,
                     cancellationToken))
                 throw new SlotUnavailableException("already_today");
         }
@@ -218,7 +218,7 @@ public sealed class BookingService(
         var (dayStart, dayEnd) = ScheduleRules.DayBounds(today, zone);
         var open = await db.Appointments.AsNoTracking()
             .Where(a => a.FacilityId == facilityId && working.Contains(a.CalendarId) && a.Start >= dayStart && a.Start < dayEnd
-                && a.State != AppointmentState.Done && a.State != AppointmentState.Cancelled && a.State != AppointmentState.NoShow && a.State != AppointmentState.NeedsRebooking)
+                && a.State != AppointmentState.Done && a.State != AppointmentState.Cancelled && a.State != AppointmentState.NoShow && a.State != AppointmentState.NeedsRebooking && a.State != AppointmentState.LeftWithoutBeingSeen)
             .GroupBy(a => a.CalendarId).Select(g => new { g.Key, Count = g.Count() }).ToDictionaryAsync(g => g.Key, g => g.Count, cancellationToken);
         return working.OrderBy(id => open.GetValueOrDefault(id)).ThenBy(id => id).First();
     }
@@ -235,7 +235,7 @@ public sealed class BookingService(
         var exceptions = await context.ExceptionsAsync(facilityId, today, today, null, cancellationToken);
         var taken = await db.Appointments.AsNoTracking()
             .Where(a => a.FacilityId == facilityId && ids.Contains(a.CalendarId) && a.Start < to && a.End > from && !a.Unscheduled
-                && a.State != AppointmentState.Cancelled && a.State != AppointmentState.NoShow && a.State != AppointmentState.NeedsRebooking)
+                && a.State != AppointmentState.Cancelled && a.State != AppointmentState.NoShow && a.State != AppointmentState.NeedsRebooking && a.State != AppointmentState.LeftWithoutBeingSeen)
             .Select(a => new { a.CalendarId, a.Start, a.End }).ToListAsync(cancellationToken);
         var held = await db.SlotHolds.AsNoTracking()
             .Where(h => h.FacilityId == facilityId && ids.Contains(h.CalendarId) && h.ExpiresAt > now && h.HeldBy != me)
@@ -399,8 +399,17 @@ public sealed class BookingService(
         return await EndAsync(seen, AppointmentState.NoShow, SchedulingAudit.NoShow, "AppointmentNoShow.v1", null, null, cancellationToken);
     }
 
+    public async Task<AppointmentChip> MarkLeftAsync(Guid appointmentId, CancelAppointment command, CancellationToken cancellationToken = default)
+    {
+        var note = CleanCancel(command);
+        var seen = await FindAsync(appointmentId, cancellationToken, SchedulingAccess.CanRunQueue);
+        if (!VisitFlow.CanLeave(seen.State)) throw new VisitTransitionException("invalid_transition");
+        // No subscriber maps AppointmentLeft.v1 (OutboxDispatcher), so the patient who walked out is sent nothing.
+        return await EndAsync(seen, AppointmentState.LeftWithoutBeingSeen, SchedulingAudit.Left, "AppointmentLeft.v1", command.Reason, note, cancellationToken);
+    }
+
     /// <summary>
-    /// Cancel or no-show: the state changes only from the state the desk saw (a concurrent check-in or move wins and this one is
+    /// Cancel, no-show or left without being seen: the state changes only from the state the desk saw (a concurrent check-in or move wins and this one is
     /// "changed"), the visit's slots are freed for booking again, and the status event (with the reason) and the outbox event are
     /// written with the audit event, all under the doctor-day lock of the visit.
     /// </summary>
@@ -416,11 +425,13 @@ public sealed class BookingService(
             await db.ScheduleSlots.Where(s => s.AppointmentId == seen.Id).ExecuteDeleteAsync(cancellationToken); // the slot can be booked again
             db.StatusEvents.Add(new VisitStatusEvent
             {
-                Id = Guid.CreateVersion7(), TenantId = seen.TenantId, AppointmentId = seen.Id, State = to, ActorUserId = me, OccurredAt = now, CancelReason = reason, Note = note,
+                Id = Guid.CreateVersion7(), TenantId = seen.TenantId, AppointmentId = seen.Id, State = to, FromState = seen.State, ActorUserId = me, OccurredAt = now, CancelReason = reason, Note = note,
             });
             db.Outbox.Add(Event(eventType, seen, now, new { appointmentId = seen.Id, facilityId = seen.FacilityId, calendarId = seen.CalendarId, patientId = seen.PatientId, start = seen.Start, reason, quiet, series }));
             await db.SaveChangesAsync(cancellationToken);
-            await context.AuditAsync(action, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment, seen.Id, seen.PatientId, cancellationToken);
+            // Who and when are the audit row's own; the detail adds the state it left and the reason code (the note stays on the status event).
+            await context.AuditAsync(action, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment, seen.Id, seen.PatientId, cancellationToken,
+                reason is null ? $"from={seen.State}" : $"from={seen.State};reason={reason}");
             var after = Moved(seen, seen.CalendarId, seen.Start, seen.End, me, now);
             after.State = to;
             return after;
@@ -447,11 +458,11 @@ public sealed class BookingService(
             Name(m.ActorUserId), m.OccurredAt, m.ReassignReason))];
     }
 
-    async Task<Appointment> FindAsync(Guid appointmentId, CancellationToken cancellationToken)
+    async Task<Appointment> FindAsync(Guid appointmentId, CancellationToken cancellationToken, SchedulingAccess.Need? need = null)
     {
         var visit = await db.Appointments.AsNoTracking().SingleOrDefaultAsync(a => a.Id == appointmentId, cancellationToken)
             ?? throw new AppointmentNotFoundException();
-        await context.RequireAsync(visit.FacilityId, SchedulingAccess.CanBook, cancellationToken);
+        await context.RequireAsync(visit.FacilityId, need ?? SchedulingAccess.CanBook, cancellationToken);
         return visit;
     }
 
@@ -612,7 +623,7 @@ public sealed class BookingService(
         var earliest = start.AddMinutes(-ScheduleRules.MaxVisitMinutes); // no visit is longer, so the index seek has a lower bound
         var self = moving?.Id;
         if (await db.Appointments.AnyAsync(a => a.FacilityId == facilityId && a.CalendarId == calendarId && a.Start < end && start < a.End && a.Start > earliest
-                && a.State != AppointmentState.Cancelled && a.State != AppointmentState.NoShow && a.State != AppointmentState.NeedsRebooking && a.Id != self && !a.Unscheduled, cancellationToken))
+                && a.State != AppointmentState.Cancelled && a.State != AppointmentState.NoShow && a.State != AppointmentState.NeedsRebooking && a.State != AppointmentState.LeftWithoutBeingSeen && a.Id != self && !a.Unscheduled, cancellationToken))
             throw new SlotUnavailableException("slot_unavailable");
         return end;
     }

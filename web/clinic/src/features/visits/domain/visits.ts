@@ -6,7 +6,7 @@ export type VisitRow = {
 export type VisitsAnswer = { visits: VisitRow[]; timeZone: string };
 
 /** `state` is the appointment state; the screen translates it (`schedule.state.<state>`). */
-export type DeskVisitState = 'Booked' | 'CheckedIn' | 'WithNurse' | 'ReadyForDoctor' | 'InConsult' | 'Billing' | 'Done' | 'Cancelled' | 'NoShow' | 'NeedsRebooking';
+export type DeskVisitState = 'Booked' | 'CheckedIn' | 'WithNurse' | 'ReadyForDoctor' | 'InConsult' | 'Billing' | 'Done' | 'Cancelled' | 'NoShow' | 'NeedsRebooking' | 'LeftWithoutBeingSeen';
 export type DeskVisit = { appointmentId: string; start: string; state: DeskVisitState };
 
 /** What a visit is, in words: a signed note, a visit still open, or one ended with no signed note. Never colour alone. */

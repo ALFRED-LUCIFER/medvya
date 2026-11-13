@@ -35,17 +35,20 @@ const cards = () => [
   card('a5', 'Rahul Menon (synthetic)', '09:30', 'Billing'),
 ];
 
-type Calls = { checkIns: { id: string; body: { elapsedMs: number }; csrf: string | undefined }[]; moves: { id: string; state: string }[]; boards: number };
+type Calls = { checkIns: { id: string; body: { elapsedMs: number }; csrf: string | undefined }[]; moves: { id: string; state: string }[]; boards: number;
+  undos: { id: string; state: string }[]; ends: { id: string; how: string; reason: string }[] };
 
-async function open(page: Page, { locale = 'en', as = reception, status = 200, moveCode = '', empty = false, only = null as string[] | null } = {}) {
-  const calls: Calls = { checkIns: [], moves: [], boards: 0 };
-  const state = empty ? [] : cards().filter(c => !only || only.includes(c.state));
+async function open(page: Page, { locale = 'en', as = reception, status = 200, moveCode = '', undoCode = '', empty = false, only = null as string[] | null, extra = [] as Card[] } = {}) {
+  const calls: Calls = { checkIns: [], moves: [], boards: 0, undos: [], ends: [] };
+  const before = new Map<string, string>(); // where each card was before its last move, for undo
+  let left = 0;
+  const state = empty ? [] : [...cards().filter(c => !only || only.includes(c.state)), ...extra];
   await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
   await page.route('**/v1/me/context', r => r.fulfill({ json: as }));
   await page.route('**/v1/front-desk/board?*', r => {
     expect(new URL(r.request().url()).searchParams.get('facilityId')).toBe('f-1');
     calls.boards++;
-    return status === 200 ? r.fulfill({ json: { facilityId: 'f-1', timeZone: 'Asia/Kolkata', date: '2026-10-19', now, cards: state } }) : r.fulfill({ status, json: {} });
+    return status === 200 ? r.fulfill({ json: { facilityId: 'f-1', timeZone: 'Asia/Kolkata', date: '2026-10-19', now, cards: state, leftWithoutBeingSeen: left } }) : r.fulfill({ status, json: {} });
   });
   await page.route('**/v1/appointments/*/check-in', r => {
     const id = r.request().url().split('/').at(-2)!;
@@ -60,9 +63,27 @@ async function open(page: Page, { locale = 'en', as = reception, status = 200, m
     calls.moves.push({ id, state: body.state });
     if (moveCode) return r.fulfill({ status: 409, json: { title: 'Visit cannot make this move', code: moveCode } });
     const c = state.find(x => x.id === id)!;
+    before.set(id, c.state);
     Object.assign(c, { state: body.state, since: now });
     return r.fulfill({ json: c });
   });
+  // MDV-P1-100: undo the last move; left without being seen and cancel take the card off the board.
+  await page.route('**/v1/appointments/*/undo', r => {
+    const id = r.request().url().split('/').at(-2)!;
+    calls.undos.push({ id, state: (r.request().postDataJSON() as { state: string }).state });
+    if (undoCode) return r.fulfill({ status: 409, json: { title: 'Visit cannot make this move', code: undoCode } });
+    const c = state.find(x => x.id === id)!;
+    Object.assign(c, { state: before.get(id), since: now });
+    return r.fulfill({ json: c });
+  });
+  for (const how of ['left', 'cancel'])
+    await page.route(`**/v1/appointments/*/${how}`, r => {
+      const id = r.request().url().split('/').at(-2)!;
+      calls.ends.push({ id, how, reason: (r.request().postDataJSON() as { reason: string }).reason });
+      state.splice(state.findIndex(x => x.id === id), 1);
+      if (how === 'left') left++;
+      return r.fulfill({ json: {} });
+    });
   await page.goto('/front-desk');
   return Object.assign(calls, { state }); // state: what the server's board holds now, for changes made at "another desk"
 }
@@ -86,8 +107,9 @@ test('shows today\'s visits by status with nonclinical tags, in facility time', 
   await expect(cardOf(page, 'Farhan Qureshi (synthetic)')).toContainText('Waiting 12 min');
   await expect(cardOf(page, 'Farhan Qureshi (synthetic)')).toContainText('Token A-07'); // what the queue TV shows instead of the name
   // Each column's action, as designed. Nurse intake is off here, so a checked-in patient goes straight to the doctor (MDV audit UX-05).
-  await expect(cardOf(page, 'Farhan Qureshi (synthetic)').getByRole('button')).toHaveText('Ready for doctor');
-  await expect(cardOf(page, 'Lakshmi Pillai (synthetic)').getByRole('button')).toHaveText('Intake done');
+  // A waiting card also has its menu (MDV-P1-100).
+  await expect(cardOf(page, 'Farhan Qureshi (synthetic)').getByRole('button')).toHaveText(['Ready for doctor', 'More']);
+  await expect(cardOf(page, 'Lakshmi Pillai (synthetic)').getByRole('button')).toHaveText(['Intake done', 'More']);
   await expect(cardOf(page, 'Vikram Desai (synthetic)').getByRole('button')).toHaveText('Consult done');
   const billing = cardOf(page, 'Rahul Menon (synthetic)');
   await expect(billing.getByRole('button', { name: 'Close visit' })).toBeEnabled();
@@ -132,6 +154,95 @@ test('moves follow the board and a conflict says the visit moved on', async ({ p
   await open(page, { moveCode: 'invalid_transition' });
   await cardOf(page, 'Lakshmi Pillai (synthetic)').getByRole('button', { name: 'Intake done' }).click();
   await expect(cardOf(page, 'Lakshmi Pillai (synthetic)').getByRole('alert')).toHaveText('This visit has already moved on. The board is up to date.');
+});
+
+// MDV-P1-100 (finding F-05): a wrong Call in is undone from the status line; the server decides the window.
+test('Call in, then Undo within the window: the card is back in Ready for doctor with its token', async ({ page }) => {
+  const calls = await open(page);
+  const farhan = cardOf(page, 'Farhan Qureshi (synthetic)');
+  await farhan.getByRole('button', { name: 'Ready for doctor' }).click();
+  await farhan.getByRole('button', { name: 'Call in' }).click();
+  await expect(column(page, 'In consult').getByRole('article', { name: 'Farhan Qureshi (synthetic)' })).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'moved to' })).toHaveText('Farhan Qureshi (synthetic) moved to In consult.');
+
+  await page.getByRole('button', { name: 'Undo' }).click();
+  const back = column(page, 'Ready for doctor').getByRole('article', { name: 'Farhan Qureshi (synthetic)' });
+  await expect(back).toContainText('Token A-07');
+  await expect(page.getByRole('status').filter({ hasText: 'Undone' })).toHaveText('Undone: Farhan Qureshi (synthetic) is back in Ready for doctor.');
+  await expect(page.getByRole('button', { name: 'Undo' })).toHaveCount(0); // an undo is not undone
+  expect(calls.undos).toEqual([{ id: 'a2', state: 'InConsult' }]); // the state the desk saw, so the server can refuse a stale undo
+});
+
+test('an undo the server refuses says why, and the offer goes after 30 seconds', async ({ page }) => {
+  await page.clock.install();
+  await open(page, { undoCode: 'undo_expired' });
+  const farhan = cardOf(page, 'Farhan Qureshi (synthetic)');
+  await farhan.getByRole('button', { name: 'Ready for doctor' }).click();
+  await page.getByRole('button', { name: 'Undo' }).click();
+  await expect(farhan.getByRole('alert')).toHaveText('Too late to undo: more than 30 seconds have passed.');
+
+  await farhan.getByRole('button', { name: 'Call in' }).click();
+  await expect(page.getByRole('button', { name: 'Undo' })).toBeVisible();
+  await page.clock.fastForward(30_000);
+  await expect(page.getByRole('button', { name: 'Undo' })).toHaveCount(0);
+  await expect(page.getByRole('status').filter({ hasText: 'moved to' })).toBeVisible(); // the line stays; only the offer goes
+});
+
+test('the card menu marks a patient as left without being seen, by keyboard, with a reason', async ({ page }) => {
+  const calls = await open(page);
+  const more = cardOf(page, 'Farhan Qureshi (synthetic)').getByRole('button', { name: 'More for Farhan Qureshi (synthetic)' });
+  await more.focus();
+  await page.keyboard.press('Enter');
+  const dialog = page.getByRole('dialog', { name: 'Farhan Qureshi (synthetic): what happened?' });
+  await expect(dialog.getByRole('button', { name: 'Cancel visit' })).toBeVisible();
+  await dialog.getByRole('button', { name: 'Left without being seen' }).focus();
+  await page.keyboard.press('Enter');
+  const reasons = page.getByRole('dialog', { name: 'Farhan Qureshi (synthetic) left without being seen' });
+  await reasons.getByRole('button', { name: 'Mark as left' }).click();
+  await expect(reasons.getByText('Choose a reason.')).toBeVisible(); // never without a reason
+  expect(calls.ends).toEqual([]);
+  await reasons.getByRole('combobox', { name: 'Reason' }).focus();
+  await page.keyboard.press('Enter');
+  await page.getByRole('option', { name: 'Patient unwell' }).click();
+  await reasons.getByRole('button', { name: 'Mark as left' }).click();
+
+  await expect(cardOf(page, 'Farhan Qureshi (synthetic)')).toHaveCount(0); // off the board: not in Done
+  await expect(column(page, 'Done').getByRole('article')).toHaveCount(0);
+  await expect(page.getByRole('status').filter({ hasText: 'left without' })).toHaveText('Farhan Qureshi (synthetic) marked as left without being seen.');
+  await expect(page.getByText('Left without being seen today: 1')).toBeVisible();
+  expect(calls.ends).toEqual([{ id: 'a2', how: 'left', reason: 'PatientUnwell' }]);
+  expect(page.url()).not.toContain('Farhan');
+});
+
+test('the card menu cancels a checked-in visit; closing the dialog changes nothing; a nurse-held card offers only left', async ({ page }) => {
+  const calls = await open(page);
+  const more = cardOf(page, 'Farhan Qureshi (synthetic)').getByRole('button', { name: /^More/ });
+  await more.click();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(more).toBeFocused();
+  expect(calls.ends).toEqual([]);
+
+  await more.click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Cancel visit' }).click();
+  const cancel = page.getByRole('dialog', { name: 'Cancel the visit for Farhan Qureshi (synthetic)' });
+  await cancel.getByRole('combobox', { name: 'Reason' }).click();
+  await page.getByRole('option', { name: 'Booked in error' }).click();
+  await cancel.getByRole('button', { name: 'Cancel visit' }).click();
+  await expect(cardOf(page, 'Farhan Qureshi (synthetic)')).toHaveCount(0);
+  expect(calls.ends).toEqual([{ id: 'a2', how: 'cancel', reason: 'BookedInError' }]);
+
+  // With the nurse: not cancelled from here, so the menu goes straight to the reason for leaving.
+  await cardOf(page, 'Lakshmi Pillai (synthetic)').getByRole('button', { name: /^More/ }).click();
+  await expect(page.getByRole('dialog', { name: 'Lakshmi Pillai (synthetic) left without being seen' })).toBeVisible();
+});
+
+test('a card with an open consultation reads With the doctor and has no desk action', async ({ page }) => {
+  await open(page, { extra: [card('a6', 'Deepak Nair (synthetic)', '10:10', 'InConsult', { withDoctor: true, room: 'Room 3' })] });
+  const deepak = cardOf(page, 'Deepak Nair (synthetic)');
+  await expect(deepak).toContainText('With the doctor');
+  await expect(deepak.getByRole('button')).toHaveCount(0);
+  await expect(cardOf(page, 'Vikram Desai (synthetic)').getByRole('button', { name: 'Consult done' })).toBeEnabled(); // no consultation screen in use: the desk still closes it
 });
 
 test('with billing switched on (flag billing.invoices), Billing cards lead to payment instead of the placeholder', async ({ page }) => {
@@ -239,6 +350,24 @@ test('live: unreachable hub shows the paused state, in Arabic too', async ({ pag
 });
 
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
+const axeViolations = (page: Page) => page.evaluate(async () =>
+  (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations
+    .map(v => `${v.id} (${v.nodes.length})`));
+for (const locale of ['en', 'ar'])
+  test(`axe finds no violations on the status line, the card menu and its reason form (${locale})`, async ({ page }) => {
+    await open(page, { locale });
+    const farhan = cardOf(page, 'Farhan Qureshi (synthetic)');
+    await farhan.getByRole('button').first().click(); // a move, so the status line offers Undo
+    await expect(page.getByRole('status').filter({ hasText: 'Farhan' })).toBeVisible();
+    await page.addScriptTag({ path: axePath });
+    expect(await axeViolations(page)).toEqual([]);
+    await farhan.getByRole('button').last().click(); // the menu: left or cancel
+    await expect(page.getByRole('dialog')).toBeVisible();
+    expect(await axeViolations(page)).toEqual([]);
+    await page.getByRole('dialog').getByRole('button').first().click(); // left without being seen: the reason form
+    await expect(page.getByRole('dialog').getByRole('combobox')).toBeVisible();
+    expect(await axeViolations(page)).toEqual([]);
+  });
 for (const locale of ['en', 'ar'])
   test(`axe finds no violations on the board and the identity check (${locale})`, async ({ page }) => {
     await open(page, { locale });

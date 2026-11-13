@@ -2,6 +2,16 @@
 
 `main.bicep` is the cheapest viable dev environment in Central India. It is for synthetic data only; the `shortcut:` comment at the top lists what is deliberately missing.
 
+**Apply from CI:** run the `infra-dev` workflow (Actions → infra-dev → Run workflow, from `main`). It prints the what-if, then waits for a reviewer on the `dev-infra` environment before the real deployment. One-time setup (the repository is public, so the two personal values are secrets, masked in logs):
+
+1. The CI identity (`AZURE_CLIENT_ID`) gets **Owner** on `rg-medvya-dev-in`: the template creates role and policy assignments.
+2. Federated credential for the new environment: `az ad app federated-credential create --id <AZURE_CLIENT_ID> --parameters '{"name":"github-dev-infra","issuer":"https://token.actions.githubusercontent.com","subject":"repo:ALFRED-LUCIFER/medvya:environment:dev-infra","audiences":["api://AzureADTokenExchange"]}'`
+3. GitHub environment `dev-infra` with yourself as required reviewer, the same `AZURE_*` variables as `dev`, and on both environments the variables `AZURE_DB_ADMIN_OBJECT_ID`, `STAFF_SIGNIN_CLIENT_ID`, `AZURE_DEPLOY_PRINCIPAL_ID`. Repository secrets `ALERT_EMAIL` and `AZURE_DB_ADMIN_LOGIN`.
+
+**Never grant by hand what the template grants.** An assignment made by hand has another name than the template's, so the next apply fails with "The role assignment already exists" (this happened on 9 Nov; deployments `medvya-dev-10` and `-11` failed until the hand-made ones were removed). Add it to the template and apply instead.
+
+By hand, with the same parameters, the commands are:
+
 ```
 az group create -n rg-medvya-dev-in -l centralindia
 az deployment group what-if -g rg-medvya-dev-in -f infra/bicep/main.bicep -p dbAdminObjectId=<entra object id> dbAdminLogin=<upn> alertEmail=<email> oidcClientId=<app registration client id> deployPrincipalId=<object id of the deploy service principal>

@@ -1,0 +1,66 @@
+name: infra-dev
+
+# Applies infra/bicep/main.bicep to the India dev resource group (MDV-P0-006): what-if first, then the real deployment only after a
+# reviewer approves the `dev-infra` environment. Manual runs only: the template creates role and policy assignments, so the identity
+# needs Owner on the resource group, and a reviewer reads the what-if before anything changes. Setup: infra/bicep/README.md.
+# The repository is public, so its run logs are too: the alert email and the administrator's sign-in name are secrets (masked in logs).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: infra-dev
+  cancel-in-progress: false
+
+env:
+  RG: ${{ vars.AZURE_RESOURCE_GROUP }}
+  DB_ADMIN_OBJECT_ID: ${{ vars.AZURE_DB_ADMIN_OBJECT_ID }}
+  OIDC_CLIENT_ID: ${{ vars.STAFF_SIGNIN_CLIENT_ID }}
+  DEPLOY_PRINCIPAL_ID: ${{ vars.AZURE_DEPLOY_PRINCIPAL_ID }}
+
+jobs:
+  what-if:
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Refuse commits that are not on main
+        run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main || { echo "::error::$GITHUB_SHA is not on main"; exit 1; }
+      - uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: What-if (read this before approving dev-infra)
+        env:
+          ALERT_EMAIL: ${{ secrets.ALERT_EMAIL }}
+          DB_ADMIN_LOGIN: ${{ secrets.AZURE_DB_ADMIN_LOGIN }}
+        run: |
+          az deployment group what-if -g "$RG" -f infra/bicep/main.bicep --exclude-change-types NoChange Ignore \
+            -p dbAdminObjectId="$DB_ADMIN_OBJECT_ID" dbAdminLogin="$DB_ADMIN_LOGIN" alertEmail="$ALERT_EMAIL" \
+               oidcClientId="$OIDC_CLIENT_ID" deployPrincipalId="$DEPLOY_PRINCIPAL_ID"
+
+  deploy:
+    needs: what-if
+    runs-on: ubuntu-latest
+    environment: dev-infra # required reviewer
+    steps:
+      - uses: actions/checkout@v7
+      - uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Deploy
+        env:
+          ALERT_EMAIL: ${{ secrets.ALERT_EMAIL }}
+          DB_ADMIN_LOGIN: ${{ secrets.AZURE_DB_ADMIN_LOGIN }}
+        run: |
+          az deployment group create -g "$RG" -n "infra-dev-$GITHUB_RUN_NUMBER" -f infra/bicep/main.bicep -o none \
+            -p dbAdminObjectId="$DB_ADMIN_OBJECT_ID" dbAdminLogin="$DB_ADMIN_LOGIN" alertEmail="$ALERT_EMAIL" \
+               oidcClientId="$OIDC_CLIENT_ID" deployPrincipalId="$DEPLOY_PRINCIPAL_ID"

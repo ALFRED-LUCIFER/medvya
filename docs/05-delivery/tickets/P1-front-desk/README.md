@@ -76,7 +76,7 @@
 | [MDV-P1-036](MDV-P1-036.md) | To do | Tablet-responsive reception views (desk tablet) | Task | MUST | P1-08 | — | 1 | 9–9 | 21 Dec → 25 Dec 2026 | 88% High |
 | [MDV-P1-037](MDV-P1-037.md) | To do | Performance budget and load test for booking and calendar | Task | MUST | P1-06, P1-07 | — | 1.5 | 9–9 | 21 Dec → 25 Dec 2026 | 86% High |
 | [MDV-P1-038](MDV-P1-038.md) | To do | P1 security review: threat-model update, ASVS checks, authorisation tests, dependency scan — no open high/critical | Gate | MUST | P1-05, P1-11 | — | 2 | 9–9 | 21 Dec → 25 Dec 2026 | 80% Medium |
-| [MDV-P1-039](MDV-P1-039.md) | To do | Production deployment for the launch country and a production tenant per pilot clinic | Task | MUST | P1-02 | — | 1.5 | 9–9 | 21 Dec → 25 Dec 2026 | 82% Medium |
+| [MDV-P1-039](MDV-P1-039.md) | To do | Production deployment for the launch country and a production tenant per pilot clinic | Task | MUST | P1-02 | — | 1.5 | 9–9 | 21 Dec → 25 Dec 2026 | 70% Medium |
 | [MDV-P1-040](MDV-P1-040.md) | To do | Reception training (30 min), one-page desk card and support channel with named contact | Chore | MUST | P1-08 | — | 1.5 | 9–9 | 21 Dec → 25 Dec 2026 | 88% High |
 | [MDV-P1-041](MDV-P1-041.md) | To do | Baseline metrics capture and in-product measurement (check-in time, no-shows, double bookings, reminder delivery) | Task | MUST | P1-08, P1-09 | — | 1.5 | 9–10 | 21 Dec → 01 Jan 2027 | 84% Medium |
 | [MDV-P1-042](MDV-P1-042.md) | To do | R1 pilot (2 consecutive weeks of real bookings), exit gate review and release notes | Gate | MUST | P1-06, P1-08 | — | 2 | 10–10 | 28 Dec → 01 Jan 2027 | 65% Medium |

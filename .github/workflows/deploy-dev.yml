@@ -4,7 +4,7 @@ name: deploy-dev
 # The database is private (MDV-P0-038), so this runner never connects to it. Migrations run inside the VNet (MDV-P0-042): the runner
 # uploads db-migrate to Blob and starts the Container Apps job from infra/bicep/main.bicep, which applies infra/postgres/roles.sql as its
 # administrator identity, maps the app and migrator logins, then migrates as medvya_migrator. The app ships only after the job succeeds.
-# shortcut: API only, no staging slot, web app not deployed (needs a static host); add with staging.
+# shortcut: no staging slot; the web app ships inside the API (/app/). Staging with a slot swap comes with production (MDV-P1-039).
 on:
   push:
     tags: ['v*']

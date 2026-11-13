@@ -16,7 +16,7 @@
 
 | Epic | Title | Requirements | Goal |
 |---|---|---|---|
-| MDV-P0-E01 | Repository, CI/CD and environments | P0-01, P0-02 | A deployable .NET 10 + React monorepo with green CI and tagged deploys to staging. |
+| MDV-P0-E01 | Repository, CI/CD and environments | P0-01, P0-02 | A deployable .NET 10 + React monorepo with green CI and tagged deploys to the India dev environment, where the pilot runs (staging and production: MDV-P1-039). |
 | MDV-P0-E02 | Identity, tenancy and authorisation | P0-03, P0-04, P0-05 | Staff sign in with MFA into the right facility and only see what their role allows, enforced on the server and in SQL. |
 | MDV-P0-E03 | Audit, data security and observability | P0-06, P0-09, P0-10 | Every patient-data access is provable; national IDs are unreadable to admins; nothing sensitive leaks into logs. |
 | MDV-P0-E04 | Design system and journeys | P0-07 | The Medvya theme, clinical primitives and i18n/RTL pipeline in code; the six journeys signed off. |
@@ -39,7 +39,7 @@
 | [MDV-P0-030](MDV-P0-030.md) | To do | Shared Table component (shadcn) and table controller pattern; replace the four raw tables | Story | MUST | P0-07 | — | 1.5 | 1–2 | 26 Oct → 06 Nov 2026 | 85% High |
 | [MDV-P0-031](MDV-P0-031.md) | To do | Accept ADR-012: PostgreSQL with EF Core, application-level national-ID encryption, hash-chained audit | Chore | MUST | P0-08 | — | 0.5 | 1–1 | 26 Oct → 30 Oct 2026 | 90% High |
 | [MDV-P0-032](MDV-P0-032.md) | To do | Swap the platform to PostgreSQL: Npgsql provider, Testcontainers.PostgreSql, Hangfire.PostgreSql, local services and CI | Story | MUST | P0-01 | — | 3 | 1–2 | 26 Oct → 06 Nov 2026 | 75% Medium |
-| [MDV-P0-007](MDV-P0-007.md) | Partly done | GitHub OIDC federation to Azure and tagged deploy to staging | Task | MUST | P0-01, P0-02 | — | 1.5 | 2–2 | 02 Nov → 06 Nov 2026 | 88% High |
+| [MDV-P0-007](MDV-P0-007.md) | Partly done | GitHub OIDC federation to Azure and tagged deploy to dev | Task | MUST | P0-01, P0-02 | — | 1.5 | 2–2 | 02 Nov → 06 Nov 2026 | 88% High |
 | [MDV-P0-008](MDV-P0-008.md) | Partly done | Database security baseline part 1: Entra-only auth, managed identity, least-privilege users per module and for migrations | Task | MUST | P0-09 | — | 1.5 | 2–2 | 02 Nov → 06 Nov 2026 | 85% High |
 | [MDV-P0-009](MDV-P0-009.md) | Partly done | Database security baseline part 2: national/insurance ID encryption, masked access, storage encryption with a customer-managed key | Task | MUST | P0-09 | — | 2.5 | 2–3 | 02 Nov → 13 Nov 2026 | 72% Medium |
 | [MDV-P0-010](MDV-P0-010.md) | Done | Tenancy model with EF Core global filters and PostgreSQL row-level security (cross-tenant test in CI) | Story | MUST | P0-04 | — | 3 | 2–2 | 02 Nov → 06 Nov 2026 | 88% High |

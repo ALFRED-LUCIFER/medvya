@@ -1061,11 +1061,12 @@ labels: release, production
 estimate: 1.5
 weeks: 9
 depends: MDV-P1-038, MDV-P1-043
-confidence: 82 | Infra exists from P0; depends on signed pilot agreements.
+confidence: 70 | Dev infra exists from P0; staging and production parameters, slot and approval are new here (moved from MDV-P0-006/007 on 13 Nov 2026). Depends on signed pilot agreements.
 sources: PRD v2 P1 delivery package 1
 desc:
-Deploy production for the launch country from a tag, verify private networking, backups, alerts and the 12 data-protection layers, then create one production tenant per partner clinic with owner accounts (MFA) and feature flags for R1 only.
+Add staging and production parameters to infra/bicep (Defender plans, Storage private endpoint, budgets per environment), a staging slot with smoke test and swap, and a production workflow that needs a manual approval and only accepts tags from main. Deploy production for the launch country from a tag, verify private networking, backups, alerts and the 12 data-protection layers, then create one production tenant per partner clinic with owner accounts (MFA) and feature flags for R1 only.
 ac:
+- Staging deploys from a tag on main with a slot swap; production deploys only after a manual approval.
 - Production passes the 12-layer checklist (docs/04-security-compliance) with evidence.
 - Each partner clinic has its own tenant; owners signed in with MFA and accepted ToS/DPA.
 - Only R1 features are enabled by flags; clinical modules are not reachable.

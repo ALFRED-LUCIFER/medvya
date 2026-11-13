@@ -76,7 +76,8 @@ export function useNoteController(encounterId: string, canSign: boolean, timeZon
   // Leaving the page saves what is typed, and so does a reload or a closed tab (pagehide, with keepalive); closing the tab warns while text is
   // unsaved; coming back online retries a failed save.
   useEffect(() => {
-    const warn = (e: BeforeUnloadEvent) => { if (saver.unsaved()) e.preventDefault(); };
+    // The unsent text goes out already at beforeunload, while the page is fully alive, not only at pagehide during teardown; sent twice it is not.
+    const warn = (e: BeforeUnloadEvent) => { if (saver.unsaved()) { e.preventDefault(); saver.leave(); } };
     const online = () => void saver.retry();
     window.addEventListener('beforeunload', warn);
     window.addEventListener('pagehide', saver.leave);

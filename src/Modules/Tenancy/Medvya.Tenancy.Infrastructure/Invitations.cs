@@ -1,3 +1,4 @@
+using System.Data.Common;
 using System.Globalization;
 using System.Net.Mail;
 using Medvya.Audit.Application;
@@ -7,6 +8,7 @@ using Medvya.Tenancy.Application;
 using Medvya.Tenancy.Domain;
 using Medvya.Tenancy.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -117,8 +119,8 @@ public sealed partial class Invitations(TenancyDbContext db, ICurrentTenant tena
         db.Invitations.Add(invitation);
         if (superseded is not null) superseded.RevokedAt ??= now;
 
-        // Saved, emailed, audited and committed as one unit: a failed email or audit leaves no invitation behind. The email goes before the
-        // audit row (which is written outside this transaction) so a send that fails leaves no row saying an invitation was created.
+        // Saved, emailed, audited and committed as one unit: a failed email or audit leaves no invitation behind. The audit row is written in this transaction, so a failed
+        // audit write rolls the invitation back; the email goes first so a failed send leaves nothing behind.
         // A commit that fails after the email went out leaves a link that shows the expired state, which is harmless.
         var message = Email(email, clinic, membership.Role, facility, $"{baseUrl.TrimEnd('/')}/invite/{token}", invitation.ExpiresAt);
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
@@ -126,7 +128,7 @@ public sealed partial class Invitations(TenancyDbContext db, ICurrentTenant tena
         await db.SaveChangesAsync(cancellationToken);
         if (emailLater)
         {
-            await Audit(tenantId, inviter, "invitation.create", invitation.Id, now, cancellationToken);
+            await Audit(tenantId, inviter, "invitation.create", invitation.Id, now, tx.GetDbTransaction(), cancellationToken);
             await tx.CommitAsync(cancellationToken);
             // shortcut: in memory, so an instance restart before the send loses the email (the invitation stays and is resent from Staff);
             // a durable queue must store the message, link token included, so it waits for the jobs host and encrypted job data.
@@ -141,7 +143,7 @@ public sealed partial class Invitations(TenancyDbContext db, ICurrentTenant tena
         {
             throw new InvitationEmailException(ex);
         }
-        await Audit(tenantId, inviter, superseded is null ? "invitation.create" : "invitation.resend", invitation.Id, now, cancellationToken);
+        await Audit(tenantId, inviter, superseded is null ? "invitation.create" : "invitation.resend", invitation.Id, now, tx.GetDbTransaction(), cancellationToken);
         await tx.CommitAsync(cancellationToken);
         return new InvitationCreated(invitation.Id, invitation.ExpiresAt, InvitationRules.RequiresLicenceVerification(membership.Role));
     }
@@ -167,7 +169,7 @@ public sealed partial class Invitations(TenancyDbContext db, ICurrentTenant tena
         var revoked = await db.Invitations.Where(i => i.Id == invitationId && i.AcceptedAt == null && i.RevokedAt == null)
             .ExecuteUpdateAsync(s => s.SetProperty(i => i.RevokedAt, now), cancellationToken);
         if (revoked == 0) return false;
-        await Audit(tenantId, user.UserId, "invitation.revoke", invitationId, now, cancellationToken);
+        await Audit(tenantId, user.UserId, "invitation.revoke", invitationId, now, tx.GetDbTransaction(), cancellationToken);
         await tx.CommitAsync(cancellationToken);
         return true;
     }
@@ -208,19 +210,17 @@ public sealed partial class Invitations(TenancyDbContext db, ICurrentTenant tena
             if (!await db.Memberships.AnyAsync(m => m.UserId == userId && m.FacilityId == also, cancellationToken))
                 await Locations.AddAsync(db, membership, also, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
-        await Audit(t.TenantId, userId, "invitation.accept", invitation.Id, now, cancellationToken);
+        await Audit(t.TenantId, userId, "invitation.accept", invitation.Id, now, tx.GetDbTransaction(), cancellationToken);
         await tx.CommitAsync(cancellationToken);
         return true;
     }
 
-    // shortcut: the audit store is a separate DbContext without a shared transaction, as in FeatureFlags; a commit failing after
-    // the audit write leaves an audit row for a change that did not land. Share the transaction when an outbox exists.
-    Task Audit(Guid tenantId, Guid? actor, string action, Guid invitationId, DateTimeOffset at, CancellationToken ct) =>
+    Task Audit(Guid tenantId, Guid? actor, string action, Guid invitationId, DateTimeOffset at, DbTransaction tx, CancellationToken ct) =>
         audit.WriteAsync(new AuditEvent
         {
             Id = Guid.CreateVersion7(), TenantId = tenantId, ActorUserId = actor, Action = action, ResourceType = "invitation",
             ResourceId = invitationId, Purpose = "support", Outcome = AuditOutcome.Allowed, OccurredAt = at,
-        }, ct);
+        }, tx, ct);
 
     // shortcut: English-only email; send it in the invitee's language once notification templates are localised (MDV-P1-032).
     // No patient data: clinic, role, facility, link and expiry only.

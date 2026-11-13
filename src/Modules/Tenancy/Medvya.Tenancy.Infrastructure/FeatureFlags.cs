@@ -6,6 +6,7 @@ using Medvya.Tenancy.Application;
 using Medvya.Tenancy.Domain;
 using Medvya.Tenancy.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Medvya.Tenancy.Infrastructure;
 
@@ -34,6 +35,7 @@ public sealed partial class FeatureFlags(TenancyDbContext db, ICurrentTenant ten
         var tenantId = tenant.TenantId ?? throw new InvalidOperationException("No tenant context.");
 
         var now = DateTimeOffset.UtcNow;
+        await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
         var flag = await db.FeatureFlags.SingleOrDefaultAsync(f => f.Key == key, cancellationToken);
         if (flag is null)
         {
@@ -45,9 +47,8 @@ public sealed partial class FeatureFlags(TenancyDbContext db, ICurrentTenant ten
         flag.Description = description;
         flag.ChangedBy = user.UserId;
         flag.ChangedAt = now;
+        await db.SaveChangesAsync(cancellationToken);
 
-        // Audit first, as the .Audited() filter does: a failed audit write stops the change (fail closed).
-        // shortcut: two DbContexts with no shared transaction, so a failed save can leave an audit row for a change that did not land; share the transaction when an outbox exists.
         await audit.WriteAsync(new AuditEvent
         {
             Id = Guid.CreateVersion7(),
@@ -59,7 +60,7 @@ public sealed partial class FeatureFlags(TenancyDbContext db, ICurrentTenant ten
             Purpose = "support",
             Outcome = AuditOutcome.Allowed,
             OccurredAt = now,
-        }, cancellationToken);
-        await db.SaveChangesAsync(cancellationToken);
+        }, tx.GetDbTransaction(), cancellationToken);
+        await tx.CommitAsync(cancellationToken);
     }
 }

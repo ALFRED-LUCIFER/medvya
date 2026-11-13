@@ -1,5 +1,5 @@
 import { useI18n } from '@medvya/i18n';
-import { Button, cn, scheduleLooks } from '@medvya/ui';
+import { Button, Card, cn, scheduleLooks } from '@medvya/ui';
 import { hasStarted, type CalendarKind, type ScheduleColumn } from '../domain/schedule';
 import type { AgendaEntry } from '../domain/views';
 import type { GridActions } from './DayGrid';
@@ -19,7 +19,8 @@ export default function AgendaView({ sections, timeZone, updating, now, ...actio
       {sections.map(({ column, entries }) => {
         const name = column.name || t('schedule.doctor');
         return (
-          <section key={column.calendarId} aria-labelledby={`agenda-${column.calendarId}`} className="rounded-lg border bg-card">
+          // A flush card: the doctor's name is a header strip and the rows run edge to edge.
+          <Card key={column.calendarId} aria-labelledby={`agenda-${column.calendarId}`} className="gap-0 p-0">
             <h2 id={`agenda-${column.calendarId}`} className="border-b px-4 py-2.5 text-sm font-bold">{name}</h2>
             <ul className="flex flex-col divide-y">
               {entries.length === 0 && <li className="px-4 py-3 text-sm text-muted-foreground">{t('schedule.column.noSchedule')}</li>}
@@ -30,7 +31,7 @@ export default function AgendaView({ sections, timeZone, updating, now, ...actio
                 </li>
               ))}
             </ul>
-          </section>
+          </Card>
         );
       })}
     </div>

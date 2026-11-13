@@ -56,8 +56,7 @@
     "web/clinic/src/features/problems/components/ProblemsPage.tsx": 1,
     "web/clinic/src/features/reconciliation/components/ReconciliationPage.tsx": 1,
     "web/clinic/src/features/registration/components/RegistrationSuccess.tsx": 1,
-    "web/clinic/src/features/schedule/components/DaySheetView.tsx": 1,
-    "web/clinic/src/features/schedule/components/SchedulePage.tsx": 1
+    "web/clinic/src/features/schedule/components/DaySheetView.tsx": 1
   },
   "inlineCard": {
     "web/clinic/src/features/encounters/components/ConsultPage.tsx": 1,
@@ -88,18 +87,11 @@
     "web/clinic/src/features/registration/components/Registration.tsx": 2,
     "web/clinic/src/features/registration/components/RegistrationSidePanel.tsx": 2,
     "web/clinic/src/features/registration/components/RegistrationSuccess.tsx": 1,
-    "web/clinic/src/features/schedule/components/AdjustmentsPage.tsx": 4,
-    "web/clinic/src/features/schedule/components/AgendaView.tsx": 1,
-    "web/clinic/src/features/schedule/components/AppointmentPanel.tsx": 1,
-    "web/clinic/src/features/schedule/components/BookingPanel.tsx": 3,
-    "web/clinic/src/features/schedule/components/DayGrid.tsx": 1,
-    "web/clinic/src/features/schedule/components/WeekView.tsx": 1,
     "web/clinic/src/features/settings/components/Section.tsx": 1,
     "web/clinic/src/features/settings/components/SettingsPage.tsx": 1,
     "web/clinic/src/features/shell/components/MorePage.tsx": 2,
     "web/clinic/src/features/shell/components/ShellMessage.tsx": 1,
-    "web/clinic/src/features/today/components/DoctorTodayPage.tsx": 3,
-    "web/clinic/src/features/waitlist/components/WaitlistPage.tsx": 3
+    "web/clinic/src/features/today/components/DoctorTodayPage.tsx": 3
   },
   "localMessage": {
     "web/clinic/src/features/encounters/components/ConsultPage.tsx": 1,

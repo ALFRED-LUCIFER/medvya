@@ -2,7 +2,7 @@ import { Link } from 'react-router';
 import type { UseFormReturn } from 'react-hook-form';
 import { ArrowLeft, CalendarClock, CircleAlert, CircleCheck, Clock, Send } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, cn, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, PageContainer, PageHeader } from '@medvya/ui';
+import { Button, buttonVariants, Card, cn, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, PageContainer, PageHeader } from '@medvya/ui';
 import PatientsMessage from '../../patients/components/PatientsMessage';
 import { PatientPicker, type PatientSearchView } from '../../schedule/components/BookingPanel';
 import { reasonCategories, visitTypes, type PatientMatch } from '../../schedule/domain/booking';
@@ -48,15 +48,17 @@ export default function WaitlistPage(p: Props) {
 
   return (
     <PageContainer width="reading" className="gap-5">
-      <Link to={p.boardPath} className={cn(buttonVariants({ variant: 'ghost' }), 'self-start px-2')}><ArrowLeft className="rtl:rotate-180" aria-hidden />{t('walkIn.back')}</Link>
-      <PageHeader title={t('waitlist.title')} description={t('waitlist.intro')} />
+      <PageHeader title={t('waitlist.title')} description={t('waitlist.intro')}
+        back={<Link to={p.boardPath} className={cn(buttonVariants({ variant: 'ghost' }), 'px-2')}><ArrowLeft className="rtl:rotate-180" aria-hidden />{t('walkIn.back')}</Link>} />
 
       <div aria-live="polite">
         {p.outcome && (
-          <p role="status" className="flex items-start gap-1.5 rounded-md border bg-card p-3 text-sm font-semibold">
-            <CircleCheck className="mt-0.5 size-4 shrink-0 text-success-700" aria-hidden />
-            {p.outcome.kind === 'booked' ? t('waitlist.outcome.booked', { name: p.outcome.visit.patientName, when: when(p.outcome.visit.start) }) : t(`waitlist.outcome.${p.outcome.kind}`)}
-          </p>
+          <Card size="item" role="status">
+            <p className="flex items-start gap-1.5 text-sm font-semibold">
+              <CircleCheck className="mt-0.5 size-4 shrink-0 text-success-700" aria-hidden />
+              {p.outcome.kind === 'booked' ? t('waitlist.outcome.booked', { name: p.outcome.visit.patientName, when: when(p.outcome.visit.start) }) : t(`waitlist.outcome.${p.outcome.kind}`)}
+            </p>
+          </Card>
         )}
         {p.error && (
           <p role="alert" className="flex items-start gap-1.5 text-sm font-semibold text-danger-700">
@@ -75,7 +77,7 @@ export default function WaitlistPage(p: Props) {
           {p.entries.map(e => {
             const busy = p.pendingId === e.id;
             return (
-              <li key={e.id} data-testid="waitlist-entry" className="flex flex-col gap-2 rounded-xl border bg-card p-4">
+              <li key={e.id} data-testid="waitlist-entry"><Card size="item">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <p className="font-bold">{t('waitlist.patient', { name: e.patientName, mrn: e.mrn })}</p>
                   {/* State in words and an icon, never colour alone. */}
@@ -102,13 +104,13 @@ export default function WaitlistPage(p: Props) {
                   <Button type="button" variant="ghost" disabled={busy} onClick={() => p.onRemove(e)}>{t('waitlist.remove')}</Button>
                 </div>
                 {offerable(e) && <p className="text-xs text-muted-foreground">{slot(e.match!)}</p>}
-              </li>
+              </Card></li>
             );
           })}
         </ul>
       </section>
 
-      <form noValidate onSubmit={e => { e.preventDefault(); p.onAdd(); }} className="flex flex-col gap-4 rounded-xl border bg-card p-4" aria-labelledby="waitlist-add">
+      <Card><form noValidate onSubmit={e => { e.preventDefault(); p.onAdd(); }} className="flex flex-col gap-4" aria-labelledby="waitlist-add">
         <h2 id="waitlist-add" className="text-lg font-bold">{t('waitlist.add')}</h2>
         <PatientPicker search={p.patientSearch} chosen={p.patientId} registerPath={null} invalid={false} />
         {p.patient?.loading && <p className="text-sm text-muted-foreground">{t('patients.loading')}</p>}
@@ -165,7 +167,7 @@ export default function WaitlistPage(p: Props) {
           </div>
         </div>
         <Button type="submit" className="self-start" disabled={!p.canAdd} loading={p.adding}>{t('waitlist.addSubmit')}</Button>
-      </form>
+      </form></Card>
     </PageContainer>
   );
 }

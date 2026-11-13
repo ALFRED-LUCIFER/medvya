@@ -3,7 +3,7 @@ import type { UseFormReturn } from 'react-hook-form';
 import { Link } from 'react-router';
 import { ChevronLeft, ChevronRight, CircleAlert, CircleCheck, Hourglass, Search } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, cn, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea } from '@medvya/ui';
+import { Button, buttonVariants, Card, cn, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea } from '@medvya/ui';
 import PatientSummaryLine from '../../patients/components/PatientSummaryLine';
 import { pageCount, spokenExtras, type SearchErrorCode, type SearchResult } from '../../patients/domain/directory';
 import { channels, reasonCategories, visitTypes, type BookedAppointment, type BookingForm, type Hold, type PatientMatch, type SlotChoice, type SlotError } from '../domain/booking';
@@ -76,7 +76,7 @@ export default function BookingPanel(p: Props) {
 
   if (!p.choice)
     return (
-      <aside aria-label={t('booking.title')} className="flex flex-col gap-3 rounded-xl border bg-card p-4">
+      <aside aria-label={t('booking.title')}><Card>
         {p.seriesDone ? (
           <div role="status" className="flex flex-col items-start gap-2">
             <p className="flex items-center gap-2 font-bold text-success-700"><CircleCheck aria-hidden className="size-5" />{t('series.done.title', { count: p.seriesDone.booked })}</p>
@@ -102,13 +102,13 @@ export default function BookingPanel(p: Props) {
             <p className="text-sm text-muted-foreground">{t(p.rebook ? 'booking.rebook.body' : 'booking.hint.body')}</p>
           </>
         )}
-      </aside>
+      </Card></aside>
     );
 
   const { register, formState: { errors } } = p.form;
   if (p.plan)
     return (
-      <aside aria-label={t('booking.title')} className="flex flex-col gap-4 rounded-xl border bg-card p-4">
+      <aside aria-label={t('booking.title')}><Card className="gap-4">
         <div>
           <h2 className="text-lg font-extrabold">{t('series.review.title')}</h2>
           <p className="text-sm text-muted-foreground">{t('series.review.body')}</p>
@@ -149,12 +149,12 @@ export default function BookingPanel(p: Props) {
           <Button type="button" loading={p.booking} disabled={!p.plan.some(r => r.include)} onClick={p.onConfirm}>{t('series.confirm', { count: p.plan.filter(r => r.include).length })}</Button>
           <Button type="button" variant="outline" onClick={p.onBackToForm}>{t('series.back')}</Button>
         </div>
-      </aside>
+      </Card></aside>
     );
   const lengthOf = (v: VisitType) => p.visitLengths.find(l => l.visitType === v)?.minutes;
   const end = p.hold?.end;
   return (
-    <aside aria-label={t('booking.title')} className="rounded-xl border bg-card p-4">
+    <aside aria-label={t('booking.title')}><Card>
       <form noValidate className="flex flex-col gap-4" onSubmit={e => { e.preventDefault(); p.onConfirm(); }}>
         <div>
           <h2 className="text-lg font-extrabold">{t('booking.title')}</h2>
@@ -250,7 +250,7 @@ export default function BookingPanel(p: Props) {
           <Button type="button" variant="outline" onClick={p.onClose}>{t('booking.cancel')}</Button>
         </div>
       </form>
-    </aside>
+    </Card></aside>
   );
 }
 

@@ -165,12 +165,15 @@ async function open(page: Page, { locale = 'en', status = 200, as = reception, h
 // (before the first slot). Specs that need another time set their own, which replaces this one.
 test.beforeEach(({ page }) => page.clock.setFixedTime(new Date(ist('2026-10-19', '08:00'))));
 
+// The day or week shown, beside the page title (MDV-P2-059).
+const shown = (page: Page) => page.locator('main [data-slot=page-header-meta]');
 const column = (page: Page, name: string) => page.getByRole('list', { name });
 const bookButton = (page: Page, time: string) => page.getByRole('button', { name: `Book Dr. Arjun Rao (synthetic) at ${time}` });
 
 test('shows bookable slots exactly in the template windows, in facility time', async ({ page }) => {
   await open(page, { as: nurse }); // read-only: free slots are listed, not buttons
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Monday, 19 October 2026');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Schedule'); // MDV-P2-059: the day is secondary text beside the title
+  await expect(shown(page)).toHaveText('Monday, 19 October 2026');
   await expect(page.getByText('Facility time · Asia/Kolkata')).toBeVisible();
 
   const rao = column(page, 'Dr. Arjun Rao (synthetic)');
@@ -224,15 +227,15 @@ test('a slot stops being bookable when its start passes, without a reload', asyn
 
 test('moves between days and back to today', async ({ page }) => {
   const calls = await open(page);
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Monday, 19 October 2026');
+  await expect(shown(page)).toHaveText('Monday, 19 October 2026');
   await page.getByRole('button', { name: 'Next day' }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Tuesday, 20 October 2026');
+  await expect(shown(page)).toHaveText('Tuesday, 20 October 2026');
   await page.getByRole('button', { name: 'Previous day' }).click();
   await expect.poll(() => calls.dates).toContain('2026-10-19'); // two clicks before a render step the address twice but fetch only the last day
   await page.getByRole('button', { name: 'Previous day' }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Sunday, 18 October 2026');
+  await expect(shown(page)).toHaveText('Sunday, 18 October 2026');
   await page.getByRole('button', { name: 'Today' }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Monday, 19 October 2026');
+  await expect(shown(page)).toHaveText('Monday, 19 October 2026');
   expect(calls.dates.slice(0, 4)).toEqual([null, '2026-10-20', '2026-10-19', '2026-10-18']); // the server decides "today"
 });
 
@@ -245,7 +248,7 @@ test('the selected date and view survive a reload, and a stale visit panel close
   await page.getByRole('button', { name: 'List', exact: true }).click();
   await expect(page).toHaveURL(/\/schedule\?date=2026-10-20&view=list$/);
   await page.reload();
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Tuesday, 20 October 2026');
+  await expect(shown(page)).toHaveText('Tuesday, 20 October 2026');
   await expect(page.getByRole('button', { name: 'List', exact: true })).toHaveAttribute('aria-pressed', 'true');
   expect(calls.dates.at(-1)).toBe('2026-10-20');
 
@@ -259,7 +262,7 @@ test('the selected date and view survive a reload, and a stale visit panel close
   await page.getByRole('button', { name: 'Week', exact: true }).click();
   await expect(page.getByRole('complementary', { name: 'Appointment', exact: true })).toHaveCount(0);
   await page.goto('/schedule?date=not-a-date&view=month'); // a broken link falls back to today and the day view
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Monday, 19 October 2026');
+  await expect(shown(page)).toHaveText('Monday, 19 October 2026');
 });
 
 test('reception books an empty slot: hold, longer visit type, confirm the patient, book', async ({ page }) => {
@@ -442,7 +445,7 @@ for (const [locale, book, message] of [
 
 test('no access says so and is not retried', async ({ page }) => {
   const calls = await open(page, { status: 403 });
-  await expect(page.getByRole('heading', { name: 'You don’t have access to this facility.' })).toBeVisible();
+  await expect(page.getByText('You don’t have access to this facility.')).toBeVisible();
   await expect(page.getByRole('alert')).toHaveCount(0); // an access state, not a failure
   expect(calls.dates).toHaveLength(1);
 });
@@ -466,12 +469,12 @@ test('offline is said once, by the shell banner', async ({ page, context }) => {
 
 test('a fast double click on Next moves two days, and the old day is marked as updating meanwhile', async ({ page }) => {
   const calls = await open(page, { delayMs: 600 });
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Monday, 19 October 2026');
+  await expect(shown(page)).toHaveText('Monday, 19 October 2026');
   const next = page.getByRole('button', { name: 'Next day' });
   await next.click();
   await next.click(); // before the 20th has answered
   await expect(page.getByRole('region', { name: 'Day schedule' })).toHaveAttribute('aria-busy', 'true');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Wednesday, 21 October 2026');
+  await expect(shown(page)).toHaveText('Wednesday, 21 October 2026');
   await expect(page.getByRole('region', { name: 'Day schedule' })).not.toHaveAttribute('aria-busy');
   expect(calls.dates).toEqual([null, '2026-10-20', '2026-10-21']);
 });
@@ -618,7 +621,7 @@ test('week and list views show the same appointments as the day view', async ({ 
   await expect(raoList.getByRole('listitem').filter({ hasText: 'Unavailable 12:00–13:00 · Break · Lunch break' })).toHaveCount(1);
 
   await page.getByRole('button', { name: 'Week', exact: true }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Mon, 19 Oct – Sun, 25 Oct');
+  await expect(shown(page)).toHaveText('Mon, 19 Oct – Sun, 25 Oct');
   const week = page.getByRole('region', { name: 'Week of Dr. Arjun Rao (synthetic)' });
   const monday = week.getByRole('list', { name: 'Appointments on Monday, 19 October 2026' });
   await expect(monday.getByRole('listitem')).toHaveCount(inDay.length); // allInnerTexts does not wait for the week to render
@@ -632,11 +635,11 @@ test('week and list views show the same appointments as the day view', async ({ 
   await page.getByRole('option', { name: 'Procedure room (synthetic)' }).click();
   await expect(page.getByRole('region', { name: 'Week of Procedure room (synthetic)' })).toBeVisible();
   await page.getByRole('button', { name: 'Next week' }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Mon, 26 Oct – Sun, 1 Nov');
+  await expect(shown(page)).toHaveText('Mon, 26 Oct – Sun, 1 Nov');
   await expect.poll(() => calls.weeks.slice(1)).toEqual([{ calendarId: 'r-1', date: null }, { calendarId: 'r-1', date: '2026-10-26' }]);
 
   await page.getByRole('button', { name: 'Tue, 27 Oct' }).click(); // a day opens its day view
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Tuesday, 27 October 2026');
+  await expect(shown(page)).toHaveText('Tuesday, 27 October 2026');
   await expect(page.getByRole('region', { name: 'Day schedule' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Procedure room (synthetic)' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Dr. Arjun Rao (synthetic)' })).toHaveCount(0); // the filter stays

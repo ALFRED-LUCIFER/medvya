@@ -1,5 +1,5 @@
 import { useI18n } from '@medvya/i18n';
-import { cn } from '@medvya/ui';
+import { Card, cn } from '@medvya/ui';
 import type { WeekDay } from '../domain/views';
 import { AppointmentChip } from './AppointmentChip';
 import { OpenableChip } from './OpenableChip';
@@ -15,8 +15,8 @@ export default function WeekView({ name, calendarId, days, timeZone, updating, o
   const { t, formatTime, formatDay, formatShortDay } = useI18n();
   const time = (iso: string) => formatTime(new Date(iso), timeZone);
   return (
-    <section aria-label={t('schedule.weekOf', { name })} aria-busy={updating || undefined} tabIndex={0}
-      className={cn('overflow-x-auto rounded-lg border bg-card transition-opacity', updating && 'opacity-60')}>
+    <Card aria-label={t('schedule.weekOf', { name })} aria-busy={updating || undefined} tabIndex={0}
+      className={cn('gap-0 overflow-x-auto p-0 transition-opacity', updating && 'opacity-60')}>
       <ol className="grid md:min-w-[840px] md:grid-cols-7">
         {days.map(d => (
           <li key={d.date} className="flex flex-col gap-2 border-t p-3 first:border-t-0 md:min-h-80 md:border-t-0 md:border-s md:first:border-s-0">
@@ -48,6 +48,6 @@ export default function WeekView({ name, calendarId, days, timeZone, updating, o
           </li>
         ))}
       </ol>
-    </section>
+    </Card>
   );
 }

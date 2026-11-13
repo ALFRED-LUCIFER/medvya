@@ -2,8 +2,7 @@ import { useRef, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { CalendarOff, ChevronLeft, ChevronRight, Plus, Printer } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, cn, FocusScope, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
-import ShellMessage from '../../shell/components/ShellMessage';
+import { Button, buttonVariants, cn, EmptyState, FocusScope, PageContainer, PageHeader, PageMessage, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
 import type { DayLayout, ScheduleColumn } from '../domain/schedule';
 import { scheduleViews, type AgendaEntry, type ScheduleView, type WeekDay } from '../domain/views';
 import AgendaView from './AgendaView';
@@ -73,20 +72,16 @@ export default function SchedulePage(props: Props) {
   const { date, view, weekSpan, onClosePanel } = props;
   const drawer = !!onClosePanel && props.tablet;
   const isWeek = view === 'week';
-  const title = isWeek && weekSpan ? t('schedule.weekRange', { from: formatShortDay(weekSpan.from), to: formatShortDay(weekSpan.to) })
-    : date ? formatDay(date) : t('nav.schedule');
+  // The page is "Schedule"; the day or week shown is secondary text beside it (MDV-P2-059), so the title never changes while a day loads.
+  const shown = isWeek && weekSpan ? t('schedule.weekRange', { from: formatShortDay(weekSpan.from), to: formatShortDay(weekSpan.to) })
+    : date ? formatDay(date) : undefined;
   return (
     <>
     {props.sheet && <DaySheetView sheet={props.sheet} printedBy={props.printedBy} />}
     {/* While a day sheet prints, the screen content stays off the paper. */}
-    <div className={cn('flex flex-col gap-4 max-md:pb-16', props.sheet && 'print:hidden')}>
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-sm font-bold text-action-600">{t('nav.schedule')}</p>
-          <h1 className="text-2xl font-extrabold tracking-tight">{title}</h1>
-          {props.timeZone && <p className="text-sm text-muted-foreground">{t('schedule.facilityTime', { zone: props.timeZone })}</p>}
-        </div>
-        {/* Printing (the list view is the paper agenda) keeps the heading and the schedule, not the controls. */}
+    <PageContainer className={cn('max-md:pb-16', props.sheet && 'print:hidden')}>
+      <PageHeader title={t('nav.schedule')} meta={shown} description={props.timeZone && t('schedule.facilityTime', { zone: props.timeZone })} actions={
+        // Printing (the list view is the paper agenda) keeps the heading and the schedule, not the controls.
         <div className="flex flex-wrap items-center gap-2 print:hidden">
           <Button variant="outline" size="icon" aria-label={t(isWeek ? 'schedule.prevWeek' : 'schedule.prevDay')} disabled={!date} onClick={props.onPrevious}>
             <ChevronLeft className="rtl:rotate-180" aria-hidden />
@@ -111,8 +106,7 @@ export default function SchedulePage(props: Props) {
           )}
           <Button variant="outline" disabled={!date || props.printing} onClick={props.onPrintSheet}><Printer aria-hidden />{t('schedule.sheet.print')}</Button>
           {props.leavePath && <Link to={props.leavePath} className={buttonVariants({ variant: 'outline' })}><CalendarOff aria-hidden />{t('schedule.leave')}</Link>}
-        </div>
-      </header>
+        </div>} />
       {props.printFailed && <p role="alert" className="text-sm font-bold text-destructive print:hidden">{t('schedule.sheet.failed')}</p>}
       <Legend />
       {/* The schedule takes the full width when no booking panel sits beside it (the week view). */}
@@ -135,7 +129,7 @@ export default function SchedulePage(props: Props) {
           <Plus aria-hidden />{t('schedule.bookNext')}
         </Button>
       )}
-    </div>
+    </PageContainer>
     </>
   );
 }
@@ -143,20 +137,15 @@ export default function SchedulePage(props: Props) {
 // Offline is not handled here: the shell's OfflineBanner says it once for every screen.
 function Body(p: Props) {
   const { t } = useI18n();
-  if (p.forbidden) return <ShellMessage heading="h2" title={t('err.403')} body={t('schedule.forbidden.body')} />;
+  if (p.forbidden) return <PageMessage kind="denied" title={t('err.403')}>{t('schedule.forbidden.body')}</PageMessage>;
   if (p.failed)
-    return (
-      <div role="alert" className="flex flex-col items-start gap-3">
-        <ShellMessage heading="h2" title={t('schedule.error.title')} body={t('schedule.error.body')} />
-        <Button variant="default" onClick={p.onRetry}>{t('schedule.retry')}</Button>
-      </div>
-    );
-  if (p.loading || !p.day || !p.timeZone) return <ShellMessage heading="h2" busy title={t('schedule.loading')} />;
-  if (p.day.columns.length === 0 && p.calendars.length === 0) return <ShellMessage heading="h2" title={t('schedule.empty.title')} body={t('schedule.empty.body')} />;
+    return <PageMessage kind="error" title={t('schedule.error.title')} action={<Button onClick={p.onRetry}>{t('schedule.retry')}</Button>}>{t('schedule.error.body')}</PageMessage>;
+  if (p.loading || !p.day || !p.timeZone) return <PageMessage kind="busy">{t('schedule.loading')}</PageMessage>;
+  if (p.day.columns.length === 0 && p.calendars.length === 0) return <EmptyState title={t('schedule.empty.title')}>{t('schedule.empty.body')}</EmptyState>;
   if (p.view === 'week')
     return p.week && p.weekCalendar
       ? <WeekView name={p.weekName} calendarId={p.weekCalendar} days={p.week} timeZone={p.timeZone} updating={p.updating} onOpenDay={p.onOpenDay} onOpen={p.actions.onOpen} />
-      : <ShellMessage heading="h2" busy title={t('schedule.loading')} />;
+      : <PageMessage kind="busy">{t('schedule.loading')}</PageMessage>;
   if (p.view === 'list') return <AgendaView sections={p.agenda} timeZone={p.timeZone} updating={p.updating} now={p.now} onSlot={p.actions.onSlot} onOpen={p.actions.onOpen} moving={p.actions.moving} />;
   return <DayGrid day={p.day} updating={p.updating} now={p.now} {...p.actions} />;
 }

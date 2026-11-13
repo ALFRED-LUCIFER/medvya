@@ -1287,6 +1287,8 @@
   "booking.rebook.body": "Select an empty slot. The patient is filled in for you.",
   "registration.full.intro.IN": "Full registration: enter what the patient can provide now. ABHA is optional and care never depends on it.",
   "registration.full.intro.AE": "Full registration: copy the Emirates ID carefully to avoid typing errors.",
+  "registration.draft.restored": "Your unfinished registration was restored.",
+  "registration.draft.startAgain": "Start again",
   "registration.mode.label": "Registration mode",
   "registration.mode.quick": "Quick (busy desk)",
   "registration.mode.full": "Full registration",

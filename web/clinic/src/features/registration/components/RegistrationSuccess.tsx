@@ -43,7 +43,7 @@ export default function RegistrationSuccess({ result, name, actorName, onRegiste
       <div className="flex flex-wrap gap-2">
         {bookPath && (slot
           ? <Link to={`${bookPath}?${slot}&${new URLSearchParams({ patient: result.patientId })}`} className={buttonVariants()}>{t('registration.done.backToBooking')}</Link>
-          : <Link to={bookPath} className={buttonVariants()}>{t('registration.done.book')}</Link>)}
+          : <Link to={`${bookPath}?${new URLSearchParams({ patient: result.patientId })}`} className={buttonVariants()}>{t('registration.done.book')}</Link>)}
         {/* Walk-in with this patient chosen: the id is opaque, never patient data. */}
         {checkInPath && <Link to={`${checkInPath}?${new URLSearchParams({ patient: result.patientId })}`} className={buttonVariants({ variant: 'outline' })}>{t('registration.done.checkIn')}</Link>}
         <Link to={recordPath} className={buttonVariants({ variant: 'outline' })}>{t('registration.done.open')}</Link>

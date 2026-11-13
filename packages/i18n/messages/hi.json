@@ -1283,6 +1283,8 @@
   "booking.rebook.body": "कोई खाली स्लॉट चुनें। मरीज़ अपने आप भर जाएगा।",
   "registration.full.intro.IN": "पूर्ण पंजीकरण: मरीज़ अभी जो दे सकता है वह दर्ज करें। ABHA वैकल्पिक है और देखभाल कभी इस पर निर्भर नहीं करती।",
   "registration.full.intro.AE": "पूर्ण पंजीकरण: टाइपिंग की गलतियों से बचने के लिए एमिरेट्स आईडी ध्यान से लिखें।",
+  "registration.draft.restored": "आपका अधूरा पंजीकरण वापस लाया गया है।",
+  "registration.draft.startAgain": "फिर से शुरू करें",
   "registration.mode.label": "पंजीकरण मोड",
   "registration.mode.quick": "त्वरित (व्यस्त डेस्क)",
   "registration.mode.full": "पूर्ण पंजीकरण",

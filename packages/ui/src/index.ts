@@ -16,7 +16,7 @@ export { Chip, toneClasses, type Tone, type ChipProps } from '#components/ui/chi
 export { Tag, type TagProps } from '#components/ui/tag';
 export { Banner, type BannerProps } from '#components/ui/banner';
 export { PatientBanner, AllergyBlock, bannerFields, allergiesInWords, type AllergyState, type BannerAllergy, type BannerClinical, type BannerDeskPatient, type BannerIdentity } from '#components/ui/patient-banner';
-export { Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow, TableState, type SortDirection } from '#components/ui/table';
+export { Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TablePagination, TableRow, TableState, type SortDirection } from '#components/ui/table';
 export { Card, Section, type CardProps } from '#components/ui/card';
 export { PageMessage, EmptyState, type PageMessageProps } from '#components/ui/page-message';
 export { SegmentedControl, type SegmentedControlProps } from '#components/ui/segmented-control';

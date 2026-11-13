@@ -6,13 +6,15 @@ import { Button, Input, Select, SelectContent, SelectItem, SelectTrigger, Select
 import { describedBy, fieldError } from '../../settings/components/fieldStyles';
 import { Field } from '../../settings/components/Field';
 import { Section } from '../../settings/components/Section';
-import { classesFor, formularyColumns, forms, type Country, type FormularyItem, type MedicineForm, type ProblemCode } from '../domain/formulary';
+import type { TableView } from '../../table/domain/tableSort';
+import { classesFor, FORMULARY_LIMIT, formularyColumns, forms, isFormularySortable, type Country, type FormularyColumn, type FormularyItem, type FormularySortColumn, type MedicineForm, type ProblemCode } from '../domain/formulary';
 
 type Props = {
   country: Country;
   query: string;
   onQuery: (query: string) => void;
   items: FormularyItem[];
+  table: TableView<FormularyItem, FormularySortColumn>;
   loading: boolean;
   failed: boolean;
   form: UseFormReturn<MedicineForm>;
@@ -29,6 +31,7 @@ export default function FormularyPanel(p: Props) {
   const tableState = p.loading ? 'loading' : p.failed ? 'error' : p.items.length === 0 ? 'empty' : 'ready';
   // A code the server sent is translated; anything the form itself rejected is a missing or malformed value.
   const problem = (e: FieldError | undefined) => (e ? t(`formulary.error.${(e.type === 'server' ? e.message : 'required') as ProblemCode}`) : null);
+  const col = (c: FormularyColumn) => t(`formulary.col.${c}`);
 
   return (
     <div className="flex flex-col gap-4">
@@ -38,27 +41,33 @@ export default function FormularyPanel(p: Props) {
           <Input id="formulary-search" type="search" autoComplete="off" value={p.query} onChange={e => p.onQuery(e.target.value)} />
         </Field>
         <TableState state={tableState} messages={{ loading: t('formulary.loading'), error: t('formulary.loadFailed'), empty: t('formulary.empty') }}>
-          <Table label={t('formulary.tableLabel')} className="min-w-[760px]">
+          {/* Compact: a reference list read with a mouse (DESIGN.md, Density). No paging: the search answers at most 50 medicines. */}
+          <Table label={t('formulary.tableLabel')} density="compact" stacked status={p.table.status} className="md:min-w-[760px]">
             <TableHeader>
-              <TableRow>{formularyColumns.map(c => <TableHead key={c} scope="col">{t(`formulary.col.${c}`)}</TableHead>)}</TableRow>
+              <TableRow>
+                {formularyColumns.map(c => (
+                  <TableHead key={c} scope="col" {...(isFormularySortable(c) && { sort: p.table.sortOf(c), onSort: () => p.table.onSort(c) })}>{col(c)}</TableHead>
+                ))}
+              </TableRow>
             </TableHeader>
             <TableBody>
-              {p.items.map(i => (
+              {p.table.rows.map(i => (
                 <TableRow key={i.id}>
                   <TableHead scope="row">{i.generic}</TableHead>
-                  <TableCell><bdi dir="ltr">{i.strength}</bdi></TableCell>
-                  <TableCell>{t(`formulary.form.${i.form}`)}</TableCell>
-                  <TableCell>{i.brands.join(', ')}</TableCell>
-                  <TableCell>
+                  <TableCell label={col('strength')}><bdi dir="ltr">{i.strength}</bdi></TableCell>
+                  <TableCell label={col('form')}>{t(`formulary.form.${i.form}`)}</TableCell>
+                  <TableCell label={col('brands')}>{i.brands.join(', ')}</TableCell>
+                  <TableCell label={col('class')}>
                     {t(`formulary.class.${i.regClass}`)}
                     {i.printRequirements.map(r => <span key={r} className="block text-sm text-muted-foreground">{t(`formulary.print.${r}`)}</span>)}
                   </TableCell>
-                  <TableCell>{i.nationalCode ? <bdi dir="ltr">{i.nationalCode}</bdi> : t('formulary.noCode')}</TableCell>
-                  <TableCell>{t(`formulary.source.${i.source}`)}</TableCell>
+                  <TableCell label={col('code')}>{i.nationalCode ? <bdi dir="ltr">{i.nationalCode}</bdi> : t('formulary.noCode')}</TableCell>
+                  <TableCell label={col('source')}>{t(`formulary.source.${i.source}`)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
+          {p.items.length >= FORMULARY_LIMIT && <p className="text-sm">{t('formulary.capped', { count: FORMULARY_LIMIT })}</p>}
         </TableState>
       </Section>
 

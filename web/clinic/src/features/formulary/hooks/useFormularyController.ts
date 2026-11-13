@@ -2,9 +2,11 @@ import { useDeferredValue, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
+import { useI18n } from '@medvya/i18n';
 import { ApiError } from '../../schedule/services/scheduleApi';
+import { useTableController } from '../../table/hooks/useTableController';
 import {
-  brandProblems, brandRowsSchema, emptyMedicine, medicineSchema, orderSetSchema, parseBrandRows, splitProblem,
+  brandProblems, brandRowsSchema, emptyMedicine, formularySort, medicineSchema, orderSetSchema, parseBrandRows, splitProblem,
   type BrandProblem, type BrandRowsForm, type MedicineForm, type OrderSetForm, type ProblemCode,
 } from '../domain/formulary';
 import { addBrands, addMedicine, addOrderSet, fetchOrderSets, searchFormulary } from '../services/formularyApi';
@@ -13,10 +15,13 @@ const problemOf = (e: unknown) => splitProblem(e instanceof ApiError ? e.code : 
 
 /** Medicines tab (F-13): search the country list, add a clinic medicine. The server validates by the country's rules and answers with codes. */
 export function useFormularyController() {
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const [query, setQuery] = useState('');
   const deferred = useDeferredValue(query.trim());
   const list = useQuery({ queryKey: ['formulary', deferred], queryFn: () => searchFormulary(deferred), placeholderData: keepPreviousData });
+  const items = list.data ?? [];
+  const table = useTableController(items, formularySort, c => t(`formulary.col.${c}`));
   const form = useForm<MedicineForm>({ resolver: zodResolver(medicineSchema), defaultValues: emptyMedicine() });
   const [saved, setSaved] = useState(false);
   const [formError, setFormError] = useState<ProblemCode | null>(null);
@@ -40,7 +45,8 @@ export function useFormularyController() {
   return {
     query,
     onQuery: setQuery,
-    items: list.data ?? [],
+    items,
+    table,
     loading: list.isPending,
     failed: list.isError,
     form,

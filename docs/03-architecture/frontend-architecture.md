@@ -79,7 +79,8 @@ Why it matters for Medvya:
 Never write `<table>`, `<tr>`, `<th>` or `<td>` in `features/` (lint rule `react/forbid-elements` fails the build). Use `Table`, `TableHeader`, `TableBody`, `TableRow`, `TableHead`, `TableCell` and `TableState` from `@medvya/ui`.
 
 - `domain/`: column definitions as plain data, and the sort values per column.
-- `hooks/useXxxTableController`: sort, filter and paging state; returns rows, `sortOf(key)` and `onSort(key)`. Server data stays in TanStack Query.
+- `hooks/useXxxTableController`: sort, filter and paging state; returns rows, `sortOf(key)` and `onSort(key)`. Server data stays in TanStack Query. Sort and paging come from the shared `useTableController(rows, sortValues, columnLabel)` in `features/table` (MDV-P2-054): it also returns `status` (the sort, for `<Table status>`, announced politely) and `page`, `pageCount`, `onPage` for `<TablePagination>` (50 rows a page).
+- `stacked` on `Table` turns rows into labelled blocks under 768 px (no sideways scroll on a phone); give each `TableCell` its column `label`. `density="compact"` (36 px rows, 48 px on a coarse pointer) is allowed on the audit log, formulary, order sets and staff tables only (lint rule `medvya-ui/compact-table`).
 - `components/`: render the rows they are given. `TableState` shows the one loading, error and empty message; `TableHead` with `onSort` renders a 44 px button and sets `aria-sort`.
 - Pass `label` to `Table` when it can scroll sideways, so the region is focusable and named. Use `numeric` for right-aligned (end-aligned, flips in Arabic) columns and `sticky` on `TableHeader` for long tables.
 

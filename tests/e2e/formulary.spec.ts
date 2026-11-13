@@ -165,3 +165,78 @@ for (const locale of ['en', 'ar'])
       (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations.map(v => `${v.id} (${v.nodes.length})`));
     expect(violations).toEqual([]);
   });
+
+// MDV-P2-054: the medicine list is a compact table (36 px rows with a mouse, 48 px on a coarse pointer), sorted from the keyboard
+// with the order announced, and stacked rows on a phone: no sideways scroll, the strength (the dose) always in view.
+const rowHeights = (page: Page) =>
+  page.getByRole('region', { name: 'Medicine list' }).locator('tbody tr').evaluateAll(rows => rows.map(r => Math.round(r.getBoundingClientRect().height)));
+
+test('a header sorts by keyboard, the order changes and the sort is announced', async ({ page }) => {
+  await open(page);
+  const table = page.getByRole('region', { name: 'Medicine list' });
+  const names = () => table.getByRole('rowheader').allTextContents();
+  await expect(table.getByRole('rowheader')).toHaveText(['Metformin', 'Tramadol', 'Paracetamol']); // the server's order
+  const generic = table.getByRole('button', { name: 'Generic name' });
+  await generic.focus();
+  await page.keyboard.press('Enter');
+  await expect(table.getByRole('columnheader', { name: 'Generic name' })).toHaveAttribute('aria-sort', 'ascending');
+  expect(await names()).toEqual(['Metformin', 'Paracetamol', 'Tramadol']);
+  await expect(table.getByRole('status')).toHaveText('Sorted by Generic name, ascending');
+  await page.keyboard.press('Enter');
+  expect(await names()).toEqual(['Tramadol', 'Paracetamol', 'Metformin']);
+  await expect(table.getByRole('status')).toHaveText('Sorted by Generic name, descending');
+  await table.getByRole('button', { name: 'Class' }).press('Enter'); // ordinary first, then the schedules from H to H1
+  expect(await names()).toEqual(['Paracetamol', 'Metformin', 'Tramadol']);
+  await expect(table.getByRole('columnheader', { name: 'Generic name' })).toHaveAttribute('aria-sort', 'none');
+});
+
+test('a full answer of 50 says so and asks to narrow the search', async ({ page }) => {
+  await open(page);
+  await expect(page.getByText(/Showing the first/)).toBeHidden();
+  await page.route('**/v1/settings/formulary?*', r =>
+    r.fulfill({ json: Array.from({ length: 50 }, (_, i) => item(`Synthetic medicine ${i}`, '1 mg', 'Tablet', 'None', [])) }));
+  await page.getByLabel('Search by generic or brand name').fill('syn');
+  await expect(page.getByText('Showing the first 50 medicines. Type more of the name to narrow the list.')).toBeVisible();
+});
+
+test('compact rows are 36 px with a mouse', async ({ page }) => {
+  await open(page);
+  const paracetamol = page.getByRole('row', { name: /Paracetamol/ }); // one line of text; a class with a print warning takes two
+  await expect(paracetamol).toBeVisible();
+  expect(Math.round((await paracetamol.boundingBox())!.height)).toBe(36);
+});
+
+test.describe('on a coarse pointer', () => {
+  test.use({ hasTouch: true, isMobile: true, viewport: { width: 1024, height: 768 } });
+  test('the compact table ignores its density: rows are 48 px', async ({ page }) => {
+    await open(page);
+    await expect(page.getByRole('row', { name: /Paracetamol/ })).toBeVisible();
+    expect(await page.evaluate(() => matchMedia('(any-pointer: coarse)').matches)).toBe(true);
+    for (const h of await rowHeights(page)) expect(h).toBeGreaterThanOrEqual(48);
+  });
+});
+
+test.describe('at 375 px', () => {
+  test.use({ viewport: { width: 375, height: 812 } });
+  for (const locale of ['en', 'ar'])
+    test(`rows are stacked: no sideways scroll, every field in view, axe clean (${locale})`, async ({ page }) => {
+      await open(page, locale === 'ar' ? 'AE' : 'IN', locale);
+      const region = page.getByRole('region', { name: locale === 'ar' ? 'قائمة الأدوية' : 'Medicine list' });
+      const tramadol = region.getByRole('row', { name: /Tramadol/ });
+      await expect(tramadol).toBeVisible();
+      expect(await region.evaluate(e => e.scrollWidth - e.clientWidth)).toBeLessThanOrEqual(0);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+      // The identity (generic name) and the dose (strength) are inside the viewport, each strength labelled.
+      for (const cell of [tramadol.getByRole('rowheader'), tramadol.getByRole('cell').filter({ hasText: '50 mg' })]) {
+        await cell.scrollIntoViewIfNeeded();
+        const box = (await cell.boundingBox())!;
+        expect(box.x).toBeGreaterThanOrEqual(0);
+        expect(box.x + box.width).toBeLessThanOrEqual(375);
+      }
+      await expect(tramadol.getByRole('cell').filter({ hasText: '50 mg' })).toContainText(locale === 'ar' ? 'التركيز' : 'Strength');
+      await page.addScriptTag({ path: axePath });
+      const violations = await page.evaluate(async () =>
+        (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations.map(v => `${v.id} (${v.nodes.length})`));
+      expect(violations).toEqual([]);
+    });
+});

@@ -3,7 +3,7 @@ import { CircleStop, PenLine, Sparkles } from 'lucide-react';
 import {
   alertLooks, Button, ChoiceRow, ClinicalAlert, IdentityBanner, Input, Label, provenanceLooks, ProvenanceTag,
   RecordingPill, recordingLooks, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, StatusChip, statusLooks,
-  Switch, SystemState, systemStates, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Textarea,
+  Switch, SystemState, systemStates, Table, TableBody, TableCell, TableHead, TableHeader, TablePagination, TableRow, Textarea,
 } from '@medvya/ui';
 import PageComponentsGallery from './PageComponentsGallery';
 import FieldGallery from './FieldGallery';
@@ -13,6 +13,34 @@ import PatientBannerSection from './gallery/PatientBannerSection';
 import ShellComponentsGallery from './ShellComponentsGallery';
 
 const keys = <T extends object>(o: T) => Object.keys(o) as (keyof T)[];
+
+// MDV-P2-054: compact density (36 px rows with a mouse, 48 px on a coarse pointer), stacked rows under 768 px, sort and paging.
+const medicines = [['Amlodipine', '5 mg', 'Tablet'], ['Metformin', '500 mg', 'Tablet'], ['Salbutamol', '100 mcg', 'Inhaler']];
+function CompactTableSection() {
+  const [descending, setDescending] = useState(false);
+  const [page, setPage] = useState(0);
+  const rows = descending ? [...medicines].reverse() : medicines;
+  return (
+    <section className="flex flex-col gap-3">
+      <h2 className="text-lg font-bold">Table: compact, stacked under 768 px, sortable, paged</h2>
+      <Table label="Medicines (compact)" density="compact" stacked status={`Sorted by Generic name, ${descending ? 'descending' : 'ascending'}`}>
+        <TableHeader>
+          <TableRow>
+            <TableHead scope="col" sort={descending ? 'descending' : 'ascending'} onSort={() => setDescending(d => !d)}>Generic name</TableHead>
+            <TableHead scope="col">Strength</TableHead>
+            <TableHead scope="col">Form</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.map(([name, strength, form]) => (
+            <TableRow key={name}><TableHead scope="row">{name}</TableHead><TableCell label="Strength"><bdi dir="ltr">{strength}</bdi></TableCell><TableCell label="Form">{form}</TableCell></TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      <TablePagination page={page} pageCount={3} onPage={setPage} />
+    </section>
+  );
+}
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -126,6 +154,7 @@ export default function UiGallery({ switcher }: { switcher: ReactNode }) {
           </TableBody>
         </Table>
       </Section>
+      <CompactTableSection />
       <section className="flex flex-col gap-3">
         <h2 className="text-lg font-bold">Type tokens</h2>
         {typeTokens.map(c => <Measured key={c} name={c} read={s => `${s.fontSize} / ${s.lineHeight} · ${s.fontWeight}`}>Meera Iyer · DQ-10-4482 · ميرا</Measured>)}

@@ -30,6 +30,20 @@ export const classesFor = (country: Country): RegulatoryClass[] =>
 
 /** Column definitions are data; the label for each is the i18n key `formulary.col.<key>`. */
 export const formularyColumns = ['generic', 'strength', 'form', 'brands', 'class', 'code', 'source'] as const;
+export type FormularyColumn = (typeof formularyColumns)[number];
+
+/** The search answers with at most this many medicines (MaxLimit in FormularyService); a full answer says so and asks to narrow. */
+export const FORMULARY_LIMIT = 50;
+
+const regClasses = ['None', 'ScheduleH', 'ScheduleH1', 'ScheduleX', 'Controlled'] as const;
+/** The columns people sort by: the name, the class from ordinary to strictest, and whether the clinic added it. */
+export const formularySort = {
+  generic: (i: FormularyItem) => i.generic,
+  class: (i: FormularyItem) => regClasses.indexOf(i.regClass),
+  source: (i: FormularyItem) => i.source,
+};
+export type FormularySortColumn = keyof typeof formularySort;
+export const isFormularySortable = (c: FormularyColumn): c is FormularySortColumn => c in formularySort;
 
 const optional = (max: number) => z.string().trim().max(max);
 
@@ -38,7 +52,7 @@ export const medicineSchema = z.object({
   strength: z.string().trim().min(1).max(50),
   form: z.enum(forms),
   brands: optional(1100),
-  regClass: z.enum(['None', 'ScheduleH', 'ScheduleH1', 'ScheduleX', 'Controlled']),
+  regClass: z.enum(regClasses),
   nationalCode: optional(30),
   atc: optional(7),
   defaultSig: optional(200),

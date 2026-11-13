@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { nextSort, sortDirection, sortRows, type SortState } from './tableSort';
+import { nextSort, pageRows, sortDirection, sortRows, type SortState } from './tableSort';
 
 const values = { name: (r: { name: string | null }) => r.name };
 
@@ -22,5 +22,14 @@ describe('tableSort', () => {
     expect(sortRows(rows, { key: 'name', direction: 'ascending' }, values).map(r => r.name)).toEqual(['a', 'b', null]);
     expect(sortRows(rows, { key: 'name', direction: 'descending' }, values).map(r => r.name)).toEqual(['b', 'a', null]);
     expect(rows.map(r => r.name)).toEqual(['b', null, 'a']);
+  });
+  it('pages over 50 rows, counts pages from 1 row up, and clamps a page past the end to the last page', () => {
+    const rows = Array.from({ length: 120 }, (_, i) => i);
+    expect(pageRows(rows, 0)).toMatchObject({ page: 0, pageCount: 3 });
+    expect(pageRows(rows, 0).rows).toEqual(rows.slice(0, 50));
+    expect(pageRows(rows, 2).rows).toEqual(rows.slice(100));
+    expect(pageRows(rows, 9)).toMatchObject({ page: 2, pageCount: 3 });
+    expect(pageRows(rows.slice(0, 50), 1)).toMatchObject({ page: 0, pageCount: 1, rows: rows.slice(0, 50) });
+    expect(pageRows([], 0)).toEqual({ rows: [], page: 0, pageCount: 1 });
   });
 });

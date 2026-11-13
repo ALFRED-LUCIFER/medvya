@@ -53,7 +53,7 @@ function PageHeader({ title, eyebrow, description, actions, back, meta, classNam
           <h1 className="min-w-0 truncate text-title">{title}</h1>
           {meta && <span data-slot="page-header-meta" className="shrink-0 text-body text-muted-foreground tabular-nums">{meta}</span>}
         </div>
-        {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
+        {actions && <div className="flex min-w-0 flex-wrap items-center gap-2">{actions}</div>}
       </div>
       {description && <p className="text-muted-foreground">{description}</p>}
       {children}

@@ -83,7 +83,7 @@ The mechanism can be built on draft wording, but it can't go live until **MDV-P1
 
 | Order | Ticket | Needs |
 |---|---|---|
-| 26 | **MDV-P0-029** R0 exit gate and release notes | Wave 3, P0-023 clinical sign-off |
+| 26 | **MDV-P0-029** R0 exit gate and release notes | Wave 3; the clinical walk-through moved to the pilot entry check (P1-073) |
 | 27 | **MDV-P1-038** P1 security review (external reviewer) | P1-019, P1-009, P1-035 |
 | 28 | **MDV-P1-039** Production deployment, a tenant per pilot clinic | P1-038, P1-043 signed clinics |
 | 29 | **MDV-P1-040** Reception training, desk card, support contact | P1-039 |
@@ -101,7 +101,7 @@ The mechanism can be built on draft wording, but it can't go live until **MDV-P1
 | Founder | **MDV-P1-043** sign two pilot clinics | production, pilot |
 | Founder | **MDV-P1-045** India DLT sender and SMS templates (start early: approval has lead time) | SMS reminders (exit criterion 4) |
 | Counsel | **MDV-P1-044** privacy notice, ToS, DPA and consent wording; real privacy contact | consents, reminders, public forms going live |
-| Clinical advisor | **MDV-P0-023** journey sign-off | R0 gate |
+| Pilot clinic doctor | **MDV-P1-073** journey walk-through and sign-off (moved from P0-023) | pilot entry (P1-042) |
 | External reviewer | **MDV-P1-038** security review | production |
 | Tax adviser | sign-off of printed documents (**MDV-P4-031**) | not R1 (billing is P4) |
 

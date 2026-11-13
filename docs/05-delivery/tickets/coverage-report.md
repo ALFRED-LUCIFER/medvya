@@ -14,7 +14,7 @@ Every requirement, screen, exit criterion, NFR, delivery-package item and depend
 | P0-04 | P0 | MUST | MDV-P0-010, MDV-P0-028 |
 | P0-05 | P0 | MUST | MDV-P0-014, MDV-P0-015, MDV-P0-022 |
 | P0-06 | P0 | MUST | MDV-P0-017, MDV-P0-036 |
-| P0-07 | P0 | MUST | MDV-P0-020, MDV-P0-021, MDV-P0-022, MDV-P0-023, MDV-P0-030 |
+| P0-07 | P0 | MUST | MDV-P0-020, MDV-P0-021, MDV-P0-022, MDV-P0-023, MDV-P0-030, MDV-P1-073 |
 | P0-08 | P0 | MUST | MDV-P0-002, MDV-P0-003, MDV-P0-016, MDV-P0-024, MDV-P0-031 |
 | P0-09 | P0 | MUST | MDV-P0-008, MDV-P0-009, MDV-P0-034, MDV-P0-035, MDV-P0-037, MDV-P0-041 |
 | P0-10 | P0 | MUST | MDV-P0-016, MDV-P0-018, MDV-P0-025, MDV-P0-026, MDV-P0-027 |
@@ -93,7 +93,7 @@ Every requirement, screen, exit criterion, NFR, delivery-package item and depend
 | F-03 Sign up · MFA / passkey · recovery | P0 | DESIGNED | MDV-P0-011, MDV-P0-012, MDV-P1-059, MDV-P1-060 |
 | F-05 Session expired · 403 · 404 · offline | P0 | DESIGNED | MDV-P0-015 |
 | F-06 Invite acceptance | P0 | DESIGNED | MDV-P0-013, MDV-P1-059 |
-| X-03 Six end-to-end journeys (storyboard) | P0 | DESIGNED | MDV-P0-023 |
+| X-03 Six end-to-end journeys (storyboard) | P0 | DESIGNED | MDV-P0-023, MDV-P1-073 |
 | D-03 Notification centre | P1 | DESIGNED | MDV-P1-034 |
 | D-04 Clinic overview (multi-doctor Today, shared waiting room) | P1 | DESIGNED | MDV-P1-030 |
 | F-01 Landing (solo doctor / hospital) | P1 | DESIGNED | MDV-P1-001, MDV-P1-053, MDV-P1-054, MDV-P1-055, MDV-P1-056, MDV-P5-050 |

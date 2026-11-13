@@ -177,6 +177,7 @@ public static class SessionControl
     }
 
     // Written before the change it records: if the audit write fails, the request fails (fail closed), as .Audited() does.
+    // shortcut: sessions live in the Identity DbContext, so this is not one transaction; a failed revoke leaves an event for a change that did not land (the user retries). Share the transaction if session audits must be exact.
     internal static Task WriteAuditAsync(HttpContext http, string action, string resourceType, Guid resourceId) =>
         http.RequestServices.GetRequiredService<IAuditLog>().WriteAsync(new AuditEvent
         {

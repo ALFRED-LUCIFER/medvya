@@ -9,7 +9,7 @@ import { fetchProblems } from '../../problems/services/problemsApi';
 import { remainingItems, sectionTicks, signChecklist } from '../domain/checklist';
 import type { EncounterBanner } from '../domain/encounter';
 import { autosaveDelayMs, saveRetryDelayMs, defaultTargetSection, insertAt, inTemplateOrder, phraseKey, vitalNameKey, type PreviousNote, type VerifiedVital, missingRequired, noteFormSchema, signFailure, switchChoices, switchTemplate, type NoteForm, type NoteSections, type NoteTemplate, type RecordingConsent, type SavePhase, type SignFailure } from '../domain/note';
-import { fetchNote, fetchNoteCatalog, fetchPrefill, fetchPrevious, saveNote, signNote, startReauth } from '../services/noteApi';
+import { fetchNote, fetchNoteAfterLeaving, fetchNoteCatalog, fetchPrefill, fetchPrevious, markLeftWithSave, saveNote, signNote, startReauth } from '../services/noteApi';
 import { createAutosaver } from '../services/noteAutosaver';
 import { forSave, unfinishedFindings } from '../domain/structured';
 
@@ -24,7 +24,7 @@ export function useNoteController(encounterId: string, canSign: boolean, timeZon
   const { t, formatDate, formatTime } = useI18n();
   const queryClient = useQueryClient();
   // MDV-P1-089: each visit to the page reads the note again, after any save that leaving it started.
-  const note = useQuery({ queryKey: ['note', encounterId], queryFn: async () => { await leaving.get(encounterId); return fetchNote(encounterId); },
+  const note = useQuery({ queryKey: ['note', encounterId], queryFn: async () => { await leaving.get(encounterId); return fetchNoteAfterLeaving(encounterId); },
     retry: false, staleTime: Infinity, refetchOnWindowFocus: false, refetchOnMount: 'always' });
   // Only what the server answered since this page opened: a copy cached by an earlier visit may be older than the server's.
   const held = note.isFetchedAfterMount && !note.isError ? note.data : undefined;
@@ -49,7 +49,7 @@ export function useNoteController(encounterId: string, canSign: boolean, timeZon
   const fields = useRef<Record<string, HTMLTextAreaElement | null>>({});
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   // Every answer to a save goes into the query cache, also one that arrives after the doctor left the page.
-  const [saver] = useState(() => createAutosaver({ save: (d, v, keepalive) => saveNote(encounterId, d, v, keepalive), delayMs: autosaveDelayMs, retryMs: saveRetryDelayMs, onPhase: setPhase,
+  const [saver] = useState(() => createAutosaver({ save: (d, v, keepalive) => { if (keepalive) markLeftWithSave(encounterId, v); return saveNote(encounterId, d, v, keepalive); }, delayMs: autosaveDelayMs, retryMs: saveRetryDelayMs, onPhase: setPhase,
     onSaved: view => { setSavedAt(new Date()); queryClient.setQueryData(['note', encounterId], view); } }));
   // MDV-P2-044: the recording consent is part of the note and saved with it; the checklist reads it with the visit's reconciliation.
   const [consent, setConsent] = useState<RecordingConsent | null>(null);

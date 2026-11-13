@@ -27,7 +27,7 @@ export default function ApprovalsPage({ vm, operator }: { vm: { queue: QueueVm; 
             </TabsList>
             <TabsContent value={q.filter}>
               <TableState state={q.state} messages={{ loading: t('platform.state.loading'), error: t(q.forbidden ? 'platform.state.forbidden' : 'platform.state.error'), empty: t('platform.approvals.empty') }}>
-                <Table>
+                <Table label={t('platform.approvals.queueTable')}>
                   <TableHeader>
                     <TableRow>
                       <TableHead>{t('platform.approvals.col.organisation')}</TableHead>

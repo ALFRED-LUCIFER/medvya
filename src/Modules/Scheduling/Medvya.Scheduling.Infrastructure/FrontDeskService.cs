@@ -25,9 +25,7 @@ public sealed partial class FrontDeskService(
     public const string MeterName = "Medvya.FrontDesk";
     static readonly Meter Meter = new(MeterName);
     static readonly Histogram<double> CheckInSeconds = Meter.CreateHistogram<double>(
-        "medvya.front_desk.check_in.duration", "s", "From tapping Check in to the visit being checked in (exit gate 3).");
-    // A check-in left open longer than this is someone walking away from the desk, not a check-in time.
-    static readonly TimeSpan MaxCheckIn = TimeSpan.FromMinutes(30);
+        "medvya.front_desk.check_in.duration", "s", "From opening Walk-in or tapping Check in to the visit being checked in (exit gate 3).");
 
     public async Task<FrontDeskBoard> GetBoardAsync(Guid facilityId, CancellationToken cancellationToken = default)
     {
@@ -52,7 +50,7 @@ public sealed partial class FrontDeskService(
     public async Task<BoardCard> CheckInAsync(Guid appointmentId, CheckIn command, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
-        int? timed = command.ElapsedMs is long ms && ms > 0 && TimeSpan.FromMilliseconds(ms) <= MaxCheckIn ? (int)ms : null;
+        var timed = PilotMetricRules.TimedMs(command.ElapsedMs); // from the client: out of bounds is stored as not measured, never as zero
         var (visit, moved) = await MoveAsync(appointmentId, AppointmentState.CheckedIn, SchedulingAudit.CheckIn, cancellationToken, timed);
         if (moved && timed is int t) CheckInSeconds.Record(t / 1000d, new KeyValuePair<string, object?>("tenant_id", visit.TenantId));
         // No nurse step: the patient is ready for the doctor on arrival (MDV-AUDIT-1104).

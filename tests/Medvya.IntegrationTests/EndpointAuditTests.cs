@@ -119,6 +119,7 @@ public sealed class EndpointAuditTests(PostgresFixture sql) : IClassFixture<Post
         "GET /v1/order-sets",
         "GET /v1/settings/formulary",
         "POST /v1/settings/formulary",
+        "POST /v1/settings/formulary/brands", // MDV-P1-088: brand and medicine names only; audited inside the service (formulary.brands.add; FormularyTests)
         "GET /v1/settings/order-sets",
         "POST /v1/settings/order-sets",
         // Diagnosis code set (MDV-P2-010): the country's codes and descriptions, no patient data; the problem list itself is audited.

@@ -60,6 +60,7 @@ export default function PilotMetricsPanel(p: Props) {
                 : t('pilotMetrics.checkInGap', { gap: formatNumber(p.gapSeconds), target: formatNumber(c.targetSeconds) })}</span>
               <span>{t('pilotMetrics.checkInCounts', { returning: formatNumber(c.returningCount), all: formatNumber(c.count),
                 median: c.medianSeconds === null ? none : unit('CheckInSeconds', Math.round(c.medianSeconds)) })}</span>
+              {c.unmeasured > 0 && <span>{t('pilotMetrics.checkInUnmeasured', { count: formatNumber(c.unmeasured) })}</span>}
             </span>}
             baseline={baseline('CheckInSeconds')} />
           <Tile label={t('pilotMetrics.noShow')} value={m.noShows.percent === null ? none : unit('NoShowPercent', m.noShows.percent)}

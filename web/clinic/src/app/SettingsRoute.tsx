@@ -1,7 +1,8 @@
 import { useSearchParams } from 'react-router';
+import BrandsPanel from '../features/formulary/components/BrandsPanel';
 import FormularyPanel from '../features/formulary/components/FormularyPanel';
 import OrderSetsPanel from '../features/formulary/components/OrderSetsPanel';
-import { useFormularyController, useOrderSetsController } from '../features/formulary/hooks/useFormularyController';
+import { useBrandsController, useFormularyController, useOrderSetsController } from '../features/formulary/hooks/useFormularyController';
 import DoctorsPanel from '../features/settings/components/DoctorsPanel';
 import HolidaysPanel from '../features/settings/components/HolidaysPanel';
 import HoursPanel from '../features/settings/components/HoursPanel';
@@ -60,6 +61,7 @@ function Medicines({ country }: { country: 'IN' | 'AE' | null }) {
   return (
     <>
       <FormularyPanel country={country} {...useFormularyController()} />
+      <BrandsPanel {...useBrandsController()} />
       <OrderSetsPanel {...useOrderSetsController()} />
     </>
   );

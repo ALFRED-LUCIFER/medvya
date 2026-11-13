@@ -10,6 +10,7 @@ namespace Medvya.Prescribing.Infrastructure.Persistence;
 public sealed class PrescribingDbContext(DbContextOptions<PrescribingDbContext> options, ICurrentTenant tenant) : DbContext(options)
 {
     public DbSet<FormularyItem> FormularyItems => Set<FormularyItem>();
+    public DbSet<FormularyBrand> FormularyBrands => Set<FormularyBrand>();
     public DbSet<OrderSet> OrderSets => Set<OrderSet>();
     public DbSet<ClinicalOrder> Orders => Set<ClinicalOrder>();
     public DbSet<Referral> Referrals => Set<Referral>();
@@ -49,6 +50,13 @@ public sealed class PrescribingDbContext(DbContextOptions<PrescribingDbContext> 
             // The same medicine once per clinic (the service also compares ignoring case); the starter list has no tenant, so its rows never collide.
             e.HasIndex(x => new { x.TenantId, x.Country, x.Generic, x.Strength, x.Form }).IsUnique();
             e.HasQueryFilter(x => x.TenantId == null || x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<FormularyBrand>(e =>
+        {
+            e.Property(x => x.Name).HasMaxLength(100);
+            e.HasIndex(x => new { x.TenantId, x.FormularyItemId, x.Name }).IsUnique(); // the service also compares ignoring case
+            e.HasOne<FormularyItem>().WithMany().HasForeignKey(x => x.FormularyItemId).OnDelete(DeleteBehavior.Restrict);
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<ClinicalOrder>(e =>
         {

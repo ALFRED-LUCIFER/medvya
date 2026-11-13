@@ -218,8 +218,8 @@ public sealed class VisitStatusEvent
     /// <summary>The desk's note on a cancellation; it may mention health, so it is never on reception screens, in logs or in events.</summary>
     [Classification(DataClass.SensitiveHealth)] public string? Note { get; init; }
     /// <summary>
-    /// Check-in only: milliseconds from the desk tapping "Check in" as the patient arrives to the visit being checked in, timed by
-    /// the desk (pilot metric, exit gate 3). A number, never patient data; null when not timed.
+    /// Check-in only: milliseconds from the desk opening Walk-in, or tapping "Check in" on the board, to the visit being checked in,
+    /// timed by the desk (pilot metric, exit gate 3). A number, never patient data; null when not measured.
     /// </summary>
     [Classification(DataClass.Internal)] public int? CheckInMs { get; init; }
 }

@@ -57,6 +57,38 @@ export const orderSetSchema = z.object({ name: z.string().trim().min(1).max(100)
 export type OrderSetForm = z.infer<typeof orderSetSchema>;
 export const toOrderSetBody = (f: OrderSetForm) => ({ name: f.name, items: f.items.split('\n').map(i => i.trim()).filter(Boolean) });
 
+// Brand names in bulk (MDV-P1-088). The server is the authority on every row; this only splits the pasted text and words its answer.
+/** The allergy classes of the safety rules (SafetyRules.Classes on the server), as a row names them; "none" for a medicine in no class. */
+export const allergyClasses = ['penicillins', 'cephalosporins', 'sulfonamides', 'fluoroquinolones', 'macrolides', 'nsaids', 'opioids', 'none'] as const;
+export const brandRowsSchema = z.object({ rows: z.string() });
+export type BrandRowsForm = z.infer<typeof brandRowsSchema>;
+export type BrandRow = { brand: string; generic: string; strength: string; form: string; allergyClass: string };
+export type BrandProblemCode = 'none' | 'columns' | 'required' | 'too_long' | 'too_many' | 'not_listed' | 'not_checked' | 'mismatch' | 'already_listed' | 'is_generic' | 'failed';
+/** A refused row, counted from 1 as the admin sees it; null when the problem is the whole request. */
+export type BrandProblem = { row: number | null; code: BrandProblemCode };
+const brandRowCodes: readonly string[] = ['required', 'too_long', 'not_listed', 'not_checked', 'mismatch', 'already_listed', 'is_generic'];
+
+/** One brand per line: brand, generic, strength, form, allergy class. Tabs (a paste from a spreadsheet) or commas; blank lines are skipped. */
+export function parseBrandRows(text: string): { rows: BrandRow[]; problems: BrandProblem[] } {
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  const cells = lines.map(l => l.split(l.includes('\t') ? '\t' : ',').map(c => c.trim()));
+  const problems: BrandProblem[] = lines.length === 0 ? [{ row: null, code: 'none' }] : cells.flatMap((c, i) => (c.length === 5 ? [] : [{ row: i + 1, code: 'columns' as const }]));
+  return { rows: cells.map(([brand = '', generic = '', strength = '', form = '', allergyClass = '']) => ({ brand, generic, strength, form, allergyClass })), problems };
+}
+
+/** The server's refusal ("rows[3].generic": ["not_listed"]) as one problem a row and code. Anything else reads as "failed". */
+export function brandProblems(body: unknown): BrandProblem[] {
+  const errors = Object.entries((body as { errors?: Record<string, string[]> } | null)?.errors ?? {});
+  const found = errors.flatMap(([field, codes]): BrandProblem[] => {
+    const row = /^rows\[(\d+)\]/.exec(field);
+    const code = codes[0];
+    if (row && code && brandRowCodes.includes(code)) return [{ row: Number(row[1]) + 1, code: code as BrandProblemCode }];
+    return field === 'rows' && (code === 'required' || code === 'too_many') ? [{ row: null, code: code === 'required' ? 'none' : 'too_many' }] : [];
+  });
+  const once = found.filter((p, i) => found.findIndex(o => o.row === p.row && o.code === p.code) === i);
+  return once.length > 0 ? once.sort((a, b) => (a.row ?? 0) - (b.row ?? 0)) : [{ row: null, code: 'failed' }];
+}
+
 /** What a refusal is worded as: the server's field codes, plus "conflict" (already listed) and "failed" (anything else). */
 export type ProblemCode = 'required' | 'too_long' | 'too_many' | 'unknown' | 'invalid' | 'not_in_country' | 'conflict' | 'failed';
 const problemCodes: readonly string[] = ['required', 'too_long', 'too_many', 'unknown', 'invalid', 'not_in_country'];

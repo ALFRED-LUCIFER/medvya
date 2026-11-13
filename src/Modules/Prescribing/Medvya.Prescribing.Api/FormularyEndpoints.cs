@@ -25,6 +25,8 @@ public static class FormularyEndpoints
         admin.MapGet("/formulary", Search);
         admin.MapPost("/formulary", async ([FromBody] AddMedicine? body, [FromServices] IFormulary f, CancellationToken ct) =>
             body is null ? Required() : Results.Created("/v1/settings/formulary", await f.AddAsync(body, ct)));
+        admin.MapPost("/formulary/brands", async ([FromBody] AddBrands? body, [FromServices] IFormulary f, CancellationToken ct) =>
+            body is null ? Required() : Results.Ok(await f.AddBrandsAsync(body, ct)));
         admin.MapGet("/order-sets", async ([FromServices] IFormulary f, CancellationToken ct) => Results.Ok(await f.OrderSetsAsync(ct)));
         admin.MapPost("/order-sets", async ([FromBody] CreateOrderSet? body, [FromServices] IFormulary f, CancellationToken ct) =>
             body is null ? Required() : Results.Created("/v1/settings/order-sets", await f.CreateOrderSetAsync(body, ct)));

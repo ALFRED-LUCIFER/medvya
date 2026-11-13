@@ -146,7 +146,8 @@ export async function mockPrescription(page: Page, opts: {
   await page.route('**/v1/formulary?*', r => {
     calls.searched.push(new URL(r.request().url()).searchParams.get('q') ?? '');
     const q = (new URL(r.request().url()).searchParams.get('q') ?? '').toLowerCase();
-    return r.fulfill({ json: formulary.filter(f => !opts.formulary || f.generic.toLowerCase().includes(q) || f.brands.some(b => b.toLowerCase().includes(q))) });
+    const starts = (name: string) => ` ${name.toLowerCase()}`.includes(` ${q}`); // the start of a word, as the server matches (MDV-P1-088)
+    return r.fulfill({ json: formulary.filter(f => !opts.formulary || starts(f.generic) || f.brands.some(starts)) });
   });
   return { lines, calls, orders: ordered.orders, orderCalls: ordered.calls };
 }

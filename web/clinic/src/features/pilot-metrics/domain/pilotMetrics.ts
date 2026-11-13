@@ -7,7 +7,7 @@ export type Baseline = { metric: PilotMetricId; value: number; method: string; f
 export type PilotMetrics = {
   from: string;
   to: string;
-  checkIn: { returningMedianSeconds: number | null; returningCount: number; medianSeconds: number | null; count: number; targetSeconds: number };
+  checkIn: { returningMedianSeconds: number | null; returningCount: number; medianSeconds: number | null; count: number; targetSeconds: number; unmeasured: number };
   noShows: { noShows: number; attended: number; percent: number | null };
   doubleBookingRefusals: number;
   baselines: Baseline[];

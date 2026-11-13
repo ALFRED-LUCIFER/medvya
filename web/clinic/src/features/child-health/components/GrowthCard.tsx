@@ -114,7 +114,7 @@ function Measurements({ view }: { view: Growth }) {
   if (view.measurements.length === 0) return <p className="text-muted-foreground">{t('childHealth.growth.none')}</p>;
   const n = (x: number | null) => (x === null ? '' : formatNumber(x));
   return (
-    <Table>
+    <Table label={t('childHealth.growth.table')}>
       <TableCaption className="sr-only">{t('childHealth.growth.table')}</TableCaption>
       <TableHeader>
         <TableRow>

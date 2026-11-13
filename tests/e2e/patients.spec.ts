@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page, type Request } from '@playwright/test';
+import { t } from './support/desk';
 
 // MDV-P1-018 directory and privacy-safe search. CI has no API: /v1/me/context and /v1/patients/* are mocked with the synthetic
 // cast (docs/00-overview/personas.md); the server side is covered by PatientEndpointTests on SQL Server.
@@ -13,8 +14,8 @@ const receptionist = {
 };
 const meeraId = '5e1d0001-0004-4000-8000-000000000001';
 const rows = [
-  { id: meeraId, initials: 'MI', fullName: 'Meera Iyer (synthetic)', ageYears: 54, ageEstimated: false, sexAtBirth: 'Female', mrnTail: '4482', mobileTail: '0101', status: 'Complete' },
-  { id: '5e1d0001-0004-4000-8000-000000000002', initials: 'DN', fullName: 'Deepak Nair (synthetic)', ageYears: 47, ageEstimated: true, sexAtBirth: 'Male', mrnTail: '4483', mobileTail: '0201', status: 'Incomplete' },
+  { id: meeraId, initials: 'MI', fullName: 'Meera Iyer (synthetic)', ageYears: 54, ageEstimated: false, sexAtBirth: 'Female', mrnTail: '4482', mobileTail: '0101', status: 'Complete', dateOfBirth: '1972-03-12', lastVisitOn: '2026-11-12', duplicate: null },
+  { id: '5e1d0001-0004-4000-8000-000000000002', initials: 'DN', fullName: 'Deepak Nair (synthetic)', ageYears: 47, ageEstimated: true, sexAtBirth: 'Male', mrnTail: '4483', mobileTail: '0201', status: 'Incomplete', dateOfBirth: null, lastVisitOn: null, duplicate: null },
 ];
 const meera = {
   id: meeraId, mrn: 'DQ-10-4482', fullName: 'Meera Iyer (synthetic)', arabicName: null, dateOfBirth: '1972-03-12', dateOfBirthEstimated: false,
@@ -68,8 +69,8 @@ test('the desk finds a patient from the header, sees the full name and opens the
   const results = page.getByRole('main').getByRole('table');
   await expect(results).toContainText('Meera Iyer (synthetic)'); // MDV-AUDIT-1100: the name, with the phone and MRN tails, tells similar rows apart
   await expect(results).not.toContainText('+91'); // never the whole phone number
-  await expect(page.getByRole('link', { name: /Meera Iyer \(synthetic\), 54 y, Female, MRN ending 4482, phone ending 0101/ })).toBeVisible();
-  await expect(page.getByRole('link', { name: /Deepak Nair \(synthetic\), about 47 y, Male, MRN ending 4483, phone ending 0201.*incomplete registration/ })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Meera Iyer \(synthetic\), 54 y, Female, Born 12 Mar 1972, MRN ending 4482, phone ending 0101, Last visit 12 Nov 2026\./ })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Deepak Nair \(synthetic\), about 47 y, Male, MRN ending 4483, phone ending 0201, No visit yet\..*incomplete registration/ })).toBeVisible();
 
   await page.getByRole('link', { name: /Meera Iyer \(synthetic\), 54 y/ }).click();
   await expect(page).toHaveURL(`/patients/directory/${meeraId}`);
@@ -210,3 +211,63 @@ test('paging keeps the list on screen and focus on the results, with one live st
   await expect(status).toHaveText('Patients: 45');
   await expect(page.getByRole('heading', { name: 'Patients: 45' })).toBeFocused();
 });
+
+// MDV-P1-101 (audit F-08): two people with one name, age and sex, found by the same phone ending. The server sends the main record first.
+const twin = { initials: 'DN', fullName: 'Deepak Nair (synthetic)', ageYears: 47, ageEstimated: false, sexAtBirth: 'Male', mobileTail: '0102', status: 'Complete' };
+const twins = [
+  { ...twin, id: '5e1d0001-0101-4000-8000-000000000001', mrnTail: '4483', dateOfBirth: '1979-02-01', lastVisitOn: '2026-10-19', duplicate: 'MainRecord' },
+  { ...twin, id: '5e1d0001-0101-4000-8000-000000000002', mrnTail: '4490', dateOfBirth: '1979-06-15', lastVisitOn: null, duplicate: 'PossibleDuplicate' },
+];
+const twinsFound = () => ({ json: { matchedOn: 'Number', items: twins, page: 1, pageSize: 20, total: 2 } });
+
+test('the directory tells two people with one name apart: date of birth, last visit and the duplicate mark', async ({ page }) => {
+  const searches = await deskWith(page, twinsFound);
+  await page.goto('/patients/directory');
+  const search = page.getByRole('searchbox', { name: 'Name, MRN, phone or ID' });
+  await search.fill('0102');
+  await search.press('Enter');
+  const rows = page.getByRole('main').getByRole('table').getByRole('row');
+  await expect(rows.nth(1)).toContainText('01 Feb 1979');
+  await expect(rows.nth(1)).toContainText('19 Oct 2026');
+  await expect(rows.nth(1)).toContainText('Main record');
+  await expect(rows.nth(2)).toContainText('15 Jun 1979');
+  await expect(rows.nth(2)).toContainText('No visit yet');
+  await expect(rows.nth(2)).toContainText('Possible duplicate');
+  await expect(page.getByRole('link', { name: /Deepak Nair \(synthetic\), 47 y, Male, Born 01 Feb 1979, MRN ending 4483, phone ending 0102, Last visit 19 Oct 2026, Main record\./ })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Born 15 Jun 1979, MRN ending 4490, phone ending 0102, No visit yet, Possible duplicate\./ })).toBeVisible();
+  // Neither the search text nor anything about the patients reaches an address.
+  for (const url of [page.url(), ...searches.map(s => s.url())]) expect(url).not.toMatch(/0102|Deepak|Nair|1979/);
+});
+
+for (const locale of ['en', 'ar'])
+  test(`the walk-in picker shows two lines a row, the main record first, 48 px rows that are one target, axe clean (${locale})`, async ({ page }) => {
+    const searches = await deskWith(page, twinsFound, locale);
+    await page.route('**/v1/schedule?*', r => r.fulfill({ json: { facilityId: 'f-1', timeZone: 'Asia/Kolkata', date: '2026-10-19', start: '2026-10-19T02:30:00Z', end: '2026-10-19T15:30:00Z', columns: [] } }));
+    await page.setViewportSize({ width: 820, height: 1180 }); // a tablet at the desk
+    await page.goto('/front-desk/walk-in');
+    await page.getByRole('searchbox').fill('0102');
+    await page.getByRole('searchbox').press('Enter');
+    const picks = page.getByRole('list', { name: t(locale, 'booking.patientResults') }).getByRole('button');
+    await expect(picks).toHaveCount(2);
+    if (locale === 'en') {
+      await expect(picks.nth(0)).toHaveAccessibleName('Deepak Nair (synthetic), 47 y, Male, Born 01 Feb 1979, MRN 4483, phone 0102, Last visit 19 Oct 2026, Main record. Choose for this booking');
+      await expect(picks.nth(1)).toHaveAccessibleName('Deepak Nair (synthetic), 47 y, Male, Born 15 Jun 1979, MRN 4490, phone 0102, No visit yet, Possible duplicate. Choose for this booking');
+      await expect(picks.nth(0)).toContainText('Born 01 Feb 1979');
+      await expect(picks.nth(0)).toContainText('Last visit 19 Oct 2026');
+      await expect(picks.nth(0)).toContainText('Main record');
+      await expect(picks.nth(1)).toContainText('Possible duplicate');
+      await expect(picks.nth(1)).not.toContainText('+91'); // the phone and the MRN stay masked
+    } else await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+    for (const pick of await picks.all()) {
+      const [button, row] = [await pick.boundingBox(), await pick.locator('xpath=..').boundingBox()];
+      expect(button!.height).toBeGreaterThanOrEqual(48);
+      // The whole row is the target: the button fills the list item except the 1 px divider between rows.
+      expect(button!.width).toBe(row!.width);
+      expect(row!.height - button!.height).toBeLessThanOrEqual(1);
+    }
+    expect(await axe(page)).toEqual([]);
+    for (const url of [page.url(), ...searches.map(s => s.url())]) expect(url).not.toMatch(/0102|Deepak|Nair|1979/);
+    // Choosing is still one click.
+    await picks.nth(0).click();
+    await expect(picks.nth(0)).toHaveAttribute('aria-pressed', 'true');
+  });

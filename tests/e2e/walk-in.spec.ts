@@ -61,19 +61,25 @@ test('a new walk-in is quick-registered and checked in within a minute, then wai
   const calls = await desk(page);
   const started = Date.now();
   await page.goto('/front-desk');
-  await page.getByRole('link', { name: 'Walk-in' }).click();
-  await page.getByRole('link', { name: 'New patient: quick registration' }).click();
+  await page.getByRole('link', { name: 'Walk-in' }).click(); // click 1
+  const register = page.getByRole('link', { name: 'New patient: quick registration' });
+  await expect(register).toBeVisible();
+  const opened = Date.now(); // Walk-in is open: the check-in clock is running (MDV-P1-106)
+  await register.click(); // click 2
   await expect(page.getByRole('link', { name: 'Quick (busy desk)' })).toHaveAttribute('aria-current', 'page');
   await page.getByLabel('Full name').fill('Arjun Nair (synthetic)');
   await page.getByLabel('Mobile').fill('+91 90000 00777');
   await page.getByRole('textbox', { name: 'Date of birth', exact: true }).fill('1990-01-01');
   await page.getByRole('radio', { name: 'Male', exact: true }).check();
-  await page.getByRole('button', { name: 'Register patient' }).click();
-  await page.getByRole('link', { name: 'Check in now (walk-in)' }).click();
+  await page.getByRole('button', { name: 'Register patient' }).click(); // click 3 (the sex radio is a form field, as before)
+  const back = page.getByRole('link', { name: 'Check in now (walk-in)' });
+  await expect(back).toBeVisible();
+  const registered = Date.now();
+  await back.click(); // click 4
 
   await expect(page).toHaveURL(`/front-desk/walk-in?patient=${patientId}`); // an opaque id, never patient data
   await expect(page.getByText('Patient: Arjun Nair (synthetic) · MRN 000777')).toBeVisible();
-  await page.getByRole('button', { name: 'Check in now' }).click();
+  await page.getByRole('button', { name: 'Check in now' }).click(); // click 5: a new walk-in is still 5 clicks (limit 6), none added
   await expect(page.getByRole('heading', { name: 'Arjun Nair (synthetic) is checked in' })).toBeVisible();
   await expect(page.getByText('Walk-in with Dr. Arjun Rao (synthetic) at 10:40.', { exact: false })).toBeVisible();
   await expect(page.getByText('Token A-02')).toBeVisible(); // MDV-P1-052: the token is on the success screen, not only on the board
@@ -84,7 +90,8 @@ test('a new walk-in is quick-registered and checked in within a minute, then wai
   expect(calls.walkIns[0]!.postDataJSON()).toEqual({ facilityId: 'f-1', patientId, calendarId: null, visitType: 'NewConsultation', reasonCategory: 'General', allowRepeat: false });
   expect(new URL(calls.walkIns[0]!.url()).search).toBe('');
   expect(calls.checkIns[0]!.url()).toContain('/v1/appointments/a-9/check-in');
-  expect((calls.checkIns[0]!.postDataJSON() as { elapsedMs: number }).elapsedMs).toBeGreaterThan(0);
+  // Timed from opening Walk-in, through quick registration, to the check-in: not from coming back with the patient chosen.
+  expect((calls.checkIns[0]!.postDataJSON() as { elapsedMs: number }).elapsedMs).toBeGreaterThanOrEqual(registered - opened);
 
   await page.getByRole('link', { name: 'Back to the board' }).first().click();
   const checkedIn = page.getByRole('region', { name: /Checked in/ });
@@ -113,6 +120,8 @@ test('with no free slot today the desk chooses a doctor and the patient is queue
   await expect(page.getByText('No free slot today: queued for Dr. Arjun Rao (synthetic) without taking a slot.', { exact: false })).toBeVisible();
   expect(calls.walkIns.at(-1)!.postDataJSON()).toMatchObject({ calendarId: 'd-1' });
   expect(calls.checkIns).toHaveLength(1);
+  // Arrived with the patient already chosen and no Walk-in opened before: the start was not seen, so not measured, never ~0 s (MDV-P1-106).
+  expect(calls.checkIns[0]!.postDataJSON()).toEqual({ elapsedMs: null });
 });
 
 // MDV-P1-052: a second walk-in for a patient who already has an open visit today is a warning first, then a deliberate choice.

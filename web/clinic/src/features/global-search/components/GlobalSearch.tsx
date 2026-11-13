@@ -5,6 +5,7 @@ import {
   Button, buttonVariants, Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@medvya/ui';
 import { accessReasons, type AccessReason } from '../../clinical-access/domain/clinicalAccess';
+import PatientSummaryLine from '../../patients/components/PatientSummaryLine';
 import type { LookupRow } from '../domain/lookup';
 
 type Props = {
@@ -19,7 +20,7 @@ type Props = {
   startVisitPath: string | null; bookPath: string | null; registerPath: string | null;
 };
 
-/** D-02 global search overlay: opened with ⌘K / Ctrl+K or the header button. Initials, age and MRN tail only until a chart is opened. */
+/** D-02 global search overlay: opened with ⌘K / Ctrl+K or the header button. Each row is the desk's search row (MDV-P1-101); numbers stay masked until a chart is opened. */
 export default function GlobalSearch(p: Props) {
   const { t } = useI18n();
   return (
@@ -55,15 +56,12 @@ export default function GlobalSearch(p: Props) {
 
 function Row({ row, index, selected, onActive }: { row: LookupRow; index: number; selected: boolean; onActive: (i: number) => void }) {
   const { t } = useI18n();
-  const age = t(row.ageEstimated ? 'patients.ageEstimated' : 'patients.age', { age: row.ageYears });
   const note = row.access === 'CanRequest' ? t('globalSearch.notYours') : row.access === 'RequestPending' ? t('globalSearch.pending') : row.access === 'NoAccess' ? t('globalSearch.noChart') : null;
   return (
     // The row is text only; its actions sit below the list, so nothing interactive is nested in the option.
     <li id={`gs-row-${index}`} role="option" aria-selected={selected} onClick={() => onActive(index)}
-      className="flex min-h-11 cursor-pointer flex-wrap items-center gap-x-3 gap-y-0.5 rounded-md border px-3 py-2 text-sm aria-selected:border-action-600 aria-selected:bg-muted">
-      <strong className="font-extrabold">{row.initials}</strong>
-      <span>{age}</span>
-      <bdi className="font-mono text-xs text-muted-foreground">{t('patients.mrnTail', { mrn: row.mrnTail })}</bdi>
+      className="flex min-h-12 cursor-pointer flex-wrap items-center gap-x-3 gap-y-0.5 rounded-md border px-3 py-2 text-sm aria-selected:border-action-600 aria-selected:bg-muted">
+      <PatientSummaryLine row={row} spoken />
       {note && <span className="text-xs font-bold text-ink-700">{note}</span>}
     </li>
   );

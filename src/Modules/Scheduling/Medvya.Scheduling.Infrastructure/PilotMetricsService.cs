@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Medvya.Scheduling.Infrastructure;
 
 /// <summary>
-/// Pilot metrics (MDV-P1-041) from what scheduling already writes: timed check-in status events, visit states and the database's
+/// Pilot metrics (MDV-P1-041) from what scheduling already writes: check-in status events (timed or not measured), visit states and the database's
 /// double-booking refusals. Aggregates only; patient ids are used to tell returning patients and never leave this class.
 /// </summary>
 public sealed class PilotMetricsService(SchedulingDbContext db, SchedulingContext context) : IPilotMetrics
@@ -22,15 +22,18 @@ public sealed class PilotMetricsService(SchedulingDbContext db, SchedulingContex
         var checkIns = await (
             from e in db.StatusEvents
             join a in db.Appointments on e.AppointmentId equals a.Id
-            where e.State == AppointmentState.CheckedIn && e.CheckInMs != null && e.OccurredAt >= since && e.OccurredAt < until && a.FacilityId == facilityId
-            select new { a.PatientId, a.Start, Ms = e.CheckInMs!.Value }).ToListAsync(cancellationToken);
+            where e.State == AppointmentState.CheckedIn && e.OccurredAt >= since && e.OccurredAt < until && a.FacilityId == facilityId
+            select new { a.PatientId, a.Start, e.CheckInMs }).ToListAsync(cancellationToken);
+        // Not measured (no start, or an impossible time) is left out and counted apart, never read as zero (MDV-P1-106).
+        var arrivals = checkIns.Count;
+        checkIns = [.. checkIns.Select(c => c with { CheckInMs = PilotMetricRules.TimedMs(c.CheckInMs) }).Where(c => c.CheckInMs != null)];
         // Returning: the patient came to an earlier visit at the practice (any location) before this one.
         var patientIds = checkIns.Select(c => c.PatientId).Distinct().ToList();
         var firstVisit = await db.Appointments.Where(a => patientIds.Contains(a.PatientId) && Attended.Contains(a.State))
             .GroupBy(a => a.PatientId).Select(g => new { g.Key, First = g.Min(a => a.Start) }).ToDictionaryAsync(x => x.Key, x => x.First, cancellationToken);
-        var returning = checkIns.Where(c => firstVisit.TryGetValue(c.PatientId, out var first) && first < c.Start).Select(c => c.Ms / 1000d).ToList();
-        var checkIn = new CheckInMetric(PilotMetricRules.Median(returning), returning.Count, PilotMetricRules.Median(checkIns.Select(c => c.Ms / 1000d)), checkIns.Count,
-            PilotMetricRules.CheckInTargetSeconds);
+        var returning = checkIns.Where(c => firstVisit.TryGetValue(c.PatientId, out var first) && first < c.Start).Select(c => c.CheckInMs!.Value / 1000d).ToList();
+        var checkIn = new CheckInMetric(PilotMetricRules.Median(returning), returning.Count, PilotMetricRules.Median(checkIns.Select(c => c.CheckInMs!.Value / 1000d)), checkIns.Count,
+            PilotMetricRules.CheckInTargetSeconds, arrivals - checkIns.Count);
 
         // Walk-ins never no-show; a booked visit still waiting for its outcome counts in neither number.
         var states = await db.Appointments.Where(a => a.FacilityId == facilityId && !a.WalkIn && a.Start >= since && a.Start < until)

@@ -11,7 +11,7 @@ describe('pilot metrics', () => {
   });
 
   it('reports the gap to the 60 s check-in target, or none without returning patients', () => {
-    const base = { returningCount: 2, medianSeconds: 70, count: 3, targetSeconds: 60 };
+    const base = { returningCount: 2, medianSeconds: 70, count: 3, targetSeconds: 60, unmeasured: 0 };
     expect(checkInGap({ ...base, returningMedianSeconds: 74.6 })).toBe(15);
     expect(checkInGap({ ...base, returningMedianSeconds: 41 })).toBe(0);
     expect(checkInGap({ ...base, returningMedianSeconds: null })).toBeNull();

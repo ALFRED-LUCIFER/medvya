@@ -1,7 +1,7 @@
 import { useId } from 'react';
 import { Copy, FileCheck, KeyRound, UserPlus, UserX } from 'lucide-react';
 import { useI18n, type MessageKey } from '@medvya/i18n';
-import { Button, Card, Input, PageContainer, PageHeader, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState } from '@medvya/ui';
+import { Button, Card, ErrorSummary, Field, FieldMarks, Input, PageContainer, PageHeader, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState } from '@medvya/ui';
 import type { FormEventHandler } from 'react';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 import ReasonPanel from '../../shell/components/ReasonPanel';
@@ -22,9 +22,12 @@ type Props = {
 export default function TeamPage({ vm }: Props) {
   const { t, formatDate, formatTime, formatCalendarDate } = useI18n();
   const ids = { name: useId(), email: useId(), role: useId(), ends: useId() };
-  const errorText = (code?: string) => (code ? t(`platform.error.${code}` as MessageKey) : null);
+  const errorText = (code?: string) => (code ? t(`platform.error.${code}` as MessageKey) : undefined);
   const when = (iso: string) => `${formatDate(new Date(iso))} ${formatTime(new Date(iso))}`;
   const e = vm.inviteForm.formState.errors;
+  const inviteErrors = ([['displayName', ids.name, 'platform.team.name'], ['email', ids.email, 'platform.team.email'], ['accessEndsOn', ids.ends, 'platform.team.accessEnds'],
+    ['reason', `${ids.name}-reason`, 'platform.reason.label']] as const)
+    .flatMap(([name, id, label]) => (e[name]?.message ? [{ id, label: t(label), message: errorText(e[name]?.message)! }] : []));
 
   return (
     <PageContainer>
@@ -54,35 +57,30 @@ export default function TeamPage({ vm }: Props) {
       {vm.inviting && (
         <Card title={t('platform.team.inviteTitle')}>
           <form onSubmit={vm.onInvite} noValidate className="grid gap-3 sm:grid-cols-2">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor={ids.name}>{t('platform.team.name')}</Label>
-              <Input id={ids.name} autoComplete="off" aria-invalid={e.displayName ? true : undefined} {...vm.inviteForm.register('displayName')} />
-              {e.displayName && <p className="text-sm font-semibold text-danger-700">{errorText(e.displayName.message)}</p>}
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor={ids.email}>{t('platform.team.email')}</Label>
-              <Input id={ids.email} type="email" dir="ltr" autoComplete="off" aria-invalid={e.email ? true : undefined} {...vm.inviteForm.register('email')} />
-              {e.email && <p className="text-sm font-semibold text-danger-700">{errorText(e.email.message)}</p>}
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor={ids.role}>{t('platform.team.role')}</Label>
+            <ErrorSummary title={t('field.errorSummary')} focusKey={vm.inviteForm.formState.submitCount} errors={inviteErrors} className="sm:col-span-2" />
+            {/* Most answers are required, so only the optional end date is marked, in words. */}
+            <FieldMarks mark="optional">
+              <Field id={ids.name} label={t('platform.team.name')} required error={errorText(e.displayName?.message)}>
+                <Input autoComplete="off" {...vm.inviteForm.register('displayName')} />
+              </Field>
+              <Field id={ids.email} label={t('platform.team.email')} required error={errorText(e.email?.message)}>
+                <Input type="email" dir="ltr" autoComplete="off" {...vm.inviteForm.register('email')} />
+              </Field>
               <Controller control={vm.inviteForm.control} name="role" render={({ field }) => (
                 <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger id={ids.role}><SelectValue /></SelectTrigger>
+                  <Field id={ids.role} label={t('platform.team.role')} required>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                  </Field>
                   <SelectContent>{roles.map(r => <SelectItem key={r} value={r}>{t(`platform.role.${r}`)}</SelectItem>)}</SelectContent>
                 </Select>
               )} />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor={ids.ends}>{t('platform.team.accessEnds')}</Label>
-              <Input id={ids.ends} type="date" aria-describedby={`${ids.ends}-hint`} {...vm.inviteForm.register('accessEndsOn')} />
-              <p id={`${ids.ends}-hint`} className="text-sm text-muted-foreground">{t('platform.team.accessEndsHint')}</p>
-            </div>
-            <div className="flex flex-col gap-1.5 sm:col-span-2">
-              <Label htmlFor={`${ids.name}-reason`}>{t('platform.reason.label')}</Label>
-              <Input id={`${ids.name}-reason`} aria-invalid={e.reason ? true : undefined} {...vm.inviteForm.register('reason')} />
-              <p className={e.reason ? 'text-sm font-semibold text-danger-700' : 'text-sm text-muted-foreground'}>{e.reason ? errorText(e.reason.message) : t('platform.reason.hint')}</p>
-            </div>
+              <Field id={ids.ends} label={t('platform.team.accessEnds')} hint={t('platform.team.accessEndsHint')} error={errorText(e.accessEndsOn?.message)}>
+                <Input type="date" {...vm.inviteForm.register('accessEndsOn')} />
+              </Field>
+              <Field id={`${ids.name}-reason`} label={t('platform.reason.label')} required hint={t('platform.reason.hint')} error={errorText(e.reason?.message)} className="sm:col-span-2">
+                <Input {...vm.inviteForm.register('reason')} />
+              </Field>
+            </FieldMarks>
             {vm.inviteFailed && <p role="alert" className="text-sm font-semibold text-danger-700 sm:col-span-2">{t('platform.error.failed')}</p>}
             <div className="flex flex-wrap gap-2 sm:col-span-2">
               <Button type="submit" loading={vm.inviteBusy}>{t('platform.team.sendInvite')}</Button>

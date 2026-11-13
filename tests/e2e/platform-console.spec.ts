@@ -74,7 +74,13 @@ test('team actions need a reason, which is sent with the invitation; the link is
   await page.getByLabel('Name').fill('Kavya (synthetic)');
   await page.getByLabel('Work email').fill('kavya@medvya.example');
   await page.getByRole('button', { name: 'Create invitation link' }).click();
-  await expect(page.getByText('Give a reason of at least 5 characters.')).toBeVisible();
+  // MDV-P2-058: the refused invitation focuses the error summary; its link focuses the reason.
+  const summary = page.getByRole('group', { name: 'There is a problem' });
+  await expect(summary).toBeFocused();
+  await expect(summary.getByRole('link')).toHaveText(['Reason (saved in the audit log): Give a reason of at least 5 characters.']);
+  expect(await axe(page)).toEqual([]);
+  await summary.getByRole('link').click();
+  await expect(page.getByLabel('Reason (saved in the audit log)')).toBeFocused();
   expect(body).toEqual({});
   await page.getByLabel('Reason (saved in the audit log)').fill('New licence reviewer joining');
   await page.getByRole('button', { name: 'Create invitation link' }).click();

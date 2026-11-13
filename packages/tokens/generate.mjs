@@ -11,7 +11,16 @@ const num = v => (/^[\d.]+(px|ms)$/.test(v) ? parseFloat(v) : v);
 // `space` is not one: it names the allowed steps of Tailwind's own numeric scale, which a --spacing-<n> key would override.
 const groups = ['color', 'radius', 'font', 'breakpoint', 'text', 'space', 'spacing', 'container', 'shadow', 'ease', 'transition-duration'];
 
-export function render(t) {
+export function render(source) {
+  // A tone names a palette colour per role; it renders as --color-<tone>-<role> (text-danger-text, bg-danger-bg, border-danger-border).
+  const tone = Object.fromEntries(Object.entries(source.tone).map(([name, roles]) =>
+    [name, Object.fromEntries(Object.entries(roles).map(([role, ref]) => {
+      if (!source.color[ref]) throw new Error(`tone ${name}.${role} names a colour that does not exist: ${ref}`);
+      return [role, source.color[ref]];
+    }))]));
+  const toneColors = Object.entries(tone).flatMap(([name, roles]) => Object.entries(roles).map(([role, v]) => [`${name}-${role}`, v]));
+  const toneNotes = Object.fromEntries(Object.keys(tone).map(name => [`color-${name}-text`, source.notes[`tone-${name}`]]));
+  const t = { ...source, color: { ...source.color, ...Object.fromEntries(toneColors) }, notes: { ...source.notes, ...toneNotes } };
   const cssVar = (g, k) => (g === 'radius' && k === 'default' ? '--radius' : `--${g}-${k}`);
   // A type token is an object: font-size is --text-<name>, the others are Tailwind's --text-<name>--<property> modifiers.
   const decls = (g, k, v) => (typeof v === 'string' ? [[cssVar(g, k), v]]
@@ -21,7 +30,7 @@ export function render(t) {
   const css = `/* Generated from tokens.json by generate.mjs. Do not edit. */\n@theme static {\n${lines.join('\n')}\n}\n`;
   const plain = v => (typeof v === 'string' ? num(v) : obj(v));
   const obj = o => Object.fromEntries(Object.entries(o).map(([k, v]) => [camel(k), plain(v)]));
-  const theme = `// Generated from tokens.json by generate.mjs. Do not edit. Plain values for React Native (px and ms become numbers).\nexport const theme = ${JSON.stringify(Object.fromEntries(groups.map(g => [camel(g), obj(t[g])])), null, 2)} as const;\n`;
+  const theme = `// Generated from tokens.json by generate.mjs. Do not edit. Plain values for React Native (px and ms become numbers).\nexport const theme = ${JSON.stringify({ ...Object.fromEntries(groups.map(g => [camel(g), obj(t[g])])), tone }, null, 2)} as const;\n`;
   return { css, theme };
 }
 

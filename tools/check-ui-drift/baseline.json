@@ -91,10 +91,7 @@
     "web/clinic/src/features/today/components/DoctorTodayPage.tsx": 8,
     "web/platform-admin/src/features/shell/components/ConsoleShell.tsx": 2
   },
-  "rawHexLibrary": {
-    "packages/ui/src/components/ui/button.tsx": 2,
-    "packages/ui/src/primitives.tsx": 88
-  },
+  "rawHexLibrary": {},
   "rawHexApps": {
     "web/clinic/src/features/documents/components/DocumentsPage.tsx": 1,
     "web/platform-admin/src/features/approvals/components/DocumentViewer.tsx": 1

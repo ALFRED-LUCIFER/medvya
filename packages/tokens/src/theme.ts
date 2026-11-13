@@ -57,7 +57,46 @@ export const theme = {
     "destructiveForeground": "#ffffff",
     "border": "#dfe7ed",
     "input": "#76899c",
-    "ring": "#2563eb"
+    "ring": "#2563eb",
+    "white": "#ffffff",
+    "danger800": "#8a1626",
+    "danger500": "#c83a4b",
+    "danger200": "#f3b9c0",
+    "danger25": "#fff7f8",
+    "warning800": "#7a4710",
+    "warning500": "#b7791f",
+    "warning200": "#efd5a6",
+    "success800": "#07774f",
+    "success100": "#e6f4ef",
+    "info700": "#1d4ed8",
+    "info300": "#93b4f5",
+    "ai300": "#a897e8",
+    "sage700": "#3e6a4d",
+    "sage50": "#eef4ef",
+    "ink200": "#cbd6e0",
+    "ink100": "#edf1f5",
+    "disabled": "#e6ecf1",
+    "dangerText": "#8a1626",
+    "dangerBg": "#fdecee",
+    "dangerBorder": "#c83a4b",
+    "warningText": "#7a4710",
+    "warningBg": "#fdf5e7",
+    "warningBorder": "#b7791f",
+    "successText": "#07774f",
+    "successBg": "#e6f4ef",
+    "successBorder": "#087f5b",
+    "infoText": "#1d4ed8",
+    "infoBg": "#eff4ff",
+    "infoBorder": "#2563eb",
+    "brandText": "#0f766e",
+    "brandBg": "#e7f6f4",
+    "brandBorder": "#0e9384",
+    "aiText": "#5b3fc4",
+    "aiBg": "#f2effc",
+    "aiBorder": "#7155d8",
+    "neutralText": "#334e68",
+    "neutralBg": "#f1f5f8",
+    "neutralBorder": "#76899c"
   },
   "radius": {
     "default": 10,
@@ -168,5 +207,42 @@ export const theme = {
   },
   "transitionDuration": {
     "fast": 150
+  },
+  "tone": {
+    "danger": {
+      "text": "#8a1626",
+      "bg": "#fdecee",
+      "border": "#c83a4b"
+    },
+    "warning": {
+      "text": "#7a4710",
+      "bg": "#fdf5e7",
+      "border": "#b7791f"
+    },
+    "success": {
+      "text": "#07774f",
+      "bg": "#e6f4ef",
+      "border": "#087f5b"
+    },
+    "info": {
+      "text": "#1d4ed8",
+      "bg": "#eff4ff",
+      "border": "#2563eb"
+    },
+    "brand": {
+      "text": "#0f766e",
+      "bg": "#e7f6f4",
+      "border": "#0e9384"
+    },
+    "ai": {
+      "text": "#5b3fc4",
+      "bg": "#f2effc",
+      "border": "#7155d8"
+    },
+    "neutral": {
+      "text": "#334e68",
+      "bg": "#f1f5f8",
+      "border": "#76899c"
+    }
   }
 } as const;

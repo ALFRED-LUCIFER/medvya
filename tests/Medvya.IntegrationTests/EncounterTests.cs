@@ -230,13 +230,15 @@ public sealed class EncounterTests(PostgresFixture sql) : IClassFixture<Postgres
     }
 
     [Fact]
-    public async Task ADeskMoveBeforeTheEndLeavesTheVisitWhereTheDeskPutIt()
+    public async Task AVisitAlreadyMovedOnBeforeTheEndStaysWhereItIs()
     {
         await h.StepsAsync(nurse: false, billing: true);
         var visit = await ArrivedAsync();
         var started = await Encounters(h.Doctor).StartAsync(new StartEncounter(visit));
-        await h.FrontDesk(h.Reception).MoveAsync(visit, new MoveVisit { State = AppointmentState.Billing });
-        await h.FrontDesk(h.Reception).MoveAsync(visit, new MoveVisit { State = AppointmentState.Done });
+        // Since MDV-P1-100 the desk cannot close a visit under an open consultation (VisitUndoTests); rows closed that way before it still end cleanly.
+        Assert.Equal("with_doctor", (await Assert.ThrowsAsync<VisitTransitionException>(() => h.FrontDesk(h.Reception).MoveAsync(visit, new MoveVisit { State = AppointmentState.Billing }))).Code);
+        await using (var db = sql.Scheduling(h.Tenant))
+            await db.Appointments.Where(a => a.Id == visit).ExecuteUpdateAsync(s => s.SetProperty(a => a.State, AppointmentState.Done));
         Assert.Equal(EncounterStatus.Ended, (await Encounters(h.Doctor).EndAsync(started!.Id))!.Status);
         Assert.Equal(AppointmentState.Done, (await VisitAsync(visit)).State);
     }

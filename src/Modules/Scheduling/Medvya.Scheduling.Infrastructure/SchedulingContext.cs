@@ -30,13 +30,14 @@ public sealed class SchedulingContext(
     /// Writes the use case's audit event inside its open transaction, after its changes are saved and before the commit, so the
     /// event commits with the change and a failed audit write rolls it back (fail closed, MDV-P0-017). Opaque ids and codes only.
     /// </summary>
-    public Task AuditAsync(string action, string resourceType, string purpose, Guid? resourceId, Guid? patientId, CancellationToken cancellationToken)
+    /// <param name="detail">Codes only (states, a reason code), never names or free text.</param>
+    public Task AuditAsync(string action, string resourceType, string purpose, Guid? resourceId, Guid? patientId, CancellationToken cancellationToken, string? detail = null)
     {
         var tx = db.Database.CurrentTransaction ?? throw new InvalidOperationException("An audited write runs in a transaction.");
         return audit.WriteAsync(new AuditEvent
         {
             Id = Guid.CreateVersion7(), TenantId = TenantId, ActorUserId = UserId, Action = action, ResourceType = resourceType,
-            ResourceId = resourceId, PatientId = patientId, Purpose = purpose, Outcome = AuditOutcome.Allowed, OccurredAt = Now,
+            ResourceId = resourceId, PatientId = patientId, Purpose = purpose, Outcome = AuditOutcome.Allowed, OccurredAt = Now, Detail = detail,
         }, tx.GetDbTransaction(), cancellationToken);
     }
 

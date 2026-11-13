@@ -197,6 +197,14 @@ public interface IBookingService
     Task<AppointmentChip> MarkNoShowAsync(Guid appointmentId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// The patient arrived and left before the doctor saw them (MDV-P1-100): a waiting visit ends as Left without being seen, with a reason
+    /// as for a cancellation. Its slots are freed and its token leaves the queue display; the patient is sent nothing. A queue action
+    /// (full "Check-in &amp; queue"), audited with the reason code and the state it left.
+    /// </summary>
+    /// <exception cref="VisitTransitionException">Not waiting ("invalid_transition"), or changed meanwhile ("changed").</exception>
+    Task<AppointmentChip> MarkLeftAsync(Guid appointmentId, CancelAppointment command, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// The visit's moves, oldest first (MDV-P1-024): each reschedule and each same-day move to another doctor's queue (MDV-P1-030),
     /// with the old and new slot, who moved it and when. Calendar and staff display names, times and a reason code only.
     /// </summary>

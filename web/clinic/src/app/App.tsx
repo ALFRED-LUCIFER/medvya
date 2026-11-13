@@ -152,7 +152,7 @@ export default function App({ locale, onLocaleChange }: Props) {
             : i.id === 'today' && active.capabilities.Patient360Chart === 'Full' && pathOf('frontDesk')
             ? <TodayRoute facilityId={active.facilityId} online={online} userId={shell.session?.user.id ?? ''} />
             : i.id === 'frontDesk' || (i.id === 'today' && pathOf('frontDesk'))
-            ? <FrontDeskRoute facilityId={active.facilityId} online={online} canMove={active.capabilities.CheckInQueue === 'Full'}
+            ? <FrontDeskRoute facilityId={active.facilityId} online={online} canMove={active.capabilities.CheckInQueue === 'Full'} canCancel={active.capabilities.RegisterBookPatients === 'Full'}
                 registerPath={registerPath} walkInPath={walkInPath} waitlistPath={waitlistPath} billingPath={shell.items.find(b => b.id === 'billing')?.path ?? null}
                 canConsult={active.capabilities.Patient360Chart === 'Full'} steps={{ nurse: active.flags.includes('clinical.nurse-intake'), billing: active.flags.includes('billing.invoices') }}
                 intakePath={nursePath && active.capabilities.VitalsAllergiesEntry === 'Full' ? (id: string) => `${nursePath}/${id}` : null} />

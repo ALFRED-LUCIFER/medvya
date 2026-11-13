@@ -593,6 +593,10 @@ namespace Medvya.Scheduling.Infrastructure.Persistence.Migrations
                     b.Property<int?>("CheckInMs")
                         .HasColumnType("integer");
 
+                    b.Property<string>("FromState")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
                     b.Property<string>("Note")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");

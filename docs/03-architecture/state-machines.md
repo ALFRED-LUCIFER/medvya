@@ -11,13 +11,20 @@ BOOKED ──check-in──▶ CHECKED_IN ──▶ WITH_NURSE ──▶ READY_F
   ├─mark no-show──▶ NO_SHOW ──offer rebook──▶ (new BOOKED)
   ╰─leave / shortened day─▶ NEEDS_REBOOKING ──reschedule──▶ BOOKED   (or cancel)
 WALK_IN ──▶ CHECKED_IN
+CHECKED_IN | WITH_NURSE | READY_FOR_DOCTOR ──left(reason)──▶ LEFT_WITHOUT_BEING_SEEN
+any board move ──undo (own move, 30 s)──▶ the state it left
 ```
 - Check-in is only allowed from BOOKED, on the visit's facility-local day.
 - WITH_NURSE and BILLING are optional steps (MDV audit UX-05, `VisitSteps`): WITH_NURSE only while the tenant flag `clinical.nurse-intake` is on, BILLING only while `billing.invoices` is on. A step that is off is skipped (CHECKED_IN → READY_FOR_DOCTOR, IN_CONSULT → DONE) and its board column is hidden; a visit already in it when the step is turned off still moves on.
 - No-show is only allowed from BOOKED, once the start time has passed.
 - Reschedule is only allowed from BOOKED, to a free slot of a calendar of the same kind. History is kept: the old slot, the new slot, who and when.
 - Cancel needs a reason from a short list, and Other needs a note. It is allowed from BOOKED, or from CHECKED_IN when the patient leaves before being seen. From WITH_NURSE on, the visit is finished on the board, and a completed, cancelled or no-show visit cannot be cancelled. This is narrower than the design's "not when Completed" (MDV-P1-024).
-- Reschedule, cancel and no-show free the visit's slots in the same transaction, under the doctor-day lock of every day they touch (MDV-P1-022, MDV-P1-024).
+- **Left without being seen** (MDV-P1-100) is an end state of its own for a patient who arrived and went before the doctor saw them: allowed from CHECKED_IN, WITH_NURSE and READY_FOR_DOCTOR, with a reason as for a cancellation (the same list; Other needs a note). It is a queue action (full "Check-in & queue"). The visit leaves the board and the queue display, is never counted in DONE (the board counts it apart), its token is not reissued, and the patient is sent nothing (`AppointmentLeft.v1` has no subscriber). It is not a no-show (they came) and cannot be cancelled, moved or undone.
+- **Undo** (MDV-P1-100, `POST /v1/appointments/{id}/undo`) puts a visit back in the state its last move took it from, with its token. The server allows it only for the caller's own move, within 30 seconds (`VisitFlow.UndoWindow`), while that move is still the visit's latest change, and the caller names the state they saw: otherwise 409 `undo_expired` or `changed`. Only a move backwards to CHECKED_IN, READY_FOR_DOCTOR, IN_CONSULT or BILLING is undone: not check-in, not the nurse's handoff, not an end state, not an undo. With the nurse step off, the automatic CHECKED_IN → READY_FOR_DOCTOR step of a check-in may be undone to CHECKED_IN through the API (the board does not offer it; the token stays). Undoing a call-in clears the room. Each status event keeps the state it left (`FromState`).
+- **The desk cannot close a visit under the doctor** (MDV-P1-100). While a consultation is open for the visit (asked of the Encounters module, `IOpenConsultations`), the board's move out of IN_CONSULT and an undo are refused with 409 `with_doctor`, and the board card carries `withDoctor`. The doctor's End moves the visit. A clinic whose doctors do not use the consultation screen has no open consultation, so the desk's Call in and Consult done work as before.
+- Two people changing one visit: a move is a conditional update from the state the caller saw, so the second gets a 409 (`invalid_transition`, `changed`, `with_doctor`) and never overwrites the first; repeating the same move changes nothing.
+- Undo, cancel, no-show and left-without-being-seen are audited with who, when and a detail of codes only: the state the visit left and the reason code (`from=READY…;reason=…`). A cancellation note stays on the status event.
+- Reschedule, cancel, no-show and left-without-being-seen free the visit's slots in the same transaction, under the doctor-day lock of every day they touch (MDV-P1-022, MDV-P1-024).
 - Leave or a shortened day (MDV-P1-012) moves each affected BOOKED visit to NEEDS_REBOOKING, freeing its slots in the same transaction as the leave. Saving needs an action for every affected visit: offer (AppointmentNeedsRebooking.v1 makes the patient's rebooking message, clinic, date and time only) or manual (no message). Reschedule and cancel are allowed from NEEDS_REBOOKING; the visit shows in the board's "needs rebooking" section.
 - Statuses visible to reception are **nonclinical**.
 - Call in (READY_FOR_DOCTOR → IN_CONSULT) records the room of the doctor's session from the schedule template (MDV-P1-029).
@@ -33,7 +40,7 @@ WALK_IN ──▶ CHECKED_IN
 `ACTIVE → ENDED`. There is one encounter per visit, led by the doctor who started it, and authority is Medvya (a hospital HIS comes in P7).
 - **Start** is allowed from a waiting visit (CHECKED_IN, WITH_NURSE, READY_FOR_DOCTOR) on the visit's facility-local day. It moves the visit to IN_CONSULT with the room of the doctor's session, in the same transaction as the encounter. Starting a visit already IN_CONSULT just creates the encounter. A second start, or one at the same moment, returns the same encounter.
 - **One open consultation per doctor.** To start another, the doctor ends the open one or explicitly leaves it open (`leaveOpen`).
-- **End** moves the visit IN_CONSULT → BILLING, or → DONE when billing is off. A visit the desk already moved on stays where it is. An ended encounter is never reopened.
+- **End** moves the visit IN_CONSULT → BILLING, or → DONE when billing is off. While the consultation is open the desk cannot move the visit on or undo it (MDV-P1-100); a visit found elsewhere stays where it is. An ended encounter is never reopened.
 - Start and end are pushed to the facility's open boards after the commit, as ids and state only (as in MDV-P1-029).
 - Every call needs clinical access (MDV-P2-024): Patient 360 at Full to start or end, any treating level to read. Leading an encounter is a care relationship under "assigned only".
 

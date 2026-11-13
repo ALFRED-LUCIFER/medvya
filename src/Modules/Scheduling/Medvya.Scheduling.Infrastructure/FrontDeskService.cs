@@ -19,7 +19,7 @@ namespace Medvya.Scheduling.Infrastructure;
 /// </summary>
 public sealed partial class FrontDeskService(
     SchedulingDbContext db, SchedulingContext context, DoctorDayTransaction transaction, IBoardNotifier notifier, IOptions<SchedulingOptions> options,
-    ILogger<FrontDeskService> log, IEnumerable<IHandoffGate> handoffGates) : IFrontDeskService
+    ILogger<FrontDeskService> log, IEnumerable<IHandoffGate> handoffGates, IEnumerable<IOpenConsultations> consultations) : IFrontDeskService
 {
     /// <summary>Meter of front-desk measurements. Values are durations only; the one tag is the opaque tenant id.</summary>
     public const string MeterName = "Medvya.FrontDesk";
@@ -37,13 +37,16 @@ public sealed partial class FrontDeskService(
         var date = ScheduleRules.LocalDate(now, zone);
         var (from, to) = (ScheduleRules.Instant(date, TimeOnly.MinValue, zone), ScheduleRules.Instant(date.AddDays(1), TimeOnly.MinValue, zone));
 
-        var visits = await db.Appointments.AsNoTracking()
+        var today = await db.Appointments.AsNoTracking()
             .Where(a => a.FacilityId == facilityId && a.Start >= from && a.Start < to && a.State != AppointmentState.Cancelled && a.State != AppointmentState.NoShow)
             .OrderBy(a => a.Start).ThenBy(a => a.Id).ToListAsync(cancellationToken);
+        // A patient who left is off the board and counted on their own, never in Done (MDV-P1-100).
+        var visits = today.Where(a => a.State != AppointmentState.LeftWithoutBeingSeen).ToList();
         var patients = await context.PatientsAsync(visits.Select(a => a.PatientId), cancellationToken);
         var calendars = (await context.CalendarsAsync(facilityId, cancellationToken)).ToDictionary(c => c.Id, c => c.Name);
         var tokens = await TokensAsync([.. visits.Select(a => a.Id)], cancellationToken);
-        return new(facilityId, facility.TimeZone, date, now, [.. visits.Select(a => Card(a, patients, calendars, tokens))]);
+        var withDoctor = await WithDoctorAsync([.. visits.Where(a => a.State == AppointmentState.InConsult).Select(a => a.Id)], cancellationToken);
+        return new(facilityId, facility.TimeZone, date, now, [.. visits.Select(a => Card(a, patients, calendars, tokens, withDoctor))], today.Count - visits.Count);
     }
 
     public async Task<BoardCard> CheckInAsync(Guid appointmentId, CheckIn command, CancellationToken cancellationToken = default)
@@ -66,6 +69,59 @@ public sealed partial class FrontDeskService(
         return await CardAsync(visit, cancellationToken);
     }
 
+    public async Task<BoardCard> UndoAsync(Guid appointmentId, UndoMove command, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        if (command.State is not { } seen || !Enum.IsDefined(seen)) throw new SchedulingValidationException([new("state", "required")]);
+        var visit = await db.Appointments.AsNoTracking().SingleOrDefaultAsync(a => a.Id == appointmentId, cancellationToken)
+            ?? throw new AppointmentNotFoundException();
+        await context.RequireAsync(visit.FacilityId, SchedulingAccess.CanRunQueue, cancellationToken);
+        var (now, me) = (context.Now, context.UserId);
+        // Only the caller's own move, and only while it is still the visit's latest change: never someone else's, never an older one.
+        if (me is null || visit.State != seen || visit.ChangedBy != me) throw new VisitTransitionException("changed");
+        if (now - visit.ChangedAt > VisitFlow.UndoWindow) throw new VisitTransitionException("undo_expired");
+        var from = await db.StatusEvents.AsNoTracking().Where(e => e.AppointmentId == appointmentId && e.State == seen && e.OccurredAt == visit.ChangedAt)
+            .Select(e => e.FromState).FirstOrDefaultAsync(cancellationToken);
+        if (!VisitFlow.CanUndo(from, seen)) throw new VisitTransitionException("invalid_transition");
+        var to = from!.Value;
+        var room = to < AppointmentState.InConsult ? null : visit.Room; // back in the queue: no longer called in to a room
+
+        await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
+        if (await db.Appointments.Where(a => a.Id == appointmentId && a.State == seen && a.ChangedAt == visit.ChangedAt)
+                .ExecuteUpdateAsync(s => s.SetProperty(a => a.State, to).SetProperty(a => a.Room, room)
+                    .SetProperty(a => a.ChangedBy, me).SetProperty(a => a.ChangedAt, now), cancellationToken) == 0)
+            throw new VisitTransitionException("changed");
+        await RefuseWithDoctorAsync(appointmentId, cancellationToken);
+        db.StatusEvents.Add(new VisitStatusEvent
+        {
+            Id = Guid.CreateVersion7(), TenantId = visit.TenantId, AppointmentId = visit.Id, State = to, FromState = seen, ActorUserId = me, OccurredAt = now,
+        });
+        await db.SaveChangesAsync(cancellationToken);
+        await context.AuditAsync(SchedulingAudit.Undo, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment, visit.Id, visit.PatientId, cancellationToken, $"from={seen}");
+        await tx.CommitAsync(cancellationToken);
+        (visit.State, visit.Room, visit.ChangedBy, visit.ChangedAt) = (to, room, me, now);
+        await NotifyAsync(notifier, log, new(visit.TenantId, visit.FacilityId, visit.Id, to, now));
+        return await CardAsync(visit, cancellationToken);
+    }
+
+    /// <summary>
+    /// While a consultation is open the visit is the doctor's (MDV-P1-100): the desk neither closes it nor undoes it back to the queue.
+    /// Checked inside the move's transaction, after its update, so a consultation committed before the check always refuses the move.
+    /// shortcut: a Start committing in the instant after this check slips past; lock the visit row in both if it is ever seen.
+    /// </summary>
+    async Task RefuseWithDoctorAsync(Guid appointmentId, CancellationToken cancellationToken)
+    {
+        if ((await WithDoctorAsync([appointmentId], cancellationToken)).Contains(appointmentId)) throw new VisitTransitionException("with_doctor");
+    }
+
+    async Task<HashSet<Guid>> WithDoctorAsync(Guid[] appointmentIds, CancellationToken cancellationToken)
+    {
+        var open = new HashSet<Guid>();
+        if (appointmentIds.Length > 0)
+            foreach (var source in consultations) open.UnionWith(await source.OpenAsync(appointmentIds, cancellationToken));
+        return open;
+    }
+
     public async Task<ClinicOverview> GetOverviewAsync(Guid facilityId, CancellationToken cancellationToken = default)
     {
         await context.RequireAsync(facilityId, SchedulingAccess.CanViewBoard, cancellationToken);
@@ -75,7 +131,7 @@ public sealed partial class FrontDeskService(
         var (from, to) = (ScheduleRules.Instant(date, TimeOnly.MinValue, zone), ScheduleRules.Instant(date.AddDays(1), TimeOnly.MinValue, zone));
         var visits = await db.Appointments.AsNoTracking()
             .Where(a => a.FacilityId == facilityId && a.CalendarKind == CalendarKind.Doctor && a.Start >= from && a.Start < to
-                && a.State != AppointmentState.Cancelled && a.State != AppointmentState.NoShow && a.State != AppointmentState.NeedsRebooking)
+                && a.State != AppointmentState.Cancelled && a.State != AppointmentState.NoShow && a.State != AppointmentState.NeedsRebooking && a.State != AppointmentState.LeftWithoutBeingSeen)
             .OrderBy(a => a.Start).ThenBy(a => a.Id).ToListAsync(cancellationToken);
         var patients = await context.PatientsAsync(visits.Select(a => a.PatientId), cancellationToken);
         var tokens = await TokensAsync([.. visits.Select(a => a.Id)], cancellationToken);
@@ -194,9 +250,10 @@ public sealed partial class FrontDeskService(
             Guard(current.State, to, steps);
             throw new VisitTransitionException("invalid_transition");
         }
+        if (from == AppointmentState.InConsult) await RefuseWithDoctorAsync(appointmentId, cancellationToken); // the doctor's End closes it, not the desk
         db.StatusEvents.Add(new VisitStatusEvent
         {
-            Id = Guid.CreateVersion7(), TenantId = visit.TenantId, AppointmentId = visit.Id, State = to, ActorUserId = me, OccurredAt = now, CheckInMs = checkInMs,
+            Id = Guid.CreateVersion7(), TenantId = visit.TenantId, AppointmentId = visit.Id, State = to, FromState = from, ActorUserId = me, OccurredAt = now, CheckInMs = checkInMs,
         });
         if (to == AppointmentState.CheckedIn) await IssueTokenAsync(visit, ScheduleRules.LocalDate(now, zone), now, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
@@ -284,13 +341,14 @@ public sealed partial class FrontDeskService(
     {
         var patients = await context.PatientsAsync([visit.PatientId], cancellationToken);
         var calendars = (await context.CalendarsAsync(visit.FacilityId, cancellationToken)).ToDictionary(c => c.Id, c => c.Name);
-        return Card(visit, patients, calendars, await TokensAsync([visit.Id], cancellationToken));
+        var withDoctor = visit.State == AppointmentState.InConsult ? await WithDoctorAsync([visit.Id], cancellationToken) : [];
+        return Card(visit, patients, calendars, await TokensAsync([visit.Id], cancellationToken), withDoctor);
     }
 
-    static BoardCard Card(Appointment a, IReadOnlyDictionary<Guid, PatientSummary> patients, Dictionary<Guid, string> calendars, Dictionary<Guid, string> tokens)
+    static BoardCard Card(Appointment a, IReadOnlyDictionary<Guid, PatientSummary> patients, Dictionary<Guid, string> calendars, Dictionary<Guid, string> tokens, HashSet<Guid> withDoctor)
     {
         var p = patients.GetValueOrDefault(a.PatientId);
         return new(a.Id, AppointmentReference.Of(a.Id), a.PatientId, p?.FullName ?? "", p?.DateOfBirth, p?.RegistrationIncomplete ?? false,
-            a.CalendarId, calendars.GetValueOrDefault(a.CalendarId, ""), a.VisitType, a.ReasonCategory, a.Start, a.End, a.State, a.ChangedAt, a.Room, tokens.GetValueOrDefault(a.Id), a.WalkIn, a.Unscheduled, p?.SexAtBirth.ToString());
+            a.CalendarId, calendars.GetValueOrDefault(a.CalendarId, ""), a.VisitType, a.ReasonCategory, a.Start, a.End, a.State, a.ChangedAt, a.Room, tokens.GetValueOrDefault(a.Id), a.WalkIn, a.Unscheduled, p?.SexAtBirth.ToString(), withDoctor.Contains(a.Id));
     }
 }

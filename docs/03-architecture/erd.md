@@ -1005,7 +1005,7 @@ erDiagram
 | `ScheduleSlots` | 6 | Id | tenant-scoped |
 | `Templates` | 8 | Id | tenant-scoped |
 | `SlotHolds` | 9 | Id | tenant-scoped |
-| `VisitStatusEvents` | 9 | Id | tenant-scoped |
+| `VisitStatusEvents` | 10 | Id | tenant-scoped |
 | `Waitlist` | 21 | Id | tenant-scoped |
 
 <details><summary><code>scheduling.Appointments</code> columns</summary>
@@ -1226,6 +1226,7 @@ erDiagram
 | `AppointmentId` | guid |  | FK to `Appointment` |
 | `CancelReason` | character varying(30) |  |  |
 | `CheckInMs` | int | yes |  |
+| `FromState` | character varying(20) |  |  |
 | `Note` | character varying(500) |  |  |
 | `OccurredAt` | timestamptz |  |  |
 | `State` | character varying(20) |  |  |

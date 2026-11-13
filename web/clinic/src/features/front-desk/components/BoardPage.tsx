@@ -1,9 +1,12 @@
-import type { ReactNode } from 'react';
-import { CalendarCheck, CalendarClock, CircleCheck, ClipboardCheck, DoorOpen, EyeOff, ReceiptText, Syringe, UserCheck, type LucideIcon } from 'lucide-react';
+import { useRef, type ReactNode } from 'react';
+import type { UseFormReturn } from 'react-hook-form';
+import { CalendarCheck, CalendarClock, CircleCheck, ClipboardCheck, DoorOpen, Ellipsis, EyeOff, ReceiptText, Syringe, Undo2, UserCheck, type LucideIcon } from 'lucide-react';
 import { useI18n, type MessageKey } from '@medvya/i18n';
-import { Button, FrontDeskTag, PageContainer, PageHeader } from '@medvya/ui';
+import { Button, Dialog, DialogContent, DialogDescription, DialogTitle, FrontDeskTag, PageContainer, PageHeader } from '@medvya/ui';
+import type { CancelForm } from '../../schedule/domain/changes';
+import CancelReasonFields from '../../schedule/components/CancelReasonFields';
 import type { workload } from '../domain/overview';
-import { ageYears, minutesSince, needsRebooking, nextState, visibleColumns, type Board, type BoardCard, type BoardColumn, type LiveStatus, type MoveError, type VisitSteps } from '../domain/board';
+import { ageYears, endKinds, minutesSince, needsRebooking, nextState, visibleColumns, type Board, type BoardCard, type BoardColumn, type EndKind, type LiveStatus, type MoveError, type Notice, type VisitSteps } from '../domain/board';
 
 // Every column is words and an icon (never colour alone), following the Clinician App board (P-01).
 const columnIcons: Record<BoardColumn, LucideIcon> = {
@@ -42,6 +45,22 @@ type Props = {
   onConfirmCheckIn: () => void;
   onCancelCheckIn: () => void;
   onMove: (id: string, state: BoardColumn) => void;
+  /** What this desk last did (MDV-P1-100): said in the status line, with Undo while `undo` is set. */
+  notice: Notice | null;
+  undoing: boolean;
+  onUndo: () => void;
+  /** May cancel a visit (full "Register / book patients"); marking a patient as left needs only `canMove`. */
+  canCancel: boolean;
+  /** The card being ended from its menu; kind null while the desk chooses between left and cancel. */
+  ending: { card: BoardCard; kind: EndKind | null } | null;
+  endForm: UseFormReturn<CancelForm>;
+  endWorking: boolean;
+  endFailed: boolean;
+  onStartEnd: (card: BoardCard, kind: EndKind | null) => void;
+  onEndKind: (kind: EndKind) => void;
+  onEndReason: (reason: CancelForm['reason']) => void;
+  onConfirmEnd: () => void;
+  onCancelEnd: () => void;
   /** "Register patient", shown when the role may register. */
   registerAction?: ReactNode;
   /** Link to the waitlist. */
@@ -78,8 +97,61 @@ export default function BoardPage(props: Props) {
         {props.views}
       </PageHeader>
       {props.board && props.workload.length > 0 && <Workload rows={props.workload} />}
+      <StatusLine {...props} />
       <Body {...props} />
+      <EndVisit {...props} />
     </PageContainer>
+  );
+}
+
+/** What this desk last did, announced when it changes; Undo sits beside it for 30 seconds (the server refuses later). */
+function StatusLine({ board, notice, undoing, online, canMove, onUndo }: Props) {
+  const { t } = useI18n();
+  const left = board?.leftWithoutBeingSeen ?? 0;
+  return (
+    <div className="flex min-h-11 flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+      <p role="status" className="font-bold">
+        {notice && t(`board.notice.${notice.kind}`, { name: notice.name || t('board.unknownPatient'), column: t(`board.column.${notice.state}`) })}
+      </p>
+      {notice?.undo && canMove && <Button variant="outline" loading={undoing} disabled={!online} onClick={onUndo}><Undo2 aria-hidden />{t('board.undo')}</Button>}
+      {left > 0 && <p className="ms-auto text-muted-foreground">{t('board.leftToday', { count: left })}</p>}
+    </div>
+  );
+}
+
+/** The card menu's dialog: left without being seen or cancel, then the reason. Closing it changes nothing. */
+function EndVisit({ ending, endForm, endWorking, endFailed, online, onEndKind, onEndReason, onConfirmEnd, onCancelEnd }: Props) {
+  const { t } = useI18n();
+  const name = ending?.card.patientName || t('board.unknownPatient');
+  // The dialog closes after `ending` is cleared, so remember whose menu opened it to give focus back there.
+  const opener = useRef<string | null>(null);
+  return (
+    <Dialog open={ending !== null} onOpenChange={open => { if (!open && !endWorking) onCancelEnd(); }}>
+      <DialogContent closeLabel={t('board.end.close')} onOpenAutoFocus={() => { opener.current = ending?.card.id ?? null; }}
+        // Opened by state, not by a trigger: give focus back to the card's menu button, or to the board when the card has left it.
+        onCloseAutoFocus={e => { e.preventDefault(); (document.getElementById(`board-more-${opener.current}`) ?? document.getElementById('board-region'))?.focus(); }}>
+        <DialogTitle>{t(ending?.kind ? `board.end.${ending.kind}.title` : 'board.end.title', { name })}</DialogTitle>
+        {ending?.kind ? (
+          <form noValidate className="flex flex-col gap-3" onSubmit={e => { e.preventDefault(); onConfirmEnd(); }}>
+            <DialogDescription>{t(`board.end.${ending.kind}.body`)}</DialogDescription>
+            <CancelReasonFields form={endForm} onReason={onEndReason} />
+            {endFailed && <p role="alert" className="text-sm font-bold text-danger-700">{t('board.error.failed')}</p>}
+            <div className="flex flex-wrap gap-2">
+              <Button type="submit" loading={endWorking} disabled={!online}>{t(`board.end.${ending.kind}.confirm`)}</Button>
+              <Button type="button" variant="outline" disabled={endWorking} onClick={onCancelEnd}>{t('appointment.back')}</Button>
+            </div>
+          </form>
+        ) : (
+          <>
+            <DialogDescription>{t('board.end.choose')}</DialogDescription>
+            <div className="flex flex-col gap-2">
+              <Button variant="outline" className="whitespace-normal" onClick={() => onEndKind('left')}>{t('board.end.left')}</Button>
+              <Button variant="outline" className="whitespace-normal" onClick={() => onEndKind('cancel')}>{t('board.end.cancel')}</Button>
+            </div>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -126,7 +198,7 @@ function Body(props: Props) {
   if (board.cards.length === 0) return <Message title={t('board.empty.title')} body={t('board.empty.body')} />;
   return (
     // The board scrolls sideways on its own at tablet width and 200 % zoom; the page never does.
-    <section aria-label={t('board.region')} tabIndex={0} className="relative overflow-x-auto rounded-lg pb-2">
+    <section id="board-region" aria-label={t('board.region')} tabIndex={0} className="relative overflow-x-auto rounded-lg pb-2">
       <div className="grid auto-cols-[minmax(156px,1fr)] grid-flow-col gap-3">
         {visibleColumns(props.steps, props.columns).map(c => <Column key={c} state={c} {...props} board={board} />)}
       </div>
@@ -172,7 +244,7 @@ function Column(props: Props & { state: BoardColumn; board: Board }) {
   );
 }
 
-function Card({ card, board, steps, now, failedVisitIds, canMove, online, confirmingId, pendingId, failure, paymentAction, consultAction, nurseStep, onStartCheckIn, onConfirmCheckIn, onCancelCheckIn, onMove }: Props & { card: BoardCard; board: Board }) {
+function Card({ card, board, steps, now, failedVisitIds, canMove, canCancel, online, confirmingId, pendingId, failure, paymentAction, consultAction, nurseStep, onStartCheckIn, onConfirmCheckIn, onCancelCheckIn, onMove, onStartEnd }: Props & { card: BoardCard; board: Board }) {
   const { t, formatTime, formatCalendarDate } = useI18n();
   const state = card.state as BoardColumn;
   const next = nextState(state, steps);
@@ -182,6 +254,7 @@ function Card({ card, board, steps, now, failedVisitIds, canMove, online, confir
   const confirming = confirmingId === card.id;
   const age = ageYears(card.dateOfBirth, now);
   const dob = card.dateOfBirth ? formatCalendarDate(card.dateOfBirth) : t('board.dobUnknown');
+  const ends = canMove ? endKinds(card.state, canCancel) : [];
 
   return (
     <article aria-labelledby={nameId} className="flex flex-col gap-1.5 rounded-lg border bg-card px-3 py-2.5">
@@ -207,7 +280,10 @@ function Card({ card, board, steps, now, failedVisitIds, canMove, online, confir
           <Button autoFocus className="whitespace-normal" loading={busy} disabled={!online} onClick={onConfirmCheckIn}>{t('board.confirm.arrived')}</Button>
           <Button variant="outline" onClick={onCancelCheckIn}>{t('booking.cancel')}</Button>
         </div>
-      ) : nurseStep && state === 'WithNurse' ? nurseStep(card) : canMove && next && state !== 'Done' ? (
+      ) : nurseStep && state === 'WithNurse' ? nurseStep(card) : card.withDoctor && state === 'InConsult' ? (
+        // A consultation is open: the doctor's End moves the card, so the desk has words here and no action (MDV-P1-100).
+        <FrontDeskTag kind="room" text={t('board.withDoctor')} />
+      ) : canMove && next && state !== 'Done' ? (
         <Button variant="outline" className="mt-1 whitespace-normal" loading={busy} disabled={!online}
           onClick={() => (state === 'Booked' ? onStartCheckIn(card.id) : onMove(card.id, next))}>
           {t(state === 'CheckedIn' && next === 'ReadyForDoctor' ? 'board.action.toDoctor' : actionKeys[state])}
@@ -221,6 +297,12 @@ function Card({ card, board, steps, now, failedVisitIds, canMove, online, confir
         </>
       ))}
       {consultAction?.(card)}
+      {ends.length > 0 && (
+        <Button id={`board-more-${card.id}`} variant="ghost" className="whitespace-normal" disabled={!online}
+          aria-label={t('board.more.for', { name: card.patientName || t('board.unknownPatient') })} onClick={() => onStartEnd(card, ends.length === 1 ? ends[0]! : null)}>
+          <Ellipsis aria-hidden />{t('board.more')}
+        </Button>
+      )}
       {error && <p role="alert" className="text-xs font-bold text-danger-700">{t(`board.error.${error}`)}</p>}
     </article>
   );

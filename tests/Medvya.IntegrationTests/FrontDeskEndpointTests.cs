@@ -143,12 +143,12 @@ public sealed class FrontDeskEndpointTests(PostgresFixture sql) : IClassFixture<
         var body = await response.Content.ReadAsStringAsync();
         var json = JsonDocument.Parse(body).RootElement;
 
-        Assert.Equal(["facilityId", "timeZone", "date", "now", "cards"], json.EnumerateObject().Select(p => p.Name));
+        Assert.Equal(["facilityId", "timeZone", "date", "now", "cards", "leftWithoutBeingSeen"], json.EnumerateObject().Select(p => p.Name)); // a count only (MDV-P1-100)
         var card = Assert.Single(json.GetProperty("cards").EnumerateArray());
         // Exactly these fields: adding one (the reason text, a phone number, an identifier) must be a reviewed change here.
         Assert.Equal(
             ["id", "reference", "patientId", "patientName", "dateOfBirth", "registrationIncomplete", "calendarId", "calendarName",
-             "visitType", "reasonCategory", "start", "end", "state", "since", "room", "token", "walkIn", "unscheduled", "sex"], // sex at birth: with the date of birth, how a desk tells two patients of one name apart (MDV-AUDIT-1105)
+             "visitType", "reasonCategory", "start", "end", "state", "since", "room", "token", "walkIn", "unscheduled", "sex", "withDoctor"], // sex at birth: with the date of birth, how a desk tells two patients of one name apart (MDV-AUDIT-1105); withDoctor: a consultation is open (MDV-P1-100)
             card.EnumerateObject().Select(p => p.Name));
         Assert.Equal(("ChronicReview", "Booked", "1972-03-12"), (card.GetProperty("reasonCategory").GetString(), card.GetProperty("state").GetString(), card.GetProperty("dateOfBirth").GetString()));
         Assert.Equal("Female", card.GetProperty("sex").GetString());

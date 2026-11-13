@@ -83,7 +83,7 @@ public sealed class ConsultVisits(SchedulingDbContext db, SchedulingContext cont
             var current = await shared.Appointments.AsNoTracking().SingleAsync(a => a.Id == visit.Id, cancellationToken);
             return current.State == to ? View(current) : throw new VisitTransitionException("invalid_transition");
         }
-        shared.StatusEvents.Add(new VisitStatusEvent { Id = Guid.CreateVersion7(), TenantId = visit.TenantId, AppointmentId = visit.Id, State = to, ActorUserId = me, OccurredAt = now });
+        shared.StatusEvents.Add(new VisitStatusEvent { Id = Guid.CreateVersion7(), TenantId = visit.TenantId, AppointmentId = visit.Id, State = to, FromState = visit.State, ActorUserId = me, OccurredAt = now });
         await shared.SaveChangesAsync(cancellationToken);
         return new ConsultVisit(visit.Id, visit.FacilityId, visit.PatientId, to, room, visit.Start);
     }

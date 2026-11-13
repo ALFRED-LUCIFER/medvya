@@ -7,18 +7,20 @@ namespace Medvya.Scheduling.Application;
 /// birth are there to confirm identity at check-in; RegistrationIncomplete flags a record to finish at the desk. Since is
 /// when the visit entered its current state (the "Waiting 12 min" timer); Room is where the patient was called in to; Token is
 /// the waiting-room token issued at check-in (MDV-P1-031). Sex is the record's sex at birth (Female, Male, Other), with the date of birth
-/// the age and sex a desk tells two patients of one name apart by.
+/// the age and sex a desk tells two patients of one name apart by. WithDoctor: a consultation is open for the visit, so it ends by the
+/// doctor's End and the desk has no action on it (MDV-P1-100).
 /// </summary>
 public sealed record BoardCard(
     Guid Id, string Reference, Guid PatientId, string PatientName, DateOnly? DateOfBirth, bool RegistrationIncomplete,
     Guid CalendarId, string CalendarName, VisitType VisitType, ReasonCategory ReasonCategory,
-    DateTimeOffset Start, DateTimeOffset End, AppointmentState State, DateTimeOffset Since, string? Room, string? Token, bool WalkIn = false, bool Unscheduled = false, string? Sex = null);
+    DateTimeOffset Start, DateTimeOffset End, AppointmentState State, DateTimeOffset Since, string? Room, string? Token, bool WalkIn = false, bool Unscheduled = false, string? Sex = null, bool WithDoctor = false);
 
 /// <summary>
-/// Today's board (P-01) of one facility: every visit of the facility-local day that is not cancelled or a no-show, in time
-/// order. Now is the server's clock, so wait timers do not depend on the device's clock.
+/// Today's board (P-01) of one facility: every visit of the facility-local day that is not cancelled, a no-show or left without
+/// being seen, in time order. Now is the server's clock, so wait timers do not depend on the device's clock. LeftWithoutBeingSeen
+/// counts today's patients who left, apart from Done (MDV-P1-100).
 /// </summary>
-public sealed record FrontDeskBoard(Guid FacilityId, string TimeZone, DateOnly Date, DateTimeOffset Now, IReadOnlyList<BoardCard> Cards);
+public sealed record FrontDeskBoard(Guid FacilityId, string TimeZone, DateOnly Date, DateTimeOffset Now, IReadOnlyList<BoardCard> Cards, int LeftWithoutBeingSeen = 0);
 
 /// <summary>
 /// Check in a visit. ElapsedMs is how long the desk took from tapping "Check in" to confirming (exit gate 3 measures the
@@ -31,6 +33,15 @@ public sealed record CheckIn
 
 /// <summary>Move a visit to the next column of the board. Nullable so a missing state fails validation instead of meaning "Booked".</summary>
 public sealed record MoveVisit
+{
+    public AppointmentState? State { get; init; }
+}
+
+/// <summary>
+/// Undo the caller's own last move of a visit (MDV-P1-100). State is the state that move left the visit in, as the caller saw it:
+/// when the visit is anywhere else by now, the undo is refused instead of undoing someone else's move.
+/// </summary>
+public sealed record UndoMove
 {
     public AppointmentState? State { get; init; }
 }
@@ -85,8 +96,19 @@ public interface IFrontDeskService
     /// <exception cref="VisitTransitionException">Not booked any more, or not today.</exception>
     Task<BoardCard> CheckInAsync(Guid appointmentId, CheckIn command, CancellationToken cancellationToken = default);
 
-    /// <exception cref="VisitTransitionException">Not the next step from the visit's current state.</exception>
+    /// <exception cref="VisitTransitionException">Not the next step from the visit's current state, or "with_doctor": a consultation is open, so the doctor ends it.</exception>
     Task<BoardCard> MoveAsync(Guid appointmentId, MoveVisit command, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Puts the visit back where the caller's last move took it from, with its token, within <see cref="VisitFlow.UndoWindow"/> of that
+    /// move and only while it is still the visit's latest change. Audited with the state it left.
+    /// </summary>
+    /// <exception cref="AppointmentNotFoundException">No such appointment in this tenant.</exception>
+    /// <exception cref="VisitTransitionException">
+    /// "undo_expired" after the window; "changed" when the visit is not in the state given or someone else changed it last;
+    /// "with_doctor" while a consultation is open; "invalid_transition" for a move that is never undone.
+    /// </exception>
+    Task<BoardCard> UndoAsync(Guid appointmentId, UndoMove command, CancellationToken cancellationToken = default);
 
     /// <summary>The real-time group of the facility's board, after the same access check as <see cref="GetBoardAsync"/>.</summary>
     /// <exception cref="SchedulingAccessDeniedException">No board access at this facility.</exception>

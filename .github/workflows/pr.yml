@@ -42,7 +42,7 @@ jobs:
           has() { echo "$files" | grep -Eq "$1" && echo true || echo false; }
           # infra/postgres only: the integration fixture applies roles.sql; Bicep and Entra scripts are not built or tested here.
           echo "backend=$(has '^(src/|tests/Medvya\.|Directory\.|global\.json|Medvya\.sln|dotnet-tools\.json|infra/postgres/|tools/erd/|docs/03-architecture/erd\.md|packages/api-client/|\.github/)')" >> "$GITHUB_OUTPUT"
-          echo "web=$(has '^(web/|mobile/|packages/|tests/e2e/|package\.json|pnpm-|tools/check-synthetic/|\.github/)')" >> "$GITHUB_OUTPUT"
+          echo "web=$(has '^(web/|mobile/|packages/|tests/e2e/|package\.json|pnpm-|tools/check-synthetic/|tools/check-ui-drift/|\.github/)')" >> "$GITHUB_OUTPUT"
           # The browser suite drives the web apps only; no web screen imports mobile/ (ADR-013), so a mobile-only change skips it (#1129).
           echo "e2e=$(has '^(web/|packages/|tests/e2e/|package\.json|pnpm-|\.github/)')" >> "$GITHUB_OUTPUT"
 
@@ -135,6 +135,8 @@ jobs:
       - run: pnpm -r test
       - run: pnpm audit --audit-level high
       - run: node tools/check-synthetic/check.mjs --self-test && node tools/check-synthetic/check.mjs
+      - name: UI drift counts may only fall (DESIGN.md guardrails, MDV-P1-076)
+        run: node tools/check-ui-drift/check.mjs --self-test && pnpm check:ui-drift
 
   web-e2e:
     # Playwright split over 5 machines (one 14 min run, then 3 shards of 5-8 min). The performance budget runs alone on its own machine:

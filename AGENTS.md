@@ -64,11 +64,12 @@ src/features/<feature>/components/ presentational: props in, events out (no serv
 - **Pinned chrome** (top bar, patient strip, section anchors, action footer) takes at most 30 % of the viewport height, and nothing focusable sits under it. The action footer is part of the layout, never an overlay (MDV-P1-082, MDV-P1-092).
 - **Motion** uses the two tokens (ease-out `cubic-bezier(0.23, 1, 0.32, 1)`, 150 ms; MDV-P1-079) and named transition properties, never `transition-all` (MDV-P2-056). Never: page transitions, sliding cards between columns, staggered lists, animating the Ctrl+K search, anything that moves while a doctor types, animated counters, toasts over the patient strip.
 - **A new shared component is not done until it is in the `/__ui` gallery in English and Arabic.**
+- **Drift counts may only fall.** `pnpm check:ui-drift` (CI, web job) counts height patches, arbitrary font sizes, raw hex colours, `sm:grid-cols-*`, raw `h1`, `border bg-card` and local `Message`, `Field`, `Card` and `Empty` components against `tools/check-ui-drift/baseline.json`. A rise fails. When your change lowers a count, run `pnpm check:ui-drift --update` and commit the baseline in the same PR. Never raise a number by hand.
 
 ## 5 · Definition of Done (every PR)
 
 - [ ] Ticket acceptance criteria met and demonstrated
-- [ ] `dotnet build` (0 warnings) · `dotnet test` · `pnpm -r build` · `pnpm -r lint` · `pnpm -r test` · `pnpm e2e` · `pnpm check:synthetic` all pass locally
+- [ ] `dotnet build` (0 warnings) · `dotnet test` · `pnpm -r build` · `pnpm -r lint` · `pnpm -r test` · `pnpm e2e` · `pnpm check:synthetic` · `pnpm check:ui-drift` all pass locally
 - [ ] New/changed behaviour tested; safety tests mutation-checked
 - [ ] UI verified in a browser (English and Arabic), axe clean
 - [ ] Cross-cutting X1–X8 (`docs/05-delivery/README.md`) considered: security, privacy, clinical safety, states (empty/loading/error/403/offline), a11y and language, performance, reliability, observability

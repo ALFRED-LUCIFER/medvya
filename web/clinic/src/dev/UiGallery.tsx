@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { type ReactNode, useState } from 'react';
 import { CircleStop, PenLine, Sparkles } from 'lucide-react';
 import {
   alertLooks, Button, ClinicalAlert, IdentityBanner, Input, Label, provenanceLooks, ProvenanceTag,
@@ -22,6 +22,24 @@ function Field({ id, label, defaultValue, error, disabled }: { id: string; label
       <Label htmlFor={id}>{label}</Label>
       <Input id={id} defaultValue={defaultValue} disabled={disabled} aria-invalid={!!error} aria-describedby={error ? `${id}-err` : undefined} className="min-h-11" />
       {error && <p id={`${id}-err`} className="text-xs font-semibold text-danger-700">{error}</p>}
+    </div>
+  );
+}
+
+// Class names are written out in full so Tailwind generates them (MDV-P1-079 tokens).
+const typeTokens = ['text-display', 'text-title', 'text-heading', 'text-subheading', 'text-body', 'text-body-large', 'text-label', 'text-caption', 'text-mono font-mono'];
+const spaceTokens = ['w-0.5', 'w-1', 'w-1.5', 'w-2', 'w-3', 'w-4', 'w-6', 'w-8', 'w-12', 'w-16'];
+const sizeTokens = ['w-topbar', 'w-topbar-phone', 'w-rail', 'w-sidebar', 'w-header', 'w-gutter', 'w-gutter-md', 'w-gutter-xl', 'w-control', 'w-control-compact', 'w-row', 'w-row-compact'];
+const widthTokens = ['max-w-page', 'max-w-reading', 'max-w-measure', 'max-w-form', 'max-w-panel', 'max-w-panel-chart'];
+
+// Shows what the browser computed, so the specimen measures the token rather than restating it.
+function Measured({ name, className = name, read, children }: { name: string; className?: string; read: (s: CSSStyleDeclaration) => string; children?: ReactNode }) {
+  const [value, setValue] = useState('');
+  return (
+    <div className="flex flex-wrap items-baseline gap-3">
+      <code className="w-56 shrink-0 text-xs">{name}</code>
+      <span className="w-44 shrink-0 text-xs text-muted-foreground tabular-nums">{value}</span>
+      <div ref={el => { if (el) setValue(read(getComputedStyle(el))); }} className={className}>{children}</div>
     </div>
   );
 }
@@ -63,6 +81,25 @@ export default function UiGallery({ switcher }: { switcher: ReactNode }) {
         <Field id="f-pin" label="PIN code" defaultValue="68203" error="PIN code must be 6 digits" />
         <Field id="f-locked" label="Locked" defaultValue="Locked" disabled />
       </Section>
+      <section className="flex flex-col gap-3">
+        <h2 className="text-lg font-bold">Type tokens</h2>
+        {typeTokens.map(c => <Measured key={c} name={c} read={s => `${s.fontSize} / ${s.lineHeight} · ${s.fontWeight}`}>Meera Iyer · DQ-10-4482 · ميرا</Measured>)}
+      </section>
+      <section className="flex flex-col gap-3">
+        <h2 className="text-lg font-bold">Spacing scale and layout sizes</h2>
+        {[...spaceTokens, ...sizeTokens].map(c => <Measured key={c} name={c} className={`${c} h-4 shrink-0 bg-brand-700`} read={s => s.width} />)}
+      </section>
+      <section className="flex flex-col gap-3">
+        <h2 className="text-lg font-bold">Widths</h2>
+        {widthTokens.map(c => <Measured key={c} name={c} read={s => s.maxWidth}>{c}</Measured>)}
+        <Measured name="wide:block" className="hidden wide:block" read={s => s.display}>Shown from the wide breakpoint (1024 px)</Measured>
+      </section>
+      <section className="flex flex-col gap-3">
+        <h2 className="text-lg font-bold">Radius, elevation and motion</h2>
+        {['rounded-sm', 'rounded-md', 'rounded-lg', 'rounded-full', 'shadow-popover', 'shadow-dialog'].map(c =>
+          <Measured key={c} name={c} className={`${c} size-11 shrink-0 border bg-card`} read={s => (c.startsWith('shadow') ? 'elevation' : s.borderRadius)} />)}
+        <Measured name="duration-fast ease-out" className="transition-colors duration-fast ease-out" read={s => `${s.transitionDuration} ${s.transitionTimingFunction}`}>Motion</Measured>
+      </section>
     </main>
   );
 }

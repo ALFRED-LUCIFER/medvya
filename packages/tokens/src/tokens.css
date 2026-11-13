@@ -57,15 +57,115 @@
   --color-border: #dfe7ed;
   --color-input: #76899c; /* boundary of inputs, selects, textareas, outline buttons: ≥ 3:1 on every surface (tested) */
   --color-ring: #2563eb;
+  --color-white: #ffffff;
+  --color-danger-800: #8a1626;
+  --color-danger-500: #c83a4b;
+  --color-danger-200: #f3b9c0;
+  --color-danger-25: #fff7f8;
+  --color-warning-800: #7a4710;
+  --color-warning-500: #b7791f;
+  --color-warning-200: #efd5a6;
+  --color-success-800: #07774f; /* success text on a tint: #087f5b is 4.42:1 on #e6f4ef and fails AA */
+  --color-success-100: #e6f4ef;
+  --color-info-700: #1d4ed8;
+  --color-info-300: #93b4f5;
+  --color-ai-300: #a897e8;
+  --color-sage-700: #3e6a4d; /* closed-loop "contacted" only */
+  --color-sage-50: #eef4ef;
+  --color-ink-200: #cbd6e0;
+  --color-ink-100: #edf1f5;
+  --color-disabled: #e6ecf1; /* disabled button fill (grey, not opacity) */
+  --color-danger-text: #8a1626; /* allergy, critical, blocked, destructive; never emphasis or branding */
+  --color-danger-bg: #fdecee;
+  --color-danger-border: #c83a4b;
+  --color-warning-text: #7a4710; /* uncertain, attention, incomplete, not checked; never "error" */
+  --color-warning-bg: #fdf5e7;
+  --color-warning-border: #b7791f;
+  --color-success-text: #07774f; /* confirmed, done, signed; never primary buttons */
+  --color-success-bg: #e6f4ef;
+  --color-success-border: #087f5b;
+  --color-info-text: #1d4ed8; /* booked, in progress, neutral system state */
+  --color-info-bg: #eff4ff;
+  --color-info-border: #2563eb;
+  --color-brand-text: #0f766e; /* the one next action; the active navigation item; never status */
+  --color-brand-bg: #e7f6f4;
+  --color-brand-border: #0e9384;
+  --color-ai-text: #5b3fc4; /* provisional AI output only (dashed); never anything a clinician accepted */
+  --color-ai-bg: #f2effc;
+  --color-ai-border: #7155d8;
+  --color-neutral-text: #334e68; /* everything else */
+  --color-neutral-bg: #f1f5f8;
+  --color-neutral-border: #76899c;
   --radius: 10px;
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 12px;
+  --radius-sm: 6px; /* chips */
+  --radius-md: 10px; /* controls */
+  --radius-lg: 12px; /* cards and panels */
   --radius-xl: 16px;
+  --radius-full: 9999px; /* pills and avatars */
   --font-sans: "Manrope Variable", Manrope, "Noto Sans Arabic", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
   --breakpoint-sm: 360px;
   --breakpoint-md: 768px;
+  --breakpoint-wide: 1024px; /* two-pane layouts (wide:) */
   --breakpoint-lg: 1280px;
   --breakpoint-xl: 1600px;
+  --text-display: 30px; /* queue display, print headers */
+  --text-display--line-height: 36px;
+  --text-display--font-weight: 800;
+  --text-title: 20px; /* page title in the 44 px header */
+  --text-title--line-height: 28px;
+  --text-title--font-weight: 700;
+  --text-heading: 18px; /* section and card titles; patient name in the strip */
+  --text-heading--line-height: 26px;
+  --text-heading--font-weight: 700;
+  --text-subheading: 16px; /* sub-sections; patient name in rows */
+  --text-subheading--line-height: 24px;
+  --text-subheading--font-weight: 700;
+  --text-body: 14px; /* default, tables, controls (weight 500 awaits the founder; applied by MDV-P2-057) */
+  --text-body--line-height: 20px;
+  --text-body--font-weight: 500;
+  --text-body-large: 16px; /* typed clinical text, patient-facing pages: 16 px, so a phone browser does not zoom on focus */
+  --text-body-large--line-height: 24px;
+  --text-body-large--font-weight: 500;
+  --text-label: 14px; /* field labels, table headers, buttons */
+  --text-label--line-height: 20px;
+  --text-label--font-weight: 600;
+  --text-caption: 12px; /* hints, metadata, chips */
+  --text-caption--line-height: 16px;
+  --text-caption--font-weight: 600;
+  --text-mono: 13px; /* MRN, token, codes; use with font-mono */
+  --text-mono--line-height: 20px;
+  --text-mono--font-weight: 500;
+  --space-2: 2px; /* the spacing scale; the Tailwind steps 0.5, 1, 1.5, 2, 3, 4, 6, 8, 12 and 16 are these values (p-4 = 16 px) */
+  --space-4: 4px;
+  --space-6: 6px;
+  --space-8: 8px;
+  --space-12: 12px;
+  --space-16: 16px;
+  --space-24: 24px;
+  --space-32: 32px;
+  --space-48: 48px;
+  --space-64: 64px;
+  --spacing-topbar: 48px; /* top bar from 768 px up (h-topbar) */
+  --spacing-topbar-phone: 56px; /* top bar on phones */
+  --spacing-rail: 72px; /* navigation rail, 768 to 1279 */
+  --spacing-sidebar: 232px; /* sidebar, 1280 and up */
+  --spacing-header: 44px; /* page header row */
+  --spacing-gutter: 16px; /* page gutter on phones */
+  --spacing-gutter-md: 24px; /* page gutter on tablets */
+  --spacing-gutter-xl: 32px; /* page gutter at 1600 and up */
+  --spacing-control: 44px; /* comfortable control height, the default */
+  --spacing-control-compact: 36px; /* compact: the four read-only tables only */
+  --spacing-row: 48px; /* comfortable table row */
+  --spacing-row-compact: 36px; /* compact: the four read-only tables only */
+  --container-page: 1600px; /* fluid page maximum (max-w-page) */
+  --container-reading: 1152px; /* reading maximum */
+  --container-measure: 72ch; /* body text line length */
+  --container-form: 768px; /* form maximum */
+  --container-panel: 320px; /* side panel */
+  --container-panel-chart: 360px; /* consultation chart panel */
+  --shadow-popover: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); /* menus and popovers (the value select menus render today) */
+  --shadow-dialog: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); /* dialogs, sheets and drawers (the value dialogs render today) */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1); /* the one curve; replaces the Tailwind ease-out default */
+  --transition-duration-fast: 150ms; /* the one duration (duration-fast) */
 }

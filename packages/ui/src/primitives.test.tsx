@@ -55,6 +55,22 @@ describe('clinical primitives', () => {
       expect(contrast(tokens[fg], tokens[bg]), `${fg} on ${bg}`).toBeGreaterThanOrEqual(4.5);
   });
 
+  it('gives each tone a text, background and border that pass AA, and the same seven tones as ui-native', () => {
+    const names = [...readFileSync(join(process.cwd(), '../ui-native/src/display.tsx'), 'utf8')
+      .match(/export type Tone = ([^;]+);/)![1]!.matchAll(/'(\w+)'/g)].map(m => m[1]).sort();
+    const tones = [...new Set(Object.keys(tokens).filter(k => k.endsWith('-text')).map(k => k.slice(0, -'-text'.length)))].sort();
+    expect(tones).toEqual(names);
+    expect(tones).toHaveLength(7);
+    for (const tone of tones) {
+      const [text, bg, border] = ['text', 'bg', 'border'].map(r => tokens[`${tone}-${r}`]!);
+      // A tone sits on its own tint or on a plain card.
+      for (const [on, surface] of [['bg', bg], ['card', tokens.card]] as const) {
+        expect(contrast(text!, surface!), `${tone} text on ${on}`).toBeGreaterThanOrEqual(4.5);
+        expect(contrast(border!, surface!), `${tone} border on ${on}`).toBeGreaterThanOrEqual(3);
+      }
+    }
+  });
+
   it('meets WCAG 1.4.11 non-text contrast (3:1) for control boundaries and the focus ring', () => {
     // Every surface a control sits on or fills with (outline-button hover is accent). Only the light theme ships today.
     const surfaces = ['background', 'surface', 'card', 'popover', 'secondary', 'muted', 'accent'];

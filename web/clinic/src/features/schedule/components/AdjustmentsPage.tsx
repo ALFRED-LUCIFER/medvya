@@ -2,7 +2,7 @@ import type { UseFormReturn } from 'react-hook-form';
 import { Link } from 'react-router';
 import { ArrowLeft, CircleAlert, CircleCheck } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, cn, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea, PageContainer, PageHeader } from '@medvya/ui';
+import { Button, buttonVariants, Card, cn, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea, PageContainer, PageHeader } from '@medvya/ui';
 import { adjustmentKinds, type AdjustmentForm, rebookActions, type AdjustmentError, type RebookAction, type SaveResult, type SavedAdjustment } from '../domain/adjustments';
 import { localDate } from '../domain/changes';
 import type { Appointment } from '../domain/schedule';
@@ -50,21 +50,21 @@ export default function AdjustmentsPage(p: Props) {
 
   return (
     <PageContainer width="form" className="gap-5">
-      <Link to={p.backPath} className={cn(buttonVariants({ variant: 'ghost' }), 'self-start px-2')}>
-        <ArrowLeft className="rtl:rotate-180" aria-hidden />{t('adjustment.back')}
-      </Link>
-      <PageHeader title={t('adjustment.title')} description={t('adjustment.intro')} />
+      <PageHeader title={t('adjustment.title')} description={t('adjustment.intro')} back={
+        <Link to={p.backPath} className={cn(buttonVariants({ variant: 'ghost' }), 'px-2')}>
+          <ArrowLeft className="rtl:rotate-180" aria-hidden />{t('adjustment.back')}
+        </Link>} />
 
       {p.result && (
-        <div role="status" className="flex flex-col items-start gap-2 rounded-xl border bg-card p-4">
+        <Card role="status" className="items-start gap-2">
           <p className="flex items-center gap-2 font-bold"><CircleCheck className="size-5 text-success-700" aria-hidden />{t('adjustment.saved')}</p>
           {p.result.offered + p.result.manual > 0 && <p>{t('adjustment.savedCounts', { offered: p.result.offered, manual: p.result.manual })}</p>}
           {p.boardPath && p.result.offered + p.result.manual > 0 && <Link to={p.boardPath} className={buttonVariants({ variant: 'link' })}>{t('adjustment.toBoard')}</Link>}
-        </div>
+        </Card>
       )}
 
-      {p.manageable.length === 0 && !p.loading && <p className="rounded-xl border bg-card p-4 text-muted-foreground">{t('adjustment.viewOnly')}</p>}
-      {p.manageable.length > 0 && <form noValidate onSubmit={e => { void p.onSave(e); }} className="flex flex-col gap-5 rounded-xl border bg-card p-4">
+      {p.manageable.length === 0 && !p.loading && <Card><p className="text-muted-foreground">{t('adjustment.viewOnly')}</p></Card>}
+      {p.manageable.length > 0 && <Card><form noValidate onSubmit={e => { void p.onSave(e); }} className="flex flex-col gap-5">
         <div className="grid gap-4 md:grid-cols-2">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="adj-calendar">{t('adjustment.calendar')}</Label>
@@ -133,7 +133,7 @@ export default function AdjustmentsPage(p: Props) {
           <Button type="submit" disabled={!p.canSave} loading={p.saving}>{t('adjustment.save')}</Button>
           {p.editingId && <Button type="button" variant="outline" onClick={p.onCancelEdit}>{t('adjustment.cancelEdit')}</Button>}
         </div>
-      </form>}
+      </form></Card>}
 
       <section aria-labelledby="adj-saved" className="flex flex-col gap-2">
         <h2 id="adj-saved" className="text-lg font-extrabold">{t('adjustment.upcoming')}</h2>
@@ -146,7 +146,7 @@ export default function AdjustmentsPage(p: Props) {
             {p.saved.map(s => {
               const name = p.calendars.find(c => c.id === s.calendarId)?.name ?? '';
               return (
-                <li key={s.id} className="flex flex-col gap-2 rounded-lg border bg-card p-3">
+                <li key={s.id}><Card size="item">
                   <Saved row={s} name={name} formatDay={formatDay} />
                   {p.confirmingId === s.id ? (
                     <div className="flex flex-col items-start gap-2">
@@ -162,7 +162,7 @@ export default function AdjustmentsPage(p: Props) {
                       <Button type="button" variant="outline" onClick={() => p.onAskDelete(s.id)} aria-label={t('adjustment.delete.named', { name })}>{t('adjustment.delete')}</Button>
                     </div>
                   )}
-                </li>
+                </Card></li>
               );
             })}
           </ul>

@@ -2,7 +2,7 @@ import type { UseFormReturn } from 'react-hook-form';
 import { Link } from 'react-router';
 import { CircleAlert, CircleCheck, X } from 'lucide-react';
 import { useI18n, type MessageKey } from '@medvya/i18n';
-import { Button, buttonVariants, cn } from '@medvya/ui';
+import { Button, buttonVariants, Card, cn } from '@medvya/ui';
 import { codeKey, needsAttention, type PatientMessage } from '../domain/messages';
 import { actions, localDate, type Action, type CancelForm, type ChangeError, type Rule, type VisitMove } from '../domain/changes';
 import type { Appointment } from '../domain/schedule';
@@ -58,7 +58,7 @@ export default function AppointmentPanel(p: Props) {
   const run: Record<Action, () => void> = { checkIn: p.onCheckIn, reschedule: p.onReschedule, cancel: p.onStartCancel, noShow: p.onNoShow };
 
   return (
-    <aside aria-label={t('appointment.title')} className="flex flex-col gap-4 rounded-xl border bg-card p-4">
+    <aside aria-label={t('appointment.title')}><Card className="gap-4">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="font-mono text-xs text-muted-foreground">{a.reference}</p>
@@ -134,7 +134,7 @@ export default function AppointmentPanel(p: Props) {
 
       <History history={p.history} timeZone={p.timeZone} />
       <Messages messages={p.messages} preparing={p.messagesPreparing} timeZone={p.timeZone} />
-    </aside>
+    </Card></aside>
   );
 }
 

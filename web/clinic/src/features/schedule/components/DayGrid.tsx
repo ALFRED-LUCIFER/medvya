@@ -1,6 +1,6 @@
 import type { DragEvent } from 'react';
 import { useI18n } from '@medvya/i18n';
-import { cn, scheduleLooks } from '@medvya/ui';
+import { Card, cn, scheduleLooks } from '@medvya/ui';
 import { columnTracks, hasStarted, type CalendarKind, type ColumnItem, type ColumnLayout, type DayLayout } from '../domain/schedule';
 import { hatched } from './looks';
 import { AppointmentChip } from './AppointmentChip';
@@ -30,8 +30,8 @@ export default function DayGrid({ day, updating, now, ...actions }: { day: DayLa
   // The grid scrolls inside its own box so headers stick to its top and the time axis to its reading-start side.
   // Focusable, so keyboard users can scroll it too (WCAG 2.1.1); the global focus ring shows where focus is.
   return (
-    <section aria-label={t('schedule.grid')} aria-busy={updating || undefined} tabIndex={0}
-      className={cn('max-h-[calc(100dvh-12rem)] min-h-80 overflow-auto rounded-lg border bg-card transition-opacity', updating && 'opacity-60')}>
+    <Card aria-label={t('schedule.grid')} aria-busy={updating || undefined} tabIndex={0}
+      className={cn('max-h-[calc(100dvh-12rem)] min-h-80 gap-0 overflow-auto p-0 transition-opacity', updating && 'opacity-60')}>
       <div className="grid" style={{ gridTemplateColumns: `56px ${columnTracks(day.columns)}` }}>
         <div className="sticky start-0 top-0 z-30 border-e border-b bg-card" />
         {day.columns.map(c => <ColumnHeader key={c.calendarId} column={c} />)}
@@ -47,7 +47,7 @@ export default function DayGrid({ day, updating, now, ...actions }: { day: DayLa
           </ul>
         ))}
       </div>
-    </section>
+    </Card>
   );
 }
 

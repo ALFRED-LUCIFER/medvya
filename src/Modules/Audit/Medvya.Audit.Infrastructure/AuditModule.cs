@@ -20,6 +20,7 @@ public static class AuditModule
             .AddScoped<TenantSessionInterceptor>()
             .AddDbContext<AuditDbContext>((sp, o) => o.UseNpgsql(PostgresDataSources.For(connectionString)).AddInterceptors(sp.GetRequiredService<TenantSessionInterceptor>()))
             .AddScoped<IAuditLog, AuditLog>()
+            .AddSingleton<IPlatformAuditLog>(new PlatformAuditLog(connectionString))
             .AddScoped<IAuditTrail, AuditTrail>();
     }
 

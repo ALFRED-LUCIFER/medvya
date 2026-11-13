@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Medvya.Audit.Api;
 using Medvya.Audit.Application;
 using Medvya.Audit.Domain;
 using Medvya.Identity.Application;
@@ -133,8 +134,9 @@ public static class SessionControl
         {
             if (Read(http.User, SessionIdClaim) is { } sessionId && Read(http.User, ClaimTypes.NameIdentifier) is { } userId)
             {
-                // Audit rows belong to a tenant; a session that never chose a facility has none and is ended unaudited.
+                // A session that never chose a facility has no tenant: its sign-out goes in the platform chain.
                 if (http.User.FindFirst(TenantClaim) is not null) await WriteAuditAsync(http, "auth.signout", "session", sessionId);
+                else await AuditedEndpoint.WritePlatformAsync(http, "auth.signout", "session", "support", sessionId, AuditOutcome.Allowed);
                 await sessions.RevokeAsync(userId, sessionId, http.RequestAborted);
             }
             // A native app holds no cookie to clear (and the bearer scheme cannot sign out); revoking the row is the whole logout.

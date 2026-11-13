@@ -127,7 +127,7 @@ for (const locale of ['en', 'ar']) {
     for (const link of await tabs.getByRole('link').all()) expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(48);
     await tabs.getByRole('link').last().click();
     await expect(page).toHaveURL('/more');
-    await expect(page.getByRole('main').getByRole('link')).toHaveCount(6);
+    await expect(page.getByRole('main').getByRole('link')).toHaveCount(7); // includes My devices (MDV-P0-012)
   });
 }
 

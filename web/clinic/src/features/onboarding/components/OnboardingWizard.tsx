@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { useWatch, type UseFormReturn } from 'react-hook-form';
 import { ArrowLeft, ArrowRight, Check, LifeBuoy } from 'lucide-react';
 import { useI18n, type Country } from '@medvya/i18n';
-import { Button } from '@medvya/ui';
+import { Button, Card, PageHeader } from '@medvya/ui';
 import { preview, skippable, stepIds, type FinishResult, type Rules, type WizardForm } from '../domain/onboarding';
 import BookingPreview from './BookingPreview';
 import { HoursStep, PatientsStep, PaymentsStep, PracticeStep, TeamStep } from './OnboardingSteps';
@@ -82,37 +82,37 @@ export default function OnboardingWizard(p: Props) {
               );
             })}
           </ol>
-          <p className="flex flex-col gap-1 rounded-xl border bg-card p-4 text-xs text-muted-foreground">
+          <Card className="gap-1 text-xs text-muted-foreground">
             <strong className="flex items-center gap-1.5 text-sm text-foreground"><LifeBuoy className="size-4" aria-hidden />{t('onboarding.help.title')}</strong>
             {t('onboarding.help.body')}
-          </p>
+          </Card>
         </nav>
 
-        <main className="flex flex-col gap-6 rounded-2xl border bg-card p-5 md:p-8">
-          {done ? <ReadyScreen form={values} done={done} homeLabel={p.homeLabel} onBook={p.onBook} onHome={p.onHome} /> : (
-            <form noValidate onSubmit={e => { e.preventDefault(); p.onNext(); }} className="flex flex-col gap-6" aria-labelledby="onboarding-step">
-              <div className="flex flex-col gap-2">
-                <p className="text-xs font-bold text-brand-700">{t('onboarding.eyebrow', { n: index + 1, name })}</p>
-                <h1 id="onboarding-step" className="text-2xl font-extrabold">{t(`onboarding.${id}.title`)}</h1>
-                <p className="text-muted-foreground">{t(`onboarding.${id}.intro`)}</p>
-              </div>
-              {body}
-              <div className="flex flex-wrap items-center gap-3 border-t pt-4">
-                {index > 0 && <Button type="button" variant="outline" onClick={p.onBack}><ArrowLeft className="size-4 rtl:rotate-180" aria-hidden />{t('onboarding.back')}</Button>}
-                <p aria-live="polite" className="text-sm text-muted-foreground">
-                  {p.saveState === 'saving' ? t('onboarding.saving') : p.saveState === 'saved' ? t('onboarding.saved') : p.saveState === 'failed' ? t('onboarding.saveFailed') : ''}
-                </p>
-                <span className="flex-1" />
-                {skippable(step) && <Button type="button" variant="ghost" onClick={p.onSkip} disabled={p.working}>{t('onboarding.skip')}</Button>}
-                <Button type="submit" loading={p.working}>
-                  {p.last ? t('onboarding.finishSetup') : t('onboarding.continue')}<ArrowRight className="size-4 rtl:rotate-180" aria-hidden />
-                </Button>
-              </div>
-              <div aria-live="assertive" className="text-sm font-semibold text-danger-700">
-                {p.problem && <p>{t(`onboarding.problem.${p.problem}`)}</p>}
-              </div>
-            </form>
-          )}
+        <main className="min-w-0">
+          <Card className="gap-6 p-5 md:p-8">
+            {done ? <ReadyScreen form={values} done={done} homeLabel={p.homeLabel} onBook={p.onBook} onHome={p.onHome} /> : (
+              <form noValidate onSubmit={e => { e.preventDefault(); p.onNext(); }} className="flex flex-col gap-6" aria-label={t(`onboarding.${id}.title`)}>
+                {/* The eyebrow is the step counter, not a menu item. */}
+                <PageHeader className="[&_h1]:whitespace-normal" eyebrow={t('onboarding.eyebrow', { n: index + 1, name })} title={t(`onboarding.${id}.title`)}
+                  description={t(`onboarding.${id}.intro`)} />
+                {body}
+                <div className="flex flex-wrap items-center gap-3 border-t pt-4">
+                  {index > 0 && <Button type="button" variant="outline" onClick={p.onBack}><ArrowLeft className="size-4 rtl:rotate-180" aria-hidden />{t('onboarding.back')}</Button>}
+                  <p aria-live="polite" className="text-sm text-muted-foreground">
+                    {p.saveState === 'saving' ? t('onboarding.saving') : p.saveState === 'saved' ? t('onboarding.saved') : p.saveState === 'failed' ? t('onboarding.saveFailed') : ''}
+                  </p>
+                  <span className="flex-1" />
+                  {skippable(step) && <Button type="button" variant="ghost" onClick={p.onSkip} disabled={p.working}>{t('onboarding.skip')}</Button>}
+                  <Button type="submit" loading={p.working}>
+                    {p.last ? t('onboarding.finishSetup') : t('onboarding.continue')}<ArrowRight className="size-4 rtl:rotate-180" aria-hidden />
+                  </Button>
+                </div>
+                <div aria-live="assertive" className="text-sm font-semibold text-danger-700">
+                  {p.problem && <p>{t(`onboarding.problem.${p.problem}`)}</p>}
+                </div>
+              </form>
+            )}
+          </Card>
         </main>
 
         {!done && (

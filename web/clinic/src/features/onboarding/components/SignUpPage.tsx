@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { CircleAlert } from 'lucide-react';
 import { useI18n, type Country } from '@medvya/i18n';
-import { Button, Input, Label } from '@medvya/ui';
+import { Button, Input, Label, PageHeader } from '@medvya/ui';
 import AuthFrame from '../../session/components/AuthFrame';
 import type { SignUpForm } from '../domain/signUp';
 import Frame from './OnboardingFrame';
@@ -66,19 +66,14 @@ export default function SignUpPage({ languageSwitcher, form, step, country, onCo
     <AuthFrame languageSwitcher={languageSwitcher} steps={steps} country={country}>
       <form noValidate onSubmit={e => { e.preventDefault(); onNext(); }} className="flex flex-col gap-[18px]">
         {step === 1 ? <>
-          <div className="flex flex-col gap-1.5">
-            <h1 className="text-[28px] font-bold text-brand-950">{t('signin.create.practice.title')}</h1>
-            <p className="text-[15px] text-muted-foreground">{t('signin.create.practice.body')}</p>
-          </div>
+          {/* Wraps rather than truncates: nothing loads into this title, and on a phone it must be read whole. */}
+          <PageHeader className="[&_h1]:whitespace-normal" title={t('signin.create.practice.title')} description={t('signin.create.practice.body')} />
           <CountryChoice country={country} onChange={onCountry} />
           <TextField form={form} name="practiceName" label={t('signin.create.practiceName')} />
           <TextField form={form} name="city" label={t(country === 'AE' ? 'signin.create.emirate' : 'signin.create.city')} />
           <Button type="submit" className="min-h-12">{t('signin.continue')}</Button>
         </> : <>
-          <div className="flex flex-col gap-1.5">
-            <h1 className="text-[28px] font-bold text-brand-950">{t('signin.create.about.title')}</h1>
-            <p className="text-[15px] text-muted-foreground">{t('signin.create.about.body')}</p>
-          </div>
+          <PageHeader className="[&_h1]:whitespace-normal" title={t('signin.create.about.title')} description={t('signin.create.about.body')} />
           <TextField form={form} name="fullName" label={t('signin.create.fullName')} autoFocus />
           <TextField form={form} name="email" label={t('signin.email')} ltr />
           <fieldset className="flex flex-col gap-2">
@@ -109,7 +104,7 @@ export function StartPage({ languageSwitcher, country, onCountry, onStart, start
   const { t } = useI18n();
   return (
     <Frame languageSwitcher={languageSwitcher}>
-      <h1 className="text-2xl font-extrabold">{t('onboarding.title')}</h1>
+      <PageHeader className="[&_h1]:whitespace-normal" title={t('onboarding.title')} />
       <CountryChoice country={country} onChange={onCountry} />
       <Button onClick={onStart} loading={starting}>{t('onboarding.start.cta')}</Button>
       <p aria-live="assertive" className="text-sm font-semibold text-danger-700">{failed ? t('onboarding.start.failed') : ''}</p>

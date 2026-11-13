@@ -2,7 +2,7 @@ import { CircleCheck, CircleDashed, Info } from 'lucide-react';
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, Input, Label, PageContainer, PageHeader } from '@medvya/ui';
+import { Button, buttonVariants, Card, Input, Label, PageContainer, PageHeader } from '@medvya/ui';
 import { uploadErrorKey, type DocumentKind, type FileProblem, type ItContactForm, type OrganisationRequest, type RequestError } from '../domain/organisationRequest';
 
 type Props = {
@@ -76,25 +76,27 @@ export default function OrganisationRequestPage(p: Props) {
             const id = `doc-${kind}`;
             const failed = p.uploadError && p.uploadErrorKind === kind;
             return (
-              <li key={kind} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card p-4">
-                <div className="flex min-w-0 flex-col gap-1">
-                  <Label htmlFor={id}>{t(`orgRequest.doc.${kind}`)}</Label>
-                  <span className="flex items-center gap-1.5 text-sm">
-                    {added ? <CircleCheck className="size-4" aria-hidden /> : <CircleDashed className="size-4" aria-hidden />}
-                    {added ? t('orgRequest.doc.added') : t('orgRequest.doc.missing')}
-                  </span>
-                  {failed && uploadMessage && <span id={`${id}-error`} role="alert" className={error}>{uploadMessage}</span>}
-                </div>
-                {p.editable && (
-                  <>
-                    <input id={id} type="file" accept="application/pdf,image/png,image/jpeg" className="peer sr-only" disabled={p.uploading === kind}
-                      aria-describedby={failed ? `${id}-error` : undefined} aria-invalid={failed ? true : undefined}
-                      onChange={e => { p.onFile(kind, e.currentTarget.files?.[0]); e.currentTarget.value = ''; }} />
-                    <label htmlFor={id} className={buttonVariants({ variant: 'outline', className: 'w-fit cursor-pointer peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring peer-disabled:pointer-events-none peer-disabled:opacity-50' })}>
-                      {p.uploading === kind ? t('orgRequest.doc.uploading') : added ? t('orgRequest.doc.replace') : t('orgRequest.doc.choose')}
-                    </label>
-                  </>
-                )}
+              <li key={kind}>
+                <Card className="flex-row flex-wrap items-center justify-between">
+                  <div className="flex min-w-0 flex-col gap-1">
+                    <Label htmlFor={id}>{t(`orgRequest.doc.${kind}`)}</Label>
+                    <span className="flex items-center gap-1.5 text-sm">
+                      {added ? <CircleCheck className="size-4" aria-hidden /> : <CircleDashed className="size-4" aria-hidden />}
+                      {added ? t('orgRequest.doc.added') : t('orgRequest.doc.missing')}
+                    </span>
+                    {failed && uploadMessage && <span id={`${id}-error`} role="alert" className={error}>{uploadMessage}</span>}
+                  </div>
+                  {p.editable && (
+                    <>
+                      <input id={id} type="file" accept="application/pdf,image/png,image/jpeg" className="peer sr-only" disabled={p.uploading === kind}
+                        aria-describedby={failed ? `${id}-error` : undefined} aria-invalid={failed ? true : undefined}
+                        onChange={e => { p.onFile(kind, e.currentTarget.files?.[0]); e.currentTarget.value = ''; }} />
+                      <label htmlFor={id} className={buttonVariants({ variant: 'outline', className: 'w-fit cursor-pointer peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring peer-disabled:pointer-events-none peer-disabled:opacity-50' })}>
+                        {p.uploading === kind ? t('orgRequest.doc.uploading') : added ? t('orgRequest.doc.replace') : t('orgRequest.doc.choose')}
+                      </label>
+                    </>
+                  )}
+                </Card>
               </li>
             );
           })}

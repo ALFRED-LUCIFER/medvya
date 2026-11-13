@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { CircleAlert, ShieldCheck } from 'lucide-react';
+import { PageHeader } from '@medvya/ui';
 import { useI18n } from '@medvya/i18n';
 import AuthFrame from '../../session/components/AuthFrame';
 import type { PaperVerify } from '../domain/authorisation';
@@ -15,8 +16,9 @@ export default function PaperVerifyPage(p: Props) {
   const r = p.result;
   return (
     <AuthFrame languageSwitcher={p.languageSwitcher}>
-      <section aria-labelledby="paper-verify-title" className="flex flex-col gap-3">
-        <h1 id="paper-verify-title" className="text-xl font-extrabold">{t('paperVerify.title')}</h1>
+      <section aria-label={t('paperVerify.title')} className="flex flex-col gap-3">
+        {/* Wraps rather than truncates: nothing loads into this title, and on a phone it must be read whole. */}
+        <PageHeader className="[&_h1]:whitespace-normal" title={t('paperVerify.title')} />
         {p.loading && <p role="status">{t('paperVerify.loading')}</p>}
         {(p.unknown || p.failed) && <p role="alert" className="flex items-start gap-2 font-bold"><CircleAlert aria-hidden className="mt-0.5 size-5 shrink-0" />{t(p.unknown ? 'paperVerify.unknown' : 'paperVerify.failed')}</p>}
         {r && (

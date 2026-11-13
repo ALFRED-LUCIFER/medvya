@@ -1,6 +1,6 @@
 import { CalendarPlus, CircleCheck, FileUp, FolderInput, Plug, Store, Users, type LucideIcon } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button } from '@medvya/ui';
+import { Button, PageHeader } from '@medvya/ui';
 import { specialtyIdOf, type FinishResult, type WizardForm } from '../domain/onboarding';
 
 type Props = { form: WizardForm; done: FinishResult; homeLabel: 'today' | 'frontDesk'; onBook: () => void; onHome: () => void };
@@ -24,8 +24,8 @@ export default function ReadyScreen({ form, done, homeLabel, onBook, onHome }: P
     <div className="flex flex-col gap-6">
       <div role="status" className="flex flex-col items-start gap-3">
         <CircleCheck className="size-12 text-success-700" aria-hidden />
-        <h1 className="text-2xl font-extrabold">{t('onboarding.ready.title', { name: form.clinicName.trim() })}</h1>
-        <p className="text-muted-foreground">{t('onboarding.ready.body')}</p>
+        {/* Wraps rather than truncates: nothing loads into this title, and on a phone it must be read whole. */}
+        <PageHeader className="[&_h1]:whitespace-normal" title={t('onboarding.ready.title', { name: form.clinicName.trim() })} description={t('onboarding.ready.body')} />
         {done.invitationsFailed > 0 && <p className="font-semibold text-warning-700">{t('onboarding.done.invitesFailed', { n: done.invitationsFailed })}</p>}
       </div>
       <dl className="flex flex-col divide-y rounded-xl border">

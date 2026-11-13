@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { useI18n } from '@medvya/i18n';
+import { Card } from '@medvya/ui';
 
 /** Page frame shared by the sign-up screens: brand, language switcher and one card. */
 export default function Frame({ languageSwitcher, children }: { languageSwitcher: ReactNode; children: ReactNode }) {
@@ -10,7 +11,7 @@ export default function Frame({ languageSwitcher, children }: { languageSwitcher
         <span className="text-lg font-extrabold">{t('app.name')}</span>
         {languageSwitcher}
       </div>
-      <div className="flex flex-col gap-6 rounded-xl border bg-card p-5 md:p-7">{children}</div>
+      <Card className="gap-6 p-5 md:p-7">{children}</Card>
     </main>
   );
 }

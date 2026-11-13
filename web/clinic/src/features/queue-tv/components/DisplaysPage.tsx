@@ -2,7 +2,7 @@ import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { Copy, MonitorPlay } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, Input, Label } from '@medvya/ui';
+import { Button, Card, Input, Label } from '@medvya/ui';
 import type { Display, DisplayInput } from '../domain/queueTv';
 
 type Props = {
@@ -29,9 +29,8 @@ export default function DisplaysPage(p: Props) {
   const { t, formatDate } = useI18n();
   const { errors } = p.form.formState;
   return (
-    <section aria-labelledby="displays-title" className="flex max-w-[720px] flex-col gap-4 rounded-xl border bg-card p-6">
-      <h2 id="displays-title" className="flex items-center gap-2 text-lg font-extrabold"><MonitorPlay aria-hidden className="size-6" />{t('displays.title')}</h2>
-      <p className="text-muted-foreground">{t('displays.intro')}</p>
+    <Card aria-label={t('displays.title')} className="max-w-[720px] gap-4"
+      title={<span className="flex items-center gap-2"><MonitorPlay aria-hidden className="size-6" />{t('displays.title')}</span>} intro={t('displays.intro')}>
       {p.loading ? <p role="status">{t('displays.loading')}</p>
         : p.loadFailed ? <p role="alert" className={fieldError}>{t(p.forbidden ? 'displays.forbidden' : 'displays.loadFailed')}</p>
         : <>
@@ -78,6 +77,6 @@ export default function DisplaysPage(p: Props) {
           )}
           {p.revokeFailed && <p role="alert" className={fieldError}>{t('displays.revokeFailed')}</p>}
         </>}
-    </section>
+    </Card>
   );
 }

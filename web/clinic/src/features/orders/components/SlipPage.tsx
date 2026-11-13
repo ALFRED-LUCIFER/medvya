@@ -1,7 +1,7 @@
 import { Link } from 'react-router';
 import { FileDown, Printer } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants } from '@medvya/ui';
+import { Button, buttonVariants, PageHeader, PageMessage } from '@medvya/ui';
 import type { OrderSlip } from '../domain/orders';
 
 type Props = { slip: OrderSlip | null; loading: boolean; nothingPlaced: boolean; failed: boolean; onPrint: () => void; consultPath: string;
@@ -14,8 +14,14 @@ type Props = { slip: OrderSlip | null; loading: boolean; nothingPlaced: boolean;
  */
 export default function SlipPage(p: Props) {
   const { t, formatDate, formatCalendarDate } = useI18n();
-  if (p.loading) return <p role="status">{t('orders.slip.loading')}</p>;
-  if (p.nothingPlaced || p.failed || !p.slip) return <p role="alert" className="font-bold">{t(p.nothingPlaced ? 'orders.slip.notFound' : 'orders.slip.loadFailed')}</p>;
+  if (p.loading || p.nothingPlaced || p.failed || !p.slip)
+    return (
+      <div className="flex max-w-[720px] flex-col gap-4">
+        <PageHeader title={t('orders.slip.title')} />
+        {p.loading ? <PageMessage kind="busy">{t('orders.slip.loading')}</PageMessage>
+          : <PageMessage kind="error">{t(p.nothingPlaced ? 'orders.slip.notFound' : 'orders.slip.loadFailed')}</PageMessage>}
+      </div>
+    );
   const { slip } = p;
   return (
     <div className="flex max-w-[720px] flex-col gap-4">
@@ -25,11 +31,11 @@ export default function SlipPage(p: Props) {
         <Link to={p.consultPath} className={buttonVariants({ variant: 'outline' })}>{t('orders.slip.back')}</Link>
       </div>
       {p.pdfProblem && <p role="alert" className="font-bold text-danger-700 print:hidden">{t(p.pdfProblem === 'unsupported' ? 'paper.pdfUnsupported' : 'paper.pdfFailed')}</p>}
-      <article aria-labelledby="slip-title" className="flex flex-col gap-4 rounded-xl border bg-white p-6 text-black print:rounded-none print:border-0 print:p-0">
-        <header className="border-b-2 border-black pb-2">
-          <h1 id="slip-title" className="text-xl font-extrabold">{t('orders.slip.title')}</h1>
+      <article aria-label={t('orders.slip.title')} className="flex flex-col gap-4 rounded-xl border bg-white p-6 text-black print:rounded-none print:border-0 print:p-0">
+        {/* On paper the title wraps; it is never cut. */}
+        <PageHeader className="border-b-2 border-black pb-2 [&_h1]:whitespace-normal" title={t('orders.slip.title')}>
           <p className="font-bold">{slip.facilityName}</p>
-        </header>
+        </PageHeader>
         <dl className="grid grid-cols-[max-content_1fr] gap-x-6 gap-y-1">
           <dt className="font-bold">{t('orders.slip.patient')}</dt><dd>{slip.patient.fullName}</dd>
           <dt className="font-bold">{t('orders.slip.mrn')}</dt><dd><bdi dir="ltr">{slip.patient.mrn}</bdi></dd>

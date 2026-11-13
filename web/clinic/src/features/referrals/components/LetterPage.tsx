@@ -1,7 +1,7 @@
 import { Link } from 'react-router';
 import { FileDown, Printer } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants } from '@medvya/ui';
+import { Button, buttonVariants, PageHeader, PageMessage } from '@medvya/ui';
 import type { Letter } from '../domain/referrals';
 
 type Props = { letter: Letter | null; loading: boolean; notFound: boolean; failed: boolean; onPrint: () => void; consultPath: string;
@@ -14,8 +14,14 @@ type Props = { letter: Letter | null; loading: boolean; notFound: boolean; faile
  */
 export default function LetterPage(p: Props) {
   const { t, formatDate, formatCalendarDate } = useI18n();
-  if (p.loading) return <p role="status">{t('referrals.letter.loading')}</p>;
-  if (p.notFound || p.failed || !p.letter) return <p role="alert" className="font-bold">{t(p.notFound ? 'referrals.letter.notFound' : 'referrals.letter.loadFailed')}</p>;
+  if (p.loading || p.notFound || p.failed || !p.letter)
+    return (
+      <div className="flex max-w-[720px] flex-col gap-4">
+        <PageHeader title={t('referrals.letter.title')} />
+        {p.loading ? <PageMessage kind="busy">{t('referrals.letter.loading')}</PageMessage>
+          : <PageMessage kind="error">{t(p.notFound ? 'referrals.letter.notFound' : 'referrals.letter.loadFailed')}</PageMessage>}
+      </div>
+    );
   const { letter } = p;
   return (
     <div className="flex max-w-[720px] flex-col gap-4">
@@ -25,11 +31,11 @@ export default function LetterPage(p: Props) {
         <Link to={p.consultPath} className={buttonVariants({ variant: 'outline' })}>{t('referrals.letter.back')}</Link>
       </div>
       {p.pdfProblem && <p role="alert" className="font-bold text-danger-700 print:hidden">{t(p.pdfProblem === 'unsupported' ? 'paper.pdfUnsupported' : 'paper.pdfFailed')}</p>}
-      <article aria-labelledby="letter-title" className="flex flex-col gap-4 rounded-xl border bg-white p-6 text-black print:rounded-none print:border-0 print:p-0">
-        <header className="border-b-2 border-black pb-2">
-          <h1 id="letter-title" className="text-xl font-extrabold">{t('referrals.letter.title')}</h1>
+      <article aria-label={t('referrals.letter.title')} className="flex flex-col gap-4 rounded-xl border bg-white p-6 text-black print:rounded-none print:border-0 print:p-0">
+        {/* On paper the title wraps; it is never cut. */}
+        <PageHeader className="border-b-2 border-black pb-2 [&_h1]:whitespace-normal" title={t('referrals.letter.title')}>
           <p className="font-bold">{letter.facilityName}</p>
-        </header>
+        </PageHeader>
         <dl className="grid grid-cols-[max-content_1fr] gap-x-6 gap-y-1">
           <dt className="font-bold">{t('referrals.letter.to')}</dt><dd>{letter.provider}</dd>
           <dt className="font-bold">{t('referrals.letter.urgency')}</dt><dd>{t(`referrals.urgency.${letter.urgency}`)}</dd>

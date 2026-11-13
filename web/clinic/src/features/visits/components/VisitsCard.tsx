@@ -1,6 +1,6 @@
 import { Link } from 'react-router';
 import { useI18n } from '@medvya/i18n';
-import { buttonVariants } from '@medvya/ui';
+import { buttonVariants, Card } from '@medvya/ui';
 import { visitStatus, type VisitRow } from '../domain/visits';
 
 type Props = { visits: VisitRow[]; timeZone: string; loading: boolean; failed: boolean; consultPath: (encounterId: string) => string; printRx: boolean };
@@ -10,8 +10,7 @@ export default function VisitsCard(p: Props) {
   const { t, formatDate, formatTime } = useI18n();
   const link = buttonVariants({ variant: 'link', className: 'px-0' });
   return (
-    <section aria-label={t('visits.title')} className="flex flex-col gap-3 rounded-xl border bg-card p-4">
-      <h2 className="text-base font-extrabold">{t('visits.title')}</h2>
+    <Card title={t('visits.title')}>
       {p.loading ? <p role="status">{t('visits.loading')}</p>
         : p.failed ? <p role="alert" className="font-bold">{t('visits.loadFailed')}</p>
         : p.visits.length === 0 ? <p className="text-muted-foreground">{t('visits.empty')}</p>
@@ -39,7 +38,7 @@ export default function VisitsCard(p: Props) {
             })}
           </ol>
         )}
-    </section>
+    </Card>
   );
 }
 

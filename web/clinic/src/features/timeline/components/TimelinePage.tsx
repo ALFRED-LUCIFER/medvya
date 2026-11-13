@@ -1,6 +1,6 @@
 import { Link } from 'react-router';
 import { ltr, useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, ProvenanceTag, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@medvya/ui';
+import { Button, buttonVariants, Card, EmptyState, PageContainer, PageHeader, PageMessage, ProvenanceTag, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@medvya/ui';
 import type { ChartSource, ClinicalRefusal, Patient360 } from '../../patient360/domain/chart';
 import { pathOf, provenanceOf, sparkBox } from '../../patient360/domain/chart';
 import { PatientBanner, PrescribedLinks } from '../../patient360/components/Patient360Page';
@@ -24,30 +24,32 @@ type Props = {
  */
 export default function TimelinePage(p: Props) {
   const { t } = useI18n();
-  if (p.refusal) return <Message title={t('patient360.refused.title')} body={t(p.refusal.canRequest ? 'consult.refused.ask' : 'patient360.refused.role')} backPath={p.backPath} />;
-  if (p.notFound || p.failed) return <Message title={t(p.notFound ? 'patient360.notFound' : 'timeline.loadFailed')} backPath={p.backPath} />;
+  // One header in every state, so the title and the way back never move (MDV-P2-059).
+  const header = <PageHeader title={t('timeline.title')} actions={<Link to={p.backPath} className={buttonVariants({ variant: 'outline' })}>{t('timeline.backToChart')}</Link>} />;
+  if (p.refusal)
+    return <PageContainer>{header}<PageMessage kind="denied" title={t('patient360.refused.title')}>{t(p.refusal.canRequest ? 'consult.refused.ask' : 'patient360.refused.role')}</PageMessage></PageContainer>;
+  if (p.notFound || p.failed) return <PageContainer>{header}<PageMessage kind="error">{t(p.notFound ? 'patient360.notFound' : 'timeline.loadFailed')}</PageMessage></PageContainer>;
   return (
-    <div className="flex flex-col gap-4">
+    <PageContainer>
+      {header}
       {p.patient && <PatientBanner data={p.patient} />}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-extrabold">{t('timeline.title')}</h1>
-        <Link to={p.backPath} className={buttonVariants({ variant: 'outline' })}>{t('timeline.backToChart')}</Link>
-      </div>
       <Filters {...p} />
       <div className="grid gap-4 lg:grid-cols-[3fr_2fr]">
-        <section aria-label={t('timeline.list')} className="flex flex-col gap-3 rounded-xl border bg-card p-4">
-          {p.loading ? <p role="status">{t('timeline.loading')}</p>
-            : p.entries.length === 0 ? <Empty {...p} />
+        <Card aria-label={t('timeline.list')}>
+          {p.loading ? <PageMessage kind="busy">{t('timeline.loading')}</PageMessage>
+            : p.entries.length === 0 ? <EmptyState action={hasFilters(p.filters) && <Button variant="outline" onClick={p.onClear}>{t('timeline.clear')}</Button>}>
+              {t(hasFilters(p.filters) ? 'timeline.empty.filtered' : 'timeline.empty')}
+            </EmptyState>
             : <ol className="flex flex-col gap-3">{p.entries.map(e => <Entry key={e.id} entry={e} zone={p.timeZone} consultPath={p.consultPath} printRx={p.printRx} />)}</ol>}
           {p.canLoadMore && (
             <Button variant="outline" className="self-start" loading={p.loadingMore} onClick={p.onMore}>{t('timeline.loadEarlier')}</Button>
           )}
           {p.loadMoreFailed && <p role="alert" className="font-bold text-danger-700">{t('timeline.loadMoreFailed')}</p>}
           {!p.loading && !p.canLoadMore && p.entries.length > 0 && <p role="status" className="text-sm text-muted-foreground">{t('timeline.end')}</p>}
-        </section>
+        </Card>
         <Trends {...p} />
       </div>
-    </div>
+    </PageContainer>
   );
 }
 
@@ -70,16 +72,6 @@ function Filters(p: Props) {
       </Select>
       {hasFilters(p.filters) && <Button variant="ghost" onClick={p.onClear}>{t('timeline.clear')}</Button>}
     </section>
-  );
-}
-
-function Empty(p: Props) {
-  const { t } = useI18n();
-  return (
-    <div className="flex flex-col items-start gap-2">
-      <p className="font-bold">{t(hasFilters(p.filters) ? 'timeline.empty.filtered' : 'timeline.empty')}</p>
-      {hasFilters(p.filters) && <Button variant="outline" onClick={p.onClear}>{t('timeline.clear')}</Button>}
-    </div>
   );
 }
 
@@ -109,8 +101,7 @@ function Trends(p: Props) {
   const lines = p.series ? chartLines(p.series) : null;
   const name = t(`patient360.trend.${p.choice}`);
   return (
-    <section aria-label={t('patient360.trends')} className="flex flex-col gap-3 rounded-xl border bg-card p-4">
-      <h2 className="text-base font-extrabold">{t('patient360.trends')}</h2>
+    <Card title={t('patient360.trends')}>
       <div className="flex flex-wrap gap-2">
         {trendChoices.map(c => (
           <Button key={c} variant={c === p.choice ? 'selected' : 'outline'} aria-pressed={c === p.choice} onClick={() => p.onChoice(c)}>{t(`patient360.trend.${c}`)}</Button>
@@ -147,17 +138,6 @@ function Trends(p: Props) {
             </Table>
           </>
         )}
-    </section>
-  );
-}
-
-function Message({ title, body, backPath }: { title: string; body?: string; backPath: string }) {
-  const { t } = useI18n();
-  return (
-    <div role="alert" className="flex flex-col items-start gap-3 rounded-xl border bg-card p-6">
-      <h1 className="text-lg font-extrabold">{title}</h1>
-      {body && <p>{body}</p>}
-      <Link to={backPath} className={buttonVariants({ variant: 'outline' })}>{t('timeline.backToChart')}</Link>
-    </div>
+    </Card>
   );
 }

@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import { Link } from 'react-router';
 import { Camera, CircleAlert, CircleCheck, Hourglass, Pencil, ShieldAlert, Upload } from 'lucide-react';
 import { ltr, useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, Input, Label, ProvenanceTag, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
+import { Button, buttonVariants, Card, Input, Label, PageContainer, PageHeader, PageMessage, ProvenanceTag, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
 import type { ClinicalRefusal } from '../../patient360/domain/chart';
 import { provenanceOf } from '../../patient360/domain/chart';
 import { canOpenDocument, documentSources, documentTypes, sizeLabel, type DocumentList, type DocumentRow, type DocumentSource, type DocumentType, type ScanStatus, type UploadFailure, type ViewLink } from '../domain/documents';
@@ -26,28 +26,30 @@ type Props = {
  */
 export default function DocumentsPage(p: Props) {
   const { t, formatCalendarDate } = useI18n();
-  if (p.loading) return <p role="status">{t('documents.loading')}</p>;
-  if (p.refusal) return <Message title={t('patient360.refused.title')} body={t(p.refusal.canRequest ? 'consult.refused.ask' : 'documents.refused.role')} backPath={p.backPath} />;
-  if (p.notFound || p.failed || !p.patient) return <Message title={t(p.notFound ? 'patient360.notFound' : 'documents.loadFailed')} backPath={p.backPath} />;
+  // One header in every state, so the title and the way back never move (MDV-P2-059).
+  const header = <PageHeader title={t('documents.title')} actions={<Link to={p.backPath} className={buttonVariants({ variant: 'outline' })}>{t('documents.back')}</Link>} />;
+  if (p.loading) return <PageContainer>{header}<PageMessage kind="busy">{t('documents.loading')}</PageMessage></PageContainer>;
+  if (p.refusal)
+    return <PageContainer>{header}<PageMessage kind="denied" title={t('patient360.refused.title')}>{t(p.refusal.canRequest ? 'consult.refused.ask' : 'documents.refused.role')}</PageMessage></PageContainer>;
+  if (p.notFound || p.failed || !p.patient) return <PageContainer>{header}<PageMessage kind="error">{t(p.notFound ? 'patient360.notFound' : 'documents.loadFailed')}</PageMessage></PageContainer>;
   return (
-    <div className="flex flex-col gap-4">
+    <PageContainer>
+      {header}
       <section aria-label={t('consult.banner.label')} className="flex flex-wrap items-baseline gap-x-4 gap-y-1 rounded-xl border-2 border-brand-700 bg-card p-4">
-        <h1 className="text-xl font-extrabold">{p.patient.fullName}</h1>
+        <h2 className="text-heading">{p.patient.fullName}</h2>
         <span>{t('consult.banner.mrn', { mrn: ltr(p.patient.mrn) })}</span>
         <span>{t('documents.dob', { date: formatCalendarDate(p.patient.dateOfBirth) })}</span>
-        <Link to={p.backPath} className={buttonVariants({ variant: 'outline', className: 'ms-auto' })}>{t('documents.back')}</Link>
       </section>
-      <h2 className="text-lg font-extrabold">{t('documents.title')}</h2>
       <UploadPanel {...p} />
       {p.viewer && <Viewer viewer={p.viewer} timeZone={p.timeZone} onClose={p.onCloseViewer} />}
       {p.expired && <p role="status" className="font-bold">{t('documents.viewer.expired')}</p>}
-      <section aria-label={t('documents.list')} className="flex flex-col gap-3 rounded-xl border bg-card p-4">
+      <Card aria-label={t('documents.list')}>
         {!p.canOpen && <p className="text-sm text-muted-foreground">{t('documents.deskNote')}</p>}
         {p.documents.length === 0 ? <p className="text-muted-foreground">{t('documents.empty')}</p>
           : <ul className="flex flex-col gap-3">{p.documents.map(d => <Row key={d.id} doc={d} {...p} />)}</ul>}
         {p.openProblem && <p role="alert" className="font-bold text-danger-700">{t(`documents.open.${p.openProblem}`)}</p>}
-      </section>
-    </div>
+      </Card>
+    </PageContainer>
   );
 }
 
@@ -56,8 +58,7 @@ function UploadPanel(p: Props) {
   const file = useRef<HTMLInputElement>(null), photo = useRef<HTMLInputElement>(null);
   const busy = p.uploading || p.addingPhoto;
   return (
-    <section aria-label={t('documents.upload')} className="flex flex-col gap-3 rounded-xl border bg-card p-4">
-      <h3 className="text-base font-extrabold">{t('documents.upload')}</h3>
+    <Card title={t('documents.upload')}>
       <div className="flex flex-wrap items-end gap-3">
         <div className="flex flex-col gap-1">
           <Label htmlFor="doc-type">{t('documents.field.type')}</Label>
@@ -105,7 +106,7 @@ function UploadPanel(p: Props) {
           <Button variant="ghost" onClick={p.onDismissFailure}>{t('documents.dismiss')}</Button>
         </div>
       )}
-    </section>
+    </Card>
   );
 }
 
@@ -176,16 +177,5 @@ function Viewer({ viewer, timeZone, onClose }: { viewer: ViewLink; timeZone: str
         <div aria-hidden className="pointer-events-none absolute inset-0 select-none" style={{ backgroundImage: watermark(mark) }} />
       </div>
     </section>
-  );
-}
-
-function Message({ title, body, backPath }: { title: string; body?: string; backPath: string }) {
-  const { t } = useI18n();
-  return (
-    <div role="alert" className="flex flex-col items-start gap-3 rounded-xl border bg-card p-6">
-      <h1 className="text-lg font-extrabold">{title}</h1>
-      {body && <p>{body}</p>}
-      <Link to={backPath} className={buttonVariants({ variant: 'outline' })}>{t('documents.back')}</Link>
-    </div>
   );
 }

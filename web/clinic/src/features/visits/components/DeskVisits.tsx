@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { useI18n } from '@medvya/i18n';
+import { Card } from '@medvya/ui';
 import type { DeskVisit } from '../domain/visits';
 
 type Props = { visits: DeskVisit[]; timeZone?: string; loading: boolean; failed: boolean; followUp?: ReactNode };
@@ -8,9 +9,8 @@ type Props = { visits: DeskVisit[]; timeZone?: string; loading: boolean; failed:
 export default function DeskVisits(p: Props) {
   const { t, formatDate, formatTime } = useI18n();
   return (
-    <section aria-labelledby="desk-visits" className="rounded-xl border bg-card p-4">
-      <h2 id="desk-visits" className="mb-3 text-base font-extrabold">{t('visits.title')}</h2>
-      {p.followUp && <div className="mb-3">{p.followUp}</div>}
+    <Card title={t('visits.title')}>
+      {p.followUp}
       {p.loading ? <p role="status">{t('visits.loading')}</p>
         : p.failed ? <p role="alert" className="text-sm font-semibold text-danger-700">{t('visits.loadFailed')}</p>
         : p.visits.length === 0 ? <p className="text-muted-foreground">{t('visits.empty')}</p>
@@ -27,6 +27,6 @@ export default function DeskVisits(p: Props) {
             })}
           </ul>
         )}
-    </section>
+    </Card>
   );
 }

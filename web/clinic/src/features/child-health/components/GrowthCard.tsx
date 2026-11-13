@@ -1,7 +1,7 @@
 import type { UseFormReturn } from 'react-hook-form';
 import { Controller } from 'react-hook-form';
 import { ltr, useI18n } from '@medvya/i18n';
-import { Button, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@medvya/ui';
+import { Button, Card, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@medvya/ui';
 import { CircleAlert, TrendingDown, TrendingUp } from 'lucide-react';
 import { describedBy } from '../../settings/components/fieldStyles';
 import {
@@ -28,19 +28,11 @@ export default function GrowthCard(p: Props) {
   const v = p.view;
   const series = v.series.find(s => s.indicator === p.indicator) ?? null;
   return (
-    <section aria-labelledby="growth-title" className="flex flex-col gap-3 rounded-xl border bg-card p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 id="growth-title" className="text-base font-extrabold">{t('childHealth.growth.title')}</h2>
-        {!v.noCentiles && (
-          <div className="flex flex-wrap gap-2">
-            {indicators.map(i => (
-              <Button key={i} type="button" variant={i === p.indicator ? 'selected' : 'outline'} aria-pressed={i === p.indicator} onClick={() => p.onIndicator(i)}>
-                {t(`childHealth.growth.indicator.${i}`)}
-              </Button>
-            ))}
-          </div>
-        )}
-      </div>
+    <Card title={t('childHealth.growth.title')} actions={!v.noCentiles && indicators.map(i => (
+      <Button key={i} type="button" variant={i === p.indicator ? 'selected' : 'outline'} aria-pressed={i === p.indicator} onClick={() => p.onIndicator(i)}>
+        {t(`childHealth.growth.indicator.${i}`)}
+      </Button>
+    ))}>
       {!v.signedOff && <p className="text-sm text-muted-foreground">{t('childHealth.growth.draft')}</p>}
       {v.noCentiles ? <p className="font-bold">{t(`childHealth.growth.noCentiles.${v.noCentiles}`)}</p> : series && <Chart series={series} />}
       {v.velocity && (
@@ -52,7 +44,7 @@ export default function GrowthCard(p: Props) {
       <Measurements view={v} />
       {p.canRecord && <GrowthForm {...p} />}
       {p.problem && <p role="alert" className="font-bold text-danger-700">{t(`childHealth.growth.error.${p.problem}`)}</p>}
-    </section>
+    </Card>
   );
 }
 

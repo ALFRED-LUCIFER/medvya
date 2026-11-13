@@ -1,7 +1,7 @@
 import { Link } from 'react-router';
 import { CircleCheck, Hourglass, ShieldAlert } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { buttonVariants, ProvenanceTag } from '@medvya/ui';
+import { buttonVariants, Card, ProvenanceTag } from '@medvya/ui';
 import { provenanceOf } from '../../patient360/domain/chart';
 import type { DocumentRow } from '../domain/documents';
 
@@ -11,8 +11,7 @@ type Props = { documents: DocumentRow[]; loading: boolean; failed: boolean; docu
 export default function DocumentsSummary(p: Props) {
   const { t, formatCalendarDate } = useI18n();
   return (
-    <section aria-label={t('documents.title')} className="flex flex-col gap-3 rounded-xl border bg-card p-4">
-      <h2 className="text-base font-extrabold">{t('documents.title')}</h2>
+    <Card title={t('documents.title')}>
       {p.loading ? <p role="status">{t('documents.loading')}</p>
         : p.failed ? <p role="alert" className="font-bold">{t('documents.loadFailed')}</p>
         : p.documents.length === 0 ? <p className="text-muted-foreground">{t('documents.empty')}</p>
@@ -33,7 +32,7 @@ export default function DocumentsSummary(p: Props) {
           </ul>
         )}
       <Link to={p.documentsPath} className={buttonVariants({ variant: 'outline', className: 'self-start' })}>{t('documents.openAll')}</Link>
-    </section>
+    </Card>
   );
 }
 

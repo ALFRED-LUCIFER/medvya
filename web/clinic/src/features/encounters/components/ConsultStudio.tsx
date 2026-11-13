@@ -56,7 +56,7 @@ export default function ConsultStudio(p: Props) {
     <section aria-labelledby="note-title" className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 id="note-title" className="text-lg font-extrabold">{t('noteEditor.title')}</h2>
-        {!p.readOnly && <SaveState phase={p.phase} reloading={p.reloading} onRetry={p.onRetry} onReapply={p.onReapply} />}
+        {!p.readOnly && <SaveState phase={p.phase} savedAt={p.savedAt} reloading={p.reloading} onRetry={p.onRetry} onReapply={p.onReapply} />}
       </div>
       <div className="flex flex-col gap-2">
         <RecordingConsentChoice value={p.consent} readOnly={p.readOnly} onChange={p.onConsent} />

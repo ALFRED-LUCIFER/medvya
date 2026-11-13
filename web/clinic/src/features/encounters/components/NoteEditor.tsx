@@ -16,6 +16,8 @@ export type NoteEditorProps = StructuredProps & {
   loading: boolean; forbidden: boolean; loadFailed: boolean;
   template: NoteTemplate | null; templateKey: string | null; choices: NoteTemplate[];
   readOnly: boolean; phase: SavePhase; reloading: boolean;
+  /** The time the server last answered a save, as shown; null until then. */
+  savedAt: string | null;
   pendingSwitch: { template: NoteTemplate; dropped: string[] } | null;
   onRequestSwitch: (key: string) => void; onCancelSwitch: () => void; onConfirmSwitch: () => void;
   onRetry: () => void; onReapply: () => void;
@@ -43,7 +45,7 @@ export default function NoteEditor(p: NoteEditorProps) {
       {!p.readOnly && <p className="text-sm text-muted-foreground">{t('noteEditor.manualBanner')}</p>}
       <SignedBanner signed={p.readOnly} versionNo={p.signature?.versionNo ?? 1} />
       {p.signature && <SignedLine signature={p.signature} timeZone={p.timeZone} />}
-      {!p.readOnly && <SaveState phase={p.phase} reloading={p.reloading} onRetry={p.onRetry} onReapply={p.onReapply} />}
+      {!p.readOnly && <SaveState phase={p.phase} savedAt={p.savedAt} reloading={p.reloading} onRetry={p.onRetry} onReapply={p.onReapply} />}
       {p.assist && <NoteAssist assist={p.assist} template={p.template} timeZone={p.timeZone} />}
       <div className="flex flex-col gap-4">
         {p.template.sections.map(s => <NoteSectionField key={s.id} section={s} register={p.register} readOnly={p.readOnly} answers={p.answers} onAnswers={p.onAnswers} />)}

@@ -1,0 +1,1378 @@
+[
+ {
+  "k": "loading front-desk",
+  "v": {
+   "text": "Front desk\n\nReception board\nBy status\nBy doctor\n\nLive updates\n\nReceptionist view",
+   "busy": true,
+   "h": 900
+  }
+ },
+ {
+  "k": "loaded front-desk",
+  "v": {
+   "h": 2074
+  }
+ },
+ {
+  "k": "loading today",
+  "v": {
+   "text": "Today\n\nToday\n\nLive updates\n\nMy patients\nWhole clinic\nLoading the board…",
+   "busy": true,
+   "h": 900
+  }
+ },
+ {
+  "k": "loaded today",
+  "v": {
+   "h": 1410
+  }
+ },
+ {
+  "k": "loading consult",
+  "v": {
+   "text": "Opening the consultation…",
+   "busy": true,
+   "h": 900
+  }
+ },
+ {
+  "k": "loaded consult",
+  "v": {
+   "h": 3362
+  }
+ },
+ {
+  "k": "loading patient-360",
+  "v": {
+   "text": "Opening the chart…",
+   "busy": true,
+   "h": 900
+  }
+ },
+ {
+  "k": "loaded patient-360",
+  "v": {
+   "h": 3241
+  }
+ },
+ {
+  "k": "loading settings",
+  "v": {
+   "text": "Practice settings\nPractice\nPeople\nClinical\nMessages\nSecurity\nProfile\nLocations\nH",
+   "busy": true,
+   "h": 900
+  }
+ },
+ {
+  "k": "loaded settings",
+  "v": {
+   "h": 1226
+  }
+ },
+ {
+  "k": "loading schedule",
+  "v": {
+   "text": "Schedule\n\nSchedule\nToday\nDay\nWeek\nList\nPrint day sheet\nLeave and exceptions\nBook",
+   "busy": true,
+   "h": 900
+  }
+ },
+ {
+  "k": "loaded schedule",
+  "v": {
+   "h": 992
+  }
+ },
+ {
+  "k": "loading directory",
+  "v": {
+   "text": "Patients\n\nSearch by name, phone number (full or at least 4 digits), Aadhaar, MRN",
+   "busy": true,
+   "h": 1056
+  }
+ },
+ {
+  "k": "loaded directory",
+  "v": {
+   "h": 1056
+  }
+ },
+ {
+  "k": "ar 1440 today",
+  "v": {
+   "dir": "rtl",
+   "lang": "ar",
+   "hOverflow": false,
+   "docH": 1410,
+   "untranslated": [
+    "Kavya Pillaibdcc",
+    "Meera Iyer (synthetic)",
+    "Anjali Varmahjdd",
+    "Meenakshi Sundarameejh",
+    "Kavitha Menongige",
+    "Revathi Krishnaniadg"
+   ],
+   "untranslatedN": 6,
+   "textN": 80,
+   "h1Lines": 1,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 0,
+   "spill": 0
+  }
+ },
+ {
+  "k": "ar 1440 front-desk",
+  "v": {
+   "dir": "rtl",
+   "lang": "ar",
+   "hOverflow": false,
+   "docH": 1999,
+   "untranslated": [
+    "Dr. Arjun Rao (synthetic)",
+    "Dr. S. Menon (synthetic)",
+    "Meenakshi Sundarameejh",
+    "Kavya Pillaibdcc",
+    "Anjali Varmahjdd",
+    "Kavitha Menongige",
+    "Revathi Krishnaniadg",
+    "Sowmya Raghavanjaih",
+    "Meera Iyer (synthetic)"
+   ],
+   "untranslatedN": 9,
+   "textN": 100,
+   "h1Lines": 1,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 0,
+   "spill": 0
+  }
+ },
+ {
+  "k": "ar 1440 consult",
+  "v": {
+   "dir": "rtl",
+   "lang": "ar",
+   "hOverflow": false,
+   "docH": 3611,
+   "untranslated": [
+    "Meera Iyer (synthetic)",
+    "Review of sugars (synthetic)",
+    "Type 2 diabetes, fair control (synthetic)",
+    "Continue metformin, HbA1c in three months (synthetic)",
+    "Increased thirst for two weeks (synthetic)",
+    "Raised blood sugar, review (synthetic)",
+    "Diet advice, review in two weeks (synthetic)",
+    "Metformin",
+    "500 mg · Tablet",
+    "Take 1 tablet by mouth twice a day."
+   ],
+   "untranslatedN": 11,
+   "textN": 159,
+   "h1Lines": 1,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 0,
+   "spill": 0
+  }
+ },
+ {
+  "k": "ar 1440 register-patient",
+  "v": {
+   "dir": "rtl",
+   "lang": "ar",
+   "hOverflow": false,
+   "docH": 1020,
+   "untranslated": [],
+   "untranslatedN": 0,
+   "textN": 53,
+   "h1Lines": 1,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 0,
+   "spill": 0
+  }
+ },
+ {
+  "k": "ar 1440 schedule",
+  "v": {
+   "dir": "rtl",
+   "lang": "ar",
+   "hOverflow": false,
+   "docH": 992,
+   "untranslated": [
+    "Dr. Arjun Rao (synthetic)",
+    "Kavya Pillaibdcc",
+    "Meera Iyer (synthetic)",
+    "Anjali Varmahjdd",
+    "Meenakshi Sundarameejh",
+    "Kavitha Menongige",
+    "Revathi Krishnaniadg"
+   ],
+   "untranslatedN": 7,
+   "textN": 97,
+   "h1Lines": 1,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 0,
+   "spill": 0
+  }
+ },
+ {
+  "k": "ar 1440 patients-directory",
+  "v": {
+   "dir": "rtl",
+   "lang": "ar",
+   "hOverflow": false,
+   "docH": 1056,
+   "untranslated": [
+    "Sowmya Raghavanjaih",
+    "Revathi Krishnaniadg",
+    "Kavitha Menongige",
+    "Meenakshi Sundarameejh",
+    "Deepak Nair (synthetic)",
+    "Lakshmi Rajanjafg",
+    "Anjali Varmahjdd",
+    "Kavya Pillaibdcc",
+    "Meera Iyer (synthetic)"
+   ],
+   "untranslatedN": 9,
+   "textN": 95,
+   "h1Lines": 1,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 0,
+   "spill": 0
+  }
+ },
+ {
+  "k": "ar 1440 patient-360",
+  "v": {
+   "dir": "rtl",
+   "lang": "ar",
+   "hOverflow": false,
+   "docH": 3241,
+   "untranslated": [
+    "Meera Iyer (synthetic)",
+    "Penicillin",
+    "Metformin 500 mg",
+    "Dr. Arjun Rao (synthetic)",
+    "Metformin 500 mg Take 1 tablet by mouth twice a day."
+   ],
+   "untranslatedN": 5,
+   "textN": 150,
+   "h1Lines": 1,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 0,
+   "spill": 0
+  }
+ },
+ {
+  "k": "ar 1440 settings-hours",
+  "v": {
+   "dir": "rtl",
+   "lang": "ar",
+   "hOverflow": false,
+   "docH": 2227,
+   "untranslated": [
+    "Dr. Arjun Rao (synthetic)"
+   ],
+   "untranslatedN": 1,
+   "textN": 76,
+   "h1Lines": 2,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 0,
+   "spill": 0
+  }
+ },
+ {
+  "k": "ar 1024 today",
+  "v": {
+   "dir": "rtl",
+   "lang": "ar",
+   "hOverflow": false,
+   "docH": 1495,
+   "untranslated": [
+    "Kavya Pillaibdcc",
+    "Meera Iyer (synthetic)",
+    "Anjali Varmahjdd",
+    "Meenakshi Sundarameejh",
+    "Kavitha Menongige",
+    "Revathi Krishnaniadg"
+   ],
+   "untranslatedN": 6,
+   "textN": 80,
+   "h1Lines": 1,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 0,
+   "spill": 0
+  }
+ },
+ {
+  "k": "ar 1024 front-desk",
+  "v": {
+   "dir": "rtl",
+   "lang": "ar",
+   "hOverflow": false,
+   "docH": 2149,
+   "untranslated": [
+    "Dr. Arjun Rao (synthetic)",
+    "Dr. S. Menon (synthetic)",
+    "Meenakshi Sundarameejh",
+    "Kavya Pillaibdcc",
+    "Anjali Varmahjdd",
+    "Kavitha Menongige",
+    "Revathi Krishnaniadg",
+    "Sowmya Raghavanjaih",
+    "Meera Iyer (synthetic)"
+   ],
+   "untranslatedN": 9,
+   "textN": 100,
+   "h1Lines": 1,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 1,
+   "spill": 3
+  }
+ },
+ {
+  "k": "ar 1024 consult",
+  "v": {
+   "dir": "rtl",
+   "lang": "ar",
+   "hOverflow": false,
+   "docH": 4093,
+   "untranslated": [
+    "Meera Iyer (synthetic)",
+    "Review of sugars (synthetic)",
+    "Type 2 diabetes, fair control (synthetic)",
+    "Continue metformin, HbA1c in three months (synthetic)",
+    "Increased thirst for two weeks (synthetic)",
+    "Raised blood sugar, review (synthetic)",
+    "Diet advice, review in two weeks (synthetic)",
+    "Metformin",
+    "500 mg · Tablet",
+    "Take 1 tablet by mouth twice a day."
+   ],
+   "untranslatedN": 11,
+   "textN": 159,
+   "h1Lines": 1,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 0,
+   "spill": 0
+  }
+ },
+ {
+  "k": "ar 1024 register-patient",
+  "v": {
+   "dir": "rtl",
+   "lang": "ar",
+   "hOverflow": false,
+   "docH": 1420,
+   "untranslated": [],
+   "untranslatedN": 0,
+   "textN": 53,
+   "h1Lines": 1,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 0,
+   "spill": 0
+  }
+ },
+ {
+  "k": "ar 1024 schedule",
+  "v": {
+   "dir": "rtl",
+   "lang": "ar",
+   "hOverflow": false,
+   "docH": 1022,
+   "untranslated": [
+    "Dr. Arjun Rao (synthetic)",
+    "Kavya Pillaibdcc",
+    "Meera Iyer (synthetic)",
+    "Anjali Varmahjdd",
+    "Meenakshi Sundarameejh",
+    "Kavitha Menongige",
+    "Revathi Krishnaniadg"
+   ],
+   "untranslatedN": 7,
+   "textN": 97,
+   "h1Lines": 1,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 0,
+   "spill": 0
+  }
+ },
+ {
+  "k": "ar 1024 patients-directory",
+  "v": {
+   "dir": "rtl",
+   "lang": "ar",
+   "hOverflow": false,
+   "docH": 1056,
+   "untranslated": [
+    "Sowmya Raghavanjaih",
+    "Revathi Krishnaniadg",
+    "Kavitha Menongige",
+    "Meenakshi Sundarameejh",
+    "Deepak Nair (synthetic)",
+    "Lakshmi Rajanjafg",
+    "Anjali Varmahjdd",
+    "Kavya Pillaibdcc",
+    "Meera Iyer (synthetic)"
+   ],
+   "untranslatedN": 9,
+   "textN": 95,
+   "h1Lines": 1,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 0,
+   "spill": 0
+  }
+ },
+ {
+  "k": "ar 1024 patient-360",
+  "v": {
+   "dir": "rtl",
+   "lang": "ar",
+   "hOverflow": false,
+   "docH": 3805,
+   "untranslated": [
+    "Meera Iyer (synthetic)",
+    "Penicillin",
+    "Metformin 500 mg",
+    "Dr. Arjun Rao (synthetic)",
+    "Metformin 500 mg Take 1 tablet by mouth twice a day."
+   ],
+   "untranslatedN": 5,
+   "textN": 150,
+   "h1Lines": 1,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 0,
+   "spill": 0
+  }
+ },
+ {
+  "k": "ar 1024 settings-hours",
+  "v": {
+   "dir": "rtl",
+   "lang": "ar",
+   "hOverflow": false,
+   "docH": 2247,
+   "untranslated": [
+    "Dr. Arjun Rao (synthetic)"
+   ],
+   "untranslatedN": 1,
+   "textN": 76,
+   "h1Lines": 2,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 0,
+   "spill": 0
+  }
+ },
+ {
+  "k": "ar 375 today",
+  "v": {
+   "dir": "rtl",
+   "lang": "ar",
+   "hOverflow": false,
+   "docH": 2148,
+   "untranslated": [
+    "Kavya Pillaibdcc",
+    "Meera Iyer (synthetic)",
+    "Anjali Varmahjdd",
+    "Meenakshi Sundarameejh",
+    "Kavitha Menongige",
+    "Revathi Krishnaniadg"
+   ],
+   "untranslatedN": 6,
+   "textN": 80,
+   "h1Lines": 1,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 0,
+   "spill": 0
+  }
+ },
+ {
+  "k": "ar 375 front-desk",
+  "v": {
+   "dir": "rtl",
+   "lang": "ar",
+   "hOverflow": false,
+   "docH": 2449,
+   "untranslated": [
+    "Dr. Arjun Rao (synthetic)",
+    "Dr. S. Menon (synthetic)",
+    "Meenakshi Sundarameejh",
+    "Kavya Pillaibdcc",
+    "Anjali Varmahjdd",
+    "Kavitha Menongige",
+    "Revathi Krishnaniadg",
+    "Sowmya Raghavanjaih",
+    "Meera Iyer (synthetic)"
+   ],
+   "untranslatedN": 9,
+   "textN": 100,
+   "h1Lines": 2,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 1,
+   "spill": 3
+  }
+ },
+ {
+  "k": "ar 375 consult",
+  "v": {
+   "dir": "rtl",
+   "lang": "ar",
+   "hOverflow": false,
+   "docH": 4693,
+   "untranslated": [
+    "Meera Iyer (synthetic)",
+    "Review of sugars (synthetic)",
+    "Type 2 diabetes, fair control (synthetic)",
+    "Continue metformin, HbA1c in three months (synthetic)",
+    "Increased thirst for two weeks (synthetic)",
+    "Raised blood sugar, review (synthetic)",
+    "Diet advice, review in two weeks (synthetic)",
+    "Metformin",
+    "500 mg · Tablet",
+    "Take 1 tablet by mouth twice a day."
+   ],
+   "untranslatedN": 11,
+   "textN": 159,
+   "h1Lines": 1,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 0,
+   "spill": 0
+  }
+ },
+ {
+  "k": "ar 375 register-patient",
+  "v": {
+   "dir": "rtl",
+   "lang": "ar",
+   "hOverflow": false,
+   "docH": 1942,
+   "untranslated": [],
+   "untranslatedN": 0,
+   "textN": 53,
+   "h1Lines": 1,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 0,
+   "spill": 0
+  }
+ },
+ {
+  "k": "ar 375 schedule",
+  "v": {
+   "dir": "rtl",
+   "lang": "ar",
+   "hOverflow": false,
+   "docH": 1805,
+   "untranslated": [
+    "Dr. Arjun Rao (synthetic)",
+    "Kavya Pillaibdcc",
+    "Meera Iyer (synthetic)",
+    "Anjali Varmahjdd",
+    "Meenakshi Sundarameejh",
+    "Kavitha Menongige",
+    "Revathi Krishnaniadg"
+   ],
+   "untranslatedN": 7,
+   "textN": 77,
+   "h1Lines": 1,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 0,
+   "spill": 0
+  }
+ },
+ {
+  "k": "ar 375 patients-directory",
+  "v": {
+   "dir": "rtl",
+   "lang": "ar",
+   "hOverflow": false,
+   "docH": 1624,
+   "untranslated": [
+    "Sowmya Raghavanjaih",
+    "Revathi Krishnaniadg",
+    "Kavitha Menongige",
+    "Meenakshi Sundarameejh",
+    "Deepak Nair (synthetic)",
+    "Lakshmi Rajanjafg",
+    "Anjali Varmahjdd",
+    "Kavya Pillaibdcc",
+    "Meera Iyer (synthetic)"
+   ],
+   "untranslatedN": 9,
+   "textN": 95,
+   "h1Lines": 1,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 0,
+   "spill": 0
+  }
+ },
+ {
+  "k": "ar 375 patient-360",
+  "v": {
+   "dir": "rtl",
+   "lang": "ar",
+   "hOverflow": false,
+   "docH": 4965,
+   "untranslated": [
+    "Meera Iyer (synthetic)",
+    "Penicillin",
+    "Metformin 500 mg",
+    "Dr. Arjun Rao (synthetic)",
+    "Metformin 500 mg Take 1 tablet by mouth twice a day."
+   ],
+   "untranslatedN": 5,
+   "textN": 150,
+   "h1Lines": 1,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 0,
+   "spill": 0
+  }
+ },
+ {
+  "k": "ar 375 settings-hours",
+  "v": {
+   "dir": "rtl",
+   "lang": "ar",
+   "hOverflow": false,
+   "docH": 4193,
+   "untranslated": [
+    "Dr. Arjun Rao (synthetic)"
+   ],
+   "untranslatedN": 1,
+   "textN": 76,
+   "h1Lines": 2,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 0,
+   "spill": 0
+  }
+ },
+ {
+  "k": "hi 1440 today",
+  "v": {
+   "dir": "ltr",
+   "lang": "hi",
+   "hOverflow": false,
+   "docH": 1410,
+   "untranslated": [
+    "Kavya Pillaibdcc",
+    "Meera Iyer (synthetic)",
+    "Anjali Varmahjdd",
+    "Meenakshi Sundarameejh",
+    "Kavitha Menongige",
+    "Revathi Krishnaniadg"
+   ],
+   "untranslatedN": 6,
+   "textN": 80,
+   "h1Lines": 1,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 0,
+   "spill": 0
+  }
+ },
+ {
+  "k": "hi 1440 front-desk",
+  "v": {
+   "dir": "ltr",
+   "lang": "hi",
+   "hOverflow": false,
+   "docH": 1943,
+   "untranslated": [
+    "Dr. Arjun Rao (synthetic)",
+    "Dr. S. Menon (synthetic)",
+    "Meenakshi Sundarameejh",
+    "Kavya Pillaibdcc",
+    "Anjali Varmahjdd",
+    "Kavitha Menongige",
+    "Revathi Krishnaniadg",
+    "Sowmya Raghavanjaih",
+    "Meera Iyer (synthetic)"
+   ],
+   "untranslatedN": 9,
+   "textN": 100,
+   "h1Lines": 1,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 0,
+   "spill": 0
+  }
+ },
+ {
+  "k": "hi 1440 consult",
+  "v": {
+   "dir": "ltr",
+   "lang": "hi",
+   "hOverflow": false,
+   "docH": 3611,
+   "untranslated": [
+    "Meera Iyer (synthetic)",
+    "Assist",
+    "Review of sugars (synthetic)",
+    "Type 2 diabetes, fair control (synthetic)",
+    "Continue metformin, HbA1c in three months (synthetic)",
+    "Increased thirst for two weeks (synthetic)",
+    "Raised blood sugar, review (synthetic)",
+    "Diet advice, review in two weeks (synthetic)",
+    "Metformin",
+    "500 mg · Tablet"
+   ],
+   "untranslatedN": 12,
+   "textN": 159,
+   "h1Lines": 1,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 0,
+   "spill": 0
+  }
+ },
+ {
+  "k": "hi 1440 register-patient",
+  "v": {
+   "dir": "ltr",
+   "lang": "hi",
+   "hOverflow": false,
+   "docH": 1020,
+   "untranslated": [],
+   "untranslatedN": 0,
+   "textN": 53,
+   "h1Lines": 1,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 0,
+   "spill": 0
+  }
+ },
+ {
+  "k": "hi 1440 schedule",
+  "v": {
+   "dir": "ltr",
+   "lang": "hi",
+   "hOverflow": false,
+   "docH": 936,
+   "untranslated": [
+    "Dr. Arjun Rao (synthetic)",
+    "Kavya Pillaibdcc",
+    "Meera Iyer (synthetic)",
+    "Anjali Varmahjdd",
+    "Meenakshi Sundarameejh",
+    "Kavitha Menongige",
+    "Revathi Krishnaniadg"
+   ],
+   "untranslatedN": 7,
+   "textN": 97,
+   "h1Lines": 1,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 0,
+   "spill": 0
+  }
+ },
+ {
+  "k": "hi 1440 patients-directory",
+  "v": {
+   "dir": "ltr",
+   "lang": "hi",
+   "hOverflow": false,
+   "docH": 1032,
+   "untranslated": [
+    "Sowmya Raghavanjaih",
+    "Revathi Krishnaniadg",
+    "Kavitha Menongige",
+    "Meenakshi Sundarameejh",
+    "Deepak Nair (synthetic)",
+    "Lakshmi Rajanjafg",
+    "Anjali Varmahjdd",
+    "Kavya Pillaibdcc",
+    "Meera Iyer (synthetic)"
+   ],
+   "untranslatedN": 9,
+   "textN": 95,
+   "h1Lines": 1,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 0,
+   "spill": 0
+  }
+ },
+ {
+  "k": "hi 1440 patient-360",
+  "v": {
+   "dir": "ltr",
+   "lang": "hi",
+   "hOverflow": false,
+   "docH": 3249,
+   "untranslated": [
+    "Meera Iyer (synthetic)",
+    "Penicillin",
+    "Metformin 500 mg",
+    "Dr. Arjun Rao (synthetic)",
+    "Metformin 500 mg Take 1 tablet by mouth twice a day."
+   ],
+   "untranslatedN": 5,
+   "textN": 150,
+   "h1Lines": 1,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 0,
+   "spill": 0
+  }
+ },
+ {
+  "k": "hi 1440 settings-hours",
+  "v": {
+   "dir": "ltr",
+   "lang": "hi",
+   "hOverflow": false,
+   "docH": 2227,
+   "untranslated": [
+    "Dr. Arjun Rao (synthetic)"
+   ],
+   "untranslatedN": 1,
+   "textN": 76,
+   "h1Lines": 2,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 0,
+   "spill": 0
+  }
+ },
+ {
+  "k": "hi 1024 today",
+  "v": {
+   "dir": "ltr",
+   "lang": "hi",
+   "hOverflow": false,
+   "docH": 1466,
+   "untranslated": [
+    "Kavya Pillaibdcc",
+    "Meera Iyer (synthetic)",
+    "Anjali Varmahjdd",
+    "Meenakshi Sundarameejh",
+    "Kavitha Menongige",
+    "Revathi Krishnaniadg"
+   ],
+   "untranslatedN": 6,
+   "textN": 80,
+   "h1Lines": 1,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 0,
+   "spill": 0
+  }
+ },
+ {
+  "k": "hi 1024 front-desk",
+  "v": {
+   "dir": "ltr",
+   "lang": "hi",
+   "hOverflow": false,
+   "docH": 2093,
+   "untranslated": [
+    "Dr. Arjun Rao (synthetic)",
+    "Dr. S. Menon (synthetic)",
+    "Meenakshi Sundarameejh",
+    "Kavya Pillaibdcc",
+    "Anjali Varmahjdd",
+    "Kavitha Menongige",
+    "Revathi Krishnaniadg",
+    "Sowmya Raghavanjaih",
+    "Meera Iyer (synthetic)"
+   ],
+   "untranslatedN": 9,
+   "textN": 100,
+   "h1Lines": 1,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 0,
+   "spill": 3
+  }
+ },
+ {
+  "k": "hi 1024 consult",
+  "v": {
+   "dir": "ltr",
+   "lang": "hi",
+   "hOverflow": false,
+   "docH": 4037,
+   "untranslated": [
+    "Meera Iyer (synthetic)",
+    "Assist",
+    "Review of sugars (synthetic)",
+    "Type 2 diabetes, fair control (synthetic)",
+    "Continue metformin, HbA1c in three months (synthetic)",
+    "Increased thirst for two weeks (synthetic)",
+    "Raised blood sugar, review (synthetic)",
+    "Diet advice, review in two weeks (synthetic)",
+    "Metformin",
+    "500 mg · Tablet"
+   ],
+   "untranslatedN": 12,
+   "textN": 159,
+   "h1Lines": 1,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 0,
+   "spill": 0
+  }
+ },
+ {
+  "k": "hi 1024 register-patient",
+  "v": {
+   "dir": "ltr",
+   "lang": "hi",
+   "hOverflow": false,
+   "docH": 1484,
+   "untranslated": [],
+   "untranslatedN": 0,
+   "textN": 53,
+   "h1Lines": 1,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 0,
+   "spill": 0
+  }
+ },
+ {
+  "k": "hi 1024 schedule",
+  "v": {
+   "dir": "ltr",
+   "lang": "hi",
+   "hOverflow": false,
+   "docH": 970,
+   "untranslated": [
+    "Dr. Arjun Rao (synthetic)",
+    "Kavya Pillaibdcc",
+    "Meera Iyer (synthetic)",
+    "Anjali Varmahjdd",
+    "Meenakshi Sundarameejh",
+    "Kavitha Menongige",
+    "Revathi Krishnaniadg"
+   ],
+   "untranslatedN": 7,
+   "textN": 97,
+   "h1Lines": 1,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 0,
+   "spill": 0
+  }
+ },
+ {
+  "k": "hi 1024 patients-directory",
+  "v": {
+   "dir": "ltr",
+   "lang": "hi",
+   "hOverflow": false,
+   "docH": 1056,
+   "untranslated": [
+    "Sowmya Raghavanjaih",
+    "Revathi Krishnaniadg",
+    "Kavitha Menongige",
+    "Meenakshi Sundarameejh",
+    "Deepak Nair (synthetic)",
+    "Lakshmi Rajanjafg",
+    "Anjali Varmahjdd",
+    "Kavya Pillaibdcc",
+    "Meera Iyer (synthetic)"
+   ],
+   "untranslatedN": 9,
+   "textN": 95,
+   "h1Lines": 1,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 0,
+   "spill": 0
+  }
+ },
+ {
+  "k": "hi 1024 patient-360",
+  "v": {
+   "dir": "ltr",
+   "lang": "hi",
+   "hOverflow": false,
+   "docH": 3781,
+   "untranslated": [
+    "Meera Iyer (synthetic)",
+    "Penicillin",
+    "Metformin 500 mg",
+    "Dr. Arjun Rao (synthetic)",
+    "Metformin 500 mg Take 1 tablet by mouth twice a day."
+   ],
+   "untranslatedN": 5,
+   "textN": 150,
+   "h1Lines": 1,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 0,
+   "spill": 0
+  }
+ },
+ {
+  "k": "hi 1024 settings-hours",
+  "v": {
+   "dir": "ltr",
+   "lang": "hi",
+   "hOverflow": false,
+   "docH": 2247,
+   "untranslated": [
+    "Dr. Arjun Rao (synthetic)"
+   ],
+   "untranslatedN": 1,
+   "textN": 76,
+   "h1Lines": 2,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 0,
+   "spill": 0
+  }
+ },
+ {
+  "k": "hi 375 today",
+  "v": {
+   "dir": "ltr",
+   "lang": "hi",
+   "hOverflow": false,
+   "docH": 2148,
+   "untranslated": [
+    "Kavya Pillaibdcc",
+    "Meera Iyer (synthetic)",
+    "Anjali Varmahjdd",
+    "Meenakshi Sundarameejh",
+    "Kavitha Menongige",
+    "Revathi Krishnaniadg"
+   ],
+   "untranslatedN": 6,
+   "textN": 80,
+   "h1Lines": 1,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 0,
+   "spill": 0
+  }
+ },
+ {
+  "k": "hi 375 front-desk",
+  "v": {
+   "dir": "ltr",
+   "lang": "hi",
+   "hOverflow": false,
+   "docH": 2362,
+   "untranslated": [
+    "Dr. Arjun Rao (synthetic)",
+    "Dr. S. Menon (synthetic)",
+    "Meenakshi Sundarameejh",
+    "Kavya Pillaibdcc",
+    "Anjali Varmahjdd",
+    "Kavitha Menongige",
+    "Revathi Krishnaniadg",
+    "Sowmya Raghavanjaih",
+    "Meera Iyer (synthetic)"
+   ],
+   "untranslatedN": 9,
+   "textN": 100,
+   "h1Lines": 1,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 0,
+   "spill": 3
+  }
+ },
+ {
+  "k": "hi 375 consult",
+  "v": {
+   "dir": "ltr",
+   "lang": "hi",
+   "hOverflow": false,
+   "docH": 4677,
+   "untranslated": [
+    "Meera Iyer (synthetic)",
+    "Assist",
+    "Review of sugars (synthetic)",
+    "Type 2 diabetes, fair control (synthetic)",
+    "Continue metformin, HbA1c in three months (synthetic)",
+    "Increased thirst for two weeks (synthetic)",
+    "Raised blood sugar, review (synthetic)",
+    "Diet advice, review in two weeks (synthetic)",
+    "Metformin",
+    "500 mg · Tablet"
+   ],
+   "untranslatedN": 12,
+   "textN": 159,
+   "h1Lines": 1,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 0,
+   "spill": 0
+  }
+ },
+ {
+  "k": "hi 375 register-patient",
+  "v": {
+   "dir": "ltr",
+   "lang": "hi",
+   "hOverflow": false,
+   "docH": 1966,
+   "untranslated": [],
+   "untranslatedN": 0,
+   "textN": 53,
+   "h1Lines": 1,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 0,
+   "spill": 0
+  }
+ },
+ {
+  "k": "hi 375 schedule",
+  "v": {
+   "dir": "ltr",
+   "lang": "hi",
+   "hOverflow": false,
+   "docH": 1773,
+   "untranslated": [
+    "Dr. Arjun Rao (synthetic)",
+    "Kavya Pillaibdcc",
+    "Meera Iyer (synthetic)",
+    "Anjali Varmahjdd",
+    "Meenakshi Sundarameejh",
+    "Kavitha Menongige",
+    "Revathi Krishnaniadg"
+   ],
+   "untranslatedN": 7,
+   "textN": 77,
+   "h1Lines": 1,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 0,
+   "spill": 0
+  }
+ },
+ {
+  "k": "hi 375 patients-directory",
+  "v": {
+   "dir": "ltr",
+   "lang": "hi",
+   "hOverflow": false,
+   "docH": 1496,
+   "untranslated": [
+    "Sowmya Raghavanjaih",
+    "Revathi Krishnaniadg",
+    "Kavitha Menongige",
+    "Meenakshi Sundarameejh",
+    "Deepak Nair (synthetic)",
+    "Lakshmi Rajanjafg",
+    "Anjali Varmahjdd",
+    "Kavya Pillaibdcc",
+    "Meera Iyer (synthetic)"
+   ],
+   "untranslatedN": 9,
+   "textN": 95,
+   "h1Lines": 1,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 0,
+   "spill": 0
+  }
+ },
+ {
+  "k": "hi 375 patient-360",
+  "v": {
+   "dir": "ltr",
+   "lang": "hi",
+   "hOverflow": false,
+   "docH": 4849,
+   "untranslated": [
+    "Meera Iyer (synthetic)",
+    "Penicillin",
+    "Metformin 500 mg",
+    "Dr. Arjun Rao (synthetic)",
+    "Metformin 500 mg Take 1 tablet by mouth twice a day."
+   ],
+   "untranslatedN": 5,
+   "textN": 150,
+   "h1Lines": 1,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 0,
+   "spill": 0
+  }
+ },
+ {
+  "k": "hi 375 settings-hours",
+  "v": {
+   "dir": "ltr",
+   "lang": "hi",
+   "hOverflow": false,
+   "docH": 4145,
+   "untranslated": [
+    "Dr. Arjun Rao (synthetic)"
+   ],
+   "untranslatedN": 1,
+   "textN": 76,
+   "h1Lines": 2,
+   "font": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, ",
+   "wrappedButtons": 0,
+   "spill": 0
+  }
+ },
+ {
+  "k": "zoom 720 today",
+  "v": {
+   "hOverflow": false,
+   "docW": 720,
+   "vw": 720,
+   "stickyPx": 132,
+   "vh": 450
+  }
+ },
+ {
+  "k": "zoom 720 front-desk",
+  "v": {
+   "hOverflow": false,
+   "docW": 720,
+   "vw": 720,
+   "stickyPx": 132,
+   "vh": 450
+  }
+ },
+ {
+  "k": "zoom 720 consult",
+  "v": {
+   "hOverflow": false,
+   "docW": 720,
+   "vw": 720,
+   "stickyPx": 178,
+   "vh": 450
+  }
+ },
+ {
+  "k": "zoom 720 register-patient",
+  "v": {
+   "hOverflow": false,
+   "docW": 720,
+   "vw": 720,
+   "stickyPx": 132,
+   "vh": 450
+  }
+ },
+ {
+  "k": "zoom 720 schedule",
+  "v": {
+   "hOverflow": false,
+   "docW": 720,
+   "vw": 720,
+   "stickyPx": 176,
+   "vh": 450
+  }
+ },
+ {
+  "k": "zoom 720 patient-360",
+  "v": {
+   "hOverflow": false,
+   "docW": 720,
+   "vw": 720,
+   "stickyPx": 184,
+   "vh": 450
+  }
+ },
+ {
+  "k": "zoom 640 today",
+  "v": {
+   "hOverflow": false,
+   "docW": 640,
+   "vw": 640,
+   "stickyPx": 132,
+   "vh": 512
+  }
+ },
+ {
+  "k": "zoom 640 front-desk",
+  "v": {
+   "hOverflow": false,
+   "docW": 640,
+   "vw": 640,
+   "stickyPx": 132,
+   "vh": 512
+  }
+ },
+ {
+  "k": "zoom 640 consult",
+  "v": {
+   "hOverflow": false,
+   "docW": 640,
+   "vw": 640,
+   "stickyPx": 196,
+   "vh": 512
+  }
+ },
+ {
+  "k": "zoom 640 register-patient",
+  "v": {
+   "hOverflow": false,
+   "docW": 640,
+   "vw": 640,
+   "stickyPx": 132,
+   "vh": 512
+  }
+ },
+ {
+  "k": "zoom 640 schedule",
+  "v": {
+   "hOverflow": false,
+   "docW": 640,
+   "vw": 640,
+   "stickyPx": 176,
+   "vh": 512
+  }
+ },
+ {
+  "k": "zoom 640 patient-360",
+  "v": {
+   "hOverflow": false,
+   "docW": 640,
+   "vw": 640,
+   "stickyPx": 236,
+   "vh": 512
+  }
+ },
+ {
+  "k": "zoom 320 today",
+  "v": {
+   "hOverflow": false,
+   "docW": 320,
+   "vw": 320,
+   "stickyPx": 132,
+   "vh": 256
+  }
+ },
+ {
+  "k": "zoom 320 front-desk",
+  "v": {
+   "hOverflow": false,
+   "docW": 320,
+   "vw": 320,
+   "stickyPx": 132,
+   "vh": 256
+  }
+ },
+ {
+  "k": "zoom 320 consult",
+  "v": {
+   "hOverflow": false,
+   "docW": 320,
+   "vw": 320,
+   "stickyPx": 132,
+   "vh": 256
+  }
+ },
+ {
+  "k": "zoom 320 register-patient",
+  "v": {
+   "hOverflow": false,
+   "docW": 320,
+   "vw": 320,
+   "stickyPx": 132,
+   "vh": 256
+  }
+ },
+ {
+  "k": "zoom 320 schedule",
+  "v": {
+   "hOverflow": false,
+   "docW": 320,
+   "vw": 320,
+   "stickyPx": 176,
+   "vh": 256
+  }
+ },
+ {
+  "k": "zoom 320 patient-360",
+  "v": {
+   "hOverflow": false,
+   "docW": 320,
+   "vw": 320,
+   "stickyPx": 132,
+   "vh": 256
+  }
+ },
+ {
+  "k": "nurse links",
+  "v": [
+   "button | Go to my start page"
+  ]
+ }
+]

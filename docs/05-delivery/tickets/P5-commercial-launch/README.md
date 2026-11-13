@@ -8,9 +8,9 @@
 **Day one:** Switch from the old system without closing, with history migrated, insurance checked at the desk and a paid subscription.  
 **Goal:** Everything a clinic owner needs to say yes: their data moved, no downtime, regulator-ready, learnable in one shift, and no lock-in.
 
-**Tickets:** 52 · **Estimate:** 156 dev-days vs **45 working days** in the window (OVER by 111 days: needs scope trade-off or overlap) · **Average confidence:** 65%
+**Tickets:** 54 · **Estimate:** 161.5 dev-days vs **45 working days** in the window (OVER by 116.5 days: needs scope trade-off or overlap) · **Average confidence:** 65%
 
-**Status:** To do 52
+**Status:** To do 54
 
 ## Epics
 
@@ -30,8 +30,10 @@
 
 | Key | Status | Title | Type | Prio | PRD | Screens | Est | Weeks | Dates | Confidence |
 |---|---|---|---|---|---|---|---|---|---|---|
+| [MDV-P5-053](MDV-P5-053.md) | To do | Fix the Expo bundling error, then run the same UX audit on the mobile apps in a simulator | Task | COULD | P5-10 | X-01 | 1.5 | 9–9 | 21 Dec → 25 Dec 2026 | 70% Medium |
 | [MDV-P5-001](MDV-P5-001.md) | To do | Design the 11 new P5 screens (N-04 … N-14) before build | Spike | MUST | P5-01, P5-02, P5-04, P5-05, P5-06, P5-07, P5-08, P5-09 | N-04, N-05, N-06, N-07, N-08, N-09, N-10, N-11, N-12, N-13, N-14 | 4 | 22–24 | 22 Mar → 09 Apr 2027 | 60% Low |
 | [MDV-P5-002](MDV-P5-002.md) | To do | Migration: read-only source connection via self-hosted integration runtime (Oracle, SQL Server, MySQL, CSV/Excel) (N-04) | Story | MUST | P5-01 | N-04 | 3 | 24–25 | 05 Apr → 16 Apr 2027 | 65% Medium |
+| [MDV-P5-054](MDV-P5-054.md) | To do | Later: date and time pickers and a combobox in the app language; dark and high contrast only after the tone tokens | Story | COULD | P5-10 | X-02 | 4 | 24–24 | 05 Apr → 09 Apr 2027 | 55% Low |
 | [MDV-P5-003](MDV-P5-003.md) | To do | Migration mapping: AI-proposed column and code mappings (LOINC, ICD-10, formulary) approved by a person; reusable vendor templates (N-04) | Story | MUST | P5-01 | N-04 | 4 | 25–26 | 12 Apr → 23 Apr 2027 | 62% Low |
 | [MDV-P5-006](MDV-P5-006.md) | To do | Data-quality queue: problems grouped by type and fixed by rule; reversible (N-05) | Story | MUST | P5-02 | N-05 | 3 | 25–26 | 12 Apr → 23 Apr 2027 | 65% Medium |
 | [MDV-P5-016](MDV-P5-016.md) | To do | Medvya subscription: plans, trial, subscription invoices with GST/VAT, seat counts, dunning (N-11) | Story | MUST | P5-07 | N-11 | 4 | 25–27 | 12 Apr → 30 Apr 2027 | 60% Low |

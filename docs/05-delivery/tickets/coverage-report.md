@@ -9,35 +9,35 @@ Every requirement, screen, exit criterion, NFR, delivery-package item and depend
 | Req | Phase | Priority | Tickets |
 |---|---|---|---|
 | P0-01 | P0 | MUST | MDV-P0-001, MDV-P0-004, MDV-P0-005, MDV-P0-007, MDV-P0-029, MDV-P0-032, MDV-P0-038, MDV-P0-040, MDV-P0-042 |
-| P0-02 | P0 | MUST | MDV-P0-006, MDV-P0-007, MDV-P0-019, MDV-P0-033, MDV-P0-039 |
-| P0-03 | P0 | MUST | MDV-P0-011, MDV-P0-012, MDV-P0-013, MDV-P0-026 |
+| P0-02 | P0 | MUST | MDV-P0-006, MDV-P0-007, MDV-P0-019, MDV-P0-033, MDV-P0-039, MDV-P1-105 |
+| P0-03 | P0 | MUST | MDV-P0-011, MDV-P0-012, MDV-P0-013, MDV-P0-026, MDV-P2-047 |
 | P0-04 | P0 | MUST | MDV-P0-010, MDV-P0-028 |
-| P0-05 | P0 | MUST | MDV-P0-014, MDV-P0-015, MDV-P0-022 |
+| P0-05 | P0 | MUST | MDV-P0-014, MDV-P0-015, MDV-P0-022, MDV-P1-096 |
 | P0-06 | P0 | MUST | MDV-P0-017, MDV-P0-036 |
-| P0-07 | P0 | MUST | MDV-P0-020, MDV-P0-021, MDV-P0-022, MDV-P0-023, MDV-P0-030, MDV-P1-073 |
+| P0-07 | P0 | MUST | MDV-P0-020, MDV-P0-021, MDV-P0-022, MDV-P0-023, MDV-P0-030, MDV-P1-073, MDV-P1-075, MDV-P1-076, MDV-P1-077, MDV-P1-078, MDV-P1-079, MDV-P1-080, MDV-P1-081, MDV-P1-082, MDV-P1-083, MDV-P1-084, MDV-P1-085, MDV-P1-086, MDV-P1-093, MDV-P2-054, MDV-P2-056, MDV-P2-057, MDV-P2-059, MDV-P2-060 |
 | P0-08 | P0 | MUST | MDV-P0-002, MDV-P0-003, MDV-P0-016, MDV-P0-024, MDV-P0-031 |
 | P0-09 | P0 | MUST | MDV-P0-008, MDV-P0-009, MDV-P0-034, MDV-P0-035, MDV-P0-037, MDV-P0-041 |
 | P0-10 | P0 | MUST | MDV-P0-016, MDV-P0-018, MDV-P0-025, MDV-P0-026, MDV-P0-027 |
 | P1-01 | P1 | SHOULD | MDV-P1-001, MDV-P1-002, MDV-P1-003, MDV-P1-053, MDV-P1-054, MDV-P1-055, MDV-P1-056, MDV-P1-057, MDV-P1-058 |
-| P1-02 | P1 | MUST | MDV-P1-004, MDV-P1-005, MDV-P1-006, MDV-P1-039, MDV-P1-043, MDV-P1-059, MDV-P1-060, MDV-P1-061, MDV-P1-062, MDV-P1-063, MDV-P1-064, MDV-P1-066, MDV-P1-068, MDV-P1-070 |
-| P1-03 | P1 | MUST | MDV-P1-007, MDV-P1-008, MDV-P1-065, MDV-P1-069, MDV-P1-071 |
+| P1-02 | P1 | MUST | MDV-P1-004, MDV-P1-005, MDV-P1-006, MDV-P1-039, MDV-P1-043, MDV-P1-059, MDV-P1-060, MDV-P1-061, MDV-P1-062, MDV-P1-063, MDV-P1-064, MDV-P1-066, MDV-P1-068, MDV-P1-070, MDV-P2-055 |
+| P1-03 | P1 | MUST | MDV-P1-007, MDV-P1-008, MDV-P1-065, MDV-P1-069, MDV-P1-071, MDV-P1-107 |
 | P1-04 | P1 | MUST | MDV-P1-011, MDV-P1-012 |
-| P1-05 | P1 | MUST | MDV-P1-013, MDV-P1-014, MDV-P1-015, MDV-P1-016, MDV-P1-017, MDV-P1-018, MDV-P1-020, MDV-P1-038, MDV-P1-072 |
-| P1-06 | P1 | MUST | MDV-P1-021, MDV-P1-023, MDV-P1-024, MDV-P1-025, MDV-P1-026, MDV-P1-027, MDV-P1-037, MDV-P1-042, MDV-P1-047 |
+| P1-05 | P1 | MUST | MDV-P1-013, MDV-P1-014, MDV-P1-015, MDV-P1-016, MDV-P1-017, MDV-P1-018, MDV-P1-020, MDV-P1-038, MDV-P1-072, MDV-P1-085, MDV-P1-101, MDV-P2-058 |
+| P1-06 | P1 | MUST | MDV-P1-021, MDV-P1-023, MDV-P1-024, MDV-P1-025, MDV-P1-026, MDV-P1-027, MDV-P1-037, MDV-P1-042, MDV-P1-047, MDV-P1-097, MDV-P1-102 |
 | P1-07 | P1 | MUST | MDV-P1-021, MDV-P1-022, MDV-P1-037 |
-| P1-08 | P1 | MUST | MDV-P1-028, MDV-P1-029, MDV-P1-030, MDV-P1-031, MDV-P1-036, MDV-P1-040, MDV-P1-041, MDV-P1-042, MDV-P1-049, MDV-P1-050, MDV-P1-051, MDV-P1-052 |
+| P1-08 | P1 | MUST | MDV-P1-028, MDV-P1-029, MDV-P1-030, MDV-P1-031, MDV-P1-036, MDV-P1-040, MDV-P1-041, MDV-P1-042, MDV-P1-049, MDV-P1-050, MDV-P1-051, MDV-P1-052, MDV-P1-095, MDV-P1-100, MDV-P1-103, MDV-P1-106, MDV-P2-046, MDV-P2-052, MDV-P2-053 |
 | P1-09 | P1 | MUST | MDV-P1-032, MDV-P1-033, MDV-P1-034, MDV-P1-041, MDV-P1-045 |
-| P1-10 | P1 | MUST | MDV-P1-035 |
-| P1-11 | P1 | MUST | MDV-P1-009, MDV-P1-010, MDV-P1-038 |
+| P1-10 | P1 | MUST | MDV-P1-035, MDV-P2-050 |
+| P1-11 | P1 | MUST | MDV-P1-009, MDV-P1-010, MDV-P1-038, MDV-P1-107 |
 | P1-12 | P1 | MUST | MDV-P1-019, MDV-P1-044, MDV-P1-067, MDV-P1-074 |
-| P2-01 | P2 | MUST | MDV-P2-002, MDV-P2-003 |
-| P2-02 | P2 | MUST | MDV-P2-004, MDV-P2-005, MDV-P2-006, MDV-P2-024, MDV-P2-030, MDV-P2-031, MDV-P2-032, MDV-P2-033, MDV-P2-034, MDV-P2-035, MDV-P2-036, MDV-P2-037, MDV-P2-038, MDV-P2-045 |
-| P2-03 | P2 | MUST | MDV-P2-007, MDV-P2-008, MDV-P2-026, MDV-P2-031 |
-| P2-04 | P2 | MUST | MDV-P2-001, MDV-P2-009, MDV-P2-010, MDV-P2-011, MDV-P2-025, MDV-P2-029, MDV-P2-030, MDV-P2-041, MDV-P2-042, MDV-P2-043, MDV-P2-045 |
-| P2-05 | P2 | MUST | MDV-P2-012, MDV-P2-013, MDV-P2-023, MDV-P2-026, MDV-P2-027, MDV-P2-028, MDV-P2-044 |
-| P2-06 | P2 | MUST | MDV-P2-014, MDV-P2-015, MDV-P2-016, MDV-P2-017, MDV-P2-018, MDV-P2-019, MDV-P2-020, MDV-P2-027, MDV-P2-039, MDV-P2-040, MDV-P2-043 |
+| P2-01 | P2 | MUST | MDV-P1-090, MDV-P1-099, MDV-P1-101, MDV-P1-103, MDV-P2-002, MDV-P2-003, MDV-P2-051 |
+| P2-02 | P2 | MUST | MDV-P1-081, MDV-P1-092, MDV-P2-004, MDV-P2-005, MDV-P2-006, MDV-P2-024, MDV-P2-030, MDV-P2-031, MDV-P2-032, MDV-P2-033, MDV-P2-034, MDV-P2-035, MDV-P2-036, MDV-P2-037, MDV-P2-038, MDV-P2-045, MDV-P2-051, MDV-P2-061 |
+| P2-03 | P2 | MUST | MDV-P1-092, MDV-P1-104, MDV-P2-007, MDV-P2-008, MDV-P2-026, MDV-P2-031, MDV-P2-048 |
+| P2-04 | P2 | MUST | MDV-P1-082, MDV-P1-089, MDV-P1-092, MDV-P1-094, MDV-P1-098, MDV-P1-099, MDV-P1-102, MDV-P1-104, MDV-P2-001, MDV-P2-009, MDV-P2-010, MDV-P2-011, MDV-P2-025, MDV-P2-029, MDV-P2-030, MDV-P2-041, MDV-P2-042, MDV-P2-043, MDV-P2-045 |
+| P2-05 | P2 | MUST | MDV-P1-090, MDV-P1-091, MDV-P2-012, MDV-P2-013, MDV-P2-023, MDV-P2-026, MDV-P2-027, MDV-P2-028, MDV-P2-044, MDV-P2-049 |
+| P2-06 | P2 | MUST | MDV-P1-087, MDV-P1-088, MDV-P1-090, MDV-P1-094, MDV-P1-098, MDV-P2-014, MDV-P2-015, MDV-P2-016, MDV-P2-017, MDV-P2-018, MDV-P2-019, MDV-P2-020, MDV-P2-027, MDV-P2-039, MDV-P2-040, MDV-P2-043, MDV-P2-047 |
 | P2-07 | P2 | MUST | MDV-P2-006 |
-| P2-08 | P2 | MUST | MDV-P2-021, MDV-P2-022 |
+| P2-08 | P2 | MUST | MDV-P1-087, MDV-P1-108, MDV-P2-021, MDV-P2-022 |
 | P3-01 | P3 | MUST | MDV-P3-002, MDV-P3-003, MDV-P3-004, MDV-P3-023 |
 | P3-02 | P3 | MUST | MDV-P3-005, MDV-P3-006, MDV-P3-021 |
 | P3-03 | P3 | MUST | MDV-P3-001, MDV-P3-008, MDV-P3-009, MDV-P3-010 |
@@ -65,7 +65,7 @@ Every requirement, screen, exit criterion, NFR, delivery-package item and depend
 | P5-07 | P5 | MUST | MDV-P5-001, MDV-P5-016, MDV-P5-028, MDV-P5-042, MDV-P5-043, MDV-P5-050, MDV-P5-052 |
 | P5-08 | P5 | MUST | MDV-P5-001, MDV-P5-017, MDV-P5-026, MDV-P5-040, MDV-P5-041, MDV-P5-044, MDV-P5-046, MDV-P5-048 |
 | P5-09 | P5 | MUST | MDV-P5-001, MDV-P5-018, MDV-P5-019, MDV-P5-045, MDV-P5-047, MDV-P5-049 |
-| P5-10 | P5 | MUST | MDV-P5-020, MDV-P5-021, MDV-P5-022, MDV-P5-023, MDV-P5-027, MDV-P5-030 |
+| P5-10 | P5 | MUST | MDV-P5-020, MDV-P5-021, MDV-P5-022, MDV-P5-023, MDV-P5-027, MDV-P5-030, MDV-P5-053, MDV-P5-054 |
 | P5-11 | P5 | MUST | MDV-P5-024 |
 | P5-12 | P5 | MUST | MDV-P5-025 |
 | P6-01 | P6 | MUST | MDV-P6-001, MDV-P6-002, MDV-P6-003, MDV-P6-004, MDV-P6-005, MDV-P6-010 |
@@ -91,38 +91,38 @@ Every requirement, screen, exit criterion, NFR, delivery-package item and depend
 | Screen | PRD phase | Status | Tickets |
 |---|---|---|---|
 | F-03 Sign up · MFA / passkey · recovery | P0 | DESIGNED | MDV-P0-011, MDV-P0-012, MDV-P1-059, MDV-P1-060 |
-| F-05 Session expired · 403 · 404 · offline | P0 | DESIGNED | MDV-P0-015 |
+| F-05 Session expired · 403 · 404 · offline | P0 | DESIGNED | MDV-P0-015, MDV-P1-096 |
 | F-06 Invite acceptance | P0 | DESIGNED | MDV-P0-013, MDV-P1-059 |
-| X-03 Six end-to-end journeys (storyboard) | P0 | DESIGNED | MDV-P0-023, MDV-P1-073 |
+| X-03 Six end-to-end journeys (storyboard) | P0 | DESIGNED | MDV-P0-023, MDV-P1-073, MDV-P1-108 |
 | D-03 Notification centre | P1 | DESIGNED | MDV-P1-034 |
-| D-04 Clinic overview (multi-doctor Today, shared waiting room) | P1 | DESIGNED | MDV-P1-030 |
+| D-04 Clinic overview (multi-doctor Today, shared waiting room) | P1 | DESIGNED | MDV-P1-030, MDV-P2-053 |
 | F-01 Landing (solo doctor / hospital) | P1 | DESIGNED | MDV-P1-001, MDV-P1-053, MDV-P1-054, MDV-P1-055, MDV-P1-056, MDV-P5-050 |
 | F-02 Country & data residency selector | P1 | DESIGNED | MDV-P1-002 |
 | F-04 Solo doctor onboarding (licence, schedule, invite) | P1 | DESIGNED | MDV-P1-004, MDV-P1-059, MDV-P1-061, MDV-P1-062, MDV-P1-063, MDV-P1-066 |
 | F-07 Trust centre & demo request | P1 | DESIGNED | MDV-P1-003, MDV-P1-057, MDV-P1-058 |
-| F-08 Practice settings (profile, availability, staff, services, n | P1 | DESIGNED | MDV-P1-005, MDV-P1-006, MDV-P1-019, MDV-P1-063, MDV-P1-066, MDV-P1-069, MDV-P1-070 |
+| F-08 Practice settings (profile, availability, staff, services, n | P1 | DESIGNED | MDV-P1-005, MDV-P1-006, MDV-P1-019, MDV-P1-063, MDV-P1-066, MDV-P1-069, MDV-P1-070, MDV-P2-055 |
 | F-09 Add doctor (clinic mode): licence, schedule, fees, access, s | P1 | DESIGNED | MDV-P1-007, MDV-P1-065, MDV-P1-069, MDV-P1-071 |
-| F-10 Add staff & roles (scope, permissions, invite, custom roles) | P1 | DESIGNED | MDV-P1-008, MDV-P1-009, MDV-P1-071 |
-| F-12 Practice access log | P1 | DESIGNED | MDV-P1-035 |
-| P-01 Appointment & reception board | P1 | DESIGNED | MDV-P1-025, MDV-P1-028, MDV-P1-029 |
-| P-02 Register patient · India (ABHA) & UAE (Emirates ID) | P1 | DESIGNED | MDV-P1-013, MDV-P1-014, MDV-P1-015, MDV-P1-016, MDV-P1-018, MDV-P1-019, MDV-P1-020, MDV-P1-072 |
-| P-03 Duplicate / merge review | P1 | DESIGNED | MDV-P1-017, MDV-P1-072 |
-| P-04 Day/week calendar · walk-in · reschedule · no-show | P1 | DESIGNED | MDV-P1-011, MDV-P1-012, MDV-P1-021, MDV-P1-023, MDV-P1-024, MDV-P1-025, MDV-P1-026 |
-| P-05 Waitlist & room queue · queue TV display | P1 | DESIGNED | MDV-P1-027, MDV-P1-031 |
-| D-01 Doctor Today | P2 | DESIGNED | MDV-P2-002 |
-| D-02 Global privacy-safe search (⌘K) | P2 | DESIGNED | MDV-P2-003 |
-| E-01 Patient 360 | P2 | DESIGNED | MDV-P2-004, MDV-P2-031, MDV-P2-032, MDV-P2-033, MDV-P2-034, MDV-P2-035, MDV-P2-036, MDV-P2-037, MDV-P2-038 |
+| F-10 Add staff & roles (scope, permissions, invite, custom roles) | P1 | DESIGNED | MDV-P1-008, MDV-P1-009, MDV-P1-071, MDV-P1-107 |
+| F-12 Practice access log | P1 | DESIGNED | MDV-P1-035, MDV-P2-050 |
+| P-01 Appointment & reception board | P1 | DESIGNED | MDV-P1-025, MDV-P1-028, MDV-P1-029, MDV-P1-095, MDV-P1-100, MDV-P1-102, MDV-P2-051, MDV-P2-052 |
+| P-02 Register patient · India (ABHA) & UAE (Emirates ID) | P1 | DESIGNED | MDV-P1-013, MDV-P1-014, MDV-P1-015, MDV-P1-016, MDV-P1-018, MDV-P1-019, MDV-P1-020, MDV-P1-072, MDV-P2-058 |
+| P-03 Duplicate / merge review | P1 | DESIGNED | MDV-P1-017, MDV-P1-072, MDV-P1-101 |
+| P-04 Day/week calendar · walk-in · reschedule · no-show | P1 | DESIGNED | MDV-P1-011, MDV-P1-012, MDV-P1-021, MDV-P1-023, MDV-P1-024, MDV-P1-025, MDV-P1-026, MDV-P1-097, MDV-P1-101, MDV-P1-102 |
+| P-05 Waitlist & room queue · queue TV display | P1 | DESIGNED | MDV-P1-027, MDV-P1-031, MDV-P1-100, MDV-P1-103, MDV-P2-046 |
+| D-01 Doctor Today | P2 | DESIGNED | MDV-P1-090, MDV-P1-099, MDV-P1-103, MDV-P2-002, MDV-P2-051 |
+| D-02 Global privacy-safe search (⌘K) | P2 | DESIGNED | MDV-P1-101, MDV-P2-003 |
+| E-01 Patient 360 | P2 | DESIGNED | MDV-P1-092, MDV-P2-004, MDV-P2-031, MDV-P2-032, MDV-P2-033, MDV-P2-034, MDV-P2-035, MDV-P2-036, MDV-P2-037, MDV-P2-038, MDV-P2-051, MDV-P2-061 |
 | E-02 Longitudinal timeline & trends | P2 | DESIGNED | MDV-P2-005, MDV-P2-033 |
 | E-03 Documents upload & secure viewer | P2 | DESIGNED | MDV-P2-006, MDV-P2-033 |
-| E-04 Manual note (consent declined) | P2 | DESIGNED | MDV-P2-009, MDV-P2-041, MDV-P2-042, MDV-P2-043, MDV-P2-044 |
-| E-05 Prescriptions & investigation orders | P2 | DESIGNED | MDV-P2-015, MDV-P2-018, MDV-P2-039, MDV-P2-043 |
-| E-06 Signed note · addendum · print | P2 | DESIGNED | MDV-P2-012, MDV-P2-013, MDV-P2-044 |
-| E-07 Diagnosis coding & meds reconciliation | P2 | DESIGNED | MDV-P2-010, MDV-P2-011 |
+| E-04 Manual note (consent declined) | P2 | DESIGNED | MDV-P1-089, MDV-P1-092, MDV-P1-094, MDV-P1-099, MDV-P1-104, MDV-P2-009, MDV-P2-041, MDV-P2-042, MDV-P2-043, MDV-P2-044 |
+| E-05 Prescriptions & investigation orders | P2 | DESIGNED | MDV-P1-087, MDV-P1-090, MDV-P1-094, MDV-P2-015, MDV-P2-018, MDV-P2-039, MDV-P2-043, MDV-P2-047 |
+| E-06 Signed note · addendum · print | P2 | DESIGNED | MDV-P1-091, MDV-P2-012, MDV-P2-013, MDV-P2-044, MDV-P2-049 |
+| E-07 Diagnosis coding & meds reconciliation | P2 | DESIGNED | MDV-P1-094, MDV-P2-010, MDV-P2-011 |
 | E-09 Referral out / in with status | P2 | DESIGNED | MDV-P2-019 |
 | E-10 Printed prescription · e-Rx to pharmacy · multilingual | P2 | DESIGNED | MDV-P2-017, MDV-P2-020 |
-| E-11 Add medicine while prescribing (dose builder, safety checks) | P2 | DESIGNED | MDV-P2-015, MDV-P2-016, MDV-P2-039, MDV-P2-040 |
-| F-13 Medicines & formulary · India Schedule H/H1/X · UAE drug cod | P2 | DESIGNED | MDV-P2-014 |
-| N-01 Nurse intake: vitals, allergies, meds | P2 | DESIGNED | MDV-P2-007, MDV-P2-008, MDV-P2-031 |
+| E-11 Add medicine while prescribing (dose builder, safety checks) | P2 | DESIGNED | MDV-P1-087, MDV-P1-088, MDV-P2-015, MDV-P2-016, MDV-P2-039, MDV-P2-040 |
+| F-13 Medicines & formulary · India Schedule H/H1/X · UAE drug cod | P2 | DESIGNED | MDV-P1-088, MDV-P2-014 |
+| N-01 Nurse intake: vitals, allergies, meds | P2 | DESIGNED | MDV-P1-092, MDV-P1-104, MDV-P2-007, MDV-P2-008, MDV-P2-031, MDV-P2-048 |
 | A-01 Pre-visit brief (verified vs AI split) | P3 | DESIGNED | MDV-P3-014 |
 | A-02 Recording consent & device selection | P3 | DESIGNED | MDV-P3-003 |
 | A-03 Live AI consultation | P3 | DESIGNED | MDV-P3-005 |
@@ -133,7 +133,7 @@ Every requirement, screen, exit criterion, NFR, delivery-package item and depend
 | A-09 Consent revoked · patient changed | P3 | DESIGNED | MDV-P3-004, MDV-P3-017 |
 | A-10 Speaker overlap / unconfirmed speaker | P3 | DESIGNED | MDV-P3-010 |
 | H-09 Consent templates & recording policy | P3 | DESIGNED | MDV-P3-002 |
-| X-01 Mobile: Today, capture, note, appointments, records, pairing | P3 | DESIGNED | MDV-P3-005, MDV-P3-021 |
+| X-01 Mobile: Today, capture, note, appointments, records, pairing | P3 | DESIGNED | MDV-P1-098, MDV-P3-005, MDV-P3-021, MDV-P5-053 |
 | C-01 Clinical results inbox | P4 | DESIGNED | MDV-P4-015 |
 | C-02 Care plans & follow-ups | P4 | DESIGNED | MDV-P4-016 |
 | C-03 Patient contact log & reminders | P4 | DESIGNED | MDV-P4-017 |
@@ -169,7 +169,7 @@ Every requirement, screen, exit criterion, NFR, delivery-package item and depend
 | N-14 Clinic data export (FHIR + CSV) | P5 | DESIGN NEEDED | MDV-P5-001, MDV-P5-019, MDV-P5-049 |
 | P-08 Insurance eligibility & claims handoff | P5 | DESIGNED | MDV-P5-008 |
 | P-14 Pre-authorisation, resubmission, remittance · India TPA/PMJA | P5 | DESIGNED | MDV-P5-009, MDV-P5-010 |
-| X-02 Dark mode & high-contrast variants | P5 | DESIGNED | MDV-P5-023 |
+| X-02 Dark mode & high-contrast variants | P5 | DESIGNED | MDV-P5-023, MDV-P5-054 |
 | A-07 Private voice assistant (earpiece only) | P6 | DESIGNED | MDV-P6-006 |
 | W-01 Clip pairing (code) · self-test | P6 | DESIGNED | MDV-P6-002, MDV-P6-003 |
 | W-02 Device health · battery · offline queue · firmware | P6 | DESIGNED | MDV-P6-004 |

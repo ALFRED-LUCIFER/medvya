@@ -1894,3 +1894,1411 @@ ac:
 - Given a database session as the app role, when it runs a SELECT, then no pgaudit READ line is written.
 - Given a Container Apps job run (db migrate or seed) at any hour, when it finishes, then its console log is in Log Analytics.
 - Given pgaudit WRITE lines, when they are sampled, then none holds a parameter value (log_parameter off and no literal patient values).
+
+@epic MDV-P1-E12 | UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit) | P0-07, P2-02, P2-04, P1-08 | Option B, cohesive modernisation, safety-first: two parallel tracks (D design rules and components, S safety and handoff behaviour) from the 13 Nov 2026 product UX audit; nothing from the audit is dropped (ticket map in docs/product-ux-audit/10-prioritized-implementation-backlog.md).
+
+=== MDV-P1-075
+title: Design rules: write PRODUCT.md and DESIGN.md from the audit blueprint and amend AGENTS.md section 4
+type: Chore
+epic: MDV-P1-E12
+prd: P0-07
+priority: MUST
+roles: Founder, Developer
+labels: design-system, documentation, ux, epic: ux programme, track: design, wave: D0
+estimate: 1
+weeks: 4
+confidence: 85 | The blueprint and the rulings are written; this ticket turns them into the two briefs and the house rules. The 14 px against 15 px body size needs the founder's yes.
+sources: docs/product-ux-audit/08-design-system-blueprint.md (sections 1 to 14); docs/product-ux-audit/07-debate-and-arbitration.md (rulings 1 to 8); docs/product-ux-audit/00-executive-verdict.md (What must not be changed without validation); AGENTS.md (section 4)
+desc:
+Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Track D (design rules and UI component setup), wave D0. This is audit backlog UX-35 of the Nov 2026 product UX audit (an audit id, not an MDV key).
+
+Persona and route: No screen. Readers: every developer and AI agent that writes front-end code; the founder as owner of the rules.
+Findings and reviewers: F-45, F-19, F-20, F-21 · reviewers B-27, C-04, C-05, C-11 · arbitration rulings 2, 5, 6 and 8.
+Rationale: There is no written rule for density, page headers, card sizes, how many primary buttons a view may have, or which shared component a pattern must use. That is why three patient headers, 20 view switches and about 350 size patches exist. Everything else in track D builds on these rules, so they are written first.
+Proposed UX behaviour: Two short files at the repository root. PRODUCT.md: who uses Medvya (doctor, nurse, receptionist, owner, practice admin), what each must be able to do all day, the eight design principles of blueprint section 1, the device strategy of section 11 and the phone rule of ruling 5. DESIGN.md: the layout grid and widths (section 2), navigation model (3), the two densities (4), spacing, type, radius and elevation (5), tone meanings (6), the component list with states (7), pinned chrome rules (10), motion rules with the never list (12), the accessibility targets by WCAG 2.2 criterion (13) and the guardrails (14). Both files carry the non-negotiables of the epic and the list headed Do not change without clinical validation. AGENTS.md section 4 is amended in the same change for the rules that change: 44 px is the library default and a feature never patches a control height; comfortable density is mandatory for every control that changes state, every row that picks a patient, medicine lines and any device with a coarse pointer; compact 36 px rows are allowed only on the audit log, formulary, order sets and staff tables; typed clinical text is 16 px; 1024 px is a named layout tier and sm:grid-cols is not used for column changes; the shared components that a feature must use once they exist, each with the ticket that builds it; one primary button per view; pinned chrome takes at most 30 % of the height and nothing focusable sits under it; the motion tokens and the never list; a new shared component is not done until it is in the /__ui gallery in English and Arabic. docs/02-design/tokens.md gets one line at the top saying DESIGN.md describes the build and wins where they differ.
+Prototype and blueprint reference: docs/product-ux-audit/08-design-system-blueprint.md, all sections; docs/product-ux-audit/concepts/medvya-workspace-concept.html as the picture of the target; docs/product-ux-audit/12-prototype-guide.md (What the concept deliberately does not settle).
+Components and tokens affected: None built here. Names every component and token group that waves D1 to D3 build.
+Front end and back end split: Docs only. No front-end or back-end code.
+Prerequisites and blocked by: None. This is the first ticket of track D; every other track D ticket depends on it through the lint and ratchet ticket of the same wave.
+Clinical sign-off: Not required to write the rules. The allergy presentation and the strip contents are recorded as proposals that wait for questions 3 and 4 of docs/product-ux-audit/11-pilot-doctor-validation-plan.md.
+Effort and regression risk: S · Low. Docs only; the risk is writing a rule the code cannot yet meet, so each such rule names the ticket that makes it true.
+Deliberately NOT in this ticket: (1) Any change to packages/ui or to a screen. (2) The lint rules and the CI count (the next ticket of this wave). (3) A palette or typeface change, or a second component library: both are forbidden by the rules being written.
+ac:
+- Given the repository root, when PRODUCT.md and DESIGN.md are opened, then each section of blueprint sections 1 to 14 is present in one of them and docs/README.md and AGENTS.md section 8 link to both
+- Given DESIGN.md, when the density, phone, navigation rail and owner page rules are read, then they match arbitration rulings 2, 5, 8 and 7 word for word in meaning and name the four tables that may be compact
+- Given AGENTS.md section 4, when it is read after this change, then it states the 44 px library default, the two densities, 16 px typed clinical text, the 1024 tier, the shared components to use and the motion rules, and each rule the code does not yet meet names the ticket that makes it true
+- Given DESIGN.md, when the list headed Do not change without clinical validation is read, then it holds every item of blueprint section 14 and of the executive verdict, and the epic's seven non-negotiables
+- Given DESIGN.md, when the accessibility section is read, then it lists the WCAG 2.2 criteria of blueprint section 13 as design requirements and makes no claim of conformance
+- Given the changed Markdown files, when python3 -I tools/check-links/check.py runs, then it reports 0 broken links
+tests:
+- No Playwright scenario: docs only. CI docs job (link check, synthetic check, ticket build) is green.
+notes:
+- Decision needed from the founder: body text stays 14/20 at weight 500 (what the build renders) and docs/02-design/tokens.md is corrected, or the build moves to 15 px. The blueprint proposes 14.
+- Regression risk: low.
+
+=== MDV-P1-076
+title: Guardrails: lint rules and a CI count that may only fall, so shared patterns stop drifting
+type: Task
+epic: MDV-P1-E12
+prd: P0-07
+priority: MUST
+roles: Developer
+labels: design-system, ci, frontend, epic: ux programme, track: design, wave: D0
+estimate: 1
+weeks: 4
+depends: MDV-P1-075
+confidence: 80 | The existing table rule in web/clinic/.oxlintrc.json is the pattern. Unknown: which of the new rules oxlint can express; the rest go into the count script.
+sources: docs/product-ux-audit/08-design-system-blueprint.md (section 14); docs/product-ux-audit/reviews/reviewer-c-design-system.md (section 3.13, Lint rules to add); docs/product-ux-audit/reviews/reviewer-c-rebuttal.md (section 6); web/clinic/.oxlintrc.json; .github/workflows/pr.yml
+desc:
+Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Track D (design rules and UI component setup), wave D0. This is audit backlog UX-35 of the Nov 2026 product UX audit (an audit id, not an MDV key).
+
+Persona and route: No screen. Runs in pnpm -r lint and in the PR workflow.
+Findings and reviewers: F-19, F-20, F-21, F-45 · reviewers C-01, C-03, C-04, C-11, C-16 · reviewer C rebuttal section 6.
+Rationale: A rule that is only written drifts again. The house already enforces tables by lint; the same is needed for control heights, raw colours, font sizes, column breakpoints, page titles and locally rebuilt Message, Field, Card and Empty components.
+Proposed UX behaviour: A small script (tools/check-ui-drift, run as pnpm check:ui-drift and in the PR workflow's web job) counts, in web/clinic/src/features and web/platform-admin/src: min-h-11 or h-11 on Input, SelectTrigger, Textarea and Button; arbitrary font sizes (text-[...]) outside an allow-list for the queue display and print; raw hex colours in class names (bg-[#...], text-[#...], border-[#...]), also in packages/ui; sm:grid-cols-*; raw h1 elements in features; the string border bg-card in features; and local components named Message, Field, Card or Empty in features/*/components. Today's numbers are committed as the baseline (about 350 height patches, 103 raw hex in packages/ui, 30 sm:grid-cols, 37 raw h1, 97 inline cards, and 10, 5, 2 and 2 local components). A pull request fails when any count rises; a count may only fall, and the baseline is lowered in the pull request that lowers it. When a count reaches zero, the ticket that got it there turns the matching oxlint rule to error and removes the count. The script has a self-test in the style of tools/check-links.
+Prototype and blueprint reference: docs/product-ux-audit/08-design-system-blueprint.md section 14.
+Components and tokens affected: No component. Adds one tool, one package.json script, one workflow step and the baseline file.
+Front end and back end split: Tooling only.
+Prerequisites and blocked by: Blocked by the design-rules ticket of this wave (the rules being enforced must be written first).
+Clinical sign-off: Not required.
+Effort and regression risk: S · Low. It adds a guard and weakens none; no existing lint rule or threshold changes.
+Deliberately NOT in this ticket: (1) Fixing any of the counted places: each count falls in the ticket that owns the pattern. (2) The browser test that the patient strip stays visible (in the pinned-strip screen ticket). (3) Repointing the contrast test to the tone tokens (in the tone-token ticket).
+ac:
+- Given the committed baseline, when a pull request adds one more local Message component or one more h-11 patch in a feature, then pnpm check:ui-drift exits 1 and names the file
+- Given a pull request that removes patches, when the baseline in the same pull request is lowered to the new number, then the check passes and the old number can no longer be reached
+- Given the script, when it runs with --self-test, then a sample with one extra hit fails and a sample at the baseline passes
+- Given a pull request that touches web/, packages/ or the tool, when the PR workflow runs, then the count step runs in the web job and a failure blocks the merge
+- Given web/clinic/.oxlintrc.json and the workflow, when this change is compared with main, then no existing rule, test or threshold is removed or lowered
+- Given the baseline file, when the counts are re-measured on main at merge time, then each number equals the measured number
+tests:
+- No Playwright scenario. The script's self-test runs in CI; one deliberate failing commit is shown in the PR description (mutation check of the guard).
+notes:
+- Regression risk: low.
+- The numbers in this ticket are reviewer C's counts of 13 Nov 2026; re-measure at implementation and commit what is true that day.
+
+=== MDV-P1-077
+title: Library defaults: 44 px Input, Select and Textarea, a required Table label, and 44 px hit areas for Switch
+type: Task
+epic: MDV-P1-E12
+prd: P0-07
+priority: MUST
+roles: Developer
+labels: design-system, ui, a11y, epic: ux programme, track: design, wave: D1
+estimate: 1
+weeks: 4
+depends: MDV-P1-076
+confidence: 88 | Three one-line default changes, one prop made required and one hit-area change; the 14 unpatched inputs that will grow are the only visible effect.
+sources: docs/product-ux-audit/10-prioritized-implementation-backlog.md (audit backlog UX-13); docs/product-ux-audit/08-design-system-blueprint.md (sections 4 and 7); docs/product-ux-audit/reviews/reviewer-c-design-system.md (C-01, C-13, section 2.2); packages/ui/src/components/ui/input.tsx; packages/ui/src/components/ui/select.tsx; packages/ui/src/components/ui/textarea.tsx; packages/ui/src/components/ui/table.tsx; packages/ui/src/components/ui/switch.tsx
+desc:
+Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Track D (design rules and UI component setup), wave D1 (a, foundations). This is audit backlog UX-13 of the Nov 2026 product UX audit (an audit id, not an MDV key).
+
+Persona and route: Every form and table, all roles; shown first in /__ui. The platform console inherits it.
+Findings and reviewers: F-20, F-33, F-44, F-24 (labels) · reviewers C-01, C-13, C-22, B-20, A-17.
+Rationale: The library default (36 px) contradicts the house 44 px rule, so 164 call sites patch it and a missed patch gives a small control (seen in the platform console). Four scrollable tables have no label, so keyboard users cannot name or scroll them. Switches are 32 by 18 px. This is one of the three system changes the arbitration allows before the pilot.
+Proposed UX behaviour: In packages/ui: Input, SelectTrigger and Textarea default to 44 px; select options are 44 px on a coarse pointer; Table's label prop becomes required in TypeScript, and the four tables without one (day sheet, merge review, growth card, timeline) get a translated label in the same change; Switch keeps its track size and gains a 44 by 44 px hit area by padding. A ChoiceRow helper makes the whole row the target of a native radio or checkbox. The gallery shows each control at default size with its measured height, in English and Arabic. The call-site patches stay in place in this ticket (they are now redundant, not wrong) and are deleted by the codemod ticket that follows.
+Prototype and blueprint reference: docs/product-ux-audit/08-design-system-blueprint.md section 4 (Density) and section 7 (Before the pilot).
+Components and tokens affected: input.tsx, select.tsx, textarea.tsx, table.tsx, switch.tsx; new ChoiceRow; gallery entries. No token change.
+Front end and back end split: Front end only (packages/ui, four table labels with i18n keys in en, hi and ar).
+Prerequisites and blocked by: Blocked by the lint and ratchet ticket (D0). File ownership in wave D1a: this ticket owns the five control files above and nothing in tokens or styles.css.
+Clinical sign-off: Not required. The device check (question 20 of the validation plan) confirms mouse or touch at the pilot desk; the default is safe for both.
+Effort and regression risk: S · Low. Visible change only where a control was never patched.
+Deliberately NOT in this ticket: (1) Deleting the call-site patches (the codemod ticket, which merges alone). (2) Applying ChoiceRow to the 26 native radios and checkboxes in features, and making name-link rows one target (second part of the codemod ticket). (3) Compact density (after the pilot, with the table ticket).
+ac:
+- Given the /__ui gallery, when Input, Select trigger and Textarea render with no class added, then each is at least 44 px tall in English and in Arabic
+- Given the screens that already patched their controls to 44 px, when screenshots before and after are compared, then no control changed size
+- Given the call sites that had no patch, when the change is reviewed, then the pull request lists each one and each now measures 44 px, including the platform console invite form
+- Given any Table in web/clinic or web/platform-admin, when it is used without a label, then TypeScript fails the build, and the four tables that lacked one announce a translated label to a screen reader
+- Given a Switch on a 1024 px touch viewport, when its hit area is measured, then it is at least 44 by 44 px and the visible track is unchanged
+- Given the gallery page in English and Arabic, when axe runs, then there is no violation and the controls mirror in right-to-left
+tests:
+- Vitest: default heights and the required label (type test).
+- Playwright (new step in the gallery spec, or tests/e2e/page-layout.spec.ts): on /__ui at 1024 touch, no library control is under 44 px; axe clean in en and ar.
+- Existing suites stay green: no selector depends on control height.
+notes:
+- Regression risk: low.
+
+=== MDV-P1-078
+title: Codemod: delete about 350 redundant control-height patches (merges alone), then give radios, checkboxes and name-link rows a 44 px target
+type: Task
+epic: MDV-P1-E12
+prd: P0-07
+priority: MUST
+roles: Developer
+labels: design-system, ui, a11y, refactor, epic: ux programme, track: design, wave: D1
+estimate: 1.5
+weeks: 5
+depends: MDV-P1-077
+confidence: 82 | Mechanical and checked by screenshot comparison. It touches about 90 feature files, so it must merge in a quiet window.
+sources: docs/product-ux-audit/10-prioritized-implementation-backlog.md (audit backlog UX-13); docs/product-ux-audit/reviews/reviewer-c-design-system.md (C-01, section 3.13 step 1); docs/product-ux-audit/04-evidence-backed-findings.md (F-20, F-33); docs/product-ux-audit/evidence/local-metrics.jsonl
+desc:
+Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Track D (design rules and UI component setup), wave D1 (a, foundations). This is audit backlog UX-13 of the Nov 2026 product UX audit (an audit id, not an MDV key).
+
+Persona and route: All forms in web/clinic and web/platform-admin; Today rows; settings and registration choices. All roles, touch widths first.
+Findings and reviewers: F-20, F-33 · reviewers C-01, B-20, A-17.
+Rationale: Once the defaults are right, the patches are noise and the next missed patch is impossible. About 10 % of controls on touch widths are still under 44 px: native radios and checkboxes at 16 px and patient-name links 19 px tall.
+Proposed UX behaviour: Part 1, the codemod, in its own pull request that merges alone: remove min-h-11 and h-11 from Input, SelectTrigger, Textarea and Button call sites in features and the console; lower the ratchet baseline to zero for that count and turn the lint rule to error. Part 2, by hand: the 26 native radios and checkboxes use ChoiceRow so the row is the target; on Today the whole visit row is the link to the patient, not the 19 px name.
+Prototype and blueprint reference: docs/product-ux-audit/08-design-system-blueprint.md section 4.
+Components and tokens affected: No new component. Uses the defaults and ChoiceRow from the previous ticket.
+Front end and back end split: Front end only.
+Prerequisites and blocked by: Blocked by the library-defaults ticket. File ownership: part 1 touches about 90 feature files and nothing else may merge into web/clinic/src/features or web/platform-admin/src in the same window; open pull requests rebase after it (the codemod can be re-run on a branch in minutes). Track S pull requests take priority: if one is ready, it merges first and the codemod is re-run.
+Clinical sign-off: Not required.
+Effort and regression risk: M · Low for behaviour, medium for merge conflicts with work in flight; mitigated by merging alone and re-running.
+Deliberately NOT in this ticket: (1) Any layout change. (2) Compact density. (3) The skip link (32 by 24 px, visible only on focus) stays as it is.
+ac:
+- Given web/clinic/src and web/platform-admin/src, when the code is searched for min-h-11 or h-11 on Input, SelectTrigger, Textarea and Button, then there is no hit and the ratchet count is zero
+- Given a feature file, when a developer adds h-11 to an Input, then pnpm -r lint fails with a message that names the library default
+- Given the screens captured before the codemod at 1440, 1024 and 375, when they are captured again after it, then no control changed size or position
+- Given Today, settings and registration at 1024 and 768 touch, when every control is measured, then none is under 24 px in either dimension and every radio, checkbox and patient row is at least 44 px tall as a target
+- Given the walk-in path, when a new and a returning patient are checked in, then the counts are still at most 6 clicks for a new patient and 3 for a returning one
+- Given the changed screens in English and Arabic, when axe runs, then there is no violation
+tests:
+- Existing J1 to J3 and feature suites stay green.
+- New metric check (Playwright, real stack or mocked): no control under 24 px at 375, 768 and 1024; reuse the measuring code in docs/product-ux-audit/tools/states-measure.mjs as the reference.
+- Screenshot comparison before and after for the 20 most-used screens, attached to the pull request.
+notes:
+- Regression risk: low. A failed comparison means a call site relied on the patch for something else; fix that site by hand.
+
+=== MDV-P1-079
+title: Tokens: nine type sizes, the spacing scale, page and panel widths, the 1024 tier, density and two motion values
+type: Task
+epic: MDV-P1-E12
+prd: P0-07
+priority: SHOULD
+roles: Developer
+labels: design-system, ui, frontend, epic: ux programme, track: design, wave: D1
+estimate: 1.5
+weeks: 4-5
+depends: MDV-P1-076
+confidence: 80 | Additive tokens that name what the build already renders; nothing reflows in this ticket. The generator feeds web and native, so the native build must be checked.
+sources: docs/product-ux-audit/08-design-system-blueprint.md (sections 2, 4, 5 and 12); docs/product-ux-audit/reviews/reviewer-c-design-system.md (C-05, C-11, C-16, section 3.5); docs/product-ux-audit/reviews/reviewer-b-visual-interaction.md (B-11, B-18, B-22); packages/tokens/src/tokens.json; packages/ui/src/styles.css
+desc:
+Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Track D (design rules and UI component setup), wave D1 (a, foundations). This is audit backlog UX-29 of the Nov 2026 product UX audit (an audit id, not an MDV key).
+
+Persona and route: No screen changes. Shown as a type, spacing and width specimen in /__ui.
+Findings and reviewers: F-21 · reviewers B-11, B-18, B-22, C-05, C-11, C-16.
+Rationale: The app renders 12 font sizes against a documented scale of 7, has no maximum page width, and uses four different side-panel widths. The components of waves D1b and D1c need named values to build on, or each will invent its own again.
+Proposed UX behaviour: Add to packages/tokens (and through the generator to tokens.css, theme.ts and the Tailwind theme in packages/ui/src/styles.css): the nine type tokens of blueprint section 5 (display, title, heading, subheading, body, body-large, label, caption, mono) with size, line height and weight, and tabular numerals as a utility; the spacing scale 2 to 64; widths (page maximum 1600, reading 1152 and about 72 characters, form 768, side panel 320 and 360 for the consultation chart panel); layout sizes (top bar 48 and 56, rail 72, sidebar 232, header row 44, gutters 16, 24 and 32); radius 6, 10, 12 and full; the two elevations; density (control 44 and 36, row 48 and 36); the breakpoint named wide at 1024 beside 360, 768, 1280 and 1600; and two motion tokens, ease-out cubic-bezier(0.23, 1, 0.32, 1) and a fast duration of 150 ms. Existing utilities keep working; no feature file changes.
+Prototype and blueprint reference: docs/product-ux-audit/08-design-system-blueprint.md sections 2, 4, 5 and 12.
+Components and tokens affected: packages/tokens/src/tokens.json, generate.mjs output (tokens.css, theme.ts), packages/ui/src/styles.css. Gallery specimen page.
+Front end and back end split: Front end only (tokens and styles).
+Prerequisites and blocked by: Blocked by the lint and ratchet ticket (D0). File ownership in wave D1a: this ticket and the tone-token ticket are the only ones that edit tokens.json and styles.css; this one merges first and the tone-token ticket rebases on it. Waves D1b and D1c do not edit either file.
+Clinical sign-off: Not required.
+Effort and regression risk: M · Low. Additive; the risk is the native build reading a changed token shape.
+Deliberately NOT in this ticket: (1) Applying the type tokens to features, body weight 500 and the page maximum width (the after-pilot ticket that applies them). (2) Tone tokens (the next ticket). (3) Any palette or typeface change.
+ac:
+- Given packages/tokens, when the generator runs, then the nine type tokens, the spacing scale, the widths, the density values, the wide breakpoint and the two motion tokens are in tokens.css and theme.ts and usable as Tailwind utilities
+- Given the 20 most-used screens, when they are captured before and after, then no pixel differs
+- Given mobile/ and packages/ui-native, when their type check and tests run, then they pass with the extended tokens
+- Given /__ui, when the type and spacing specimen is opened in English and Arabic, then each token is shown with its name and measured size, Arabic uses Noto Sans Arabic, and axe finds no violation
+- Given the body-large token, when it is measured, then it is 16 px on a 24 px line, so a phone browser does not zoom on focus
+- Given tokens.json, when packages/tokens tests run, then they fail if tokens.css or theme.ts was not regenerated
+tests:
+- Vitest in packages/tokens (existing tokens.test.ts extended).
+- Playwright: gallery specimen in en and ar, axe clean.
+notes:
+- Regression risk: low.
+- Decision recorded in DESIGN.md first: the fast duration is 150 ms (the old spec said 160).
+
+=== MDV-P1-080
+title: Tone tokens: one colour pair per meaning; no raw hex left in the shared library; the contrast test reads the tokens
+type: Task
+epic: MDV-P1-E12
+prd: P0-07
+priority: SHOULD
+roles: Developer
+labels: design-system, ui, a11y, epic: ux programme, track: design, wave: D1
+estimate: 1.5
+weeks: 5
+depends: MDV-P1-079
+confidence: 80 | A repointing with no intended visual change, proven by comparing the gallery. 103 literals to map by hand.
+sources: docs/product-ux-audit/08-design-system-blueprint.md (section 6); docs/product-ux-audit/reviews/reviewer-c-design-system.md (C-03, C-21, section 3.6); packages/ui/src/primitives.tsx; packages/ui/src/primitives.test.tsx; packages/tokens/src/tokens.json; packages/ui-native/src/display.tsx
+desc:
+Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Track D (design rules and UI component setup), wave D1 (a, foundations). This is audit backlog UX-21 of the Nov 2026 product UX audit (an audit id, not an MDV key).
+
+Persona and route: No screen changes. Every status chip, alert and banner in every role, through the library.
+Findings and reviewers: F-20, F-19 · reviewers C-03, C-21. Part 1 of 3 of audit backlog UX-21 (part 2 builds Chip, Tag and Banner; part 3 replaces the local chips in features).
+Rationale: Tokens style the chrome and 103 raw hex colours style the meaning. Dark and high-contrast themes cannot be built on literals, web and native can drift, and a palette fix means editing look tables by hand.
+Proposed UX behaviour: Add a tone layer to the tokens: danger, warning, success, info, brand, ai and neutral, each with a foreground, background and border value taken from the colours used today. Repoint the look tables in packages/ui/src/primitives.tsx to the tones, with no visual change. The contrast test in packages/ui reads the tone tokens, so a tone that fails 4.5:1 for text or 3:1 for a border fails the build. The names match the Tone type already used in packages/ui-native. Delete the dead dark: variants in tabs.tsx and switch.tsx. The raw-hex count in the ratchet for packages/ui falls to zero and its lint rule turns to error.
+Prototype and blueprint reference: docs/product-ux-audit/08-design-system-blueprint.md section 6 (tone table and rules).
+Components and tokens affected: tokens.json (tone layer), styles.css, primitives.tsx, primitives.test.tsx (contrast), tabs.tsx and switch.tsx (dead classes).
+Front end and back end split: Front end only.
+Prerequisites and blocked by: Blocked by the type and spacing token ticket (same two files; that one merges first). The clinical components of wave D1b rebase on this.
+Clinical sign-off: Review only: the looks must be unchanged. The allergy look itself is decided in part 2 (question 4 of the validation plan).
+Effort and regression risk: M · Low, if the comparison is exact. Any difference is a mapping error.
+Deliberately NOT in this ticket: (1) A new allergy presentation (part 2, needs clinical sign-off). (2) Dark and high-contrast themes (MDV-P5-023, which must not start before this ticket). (3) Any change to the palette.
+ac:
+- Given the tokens, when the tone layer is read, then danger, warning, success, info, brand, ai and neutral each have a text, background and border value and a written meaning
+- Given packages/ui/src, when it is searched for hex colours in class names or style objects, then there is none, the ratchet count is zero and the lint rule is an error
+- Given the /__ui gallery, when every status primitive is captured before and after in English and Arabic, then no pixel differs
+- Given the contrast test, when a tone's text colour is changed to one that gives less than 4.5:1, then the test fails
+- Given every primitive that uses a tone, when it renders, then it carries a text label, and an icon where one existed before
+- Given packages/ui and packages/ui-native, when the tone names are compared, then they are the same seven
+tests:
+- Vitest: contrast test repointed; mutation shown in the pull request (one failing colour).
+- Playwright: gallery capture comparison, axe clean in en and ar.
+notes:
+- Regression risk: low.
+
+=== MDV-P1-081
+title: PatientBanner in the shared library: full, strip and desk variants, shown in the gallery
+type: Story
+epic: MDV-P1-E12
+prd: P0-07, P2-02
+priority: MUST
+roles: Doctor, Nurse, Receptionist
+labels: design-system, clinical, safety, a11y, epic: ux programme, track: design, wave: D1, needs: clinical sign-off
+estimate: 2
+weeks: 5-6
+depends: MDV-P1-077, MDV-P1-079, MDV-P1-080
+confidence: 72 | The three existing headers show what is needed. Open: what the strip shows and how several allergies fit; that needs the pilot doctor.
+sources: docs/product-ux-audit/10-prioritized-implementation-backlog.md (audit backlog UX-03); docs/product-ux-audit/08-design-system-blueprint.md (sections 1, 6, 7, 8 and 10); docs/product-ux-audit/07-debate-and-arbitration.md (ruling 3, guarantee 1); docs/product-ux-audit/reviews/reviewer-c-design-system.md (C-02); docs/product-ux-audit/reviews/reviewer-b-rebuttal.md (section 2: strip clipped at 375, several allergies); packages/ui/src/primitives.tsx (IdentityBanner); web/clinic/src/features/encounters/components/IdentityBanner.tsx; web/clinic/src/features/patients/components/PatientRecord.tsx
+desc:
+Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Track D (design rules and UI component setup), wave D1 (b, clinical components). This is audit backlog UX-03 of the Nov 2026 product UX audit (an audit id, not an MDV key).
+
+Persona and route: Component only, in /__ui. Later used on /consult/:id and its sub-pages, /nurse/:id, the patient record and the desk record. Doctor, nurse, receptionist.
+Findings and reviewers: F-02, F-19 · reviewers A-01, B-03, B-08, C-02. Part 1 of 3 of audit backlog UX-03 (part 2 is the layout footer and save status; part 3 puts them on the screens).
+Rationale: Three patient headers exist and the allergy looks different in each: a red pill on the chart, plain text in the consultation. The most safety-relevant element needs one form before it is pinned anywhere, or the pin hard-codes the difference.
+Proposed UX behaviour: One PatientBanner in packages/ui with three variants. full: the chart header as today (avatar, name, age and sex, MRN in the mono face, date of birth, life stage, allergy block, consent, care team where recorded). strip: one row at 1024 px and wider and two rows at most below, 56 px, with name, age and sex, MRN, date of birth, the allergy block in words, consent, and slots for token and room; it wraps and never clips or shows an ellipsis alone. desk: name, age and sex, masked MRN, date of birth and no clinical data at all. The allergy block has one look everywhere: recorded allergies as a solid danger block with an icon and the words (for example Allergy: Penicillin (rash)); with more than two, the first two in words and a count that opens the full list; Allergies not recorded as a warning block with its own words; No known allergies as neutral text with a tick. Unknown is never shown as none. The strip exposes a pinned option and un-pins itself at 400 % zoom. The gallery shows every variant with one, three and five allergies, a long name, Arabic right-to-left and 375 px.
+Prototype and blueprint reference: docs/product-ux-audit/concepts/medvya-workspace-concept.html, doctor view, audit note 2; screenshots docs/product-ux-audit/concepts/screenshots/doctor-1440.png, doctor-1024.png, doctor-768.png and doctor-375.png (the 375 one shows the clipping this ticket must not repeat); blueprint sections 6, 7 and 10.
+Components and tokens affected: New PatientBanner (packages/ui/src/components/ui/patient-banner.tsx). Uses the tone tokens (danger, warning, neutral) and the heading, mono and caption type tokens. The old primitive IdentityBanner stays until the screen ticket removes it.
+Front end and back end split: Front end only. No API change: the component takes props the screens already have.
+Prerequisites and blocked by: Blocked by the D1a tickets for control defaults, type tokens and tone tokens. File ownership in wave D1b: this ticket owns patient-banner.tsx and its test and gallery section only.
+Clinical sign-off: Required before merge: questions 3 (what the strip shows; how five allergies show) and 4 (one look for the allergy, for not recorded and for no known allergies) of docs/product-ux-audit/11-pilot-doctor-validation-plan.md. The agreement is written on the issue with a date.
+Effort and regression risk: M · Low in this ticket (no screen uses it yet). The allergy wording and the unknown, none and not recorded distinction must not change: the component only presents what the screens pass in.
+Deliberately NOT in this ticket: (1) Using it on any screen (the screen ticket in wave D2). (2) Changing allergy rules, wording or data. (3) The queue button in the strip (the queue rail ticket).
+ac:
+- Given /__ui, when the PatientBanner section is opened, then full, strip and desk render from the same component and the desk variant contains no allergy, diagnosis, medicine or vitals text
+- Given a patient with five recorded allergies and a long name, when the strip renders at 1440, 1024, 768 and 375 px, then the first two allergies are readable in words, a count opens the rest, nothing is cut off and no ellipsis stands alone
+- Given the three allergy states, when each renders, then Allergies not recorded is a warning block with words, No known allergies is neutral text with a tick, and neither can be produced by passing an empty list
+- Given the allergy block, when it is viewed in greyscale and read by a screen reader, then the word Allergy and the substance are present as text
+- Given the gallery in English and Arabic, when axe runs on every variant, then there is no violation and the layout mirrors in right-to-left
+- Given the strip with the pinned option at 400 % zoom, when the page scrolls, then the strip scrolls with the content
+- Given this ticket's issue, when it is closed, then it holds the pilot doctor's dated agreement on the strip contents and the allergy look
+tests:
+- Vitest: the three allergy states, the two-plus-count rule, the desk variant holds no clinical text (this one is the safety test: it fails when clinical props are rendered in desk).
+- Playwright on /__ui: widths 1440, 1024, 768, 375; en and ar; axe clean; no text clipped (scrollWidth equals clientWidth on each cell).
+notes:
+- Regression risk: low.
+- What a receptionist can see of clinical data must not grow: the desk variant is how the type system enforces that on the client; the server rule is unchanged.
+
+=== MDV-P1-082
+title: StickyActionBar as a layout footer and SaveStatus, in the shared library
+type: Story
+epic: MDV-P1-E12
+prd: P0-07, P2-04
+priority: MUST
+roles: Doctor, Nurse
+labels: design-system, ui, a11y, notes, epic: ux programme, track: design, wave: D1
+estimate: 1
+weeks: 5
+depends: MDV-P1-077, MDV-P1-079
+confidence: 85 | Two small components with clear rules; the behaviour behind the save words is in the note ticket of track S.
+sources: docs/product-ux-audit/08-design-system-blueprint.md (sections 7, 10 and 12); docs/product-ux-audit/reviews/reviewer-b-visual-interaction.md (B-01, section 5 item B); docs/product-ux-audit/reviews/reviewer-b-rebuttal.md (sections 5 and 6); docs/product-ux-audit/05-accessibility-responsive-and-reliability.md (SC 2.4.11, 4.1.3)
+desc:
+Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Track D (design rules and UI component setup), wave D1 (b, clinical components). This is audit backlog UX-03 of the Nov 2026 product UX audit (an audit id, not an MDV key).
+
+Persona and route: Components only, in /__ui. Later the consultation, nurse intake and long forms.
+Findings and reviewers: F-10, F-03 (status), F-26 · reviewers B-01, A-03, A-15. Part 2 of 3 of audit backlog UX-03; SaveStatus is also used by audit backlog UX-04.
+Rationale: The floating Review and sign bar covers fields and hid 2 of 45 tab stops (WCAG 2.2 SC 2.4.11 at risk). The save message is a fixed sentence that cannot say Not saved.
+Proposed UX behaviour: StickyActionBar is a footer row that is part of the page layout: it reserves its own height (56 px), holds status text at the start and the commit actions at the end, sets scroll-padding-bottom on its scroll container, and un-pins at 400 % zoom. It never overlays content. SaveStatus shows one of three states in one fixed place: Saving…, Saved with the time (for example Saved 10:42), or Not saved. Trying again. It is a polite live region, changes by an opacity swap of 150 ms (instant under reduced motion), has no tick animation and no toast, and never shows Saved unless told the server answered.
+Prototype and blueprint reference: docs/product-ux-audit/concepts/medvya-workspace-concept.html, doctor view, audit note 7; blueprint sections 7, 10 and 12.
+Components and tokens affected: New sticky-action-bar.tsx and save-status.tsx in packages/ui; the motion tokens; i18n keys for the three states in en, hi and ar.
+Front end and back end split: Front end only.
+Prerequisites and blocked by: Blocked by the D1a tickets for control defaults and type tokens. File ownership: its two files, their tests and gallery section.
+Clinical sign-off: Not required for the components. The sign bar's behaviour on the consultation is validated with the screen ticket.
+Effort and regression risk: S · Low.
+Deliberately NOT in this ticket: (1) Wiring to the note controller (audit backlog UX-04, track S). (2) Putting the footer on the consultation (the screen ticket in wave D2). (3) Any change to what Sign or Authorise do.
+ac:
+- Given a long page in the gallery with the footer, when the last field is scrolled to, then the whole field is visible above the footer
+- Given the gallery page, when every control is reached with Tab, then each focused element is fully inside the visible area and none is under the footer
+- Given SaveStatus, when it is set to saving, saved at 10:42 and failed, then it reads Saving…, Saved 10:42 and Not saved. Trying again., and it cannot render Saved without a time
+- Given a screen reader and reduced motion, when the state changes, then the new text is announced once and swaps with no movement
+- Given 400 % zoom, when the page scrolls, then the footer scrolls with the content
+- Given the gallery in English and Arabic, when axe runs, then there is no violation
+tests:
+- Vitest: the state machine of SaveStatus.
+- Playwright on /__ui: tab through, assert each focused element's box is inside the viewport minus pinned chrome; en and ar; axe.
+notes:
+- Regression risk: low.
+
+=== MDV-P1-083
+title: Chip, Tag and Banner in the shared library, with tone, icon and size; the allergy has one look
+type: Story
+epic: MDV-P1-E12
+prd: P0-07
+priority: SHOULD
+roles: Doctor, Nurse, Receptionist
+labels: design-system, ui, clinical, a11y, epic: ux programme, track: design, wave: D1, needs: clinical sign-off
+estimate: 1.5
+weeks: 6
+depends: MDV-P1-080
+confidence: 75 | The native kit already has this vocabulary; the allergy look needs the pilot doctor.
+sources: docs/product-ux-audit/08-design-system-blueprint.md (sections 6 and 7); docs/product-ux-audit/reviews/reviewer-c-design-system.md (C-04, section 2.2 chips); docs/product-ux-audit/reviews/reviewer-b-visual-interaction.md (B-08); packages/ui-native/src/display.tsx; packages/ui/src/primitives.tsx
+desc:
+Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Track D (design rules and UI component setup), wave D1 (b, clinical components). This is audit backlog UX-21 of the Nov 2026 product UX audit (an audit id, not an MDV key).
+
+Persona and route: Components only, in /__ui. Later every status label in every role.
+Findings and reviewers: F-19, F-20 · reviewers B-08, C-04, C-21. Part 2 of 3 of audit backlog UX-21 (part 1 is the tone tokens; part 3 replaces the local chips in features, after the pilot).
+Rationale: About 12 chip variants exist; three styles sit side by side on one Today row. One vocabulary with tones removes the drift and gives the allergy one presentation.
+Proposed UX behaviour: Chip (rounded, for a state: tone, optional icon, two sizes), Tag (square, for a category or source, such as from nurse intake) and Banner (a full-width notice with tone, icon, title, text and one optional action) in packages/ui, all taking the tone names of the token layer. Every one carries a text label; an icon may be added, colour never stands alone. The existing FrontDeskTag, StatusChip and ProvenanceTag become thin wrappers over them with unchanged looks. The allergy presentation used by PatientBanner is exported as AllergyBlock so the chart, the consultation and the dialogs share it. The ai tone is violet and dashed with the word draft and is never used for anything a clinician accepted.
+Prototype and blueprint reference: docs/product-ux-audit/08-design-system-blueprint.md sections 6 and 7; docs/product-ux-audit/concepts/medvya-workspace-concept.html, audit notes 2 and 5.
+Components and tokens affected: New chip.tsx, tag.tsx, banner.tsx in packages/ui; primitives.tsx wrappers. Tone tokens.
+Front end and back end split: Front end only.
+Prerequisites and blocked by: Blocked by the tone-token ticket. File ownership in wave D1b: its three files; it edits primitives.tsx only to wrap the three existing primitives, after the tone-token ticket has merged.
+Clinical sign-off: Required before merge for the allergy look only: question 4 of the validation plan. The other chips keep their looks.
+Effort and regression risk: M · Low: wrappers keep today's looks; the comparison of the gallery proves it.
+Deliberately NOT in this ticket: (1) Replacing the local chips in features (after the pilot). (2) Changing any status wording.
+ac:
+- Given /__ui, when Chip, Tag and Banner are opened, then each renders in the seven tones, with and without an icon, in English and Arabic
+- Given FrontDeskTag, StatusChip and ProvenanceTag, when captured before and after, then no pixel differs
+- Given any Chip, Tag or Banner, when it is built without a text label, then TypeScript fails the build
+- Given AllergyBlock, when it renders recorded, not recorded and no known allergies, then the three match the presentation the pilot doctor agreed and the same component is used by PatientBanner
+- Given the ai tone, when it renders, then it is dashed, carries the word draft and cannot be combined with a confirmed or signed label
+- Given the gallery in English and Arabic, when axe runs, then there is no violation and text contrast is at least 4.5:1 for every tone
+tests:
+- Vitest: label required, tone mapping.
+- Playwright on /__ui: capture comparison for the three wrappers; axe in en and ar.
+notes:
+- Regression risk: low.
+
+=== MDV-P1-084
+title: Shell components in the library: AccountMenu, the labelled rail item, PageHeader with back and meta slots, and Tooltip
+type: Story
+epic: MDV-P1-E12
+prd: P0-07
+priority: SHOULD
+roles: All staff roles
+labels: design-system, ui, navigation, a11y, epic: ux programme, track: design, wave: D1
+estimate: 2
+weeks: 5-6
+depends: MDV-P1-077, MDV-P1-079
+confidence: 82 | One shadcn component is added (dropdown menu, and tooltip from the same family); the rest is composition.
+sources: docs/product-ux-audit/10-prioritized-implementation-backlog.md (audit backlog UX-16); docs/product-ux-audit/08-design-system-blueprint.md (sections 2, 3 and 7); docs/product-ux-audit/07-debate-and-arbitration.md (ruling 8); docs/product-ux-audit/reviews/reviewer-b-visual-interaction.md (B-07, B-10, B-12, section 11.1); docs/product-ux-audit/reviews/reviewer-c-design-system.md (C-08, C-09); packages/ui/src/components/ui/page.tsx; web/clinic/src/features/shell/components/AppShell.tsx
+desc:
+Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Track D (design rules and UI component setup), wave D1 (c, shell and page components). This is audit backlog UX-16 of the Nov 2026 product UX audit (an audit id, not an MDV key).
+
+Persona and route: Components only, in /__ui. Later the app shell for every role, and every page title.
+Findings and reviewers: F-18, F-22 · reviewers B-07, B-10, B-12, C-08, C-09. Part 1 of 2 of audit backlog UX-16 (part 2 puts them in the shell).
+Rationale: Language, My devices and Sign out sit as permanent buttons beside patient search; the rail between 768 and 1279 px is icons with no labels; page titles sit at seven different heights and jump when data loads.
+Proposed UX behaviour: AccountMenu: an avatar button that opens a menu with name and role, language, my devices, change facility and, last and separated, sign out; built on the shadcn dropdown menu added through the shadcn CLI; full keyboard support and focus returns to the button on close. NavRailItem: an icon with an 11 px label under it for the 72 px rail; the label is always visible, never a tooltip only. PageHeader gains back and meta slots and one fixed 44 px row: title at 20/28, secondary text (such as the date) after it, actions at the end, with the space for the secondary text reserved while loading so nothing jumps. Tooltip for icon-only buttons: appears on hover and on focus, never the only label for navigation.
+Prototype and blueprint reference: docs/product-ux-audit/concepts/medvya-workspace-concept.html, audit note 1; blueprint sections 2, 3 and 7.
+Components and tokens affected: New account-menu.tsx, nav-rail-item.tsx, tooltip.tsx, dropdown-menu.tsx (shadcn); page.tsx extended. No new library beyond the shadcn and Radix family already in use.
+Front end and back end split: Front end only.
+Prerequisites and blocked by: Blocked by the D1a tickets for control defaults and type tokens. File ownership in wave D1c: this ticket owns the four new files and page.tsx.
+Clinical sign-off: Not required.
+Effort and regression risk: M · Low: nothing uses the new pieces yet; PageHeader keeps its current props.
+Deliberately NOT in this ticket: (1) Changing AppShell (part 2, wave D2). (2) Renaming navigation items (the names ticket, at a training boundary). (3) An icon-only rail: ruling 8 forbids it as a default.
+ac:
+- Given the gallery, when the avatar button is focused and Enter is pressed, then the menu opens, arrow keys move through language, my devices, change facility and sign out in that order, Escape closes it and focus returns to the button
+- Given the open menu, when it is read, then sign out is the last item, visually separated, and every item is at least 44 px tall
+- Given NavRailItem at 72 px, when it renders in English and Arabic, then the label is visible text under the icon and is not truncated for the longest translated name
+- Given PageHeader with a title, a date and two actions, when the date arrives after loading, then the title and actions do not move and the row stays 44 px
+- Given an icon button with a Tooltip, when it is focused by keyboard, then the tooltip shows and the button still has an accessible name without it
+- Given the gallery in English and Arabic, when axe runs, then there is no violation
+tests:
+- Vitest: menu order, header slots.
+- Playwright on /__ui: keyboard path through the menu; en and ar; axe.
+notes:
+- Regression risk: low.
+- Dependency reason for the pull request: shadcn dropdown-menu and tooltip (Radix), same family as the installed dialog and select; no alternative in the library.
+
+=== MDV-P1-085
+title: Field and ErrorSummary in the shared library: one label, hint, error and required convention; a summary that takes focus
+type: Story
+epic: MDV-P1-E12
+prd: P0-07, P1-05
+priority: SHOULD
+roles: Receptionist, Practice admin, Doctor
+labels: design-system, ui, a11y, registration, epic: ux programme, track: design, wave: D1
+estimate: 1.5
+weeks: 6
+depends: MDV-P1-077, MDV-P1-079
+confidence: 82 | The registration Field is the best of the five and becomes the base.
+sources: docs/product-ux-audit/10-prioritized-implementation-backlog.md (audit backlog UX-20); docs/product-ux-audit/08-design-system-blueprint.md (sections 7 and 9); docs/product-ux-audit/reviews/reviewer-c-design-system.md (C-12, section 2.5); docs/product-ux-audit/reviews/reviewer-b-visual-interaction.md (B-13); web/clinic/src/features/registration/components/FormFields.tsx
+desc:
+Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Track D (design rules and UI component setup), wave D1 (c, shell and page components). This is audit backlog UX-20 of the Nov 2026 product UX audit (an audit id, not an MDV key).
+
+Persona and route: Components only, in /__ui. Later registration, settings, onboarding, the pregnancy card, sign-up and the platform console.
+Findings and reviewers: F-23, F-19 · reviewers B-13, C-12. Part 1 of 2 of audit backlog UX-20 (part 2 moves the forms to it, one feature at a time).
+Rationale: Five Field wrappers, three error styles and three required or optional conventions exist. After a failed submit, focus stays on the button and at 375 px the errors are off screen (WCAG 2.2 SC 3.3.1 and 3.3.3 are weak).
+Proposed UX behaviour: Field: label above the control, a required or optional mark in words (one convention per form, chosen by a prop on the form), a hint, units inside or beside the control, and an error that says what is wrong and what to do, linked with aria-describedby and marked invalid. ErrorSummary: after a failed submit it lists each error as a link to its field, takes focus, and is announced once. Both work with React Hook Form and Zod as the house rule requires and take translated strings only.
+Prototype and blueprint reference: docs/product-ux-audit/08-design-system-blueprint.md section 9 (Forms); the NHS design system error summary as advisory reference.
+Components and tokens affected: New field.tsx and error-summary.tsx in packages/ui.
+Front end and back end split: Front end only.
+Prerequisites and blocked by: Blocked by the D1a tickets for control defaults and type tokens. File ownership: its two files, tests and gallery section.
+Clinical sign-off: Not required.
+Effort and regression risk: M · Low: no form uses it yet.
+Deliberately NOT in this ticket: (1) Moving any existing form (part 2). (2) Date and time pickers in the app language (a later ticket).
+ac:
+- Given a sample form in the gallery with three invalid fields, when it is submitted, then focus moves to the summary, which lists three links, and activating a link focuses that field
+- Given the same form at 375 px, when it is submitted empty, then the summary is in the viewport
+- Given a Field with an error, when it renders, then the message is text beside the field, linked to the control, and the control is marked invalid without relying on colour
+- Given a form set to mark required fields, when it renders, then every required field carries the word in the label and no asterisk stands alone
+- Given a screen reader, when the summary appears, then it is announced once and not repeated on every keystroke
+- Given the gallery in English and Arabic, when axe runs, then there is no violation
+tests:
+- Vitest: summary links, required convention.
+- Playwright on /__ui: failed submit, focus on the summary, link moves focus; 375 and 1440; en and ar; axe.
+notes:
+- Regression risk: low.
+
+=== MDV-P1-086
+title: Page components in the library: Card and Section, PageMessage and EmptyState, SegmentedControl, SplitLayout and Sheet
+type: Story
+epic: MDV-P1-E12
+prd: P0-07
+priority: SHOULD
+roles: All staff roles
+labels: design-system, ui, a11y, epic: ux programme, track: design, wave: D1
+estimate: 2.5
+weeks: 5-6
+depends: MDV-P1-077, MDV-P1-079
+confidence: 80 | Each replaces a pattern that already exists several times, so the needed props are known. Sheet is the only new behaviour.
+sources: docs/product-ux-audit/08-design-system-blueprint.md (section 7, Next; section 12 for the drawer); docs/product-ux-audit/reviews/reviewer-c-design-system.md (C-04, section 2.2, section 3.13 steps 2, 8 and 9); docs/product-ux-audit/reviews/reviewer-b-visual-interaction.md (B-09, B-22); web/clinic/src/features/schedule/components/SchedulePage.tsx
+desc:
+Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Track D (design rules and UI component setup), wave D1 (c, shell and page components). No audit backlog id. Created from the audit's rulings and blueprint, not from a backlog line (see Findings).
+
+Persona and route: Components only, in /__ui. Later every page in every role.
+Findings and reviewers: F-19, F-17 (denied state), F-11 (two-pane layout) · reviewers B-09, B-22, C-04. From the blueprint's Next list; no UX number of its own in the backlog.
+Rationale: 97 inline card strings, 10 local Message functions, 20 hand-built view switches in five styles and four hand-built two-pane grids. The screen tickets of wave D2 need these pieces: the refused screen needs PageMessage, the consultation needs SplitLayout and Sheet, the board needs SegmentedControl.
+Proposed UX behaviour: Card and Section: two sizes only, page section (16 px padding, 12 px radius) and list item (12 px padding, 10 px radius), with title, intro and actions slots; no bordered card directly inside a bordered card. PageMessage and EmptyState: one component for busy, error, empty and denied, with an icon, a sentence, and one next action. SegmentedControl: one view switch (grey track, white selected segment, 44 px, optional icon), with the pressed state exposed to assistive technology. SplitLayout: a main and a side pane (side 320 px, or 360 px for the consultation chart panel) at 1024 px and wider; under 1024 the side becomes a Sheet (a drawer with a focus trap, Escape to close, focus returned to the opener, mirrored in right-to-left; translate 200 ms, opacity only under reduced motion).
+Prototype and blueprint reference: docs/product-ux-audit/08-design-system-blueprint.md sections 7, 8 and 12; docs/product-ux-audit/concepts/screenshots/doctor-768-chart-open.png for the drawer.
+Components and tokens affected: New card.tsx, page-message.tsx, segmented-control.tsx, split-layout.tsx, sheet.tsx in packages/ui. Uses width, radius and motion tokens.
+Front end and back end split: Front end only.
+Prerequisites and blocked by: Blocked by the D1a tickets for control defaults and type tokens. File ownership in wave D1c: its five files. The three D1c tickets each add their own gallery section file and one export line in packages/ui/src/index.ts; a conflict there is one line.
+Clinical sign-off: Not required.
+Effort and regression risk: M · Low: nothing uses them yet.
+Deliberately NOT in this ticket: (1) Replacing the inline cards, local Message functions and view switches in features (the after-pilot adoption tickets, except where a wave D2 ticket already touches the file). (2) Skeletons (the status and motion ticket).
+ac:
+- Given /__ui, when PageMessage is opened, then busy, error, empty and denied each show an icon, a sentence and at most one action, in English and Arabic
+- Given SegmentedControl with three options, when it is used by keyboard, then arrow keys or Tab move between options, the selected one is exposed as pressed, and each segment is at least 44 px tall
+- Given Card, when its props are read, then only the page-section and list-item sizes exist and nesting a bordered card in a bordered card is flagged in development
+- Given SplitLayout at 1024 px and at 768 px, when the side content is opened, then at 1024 it is beside the main pane and at 768 it is a Sheet that traps focus, closes on Escape and returns focus to the opener
+- Given reduced motion, when the Sheet opens, then it appears with opacity only and no movement
+- Given the gallery in English and Arabic, when axe runs with the Sheet open and closed, then there is no violation and the Sheet opens from the correct side in right-to-left
+tests:
+- Vitest per component.
+- Playwright on /__ui: keyboard path for SegmentedControl and Sheet; 1024 and 768; en and ar; axe.
+notes:
+- Regression risk: low.
+
+=== MDV-P1-087
+title: A free-text medicine needs a reason before authorising when the patient has, or may have, an allergy
+type: Story
+epic: MDV-P1-E12
+prd: P2-06, P2-08
+screens: E-05, E-11
+priority: MUST
+roles: Doctor
+labels: prescribing, allergies, safety, clinical-safety, epic: ux programme, track: safety, wave: S1, needs: clinical sign-off
+estimate: 2
+weeks: 4
+confidence: 78 | The severe check-could-not-run alert with a reason already exists for allergies not recorded; this reuses it. The wording needs the pilot doctor.
+sources: docs/product-ux-audit/10-prioritized-implementation-backlog.md (audit backlog UX-01); docs/product-ux-audit/04-evidence-backed-findings.md (F-01); docs/product-ux-audit/reviews/reviewer-a-clinical-workflow.md (A-02); docs/product-ux-audit/reviews/reviewer-a-rebuttal.md (section 7); docs/product-ux-audit/07-debate-and-arbitration.md (ruling 3; red-team critique); docs/product-ux-audit/tools/walkthrough-doctor-5-freetext.mjs; docs/adr (ADR-015)
+desc:
+Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Track S (safety, trust and handoff behaviour), wave S1. This is audit backlog UX-01 of the Nov 2026 product UX audit (an audit id, not an MDV key).
+
+Persona and route: /consult/:id, Prescription, Safety checks and Authorise · doctor.
+Findings and reviewers: F-01 · reviewer A-02 (P0 safety; pilot blocker for prescribing, agreed by all three reviewers).
+Rationale: Augmentin 625 Duo, a penicillin-class brand, was typed as free text for a patient with a recorded penicillin allergy and authorised as RX-CAEE099F with No alerts from the checks that could run. The print shows Allergies: Penicillin directly above the medicine. Indian outpatient prescribing is largely by brand and the formulary holds 23 generics and no brands, so free text is likely on day one.
+Proposed UX behaviour: When a prescription line is free text and the patient has any recorded allergy, or allergies are not recorded, Safety checks raises the existing severe check-could-not-run alert for that line, naming every recorded allergy in words: Not checked against: Penicillin. Augmentin 625 Duo was typed as free text. Authorise stays blocked until the doctor gives a reason, exactly as for other severe alerts. The reason is stored with the line, written to the audit record and carried on the print. With No known allergies confirmed, today's amber Not checked note stays and no reason is asked. The honest Not checked wording already on screen stays. The rule lives on the server in the prescription safety check and the authorise guard; the screen only shows it.
+Prototype and blueprint reference: docs/product-ux-audit/concepts/medvya-workspace-concept.html, doctor view: type a brand in the medicine box; screenshot docs/product-ux-audit/concepts/screenshots/doctor-1440-free-text-ack.png. The concept's inline box is a sketch: in the product the line is added through the existing Add medicine dialog.
+Components and tokens affected: SafetyChecks, AddMedicinePanel; no new component. Wording in en, hi and ar.
+Front end and back end split: Back end: the rule in the prescription safety check and the authorise guard, the reason on the line, the audit event and the print. Front end: the alert wording and the existing reason step.
+Prerequisites and blocked by: None in code: it does not wait for any component. Started on day one of track S.
+Clinical sign-off: Required before merge: questions 1 and 2 of docs/product-ux-audit/11-pilot-doctor-validation-plan.md (brand or generic; the wording Not checked against; whether a typed reason on every such line is acceptable), recorded on the issue with a date. Safe acceptance criterion 3 of the plan applies.
+Effort and regression risk: M · Low for regressions. Product risk: if the doctor prescribes mostly by brand, a reason on every line trains dismissal, so the brand list ticket matters as much as this one.
+Deliberately NOT in this ticket: (1) Brand names in the formulary (the next ticket). (2) Replacing the Add medicine dialog or adding an inline free-text box (forbidden until this is closed and a clinician has seen a replacement). (3) Interaction or dose checks for free text. (4) Any change to how a formulary medicine is checked.
+ac:
+- Given Meera Iyer with a recorded penicillin allergy and a free-text line Augmentin 625 Duo, when the doctor presses Authorise without a reason, then the server refuses and the prescription stays a draft
+- Given a patient with two recorded allergies, when a free-text line is added, then the severe alert reads Not checked against, names both allergies and the typed medicine, and does not rely on colour
+- Given a patient whose allergies are not recorded, when a free-text line is added, then the same severe alert and reason step apply
+- Given the doctor gives a reason and authorises, when the audit log and the print are read, then both carry the reason for that line
+- Given a patient with No known allergies confirmed, when a free-text line is added, then only the amber Not checked note shows and no reason is asked
+- Given the integration test on real PostgreSQL that authorises a free-text line for an allergic patient, when the server rule is removed, then the test fails (mutation check, shown in the pull request)
+- Given the alert and the reason field, when they appear, then they are announced, reachable by keyboard and axe finds no violation in English or Arabic
+- Given the refusal, when logs, telemetry and the address bar are read, then they hold no medicine name tied to a patient and no allergy text
+tests:
+- Integration (Testcontainers PostgreSQL): authorise guard for recorded allergy, allergies not recorded and no known allergies; tenant isolation unchanged.
+- Playwright J2 (tests/e2e/fullstack/j2.spec.ts, step 6): Meera Iyer, free-text Augmentin 625 Duo, Authorise refused with the named alert, give a reason, authorised, reason on the print. Second case: no known allergies, no severe alert.
+- ponytail-review and a mutation check, as the house requires for a safety rule.
+notes:
+- Regression risk: low.
+- Pilot blocker: no pilot doctor prescribes before this is merged and signed off.
+
+=== MDV-P1-088
+title: Load the pilot clinic's brand names into the formulary, mapped to generic and class; offer generic matches for typed text
+type: Story
+epic: MDV-P1-E12
+prd: P2-06
+screens: F-13, E-11
+priority: MUST
+roles: Owner, Doctor, Founder
+labels: formulary, prescribing, safety, data, needs-person, epic: ux programme, track: safety, wave: S1, needs: clinical sign-off
+estimate: 2
+weeks: 4-6
+confidence: 60 | Mostly people work: the list comes from the pilot doctor and the class mapping needs a clinical review.
+sources: docs/product-ux-audit/10-prioritized-implementation-backlog.md (audit backlog UX-02); docs/product-ux-audit/04-evidence-backed-findings.md (F-01); docs/product-ux-audit/reviews/reviewer-a-clinical-workflow.md (A-02); docs/05-delivery/session-handoff.md (section 8, pilot clinical sign-off #1041)
+desc:
+Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Track S (safety, trust and handoff behaviour), wave S1. This is audit backlog UX-02 of the Nov 2026 product UX audit (an audit id, not an MDV key).
+
+Persona and route: Settings → Clinical → Medicines (owner); Add medicine search (doctor).
+Findings and reviewers: F-01 · reviewer A-02.
+Rationale: A brand typed as free text skips the allergy check. If the doctor's usual brands are in the formulary, mapped to their generic and class, most lines are checked and the reason step of the previous ticket stays rare enough to be read.
+Proposed UX behaviour: The pilot doctor's usual brands (about 100 medicines) are added to the clinic formulary, each mapped to its generic, strength, form and allergy class, so a search by brand finds a checked medicine. When typed text has no exact match, the dialog offers Did you mean with the closest generic and brand rows before Add as free text. Search matches at the start of words, not inside them.
+Prototype and blueprint reference: docs/product-ux-audit/concepts/screenshots/doctor-1440-allergy-block.png (a formulary conflict blocked in words).
+Components and tokens affected: Formulary data and import; AddMedicinePanel search list. No new component.
+Front end and back end split: Data and a clinical review of the mapping; a small front-end change for the suggestion; back end only if brand search is not yet indexed.
+Prerequisites and blocked by: A person: the pilot doctor's list (question 1 of the validation plan). Started in parallel with the free-text rule on day one, because the list takes calendar time.
+Clinical sign-off: Required: clinical review of each brand's generic and class mapping (ADR-015 already asks for it; see #1041), recorded on the issue with the reviewer's role and date.
+Effort and regression risk: M · Low in code. A wrong class mapping is a safety risk, which is why a named reviewer signs the mapping.
+Deliberately NOT in this ticket: (1) A national brand database. (2) Automatic mapping without review. (3) Interaction data for brands beyond what the generic already has.
+ac:
+- Given the loaded list, when the doctor searches Augmentin, then the amoxicillin and clavulanate row is offered with the brand shown
+- Given a patient with a penicillin allergy, when that brand row is chosen, then it is blocked in the dialog and at authorisation exactly as the generic is
+- Given typed text with no exact match, when the list opens, then the closest formulary rows are offered above Add as free text
+- Given the imported list, when the issue is closed, then each brand's generic and class mapping carries a named clinical reviewer and date
+- Given two clinics, when one loads its brands, then the other clinic's formulary and search do not show them (integration test with row-level security)
+- Given the search list in English and Arabic, when axe runs, then there is no violation
+tests:
+- Playwright (tests/e2e/formulary.spec.ts and add-medicine.spec.ts): search Augmentin → amoxicillin and clavulanate row → blocked for a penicillin allergy.
+- Integration: brand search and tenant isolation on real PostgreSQL.
+notes:
+- Regression risk: low.
+- Synthetic data only in fixtures; the pilot list itself holds no patient data.
+
+=== MDV-P1-089
+title: The note always shows what the server holds; the last keystrokes survive a page change and a reload
+type: Story
+epic: MDV-P1-E12
+prd: P2-04
+screens: E-04
+priority: MUST
+roles: Doctor
+labels: notes, encounters, reliability, safety, epic: ux programme, track: safety, wave: S1
+estimate: 1.5
+weeks: 4
+confidence: 75 | The symptom is reproduced 2 of 2; the cause (cache not refreshed on mount) is a hypothesis to confirm first.
+sources: docs/product-ux-audit/10-prioritized-implementation-backlog.md (audit backlog UX-04); docs/product-ux-audit/04-evidence-backed-findings.md (F-03, F-26); docs/product-ux-audit/reviews/reviewer-a-clinical-workflow.md (A-03, A-15); docs/product-ux-audit/reviews/reviewer-a-evidence/walkthrough-a.log; AGENTS.md (1.2); docs/adr (ADR-011)
+desc:
+Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Track S (safety, trust and handoff behaviour), wave S1. This is audit backlog UX-04 of the Nov 2026 product UX audit (an audit id, not an MDV key).
+
+Persona and route: /consult/:id and back from /consult/:id/problems · doctor.
+Findings and reviewers: F-03, F-26 · reviewers A-03, A-15.
+Rationale: Type in Assessment, open Problems within two seconds, come back: the field shows old or empty text although the server has the new text. The signed note later carried text the screen had not shown. A reload within two seconds of typing loses the last sentence.
+Proposed UX behaviour: On mount the consultation refetches the note. Leaving the page flushes pending text and writes it to the query cache. On pagehide the pending text is sent with keepalive. The save status reads Saving…, then Saved with the time, or Not saved. Trying again.; it never says Saved before the server answered. No draft is kept in browser storage: AGENTS.md 1.2 forbids patient data there, and changing that needs a security decision and an ADR, which this ticket does not ask for.
+Prototype and blueprint reference: docs/product-ux-audit/concepts/medvya-workspace-concept.html, audit note 7 (save status in the footer).
+Components and tokens affected: The note controller hook. SaveStatus from the library when it has landed; until then the existing status text with the three honest wordings.
+Front end and back end split: Front end only.
+Prerequisites and blocked by: None. It does not wait for the SaveStatus component: the wording ships with the existing element and moves to the component later.
+Clinical sign-off: Not required (engineering validates). Safe acceptance criterion 6 of the validation plan applies: no Saved the person did not cause.
+Effort and regression risk: S to M · Low. The conflict detection between two tabs must keep working.
+Deliberately NOT in this ticket: (1) A local draft in browser storage. (2) Changing autosave timing or the conflict rule.
+ac:
+- Given text typed in Assessment, when the doctor opens Problems within 500 ms and comes back, then the field shows the new text
+- Given text typed in Plan, when the page is reloaded within 500 ms, then the new text is there
+- Given a slow or failed save, when the status is read, then it says Saving… or Not saved. Trying again. and never Saved
+- Given the page-hop test, when the refetch on mount is removed, then the test fails
+- Given the same note open in two tabs, when both type, then the second writer is told and keeps their text, as today
+- Given a consultation in use, when localStorage, sessionStorage and IndexedDB are read, then they hold no note text
+- Given a screen reader, when the status changes, then it is announced politely, and axe finds no violation in English or Arabic
+tests:
+- Playwright, real stack (tests/e2e/fullstack/j2.spec.ts, step 10): both sequences above.
+- tests/e2e/consult-note.spec.ts: status wording with a delayed and a failed save.
+notes:
+- Regression risk: low.
+
+=== MDV-P1-090
+title: Ending or signing with an unfinished prescription or order asks first; unfinished ones show on the doctor's day
+type: Story
+epic: MDV-P1-E12
+prd: P2-05, P2-06, P2-01
+screens: E-05, D-01
+priority: MUST
+roles: Doctor
+labels: encounters, prescribing, orders, safety, today, epic: ux programme, track: safety, wave: S1, needs: clinical sign-off
+estimate: 3
+weeks: 5
+confidence: 68 | The dialog is simple; finishing a draft after the visit ended is a product decision and a state-machine change.
+sources: docs/product-ux-audit/10-prioritized-implementation-backlog.md (audit backlog UX-05); docs/product-ux-audit/04-evidence-backed-findings.md (F-04); docs/product-ux-audit/reviews/reviewer-a-clinical-workflow.md (A-04); docs/product-ux-audit/07-debate-and-arbitration.md (ruling 3, guarantees 2 and 3); docs/product-ux-audit/05-accessibility-responsive-and-reliability.md (SC 3.3.4)
+desc:
+Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Track S (safety, trust and handoff behaviour), wave S1. This is audit backlog UX-05 of the Nov 2026 product UX audit (an audit id, not an MDV key).
+
+Persona and route: /consult/:id (End consultation, Sign note) and /today · doctor.
+Findings and reviewers: F-04 · reviewer A-04.
+Rationale: End consultation is one click with no dialog. A draft prescription or unplaced orders are left read-only for ever, Today says nothing about them, and the patient leaves without a valid prescription.
+Proposed UX behaviour: End consultation, and Sign note, with a draft prescription or unplaced orders open a dialog that names the patient and lists what is unfinished, with three choices: Authorise now (goes to the prescription; authorising stays its own act with its own step-up), Discard the draft (with a reason, audited), End anyway. Today lists Prescriptions to authorise beside Notes to sign, each row opening the consultation at the prescription. A draft can be completed and authorised after the visit ended, by the same doctor, until it is discarded. Sign, authorise, place orders and end stay four separate, recorded acts.
+Prototype and blueprint reference: docs/product-ux-audit/concepts/medvya-workspace-concept.html, To finish in the queue rail and audit note 7.
+Components and tokens affected: The existing Dialog (ConfirmDialog use); Today list. No new component.
+Front end and back end split: Front end: the dialog and the Today list. Back end: allow editing and authorising a draft after the encounter ended, a pending-prescriptions query scoped to the doctor, the discard reason and audit events.
+Prerequisites and blocked by: None in code. Product decision first: may a draft be finished after the patient left?
+Clinical sign-off: Required before merge: question 6 of the validation plan, recorded on the issue with a date.
+Effort and regression risk: M · Medium: touches the encounter and prescription state rules; signed notes and authorised prescriptions must stay immutable.
+Deliberately NOT in this ticket: (1) Reopening an ended consultation's note. (2) Authorising as a side effect of signing. (3) A reminder to the patient.
+ac:
+- Given a draft prescription, when the doctor presses End consultation, then a dialog names the patient and the draft and nothing ends until a choice is made
+- Given unplaced orders, when the doctor presses Sign note, then the same dialog lists them before the sign dialog
+- Given End anyway was chosen, when the doctor opens Today, then Prescriptions to authorise shows the patient and opens the consultation at the prescription
+- Given an ended visit with a draft, when the same doctor completes and authorises it, then it is authorised with its own audit record; another doctor without a care relationship is refused by the server
+- Given Discard the draft with a reason, when the audit log is read, then it holds who, when and the reason, and the draft no longer appears on Today
+- Given the integration tests for authorise-after-end, when the same-doctor rule or the ended-visit rule is removed, then a test fails
+- Given a visit taken to the end, when the audit log is read, then sign, authorise, place orders and end are four separate events
+- Given the dialog, when it opens, then focus is inside it, Escape cancels, and axe finds no violation in English or Arabic
+tests:
+- Integration (real PostgreSQL): authorise after end, discard, the pending query's tenant and doctor scope.
+- Playwright J2 new step: add a medicine → End → dialog → End anyway → Today shows it → open → authorise.
+- tests/e2e/today.spec.ts and prescription.spec.ts updated.
+notes:
+- Regression risk: medium.
+
+=== MDV-P1-091
+title: The signing checklist reports only what happened: no Identity confirmed tick the doctor did not make
+type: Story
+epic: MDV-P1-E12
+prd: P2-05
+screens: E-06
+priority: MUST
+roles: Doctor
+labels: signing, encounters, safety, clinical, epic: ux programme, track: safety, wave: S1, needs: clinical sign-off
+estimate: 1
+weeks: 4
+confidence: 80 | A wording change, or one stored tap; the pilot doctor chooses which.
+sources: docs/product-ux-audit/10-prioritized-implementation-backlog.md (audit backlog UX-06); docs/product-ux-audit/04-evidence-backed-findings.md (F-09); docs/product-ux-audit/reviews/reviewer-a-clinical-workflow.md (A-10); docs/product-ux-audit/07-debate-and-arbitration.md (ruling 3, guarantee 7); web/clinic/src/features/encounters (checklist.ts)
+desc:
+Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Track S (safety, trust and handoff behaviour), wave S1. This is audit backlog UX-06 of the Nov 2026 product UX audit (an audit id, not an MDV key).
+
+Persona and route: Consultation → Checklist · doctor.
+Findings and reviewers: F-09 · reviewer A-10.
+Rationale: On opening a consultation the checklist already says Identity confirmed (name and date of birth) · Done; in code the item only means the banner was displayed. Every AI suggestion accepted or dismissed · Done shows although no AI drafting exists. The record of what was checked before signing overstates what happened.
+Proposed UX behaviour: One of two, chosen by the pilot doctor. Either the item becomes Patient shown: name, date of birth, with no tick; or a real one-tap Confirmed with the patient at the start of the consultation, stored with who and when, which is what ticks the item. The AI line is hidden until AI drafting exists for the clinic. Signing stays locked until every remaining item is reviewed, as MDV-P2-044 built it.
+Prototype and blueprint reference: docs/product-ux-audit/concepts/medvya-workspace-concept.html, audit note 7 (N to finish before signing).
+Components and tokens affected: The checklist domain rule and panel. No new component.
+Front end and back end split: Front end; back end only if the tap is chosen (a stored confirmation and audit event).
+Prerequisites and blocked by: None in code.
+Clinical sign-off: Required before merge: question 5 of the validation plan (a tap, or shown only), recorded on the issue with a date.
+Effort and regression risk: S · Low.
+Deliberately NOT in this ticket: (1) Changing the other checklist items or the sign dialog. (2) Any AI feature.
+ac:
+- Given a newly opened consultation, when the checklist is read, then no item about identity is marked done
+- Given the tap option, when the doctor presses Confirmed with the patient, then the item is done and the record holds who and when; given the wording option, then the item reads Patient shown and has no tick
+- Given a clinic with no AI drafting, when the checklist renders, then the AI line is absent
+- Given unreviewed items, when the doctor tries to sign, then signing stays locked as today
+- Given the unit test for the checklist, when the item is derived from the banner being displayed again, then the test fails
+- Given English and Arabic, when axe runs on the checklist, then there is no violation and done is conveyed in words
+tests:
+- Vitest: checklist rule.
+- Playwright (tests/e2e/consult-studio.spec.ts; J2 step 11): open → checklist → item not done → act → done.
+notes:
+- Regression risk: low.
+
+=== MDV-P1-092
+title: Pinned patient strip and layout footer on the consultation, its sub-pages, nurse intake and the patient record
+type: Story
+epic: MDV-P1-E12
+prd: P2-04, P2-03, P2-02
+screens: E-04, N-01, E-01
+priority: MUST
+roles: Doctor, Nurse
+labels: clinical, safety, encounters, nurse, a11y, ui, epic: ux programme, track: design, wave: D2, needs: clinical sign-off
+estimate: 2.5
+weeks: 6
+depends: MDV-P1-081, MDV-P1-082
+confidence: 75 | The components exist by then; 13 test files touch the consultation, and what the strip shows waits for the pilot doctor.
+sources: docs/product-ux-audit/10-prioritized-implementation-backlog.md (audit backlog UX-03); docs/product-ux-audit/04-evidence-backed-findings.md (F-02, F-10, F-19); docs/product-ux-audit/07-debate-and-arbitration.md (ruling 3, guarantees 1 and 4; ruling 1); docs/product-ux-audit/08-design-system-blueprint.md (sections 8, 10 and 14); docs/product-ux-audit/reviews/reviewer-a-clinical-workflow.md (A-01); web/clinic/src/features/encounters/components/ConsultStudio.tsx; web/clinic/src/features/encounters/components/IdentityBanner.tsx; docs/02-design/tokens.md
+desc:
+Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Track D (design rules and UI component setup), wave D2. This is audit backlog UX-03 of the Nov 2026 product UX audit (an audit id, not an MDV key).
+
+Persona and route: /consult/:id, /consult/:id/medicines, /consult/:id/problems, /nurse/:id, /patients/:id and the desk record /patients/directory/:id · doctor, nurse, receptionist (desk variant only) · 1440, 1024 and 768.
+Findings and reviewers: F-02, F-10, F-19 · reviewers A-01, B-01, B-03, B-08, C-02. Part 3 of 3 of audit backlog UX-03 (parts 1 and 2 built the components).
+Rationale: While the doctor prescribes, nothing on screen names the patient or the allergy: the banner scrolls away on a page up to 5,350 px tall and the prescription table starts near 4,200 px. NISTIR 7804-1 asks that patient identification stay displayed in the same place regardless of scrolling. The floating sign bar hides fields and focus. All three reviewers found this independently; it is one of three system changes allowed before the pilot.
+Proposed UX behaviour: The consultation, its medicines and problems sub-pages and nurse intake show PatientBanner in the strip variant, pinned under the top bar while the page scrolls: name, age and sex, MRN, date of birth, the allergy in words, consent. The patient record uses the full variant and the desk record the desk variant, so the three old headers are gone (features/encounters IdentityBanner, the primitive IdentityBanner and the PatientRecord header card are removed). The Review and sign bar becomes the StickyActionBar footer that reserves its space. Nothing focusable is ever under pinned chrome; pinned chrome takes at most 30 % of the viewport height; at 400 % zoom the strip and footer un-pin. The Add medicine dialog and the sign dialog keep repeating the patient, as today. No rule, wording or field changes.
+Prototype and blueprint reference: docs/product-ux-audit/concepts/medvya-workspace-concept.html, doctor view, audit notes 2 and 7; docs/product-ux-audit/concepts/screenshots/doctor-1440.png, doctor-1024.png, doctor-768.png; blueprint sections 8 and 10.
+Components and tokens affected: Uses PatientBanner, StickyActionBar and SaveStatus. Removes encounters/IdentityBanner and the primitive IdentityBanner. No token change.
+Front end and back end split: Front end only. No API change.
+Prerequisites and blocked by: Blocked by the PatientBanner ticket and the StickyActionBar and SaveStatus ticket (wave D1b). File ownership in wave D2: this ticket owns ConsultStudio.tsx, ConsultPage.tsx and the nurse-intake page until it merges; the consultation layout ticket starts after it.
+Clinical sign-off: Required before merge: questions 3 and 4 of docs/product-ux-audit/11-pilot-doctor-validation-plan.md (pilot doctor and nurse), recorded on the issue with a date. Safe acceptance criterion 2 of that plan applies: whose record is this and what is she allergic to, answered without scrolling, three times out of three.
+Effort and regression risk: M · Medium: 13 test files touch the consultation. Controlled by keeping J2 and J3 green and changing no controller.
+Deliberately NOT in this ticket: (1) The consultation layout pass (next ticket in this wave). (2) The queue button in the strip (queue rail ticket). (3) Nurse intake on a phone: blocked until one group shows per screen (phone rule ticket). (4) Any change to allergy rules or wording.
+ac:
+- Given an open consultation for a patient with a recorded penicillin allergy at 1440 by 900, 1024 by 768 and 768 by 1024, when the page is scrolled to the prescription, then the patient's name and the words Allergy: Penicillin are inside the viewport
+- Given the medicines and problems sub-pages and nurse intake at 1024 touch, when each is scrolled to its last field, then the strip is still visible and names the same patient
+- Given the browser test for the strip, when the pinning is removed from the component, then the test fails (mutation check, shown in the pull request)
+- Given the consultation, when every control is reached with Tab, then each focused element is fully visible and none is under the strip or the footer
+- Given the codebase, when it is searched, then encounters IdentityBanner and the primitive IdentityBanner are gone and the chart and the consultation show the allergy with the same look
+- Given a receptionist on the desk record, when the header renders, then it shows no allergy, diagnosis, medicine or vitals, and the server's refusal of clinical routes for that role is unchanged
+- Given 400 % zoom, when the page scrolls, then strip and footer scroll with it; and in Arabic the strip mirrors and axe finds no violation in either language
+- Given 1024 by 768, when top bar, strip, section anchors and footer are measured, then together they take at most 30 % of the height
+tests:
+- Playwright, real stack (tests/e2e/fullstack/j2.spec.ts, J2 steps 10 to 12): open Meera Iyer's consultation, scroll to Prescription, assert the strip is visible and names the allergy; tab through all controls asserting each focused element is fully in view.
+- Playwright (tests/e2e/nurse-intake.spec.ts and J3 step 5): the strip stays on nurse intake at 1024 touch.
+- tests/e2e/consult-studio.spec.ts and tablet.spec.ts updated; en and ar; axe clean.
+notes:
+- Regression risk: medium.
+- If the pilot date does not allow the layout pass, this ticket alone is the accepted minimum for the first weeks (arbitration ruling 1).
+
+=== MDV-P1-093
+title: App shell: one account menu, a 48 px top bar and a labelled rail from 768 to 1279 px
+type: Story
+epic: MDV-P1-E12
+prd: P0-07
+priority: SHOULD
+roles: All staff roles
+labels: navigation, ui, a11y, responsive, rtl, epic: ux programme, track: design, wave: D2
+estimate: 1.5
+weeks: 6
+depends: MDV-P1-084
+confidence: 82 | One file (AppShell.tsx) and about 10 test locators for Sign out, Switch facility and My devices.
+sources: docs/product-ux-audit/10-prioritized-implementation-backlog.md (audit backlog UX-16); docs/product-ux-audit/04-evidence-backed-findings.md (F-18, F-22, F-13); docs/product-ux-audit/07-debate-and-arbitration.md (rulings 6 and 8); docs/product-ux-audit/08-design-system-blueprint.md (sections 2 and 3); docs/product-ux-audit/reviews/reviewer-b-visual-interaction.md (B-07, B-12, B-28); web/clinic/src/features/shell/components/AppShell.tsx
+desc:
+Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Track D (design rules and UI component setup), wave D2. This is audit backlog UX-16 of the Nov 2026 product UX audit (an audit id, not an MDV key).
+
+Persona and route: Every signed-in page · all roles · 768 and wider; bottom tabs under 768 keep working.
+Findings and reviewers: F-18, F-22, and the cause of F-13 · reviewers B-07, B-12, B-28, C-08, C-09. Part 2 of 2 of audit backlog UX-16.
+Rationale: Controls used once a day hold the most valuable row, Sign out sits beside Search, and this row is what overflowed on Azure dev at 768 and 375 px. Between 768 and 1279 px the navigation is unlabelled icons: a recognition problem for a receptionist on day one.
+Proposed UX behaviour: The top bar is 48 px from 768 px up (56 on phones) and holds clinic name, patient search, the bell and the avatar that opens AccountMenu (name and role, language, my devices, change facility, sign out last). From 768 to 1279 px the rail is 72 px with the label under every icon. From 1280 px the labelled sidebar is 232 px and may be collapsed to the rail by the user's own choice only, remembered per user without storing anything about patients. On phones the account items are in More. The keyboard hint in the search field is wrapped left-to-right so Arabic no longer scrambles it. Navigation names and order do not change here.
+Prototype and blueprint reference: docs/product-ux-audit/concepts/medvya-workspace-concept.html, audit note 1; blueprint section 3.
+Components and tokens affected: Uses AccountMenu, NavRailItem and Tooltip. Layout tokens for bar, rail and sidebar.
+Front end and back end split: Front end only.
+Prerequisites and blocked by: Blocked by the shell components ticket (wave D1c). File ownership: AppShell.tsx, MorePage.tsx and the shell specs.
+Clinical sign-off: Not required. Ruling 6: the account menu and rail labels are low-risk and may land before training.
+Effort and regression risk: M · Low to medium: about 10 locators in 3 spec files move from header buttons into the menu.
+Deliberately NOT in this ticket: (1) Renaming or reordering navigation items (the names ticket, at a training boundary). (2) An icon-only rail by default (forbidden by ruling 8). (3) Rebuilding the shell: landmarks, skip link and breakpoints stay.
+ac:
+- Given any signed-in page at 768 and 375 px, when it loads, then page width equals viewport width and Sign out is reachable in at most two actions
+- Given 1024 by 768 for each role, when the shell renders, then every navigation item shows its name as visible text under the icon
+- Given 1440 px, when a user has never chosen, then the labelled sidebar shows; when they collapse it, then the labelled rail shows and the choice is kept on reload
+- Given 1024 px and wider, when the top bar is measured, then it is 48 px tall and holds clinic, search, bell and avatar only
+- Given the avatar button, when the menu is opened and closed by keyboard, then focus returns to the button and the skip link is still the first tab stop
+- Given Arabic, when the shell renders, then it mirrors, the search key hint reads correctly, and axe finds no violation in English or Arabic
+tests:
+- tests/e2e/app-shell.spec.ts, shell.spec.ts, session-control.spec.ts and my-devices.spec.ts updated for the menu.
+- New check: page width equals viewport width at 768 and 375 for each role's start page.
+- J1 step 1 (sign in and land) stays green.
+notes:
+- Regression risk: low to medium.
+
+=== MDV-P1-094
+title: Consultation workspace layout: section anchors, vitals in one row, prescription after assessment, diagnosis inline, chart panel beside the note
+type: Story
+epic: MDV-P1-E12
+prd: P2-04, P2-06
+screens: E-04, E-05, E-07
+priority: SHOULD
+roles: Doctor
+labels: encounters, ui, clinical, a11y, responsive, epic: ux programme, track: design, wave: D2, needs: clinical sign-off
+estimate: 5
+weeks: 7-8
+depends: MDV-P1-092, MDV-P1-089, MDV-P1-078, MDV-P1-086, MDV-P1-090, MDV-P1-091
+confidence: 62 | A layout pass over hooks that work, but it touches 13 test files with 79 references, and the section order needs the pilot doctor.
+sources: docs/product-ux-audit/10-prioritized-implementation-backlog.md (audit backlog UX-14); docs/product-ux-audit/04-evidence-backed-findings.md (F-11, F-03); docs/product-ux-audit/07-debate-and-arbitration.md (ruling 3, the seven guarantees); docs/product-ux-audit/08-design-system-blueprint.md (section 8); docs/product-ux-audit/reviews/reviewer-a-rebuttal.md (section 3); docs/product-ux-audit/reviews/reviewer-b-visual-interaction.md (B-04, section 11.3); docs/product-ux-audit/reviews/reviewer-c-rebuttal.md (section 2); web/clinic/src/features/encounters/components/ConsultStudio.tsx
+desc:
+Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Track D (design rules and UI component setup), wave D2. This is audit backlog UX-14 of the Nov 2026 product UX audit (an audit id, not an MDV key).
+
+Persona and route: /consult/:id · doctor · 1024 px and wider first, then 768 to 1023.
+Findings and reviewers: F-11, F-03 · reviewers A-13, B-04, C-10.
+Rationale: One simple visit takes about 24 clicks, 9 typed fields and 5 route changes. The page is 3,600 to 5,350 px tall; the first note field is at 440 to 1,138 px; at 1024 px the chart panel drops to the bottom; 3 % of a 1024 by 768 screen is working content. The route changes also trigger the stale-note defect.
+Proposed UX behaviour: One workspace, as in blueprint section 8. Under the pinned strip: pinned section anchors (44 px) with completion marks in icon and words; vitals from the nurse as one row; History, Examination, Assessment with diagnoses added inline (no route change; the problems page stays reachable); Prescription directly after Assessment, still added through the existing Add medicine dialog, with the allergy and interaction result beside each medicine line; Plan, tests and follow-up; the layout footer with save status, what is left, Preview prescription and Review and sign. The chart panel (Chart, Past visits, Checklist) is beside the note at 1024 px and wider (360 px) and a drawer opened from the strip from 768 to 1023 px. The note column is at most 860 px wide and typed text is 16 px. The guided-steps view stays as an option. The controllers, the save model and every rule are unchanged. The seven guarantees of arbitration ruling 3 hold: pinned strip with the allergy in words; sign, authorise, place orders and end are four separate recorded acts; End asks when a draft exists; nothing focusable under pinned chrome; the allergy result beside the medicine line; no route change for diagnoses and medicines; no tick the doctor did not earn.
+Prototype and blueprint reference: docs/product-ux-audit/concepts/medvya-workspace-concept.html, doctor view at 1440, 1024 and 768, audit notes 4, 5, 6 and 7; screenshots docs/product-ux-audit/concepts/screenshots/doctor-1440.png, doctor-1440-annotated.png, doctor-1024.png, doctor-768.png, doctor-768-chart-open.png. The medicine box in the concept is a sketch and is not built.
+Components and tokens affected: SplitLayout, Sheet, StickyActionBar, SaveStatus, Card and Section, SegmentedControl (one page or guided steps). Width tokens (note 860, panel 360).
+Front end and back end split: Front end only. No controller or API change.
+Prerequisites and blocked by: Blocked by: the pinned-strip screen ticket; the note-shows-what-the-server-holds ticket; the codemod; the page components ticket; the End-with-unfinished-prescription ticket and the honest-checklist ticket (guarantees 3 and 7 must be true before the layout makes ending and signing easier). Owns ConsultStudio.tsx and the consultation specs while open.
+Clinical sign-off: Required before merge: question 7 (section order; prescription after assessment; diagnosis inline; one page or guided steps on the room tablet) of the validation plan, recorded on the issue with a date. Doctor scenario steps 1 to 9 of the plan are the session script.
+Effort and regression risk: L · High: 13 test files and 79 references; J2 alone has about 60 locators. One change per region, J1 to J6 green on each.
+Deliberately NOT in this ticket: (1) An inline free-text medicine box: the existing Add medicine dialog stays until the free-text allergy rule is closed and a clinician has seen a replacement (ruling 3). (2) The queue rail (its own ticket, after the queue rule). (3) Writing on a phone (phone rule ticket). (4) Any change to section content, required fields, vitals ranges or safety-check text. (5) Merging sign and authorise.
+ac:
+- Given an open consultation with nurse vitals at 1440 by 900 and 1024 by 768, when the page loads, then the first text box starts at or above 200 px
+- Given the Assessment section, when the doctor adds a coded diagnosis, then the route does not change and the typed note text is still on screen
+- Given 768 by 1024, when the doctor opens the chart from the strip, then the drawer shows allergies, medicines, problems and results in one action and closes back to the same scroll position
+- Given an empty note at 1440 by 900, when the page height is measured, then it is under two viewports
+- Given a note with a draft prescription and an unplaced order, when the doctor presses Review and sign, then only the note is signed, and authorising, placing orders and ending each still need their own action and write their own audit record
+- Given a medicine line for a patient with a recorded allergy, when it is added through the Add medicine dialog, then the check result is shown in words beside that line
+- Given a newly opened consultation, when the section anchors and checklist are read, then no section or item is marked complete
+- Given every control in the workspace, when it is focused by keyboard, then it is fully visible, and pinned chrome takes at most 30 % of the height at 1024 by 768
+- Given text typed in the one-page view, when the doctor switches to guided steps and back, then every word is there
+- Given English and Arabic at 1440, 1024 and 768, when axe runs, then there is no violation and the layout mirrors
+tests:
+- Playwright, real stack: J2 steps 9 to 12 (tests/e2e/fullstack/j2.spec.ts) rewritten against the new layout; the scroll and focus tests from the pinned-strip ticket still pass.
+- Metric checks: first text box position, page height, pinned-chrome share at 1440, 1024, 768.
+- consult-studio, consult-note, consult-plan, prescription, problems, orders, add-medicine and tablet specs updated; en and ar.
+notes:
+- Regression risk: high.
+- If the pilot date is fixed, this ticket slips before any track S ticket does (arbitration, red-team critique).
+
+=== MDV-P1-095
+title: Front-desk board: one header row, a one-line workload strip, pinned column headers and the doctor on the card
+type: Story
+epic: MDV-P1-E12
+prd: P1-08
+screens: P-01
+priority: SHOULD
+roles: Receptionist, Nurse, Doctor
+labels: front-desk, board, ui, responsive, a11y, epic: ux programme, track: design, wave: D2
+estimate: 2.5
+weeks: 7
+depends: MDV-P1-078, MDV-P1-084, MDV-P1-086, MDV-P1-100
+confidence: 75 | Chrome and card content only; 19 test files reference the board.
+sources: docs/product-ux-audit/10-prioritized-implementation-backlog.md (audit backlog UX-15); docs/product-ux-audit/04-evidence-backed-findings.md (F-12, F-14); docs/product-ux-audit/07-debate-and-arbitration.md (ruling 4); docs/product-ux-audit/reviews/reviewer-b-visual-interaction.md (B-02, B-05, B-06, B-19, section 11.2); docs/product-ux-audit/reviews/reviewer-a-clinical-workflow.md (A-11); web/clinic/src/features/front-desk/components/BoardPage.tsx
+desc:
+Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Track D (design rules and UI component setup), wave D2. This is audit backlog UX-15 of the Nov 2026 product UX audit (an audit id, not an MDV key).
+
+Persona and route: /front-desk, By status and By doctor · receptionist first; nurse and doctor · 768 to 1440, and a list under 768.
+Findings and reviewers: F-12, F-14 · reviewers A-11, B-02, B-05, B-06, B-19, C-23.
+Rationale: The first card starts at about 452 px at every width from 768 to 1440: 41 % of a 1024 by 768 screen is left for patients. With two doctors the card does not say whose patient it is. At 1024 px the action label wraps and the time sits outside the card. On a phone the board is six 156 px columns.
+Proposed UX behaviour: The board stays (ruling 4). One 44 px header row: title and date, the view switch (SegmentedControl), the live mark, actions. A one-line workload strip per doctor. Column headers stay pinned; columns are at least 208 px; an empty column collapses to a 48 px stub with its name and count. Card: patient name, time, the doctor's short name when more than one doctor works that day, flags on one line, one action with a short label at 44 px. Only the next action for the signed-in user is a filled button. Under 768 px the board is one list with status tabs. Card actions, their order and the walk-in path do not change.
+Prototype and blueprint reference: Reviewer B section 11.2 for the board chrome. docs/product-ux-audit/concepts/screenshots/desk-1440.png and desk-768.png show the later list view, not this ticket.
+Components and tokens affected: PageHeader, SegmentedControl, Chip, Card (list item). No new component.
+Front end and back end split: Front end only.
+Prerequisites and blocked by: Blocked by the codemod, the shell components ticket (PageHeader), the page components ticket (SegmentedControl) and the undo ticket of track S, so that Undo and Left without being seen are placed once. Owns BoardPage.tsx and FrontDeskViews.tsx while open.
+Clinical sign-off: Not clinical. The receptionist confirms at the validation session (receptionist scenario steps 1, 6 and 7); question 20 (devices at the desk) informs the widths.
+Effort and regression risk: M · Medium: 19 test files, 55 references to the board.
+Deliberately NOT in this ticket: (1) Replacing the board with a list (forbidden before the pilot by ruling 4; the list comes later as a third view). (2) Drag and drop. (3) Compact rows: every card action stays 44 px.
+ac:
+- Given nine visits at 1024 by 768, when the board loads, then the first card starts at or above 220 px
+- Given widths from 768 to 1440 px and a long patient name, when the board renders, then no text is outside its card and the action label is on one line
+- Given two doctors working today, when a card renders, then it shows the doctor's short name in words; given one doctor, then it does not
+- Given a long column, when it is scrolled, then its header with name and count stays visible
+- Given 375 px, when the board opens, then it is one list with status tabs and no sideways scrolling
+- Given the walk-in path after this change, when it is measured, then a new patient takes at most 6 clicks and a returning patient at most 3
+- Given the board for a doctor, when the first viewport is counted, then at most one filled primary button is visible
+- Given English and Arabic, when axe runs at 1440, 1024 and 375, then there is no violation
+tests:
+- J3 (tests/e2e/journeys/j3.spec.ts and fullstack/j3.spec.ts) stays green.
+- Metric check: first card position at 768, 1024, 1440; no text outside its card.
+- front-desk.spec.ts, clinic-overview.spec.ts and tablet.spec.ts updated; walk-in click count asserted in fullstack/front-desk.spec.ts.
+notes:
+- Regression risk: medium.
+
+=== MDV-P1-096
+title: A screen the role may not open says so, with a button to the start page
+type: Story
+epic: MDV-P1-E12
+prd: P0-05
+screens: F-05
+priority: SHOULD
+roles: Receptionist, Nurse, Practice admin
+labels: ux, errors, authorisation, a11y, epic: ux programme, track: design, wave: D2
+estimate: 0.5
+weeks: 6
+depends: MDV-P1-086
+confidence: 88 | The nurse on /patients/new already gets such a message, so the pattern exists.
+sources: docs/product-ux-audit/10-prioritized-implementation-backlog.md (audit backlog UX-17); docs/product-ux-audit/04-evidence-backed-findings.md (F-17, F-28); docs/product-ux-audit/reviews/reviewer-a-clinical-workflow.md (A-20, A-21); web/clinic/src/features/errors
+desc:
+Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Track D (design rules and UI component setup), wave D2. This is audit backlog UX-17 of the Nov 2026 product UX audit (an audit id, not an MDV key).
+
+Persona and route: Receptionist on /today, /settings, the chart and the consultation; nurse on /settings and a consultation; practice admin on the chart · Local and Azure.
+Findings and reviewers: F-17, part of F-28 · reviewers A-20, A-21.
+Rationale: The server refuses correctly, but the screen says Page not found. The link may be old. A person thinks the product is broken. A nurse opening a consultation sees two red error lines.
+Proposed UX behaviour: When the server answers 403 for a route, or the client knows the role lacks the capability, the page shows PageMessage in its denied state: Your role does not include this screen, with one button to the role's start page. A missing or switched-off route keeps Page not found. A nurse on a consultation sees this one calm message, not two errors. The message never says what the screen holds and never names a patient.
+Prototype and blueprint reference: docs/product-ux-audit/08-design-system-blueprint.md section 3 (A screen a role may not open says so).
+Components and tokens affected: PageMessage (denied). i18n keys in en, hi and ar.
+Front end and back end split: Front end only. The server's refusals are unchanged and are not relaxed.
+Prerequisites and blocked by: Blocked by the page components ticket (PageMessage).
+Clinical sign-off: Not required.
+Effort and regression risk: S · Low. The control is on the server; this is only the message.
+Deliberately NOT in this ticket: (1) Any change to who may open what. (2) Hiding Today for roles that only get the board (the navigation names ticket).
+ac:
+- Given a receptionist, when she opens /today, /settings or a consultation address, then the page says her role does not include this screen and offers the start page
+- Given any role, when an address that does not exist is opened, then the page says Page not found
+- Given the same role, when the API behind the screen is called directly, then it answers 403, and the authorisation tests for those endpoints are unchanged
+- Given a nurse opening a consultation, when the page renders, then one denied message shows and no red error lines
+- Given the denied page, when its text and address are read, then they hold no patient name, MRN or clinical word
+- Given English and Arabic, when axe runs, then there is no violation and the message has one h1
+tests:
+- tests/e2e/desk-access.spec.ts and clinical-access.spec.ts: assert the denied message for each role and route listed.
+- tests/e2e/fullstack/access.spec.ts: the server still answers 403.
+notes:
+- Regression risk: low.
+
+=== MDV-P1-097
+title: Schedule day view opens at the current time; the past collapses into one row
+type: Story
+epic: MDV-P1-E12
+prd: P1-06
+screens: P-04
+priority: SHOULD
+roles: Receptionist, Doctor
+labels: scheduling, calendar, ui, responsive, epic: ux programme, track: design, wave: D2
+estimate: 1
+weeks: 7
+depends: MDV-P1-078
+confidence: 82 | A scroll position and a collapsed group; the toolbar tidy-up is the larger part.
+sources: docs/product-ux-audit/10-prioritized-implementation-backlog.md (audit backlog UX-31); docs/product-ux-audit/04-evidence-backed-findings.md (F-35); docs/product-ux-audit/reviews/reviewer-b-visual-interaction.md (B-14); web/clinic/src/features/schedule/components
+desc:
+Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Track D (design rules and UI component setup), wave D2. This is audit backlog UX-31 of the Nov 2026 product UX audit (an audit id, not an MDV key).
+
+Persona and route: /schedule, Day · receptionist, doctor · 1440, 1024 and 375.
+Findings and reviewers: F-35 · reviewer B-14.
+Rationale: In the afternoon every visible row is Passed. At 1024 by 768 only 38 % of the screen shows appointments: a helper card sits above the grid for ever, the toolbar wraps and the legend has eight items.
+Proposed UX behaviour: Today's day view opens scrolled to the current time. Slots that have passed collapse into one row (Earlier today, with the count of appointments) that opens on demand. Below 1280 px the Select an empty slot helper card is gone and empty slots say Tap to book themselves; Print and Leave move into an overflow menu; the legend sits behind a Key button. With one doctor selected, the column leaves room for the booking panel. Other days open at the first working hour.
+Prototype and blueprint reference: No concept screen. docs/product-ux-audit/reviews/reviewer-b-visual-interaction.md, Schedule and B-14.
+Components and tokens affected: PageHeader; the existing day grid. No new component.
+Front end and back end split: Front end only.
+Prerequisites and blocked by: Blocked by the codemod (same files carry height patches).
+Clinical sign-off: Not clinical. The receptionist confirms at the validation session.
+Effort and regression risk: S · Low. Booking, reschedule and the slot hold are untouched.
+Deliberately NOT in this ticket: (1) Week and agenda views. (2) Any change to booking rules or the slot hold.
+ac:
+- Given today's day view at 15:00 clinic time, when it opens, then the first visible slot is within one hour of now
+- Given passed slots with appointments, when the day opens, then they are one collapsed row with a count, and opening it shows each appointment
+- Given 1024 by 768, when the day view loads, then the first slot starts at or above 240 px
+- Given an empty future slot, when it is chosen, then the booking panel opens for that time as today
+- Given the collapsed row, when it is focused, then Enter opens it and it states collapsed or expanded to assistive technology
+- Given English and Arabic, when axe runs, then there is no violation
+tests:
+- tests/e2e/schedule.spec.ts: opens at now (fixed clock), collapsed past row.
+- schedule-performance.spec.ts stays within budget.
+- J1 step 3 (book) stays green.
+notes:
+- Regression risk: low.
+
+=== MDV-P1-098
+title: Phone rule: under 768 px clinical writes say Open this on a tablet or computer
+type: Story
+epic: MDV-P1-E12
+prd: P2-04, P2-06
+screens: X-01
+priority: SHOULD
+roles: Doctor, Nurse, Receptionist
+labels: responsive, clinical, safety, ui, epic: ux programme, track: design, wave: D2, needs: clinical sign-off
+estimate: 1.5
+weeks: 8
+depends: MDV-P1-086, MDV-P1-096
+confidence: 65 | The list is ruled; nobody walked a phone flow, and the pilot doctor has not been asked.
+sources: docs/product-ux-audit/07-debate-and-arbitration.md (ruling 5); docs/product-ux-audit/08-design-system-blueprint.md (sections 8 and 11); docs/product-ux-audit/reviews/reviewer-a-rebuttal.md (section 5); docs/product-ux-audit/reviews/reviewer-b-rebuttal.md (section 7); docs/product-ux-audit/reviews/reviewer-c-design-system.md (C-10)
+desc:
+Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Track D (design rules and UI component setup), wave D2. No audit backlog id. Created from the audit's rulings and blueprint, not from a backlog line (see Findings).
+
+Persona and route: /consult/:id and sub-pages, prescription, orders, reconciliation, sign, merge approval, /settings, full registration, schedule editing, /nurse/:id · under 768 px.
+Findings and reviewers: F-11, F-12 (phone) · reviewers C-10, B-04, B-06 · arbitration ruling 5. No UX number of its own in the backlog: found while mapping the rulings to tickets.
+Rationale: At 375 px the prescription table scrolls sideways inside itself and hides dose columns; the consultation is 4,941 px tall. A phone is for looking and for small urgent acts; a prescription is neither.
+Proposed UX behaviour: Under 768 px a doctor gets My day, the queue, a read-only chart (allergy first), search, signing an addendum and seeing an escalation. Composing or authorising a prescription, reconciliation, placing orders, signing a new note, merge approval and settings show one message in place of the write control: Open this on a tablet or computer, with the patient's name where a patient is open. Reception gets the queue list and quick registration; full registration and schedule editing show the same message. Nurse vitals entry shows it too until the strip is pinned and one group shows per screen. The content stays readable; nothing is hidden behind Page not found or a clipped layout. This is a usability rule in the client, not a security control: the server's authorisation is unchanged.
+Prototype and blueprint reference: docs/product-ux-audit/08-design-system-blueprint.md section 11 (device table); docs/product-ux-audit/concepts/screenshots/doctor-375.png.
+Components and tokens affected: PageMessage or Banner with the message. The wide and 768 breakpoints.
+Front end and back end split: Front end only.
+Prerequisites and blocked by: Blocked by the page components ticket and the refused-screen ticket (same message component, different words).
+Clinical sign-off: Required before merge: question 19 of the validation plan (would you ever prescribe or sign from a phone?), recorded on the issue. If the answer is yes, this ticket is re-scoped before any code.
+Effort and regression risk: M · Low to medium: a doctor who used the phone at home loses writing there.
+Deliberately NOT in this ticket: (1) A phone layout for prescribing. (2) The native apps. (3) Any server-side block by device.
+ac:
+- Given a doctor at 375 px on an open consultation, when the prescription, orders, reconciliation or Review and sign is reached, then each shows Open this on a tablet or computer with the patient's name and no write control
+- Given the same phone, when My day, the queue, the chart and an escalation are opened, then each is readable with the allergy first and no sideways scrolling
+- Given a signed note at 375 px, when the doctor adds an addendum, then it can be written and signed
+- Given 768 px and wider, when the same screens open, then every write control is present
+- Given the API, when a write is sent from any device by an authorised user, then the server's answer is the same as before this change
+- Given English and Arabic at 375 px, when axe runs, then there is no violation
+tests:
+- New spec tests/e2e/phone-rule.spec.ts: each blocked surface at 375, each allowed surface, and the same at 768.
+- tablet.spec.ts stays green.
+notes:
+- Regression risk: low to medium.
+
+=== MDV-P1-099
+title: Queue in the consultation: tokens and ages only, escalations first, and a Next button on tablets
+type: Story
+epic: MDV-P1-E12
+prd: P2-01, P2-04
+screens: D-01, E-04
+priority: COULD
+roles: Doctor
+labels: encounters, today, queue, privacy, ui, epic: ux programme, track: design, wave: D2
+estimate: 1.5
+weeks: 8
+depends: MDV-P1-094, MDV-P1-103
+confidence: 62 | The data exists once the queue rule is in; whether the rail helps or distracts is unproven.
+sources: docs/product-ux-audit/07-debate-and-arbitration.md (ruling 3: queue rail); docs/product-ux-audit/08-design-system-blueprint.md (section 8); docs/product-ux-audit/10-prioritized-implementation-backlog.md (audit backlog UX-14 split, audit backlog UX-10 prototype); docs/product-ux-audit/reviews/reviewer-a-rebuttal.md (section 3, wrong patient); docs/product-ux-audit/reviews/reviewer-b-rebuttal.md (section 2)
+desc:
+Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Track D (design rules and UI component setup), wave D2. No audit backlog id. Created from the audit's rulings and blueprint, not from a backlog line (see Findings).
+
+Persona and route: /consult/:id · doctor · 1280 px and wider as a rail; 1024 to 1279 as a button in the strip.
+Findings and reviewers: F-07, F-04 (to finish) · reviewers A-08 · arbitration ruling 3. Named as a separate ticket by audit backlog UX-14; no UX number of its own.
+Rationale: The doctor cannot see who is next, or that a nurse escalated someone, without leaving the note. The first concept showed other patients' names and reasons beside the open note, in view of the patient in the room: the arbitration rejected that.
+Proposed UX behaviour: At 1280 px and wider a 200 px rail beside the note lists the doctor's queue in the clinic's queue order: token and age band only, escalations first with the word Escalated (no reason text), then To finish (notes to sign, prescriptions to authorise) as counts. Never a name, a reason or a diagnosis. From 1024 to 1279 px the rail is one button in the strip: Next A-07 · 3 waiting. Choosing another patient keeps today's You have another consultation open challenge. The rail is styled unlike the section anchors, so moving to another chart is a deliberate, distinct act. It can be hidden by the doctor.
+Prototype and blueprint reference: docs/product-ux-audit/concepts/medvya-workspace-concept.html, doctor view, audit note 3 (as changed after the debate); docs/product-ux-audit/concepts/screenshots/doctor-1440.png and doctor-1024.png.
+Components and tokens affected: SplitLayout region; Chip. No new component.
+Front end and back end split: Front end only; reads the ordered queue that the queue-rule ticket exposes.
+Prerequisites and blocked by: Blocked by the consultation layout ticket and the queue-rule ticket.
+Clinical sign-off: Ask the pilot doctor in the session (doctor scenario step 9) whether the rail helps; not a merge gate.
+Effort and regression risk: M · Medium: a list of other patients beside an open note is a wrong-patient risk if it ever shows names; the test below guards that.
+Deliberately NOT in this ticket: (1) Names, reasons or complaints in the rail. (2) Switching patient without the open-consultation challenge.
+ac:
+- Given a queue of five patients, when the rail renders, then each row shows a token and an age band and the page holds no other patient's name, complaint or escalation reason
+- Given the rail's test, when a name is added to a row, then the test fails (mutation check)
+- Given an escalated visit, when the rail renders, then it is the first row and carries the word Escalated
+- Given the clinic's queue rule, when the rail and My day are compared, then the order is the same
+- Given an open consultation, when another token is chosen, then the another consultation is open challenge appears and nothing changes until the doctor answers
+- Given 1024 px, when the strip renders, then the rail is the button Next with the token and the waiting count; and axe finds no violation in English or Arabic
+tests:
+- New steps in tests/e2e/consult-studio.spec.ts: rail content, the challenge, the tablet button.
+- Real stack: after the handoff walkthrough, the escalated visit is row 1 of the rail.
+notes:
+- Regression risk: medium.
+- May be dropped after the pilot doctor's session without loss to any other ticket.
+
+=== MDV-P1-100
+title: Front desk: undo the last move, Left without being seen, cancel a checked-in visit; the desk cannot close a visit under the doctor
+type: Story
+epic: MDV-P1-E12
+prd: P1-08
+screens: P-01, P-05
+priority: MUST
+roles: Receptionist, Nurse, Doctor
+labels: front-desk, board, queue, safety, audit, epic: ux programme, track: safety, wave: S2
+estimate: 4
+weeks: 5-6
+confidence: 65 | A visit state-machine change with new end states; who marks in the room and done is an open product decision.
+sources: docs/product-ux-audit/10-prioritized-implementation-backlog.md (audit backlog UX-07); docs/product-ux-audit/04-evidence-backed-findings.md (F-05); docs/product-ux-audit/reviews/reviewer-a-clinical-workflow.md (A-06); docs/product-ux-audit/07-debate-and-arbitration.md (ruling 4); docs/product-ux-audit/05-accessibility-responsive-and-reliability.md (SC 3.3.4); docs/03-architecture (state machines)
+desc:
+Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Track S (safety, trust and handoff behaviour), wave S2. This is audit backlog UX-07 of the Nov 2026 product UX audit (an audit id, not an MDV key).
+
+Persona and route: /front-desk cards; the queue display; /today · receptionist, nurse, doctor.
+Findings and reviewers: F-05 · reviewer A-06.
+Rationale: Call in and Consult done are single taps with no confirmation and no undo. The desk closed a visit while the doctor's consultation stayed open. A walk-in who leaves must be pushed through to Done, which records a visit that never happened; the display calls the wrong token and the counts are wrong.
+Proposed UX behaviour: After any move a status line offers Undo for 30 seconds, or until the next move; the server refuses an undo after the window. A card menu offers Left without being seen and Cancel visit, each with a reason; both remove the token from the queue display and are counted apart from Done. When a consultation is open for the visit, the desk's Consult done is replaced by With the doctor (no action), and In consult and Done follow the doctor's Start and End; the desk buttons stay for clinics whose doctors do not use the consultation screen. Two people changing one visit: the second is told the state changed, not silently overwritten. Every reversal and new end state is audited.
+Prototype and blueprint reference: docs/product-ux-audit/concepts/medvya-workspace-concept.html, receptionist view, Undo last move (audit note 10); screenshot docs/product-ux-audit/concepts/screenshots/desk-1440-checked-in.png.
+Components and tokens affected: Board card menu and status line; the existing Dialog for reasons. No new component.
+Front end and back end split: Back end: reverse transitions with rules and audit, two new end states, the open-consultation guard, a version check on visit state. Front end: undo line, card menu, With the doctor. ERD and state-machine docs regenerated if a column or state is added.
+Prerequisites and blocked by: None in code. Product decision: who marks in the room and done.
+Clinical sign-off: Not clinical sign-off, but two decisions block merge: questions 11 and 12 of the validation plan (pilot doctor and receptionist), recorded on the issue. Safe acceptance criterion 4 applies: the receptionist recovers from a wrong Call in without help.
+Effort and regression risk: L · Medium: the visit state machine is used by the board, the display, Today and the metrics.
+Deliberately NOT in this ticket: (1) Reopening a completed and signed visit. (2) A no-show change (exists). (3) Drag and drop. (4) The board's chrome (track D).
+ac:
+- Given a card moved by Call in, when Undo is pressed within 30 seconds, then the card is back in Ready for doctor with the same token
+- Given a move older than the window or followed by another move, when an undo is sent, then the server refuses it
+- Given a checked-in walk-in, when the desk marks Left without being seen with a reason, then the token leaves the queue display and the visit is not counted as done
+- Given an open consultation for the visit, when the desk views the card, then it reads With the doctor with no action, and a direct API call to close it is refused
+- Given an undo or a new end state, when the queue display and Today are watched, then both follow within one live update
+- Given any undo, cancel or left-without-being-seen, when the audit log is read, then it holds who, when, the reason and the previous state
+- Given the integration tests, when the window rule or the open-consultation guard is removed, then a test fails
+- Given the walk-in path, when it is measured, then it is still at most 6 clicks new and 3 returning; and the card menu works by keyboard with no axe violation in English or Arabic
+tests:
+- Integration (real PostgreSQL): transitions, window, guard, tenant isolation, audit rows.
+- Playwright J3 new steps (tests/e2e/fullstack/j3.spec.ts): Call in → Undo → card back in Ready for doctor; mark left → card gone from the display list; desk cannot close a visit with an open consultation.
+- tests/e2e/queue-tv.spec.ts and front-desk.spec.ts updated.
+notes:
+- Regression risk: medium.
+
+=== MDV-P1-101
+title: Patient picker rows show date of birth and last visit, and mark possible duplicates
+type: Story
+epic: MDV-P1-E12
+prd: P1-05, P2-01
+screens: P-04, D-02, P-03
+priority: MUST
+roles: Receptionist, Doctor
+labels: patients, search, safety, privacy, dedup, epic: ux programme, track: safety, wave: S2
+estimate: 2
+weeks: 5
+confidence: 75 | Last visit and the merge flag must be added to search results; the date of birth at a shared desk is a privacy decision.
+sources: docs/product-ux-audit/10-prioritized-implementation-backlog.md (audit backlog UX-08); docs/product-ux-audit/04-evidence-backed-findings.md (F-08); docs/product-ux-audit/reviews/reviewer-a-clinical-workflow.md (A-05); docs/product-ux-audit/reviews/reviewer-a-rebuttal.md (sections 2 and 4)
+desc:
+Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Track S (safety, trust and handoff behaviour), wave S2. This is audit backlog UX-08 of the Nov 2026 product UX audit (an audit id, not an MDV key).
+
+Persona and route: Walk-in, booking and waitlist pickers; header search · receptionist, doctor.
+Findings and reviewers: F-08 · reviewer A-05.
+Rationale: Two Deepak Nair, 47 y, Male rows differed only in the last four MRN digits; a hurried person picks the first, which was the duplicate. Visits, vitals and allergies then split across two charts.
+Proposed UX behaviour: Every result row, on two lines: name, age and sex, date of birth, masked MRN, masked phone, last visit date. A record with an open merge request shows the words Possible duplicate; the older record sorts first and is marked Main record. Rows are comfortable height (never compact) and the whole row is the target. The doctor's header search shows the same fields in place of initials only, within what the role may already search. Show full numbers stays a logged reveal.
+Prototype and blueprint reference: docs/product-ux-audit/concepts/medvya-workspace-concept.html, receptionist view: type 90000 (audit note 8); screenshots docs/product-ux-audit/concepts/screenshots/desk-1440-phone-lookup.png and desk-1440-confirm-dob.png.
+Components and tokens affected: The shared picker row; Tag for Possible duplicate and Main record. No new component.
+Front end and back end split: Front end; back end adds last visit and the merge flag to the search results the role may already see.
+Prerequisites and blocked by: None in code. Privacy decision: date of birth in a list the desk already may search.
+Clinical sign-off: Decision required before merge: question 15 of the validation plan (owner and receptionist), recorded on the issue.
+Effort and regression risk: M · Low. Search authorisation and masking must not widen.
+Deliberately NOT in this ticket: (1) One find-or-check-in box (a new flow; not before the pilot). (2) Unmasking MRN or phone. (3) Merge itself.
+ac:
+- Given two patients with the same name, age and sex, when the picker lists them, then the rows differ in at least two shown fields (date of birth, last visit or the duplicate mark)
+- Given a record with an open merge request, when it is listed, then it reads Possible duplicate and the older record is first and reads Main record
+- Given a search, when the address bar, logs and telemetry are read, then they hold no name, phone digits or date of birth
+- Given Show full numbers, when it is used, then an audit row is written as today
+- Given a role that may not search clinical data, when the search endpoint is called, then the answer holds only the desk fields, and the test fails if last visit exposes a diagnosis or note text
+- Given a touch device, when rows are measured, then each is at least 48 px tall and the whole row is the target; axe finds no violation in English or Arabic
+tests:
+- Integration: search result shape per role, tenant isolation.
+- Playwright (tests/e2e/patients.spec.ts, global-search.spec.ts; J3 step 2): search 0102 → two rows with different dates of birth or a duplicate mark.
+- Walk-in click count unchanged.
+notes:
+- Regression risk: low.
+
+=== MDV-P1-102
+title: The doctor's follow-up reaches the front desk: Follow-up due on the Done card and the desk record, with Book
+type: Story
+epic: MDV-P1-E12
+prd: P1-06, P2-04
+screens: P-01, P-04
+priority: MUST
+roles: Receptionist, Doctor
+labels: front-desk, booking, encounters, care, epic: ux programme, track: safety, wave: S2
+estimate: 2
+weeks: 6
+confidence: 78 | The follow-up is stored and printed; it has to be exposed to desk roles as a date only.
+sources: docs/product-ux-audit/10-prioritized-implementation-backlog.md (audit backlog UX-09); docs/product-ux-audit/04-evidence-backed-findings.md (F-06); docs/product-ux-audit/reviews/reviewer-a-clinical-workflow.md (A-07); docs/05-delivery/tickets/P2-doctor-workspace/MDV-P2-043.md
+desc:
+Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Track S (safety, trust and handoff behaviour), wave S2. This is audit backlog UX-09 of the Nov 2026 product UX audit (an audit id, not an MDV key).
+
+Persona and route: Board Done card, desk patient record, schedule · receptionist.
+Findings and reviewers: F-06 · reviewer A-07. A verified defect against an acceptance line of MDV-P2-043.
+Rationale: The doctor's screen says The front desk will book it from Tuesday, 17 November 2026. The desk sees nothing. Chronic-care patients are not rebooked unless they ask.
+Proposed UX behaviour: The Done card and the desk patient record show Follow-up due from 17 Nov · Book. Book opens the booking panel on that date with the patient and doctor chosen. The line clears when the follow-up is booked, or when the desk dismisses it with a reason. The desk sees the date and the doctor only, never the note or the reason for the follow-up.
+Prototype and blueprint reference: docs/product-ux-audit/concepts/medvya-workspace-concept.html, receptionist view, desk jobs beside the queue (audit note 10).
+Components and tokens affected: Board card, desk record, booking panel. No new component.
+Front end and back end split: Front end; back end exposes the follow-up date to desk roles through an application contract of the encounters module (no cross-module table access), with no clinical text.
+Prerequisites and blocked by: None.
+Clinical sign-off: Not required. The receptionist confirms in the session (receptionist scenario step 5).
+Effort and regression risk: M · Low.
+Deliberately NOT in this ticket: (1) Automatic booking. (2) Reminders to the patient. (3) Care-plan tasks (P4).
+ac:
+- Given the doctor set a follow-up of 2 weeks and ended the visit, when the receptionist opens the board and the patient's desk record, then both show Follow-up due from the date with Book
+- Given the line, when Book is pressed, then the booking panel opens on that date with the patient and doctor chosen
+- Given the follow-up is booked or dismissed with a reason, when the board refreshes, then the line is gone and a dismissal is audited
+- Given a desk role, when the follow-up is returned by the API, then it holds the date and doctor and no note text, and the test fails if clinical text is added
+- Given that ticket's line The follow-up choice appears on the front desk's list for that patient, when the journey runs, then it passes on the real stack
+- Given English and Arabic, when axe runs on the card and the record, then there is no violation
+tests:
+- Integration: the contract's role scope and tenant isolation.
+- Playwright J2 to J3 handoff (fullstack): doctor sets 2 weeks → receptionist sees and books it.
+notes:
+- Regression risk: low.
+
+=== MDV-P1-103
+title: One queue rule for the clinic: the doctor's day follows it, shows tokens and puts nurse escalations first
+type: Story
+epic: MDV-P1-E12
+prd: P2-01, P1-08
+screens: D-01, P-05
+priority: MUST
+roles: Doctor, Nurse, Receptionist
+labels: today, queue, front-desk, safety, tv, epic: ux programme, track: safety, wave: S2
+estimate: 3
+weeks: 6-7
+confidence: 68 | The ordering is a back-end rule plus a setting; the clinic's rule is not known yet.
+sources: docs/product-ux-audit/10-prioritized-implementation-backlog.md (audit backlog UX-10); docs/product-ux-audit/04-evidence-backed-findings.md (F-07, F-15); docs/product-ux-audit/reviews/reviewer-a-clinical-workflow.md (A-08, A-12); docs/product-ux-audit/tools/walkthrough-handoff.mjs
+desc:
+Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Track S (safety, trust and handoff behaviour), wave S2. This is audit backlog UX-10 of the Nov 2026 product UX audit (an audit id, not an MDV key).
+
+Persona and route: /today (doctor), the queue display, the board.
+Findings and reviewers: F-07, F-15 (order) · reviewers A-08, A-12.
+Rationale: A 72-year-old escalated for fever and BP 168/96 was row 11 of 11 on the doctor's list, below the first screen, because rows sort by slot time and a walk-in holds a late nominal slot. The display listed A-05, B-02, A-06, A-09, A-07, A-08: patients holding A-07 watch A-09 go first.
+Proposed UX behaviour: A clinic setting chooses the queue rule: token order, arrival order or appointment order (and whether booked patients go before walk-ins). Arrived patients sort by that rule on the doctor's day, on the board within a column and on the queue display, so the three always agree. Every row on the doctor's day shows the token. A nurse escalation is pinned above Next patient with its reason, in words. A walk-in is ordered by arrival, not by a far slot time. The display still shows tokens only, and names the doctor per token after a reassignment.
+Prototype and blueprint reference: docs/product-ux-audit/concepts/medvya-workspace-concept.html, doctor view, queue rail (audit note 3).
+Components and tokens affected: Today list rows; Chip for Escalated. Setting in Settings → Clinical. No new component.
+Front end and back end split: Back end: the ordering rule, the setting (audited), one ordered-queue query used by all three screens. Front end: Today, display, board.
+Prerequisites and blocked by: None in code. The pilot clinic's queue rule must be known.
+Clinical sign-off: Decision required before merge: question 10 of the validation plan (pilot doctor and receptionist), recorded on the issue.
+Effort and regression risk: M · Medium: three screens and the live updates share the order.
+Deliberately NOT in this ticket: (1) The queue rail inside the consultation (its own ticket). (2) Token slip printing (its own ticket). (3) Wait-time estimates.
+ac:
+- Given a nurse escalation, when the doctor opens the day at 1024 by 768, then the escalated visit is in the first viewport above Next patient with its reason in words
+- Given the clinic's rule, when the display's Next list, the board column and the doctor's day are compared, then the order is the same
+- Given arrived patients, when the doctor's day renders, then each row shows its token
+- Given a walk-in who arrived at 09:58 with a nominal 19:00 slot, when the arrival rule is set, then she sorts by 09:58
+- Given the ordered-queue query, when the escalation-first rule is removed, then the integration test fails; a change of the setting is audited and scoped to the tenant
+- Given the queue display, when it is read, then it shows tokens and the doctor per token and no name
+- Given English and Arabic, when axe runs on the doctor's day, then there is no violation and escalation is not conveyed by colour alone
+tests:
+- Integration: ordering for the three rules, escalation, tenant isolation.
+- Playwright, real stack: run the handoff walkthrough steps (J3 steps 4 to 6) → the escalated patient is row 1 on the doctor's day.
+- tests/e2e/today.spec.ts, queue-tv.spec.ts.
+notes:
+- Regression risk: medium.
+
+=== MDV-P1-104
+title: The nurse's chief complaint prefills the doctor's note, marked from nurse intake
+type: Story
+epic: MDV-P1-E12
+prd: P2-03, P2-04
+screens: N-01, E-04
+priority: SHOULD
+roles: Nurse, Doctor
+labels: nurse, notes, encounters, provenance, epic: ux programme, track: safety, wave: S2, needs: clinical sign-off
+estimate: 1
+weeks: 5
+confidence: 72 | Whether the nurse's text is stored was not tested; if not, a small back-end change.
+sources: docs/product-ux-audit/10-prioritized-implementation-backlog.md (audit backlog UX-11); docs/product-ux-audit/04-evidence-backed-findings.md (F-16); docs/product-ux-audit/reviews/reviewer-a-clinical-workflow.md (A-09); docs/product-ux-audit/08-design-system-blueprint.md (section 9, Redundant Entry)
+desc:
+Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Track S (safety, trust and handoff behaviour), wave S2. This is audit backlog UX-11 of the Nov 2026 product UX audit (an audit id, not an MDV key).
+
+Persona and route: /nurse/:id → /consult/:id · nurse, doctor.
+Findings and reviewers: F-16 · reviewer A-09. WCAG 2.2 SC 3.3.7 Redundant Entry, across two users.
+Rationale: The nurse typed Fever and sore throat for three days and saved. In the consultation, Chief complaint was empty and the text appeared nowhere. The doctor asks and types again.
+Proposed UX behaviour: When the consultation opens and the doctor's Chief complaint is empty, it is prefilled with the nurse's text and marked from nurse intake with the nurse's name and time (the existing provenance tag). It is editable; once the doctor edits it, the text is the doctor's and the mark says edited by the doctor. A complaint the doctor already typed is never overwritten. The signed note records the source.
+Prototype and blueprint reference: docs/product-ux-audit/08-design-system-blueprint.md section 9.
+Components and tokens affected: NoteEditor chief complaint field; ProvenanceTag. No new component.
+Front end and back end split: Front end; back end if the nurse's complaint is not yet stored or not exposed to the note.
+Prerequisites and blocked by: None.
+Clinical sign-off: Required before merge: question 8 of the validation plan (pilot doctor and nurse), recorded on the issue.
+Effort and regression risk: S · Low. Unknowns stay blank: no complaint from the nurse means an empty field.
+Deliberately NOT in this ticket: (1) Prefilling any other note section. (2) AI drafting.
+ac:
+- Given the nurse saved a complaint at intake, when the doctor opens the consultation, then Chief complaint holds that text with the mark from nurse intake
+- Given the doctor already typed a complaint, when intake is saved later, then the doctor's text stays
+- Given the prefilled text, when the doctor changes it, then the mark shows the doctor edited it and the signed note records both sources
+- Given no complaint at intake, when the consultation opens, then the field is empty and nothing is guessed
+- Given a screen reader, when the field is focused, then the source is read; axe finds no violation in English or Arabic
+tests:
+- Playwright J3 step 5 to J2 (fullstack): nurse types a complaint → the doctor's field holds it with the source mark.
+- tests/e2e/nurse-intake.spec.ts, consult-note.spec.ts.
+notes:
+- Regression risk: low.
+
+=== MDV-P1-105
+title: Redeploy Azure dev from main, capture it again at 768 and 375 px, and mark its synthetic patients
+type: Task
+epic: MDV-P1-E12
+prd: P0-02
+priority: MUST
+roles: Developer, Founder
+labels: azure, deploy, pilot, test-data, epic: ux programme, track: safety, wave: S2
+estimate: 0.5
+weeks: 4
+confidence: 85 | A tag deploy that has been done many times; the recapture needs the founder to sign in by hand.
+sources: docs/product-ux-audit/10-prioritized-implementation-backlog.md (audit backlog UX-12); docs/product-ux-audit/04-evidence-backed-findings.md (F-13, F-46, F-38); docs/product-ux-audit/01-scope-environments-and-coverage.md; docs/product-ux-audit/tools/local-capture.mjs; docs/03-architecture/azure-env-dev.md
+desc:
+Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Track S (safety, trust and handoff behaviour), wave S2. This is audit backlog UX-12 of the Nov 2026 product UX audit (an audit id, not an MDV key).
+
+Persona and route: Every signed-in page on Azure dev · owner doctor and receptionist · 768 and 375.
+Findings and reviewers: F-13, F-46, and the check asked by F-38 · reviewer A-27, lead arbiter.
+Rationale: What is deployed is behind what is built: on Azure dev the header scrolls sideways at 768 and 375 px (page width 939 and 511 px) and hides Sign out; main does not. The pilot runs on this environment, and the validation sessions use it. Its patients named Test Patient 2 lack the (synthetic) marker the house rule asks for.
+Proposed UX behaviour: Tag and deploy current main to Azure dev by the usual workflow. Run the audit's Azure capture again at 768 and 375 px for the owner doctor and the receptionist. Rename or reseed the Azure synthetic patients so each carries (synthetic). While there, check on Azure whether Settings → Terms says booking is paused while booking works, and record the answer on the small-fixes ticket.
+Prototype and blueprint reference: None.
+Components and tokens affected: None.
+Front end and back end split: Deploy and data only. No code.
+Prerequisites and blocked by: None. Do it in the first days: the pilot doctor's sessions run on the redeployed app.
+Clinical sign-off: Not required.
+Effort and regression risk: S · Low. Real Entra sign-in may behave differently from the development provider (the step-up return was only seen locally): note anything seen.
+Deliberately NOT in this ticket: (1) Staging or production. (2) Any infrastructure change.
+ac:
+- Given Azure dev after the deploy, when every captured page is measured at 768 and 375 px, then page width equals viewport width
+- Given the same widths, when the header is used, then Sign out can be reached
+- Given the deployed version, when it is compared with main, then it is the tagged commit and main was green
+- Given the Azure dev patients, when Today and the board are opened, then every patient name carries (synthetic)
+- Given Settings → Terms on Azure, when booking is tried, then the result (status line right or wrong) is written on the small-fixes ticket
+- Given the capture output, when it is stored, then it holds synthetic data only and no credential; the founder signs in by hand
+tests:
+- The audit capture script at 768 and 375 against Azure dev; widths recorded in the issue.
+- No new Playwright spec.
+notes:
+- Regression risk: low.
+- Needs a person: the founder signs in with MFA for the capture.
+
+=== MDV-P1-106
+title: Check-in time is measured from opening Walk-in to the token, so the pilot metric cannot read 0 s, target met
+type: Story
+epic: MDV-P1-E12
+prd: P1-08
+priority: MUST
+roles: Owner, Receptionist
+labels: metrics, pilot, front-desk, walk-in, epic: ux programme, track: safety, wave: S2
+estimate: 1.5
+weeks: 6
+confidence: 75 | The start event must be captured on the client and trusted only as a duration; the metric query exists.
+sources: docs/product-ux-audit/04-evidence-backed-findings.md (F-29); docs/product-ux-audit/reviews/reviewer-a-clinical-workflow.md (A-19); docs/product-ux-audit/07-debate-and-arbitration.md (ruling 7); docs/product-ux-audit/reviews/reviewer-a-rebuttal.md (section 6; non-negotiable 5); docs/05-delivery/tickets/P1-front-desk/MDV-P1-041.md
+desc:
+Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Track S (safety, trust and handoff behaviour), wave S2. This is audit backlog UX-22 of the Nov 2026 product UX audit (an audit id, not an MDV key).
+
+Persona and route: Walk-in and check-in (receptionist); Settings → Practice → Pilot metrics (owner).
+Findings and reviewers: F-29 (the verified metric defect) · reviewer A-19. Part 1 of 2 of audit backlog UX-22 (part 2 is the owner's Clinic today page, after the first pilot weeks).
+Rationale: A walk-in is created and checked in by one action, so its timed check-in is zero and the metric reads Check-in time, returning patients (median): 0 s. Target of 60 s met. The one number meant to prove the desk is faster will always look perfect. No number the system did not earn.
+Proposed UX behaviour: Check-in time runs from opening Walk-in (or the first search keystroke at check-in) to the token being issued. The duration is sent with the check-in and stored; a missing or impossible duration is stored as not measured and left out of the median, never counted as zero. The pilot metric shows how many check-ins were timed and says No data yet when none were. Past zero-second rows are excluded from the median and labelled not measured.
+Prototype and blueprint reference: docs/product-ux-audit/concepts/screenshots/owner-1440.png (Not tracked yet wording).
+Components and tokens affected: Pilot metrics panel; walk-in and check-in controllers. No new component.
+Front end and back end split: Front end: capture the start. Back end: store the duration, the median rule, the exclusion of old zero rows.
+Prerequisites and blocked by: None.
+Clinical sign-off: Not required. The owner is asked what they expect in question 17 of the validation plan.
+Effort and regression risk: M · Low. The walk-in path must not gain a click.
+Deliberately NOT in this ticket: (1) The Clinic today page (part 2). (2) Per-doctor consult times (they wait for the undo ticket). (3) Changing the baseline capture of MDV-P1-041.
+ac:
+- Given a walk-in checked in 40 seconds after Walk-in was opened, when the metric is read, then that check-in counts as about 40 s
+- Given a check-in with no measured start, when the median is computed, then it is left out and shown as not measured
+- Given the metric test, when unmeasured rows are counted as zero again, then the test fails
+- Given no timed check-ins in the period, when the metric renders, then it says No data yet and not a number
+- Given the walk-in path, when it is measured, then it is still at most 6 clicks new and 3 returning
+- Given two clinics, when metrics are read, then each sees only its own; no patient data is in the metric, logs or address
+tests:
+- Integration: median rule, exclusion, tenant isolation.
+- Playwright (tests/e2e/pilot-metrics.spec.ts): timed walk-in appears with a non-zero time.
+notes:
+- Regression risk: low.
+
+=== MDV-P1-107
+title: Staff: only an owner can offboard an owner, step-up on any offboarding, change a role in place; link or remove /admin/staff
+type: Story
+epic: MDV-P1-E12
+prd: P1-11, P1-03
+screens: F-10
+priority: MUST
+roles: Owner, Practice admin
+labels: staff, offboarding, authorisation, security, roles, epic: ux programme, track: safety, wave: S3
+estimate: 2.5
+weeks: 7
+confidence: 65 | What the server does today when an admin offboards the owner was not tested; the first step is to find out.
+sources: docs/product-ux-audit/10-prioritized-implementation-backlog.md (audit backlog UX-27); docs/product-ux-audit/04-evidence-backed-findings.md (F-30); docs/product-ux-audit/reviews/reviewer-a-clinical-workflow.md (A-23); docs/product-ux-audit/reviews/reviewer-c-design-system.md (C-14, C-15); web/clinic/src/features/staff/domain/staff.ts; docs/05-delivery/tickets/P1-front-desk/MDV-P1-009.md
+desc:
+Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Track S (safety, trust and handoff behaviour), wave S3. This is audit backlog UX-27 of the Nov 2026 product UX audit (an audit id, not an MDV key).
+
+Persona and route: Settings → People → Staff; /admin/staff · owner, practice admin.
+Findings and reviewers: F-30 · reviewers A-23, C-14, C-15.
+Rationale: A practice admin is offered Offboard on the owner doctor and the dialog opens; the code refuses only the last administrator. If it goes through, a hired admin ends the owner's access and moves the owner's patients to Needs rebooking. A role cannot be changed without offboarding and inviting again. /admin/staff is a second invite flow reachable only by typing the address.
+Proposed UX behaviour: First, a test on real PostgreSQL records what the server does today when a practice admin offboards an owner. Then: only an owner may offboard an owner, and never the last owner; the server refuses anyone else. Any offboarding asks for the identity step-up. The Offboard button is absent on rows the signed-in user may not offboard and on their own row, with a short reason in words. Change role is offered on a staff row: it takes effect on the next request, ends sessions that hold the old role, and is audited. /admin/staff is either linked from Settings → People or removed with its route.
+Prototype and blueprint reference: None.
+Components and tokens affected: Staff table row actions; the existing Dialog and step-up. No new component.
+Front end and back end split: Back end: the owner rule, step-up on the offboard endpoint, the change-role endpoint with policy and audit. Front end: row actions, dialog.
+Prerequisites and blocked by: None in code.
+Clinical sign-off: Decision required before merge: question 18 of the validation plan (may a practice admin remove a doctor, or only the owner), recorded on the issue.
+Effort and regression risk: M · Medium: authorisation and sessions. ponytail-review and a mutation check are required by the house rules for anything touching auth.
+Deliberately NOT in this ticket: (1) Custom roles (exist). (2) Bulk changes. (3) Compact rows on the staff table (after-pilot table ticket).
+ac:
+- Given a practice admin and an owner, when the admin calls the offboard endpoint for the owner on main, then a test records the answer and the issue states it
+- Given a practice admin, when the offboard endpoint is called for an owner, then the server answers 403 and nothing changes
+- Given one owner, when anyone tries to offboard them, then the server refuses
+- Given any offboarding, when it is confirmed without a recent step-up, then the server asks for it
+- Given a receptionist, when an owner changes her to nurse, then her next request has the nurse's access, her old sessions end, and the audit log holds who, when, from and to
+- Given the integration tests, when the owner rule or the step-up requirement is removed, then a test fails
+- Given the staff table, when a user may not offboard a row, then no Offboard button is offered there; axe finds no violation in English or Arabic
+- Given the app, when /admin/staff is opened, then it is linked from Settings or answers Page not found
+tests:
+- Integration (real PostgreSQL): owner rule, last owner, step-up, change role, tenant isolation.
+- Playwright (tests/e2e/staff.spec.ts, access-ended.spec.ts; J1 offboard step): change a receptionist to a nurse; an admin sees no Offboard on the owner.
+notes:
+- Regression risk: medium.
+- Kept in the pilot phase although it is in wave S3: it is an authorisation question, and the house security check ranks it before polish.
+
+=== MDV-P1-108
+title: UX validation sessions with the pilot doctor, nurse, receptionist and owner: the 21 decisions, the brand list, the training date and the device check
+type: Gate
+epic: MDV-P1-E12
+prd: P2-08
+screens: X-03
+priority: MUST
+roles: Founder, Pilot clinic doctor, Nurse, Receptionist, Owner
+labels: pilot, clinical, needs-person, ux, epic: ux programme
+estimate: 2
+weeks: 4-6
+depends: MDV-P1-105
+confidence: 55 | Needs the pilot clinic's people and time; nothing here can be done by code.
+sources: docs/product-ux-audit/11-pilot-doctor-validation-plan.md (sections 1 to 5); docs/product-ux-audit/07-debate-and-arbitration.md (Assumptions nobody could settle); docs/product-ux-audit/12-prototype-guide.md; docs/05-delivery/session-handoff.md (section 8)
+desc:
+Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Track people gate, wave People. No audit backlog id. Created from the audit's rulings and blueprint, not from a backlog line (see Findings).
+
+Persona and route: Sessions on the Azure dev app after the redeploy, with the concept open beside it. Synthetic patients only.
+Findings and reviewers: All findings marked as needing clinical validation; the 21 decisions of the validation plan. No UX number in the backlog: the plan itself is the source.
+Rationale: No clinician, nurse, receptionist or owner took part in the audit. Nothing safety-sensitive should be built from the audit alone, and twelve tickets may not merge until a named person has agreed.
+Proposed UX behaviour: The founder runs the four scripted sessions of the plan (doctor 40 minutes on the room device, receptionist 30 at the desk, nurse 20 on a tablet, owner 20) and records each of the 21 decisions with the person's role and the date, on the ticket that the decision blocks. Rows 1 to 5 come first, before the first safety tickets merge. The founder also collects the doctor's list of about 100 medicines with brands, fixes the training date and says whether screens may change shape before it or only after the first pilot weeks, and checks on site which devices are used at the desk, in the room and by the nurse (mouse or touch), including one run of the consultation and nurse intake on a real tablet.
+Prototype and blueprint reference: docs/product-ux-audit/concepts/medvya-workspace-concept.html and docs/product-ux-audit/12-prototype-guide.md (What to try).
+Components and tokens affected: None.
+Front end and back end split: People only. No code.
+Prerequisites and blocked by: Blocked by the Azure redeploy ticket (the sessions run on the redeployed app) and by the signed pilot agreement (MDV-P1-043).
+Clinical sign-off: This ticket is the sign-off. It stands apart from the clinical advisor's journey sign-off (MDV-P1-073), which is still required.
+Effort and regression risk: M (calendar time, not build time) · None to the code. Schedule risk: every ticket that names a question waits for it.
+Deliberately NOT in this ticket: (1) A clinical safety standard: the plan's criteria are the audit's proposals. (2) Real patient data in any session. (3) The journey sign-off of MDV-P1-073.
+ac:
+- Given the validation plan, when the first safety tickets are ready to merge, then decisions 1 to 5 are recorded with role and date on the tickets they block
+- Given the plan's table, when this gate closes, then each of the 21 rows has an answer, a name by role and a date, on the blocked ticket and summarised here
+- Given the doctor's session on the changed consultation, when asked whose record is this and what is she allergic to without scrolling, then the answer is right three times out of three
+- Given the doctor's session, when the usual antibiotic is prescribed for the penicillin-allergic synthetic patient, then no medicine of that class is authorised without a stop the doctor noticed
+- Given the receptionist's session, when she presses Call in on the wrong patient, then she recovers without help
+- Given this gate, when it closes, then the brand list is attached to the brand ticket, the training date is written on the navigation names ticket and the device check is written here
+- Given every session, when notes and screenshots are stored, then they hold synthetic patients only and no real person's health data
+tests:
+- No automated test. The scenario scripts of the plan (section 2) are the procedure; the questions of section 3 are asked after each session.
+notes:
+- Regression risk: none.
+- Listed in docs/05-delivery/session-handoff.md section 8 (Needs a person).

@@ -8,9 +8,9 @@
 **Day one:** Register patients, book, reschedule and cancel appointments, check patients in, run the waiting room and send automatic confirmations and reminders.  
 **Goal:** A clinic can run its entire appointment day in Medvya. This is the workflow to validate with real clinics before anything clinical is built on top.
 
-**Tickets:** 73 · **Estimate:** 162.5 dev-days vs **35 working days** in the window (OVER by 127.5 days: needs scope trade-off or overlap) · **Average confidence:** 77%
+**Tickets:** 107 · **Estimate:** 224.5 dev-days vs **35 working days** in the window (OVER by 189.5 days: needs scope trade-off or overlap) · **Average confidence:** 77%
 
-**Status:** To do 45 · Partly done 16 · Done 12
+**Status:** To do 79 · Partly done 16 · Done 12
 
 ## Epics
 
@@ -27,6 +27,7 @@
 | MDV-P1-E09 | Practice access log | P1-10 | Owners see who opened which record and when. |
 | MDV-P1-E10 | Pilot readiness and R1 gate | P1-01, P1-12 | External dependencies, production tenants, training, baselines, security review and the R1 exit gate. |
 | MDV-P1-E11 | Connectivity and resilience | P1-06, P1-08 | The desk keeps working on flaky Indian connections: safe retries, timeouts, offline assets and a paper fallback; nothing with patient data is stored in the browser without a decision. |
+| MDV-P1-E12 | UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit) | P0-07, P2-02, P2-04, P1-08 | Option B, cohesive modernisation, safety-first: two parallel tracks (D design rules and components, S safety and handoff behaviour) from the 13 Nov 2026 product UX audit; nothing from the audit is dropped (ticket map in docs/product-ux-audit/10-prioritized-implementation-backlog.md). |
 
 ## Tickets
 
@@ -38,6 +39,16 @@
 | [MDV-P1-043](MDV-P1-043.md) | To do | Sign pilot agreements with two partner clinics | Chore | MUST | P1-02 | — | 1 | 4–6 | 16 Nov → 04 Dec 2026 | 60% Low |
 | [MDV-P1-044](MDV-P1-044.md) | To do | Legal review of privacy notice, ToS, DPA and consent wording (DPDP India; UAE health data) | Chore | MUST | P1-12 | — | 1 | 4–6 | 16 Nov → 04 Dec 2026 | 60% Low |
 | [MDV-P1-045](MDV-P1-045.md) | To do | Register India DLT sender ID and SMS templates (and UAE SMS sender if applicable) | Chore | MUST | P1-09 | — | 0.5 | 4–6 | 16 Nov → 04 Dec 2026 | 62% Low |
+| [MDV-P1-075](MDV-P1-075.md) | To do | Design rules: write PRODUCT.md and DESIGN.md from the audit blueprint and amend AGENTS.md section 4 | Chore | MUST | P0-07 | — | 1 | 4–4 | 16 Nov → 20 Nov 2026 | 85% High |
+| [MDV-P1-076](MDV-P1-076.md) | To do | Guardrails: lint rules and a CI count that may only fall, so shared patterns stop drifting | Task | MUST | P0-07 | — | 1 | 4–4 | 16 Nov → 20 Nov 2026 | 80% Medium |
+| [MDV-P1-077](MDV-P1-077.md) | To do | Library defaults: 44 px Input, Select and Textarea, a required Table label, and 44 px hit areas for Switch | Task | MUST | P0-07 | — | 1 | 4–4 | 16 Nov → 20 Nov 2026 | 88% High |
+| [MDV-P1-079](MDV-P1-079.md) | To do | Tokens: nine type sizes, the spacing scale, page and panel widths, the 1024 tier, density and two motion values | Task | SHOULD | P0-07 | — | 1.5 | 4–5 | 16 Nov → 27 Nov 2026 | 80% Medium |
+| [MDV-P1-087](MDV-P1-087.md) | To do | A free-text medicine needs a reason before authorising when the patient has, or may have, an allergy | Story | MUST | P2-06, P2-08 | E-05, E-11 | 2 | 4–4 | 16 Nov → 20 Nov 2026 | 78% Medium |
+| [MDV-P1-088](MDV-P1-088.md) | To do | Load the pilot clinic's brand names into the formulary, mapped to generic and class; offer generic matches for typed text | Story | MUST | P2-06 | F-13, E-11 | 2 | 4–6 | 16 Nov → 04 Dec 2026 | 60% Low |
+| [MDV-P1-089](MDV-P1-089.md) | To do | The note always shows what the server holds; the last keystrokes survive a page change and a reload | Story | MUST | P2-04 | E-04 | 1.5 | 4–4 | 16 Nov → 20 Nov 2026 | 75% Medium |
+| [MDV-P1-091](MDV-P1-091.md) | To do | The signing checklist reports only what happened: no Identity confirmed tick the doctor did not make | Story | MUST | P2-05 | E-06 | 1 | 4–4 | 16 Nov → 20 Nov 2026 | 80% Medium |
+| [MDV-P1-105](MDV-P1-105.md) | To do | Redeploy Azure dev from main, capture it again at 768 and 375 px, and mark its synthetic patients | Task | MUST | P0-02 | — | 0.5 | 4–4 | 16 Nov → 20 Nov 2026 | 85% High |
+| [MDV-P1-108](MDV-P1-108.md) | To do | UX validation sessions with the pilot doctor, nurse, receptionist and owner: the 21 decisions, the brand list, the training date and the device check | Gate | MUST | P2-08 | X-03 | 2 | 4–6 | 16 Nov → 04 Dec 2026 | 55% Low |
 | [MDV-P1-003](MDV-P1-003.md) | Done | Trust centre and demo request (no PHI) | Story | SHOULD | P1-01 | F-07 | 1.5 | 5–5 | 23 Nov → 27 Nov 2026 | 82% Medium |
 | [MDV-P1-005](MDV-P1-005.md) | Partly done | Practice settings: profile, locations, operating hours and holidays (F-08) | Story | MUST | P1-02 | F-08 | 2.5 | 5–5 | 23 Nov → 27 Nov 2026 | 72% Medium |
 | [MDV-P1-007](MDV-P1-007.md) | Done | Add doctor (clinic mode): details, licence India/UAE, verification, schedule link, fees, access and signature image (F-09) | Story | MUST | P1-03 | F-09 | 3 | 5–6 | 23 Nov → 04 Dec 2026 | 70% Medium |
@@ -45,6 +56,16 @@
 | [MDV-P1-011](MDV-P1-011.md) | Done | Schedule templates: working hours, breaks, slot length per service, per-location calendars, time zones | Story | MUST | P1-04 | P-04 | 3 | 5–6 | 23 Nov → 04 Dec 2026 | 80% Medium |
 | [MDV-P1-013](MDV-P1-013.md) | Partly done | Patient registration — India full flow (identity, ABHA optional, Aadhaar last 4, Indian address, payer) | Story | MUST | P1-05 | P-02 | 4 | 5–6 | 23 Nov → 04 Dec 2026 | 88% High |
 | [MDV-P1-074](MDV-P1-074.md) | To do | Keep Azure logs flowing all day: PostgreSQL audit and connection logs must not exhaust the Log Analytics daily cap | Task | MUST | P1-12 | — | 1 | 5–5 | 23 Nov → 27 Nov 2026 | 70% Medium |
+| [MDV-P1-078](MDV-P1-078.md) | To do | Codemod: delete about 350 redundant control-height patches (merges alone), then give radios, checkboxes and name-link rows a 44 px target | Task | MUST | P0-07 | — | 1.5 | 5–5 | 23 Nov → 27 Nov 2026 | 82% Medium |
+| [MDV-P1-080](MDV-P1-080.md) | To do | Tone tokens: one colour pair per meaning; no raw hex left in the shared library; the contrast test reads the tokens | Task | SHOULD | P0-07 | — | 1.5 | 5–5 | 23 Nov → 27 Nov 2026 | 80% Medium |
+| [MDV-P1-081](MDV-P1-081.md) | To do | PatientBanner in the shared library: full, strip and desk variants, shown in the gallery | Story | MUST | P0-07, P2-02 | — | 2 | 5–6 | 23 Nov → 04 Dec 2026 | 72% Medium |
+| [MDV-P1-082](MDV-P1-082.md) | To do | StickyActionBar as a layout footer and SaveStatus, in the shared library | Story | MUST | P0-07, P2-04 | — | 1 | 5–5 | 23 Nov → 27 Nov 2026 | 85% High |
+| [MDV-P1-084](MDV-P1-084.md) | To do | Shell components in the library: AccountMenu, the labelled rail item, PageHeader with back and meta slots, and Tooltip | Story | SHOULD | P0-07 | — | 2 | 5–6 | 23 Nov → 04 Dec 2026 | 82% Medium |
+| [MDV-P1-086](MDV-P1-086.md) | To do | Page components in the library: Card and Section, PageMessage and EmptyState, SegmentedControl, SplitLayout and Sheet | Story | SHOULD | P0-07 | — | 2.5 | 5–6 | 23 Nov → 04 Dec 2026 | 80% Medium |
+| [MDV-P1-090](MDV-P1-090.md) | To do | Ending or signing with an unfinished prescription or order asks first; unfinished ones show on the doctor's day | Story | MUST | P2-05, P2-06, P2-01 | E-05, D-01 | 3 | 5–5 | 23 Nov → 27 Nov 2026 | 68% Medium |
+| [MDV-P1-100](MDV-P1-100.md) | To do | Front desk: undo the last move, Left without being seen, cancel a checked-in visit; the desk cannot close a visit under the doctor | Story | MUST | P1-08 | P-01, P-05 | 4 | 5–6 | 23 Nov → 04 Dec 2026 | 65% Medium |
+| [MDV-P1-101](MDV-P1-101.md) | To do | Patient picker rows show date of birth and last visit, and mark possible duplicates | Story | MUST | P1-05, P2-01 | P-04, D-02, P-03 | 2 | 5–5 | 23 Nov → 27 Nov 2026 | 75% Medium |
+| [MDV-P1-104](MDV-P1-104.md) | To do | The nurse's chief complaint prefills the doctor's note, marked from nurse intake | Story | SHOULD | P2-03, P2-04 | N-01, E-04 | 1 | 5–5 | 23 Nov → 27 Nov 2026 | 72% Medium |
 | [MDV-P1-006](MDV-P1-006.md) | To do | Practice settings: notification preferences and data tab | Story | MUST | P1-02 | F-08 | 1.5 | 6–6 | 30 Nov → 04 Dec 2026 | 72% Medium |
 | [MDV-P1-009](MDV-P1-009.md) | Partly done | Staff offboarding removes access immediately and ends all sessions | Story | MUST | P1-11 | F-10 | 1 | 6–6 | 30 Nov → 04 Dec 2026 | 90% High |
 | [MDV-P1-012](MDV-P1-012.md) | To do | Leave and schedule exceptions with re-offer of affected appointments | Story | MUST | P1-04 | P-04 | 1.5 | 6–6 | 30 Nov → 04 Dec 2026 | 82% Medium |
@@ -57,6 +78,14 @@
 | [MDV-P1-023](MDV-P1-023.md) | Partly done | Calendar views: day, week and list (per doctor and resource), mobile/tablet responsive | Story | MUST | P1-06 | P-04 | 3 | 6–7 | 30 Nov → 11 Dec 2026 | 86% High |
 | [MDV-P1-046](MDV-P1-046.md) | To do | Start UAE regulator onboarding applications early (risk mitigation) | Chore | SHOULD | — | — | 0.5 | 6–8 | 30 Nov → 18 Dec 2026 | 55% Low |
 | [MDV-P1-073](MDV-P1-073.md) | To do | Clinical advisor walks the six journeys and signs off (moved from MDV-P0-023) | Gate | MUST | P0-07 | X-03 | 1 | 6–6 | 30 Nov → 04 Dec 2026 | 60% Low |
+| [MDV-P1-083](MDV-P1-083.md) | To do | Chip, Tag and Banner in the shared library, with tone, icon and size; the allergy has one look | Story | SHOULD | P0-07 | — | 1.5 | 6–6 | 30 Nov → 04 Dec 2026 | 75% Medium |
+| [MDV-P1-085](MDV-P1-085.md) | To do | Field and ErrorSummary in the shared library: one label, hint, error and required convention; a summary that takes focus | Story | SHOULD | P0-07, P1-05 | — | 1.5 | 6–6 | 30 Nov → 04 Dec 2026 | 82% Medium |
+| [MDV-P1-092](MDV-P1-092.md) | To do | Pinned patient strip and layout footer on the consultation, its sub-pages, nurse intake and the patient record | Story | MUST | P2-04, P2-03, P2-02 | E-04, N-01, E-01 | 2.5 | 6–6 | 30 Nov → 04 Dec 2026 | 75% Medium |
+| [MDV-P1-093](MDV-P1-093.md) | To do | App shell: one account menu, a 48 px top bar and a labelled rail from 768 to 1279 px | Story | SHOULD | P0-07 | — | 1.5 | 6–6 | 30 Nov → 04 Dec 2026 | 82% Medium |
+| [MDV-P1-096](MDV-P1-096.md) | To do | A screen the role may not open says so, with a button to the start page | Story | SHOULD | P0-05 | F-05 | 0.5 | 6–6 | 30 Nov → 04 Dec 2026 | 88% High |
+| [MDV-P1-102](MDV-P1-102.md) | To do | The doctor's follow-up reaches the front desk: Follow-up due on the Done card and the desk record, with Book | Story | MUST | P1-06, P2-04 | P-01, P-04 | 2 | 6–6 | 30 Nov → 04 Dec 2026 | 78% Medium |
+| [MDV-P1-103](MDV-P1-103.md) | To do | One queue rule for the clinic: the doctor's day follows it, shows tokens and puts nurse escalations first | Story | MUST | P2-01, P1-08 | D-01, P-05 | 3 | 6–7 | 30 Nov → 11 Dec 2026 | 68% Medium |
+| [MDV-P1-106](MDV-P1-106.md) | To do | Check-in time is measured from opening Walk-in to the token, so the pilot metric cannot read 0 s, target met | Story | MUST | P1-08 | — | 1.5 | 6–6 | 30 Nov → 04 Dec 2026 | 75% Medium |
 | [MDV-P1-010](MDV-P1-010.md) | To do | Licence/registration expiry reminders and quarterly access review prompt | Story | MUST | P1-11 | — | 1.5 | 7–7 | 07 Dec → 11 Dec 2026 | 85% High |
 | [MDV-P1-017](MDV-P1-017.md) | To do | Duplicate / merge review with second approver when both records hold clinical data (P-03) | Story | MUST | P1-05 | P-03 | 2.5 | 7–7 | 07 Dec → 11 Dec 2026 | 82% Medium |
 | [MDV-P1-018](MDV-P1-018.md) | Done | Patient directory and privacy-safe search for the front desk | Story | MUST | P1-05 | P-02 | 2 | 7–7 | 07 Dec → 11 Dec 2026 | 84% Medium |
@@ -65,6 +94,10 @@
 | [MDV-P1-025](MDV-P1-025.md) | Partly done | Walk-in registration and booking straight to the queue | Story | MUST | P1-06 | P-01, P-04 | 1 | 7–7 | 07 Dec → 11 Dec 2026 | 88% High |
 | [MDV-P1-028](MDV-P1-028.md) | Done | Reception board with visit columns and one-tap check-in | Story | MUST | P1-08 | P-01 | 3 | 7–8 | 07 Dec → 18 Dec 2026 | 82% Medium |
 | [MDV-P1-032](MDV-P1-032.md) | Partly done | Email confirmations and 24 h / 2 h reminders via SendGrid and Hangfire | Story | MUST | P1-09 | — | 2.5 | 7–8 | 07 Dec → 18 Dec 2026 | 86% High |
+| [MDV-P1-094](MDV-P1-094.md) | To do | Consultation workspace layout: section anchors, vitals in one row, prescription after assessment, diagnosis inline, chart panel beside the note | Story | SHOULD | P2-04, P2-06 | E-04, E-05, E-07 | 5 | 7–8 | 07 Dec → 18 Dec 2026 | 62% Low |
+| [MDV-P1-095](MDV-P1-095.md) | To do | Front-desk board: one header row, a one-line workload strip, pinned column headers and the doctor on the card | Story | SHOULD | P1-08 | P-01 | 2.5 | 7–7 | 07 Dec → 11 Dec 2026 | 75% Medium |
+| [MDV-P1-097](MDV-P1-097.md) | To do | Schedule day view opens at the current time; the past collapses into one row | Story | SHOULD | P1-06 | P-04 | 1 | 7–7 | 07 Dec → 11 Dec 2026 | 82% Medium |
+| [MDV-P1-107](MDV-P1-107.md) | To do | Staff: only an owner can offboard an owner, step-up on any offboarding, change a role in place; link or remove /admin/staff | Story | MUST | P1-11, P1-03 | F-10 | 2.5 | 7–7 | 07 Dec → 11 Dec 2026 | 65% Medium |
 | [MDV-P1-026](MDV-P1-026.md) | To do | Recurring appointments (series) with per-occurrence exceptions | Story | MUST | P1-06 | P-04 | 1.5 | 8–8 | 14 Dec → 18 Dec 2026 | 80% Medium |
 | [MDV-P1-027](MDV-P1-027.md) | To do | Waitlist with "offer earlier slot" | Story | MUST | P1-06 | P-05 | 1.5 | 8–8 | 14 Dec → 18 Dec 2026 | 84% Medium |
 | [MDV-P1-029](MDV-P1-029.md) | Done | Real-time board updates, call/room patient, nonclinical statuses (SignalR) | Story | MUST | P1-08 | P-01 | 2 | 8–8 | 14 Dec → 18 Dec 2026 | 85% High |
@@ -73,6 +106,8 @@
 | [MDV-P1-033](MDV-P1-033.md) | Partly done | SMS confirmations and reminders with India DLT templates and delivery receipts | Story | MUST | P1-09 | — | 2 | 8–8 | 14 Dec → 18 Dec 2026 | 68% Medium |
 | [MDV-P1-034](MDV-P1-034.md) | To do | Notification centre for staff (D-03), push-safe content | Story | MUST | P1-09 | D-03 | 1.5 | 8–8 | 14 Dec → 18 Dec 2026 | 85% High |
 | [MDV-P1-035](MDV-P1-035.md) | Partly done | Practice access log for owners (F-12): who opened which record and when | Story | MUST | P1-10 | F-12 | 1.5 | 8–8 | 14 Dec → 18 Dec 2026 | 84% Medium |
+| [MDV-P1-098](MDV-P1-098.md) | To do | Phone rule: under 768 px clinical writes say Open this on a tablet or computer | Story | SHOULD | P2-04, P2-06 | X-01 | 1.5 | 8–8 | 14 Dec → 18 Dec 2026 | 65% Medium |
+| [MDV-P1-099](MDV-P1-099.md) | To do | Queue in the consultation: tokens and ages only, escalations first, and a Next button on tablets | Story | COULD | P2-01, P2-04 | D-01, E-04 | 1.5 | 8–8 | 14 Dec → 18 Dec 2026 | 62% Low |
 | [MDV-P1-036](MDV-P1-036.md) | To do | Tablet-responsive reception views (desk tablet) | Task | MUST | P1-08 | — | 1 | 9–9 | 21 Dec → 25 Dec 2026 | 88% High |
 | [MDV-P1-037](MDV-P1-037.md) | To do | Performance budget and load test for booking and calendar | Task | MUST | P1-06, P1-07 | — | 1.5 | 9–9 | 21 Dec → 25 Dec 2026 | 86% High |
 | [MDV-P1-038](MDV-P1-038.md) | To do | P1 security review: threat-model update, ASVS checks, authorisation tests, dependency scan — no open high/critical | Gate | MUST | P1-05, P1-11 | — | 2 | 9–9 | 21 Dec → 25 Dec 2026 | 80% Medium |

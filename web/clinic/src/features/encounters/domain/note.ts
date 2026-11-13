@@ -17,6 +17,8 @@ export type SignPatient = { name: string; mrn: string; dateOfBirth: string };
 export const withTitle = (name: string) => (/^dr\.?\s/i.test(name) ? name : `Dr. ${name}`);
 /** A signed addendum (MDV-P2-013): version 2 and later, each following the version before it. */
 export type NoteAddendum = { versionNo: number; amendsVersionNo: number; reason: string; text: string; signedBy: string; signedAt: string; contentHash: string; signerName?: string | null };
+/** shortcut: no recording exists before MDV-P3, so the consent step and its checklist row are hidden and signing never needs it (MDV-AUDIT-1092); flip to a tenant setting when recording ships. */
+export const recordingAvailable = false;
 /** The doctor's record of the patient's answer about recording this visit (MDV-P2-044); none yet means the note cannot be signed. */
 export const recordingConsents = ['Agreed', 'Declined', 'Withdrawn'] as const;
 export type RecordingConsent = (typeof recordingConsents)[number];

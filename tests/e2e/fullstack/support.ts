@@ -43,8 +43,15 @@ export function watchUrls(page: Page) {
   page.on('framenavigated', f => urls.push(f.url()));
   return {
     urls,
-    // The build's hashed bundle names (/app/assets/) are chosen by the bundler, not by patient data ("trash-….js" holds "rash"); every other URL is checked.
-    leaks: (words: string[]) => urls.filter(u => { const d = decodeURIComponent(u).toLowerCase(); return !new URL(u).pathname.startsWith('/app/assets/') && words.some(w => d.includes(w.toLowerCase())); }),
+    // Not checked: the build's hashed bundle names (/app/assets/, "trash-….js" holds "rash") and the sign-in redirect's random protocol values
+    // (state, nonce, code: base64 that can hold a short word by chance). Everything else in every URL is.
+    leaks: (words: string[]) => urls.filter(u => {
+      const url = new URL(u);
+      if (url.pathname.startsWith('/app/assets/')) return false;
+      for (const k of ['state', 'nonce', 'code', 'code_challenge']) url.searchParams.delete(k);
+      const d = decodeURIComponent(url.href).toLowerCase();
+      return words.some(w => d.includes(w.toLowerCase()));
+    }),
   };
 }
 

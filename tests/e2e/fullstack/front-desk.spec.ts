@@ -80,12 +80,10 @@ test('front desk: register, book, check in, see the board, cancel', async ({ pag
     const confirm = card.getByRole('group', { name: 'Confirm identity' });
     await expect(confirm).toContainText(`${patient.name} · born`);
     await confirm.getByRole('button', { name: 'Confirm arrival' }).click();
-    const checkedIn = page.getByRole('region', { name: /^Checked in/ });
-    await expect(checkedIn.getByRole('article', { name: patient.name })).toBeVisible();
+    const ready = page.getByRole('region', { name: /^Ready for doctor/ }); // nurse intake is off (the default): check-in goes straight to Ready for doctor (#1104)
+    await expect(ready.getByRole('article', { name: patient.name })).toBeVisible();
     await expectNoAxeViolations(page);
     await page.reload(); // the server, not the screen, holds the state
-    await expect(page.getByRole('region', { name: /^Checked in/ }).getByRole('article', { name: patient.name })).toBeVisible();
-    await page.getByRole('region', { name: /^Checked in/ }).getByRole('article', { name: patient.name }).getByRole('button', { name: 'Ready for doctor' }).click();
     await expect(page.getByRole('region', { name: /^Ready for doctor/ }).getByRole('article', { name: patient.name })).toBeVisible();
   });
 

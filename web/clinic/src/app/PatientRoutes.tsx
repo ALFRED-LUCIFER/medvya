@@ -15,6 +15,9 @@ import { usePatientConsentsController } from '../features/patients/hooks/usePati
 import { usePatientRecordController } from '../features/patients/hooks/usePatientRecordController';
 import { patientDirectory } from '../features/shell/domain/navigation';
 import { pickSlot } from '../features/schedule/domain/booking';
+import { FollowUpDismissDialog, FollowUpDueLine } from '../features/front-desk/components/FollowUpDue';
+import { bookFollowUpPath } from '../features/front-desk/domain/followUpDue';
+import { useFollowUpDueController } from '../features/front-desk/hooks/useFollowUpDueController';
 
 // Composition only: controller → component for the patient directory routes (MDV-P1-018).
 const recordPath = (id: string) => `${patientDirectory.path}/${id}`;
@@ -37,9 +40,20 @@ const completePath = (id: string) => `${recordPath(id)}/complete`;
 function Record({ patientId, canReveal, canDocs, facilityId, timeZone, bookPath, checkInPath }: { patientId: string; canReveal: boolean; canDocs: boolean; facilityId: string; timeZone?: string; bookPath: string | null; checkInPath: string | null }) {
   const navigate = useNavigate();
   const mergeRequest = useMergeRequest(patientId, id => void navigate(`${mergePath}/${id}`));
-  return <PatientRecord {...usePatientRecordController(patientId)} merges={useMergeHistory(patientId)} consents={usePatientConsentsController(patientId)} backPath={patientDirectory.path} canReveal={canReveal}
+  const record = usePatientRecordController(patientId);
+  const desk = useDeskVisitsController(facilityId, patientId);
+  const dismissal = useFollowUpDueController();
+  const online = true; // as the record's other actions: offline, the shell's banner says so and a failed dismiss says so in the dialog
+  // MDV-P1-102: the doctor's follow-up on the desk record; Book and Dismiss need booking access (the server checks again).
+  const book = canReveal ? bookPath : null;
+  const followUp = desk.followUp && <>
+    <FollowUpDueLine followUp={desk.followUp} patientName={record.patient?.fullName ?? ''} online={online}
+      bookPath={book && bookFollowUpPath(book, patientId, desk.followUp)} onDismiss={book ? dismissal.onStart : null} />
+    <FollowUpDismissDialog {...dismissal} online={online} />
+  </>;
+  return <PatientRecord {...record} merges={useMergeHistory(patientId)} consents={usePatientConsentsController(patientId)} backPath={patientDirectory.path} canReveal={canReveal}
     completePath={canReveal ? completePath(patientId) : null}
-    actions={{ bookPath: canReveal && bookPath ? `${bookPath}?patient=${patientId}` : null, checkInPath: checkInPath ? `${checkInPath}?patient=${patientId}` : null, editPath: canReveal ? completePath(patientId) : null }} documentsPath={canDocs ? `/patients/${patientId}/docs` : null} visits={<DeskVisits {...useDeskVisitsController(facilityId, patientId)} timeZone={timeZone} />} mergeRequest={canReveal ? mergeRequest : null} />;
+    actions={{ bookPath: canReveal && bookPath ? `${bookPath}?patient=${patientId}` : null, checkInPath: checkInPath ? `${checkInPath}?patient=${patientId}` : null, editPath: canReveal ? completePath(patientId) : null }} documentsPath={canDocs ? `/patients/${patientId}/docs` : null} visits={<DeskVisits {...desk} followUp={followUp} timeZone={timeZone} />} mergeRequest={canReveal ? mergeRequest : null} />;
 }
 
 type RegistrationLinks = { country: Country; scope: string; actorName: string; timeZone?: string; bookPath: string | null; checkInPath: string | null };

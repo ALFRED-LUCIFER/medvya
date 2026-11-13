@@ -34,11 +34,11 @@ test('typing autosaves, shows the state, and names the manual path and the requi
   await expect(note(page)).toContainText('No recording for this visit. You can write the note manually.');
   await expect(note(page).getByText('(required)')).toHaveCount(3);
   await note(page).getByLabel('Chief complaint').fill('Thirst and tiredness (synthetic)');
-  await expect(note(page).getByRole('status')).toHaveText('Saved');
+  await expect(note(page).getByRole('status')).toHaveText(/^Saved \d\d:\d\d$/);
   expect(mock.puts).toEqual([{ templateKey: 'general-opd', manual: true, recordingConsent: null, baseVersion: 0, sections: { chiefComplaint: 'Thirst and tiredness (synthetic)' } }]);
   await note(page).getByLabel('Plan').fill('Review in two weeks');
   await expect.poll(() => mock.puts.length).toBe(2);
-  await expect(note(page).getByRole('status')).toHaveText('Saved');
+  await expect(note(page).getByRole('status')).toHaveText(/^Saved \d\d:\d\d$/);
   expect(mock.puts.at(-1)).toMatchObject({ baseVersion: 1, sections: { chiefComplaint: 'Thirst and tiredness (synthetic)', plan: 'Review in two weeks' } });
   expect(await page.evaluate(() => JSON.stringify([localStorage, sessionStorage]))).not.toContain('Thirst'); // no note text in browser storage
 });
@@ -47,10 +47,10 @@ test('a failed save keeps the text on the page and retries', async ({ page }) =>
   const mock = await open(page);
   mock.next = 'offline';
   await note(page).getByLabel('Plan').fill('Rest and fluids');
-  await expect(note(page).getByRole('alert')).toContainText('Not saved. Your text is kept on this page.');
+  await expect(note(page).getByRole('status')).toHaveText('Not saved. Trying again.');
   await expect(note(page).getByLabel('Plan')).toHaveValue('Rest and fluids');
   await note(page).getByRole('button', { name: 'Retry now' }).click();
-  await expect(note(page).getByRole('status')).toHaveText('Saved');
+  await expect(note(page).getByRole('status')).toHaveText(/^Saved \d\d:\d\d$/);
   expect(mock.puts).toHaveLength(1);
   expect(mock.puts[0]!.sections).toEqual({ plan: 'Rest and fluids' });
 });
@@ -66,10 +66,71 @@ test('a stale save keeps the doctor\'s text and offers reload and reapply, never
   await expect(note(page).getByLabel('Plan')).toHaveValue('My new plan');
   expect(mock.puts).toEqual([]); // nothing was overwritten
   await note(page).getByRole('button', { name: 'Reload and reapply my changes' }).click();
-  await expect(note(page).getByRole('status')).toHaveText('Saved');
+  await expect(note(page).getByRole('status')).toHaveText(/^Saved \d\d:\d\d$/);
   await expect(note(page).getByLabel('Plan')).toHaveValue('My new plan');
   await expect(note(page).getByLabel('Assessment')).toHaveValue('Their assessment');
   expect(mock.puts).toEqual([{ templateKey: 'general-opd', manual: true, recordingConsent: null, baseVersion: 2, sections: { plan: 'My new plan', assessment: 'Their assessment' } }]);
+});
+
+// MDV-P1-089 (F-03): the note shows what the server holds. The save is slow here, so the doctor is back before it is answered (the hard case).
+test('typing, then Problems and back at once: the note shows the new text and saves on the server\'s version', async ({ page }) => {
+  const mock = await open(page, { version: 1, sections: { assessment: 'Old assessment' } });
+  await page.route('**/v1/diagnosis-codes', r => r.fulfill({ json: { system: 'ICD-10', version: '2019-medvya-starter-1', codes: [] } }));
+  mock.saveDelayMs = 500;
+  await note(page).getByLabel('Assessment').fill('New assessment (synthetic)');
+  await page.getByRole('link', { name: 'Problems and diagnoses' }).click();
+  await page.getByRole('link', { name: 'Back to the consultation' }).click();
+  await expect(note(page).getByLabel('Assessment')).toHaveValue('New assessment (synthetic)');
+  expect(mock.puts).toHaveLength(1); // leaving saved it once
+  await note(page).getByLabel('Plan').fill('Review in two weeks');
+  await expect(note(page).getByRole('status')).toHaveText(/^Saved \d\d:\d\d$/);
+  expect(mock.puts.at(-1)).toMatchObject({ baseVersion: 2, sections: { assessment: 'New assessment (synthetic)', plan: 'Review in two weeks' } }); // no conflict with itself
+  // Each visit reads the note again: what another device saved meanwhile is shown, not this browser's earlier copy.
+  await page.getByRole('link', { name: 'Problems and diagnoses' }).click();
+  mock.note = { ...mock.note, version: 4, sections: { ...mock.note.sections, subjective: 'Added on another device (synthetic)' } };
+  await page.getByRole('link', { name: 'Back to the consultation' }).click();
+  await expect(note(page).getByLabel('Subjective')).toHaveValue('Added on another device (synthetic)');
+  await expect(note(page).getByLabel('Assessment')).toHaveValue('New assessment (synthetic)');
+});
+
+// MDV-P1-089 (F-26): the page going away sends the unsent text at once. Playwright cannot intercept a keepalive request of a page that is
+// unloading, so the event is raised here on a live page; the real reload inside the autosave delay is J2 step 11 on the real stack.
+test('the page going away sends the unsent text at once, and no note text is in browser storage', async ({ page }) => {
+  const mock = await open(page);
+  await note(page).getByLabel('Plan').fill('Rest and fluids (synthetic)');
+  const typedAt = Date.now();
+  await page.evaluate(() => window.dispatchEvent(new Event('pagehide')));
+  await expect.poll(() => mock.puts.length, { intervals: [50] }).toBe(1);
+  expect(Date.now() - typedAt).toBeLessThan(1400); // not the autosave, which waits 1.5 s
+  expect(mock.puts[0]!.sections).toEqual({ plan: 'Rest and fluids (synthetic)' });
+  await page.waitForTimeout(1600);
+  expect(mock.puts).toHaveLength(1); // and the autosave does not send it a second time
+  const stored = await page.evaluate(async () => JSON.stringify([localStorage, sessionStorage, (await indexedDB.databases()).map(d => d.name)]));
+  expect(stored).not.toContain('Rest');
+  expect(stored).toMatch(/\[\]\]$/); // no IndexedDB database at all
+});
+
+// MDV-P1-089 AC3: the status never says Saved before the server answered.
+test('a slow save says Saving… until the server answers, then Saved with the time', async ({ page }) => {
+  const mock = await open(page);
+  mock.saveDelayMs = 1500;
+  await note(page).getByLabel('Plan').fill('Rest and fluids');
+  const status = note(page).getByRole('status');
+  await expect(status).toHaveText('Saving…');
+  expect(mock.puts).toHaveLength(0); // not answered yet
+  await expect(status).toHaveText(/^Saved \d\d:\d\d$/);
+  expect(mock.puts).toHaveLength(1);
+});
+
+test('a failed save says Not saved. Trying again., and does try again by itself', async ({ page }) => {
+  const mock = await open(page);
+  mock.next = 'offline';
+  await note(page).getByLabel('Plan').fill('Rest and fluids');
+  const status = note(page).getByRole('status');
+  await expect(status).toHaveText('Not saved. Trying again.');
+  await expect(note(page).getByLabel('Plan')).toHaveValue('Rest and fluids');
+  await expect(status).toHaveText(/^Saved \d\d:\d\d$/, { timeout: 10_000 }); // nobody pressed Retry
+  expect(mock.puts).toHaveLength(1);
 });
 
 test('switching template asks first, keeps shared sections and names the text that has no place', async ({ page }) => {
@@ -85,7 +146,7 @@ test('switching template asks first, keeps shared sections and names the text th
   await note(page).getByRole('combobox', { name: 'Template' }).click();
   await page.getByRole('option', { name: 'General OPD' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Switch template' }).click();
-  await expect(note(page).getByRole('status')).toHaveText('Saved');
+  await expect(note(page).getByRole('status')).toHaveText(/^Saved \d\d:\d\d$/);
   await expect(note(page).getByLabel('Plan')).toHaveValue('Diet advice');
   await expect(note(page).getByLabel('Self-monitoring')).toHaveCount(0);
   expect(mock.puts).toEqual([{ templateKey: 'general-opd', manual: true, recordingConsent: null, baseVersion: 1, sections: { plan: 'Diet advice' } }]);
@@ -385,7 +446,7 @@ test('J2.5 (note assist, MDV-P2-009) E-04 · Doctor: verified vitals are added t
   await expect(note(page).getByLabel('Objective')).toHaveValue(''); // shown, not added
   expect(mock.puts).toEqual([]);
   await assist.getByRole('button', { name: 'Add to Objective' }).click();
-  await expect(note(page).getByRole('status')).toHaveText('Saved');
+  await expect(note(page).getByRole('status')).toHaveText(/^Saved \d\d:\d\d$/);
   await expect(note(page).getByLabel('Objective')).toHaveValue(
     'Blood pressure, systolic 150 mmHg (Anita Nair (synthetic), nurse intake, verified 19 Oct 2026 10:05)\nPulse 88 /min (nurse intake, verified 19 Oct 2026 10:05)');
   expect(mock.puts.at(-1)!.sections.objective).toContain('nurse intake, verified');
@@ -413,7 +474,7 @@ test('J2.5 (note assist, MDV-P2-009) E-04 · Doctor: a quick phrase and an earli
   await assist.getByText('02 Sept 2026, signed by Dr. Arjun Rao (synthetic)').click();
   await assist.getByRole('button', { name: 'Insert Chief complaint text from 02 Sept 2026' }).click(); // goes to the section last edited, marked with its source
   await expect(plan).toHaveValue('Start.\nAdvised fluids and rest.\nThirst (synthetic) (copied from the note of 02 Sept 2026) End.');
-  await expect(note(page).getByRole('status')).toHaveText('Saved');
+  await expect(note(page).getByRole('status')).toHaveText(/^Saved \d\d:\d\d$/);
   expect(mock.puts.at(-1)!.sections.plan).toContain('copied from the note of 02 Sept 2026');
 });
 
@@ -506,6 +567,24 @@ const axeViolations = async (page: Page) => {
     (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations
       .map(v => `${v.id} (${v.nodes.length})`));
 };
+
+// MDV-P1-089 AC7: saving, saved and not saved are one polite status (the same element, so each change is read out), axe clean in both languages.
+for (const locale of ['en', 'ar'])
+  test(`the save status is one polite status element, axe clean while saved and while not saved (${locale})`, async ({ page }) => {
+    const mock = await open(page, {}, locale);
+    const status = page.getByRole('region', { name: locale === 'ar' ? 'ملاحظة الاستشارة' : 'Consultation note' }).getByRole('status');
+    await expect(status).toHaveCount(1);
+    await status.evaluate(el => { (el as HTMLElement).dataset.same = 'yes'; });
+    await page.locator('#note-plan').fill('Rest and fluids');
+    await expect(status).toHaveText(locale === 'ar' ? /^تم الحفظ \d\d:\d\d$/ : /^Saved \d\d:\d\d$/);
+    expect(await axeViolations(page)).toEqual([]);
+    mock.next = 'offline';
+    await page.locator('#note-plan').fill('Rest and fluids, review');
+    await expect(status).toHaveText(locale === 'ar' ? 'لم يتم الحفظ. نحاول مرة أخرى.' : 'Not saved. Trying again.');
+    await expect(status).toHaveAttribute('data-same', 'yes'); // not a new element: a screen reader hears the change
+    await expect(page.getByRole('alert')).toHaveCount(0); // polite, not an interruption
+    expect(await axeViolations(page)).toEqual([]);
+  });
 for (const locale of ['en', 'ar'])
   test(`axe finds no violations on the signed note with the addendum composer and on the print view at 200% zoom (${locale})`, async ({ page }) => {
     await open(page, withAddendum, locale);
@@ -552,7 +631,7 @@ test('keyboard only: write, add a phrase, switch template, and sign, with a visi
   const plan = region.getByRole('textbox', { name: /^Plan/ });
   await tabTo(page, plan, 'Tab', 120); // diabetes review 2 asks 8 symptoms and 6 systems on the way (MDV-P2-042); every stop still shows its ring
   await page.keyboard.type(' and fluids');
-  await expect(region.getByRole('status')).toHaveText('Saved');
+  await expect(region.getByRole('status')).toHaveText(/^Saved \d\d:\d\d$/);
   expect(mock.puts.at(-1)!.sections.plan).toBe('Rest and fluids');
 
   const snippets = region.getByRole('region', { name: 'Add to the note' }).locator('summary');

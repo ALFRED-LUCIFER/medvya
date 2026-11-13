@@ -69,9 +69,11 @@ public static class SchedulingEndpoints
                 await service.FindPatientAsync(facilityId ?? Guid.Empty, patientId, ct) is { } p ? Results.Ok(p) : Results.NotFound())
             .AuditedWithErrors("patient.lookup", "patient", "registration", patientRouteKey: "patientId"); // the purpose front-desk search uses (MDV-P1-018)
 
-        // The desk record's visit list (MDV-1088): dates and status only. Opens the patient's record, so the id is in the route and the audit row.
+        // The desk record's visit list (MDV-1088): dates and status only, and the doctor's follow-up still to book, date and doctor only (MDV-P1-102). Opens the patient's record, so the id is in the route and the audit row.
         schedule.MapGet("/patients/{patientId:guid}/visits", async (Guid patientId, Guid? facilityId, [FromServices] IBookingService service, CancellationToken ct) =>
-                await service.VisitsAsync(facilityId ?? Guid.Empty, patientId, ct) is { } visits ? Results.Ok(new { visits }) : Results.NotFound())
+                await service.VisitsAsync(facilityId ?? Guid.Empty, patientId, ct) is { } visits
+                    ? Results.Ok(new { visits, followUp = await service.FollowUpDueAsync(facilityId ?? Guid.Empty, patientId, ct) })
+                    : Results.NotFound())
             .AuditedWithErrors("patient.visits.list", "patient", "registration", patientRouteKey: "patientId");
 
         var holds = app.MapGroup("/v1/slot-holds").RequireAuthorization();
@@ -151,9 +153,10 @@ public static class SchedulingEndpoints
         waitlist.MapPost("/{id:guid}/accept", (Guid id, [FromServices] IWaitlistService service, CancellationToken ct) => service.AcceptAsync(id, ct))
             .AuditedWriteWithErrors(SchedulingAudit.WaitlistAccept, SchedulingAudit.WaitlistResource, SchedulingAudit.Treatment)
             .RequireAcceptedTerms();
-        waitlist.MapDelete("/{id:guid}", async (Guid id, [FromServices] IWaitlistService service, CancellationToken ct) =>
+        // A doctor's follow-up is dismissed with a reason code (MDV-P1-102); a code is no patient data, so it may travel in the query.
+        waitlist.MapDelete("/{id:guid}", async (Guid id, FollowUpDismissReason? reason, [FromServices] IWaitlistService service, CancellationToken ct) =>
             {
-                await service.RemoveAsync(id, ct);
+                await service.RemoveAsync(id, reason, ct);
                 return Results.NoContent();
             })
             .AuditedWriteWithErrors(SchedulingAudit.WaitlistRemove, SchedulingAudit.WaitlistResource, SchedulingAudit.Treatment);

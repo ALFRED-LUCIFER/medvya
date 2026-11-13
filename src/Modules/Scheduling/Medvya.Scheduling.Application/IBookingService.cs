@@ -155,6 +155,9 @@ public interface IBookingService
     /// <summary>The patient's latest visits at the organisation (shared record), newest first: date and status only. Needs "Register / book" at Read or Full, as the calendar does; null when there is no such patient in the organisation.</summary>
     Task<IReadOnlyList<DeskVisit>?> VisitsAsync(Guid facilityId, Guid patientId, CancellationToken cancellationToken = default);
 
+    /// <summary>The doctor's follow-up still to book for this patient at the facility (MDV-P1-102), date and doctor only; null when there is none. Access as <see cref="VisitsAsync"/>.</summary>
+    Task<FollowUpDue?> FollowUpDueAsync(Guid facilityId, Guid patientId, CancellationToken cancellationToken = default);
+
     /// <summary>
     /// Moves a booked visit to another slot (MDV-P1-024) on the booking path: the doctor-days of both slots locked, the new slot
     /// re-checked against the template, other appointments and other users' holds, the old slot freed and the new one taken in

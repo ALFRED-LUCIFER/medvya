@@ -1,6 +1,6 @@
 import { ApiError, csrf, post, send } from '../../schedule/services/scheduleApi';
 import type { NotificationPrefs, TemplatePreview } from '../domain/notifications';
-import type { AddLocationForm, CalendarTemplate, Closure, ClosureForm, ClosureWithVisits, DayHours, Location, LocationForm, LogoLink, Profile, ProfileForm, TermsStatus } from '../domain/settings';
+import type { AddLocationForm, CalendarTemplate, Closure, ClosureForm, ClosureWithVisits, DayHours, Location, LocationForm, LogoLink, Profile, ProfileForm, QueueRule, TermsStatus } from '../domain/settings';
 
 const json = (method: string, body: unknown) => ({ method, headers: { ...csrf, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 const blank = <T extends Record<string, string>>(form: T) => Object.fromEntries(Object.entries(form).map(([k, v]) => [k, v === '' ? null : v]));
@@ -58,3 +58,7 @@ export const fetchTemplatePreviews = (language: string) => send<TemplatePreview[
 // Nurse intake before the doctor (MDV-P2-007): one practice-wide switch; the server lets only an owner or practice admin change it and audits it.
 export const fetchNurseIntake = () => send<{ enabled: boolean }>('/v1/settings/nurse-intake');
 export const saveNurseIntake = (enabled: boolean) => send<{ enabled: boolean }>('/v1/settings/nurse-intake', json('PUT', { enabled }));
+
+// The queue rule (MDV-P1-103): only an owner or practice admin may change it; the server audits each change.
+export const fetchQueueRule = () => send<QueueRule>('/v1/settings/queue-rule');
+export const saveQueueRule = (rule: QueueRule) => send<QueueRule>('/v1/settings/queue-rule', json('PUT', rule));

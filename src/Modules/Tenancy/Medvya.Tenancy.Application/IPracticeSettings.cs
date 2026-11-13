@@ -129,4 +129,18 @@ public interface IPracticeSettings
 
     /// <exception cref="SettingsValidationException">Not a known policy.</exception>
     Task<ClinicalAccessPolicy> SaveClinicalAccessAsync(ClinicalAccessPolicy policy, CancellationToken cancellationToken = default);
+
+    /// <summary>The clinic's queue rule (MDV-P1-103).</summary>
+    Task<QueueRule> GetQueueRuleAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Saves the queue rule with its before/after and audit event (<c>settings.queue_rule.update</c>).</summary>
+    /// <exception cref="SettingsValidationException">Not a known order.</exception>
+    Task<QueueRule> SaveQueueRuleAsync(QueueRule rule, CancellationToken cancellationToken = default);
+}
+
+/// <summary>The order arrived patients are seen in (MDV-P1-103), and whether booked patients go before walk-ins.</summary>
+public sealed record QueueRule(QueueOrder Order, bool BookedFirst)
+{
+    /// <summary>What a clinic has before it chooses: arrival order, walk-ins not held back.</summary>
+    public static readonly QueueRule Default = new(QueueOrder.Arrival, false);
 }

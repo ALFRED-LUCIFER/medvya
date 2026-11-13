@@ -21,6 +21,7 @@ public static class SchedulingModule
             .AddDbContext<SchedulingDbContext>((sp, o) => o.UseNpgsql(PostgresDataSources.For(connectionString)).AddInterceptors(sp.GetRequiredService<TenantSessionInterceptor>()))
             .AddScoped<SchedulingContext>()
             .AddScoped<DoctorDayTransaction>()
+            .AddScoped<QueueOrdering>()
             .AddScoped<Medvya.Patients.Application.IPatientMergeParticipant, PatientMergeParticipant>()
             .AddScoped<Medvya.Patients.Application.IPatientLastVisits, PatientLastVisits>()
             .AddScoped<Medvya.Tenancy.Application.IStaffOffboardingParticipant, DoctorOffboardingParticipant>()

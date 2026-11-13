@@ -58,7 +58,7 @@ export default function QueueTvPage(props: Props) {
                   {tv.next.map(n => (
                     <li key={n.token} className="flex items-center justify-between gap-6 rounded-xl bg-brand-950 px-6 py-3">
                       <Token value={n.token} className="text-[48px] leading-tight" />
-                      <span className="text-[30px] text-tv-muted">{t('queueTv.wait', { minutes: n.waitMinutes })}</span>
+                      <span className="text-[30px] text-tv-muted">{[n.doctor, t('queueTv.wait', { minutes: n.waitMinutes })].filter(Boolean).join(' · ')}</span>
                     </li>
                   ))}
                 </ul>

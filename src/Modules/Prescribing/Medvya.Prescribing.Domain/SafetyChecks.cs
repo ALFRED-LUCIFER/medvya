@@ -10,7 +10,7 @@ namespace Medvya.Prescribing.Domain;
 public enum RxSeverity { Severe, Moderate }
 
 [JsonConverter(typeof(JsonStringEnumConverter<RxAlertKind>))]
-public enum RxAlertKind { Allergy, CrossSensitivity, Interaction, Duplicate, DoseAboveMaximum, AllergiesNotRecorded, Pregnancy, ChildDose, Kidney, OlderAdult }
+public enum RxAlertKind { Allergy, CrossSensitivity, Interaction, Duplicate, DoseAboveMaximum, AllergiesNotRecorded, Pregnancy, ChildDose, Kidney, OlderAdult, FreeTextAllergy }
 
 /// <summary>The chart's allergy state as the checks read it: "not recorded" is never "no known allergies".</summary>
 [JsonConverter(typeof(JsonStringEnumConverter<ChartAllergies>))]
@@ -64,7 +64,8 @@ public sealed record CheckedAllergy(
 /// pair (on the chart when <see cref="OtherOnChart"/>). <see cref="Code"/>: the allergy class (or "ingredient"), the interaction's effect,
 /// or "same_medicine" / "same_class" for a duplicate, or the patient rule (Pregnancy, ChildDose, Kidney, OlderAdult). Amounts are micrograms a
 /// day. <see cref="Measure"/> is the patient fact a patient rule rests on: gestation weeks, eGFR or age in years (and, for a
-/// child given a medicine too often, the doses a day allowed).
+/// child given a medicine too often, the doses a day allowed). For FreeTextAllergy <see cref="Substance"/> lists every recorded allergy the
+/// free-text line was not checked against (null: allergies are not recorded).
 /// </summary>
 public sealed record SafetyAlert(
     [property: Classification(DataClass.Internal)] string Key, [property: Classification(DataClass.SensitiveHealth)] RxAlertKind Kind,
@@ -106,7 +107,7 @@ public sealed record InteractionRule(
 public static class SafetyRules
 {
     /// <summary>The rule set's name (a code the screens translate) and version, recorded with every check and override.</summary>
-    public const string Source = "medvya-curated", Version = "2026.11-draft-4";
+    public const string Source = "medvya-curated", Version = "2026.11-draft-5";
 
     public static readonly IReadOnlyList<AllergyClass> Classes =
     [
@@ -193,6 +194,12 @@ public static class SafetyRules
             if (line.FreeText || line.Atc is null)
             {
                 notChecked.Add(new(line.Id, line.Name, false, line.FreeText ? NotCheckedReason.FreeText : NotCheckedReason.NoIngredientCode));
+                // MDV-P1-087: a typed medicine cannot be matched to an allergy, so unless "no known allergies" is recorded authorising needs a reason
+                // for this line. The key carries the allergy set, so an allergy recorded later asks again.
+                // shortcut: the allergies are joined here with ", " for every language; send them as a list when the alert record next changes shape.
+                if (line.FreeText && state != ChartAllergies.NoKnownAllergies)
+                    alerts.Add(new($"free_text:{line.Id}:{AllergySet(allergies)}", RxAlertKind.FreeTextAllergy, RxSeverity.Severe, line.Id, line.Name, null, false, null,
+                        allergies.Count == 0 ? null : string.Join(", ", allergies.Select(a => a.Substance)), null, null, null));
                 continue;
             }
             foreach (var allergy in allergies) AllergyAlert(line, allergy, alerts);
@@ -284,6 +291,10 @@ public static class SafetyRules
         if (patient.AgeYears >= OlderAdultAge && (nsaid || Starts(atc, Benzodiazepine)))
             Add(RxAlertKind.OlderAdult, RxSeverity.Moderate, nsaid ? "systemic_nsaid" : "benzodiazepine", patient.AgeYears);
     }
+
+    /// <summary>A short stamp of the listed allergies (their ids), short enough for an alert key whatever their number.</summary>
+    static string AllergySet(IReadOnlyList<CheckedAllergy> allergies) =>
+        Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(string.Join(',', allergies.Select(a => a.Id).Order()))))[..16];
 
     static void AllergyAlert(CheckedMedicine line, CheckedAllergy allergy, List<SafetyAlert> alerts)
     {

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useBoardController } from '../../front-desk/hooks/useBoardController';
 import { minutesSince } from '../../front-desk/domain/board';
-import { MAX_FLAGS, nextPatient, patientIdsOf, todayVisits, type Scope } from '../domain/today';
+import { escalatedVisits, MAX_FLAGS, nextPatient, patientIdsOf, todayVisits, type Scope } from '../domain/today';
 import { fetchAllergyFlags, fetchEscalations, fetchPendingNotes } from '../services/todayApi';
 
 /**
@@ -27,13 +27,16 @@ export function useTodayController(facilityId: string, online: boolean, userId: 
     queryKey: ['front-desk', facilityId, 'escalations'], enabled: online, retry: false, refetchInterval: board.live === 'live' ? false : 30_000,
     queryFn: async () => Object.fromEntries((await fetchEscalations(facilityId)).map(e => [e.appointmentId, e.reason])),
   });
+  const reasons = useMemo(() => escalations.data ?? {}, [escalations.data]);
+  const escalated = useMemo(() => escalatedVisits(visits, reasons), [visits, reasons]);
   return {
     // A failed read is said out loud: "no escalation" must never be a load error in disguise.
-    escalations: escalations.data ?? {}, escalationsFailed: escalations.isError,
+    escalations: reasons, escalationsFailed: escalations.isError, escalated,
     pendingNotes: pending.data?.items ?? [], pendingMore: pending.data?.more ?? false, pendingFailed: pending.isError,
     allergyFlags: flags.data ?? {},
     day: board.board?.date ?? null, timeZone: board.board?.timeZone ?? null,
-    visits, next: nextPatient(visits), scope, onScope: setScope,
+    // An escalated patient is pinned above the hero (MDV-P1-103), so the hero offers the next one who is not.
+    visits, next: nextPatient(visits.filter(v => !escalated.includes(v))), scope, onScope: setScope,
     waitMinutes: (since: string) => minutesSince(since, board.now),
     loading: board.loading, offline: board.offline, online, live: board.live, forbidden: board.forbidden, failed: board.failed, onRetry: board.onRetry,
   };

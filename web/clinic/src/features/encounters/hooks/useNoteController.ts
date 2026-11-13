@@ -8,11 +8,14 @@ import { fetchReconciliation } from '../../reconciliation/services/reconciliatio
 import { fetchProblems } from '../../problems/services/problemsApi';
 import { remainingItems, sectionTicks, signChecklist } from '../domain/checklist';
 import type { EncounterBanner } from '../domain/encounter';
-import { autosaveDelayMs, defaultTargetSection, insertAt, inTemplateOrder, phraseKey, vitalNameKey, type NoteView, type PreviousNote, type VerifiedVital, missingRequired, noteFormSchema, signFailure, switchChoices, switchTemplate, type NoteForm, type NoteSections, type NoteTemplate, type RecordingConsent, type SavePhase, type SignFailure } from '../domain/note';
-import { fetchNote, fetchNoteCatalog, fetchPrefill, fetchPrevious, saveNote, signNote, startReauth } from '../services/noteApi';
+import { autosaveDelayMs, saveRetryDelayMs, defaultTargetSection, insertAt, inTemplateOrder, phraseKey, vitalNameKey, type NoteView, type PreviousNote, type VerifiedVital, missingRequired, noteFormSchema, signFailure, switchChoices, switchTemplate, type NoteForm, type NoteSections, type NoteTemplate, type RecordingConsent, type SavePhase, type SignFailure } from '../domain/note';
+import { fetchNote, fetchNoteAfterLeaving, fetchNoteCatalog, fetchPrefill, fetchPrevious, markLeftWithSave, saveNote, signNote, startReauth } from '../services/noteApi';
 import { createAutosaver } from '../services/noteAutosaver';
 import { complaintMark, complaintSection, complaintToPrefill, type ComplaintSource, type IntakeComplaint } from '../domain/complaint';
 import { forSave, unfinishedFindings } from '../domain/structured';
+
+// A save still on its way when the doctor left the consultation: coming back reads the note only after it (MDV-P1-089).
+const leaving = new Map<string, Promise<unknown>>();
 
 /**
  * The consultation note editor (MDV-P2-009): template-driven sections, debounced autosave, template switch with a warning about text that has
@@ -21,7 +24,11 @@ import { forSave, unfinishedFindings } from '../domain/structured';
 export function useNoteController(encounterId: string, canSign: boolean, timeZone: string | undefined, banner: EncounterBanner | null = null) {
   const { t, formatDate, formatTime } = useI18n();
   const queryClient = useQueryClient();
-  const note = useQuery({ queryKey: ['note', encounterId], queryFn: () => fetchNote(encounterId), retry: false, staleTime: Infinity, refetchOnWindowFocus: false });
+  // MDV-P1-089: each visit to the page reads the note again, after any save that leaving it started.
+  const note = useQuery({ queryKey: ['note', encounterId], queryFn: async () => { await leaving.get(encounterId); return fetchNoteAfterLeaving(encounterId); },
+    retry: false, staleTime: Infinity, refetchOnWindowFocus: false, refetchOnMount: 'always' });
+  // Only what the server answered since this page opened: a copy cached by an earlier visit may be older than the server's.
+  const held = note.isFetchedAfterMount && !note.isError ? note.data : undefined;
   const catalog = useQuery({ queryKey: ['note-templates'], queryFn: fetchNoteCatalog, retry: false });
   const form = useForm<NoteForm>({ resolver: zodResolver(noteFormSchema), defaultValues: { sections: {} } });
   const [phase, setPhase] = useState<SavePhase>('idle');
@@ -33,7 +40,7 @@ export function useNoteController(encounterId: string, canSign: boolean, timeZon
   const [signProblem, setSignProblem] = useState<SignFailure | { kind: 'unsaved' } | { kind: 'finding' } | null>(null);
   const keyRef = useRef<string | null>(null);
   // Verified prefill, quick phrases and earlier-note snippets (MDV-P2-009): read for a draft only, and only ever added by a button the doctor presses.
-  const isDraft = !!note.data && note.data.status === 'Draft';
+  const isDraft = !!held && held.status === 'Draft';
   const offer = { retry: false, staleTime: Infinity, refetchOnWindowFocus: false, enabled: isDraft } as const;
   const prefill = useQuery({ queryKey: ['note-prefill', encounterId], queryFn: () => fetchPrefill(encounterId), ...offer });
   const previous = useQuery({ queryKey: ['note-previous', encounterId], queryFn: () => fetchPrevious(encounterId), ...offer });
@@ -45,7 +52,10 @@ export function useNoteController(encounterId: string, canSign: boolean, timeZon
   const [savedComplaint, setSavedComplaint] = useState<{ source: ComplaintSource | null; text: string | undefined } | null>(null);
   const [prefilled, setPrefilled] = useState<IntakeComplaint | null>(null);
   const keepComplaint = (view: NoteView) => { setSavedComplaint({ source: view.chiefComplaintSource ?? null, text: view.sections[complaintSection] }); return view; };
-  const [saver] = useState(() => createAutosaver({ save: async (d, v) => keepComplaint(await saveNote(encounterId, d, v)), delayMs: autosaveDelayMs, onPhase: setPhase }));
+  const [savedAt, setSavedAt] = useState<Date | null>(null);
+  // Every answer to a save goes into the query cache, also one that arrives after the doctor left the page.
+  const [saver] = useState(() => createAutosaver({ save: (d, v, keepalive) => { if (keepalive) markLeftWithSave(encounterId, v); return saveNote(encounterId, d, v, keepalive); }, delayMs: autosaveDelayMs, retryMs: saveRetryDelayMs, onPhase: setPhase,
+    onSaved: view => { setSavedAt(new Date()); keepComplaint(view); queryClient.setQueryData(['note', encounterId], view); } }));
   // MDV-P2-044: the recording consent is part of the note and saved with it; the checklist reads it with the visit's reconciliation.
   const [consent, setConsent] = useState<RecordingConsent | null>(null);
   const reconciliation = useQuery({ queryKey: ['reconciliation', encounterId], queryFn: () => fetchReconciliation(encounterId), retry: false, enabled: isDraft && canSign });
@@ -59,15 +69,15 @@ export function useNoteController(encounterId: string, canSign: boolean, timeZon
   const queue = (d: ReturnType<typeof draft>) => { if (d) saver.edit(d); };
 
   useEffect(() => {
-    if (note.data && keyRef.current === null) {
-      keyRef.current = note.data.templateKey;
-      saver.setBase(note.data);
-      form.reset({ sections: note.data.sections });
-      setTemplateKey(note.data.templateKey);
-      setConsent(note.data.recordingConsent ?? null);
-      setSavedComplaint({ source: note.data.chiefComplaintSource ?? null, text: note.data.sections[complaintSection] });
+    if (held && keyRef.current === null) {
+      keyRef.current = held.templateKey;
+      saver.setBase(held);
+      form.reset({ sections: held.sections });
+      setTemplateKey(held.templateKey);
+      setConsent(held.recordingConsent ?? null);
+      setSavedComplaint({ source: held.chiefComplaintSource ?? null, text: held.sections[complaintSection] });
     }
-  }, [note.data, form, saver]);
+  }, [held, form, saver]);
 
   // MDV-P1-104: the nurse's chief complaint goes into a blank Chief complaint once, saved like typing so the server records where it came from.
   // A complaint the doctor typed is never replaced; no complaint from the nurse leaves the field blank.
@@ -84,14 +94,20 @@ export function useNoteController(encounterId: string, canSign: boolean, timeZon
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once, when the note, its template and the offer are all loaded
   }, [offered, isDraft, templateKey, catalog.data]);
 
-  // Leaving the page saves what is typed; closing the tab warns while text is unsaved; coming back online retries a failed save.
+  // Leaving the page saves what is typed, and so does a reload or a closed tab (pagehide, with keepalive); closing the tab warns while text is
+  // unsaved; coming back online retries a failed save.
   useEffect(() => {
-    const warn = (e: BeforeUnloadEvent) => { if (saver.unsaved()) e.preventDefault(); };
+    // The unsent text goes out already at beforeunload, while the page is fully alive, not only at pagehide during teardown; sent twice it is not.
+    const warn = (e: BeforeUnloadEvent) => { if (saver.unsaved()) { e.preventDefault(); saver.leave(); } };
     const online = () => void saver.retry();
     window.addEventListener('beforeunload', warn);
+    window.addEventListener('pagehide', saver.leave);
     window.addEventListener('online', online);
-    return () => { window.removeEventListener('beforeunload', warn); window.removeEventListener('online', online); void saver.retry(); };
-  }, [saver]);
+    return () => {
+      window.removeEventListener('beforeunload', warn); window.removeEventListener('pagehide', saver.leave); window.removeEventListener('online', online);
+      leaving.set(encounterId, saver.flush().finally(saver.dispose));
+    };
+  }, [saver, encounterId]);
 
   const template = templateOf(templateKey) ?? null;
   const request = (key: string) => {
@@ -105,7 +121,7 @@ export function useNoteController(encounterId: string, canSign: boolean, timeZon
   const sections = useWatch({ control: form.control, name: 'sections' });
   const checklist = isDraft && canSign ? signChecklist({
     identityShown: !!banner, allergyState: banner?.allergies.state ?? null,
-    reconciliation: reconciliation.data ?? null, recordingConsent: consent, undecidedAi: note.data?.undecidedAi ?? [], sections,
+    reconciliation: reconciliation.data ?? null, recordingConsent: consent, undecidedAi: held?.undecidedAi ?? [], sections,
     diagnosisRecorded: problems.data ? problems.data.rows.some(r => r.addedHere || r.status === 'Active') : null,
   }) : [];
   const remaining = remainingItems(checklist);
@@ -186,12 +202,12 @@ export function useNoteController(encounterId: string, canSign: boolean, timeZon
       detail: mark.at ? (mark.byName ? t('note.complaintSource', { name: mark.byName, ...when(mark.at) }) : t('note.complaintSourceNoName', when(mark.at))) : null,
     },
     // MDV-P2-041: the one page's section bar; worked out from the same form the guided steps edit.
-    ticks: template && note.data ? sectionTicks({ template, sections, undecidedAi: note.data.undecidedAi ?? [], vitals: prefill.data?.vitals.length ?? 0, signed: !isDraft }) : null,
+    ticks: template && held ? sectionTicks({ template, sections, undecidedAi: held.undecidedAi ?? [], vitals: prefill.data?.vitals.length ?? 0, signed: !isDraft }) : null,
     consent,
     onConsent: (value: RecordingConsent) => { setConsent(value); queue(draft(form.getValues('sections'), templateKey, value)); },
-    canSign: canSign && !!note.data && note.data.status === 'Draft',
-    signature: note.data?.signature ?? null,
-    signAsName: note.data?.signAsName ?? null,
+    canSign: canSign && !!held && held.status === 'Draft',
+    signature: held?.signature ?? null,
+    signAsName: held?.signAsName ?? null,
     confirming, signing, signProblem,
     onRequestSign: requestSign,
     onCancelSign: () => setConfirming(false),
@@ -200,7 +216,7 @@ export function useNoteController(encounterId: string, canSign: boolean, timeZon
     answers: (id: string) => sections?.[id] ?? '',
     onAnswers: (id: string, text: string) => { form.setValue(`sections.${id}`, text); queue(draft(form.getValues('sections'))); },
     // Until the first save: from then on it is the doctor's note on the template they kept or chose.
-    suggested: phase === 'idle' && !!note.data && note.data.version === 0 && !!note.data.suggestedTemplateKey && note.data.suggestedTemplateKey === templateKey,
+    suggested: phase === 'idle' && !!held && held.version === 0 && !!held.suggestedTemplateKey && held.suggestedTemplateKey === templateKey,
     // Registered per section so only typing (not a programmatic reset) queues a save.
     register: (id: string) => {
       const field = form.register(`sections.${id}`, {
@@ -210,14 +226,15 @@ export function useNoteController(encounterId: string, canSign: boolean, timeZon
       });
       return { ...field, ref: (el: HTMLTextAreaElement | null) => { field.ref(el); fields.current[id] = el; } };
     },
-    loading: note.isPending || catalog.isPending,
+    loading: (!held && !note.isError) || catalog.isPending,
     forbidden: note.error instanceof ApiError && note.error.status === 403,
-    loadFailed: note.isError || catalog.isError || (!!note.data && !!catalog.data && templateKey !== null && !template),
+    loadFailed: note.isError || catalog.isError || (!!held && !!catalog.data && templateKey !== null && !template),
     template,
     templateKey,
     choices: catalog.data && templateKey ? switchChoices(catalog.data, templateKey) : [],
-    readOnly: !!note.data && note.data.status !== 'Draft',
+    readOnly: !!held && held.status !== 'Draft',
     phase,
+    savedAt: savedAt && formatTime(savedAt, timeZone),
     reloading,
     pendingSwitch,
     onRequestSwitch: request,

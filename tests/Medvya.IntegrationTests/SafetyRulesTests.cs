@@ -158,15 +158,39 @@ public sealed class SafetyRulesTests
 
     /// <summary>SAFETY (mutation check: check a free-text line or one without an ATC code, or stop reporting it, and this fails).</summary>
     [Fact]
-    public void FreeTextAndUncodedMedicinesAreReportedAsNotCheckedAndRaiseNothing()
+    public void FreeTextAndUncodedMedicinesAreReportedAsNotCheckedAndNeverMatchedToAnAllergy()
     {
         var free = new CheckedMedicine(Id(), "Amoxicillin syrup (typed)", null, null, null, false, true);
         var uncoded = Line(null!, "Clinic medicine");
         var r = Run([free, uncoded, Line("J01CA04")], [Chart(null, "Herbal tonic")], ChartAllergies.Listed, Allergy("Penicillin"));
         Assert.Equal([NotCheckedReason.FreeText, NotCheckedReason.NoIngredientCode, NotCheckedReason.DoseNotChecked, NotCheckedReason.NotOnFormulary], r.NotChecked.Select(n => n.Reason));
         Assert.True(r.NotChecked[^1].OnChart);
-        Assert.DoesNotContain(r.Alerts, a => a.ItemId == free.Id || a.ItemId == uncoded.Id);
-        Assert.Single(r.Alerts); // the coded amoxicillin only
+        Assert.DoesNotContain(r.Alerts, a => a.ItemId == uncoded.Id);
+        // The typed line is never guessed to be an allergy match: it raises only "not checked against" (MDV-P1-087), the coded amoxicillin the allergy.
+        Assert.Equal([RxAlertKind.FreeTextAllergy, RxAlertKind.Allergy], r.Alerts.Select(a => a.Kind));
+    }
+
+    /// <summary>MDV-P1-087. SAFETY (mutation check: drop the FreeTextAllergy alert, or raise it under "no known allergies", and this fails).</summary>
+    [Fact]
+    public void AFreeTextLineIsSevereNotCheckedAgainstEveryListedAllergyUnlessNoKnownAllergiesIsRecorded()
+    {
+        var free = new CheckedMedicine(Id(), "Augmentin 625 Duo", null, null, null, false, true);
+        CheckedAllergy[] two = [Allergy("Penicillin"), Allergy("Sulfa", "PatientReported")];
+        var listed = Assert.Single(Run([free], state: ChartAllergies.Listed, allergies: two).Alerts);
+        Assert.Equal((RxAlertKind.FreeTextAllergy, RxSeverity.Severe, (Guid?)free.Id, "Augmentin 625 Duo", "Penicillin, Sulfa"), (listed.Kind, listed.Severity, listed.ItemId, listed.Medicine, listed.Substance));
+        // The key names the line and the allergy set: the same set gives the same key whatever its order, another set a new one.
+        Assert.StartsWith($"free_text:{free.Id}:", listed.Key, StringComparison.Ordinal);
+        Assert.Equal(listed.Key, Run([free], state: ChartAllergies.Listed, allergies: [two[1], two[0]]).Alerts.Single().Key);
+        Assert.NotEqual(listed.Key, Run([free], state: ChartAllergies.Listed, allergies: [two[0]]).Alerts.Single().Key);
+        Assert.True(Run([free], state: ChartAllergies.Listed, allergies: [.. Enumerable.Range(0, 40).Select(i => Allergy($"Synthetic {i}"))]).Alerts.Single().Key.Length <= 200); // the stored key's column
+
+        var unknown = Run([free], state: ChartAllergies.NotRecorded).Alerts;
+        Assert.Equal([RxAlertKind.AllergiesNotRecorded, RxAlertKind.FreeTextAllergy], unknown.Select(a => a.Kind));
+        Assert.Equal((RxSeverity.Severe, (string?)null), (unknown[1].Severity, unknown[1].Substance));
+
+        var none = Run([free], state: ChartAllergies.NoKnownAllergies);
+        Assert.Empty(none.Alerts);
+        Assert.Equal(NotCheckedReason.FreeText, Assert.Single(none.NotChecked).Reason);
     }
 
     [Fact]

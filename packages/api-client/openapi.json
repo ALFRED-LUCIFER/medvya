@@ -2756,6 +2756,13 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "name": "reason",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/FollowUpDismissReason"
+            }
           }
         ],
         "responses": {
@@ -3621,6 +3628,52 @@
         "responses": {
           "200": {
             "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/settings/queue-rule": {
+      "get": {
+        "tags": [
+          "Host.Api"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueueRule"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Host.Api"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QueueRule"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueueRule"
+                }
+              }
+            }
           }
         }
       }
@@ -8151,6 +8204,25 @@
           "withDoctor": {
             "type": "boolean",
             "default": false
+          },
+          "followUp": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/FollowUpDue"
+              }
+            ]
+          },
+          "queuePlace": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -9550,6 +9622,47 @@
           }
         }
       },
+      "FollowUpDismissReason": {
+        "enum": [
+          "PatientDeclined",
+          "BookedElsewhere",
+          "NotReachable",
+          "Other",
+          null
+        ]
+      },
+      "FollowUpDue": {
+        "required": [
+          "id",
+          "dueOn",
+          "calendarId",
+          "calendarName"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "dueOn": {
+            "type": "string",
+            "format": "date"
+          },
+          "calendarId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "calendarName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "FrontDeskBoard": {
         "required": [
           "facilityId",
@@ -10818,6 +10931,28 @@
           }
         }
       },
+      "QueueOrder": {
+        "enum": [
+          "Arrival",
+          "Token",
+          "Appointment"
+        ]
+      },
+      "QueueRule": {
+        "required": [
+          "order",
+          "bookedFirst"
+        ],
+        "type": "object",
+        "properties": {
+          "order": {
+            "$ref": "#/components/schemas/QueueOrder"
+          },
+          "bookedFirst": {
+            "type": "boolean"
+          }
+        }
+      },
       "QueueTv": {
         "required": [
           "now",
@@ -10842,7 +10977,8 @@
       "QueueTvNext": {
         "required": [
           "token",
-          "waitMinutes"
+          "waitMinutes",
+          "doctor"
         ],
         "type": "object",
         "properties": {
@@ -10856,6 +10992,9 @@
               "string"
             ],
             "format": "int32"
+          },
+          "doctor": {
+            "type": "string"
           }
         }
       },

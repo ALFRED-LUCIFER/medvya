@@ -233,6 +233,22 @@ public sealed class PracticeSettings(
         return policy;
     }
 
+    public Task<QueueRule> GetQueueRuleAsync(CancellationToken cancellationToken = default) =>
+        db.Tenants.AsNoTracking().Select(t => new QueueRule(t.QueueOrder, t.BookedFirst)).SingleAsync(cancellationToken);
+
+    // shortcut: open boards, Today pages and displays pick up a new rule on their next refetch (a visit change or their poll), not at once;
+    // push a board change on save if clinics switch rules mid-session.
+    public async Task<QueueRule> SaveQueueRuleAsync(QueueRule rule, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(rule);
+        if (!Enum.IsDefined(rule.Order)) throw new SettingsValidationException([new("order", "invalid")]);
+        var clinic = await db.Tenants.SingleAsync(cancellationToken);
+        var before = new { order = clinic.QueueOrder.ToString(), bookedFirst = clinic.BookedFirst };
+        (clinic.QueueOrder, clinic.BookedFirst) = (rule.Order, rule.BookedFirst);
+        await SaveAuditedAsync("settings.queue_rule.update", "queue_rule", TenantId, before, new { order = rule.Order.ToString(), bookedFirst = rule.BookedFirst }, cancellationToken);
+        return rule;
+    }
+
     async Task<List<DayHours>> HoursAsync(Guid facilityId, CancellationToken cancellationToken) =>
         await db.OperatingHours.AsNoTracking().Where(h => h.FacilityId == facilityId).OrderBy(h => h.Weekday)
             .Select(h => new DayHours(h.Weekday, h.Opens, h.Closes)).ToListAsync(cancellationToken);

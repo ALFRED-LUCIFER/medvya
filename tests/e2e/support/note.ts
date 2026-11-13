@@ -35,6 +35,8 @@ export type NoteMock = {
   note: Note; puts: { templateKey: string; manual: boolean; recordingConsent: Note['recordingConsent']; baseVersion: number; sections: Record<string, string> }[]; chosen: string[][];
   /** The next PUT answers like this instead of saving: a 409 stale_note, or a dropped connection. */
   next: 'stale' | 'offline' | null;
+  /** MDV-P1-089: each PUT answers this late (a slow link), so a spec can look at the page while a save is in flight. */
+  saveDelayMs: number;
   /** Sign calls received, the re-authentications asked for, and the answer to the next sign instead of the real one (the server's rules are ConsultNoteTests). */
   signs: { baseVersion: number }[]; reauths: { returnUrl?: string }[]; reauthed: boolean;
   signNext: 'stale' | 'denied' | 'blank' | 'unreviewed' | null;
@@ -54,7 +56,7 @@ export type NoteMock = {
 };
 
 export async function mockNote(page: Page, seed: Partial<Note> = {}): Promise<NoteMock> {
-  const mock: NoteMock = { note: { templateKey: 'general-opd', sections: {}, version: 0, status: 'Draft', signAsName: signer, recordingConsent: null, undecidedAi: [], ...seed }, puts: [], chosen: [], next: null, signs: [], reauths: [], reauthed: false, signNext: null, reconciliation: { confirmedAt: null, total: 0 }, addendumPosts: [], pdfs: 0, pdfNext: null, vitals: [], previous: [], chiefComplaint: null, noKnownAllergies: false,
+  const mock: NoteMock = { note: { templateKey: 'general-opd', sections: {}, version: 0, status: 'Draft', signAsName: signer, recordingConsent: null, undecidedAi: [], ...seed }, puts: [], chosen: [], next: null, saveDelayMs: 0, signs: [], reauths: [], reauthed: false, signNext: null, reconciliation: { confirmedAt: null, total: 0 }, addendumPosts: [], pdfs: 0, pdfNext: null, vitals: [], previous: [], chiefComplaint: null, noKnownAllergies: false,
     problems: [{ id: 'pr-1', code: 'E11.9', description: 'Type 2 diabetes (synthetic)', verification: 'Verified', status: 'Active', addedHere: false, confirmed: true }] };
   await page.route('**/v1/encounters/e-1/medicines/reconciliation', r => r.fulfill({ json: { encounterId: 'e-1', patientId: 'p-a1', rows: [], decided: 0, disagree: 0, ...mock.reconciliation } }));
   await page.route('**/v1/encounters/e-1/problems', r => r.fulfill({ json: { encounterId: 'e-1', patientId: 'p-a1', rows: mock.problems, locked: false } }));
@@ -69,6 +71,7 @@ export async function mockNote(page: Page, seed: Partial<Note> = {}): Promise<No
   await page.route('**/v1/encounters/e-1/note', async r => {
     if (r.request().method() === 'GET') return r.fulfill({ json: view() });
     const body = r.request().postDataJSON() as NoteMock['puts'][number];
+    if (mock.saveDelayMs) await new Promise(done => setTimeout(done, mock.saveDelayMs));
     if (mock.next === 'offline') { mock.next = null; return r.abort('connectionfailed'); }
     if (mock.next === 'stale') { mock.next = null; return r.fulfill({ status: 409, contentType: 'application/problem+json', json: { code: 'stale_note', currentVersion: mock.note.version } }); }
     mock.puts.push(body);

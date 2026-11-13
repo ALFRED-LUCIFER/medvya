@@ -173,7 +173,7 @@ export type LocationChoice = { locations: Location[]; locationId: string; onLoca
 export const settingsTabs = [
   'profile', 'locations', 'hours', 'holidays', 'displays', 'metrics', 'terms',
   'staff', 'doctors',
-  'nurse', 'medicines',
+  'nurse', 'queue', 'medicines',
   'notifications',
   'requests', 'policy', 'review', 'audit', 'data',
 ] as const;
@@ -183,7 +183,7 @@ export type SettingsTab = (typeof settingsTabs)[number];
 export const settingsGroups = {
   practice: ['profile', 'locations', 'hours', 'holidays', 'displays', 'metrics', 'terms'],
   people: ['staff', 'doctors'],
-  clinical: ['nurse', 'medicines'],
+  clinical: ['nurse', 'queue', 'medicines'],
   messages: ['notifications'],
   security: ['requests', 'policy', 'review', 'audit', 'data'],
 } as const satisfies Record<string, readonly SettingsTab[]>;
@@ -196,3 +196,11 @@ export const groupOf = (tab: SettingsTab): SettingsGroup =>
 /** Where the owner accepts the terms; booking errors and the owner's banner link here. */
 export const termsPath = '/settings?tab=terms';
 export type TermsStatus = { version: string; accepted: boolean; acceptedAt: string | null; required: boolean };
+
+/**
+ * The clinic's queue rule (MDV-P1-103), as src/Modules/Tenancy/Medvya.Tenancy.Application/IPracticeSettings.cs QueueRule: the order arrived
+ * patients are seen in on the doctor's day, the board and the queue display, and whether booked patients go before walk-ins.
+ */
+export const queueOrders = ['Arrival', 'Token', 'Appointment'] as const;
+export const queueRuleSchema = z.object({ order: z.enum(queueOrders), bookedFirst: z.boolean() });
+export type QueueRule = z.infer<typeof queueRuleSchema>;

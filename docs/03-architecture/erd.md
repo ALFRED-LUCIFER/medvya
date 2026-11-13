@@ -263,7 +263,7 @@ erDiagram
 | `PracticeDefaults` | 13 | TenantId | tenant-scoped |
 | `Profiles` | 12 | Id | tenant-scoped |
 | `SettingsChanges` | 8 | Id | tenant-scoped |
-| `Tenants` | 8 | Id |  |
+| `Tenants` | 10 | Id |  |
 | `TenantIndex` | 1 | TenantId | tenant-scoped |
 | `TermsAcceptances` | 5 | Id | append-only ledger; tenant-scoped |
 
@@ -534,11 +534,13 @@ erDiagram
 | Column | Type | Null | Links to |
 |---|---|---|---|
 | `Id` | guid |  |  |
+| `BookedFirst` | bool |  |  |
 | `ClinicalAccess` | character varying(30) |  |  |
 | `CountryCode` | character(2) |  |  |
 | `CreatedAt` | timestamptz |  |  |
 | `IdleTimeoutMinutes` | int |  |  |
 | `Name` | character varying(200) |  |  |
+| `QueueOrder` | character varying(20) |  |  |
 | `ResidencyRegion` | character varying(40) |  |  |
 | `State` | character varying(20) |  |  |
 

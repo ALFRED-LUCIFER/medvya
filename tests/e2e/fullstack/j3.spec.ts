@@ -113,6 +113,11 @@ journey('J3', {
       await nurse.getByRole('textbox', { name: 'Reason for the doctor' }).fill('Synthetic chest pain on arrival');
       await nurse.getByRole('button', { name: 'Send urgent item' }).click();
       await expect(visit).toContainText('Nurse escalation: Synthetic chest pain on arrival', { timeout: 2_000 });
+      // MDV-P1-103: the escalated patient is pinned above Next (or Current) patient, with the reason in words.
+      const pinned = doctor.getByRole('region', { name: 'Escalated by the nurse' });
+      await expect(pinned.getByRole('listitem').filter({ hasText: patient.name })).toContainText('Nurse escalation: Synthetic chest pain on arrival');
+      const next = doctor.getByRole('region', { name: /^(Next|Current) patient$/ });
+      if (await next.count()) expect((await pinned.boundingBox())!.y).toBeLessThan((await next.boundingBox())!.y);
       await expectNoAxeViolations(doctor);
       await doctor.close();
 
@@ -247,5 +252,55 @@ journey('J3', {
     expect((await close.json()).code).toBe('with_doctor');
     await expectNoAxeViolations(page);
     await doctor.close();
+  },
+  // MDV-P1-102 (F-06): the doctor sets a follow-up of 2 weeks and ends the visit; the desk sees "Follow-up due" with the date and the doctor on the Done
+  // card and the desk record, books it from Book (the schedule on that day, patient and doctor chosen) and the line is gone.
+  13: async ({ page, browser }) => {
+    const watch = watchUrls(page);
+    const patient = syntheticPatient('Revathi', 'Kannan');
+    await signIn(page, joseph);
+    await walkIn(page, patient, rao);
+    const doctor = await browser.newPage();
+    await signIn(doctor, rao);
+    await doctor.goto(board);
+    await doctor.getByRole('button', { name: `Start consultation with ${patient.name}` }).click();
+    const leaveOpen = doctor.getByRole('button', { name: 'Leave it open and start this one' });
+    const opened = async () => /\/app\/consult\//.test(doctor.url()) || await leaveOpen.isVisible();
+    await expect.poll(opened).toBe(true);
+    if (await leaveOpen.isVisible()) await leaveOpen.click();
+    await expect(doctor).toHaveURL(/\/app\/consult\/[0-9a-f-]{36}$/);
+    const fu = doctor.getByRole('group', { name: 'Follow-up' });
+    await fu.getByRole('button', { name: '2 weeks' }).click();
+    await expect(fu.getByRole('button', { name: '2 weeks' })).toHaveAttribute('aria-pressed', 'true');
+    await doctor.getByRole('button', { name: 'End consultation' }).click();
+    await expect(doctor.getByRole('status').filter({ hasText: 'Consultation ended' })).toBeVisible();
+    await doctor.close();
+
+    await page.goto(board);
+    const line = page.getByRole('region', { name: /^Done/ }).getByRole('article', { name: patient.name }).getByRole('group', { name: /^Follow-up due from/ });
+    await expect(line).toContainText('Dr. Arjun Rao');
+    await expectNoAxeViolations(page);
+    const book = line.getByRole('link', { name: `Book the follow-up for ${patient.name}` });
+    const href = new URL((await book.getAttribute('href'))!, 'http://x');
+    const patientId = href.searchParams.get('patient')!;
+
+    // The desk record shows the same line, in English and Arabic, axe clean.
+    await page.goto(`/app/patients/directory/${patientId}`);
+    await expect(page.getByRole('group', { name: /^Follow-up due from/ })).toContainText('Dr. Arjun Rao');
+    await expectNoAxeViolations(page);
+    await expectArabicAxeClean(browser, joseph, `/app/patients/directory/${patientId}`);
+
+    await page.goto(board);
+    await book.click();
+    await expect(page).toHaveURL(new RegExp(`/app/schedule\\?date=${href.searchParams.get('date')}&view=day&patient=${patientId}&doctor=`));
+    await page.getByRole('list', { name: /Dr\. Arjun Rao/ }).getByRole('button', { name: /^Book / }).first().click();
+    const booked = page.waitForResponse(r => r.request().method() === 'POST' && new URL(r.url()).pathname === '/v1/appointments');
+    await page.getByRole('button', { name: 'Confirm booking' }).click();
+    expect((await booked).status()).toBeLessThan(300);
+    await page.goto(board);
+    await expect(page.getByRole('region', { name: /^Done/ }).getByRole('article', { name: patient.name })).toBeVisible();
+    await expect(page.getByRole('group', { name: /^Follow-up due from/ }).filter({ hasText: patient.name })).toHaveCount(0);
+    await expect(page.getByRole('region', { name: /^Done/ }).getByRole('article', { name: patient.name }).getByRole('group')).toHaveCount(0);
+    expect(watch.leaks([patient.name, patient.dob, patient.mobile])).toEqual([]);
   },
 });

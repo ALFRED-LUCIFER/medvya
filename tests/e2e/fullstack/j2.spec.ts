@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { expect, type Page } from '@playwright/test';
 import { journey } from '../journeys/storyboard';
 import { openPart } from '../support/disclosure';
-import { choosePatient, expectArabicAxeClean, expectNoAxeViolations, setNurseIntake, signIn, watchUrls } from './support';
+import { choosePatient, expectArabicAxeClean, expectNoAxeViolations, setNurseIntake, signIn, syntheticPatient, walkIn, watchUrls } from './support';
 
 // MDV-P0-023: journey J2 (returning diabetic patient, docs/02-design/journeys.md) through the real stack. Steps not built yet
 // name the ticket that builds them. Meera Iyer is the seeded synthetic patient (docs/00-overview/personas.md).
@@ -84,7 +84,7 @@ journey('J2', {
     // MDV-P2-009: the doctor types the note; it autosaves on the server and is still there after a reload.
     const note = page.getByRole('region', { name: 'Consultation note' });
     await note.getByLabel('Chief complaint').fill('Increased thirst for two weeks (synthetic)');
-    await expect(note.getByRole('status').filter({ hasText: /^Saved$/ })).toBeVisible(); // the one-page view has a second status (the chart panel)
+    await expect(note.getByRole('status').filter({ hasText: /^Saved \d\d:\d\d$/ })).toBeVisible(); // the one-page view has a second status (the chart panel)
     await page.reload();
     await expect(note.getByLabel('Chief complaint')).toHaveValue('Increased thirst for two weeks (synthetic)');
 
@@ -113,7 +113,7 @@ journey('J2', {
     // MDV-AUDIT-1092: no recording consent step before recording exists. MDV audit P0-2: Sign stays locked until allergies are
     // recorded (done above, before End consultation).
     await expect(note.getByRole('button', { name: 'Sign note' })).toBeEnabled();
-    await expect(note.getByRole('status').filter({ hasText: /^Saved$/ })).toBeVisible(); // the one-page view has a second status (the chart panel)
+    await expect(note.getByRole('status').filter({ hasText: /^Saved \d\d:\d\d$/ })).toBeVisible(); // the one-page view has a second status (the chart panel)
     await expect(note.getByRole('button', { name: 'Sign note' })).toHaveAccessibleDescription('Everything reviewed. Ready to sign.');
     await note.getByRole('button', { name: 'Sign note' }).click();
     const dialog = page.getByRole('dialog', { name: `Sign note for ${meera}?` });
@@ -137,7 +137,111 @@ journey('J2', {
   // E-05 (MDV-P2-015, MDV-P2-017, MDV-P2-018): on the real API and PostgreSQL, the doctor prescribes from the formulary, authorises with the step-up (separate
   // from the note), places the HbA1c order as its own action, prints, and the paper's QR verifies as valid. Cancelling it (a reason, no replacement) makes
   // the paper verify as cancelled and stop printing; authorising again issues version 2.
+  // MDV-P1-087 (audit finding F-01) comes first: a medicine typed as free text cannot be matched to an allergy, so for a patient with recorded allergies the
+  // server refuses to authorise until the doctor gives a reason for that line, and the paper carries the reason; with "no known allergies" confirmed only
+  // the "Not checked" note shows. Meera has no known allergies at this point of the journey (step 2; her penicillin allergy is recorded in step 9), so
+  // both cases use a walk-in patient of this run, in a page of their own: its step-up must not count for Meera's authorisation below.
   6: async ({ page, browser }) => {
+    const typed = await browser.newPage();
+    try {
+      const typedUrls = watchUrls(typed);
+      await signIn(typed, rao);
+      const rx = typed.getByRole('region', { name: 'Prescription' });
+      const checks = rx.getByRole('region', { name: 'Safety checks' });
+      const status = rx.getByRole('status').filter({ hasText: 'Authorised' });
+      /** A walk-in patient in consultation with Dr. Rao, with Augmentin 625 Duo typed as free text and given a complete instruction. */
+      const typeFor = async (patient: ReturnType<typeof syntheticPatient>, recordAllergies: () => Promise<void>) => {
+        await walkIn(typed, patient, rao);
+        await typed.goto('/app/front-desk');
+        await typed.getByRole('region', { name: /^Ready for doctor/ }).getByRole('article', { name: patient.name })
+          .getByRole('button', { name: `Start consultation with ${patient.name}` }).click();
+        await expect(typed).toHaveURL(/\/app\/consult\/[0-9a-f-]{36}$/);
+        await recordAllergies();
+        await rx.getByLabel('Medicine', { exact: true }).fill('Augmentin 625 Duo');
+        await rx.getByRole('button', { name: 'Add as free text' }).click();
+        const line = rx.getByRole('region', { name: 'Medicines to prescribe' }).getByRole('row', { name: 'Augmentin 625 Duo' });
+        await line.getByLabel('Dose', { exact: true }).fill('1');
+        for (const [field, option] of [['Unit', 'Tablet'], ['Route', 'By mouth'], ['How often', 'Twice a day (BD)']] as const) {
+          await line.getByRole('combobox', { name: field, exact: true }).click();
+          await typed.getByRole('option', { name: option, exact: true }).click();
+        }
+        await expect(line).toContainText('Take 1 tablet by mouth twice a day.');
+      };
+      const note = typed.getByRole('region', { name: 'Consultation note' });
+
+      // Recorded allergies (two, so the alert names every one): refused without a reason, authorised with one, the reason on the paper.
+      const allergic = syntheticPatient('Kavya', 'Nair');
+      await typeFor(allergic, async () => {
+        for (const substance of ['Penicillin', 'Sulfa']) {
+          await note.getByLabel('Allergic to').fill(substance);
+          await note.getByRole('button', { name: 'Add allergy' }).click();
+          await expect(note.getByLabel('Allergic to')).toHaveValue('');
+        }
+      });
+      const allergicPath = new URL(typed.url()).pathname;
+      // Severity and finding in words (an alert role, an icon and text: never colour alone).
+      await expect(checks.getByRole('alert')).toContainText('Severe · Not checked against: Penicillin, Sulfa. Augmentin 625 Duo was typed as free text.');
+      await expect(checks).toContainText('Augmentin 625 Duo: typed as free text, so not checked for allergies, interactions or dose.'); // the honest note stays
+      await rx.getByRole('button', { name: 'Authorise prescription' }).click();
+      await expect(rx.getByRole('alert').filter({ hasText: 'A severe alert has no reason yet.' })).toBeVisible(); // the server's refusal: still a draft
+      await expect(rx.getByRole('status').filter({ hasText: /^Draft/ })).toBeVisible();
+
+      // The reason step by keyboard alone, then axe with the alert and the field open, in English and in Arabic.
+      await checks.getByRole('button', { name: 'Give a reason to go ahead' }).focus();
+      await typed.keyboard.press('Enter');
+      const reason = checks.getByLabel('Reason to go ahead');
+      await reason.focus();
+      await expectNoAxeViolations(typed);
+      const arabic = await browser.newPage();
+      try {
+        await signIn(arabic, rao, 'ar');
+        await arabic.goto(allergicPath);
+        await expect(arabic.locator('html')).toHaveAttribute('dir', 'rtl');
+        await expect(arabic.getByRole('alert').filter({ hasText: 'لم يُفحص مقابل: Penicillin, Sulfa. Augmentin 625 Duo مكتوب نصًا حرًا.' })).toBeVisible();
+        await arabic.getByRole('button', { name: 'اذكر سبب المتابعة' }).click();
+        await expect(arabic.getByLabel('سبب المتابعة')).toBeVisible();
+        await arabic.waitForLoadState('networkidle');
+        await expectNoAxeViolations(arabic);
+      } finally {
+        await arabic.close();
+      }
+      await typed.keyboard.type('Tolerated co-amoxiclav before, patient confirms (synthetic)');
+      await typed.keyboard.press('Enter');
+      await expect(checks).toContainText('Overridden with reason: Tolerated co-amoxiclav before, patient confirms (synthetic)');
+      await rx.getByRole('button', { name: 'Authorise prescription' }).click();
+      await rx.getByRole('button', { name: 'Confirm identity' }).click(); // asked only now: the server checks the alerts before the step-up
+      await typed.getByRole('link', { name: rao }).click(); // the step-up, as stepUp() does for the journey's own page
+      await typed.waitForURL(/\/app\/consult\/[0-9a-f-]{36}$/);
+      await rx.getByRole('button', { name: 'Authorise prescription' }).click();
+      await expect(status).toHaveText(/^Authorised · version 1 · RX-[0-9A-F]{8}$/);
+      await rx.getByRole('link', { name: 'Print prescription' }).click();
+      await expect(typed.getByText('Allergies: Penicillin, Sulfa')).toBeVisible();
+      await expect(typed.getByRole('listitem').filter({ hasText: 'Augmentin 625 Duo' })).toContainText('Reason: Tolerated co-amoxiclav before, patient confirms (synthetic)');
+      await typed.goto(allergicPath);
+      await typed.getByRole('button', { name: 'End consultation' }).click(); // one open consultation at a time
+      await expect(typed.getByRole('status').filter({ hasText: 'Consultation ended' })).toBeVisible();
+
+      // No known allergies, confirmed: the "Not checked" note only, no severe alert, no reason asked (the step-up above is still fresh).
+      const clear = syntheticPatient('Divya', 'Pillai');
+      await typeFor(clear, async () => {
+        await note.getByRole('button', { name: 'Confirm: no known allergies' }).click();
+        await expect(note).toContainText('No known allergies, confirmed at this visit.');
+      });
+      await expect(checks).toContainText('Allergies: no known allergies (recorded)');
+      await expect(checks).toContainText('No alerts from the checks that could run.');
+      await expect(checks).toContainText('Augmentin 625 Duo: typed as free text, so not checked for allergies, interactions or dose.');
+      await expect(checks.getByRole('button', { name: 'Give a reason to go ahead' })).toHaveCount(0);
+      await rx.getByRole('button', { name: 'Authorise prescription' }).click();
+      await expect(status).toHaveText(/^Authorised · version 1 · RX-[0-9A-F]{8}$/);
+      await typed.getByRole('button', { name: 'End consultation' }).click(); // Meera's consultation below is the open one
+      await expect(typed.getByRole('status').filter({ hasText: 'Consultation ended' })).toBeVisible();
+      // The typed medicine travels in the formulary search (GET /v1/formulary?q=, no patient in that URL, by design in prescriptionApi.ts), so it is
+      // not in this list; the allergies, the reason and the patients are.
+      expect(typedUrls.leaks(['Penicillin', 'Sulfa', 'co-amoxiclav', 'Tolerated', allergic.name, clear.name, 'Kavya', 'Divya'])).toEqual([]);
+    } finally {
+      await typed.close();
+    }
+
     const watch = watchUrls(page);
     await signIn(page, rao);
     await startVisit(page);
@@ -334,10 +438,22 @@ journey('J2', {
     await expect(sign).toHaveAccessibleDescription(/^\d items? still needs? your review before signing$/);
 
     // a returning patient: each section also offers an Insert button for the last signed note's text
-    await note.getByRole('textbox', { name: /^Chief complaint/ }).fill('Review of sugars (synthetic)');
+    // MDV-P1-089 (F-03, F-26): the last keystrokes survive a visit to Problems and a reload, both inside the autosave delay, and the note shows
+    // what the server holds. Nothing of the note is in browser storage.
     await note.getByRole('textbox', { name: /^Assessment/ }).fill('Type 2 diabetes, fair control (synthetic)');
+    await page.getByRole('link', { name: 'Problems and diagnoses' }).click();
+    await page.getByRole('link', { name: 'Back to the consultation' }).click();
+    await expect(note.getByRole('textbox', { name: /^Assessment/ })).toHaveValue('Type 2 diabetes, fair control (synthetic)');
+    page.once('dialog', d => void d.accept()); // "Leave site?": the doctor confirms the reload
     await note.getByRole('textbox', { name: /^Plan/ }).fill('Continue metformin, HbA1c in three months (synthetic)');
-    await expect(note.getByRole('status').filter({ hasText: /^Saved$/ })).toBeVisible();
+    await page.reload();
+    await expect(note.getByRole('textbox', { name: /^Plan/ })).toHaveValue('Continue metformin, HbA1c in three months (synthetic)');
+    await expect(note.getByRole('textbox', { name: /^Assessment/ })).toHaveValue('Type 2 diabetes, fair control (synthetic)');
+    const stored = await page.evaluate(async () => JSON.stringify([localStorage, sessionStorage, (await indexedDB.databases()).map(d => d.name)]));
+    expect(stored).not.toMatch(/diabetes|metformin/i);
+    expect(stored).toMatch(/\[\]\]$/); // no IndexedDB database at all
+    await note.getByRole('textbox', { name: /^Chief complaint/ }).fill('Review of sugars (synthetic)');
+    await expect(note.getByRole('status').filter({ hasText: /^Saved \d\d:\d\d$/ })).toBeVisible();
     // Step 6's authorised metformin is on Meera's chart, so this visit's medicines need their reconciliation (MDV-1087); there is no consent step (MDV-AUDIT-1092).
     await expect(sign).toBeDisabled();
     await expect(sign).toHaveAccessibleDescription('1 item still needs your review before signing');

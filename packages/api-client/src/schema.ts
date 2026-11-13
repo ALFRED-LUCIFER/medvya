@@ -3259,7 +3259,9 @@ export interface paths {
         post?: never;
         delete: {
             parameters: {
-                query?: never;
+                query?: {
+                    reason?: components["schemas"]["FollowUpDismissReason"];
+                };
                 header?: never;
                 path: {
                     id: string;
@@ -4439,6 +4441,64 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/settings/queue-rule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["QueueRule"];
+                    };
+                };
+            };
+        };
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["QueueRule"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["QueueRule"];
+                    };
                 };
             };
         };
@@ -8932,6 +8992,9 @@ export interface components {
             sex?: null | string;
             /** @default false */
             withDoctor: boolean;
+            followUp?: null | components["schemas"]["FollowUpDue"];
+            /** Format: int32 */
+            queuePlace?: null | number | string;
         };
         /** @enum {unknown} */
         BodyPosition: "Lying" | "Standing" | null;
@@ -9262,6 +9325,17 @@ export interface components {
             /** Format: uuid */
             documentId: null | string;
         };
+        /** @enum {unknown} */
+        FollowUpDismissReason: "PatientDeclined" | "BookedElsewhere" | "NotReachable" | "Other" | null;
+        FollowUpDue: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date */
+            dueOn: string;
+            /** Format: uuid */
+            calendarId: null | string;
+            calendarName: null | string;
+        };
         FrontDeskBoard: {
             /** Format: uuid */
             facilityId: string;
@@ -9556,6 +9630,12 @@ export interface components {
              */
             version: number | string;
         };
+        /** @enum {unknown} */
+        QueueOrder: "Arrival" | "Token" | "Appointment";
+        QueueRule: {
+            order: components["schemas"]["QueueOrder"];
+            bookedFirst: boolean;
+        };
         QueueTv: {
             now: components["schemas"]["QueueTvNow"][];
             next: components["schemas"]["QueueTvNext"][];
@@ -9564,6 +9644,7 @@ export interface components {
             token: string;
             /** Format: int32 */
             waitMinutes: number | string;
+            doctor: string;
         };
         QueueTvNow: {
             token: string;

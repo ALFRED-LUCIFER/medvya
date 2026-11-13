@@ -60,4 +60,42 @@ public sealed class FollowUpBookings(SchedulingDbContext db, SchedulingContext c
         }
         return entry.State == WaitlistState.Removed ? null : new FollowUpBooking(entry.FollowUp!, entry.DueOn!.Value, entry.State);
     }
+
+    /// <summary>
+    /// The doctor's follow-ups still to book (MDV-P1-102) of these patients at the facility, the earliest due per patient: date and doctor only.
+    /// No access check: the caller has checked the desk's access to the facility.
+    /// </summary>
+    internal static async Task<Dictionary<Guid, FollowUpDue>> DueAsync(SchedulingDbContext db, Guid facilityId, IReadOnlyCollection<Guid> patientIds,
+        IReadOnlyDictionary<Guid, string> calendars, CancellationToken cancellationToken)
+    {
+        if (patientIds.Count == 0) return [];
+        var open = await db.Waitlist.AsNoTracking()
+            .Where(w => w.FacilityId == facilityId && patientIds.Contains(w.PatientId) && w.EncounterId != null && (w.State == WaitlistState.Waiting || w.State == WaitlistState.Offered))
+            .OrderBy(w => w.DueOn).ThenBy(w => w.Id).ToListAsync(cancellationToken);
+        return open.GroupBy(w => w.PatientId).ToDictionary(g => g.Key, g =>
+        {
+            var w = g.First();
+            return new FollowUpDue(w.Id, w.DueOn!.Value, w.CalendarId, w.CalendarId is { } c ? calendars.GetValueOrDefault(c) : null);
+        });
+    }
+
+    /// <summary>
+    /// A visit booked for the patient on or after a follow-up's due day books that follow-up (MDV-P1-102): its entry is Booked with the visit, and any slot
+    /// offered for it goes back. Runs on the booking's transaction.
+    /// shortcut: a visit before the due day leaves the line for the desk to dismiss ("booked elsewhere"); match on doctor or visit type if reception asks.
+    /// </summary>
+    internal static async Task BookDueAsync(SchedulingDbContext db, SchedulingContext context, Appointment booked, CancellationToken cancellationToken)
+    {
+        var open = await db.Waitlist.AsNoTracking()
+            .Where(w => w.FacilityId == booked.FacilityId && w.PatientId == booked.PatientId && w.EncounterId != null && (w.State == WaitlistState.Waiting || w.State == WaitlistState.Offered))
+            .Select(w => new { w.Id, w.DueOn }).ToListAsync(cancellationToken);
+        if (open.Count == 0) return;
+        var (_, zone) = await context.FacilityAsync(booked.FacilityId, cancellationToken);
+        var day = ScheduleRules.LocalDate(booked.Start, zone);
+        var ids = open.Where(w => w.DueOn <= day).Select(w => w.Id).ToList();
+        if (ids.Count == 0) return;
+        await db.Waitlist.Where(w => ids.Contains(w.Id) && (w.State == WaitlistState.Waiting || w.State == WaitlistState.Offered))
+            .ExecuteUpdateAsync(s => s.SetProperty(w => w.State, WaitlistState.Booked).SetProperty(w => w.AppointmentId, booked.Id).SetProperty(w => w.ChangedAt, context.Now), cancellationToken);
+        await db.SlotHolds.Where(h => ids.Contains(h.HeldBy)).ExecuteDeleteAsync(cancellationToken);
+    }
 }

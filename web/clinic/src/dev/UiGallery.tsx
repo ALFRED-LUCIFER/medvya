@@ -6,6 +6,11 @@ import {
   Switch, SystemState, systemStates, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Textarea,
 } from '@medvya/ui';
 import PageComponentsGallery from './PageComponentsGallery';
+import FieldGallery from './FieldGallery';
+import StickyActionBarSection from './gallery/StickyActionBarSection';
+import ChipTagBannerSection from './gallery/ChipTagBannerSection';
+import PatientBannerSection from './gallery/PatientBannerSection';
+import ShellComponentsGallery from './ShellComponentsGallery';
 
 const keys = <T extends object>(o: T) => Object.keys(o) as (keyof T)[];
 
@@ -141,6 +146,11 @@ export default function UiGallery({ switcher }: { switcher: ReactNode }) {
         <Measured name="duration-fast ease-out" className="transition-colors duration-fast ease-out" read={s => `${s.transitionDuration} ${s.transitionTimingFunction}`}>Motion</Measured>
       </section>
       <PageComponentsGallery />
+      <FieldGallery />
+      <StickyActionBarSection />
+      <ChipTagBannerSection />
+      <PatientBannerSection />
+      <ShellComponentsGallery />
     </main>
   );
 }

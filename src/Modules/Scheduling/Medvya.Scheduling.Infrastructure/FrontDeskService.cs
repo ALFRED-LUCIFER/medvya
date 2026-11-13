@@ -19,7 +19,7 @@ namespace Medvya.Scheduling.Infrastructure;
 /// </summary>
 public sealed partial class FrontDeskService(
     SchedulingDbContext db, SchedulingContext context, DoctorDayTransaction transaction, IBoardNotifier notifier, IOptions<SchedulingOptions> options,
-    ILogger<FrontDeskService> log, IEnumerable<IHandoffGate> handoffGates, IEnumerable<IOpenConsultations> consultations) : IFrontDeskService
+    ILogger<FrontDeskService> log, IEnumerable<IHandoffGate> handoffGates, IEnumerable<IOpenConsultations> consultations, QueueOrdering ordering) : IFrontDeskService
 {
     /// <summary>Meter of front-desk measurements. Values are durations only; the one tag is the opaque tenant id.</summary>
     public const string MeterName = "Medvya.FrontDesk";
@@ -44,7 +44,14 @@ public sealed partial class FrontDeskService(
         var calendars = (await context.CalendarsAsync(facilityId, cancellationToken)).ToDictionary(c => c.Id, c => c.Name);
         var tokens = await TokensAsync([.. visits.Select(a => a.Id)], cancellationToken);
         var withDoctor = await WithDoctorAsync([.. visits.Where(a => a.State == AppointmentState.InConsult).Select(a => a.Id)], cancellationToken);
-        return new(facilityId, facility.TimeZone, date, now, [.. visits.Select(a => Card(a, patients, calendars, tokens, withDoctor))], today.Count - visits.Count);
+        // The doctor's follow-up shows on the Done card, where the desk sees the patient off (MDV-P1-102).
+        var followUps = await FollowUpBookings.DueAsync(db, facilityId, [.. visits.Where(a => a.State == AppointmentState.Done).Select(a => a.PatientId).Distinct()], calendars, cancellationToken);
+        var places = await ordering.PlacesAsync(visits, facility.Queue, cancellationToken);
+        return new(facilityId, facility.TimeZone, date, now, [.. visits.Select(a => Card(a, patients, calendars, tokens, withDoctor) with
+        {
+            FollowUp = a.State == AppointmentState.Done ? followUps.GetValueOrDefault(a.PatientId) : null,
+            QueuePlace = places.TryGetValue(a.Id, out var place) ? place : null,
+        })], today.Count - visits.Count);
     }
 
     public async Task<BoardCard> CheckInAsync(Guid appointmentId, CheckIn command, CancellationToken cancellationToken = default)
@@ -133,8 +140,7 @@ public sealed partial class FrontDeskService(
             .OrderBy(a => a.Start).ThenBy(a => a.Id).ToListAsync(cancellationToken);
         var patients = await context.PatientsAsync(visits.Select(a => a.PatientId), cancellationToken);
         var tokens = await TokensAsync([.. visits.Select(a => a.Id)], cancellationToken);
-        var ids = visits.Select(a => a.Id).ToList();
-        var issued = await db.QueueTokens.AsNoTracking().Where(t => ids.Contains(t.AppointmentId)).ToDictionaryAsync(t => t.AppointmentId, t => t.IssuedAt, cancellationToken);
+        var places = await ordering.PlacesAsync(visits, facility.Queue, cancellationToken);
         var templates = await db.Templates.AsNoTracking().Where(t => t.FacilityId == facilityId && t.CalendarKind == CalendarKind.Doctor).ToListAsync(cancellationToken);
         var exceptions = await context.ExceptionsAsync(facilityId, date, date, null, cancellationToken);
         var working = templates.Where(t => ScheduleRules.Day(t, date, zone, exceptions.Where(x => x.CalendarId == t.CalendarId)).Hours.Count > 0).Select(t => t.CalendarId).ToHashSet();
@@ -147,10 +153,9 @@ public sealed partial class FrontDeskService(
             {
                 var own = visits.Where(v => v.CalendarId == c.Id).ToList();
                 var counts = VisitFlow.BoardStates.ToDictionary(s => s, s => own.Count(v => v.State == s));
-                // Arrived patients in token order, then the booked ones by time: a walk-in queued "now" with no slot never jumps the
-                // queue ahead of patients who checked in earlier for later slots (MDV-P1-052).
+                // Arrived patients in the clinic's queue order (MDV-P1-103), then the booked ones by time.
                 var next = own.Where(v => v.State < AppointmentState.InConsult)
-                    .OrderBy(v => issued.ContainsKey(v.Id) ? 0 : 1).ThenBy(v => issued.GetValueOrDefault(v.Id)).ThenBy(v => v.Start).ThenBy(v => v.Id).Take(3)
+                    .OrderBy(v => places.GetValueOrDefault(v.Id, int.MaxValue)).ThenBy(v => v.Start).ThenBy(v => v.Id).Take(3)
                     .Select(v => new NextVisit(v.Id, v.Start, v.State, Name(v.PatientId), tokens.GetValueOrDefault(v.Id))).ToList();
                 return new DoctorLoad(c.Id, c.Name, counts, ClinicDelay.Minutes(own.Select(v => (v.Start, v.State, v.ChangedAt)), now), next);
             }).ToList();

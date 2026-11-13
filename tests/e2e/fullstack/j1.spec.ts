@@ -143,7 +143,7 @@ test('J1: a new clinic owner sets up the practice, Medvya approves it, then a pa
     const card = page.getByRole('article', { name: patient.name });
     await card.getByRole('button', { name: 'Check in' }).click();
     await card.getByRole('group', { name: 'Confirm identity' }).getByRole('button', { name: 'Confirm arrival' }).click();
-    await expect(page.getByRole('region', { name: /^Checked in/ }).getByRole('article', { name: patient.name })).toBeVisible();
+    await expect(page.getByRole('region', { name: /^Ready for doctor/ }).getByRole('article', { name: patient.name })).toBeVisible(); // nurse intake is off (the default): check-in goes straight to Ready for doctor (#1104)
     await expectNoAxeViolations(page);
   });
 
@@ -170,13 +170,13 @@ test('J1: a new clinic owner sets up the practice, Medvya approves it, then a pa
     await panel.getByRole('button', { name: 'Confirm booking' }).click();
     await expect(panel).toContainText('Appointment booked');
     await page.getByRole('link', { name: 'Front desk' }).first().click();
-    const card = page.getByRole('region', { name: /^Booked/ }).getByRole('article', { name: patient.name }); // the first visit is already in Checked in
+    const card = page.getByRole('region', { name: /^Booked/ }).getByRole('article', { name: patient.name }); // the first visit is already in Ready for doctor
     const checkIn = card.getByRole('button', { name: 'Check in' });
     await expect(checkIn).toBeVisible();
-    const started = Date.now(); // the stopwatch: tap "Check in" to the card in Checked in
+    const started = Date.now(); // the stopwatch: tap "Check in" to the card in Ready for doctor
     await checkIn.click();
     await card.getByRole('group', { name: 'Confirm identity' }).getByRole('button', { name: 'Confirm arrival' }).click();
-    await expect(page.getByRole('region', { name: /^Checked in/ }).getByRole('article', { name: patient.name })).toHaveCount(2);
+    await expect(page.getByRole('region', { name: /^Ready for doctor/ }).getByRole('article', { name: patient.name })).toHaveCount(2);
     const stopwatchSeconds = (Date.now() - started) / 1000;
 
     await page.goto('/app/settings?tab=metrics');

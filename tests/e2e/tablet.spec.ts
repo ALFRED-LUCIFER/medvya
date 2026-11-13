@@ -5,15 +5,20 @@ import { at, axe, board, calendar, openScreen, problems, reception, screens, sig
 // Every screen: no clipped controls (the page never scrolls sideways; only the board scrolls on its own), every control
 // at least 44 px (WCAG 2.5.8 target), axe clean. Mocked API as in the other specs (CI has none).
 
-for (const [w, h] of [[768, 1024], [1024, 768]] as const)
-  for (const locale of ['en', 'ar'])
-    for (const s of screens)
-      test(`${s.name} at ${w}x${h} (${locale}): nothing clipped, targets >= 44 px, axe clean`, async ({ page }) => {
-        await page.setViewportSize({ width: w, height: h });
-        await openScreen(page, s, locale);
-        expect(await problems(page)).toEqual([]);
-        expect(await axe(page)).toEqual([]);
-      });
+// A desk tablet is a touch screen: it reports a coarse pointer, so a compact table is comfortable on it (MDV-P2-054, DESIGN.md Density).
+test.describe('on a touch tablet', () => {
+  test.use({ hasTouch: true });
+  for (const [w, h] of [[768, 1024], [1024, 768]] as const)
+    for (const locale of ['en', 'ar'])
+      for (const s of screens)
+        test(`${s.name} at ${w}x${h} (${locale}): nothing clipped, targets >= 44 px, axe clean`, async ({ page }) => {
+          await page.setViewportSize({ width: w, height: h });
+          await openScreen(page, s, locale);
+          expect(await page.evaluate(() => matchMedia('(any-pointer: coarse)').matches)).toBe(true);
+          expect(await problems(page)).toEqual([]);
+          expect(await axe(page)).toEqual([]);
+        });
+});
 
 // Before the first slot of the fixture day, so every slot is still bookable.
 for (const [w, h] of [[768, 1024], [1024, 768]] as const)

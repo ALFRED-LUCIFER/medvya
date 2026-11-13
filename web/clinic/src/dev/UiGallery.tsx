@@ -1,7 +1,8 @@
 import { type ReactNode, useState } from 'react';
-import { CircleStop, PenLine, Sparkles } from 'lucide-react';
+import { ChevronDown, CircleStop, PenLine, Sparkles } from 'lucide-react';
+import { useI18n } from '@medvya/i18n';
 import {
-  alertLooks, Button, ChoiceRow, ClinicalAlert, IdentityBanner, Input, Label, provenanceLooks, ProvenanceTag,
+  alertLooks, Button, ChoiceRow, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, ClinicalAlert, IdentityBanner, Input, Label, provenanceLooks, ProvenanceTag,
   RecordingPill, recordingLooks, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, StatusChip, statusLooks,
   Switch, SystemState, systemStates, Table, TableBody, TableCell, TableHead, TableHeader, TablePagination, TableRow, Textarea,
 } from '@medvya/ui';
@@ -14,11 +15,13 @@ import ShellComponentsGallery from './ShellComponentsGallery';
 
 const keys = <T extends object>(o: T) => Object.keys(o) as (keyof T)[];
 
-// MDV-P2-054: compact density (36 px rows with a mouse, 48 px on a coarse pointer), stacked rows under 768 px, sort and paging.
+// MDV-P2-054: compact density (36 px rows with a mouse, 48 px on a coarse pointer), stacked rows under 768 px, sort and paging;
+// row actions: one visible (32 px in a compact row with a mouse, 44 px on a coarse pointer), the rest in a menu of 44 px items.
 const medicines = [['Amlodipine', '5 mg', 'Tablet'], ['Metformin', '500 mg', 'Tablet'], ['Salbutamol', '100 mcg', 'Inhaler']];
 function CompactTableSection() {
   const [descending, setDescending] = useState(false);
   const [page, setPage] = useState(0);
+  const { dir } = useI18n();
   const rows = descending ? [...medicines].reverse() : medicines;
   return (
     <section className="flex flex-col gap-3">
@@ -29,11 +32,22 @@ function CompactTableSection() {
             <TableHead scope="col" sort={descending ? 'descending' : 'ascending'} onSort={() => setDescending(d => !d)}>Generic name</TableHead>
             <TableHead scope="col">Strength</TableHead>
             <TableHead scope="col">Form</TableHead>
+            <TableHead scope="col"><span className="sr-only">Actions</span></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {rows.map(([name, strength, form]) => (
-            <TableRow key={name}><TableHead scope="row">{name}</TableHead><TableCell label="Strength"><bdi dir="ltr">{strength}</bdi></TableCell><TableCell label="Form">{form}</TableCell></TableRow>
+            <TableRow key={name}><TableHead scope="row">{name}</TableHead><TableCell label="Strength"><bdi dir="ltr">{strength}</bdi></TableCell><TableCell label="Form">{form}</TableCell>
+              <TableCell>
+                <span className="flex flex-wrap items-center gap-2">
+                  <Button variant="outline" aria-label={`Edit ${name}`}>Edit</Button>
+                  <DropdownMenu dir={dir}>
+                    <DropdownMenuTrigger asChild><Button variant="outline" aria-label={`Actions for ${name}`}>Actions<ChevronDown aria-hidden /></Button></DropdownMenuTrigger>
+                    <DropdownMenuContent align="end"><DropdownMenuItem>Duplicate</DropdownMenuItem><DropdownMenuItem>Remove</DropdownMenuItem></DropdownMenuContent>
+                  </DropdownMenu>
+                </span>
+              </TableCell>
+            </TableRow>
           ))}
         </TableBody>
       </Table>

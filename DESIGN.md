@@ -176,7 +176,7 @@ footer 56, part of the layout: Saved 10:42 · N to finish · Preview prescriptio
 
 ## Tables and forms
 
-**Tables.** Always the library Table, with a label. Numbers right-aligned with tabular numerals. The identifying cell is bold; nothing else. Sort on the columns people sort by (name, time, wait). Paging over 50 rows. Under 768 px a table becomes stacked rows; it never scrolls sideways with hidden columns that carry dose or identity. Row actions: one visible, the rest in a menu.
+**Tables.** Always the library Table, with a label. Numbers right-aligned with tabular numerals. The identifying cell is bold; nothing else. Sort on the columns people sort by (name, time, wait). Paging over 50 rows. Under 768 px a table becomes stacked rows; it never scrolls sideways with hidden columns that carry dose or identity. Row actions: one visible, the rest in a menu. In a compact table the visible one only opens a form and is 32 px with a mouse (44 px on a coarse pointer), so the row stays 36 px; an action that acts at once or ends access (Offboard, Revoke, Remove) is a 44 px menu item and asks to confirm where it cannot be undone.
 
 **Forms.** One column under 768 px, two at most above. Label above the field. One convention per form: "required" in words when most fields are optional, "optional" in words when most are required. Units inside or beside the field. Errors say what is wrong and what to do, beside the field and in a summary that takes focus after a failed submit. Clinical notes autosave with a visible SaveStatus; settings and registration use an explicit Save. Information entered once is not asked again in the same process: the nurse's complaint prefills the doctor's note (MDV-P1-104, #1200).
 

@@ -24,6 +24,7 @@ export { Sheet, SheetTrigger, SheetContent, SheetTitle, SheetDescription } from 
 export { SplitLayout } from '#components/ui/split-layout';
 export { Field, FieldMarks, type FieldProps, type FieldMark } from '#components/ui/field';
 export { ErrorSummary, type ErrorSummaryProps } from '#components/ui/error-summary';
+export { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '#components/ui/dropdown-menu';
 export { AccountMenu, type AccountMenuProps } from '#components/ui/account-menu';
 export { NavRailItem, type NavRailItemProps } from '#components/ui/nav-rail-item';
 export { Tooltip, type TooltipProps } from '#components/ui/tooltip';

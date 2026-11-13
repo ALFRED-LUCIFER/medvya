@@ -92,6 +92,9 @@ describe('Table layout', () => {
     const body = container.querySelector('tbody')!.className;
     expect(body).toContain('[&>tr]:h-row-compact');
     expect(body).toContain('any-pointer-coarse:[&>tr]:h-row');
+    // A row's button is 32 px with a mouse, never under 44 px on a coarse pointer.
+    expect(body).toContain('[&_button]:min-h-8');
+    expect(body).toContain('any-pointer-coarse:[&_button]:min-h-11');
     expect(container.querySelector('[data-slot=table-container]')?.getAttribute('data-density')).toBe('compact');
   });
 

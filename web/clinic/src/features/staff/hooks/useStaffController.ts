@@ -2,9 +2,12 @@ import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
+import { useI18n } from '@medvya/i18n';
 import { fetchLocations } from '../../settings/services/settingsApi';
 import { ApiError } from '../../schedule/services/scheduleApi';
+import { useTableController } from '../../table/hooks/useTableController';
 import { roleOfValue, roleValue, addStaffSchema, offboardSchema, reactivateSchema, rebookingMissing, locationsOf, locationsSchema, reasonMissing, type LocationsForm, type AddStaffForm, type OffboardForm, type ReactivateForm, type StaffMember, type AssignableRole, type RoleChoice, type Step } from '../domain/staff';
+import { staffSort } from '../domain/staffTable';
 import { addStaff, changeStaffRole, fetchRoles, fetchStaff, offboardStaff, reactivateStaff, resendInvitation, revokeInvitation, setStaffLocations, startStepUp } from '../services/staffApi';
 
 
@@ -22,7 +25,9 @@ const offboardProblem = (e: unknown) => {
 
 export function useStaffController(defaultFacilityId: string) {
   const queryClient = useQueryClient();
+  const { t } = useI18n();
   const staff = useQuery({ queryKey: ['staff', 'list'], queryFn: fetchStaff });
+  const table = useTableController(staff.data ?? [], staffSort, c => t(`staff.col.${c}`));
   const roles = useQuery({ queryKey: ['staff', 'roles'], queryFn: fetchRoles });
   const locations = useQuery({ queryKey: ['settings', 'locations'], queryFn: fetchLocations });
   const refresh = () => {
@@ -96,6 +101,7 @@ export function useStaffController(defaultFacilityId: string) {
 
   return {
     staff: staff.data ?? [],
+    table,
     loading: staff.isPending || roles.isPending || locations.isPending,
     failed: staff.isError || roles.isError || locations.isError,
     catalogue: roles.data ?? { builtIn: [], custom: [] },

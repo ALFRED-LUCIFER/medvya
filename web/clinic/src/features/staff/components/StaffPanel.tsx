@@ -1,6 +1,8 @@
-import { Lock, Plus } from 'lucide-react';
+import { ChevronDown, Lock, Plus } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, Input, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState, Textarea, type SortDirection } from '@medvya/ui';
+import {
+  Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, Input, Table, TableBody, TableCell, TableHead, TableHeader, TablePagination, TableRow, TableState, Textarea,
+} from '@medvya/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
@@ -8,13 +10,14 @@ import { describedBy, fieldError } from '../../settings/components/fieldStyles';
 import type { Location } from '../../settings/domain/settings';
 import { Field } from '../../settings/components/Field';
 import { Section } from '../../settings/components/Section';
-import { staffColumns, type StaffColumn } from '../domain/staffTable';
-import { canChangeRole, isOwnerAmong, offboardBlock, roleValue, assignableRoles, canOffboard, canSetLocations, locationsOf, canReactivate, canResend, canRevoke, isDoctor, permissionRows, statusLabel, type AddStaffForm, type LocationsForm, type OffboardForm, type ReactivateForm, type RoleCatalogue, type RoleChoice, type StaffMember, type Step } from '../domain/staff';
+import type { TableView } from '../../table/domain/tableSort';
+import { staffActions, staffColumns, type StaffAction, type StaffSortColumn } from '../domain/staffTable';
+import { isOwnerAmong, offboardBlock, roleValue, assignableRoles, canOffboard, locationsOf, isDoctor, permissionRows, statusLabel, type AddStaffForm, type LocationsForm, type OffboardForm, type ReactivateForm, type RoleCatalogue, type RoleChoice, type StaffMember, type Step } from '../domain/staff';
 
 type Props = {
-  rows: StaffMember[];
-  sortOf: (key: StaffColumn) => SortDirection;
-  onSort: (key: StaffColumn) => void;
+  /** Everyone, for the rules that look across rows (owner, locations); `table.rows` is the sorted page shown. */
+  staff: StaffMember[];
+  table: TableView<StaffMember, StaffSortColumn>;
   loading: boolean;
   failed: boolean;
   catalogue: RoleCatalogue;
@@ -79,9 +82,9 @@ const same = (a: RoleChoice | null, b: RoleChoice) => !!a && a.kind === b.kind &
 
 /** Staff (F-10): who works here and with what access, and the steps to add someone. Doctors are added under Doctors, not here. */
 export default function StaffPanel(p: Props) {
-  const { t, formatDate } = useI18n();
+  const { t, formatDate, dir } = useI18n();
   const { errors } = p.form.formState;
-  const tableState = p.loading ? 'loading' : p.failed ? 'error' : p.rows.length === 0 ? 'empty' : 'ready';
+  const tableState = p.loading ? 'loading' : p.failed ? 'error' : p.staff.length === 0 ? 'empty' : 'ready';
 
   const roleName = (m: StaffMember) => m.customRoleName ?? t(`role.${m.role}`);
   const choices: { choice: RoleChoice; name: string; description: string }[] = [
@@ -90,7 +93,7 @@ export default function StaffPanel(p: Props) {
     { choice: { kind: 'doctor' }, name: t('role.HospitalDoctor'), description: t('staff.roleDesc.Doctor') },
   ];
   const stepIndex = p.step ? stepOrder.indexOf(p.step) : -1;
-  const iAmOwner = isOwnerAmong(p.rows, p.currentUserId);
+  const iAmOwner = isOwnerAmong(p.staff, p.currentUserId);
 
   return (
     <div className="flex flex-col gap-4">
@@ -102,37 +105,59 @@ export default function StaffPanel(p: Props) {
         {p.rowFailed && <p role="alert" className={fieldError}>{t('staff.rowFailed')}</p>}
         {p.emailFailed && !p.adding && <p role="alert" className={fieldError}>{t('staff.error.email')}</p>}
         <TableState state={tableState} messages={{ loading: t('settings.loading'), error: t('settings.loadFailed'), empty: t('staff.empty') }}>
-          <Table label={t('staff.tableLabel')} className="min-w-[720px]">
+          {/* Compact: a reference list read with a mouse (DESIGN.md, Density); stacked under 768 px with the name first. */}
+          <Table label={t('staff.tableLabel')} density="compact" stacked status={p.table.status} className="md:min-w-[720px]">
             <TableHeader>
               <TableRow>
                 {staffColumns.map(c => (
-                  <TableHead key={c.key} scope="col" sort={c.sortable ? p.sortOf(c.key) : undefined} onSort={c.sortable ? () => p.onSort(c.key) : undefined}>{t(`staff.col.${c.key}`)}</TableHead>
+                  <TableHead key={c.key} scope="col" sort={c.sortable ? p.table.sortOf(c.key) : undefined} onSort={c.sortable ? () => p.table.onSort(c.key) : undefined}>{t(`staff.col.${c.key}`)}</TableHead>
                 ))}
                 <TableHead scope="col"><span className="sr-only">{t('staff.col.actions')}</span></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {p.rows.map(m => {
+              {p.table.rows.map(m => {
                 const who = m.name ?? m.email ?? '';
                 const blocked = canOffboard(m) ? offboardBlock(m, p.currentUserId, iAmOwner) : null;
+                const actions = staffActions(m, p.currentUserId, iAmOwner, p.locations.length > 1);
+                const act: Record<StaffAction, { run: () => void; disabled: boolean }> = {
+                  changeRole: { run: () => p.onChangeRole(m), disabled: p.working || !!p.changing },
+                  locations: { run: () => p.onLocations(m), disabled: p.working || !!p.locating },
+                  reactivate: { run: () => p.onReactivate(m), disabled: p.working || !!p.reactivating },
+                  resend: { run: () => p.onResend(m.invitationId!), disabled: p.working },
+                  revoke: { run: () => p.onRevoke(m.invitationId!), disabled: p.working },
+                  offboard: { run: () => p.onOffboard(m), disabled: p.working || !!p.offboarding },
+                };
                 return (
                   <TableRow key={m.membershipId}>
                     <TableHead scope="row">{who}</TableHead>
-                    <TableCell>{roleName(m)}</TableCell>
-                    <TableCell>{m.facilityName}</TableCell>
-                    <TableCell>{t(`staff.mfa.${m.mfa}`)}</TableCell>
-                    <TableCell>
+                    <TableCell label={t('staff.col.role')}>{roleName(m)}</TableCell>
+                    <TableCell label={t('staff.col.access')}>{m.facilityName}</TableCell>
+                    <TableCell label={t('staff.col.mfa')}>{t(`staff.mfa.${m.mfa}`)}</TableCell>
+                    <TableCell label={t('staff.col.status')}>
                       {t(`staff.status.${statusLabel(m)}`)}
                       {m.invitationState === 'pending' && <span className="block text-muted-foreground">{t(`staff.invitation.${m.invitationState}`, { date: m.invitationExpiresAt ? formatDate(new Date(m.invitationExpiresAt)) : '' })}</span>}
                     </TableCell>
                     <TableCell>
-                      <span className="flex flex-wrap gap-2">
-                        {canResend(m) && <Button type="button" variant="outline" className="min-w-11" disabled={p.working} aria-label={t('staff.resendNamed', { name: who })} onClick={() => p.onResend(m.invitationId!)}>{t('staff.resend')}</Button>}
-                        {canRevoke(m) && <Button type="button" variant="outline" className="min-w-11" disabled={p.working} aria-label={t('staff.revokeNamed', { name: who })} onClick={() => p.onRevoke(m.invitationId!)}>{t('staff.revoke')}</Button>}
-                        {canSetLocations(m) && p.locations.length > 1 && <Button type="button" variant="outline" className="min-w-11" disabled={p.working || !!p.locating} aria-label={t('staff.locationsNamed', { name: who })} onClick={() => p.onLocations(m)}>{t('staff.locations')}</Button>}
-                        {canReactivate(m) && <Button type="button" variant="outline" className="min-w-11" disabled={p.working || !!p.reactivating} aria-label={t('staff.reactivateNamed', { name: who })} onClick={() => p.onReactivate(m)}>{t('staff.reactivate')}</Button>}
-                        {canChangeRole(m, p.currentUserId) && <Button type="button" variant="outline" className="min-w-11" disabled={p.working || !!p.changing} aria-label={t('staff.changeRoleNamed', { name: who })} onClick={() => p.onChangeRole(m)}>{t('staff.changeRole')}</Button>}
-                        {canOffboard(m) && !blocked && <Button type="button" variant="outline" className="min-w-11" disabled={p.working || !!p.offboarding} aria-label={t('staff.offboardNamed', { name: who })} onClick={() => p.onOffboard(m)}>{t('staff.offboard')}</Button>}
+                      <span className="flex flex-wrap items-center gap-2">
+                        {actions.visible && (
+                          <Button type="button" variant="outline" className="min-w-11" disabled={act[actions.visible].disabled} aria-label={t(`staff.${actions.visible}Named`, { name: who })} onClick={act[actions.visible].run}>
+                            {t(`staff.${actions.visible}`)}
+                          </Button>
+                        )}
+                        {actions.menu.length > 0 && (
+                          <DropdownMenu dir={dir} modal={false}>
+                            <DropdownMenuTrigger asChild>
+                              <Button type="button" variant="outline" disabled={p.working} aria-label={t('staff.actionsNamed', { name: who })}>{t('staff.col.actions')}<ChevronDown aria-hidden /></Button>
+                            </DropdownMenuTrigger>
+                            {/* The offboarding form takes focus (#912): the menu does not trap it, nor hand it back to its button. */}
+                            <DropdownMenuContent align="end" onCloseAutoFocus={e => { if (p.offboarding) e.preventDefault(); }}>
+                              {actions.menu.map(a => (
+                                <DropdownMenuItem key={a} disabled={act[a].disabled} aria-label={t(`staff.${a}Named`, { name: who })} onSelect={act[a].run}>{t(`staff.${a}`)}</DropdownMenuItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
                         {/* MDV-P1-107: no Offboard where this user may not offboard; the reason in words instead. The server refuses the same. */}
                         {blocked && <span className="text-caption text-muted-foreground">{t(`staff.offboardBlocked.${blocked}`)}</span>}
                       </span>
@@ -142,6 +167,7 @@ export default function StaffPanel(p: Props) {
               })}
             </TableBody>
           </Table>
+          <TablePagination page={p.table.page} pageCount={p.table.pageCount} onPage={p.table.onPage} />
         </TableState>
         {!p.step && !p.loading && !p.failed && <Button type="button" className="self-start" onClick={p.onOpen}><Plus aria-hidden className="size-4" />{t('staff.add')}</Button>}
       </Section>
@@ -177,7 +203,7 @@ export default function StaffPanel(p: Props) {
 
       {p.locating && (() => {
         const chosen = p.locationsForm.watch('facilityIds');
-        const current = locationsOf(p.rows, p.locating);
+        const current = locationsOf(p.staff, p.locating);
         const removing = current.some(id => !chosen.includes(id));
         const toggle = (id: string) => p.locationsForm.setValue('facilityIds', chosen.includes(id) ? chosen.filter(x => x !== id) : [...chosen, id], { shouldValidate: true });
         return (

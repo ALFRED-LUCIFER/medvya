@@ -1859,6 +1859,7 @@
   "staff.col.mfa": "العامل الثاني",
   "staff.col.status": "الحالة",
   "staff.col.actions": "الإجراءات",
+  "staff.actionsNamed": "الإجراءات لـ {name}",
   "staff.status.Invited": "مدعو",
   "staff.status.Active": "نشط",
   "staff.status.Suspended": "موقوف",

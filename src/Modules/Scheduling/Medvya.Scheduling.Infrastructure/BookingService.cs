@@ -572,7 +572,7 @@ public sealed class BookingService(
     static SeriesResult Refused(Guid seriesId, List<DateTimeOffset> starts, List<string?> conflicts) =>
         new(seriesId, [.. starts.Select((s, i) => new SeriesBooked(s, null, conflicts[i] ?? "series_not_booked"))]);
 
-    static readonly AppointmentState[] Attended = [AppointmentState.CheckedIn, AppointmentState.WithNurse, AppointmentState.ReadyForDoctor, AppointmentState.InConsult, AppointmentState.Billing, AppointmentState.Done];
+    internal static readonly AppointmentState[] Attended = [AppointmentState.CheckedIn, AppointmentState.WithNurse, AppointmentState.ReadyForDoctor, AppointmentState.InConsult, AppointmentState.Billing, AppointmentState.Done];
 
     public async Task<PatientView?> FindPatientAsync(Guid facilityId, Guid patientId, CancellationToken cancellationToken = default)
     {

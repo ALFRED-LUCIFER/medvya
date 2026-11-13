@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import { ChevronLeft, ChevronRight, CircleAlert, Search, TriangleAlert } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
 import { Button, Input, Label, buttonVariants, cn, PageContainer, PageHeader, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@medvya/ui';
-import { directoryColumns, directoryFilters, pageCount, type DirectoryFilter, type PatientSummary, type SearchErrorCode, type SearchResult } from '../domain/directory';
+import { directoryColumns, directoryFilters, pageCount, spokenExtras, type DirectoryFilter, type PatientSummary, type SearchErrorCode, type SearchResult } from '../domain/directory';
 import PatientsMessage from './PatientsMessage';
 
 type Props = {
@@ -123,8 +123,11 @@ function Results(p: Props) {
   );
 }
 
+// One chip style for the row's marks, until the shared Tag exists (MDV-P1-083).
+const chip = 'inline-flex items-center gap-1 rounded-sm border bg-card px-2 py-1 text-xs font-bold';
+
 function Row({ row, to }: { row: PatientSummary; to: string }) {
-  const { t } = useI18n();
+  const { t, formatCalendarDate } = useI18n();
   const age = t(row.ageEstimated ? 'patients.ageEstimated' : 'patients.age', { age: row.ageYears });
   const sex = t(`patients.sex.${row.sexAtBirth}`);
   const incomplete = row.status === 'Incomplete';
@@ -132,25 +135,34 @@ function Row({ row, to }: { row: PatientSummary; to: string }) {
     <TableRow>
       <TableHead scope="row" className="p-0">
         {/* The link's name reads the whole row, so the record opens from the first cell. */}
-        <Link to={to} className="flex min-h-11 items-center gap-2 px-3 py-1.5 hover:underline focus-visible:outline-offset-[-2px]">
+        <Link to={to} className="flex min-h-12 items-center gap-2 px-3 py-1.5 hover:underline focus-visible:outline-offset-[-2px]">
           <span aria-hidden className="grid size-8 shrink-0 place-items-center rounded-full bg-muted font-extrabold text-brand-700">{row.initials}</span>
           <span aria-hidden className="font-bold">{row.fullName}</span>
           <span className="sr-only">
-            {t('patients.row.label', { name: row.fullName, age, sex, mrn: row.mrnTail, phone: row.mobileTail })}
+            {t('patients.row.label', { name: row.fullName, age, sex, mrn: row.mrnTail, phone: row.mobileTail, ...spokenExtras(row, t, formatCalendarDate) })}
             {incomplete && t('patients.row.incomplete')}
           </span>
         </Link>
       </TableHead>
       <TableCell>{age}</TableCell>
       <TableCell>{sex}</TableCell>
+      <TableCell className="whitespace-nowrap">{row.dateOfBirth && formatCalendarDate(row.dateOfBirth)}</TableCell>
       <TableCell className="font-mono"><bdi dir="ltr">{t('patients.mrnTail', { mrn: row.mrnTail })}</bdi></TableCell>
       <TableCell className="font-mono"><bdi dir="ltr">{t('patients.mobileTail', { phone: row.mobileTail })}</bdi></TableCell>
+      <TableCell className="whitespace-nowrap">{row.lastVisitOn ? formatCalendarDate(row.lastVisitOn) : t('patients.row.noVisit')}</TableCell>
       <TableCell>
-        {incomplete && (
-          <span className="inline-flex items-center gap-1 rounded-sm border bg-card px-2 py-1 text-xs font-bold text-warning-700">
-            <TriangleAlert className="size-3.5" aria-hidden />{t('patients.status.Incomplete')}
-          </span>
-        )}
+        <span className="flex flex-wrap gap-1">
+          {row.duplicate && (
+            <span className={cn(chip, row.duplicate === 'PossibleDuplicate' && 'text-warning-700')}>
+              {row.duplicate === 'PossibleDuplicate' && <TriangleAlert className="size-3.5" aria-hidden />}{t(`patients.duplicate.${row.duplicate}`)}
+            </span>
+          )}
+          {incomplete && (
+            <span className={cn(chip, 'text-warning-700')}>
+              <TriangleAlert className="size-3.5" aria-hidden />{t('patients.status.Incomplete')}
+            </span>
+          )}
+        </span>
       </TableCell>
     </TableRow>
   );

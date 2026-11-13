@@ -20,7 +20,7 @@ namespace Medvya.Patients.Infrastructure;
 /// and row-level security; whether a clinician may open a chart at another location is the care-relationship check, not this class.
 /// </summary>
 public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant, ICurrentFacility facility, ICurrentUser user, IAuditLog audit, TimeProvider clock,
-    IFacilityDirectory facilities) : IPatientRegistry
+    IFacilityDirectory facilities, IEnumerable<IPatientLastVisits>? lastVisits = null) : IPatientRegistry
 {
     const string Purpose = "registration";
 
@@ -181,8 +181,35 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
         else
             rows = [.. (await shown.Skip((search.Page - 1) * PatientSearch.PageSize).Take(PatientSearch.PageSize).ToListAsync(cancellationToken))
                 .Select(p => (p.Id, p.FullName, p.DateOfBirth, p.DateOfBirthEstimated, p.SexAtBirth, p.Mrn, p.Mobile, p.Status, p.CountryCode))];
-        var items = rows.Select(p => new PatientSearchRow(p.Id, Initials(p.FullName), p.FullName, CountryRules.AgeOn(CountryRules.For(p.CountryCode).Today(now), p.DateOfBirth),
-            p.DateOfBirthEstimated, p.SexAtBirth, Tail(p.Mrn), p.Mobile.Length <= 4 ? p.Mobile : p.Mobile[^4..], p.Status)).ToList();
+        var ids = rows.Select(r => r.Id).ToList();
+        // Open merge requests of the rows shown (MDV-P1-101): the record that would be merged away, and the older one that would survive.
+        var open = await db.MergeRequests.AsNoTracking()
+            .Where(m => (m.Status == MergeRequestStatus.Proposed || m.Status == MergeRequestStatus.AwaitingApproval) && (ids.Contains(m.PatientId) || ids.Contains(m.CandidatePatientId)))
+            .Select(m => new { m.PatientId, m.CandidatePatientId }).ToListAsync(cancellationToken);
+        var duplicates = open.Select(m => m.PatientId).ToHashSet();
+        var mains = open.Select(m => m.CandidatePatientId).ToHashSet();
+        // shortcut: the main record is moved ahead of its possible duplicate only when both are on this page; rank pairs in SQL if desks page past duplicates.
+        foreach (var m in open)
+        {
+            var (main, duplicate) = (rows.FindIndex(r => r.Id == m.CandidatePatientId), rows.FindIndex(r => r.Id == m.PatientId));
+            if (duplicate < 0 || main < duplicate) continue;
+            var row = rows[main];
+            rows.RemoveAt(main);
+            rows.Insert(duplicate, row);
+        }
+        Dictionary<Guid, DateTimeOffset> visited = [];
+        foreach (var source in lastVisits ?? []) // none in tests that build the registry without the schedule
+            foreach (var (id, at) in await source.LastVisitsAsync(ids, now, cancellationToken))
+                if (!visited.TryGetValue(id, out var known) || at > known) visited[id] = at;
+        var items = rows.Select(p =>
+        {
+            var country = CountryRules.For(p.CountryCode);
+            return new PatientSearchRow(p.Id, Initials(p.FullName), p.FullName, CountryRules.AgeOn(country.Today(now), p.DateOfBirth),
+                p.DateOfBirthEstimated, p.SexAtBirth, Tail(p.Mrn), p.Mobile.Length <= 4 ? p.Mobile : p.Mobile[^4..], p.Status,
+                p.DateOfBirthEstimated ? null : p.DateOfBirth,
+                visited.TryGetValue(p.Id, out var at) ? country.Today(at) : null, // Today(at): the calendar day of that moment in the country's zone
+                duplicates.Contains(p.Id) ? DuplicateMark.PossibleDuplicate : mains.Contains(p.Id) ? DuplicateMark.MainRecord : null);
+        }).ToList();
         return new(term.Kind, items, search.Page, PatientSearch.PageSize, total);
     }
 

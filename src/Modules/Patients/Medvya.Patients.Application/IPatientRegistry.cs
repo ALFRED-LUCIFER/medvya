@@ -98,11 +98,27 @@ public sealed record PatientSearch(string CountryCode, string? Query, DirectoryF
 }
 
 /// <summary>
-/// A result row for staff who register and book patients (MDV-P1-018, MDV-AUDIT-1100): the full name, age, sex, the MRN tail and the phone tail, enough
-/// to tell two people apart without opening either record (each opening is audited). The rest of the demographics need the record opened.
-/// The doctor's ⌘K lookup is a different endpoint and still shows initials only.
+/// A result row for staff who register and book patients (MDV-P1-018, MDV-AUDIT-1100, MDV-P1-101): the full name, age, sex, date of birth, the MRN tail,
+/// the phone tail, the day of the last visit and the duplicate mark, enough to tell two people apart without opening either record (each opening is
+/// audited). The rest of the demographics need the record opened.
 /// </summary>
-public sealed record PatientSearchRow(Guid Id, string Initials, string FullName, int AgeYears, bool AgeEstimated, SexAtBirth SexAtBirth, string MrnTail, string MobileTail, RegistrationStatus Status);
+/// <param name="DateOfBirth">Null when the date was estimated from a stated age: a guessed date must not confirm an identity.</param>
+/// <param name="LastVisitOn">The calendar day the patient last attended, a date and nothing else (never a reason, diagnosis or note); null when never.</param>
+public sealed record PatientSearchRow(Guid Id, string Initials, string FullName, int AgeYears, bool AgeEstimated, SexAtBirth SexAtBirth, string MrnTail, string MobileTail, RegistrationStatus Status,
+    DateOnly? DateOfBirth = null, DateOnly? LastVisitOn = null, DuplicateMark? Duplicate = null);
+
+/// <summary>A record in an open merge request (MDV-P1-101): the one that would be merged away is the possible duplicate; the older one that would survive is the main record.</summary>
+public enum DuplicateMark { MainRecord, PossibleDuplicate }
+
+/// <summary>
+/// When each patient last attended a visit, for the search row (MDV-P1-101). Implemented by the module that owns visits (Scheduling). A time only:
+/// whoever may search may already list a patient's visits on the calendar, and nothing clinical travels here.
+/// </summary>
+public interface IPatientLastVisits
+{
+    /// <summary>Start of the latest attended visit per patient of the current tenant, up to <paramref name="now"/>; patients without one are left out.</summary>
+    Task<IReadOnlyDictionary<Guid, DateTimeOffset>> LastVisitsAsync(IReadOnlyCollection<Guid> patientIds, DateTimeOffset now, CancellationToken cancellationToken = default);
+}
 
 public sealed record PatientSearchResult(SearchKind MatchedOn, IReadOnlyList<PatientSearchRow> Items, int Page, int PageSize, int Total);
 

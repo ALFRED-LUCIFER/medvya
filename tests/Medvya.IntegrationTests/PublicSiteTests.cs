@@ -133,7 +133,7 @@ public sealed partial class PublicSiteTests : IClassFixture<WebApplicationFactor
     public async Task RegionCookieChoosesTheRegionCopy(string? region, string payments, string residency)
     {
         var html = await Get("/", region);
-        Assert.Contains($"AI-drafted notes, {payments} and insurance claims", html, StringComparison.Ordinal);
+        Assert.Contains(payments == "UPI payments" ? "UPI and billing" : "Payments and billing", html, StringComparison.Ordinal); // the region card, marked planned (MDV-AUDIT-1112)
         Assert.Contains($"<li>{residency}</li>", html, StringComparison.Ordinal);
     }
 

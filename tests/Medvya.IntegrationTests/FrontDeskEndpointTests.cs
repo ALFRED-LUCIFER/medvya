@@ -148,9 +148,10 @@ public sealed class FrontDeskEndpointTests(PostgresFixture sql) : IClassFixture<
         // Exactly these fields: adding one (the reason text, a phone number, an identifier) must be a reviewed change here.
         Assert.Equal(
             ["id", "reference", "patientId", "patientName", "dateOfBirth", "registrationIncomplete", "calendarId", "calendarName",
-             "visitType", "reasonCategory", "start", "end", "state", "since", "room", "token", "walkIn", "unscheduled"],
+             "visitType", "reasonCategory", "start", "end", "state", "since", "room", "token", "walkIn", "unscheduled", "sex"], // sex at birth: with the date of birth, how a desk tells two patients of one name apart (MDV-AUDIT-1105)
             card.EnumerateObject().Select(p => p.Name));
         Assert.Equal(("ChronicReview", "Booked", "1972-03-12"), (card.GetProperty("reasonCategory").GetString(), card.GetProperty("state").GetString(), card.GetProperty("dateOfBirth").GetString()));
+        Assert.Equal("Female", card.GetProperty("sex").GetString());
         Assert.DoesNotContain("chest", body, StringComparison.OrdinalIgnoreCase); // the reason in the patient's words
         Assert.DoesNotContain("+9190", body, StringComparison.Ordinal); // the patient's mobile
         Assert.DoesNotContain("000001", body, StringComparison.Ordinal); // no MRN on the board either

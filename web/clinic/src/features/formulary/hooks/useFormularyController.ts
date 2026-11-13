@@ -6,7 +6,7 @@ import { useI18n } from '@medvya/i18n';
 import { ApiError } from '../../schedule/services/scheduleApi';
 import { useTableController } from '../../table/hooks/useTableController';
 import {
-  brandProblems, brandRowsSchema, emptyMedicine, formularySort, medicineSchema, orderSetSchema, parseBrandRows, splitProblem,
+  brandProblems, brandRowsSchema, emptyMedicine, formularySort, medicineSchema, orderSetSchema, orderSetSort, parseBrandRows, splitProblem,
   type BrandProblem, type BrandRowsForm, type MedicineForm, type OrderSetForm, type ProblemCode,
 } from '../domain/formulary';
 import { addBrands, addMedicine, addOrderSet, fetchOrderSets, searchFormulary } from '../services/formularyApi';
@@ -91,8 +91,11 @@ export function useBrandsController() {
 
 /** Order sets: the clinic's list and the form to add one. */
 export function useOrderSetsController() {
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const list = useQuery({ queryKey: ['order-sets'], queryFn: fetchOrderSets });
+  const sets = list.data ?? [];
+  const table = useTableController(sets, orderSetSort, c => t(`orderSets.col.${c}`));
   const form = useForm<OrderSetForm>({ resolver: zodResolver(orderSetSchema), defaultValues: { name: '', items: '' } });
   const [saved, setSaved] = useState(false);
   const [formError, setFormError] = useState<ProblemCode | null>(null);
@@ -114,7 +117,8 @@ export function useOrderSetsController() {
   });
 
   return {
-    sets: list.data ?? [],
+    sets,
+    table,
     loading: list.isPending,
     failed: list.isError,
     form,

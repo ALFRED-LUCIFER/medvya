@@ -240,3 +240,37 @@ test.describe('at 375 px', () => {
       expect(violations).toEqual([]);
     });
 });
+
+// MDV-P2-054: order sets are a compact table too, sorted by name from the keyboard and paged over 50 sets.
+test('order sets sort by name, and over 50 sets are paged', async ({ page }) => {
+  const { sets } = await open(page);
+  sets.push(...Array.from({ length: 55 }, (_, i) => ({ id: `s-${i}`, name: `Set ${String(i).padStart(2, '0')}`, items: ['HbA1c'] })));
+  await page.reload();
+  const table = page.getByRole('region', { name: 'Order set list' });
+  await expect(table.getByRole('rowheader')).toHaveCount(50);
+  const pager = page.getByRole('navigation', { name: 'Pages' });
+  await expect(pager).toContainText('Page 1 of 2');
+  await pager.getByRole('button', { name: 'Next page' }).click();
+  await expect(table.getByRole('rowheader')).toHaveCount(5);
+  await expect(table.getByRole('rowheader').first()).toHaveText('Set 50');
+  await table.getByRole('button', { name: 'Name' }).press('Enter');
+  await table.getByRole('button', { name: 'Name' }).press('Enter'); // descending, back on page 1
+  await expect(table.getByRole('columnheader', { name: 'Name' })).toHaveAttribute('aria-sort', 'descending');
+  await expect(table.getByRole('status')).toHaveText('Sorted by Name, descending');
+  await expect(pager).toContainText('Page 1 of 2');
+  await expect(table.getByRole('rowheader').first()).toHaveText('Set 54');
+  const row = table.getByRole('row', { name: /Set 54/ });
+  expect(Math.round((await row.boundingBox())!.height)).toBe(36);
+});
+
+test.describe('order sets at 375 px', () => {
+  test.use({ viewport: { width: 375, height: 812 } });
+  test('rows are stacked with the tests labelled, and nothing scrolls sideways', async ({ page }) => {
+    const { sets } = await open(page);
+    sets.push({ id: 's-1', name: 'Diabetes review labs', items: ['HbA1c', 'Fasting glucose', 'Serum creatinine'] });
+    await page.reload();
+    const table = page.getByRole('region', { name: 'Order set list' });
+    await expect(table.getByRole('cell')).toContainText('Tests');
+    expect(await table.evaluate(e => e.scrollWidth - e.clientWidth)).toBeLessThanOrEqual(0);
+  });
+});

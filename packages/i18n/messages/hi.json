@@ -2809,6 +2809,7 @@
   "intake.action.keep": "यह मान रखें",
   "intake.action.keepFor": "यह मान रखें: {name}",
   "intake.save": "वाइटल्स सहेजें",
+  "intake.record": "वाइटल्स और वज़न दर्ज करें",
   "intake.error.value": "अधिकतम एक दशमलव वाली संख्या लिखें, या खाली छोड़ें।",
   "intake.error.implausible": "यह मान संभव नहीं है। माप जाँचें और दोबारा मापें।",
   "intake.error.too_precise": "अधिकतम एक दशमलव स्थान लिखें।",

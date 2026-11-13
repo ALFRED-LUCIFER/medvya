@@ -106,7 +106,10 @@ export async function setNurseIntake(browser: Browser, enabled: boolean) {
     await admin.goto('/app/settings?tab=nurse');
     const toggle = admin.getByRole('region', { name: 'Nurse intake' }).getByRole('switch', { name: /^Nurse intake before the doctor/ });
     await expect(toggle).toBeVisible();
-    if ((await toggle.getAttribute('aria-checked')) !== String(enabled)) await toggle.click();
+    if ((await toggle.getAttribute('aria-checked')) !== String(enabled)) {
+      await toggle.click(); // it changes every board, so it asks first (MDV-P2-055)
+      await admin.getByRole('dialog').getByRole('button', { name: enabled ? 'Switch on' : 'Switch off', exact: true }).click();
+    }
     await expect(toggle).toHaveAttribute('aria-checked', String(enabled)); // shown from the server's answer, so the switch is saved
   } finally {
     await admin.close();

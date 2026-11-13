@@ -27,6 +27,15 @@ describe('Card and Section', () => {
     expect(screen.getAllByRole('region')).toHaveLength(2);
   });
 
+  it('a headingId names the region and lets the title take focus', () => {
+    render(<Card title="Referrals" headingId="referrals">x</Card>);
+    const h = screen.getByRole('heading', { name: 'Referrals' });
+    expect(h.id).toBe('referrals');
+    h.focus();
+    expect(document.activeElement).toBe(h);
+    expect(screen.getByRole('region', { name: 'Referrals' })).toBeTruthy();
+  });
+
   it('flags a bordered Card nested in a Card in development, and not a Section in a Card', () => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     const { container } = render(<Card title="Outer"><Section title="Inner section">ok</Section></Card>);

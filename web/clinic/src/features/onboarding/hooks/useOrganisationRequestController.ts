@@ -11,10 +11,13 @@ import { fetchRequest, saveItContact, startNewRequest, submitRequest, uploadDocu
 
 const requestKey = ['organisation', 'request'];
 
-/** The owner's onboarding request: documents, the hospital's IT contact and submit. The server decides who may and when; this follows its answer. */
-export function useOrganisationRequestController() {
+/**
+ * The owner's onboarding request: documents, the hospital's IT contact and submit. The server decides who may and when; this follows its answer.
+ * An approved organisation (the session's state) has nothing left to send, and one approved before ADR-016 has no request (404), so it is not asked.
+ */
+export function useOrganisationRequestController(approved: boolean) {
   const queryClient = useQueryClient();
-  const request = useQuery({ queryKey: requestKey, queryFn: fetchRequest, retry: false });
+  const request = useQuery({ queryKey: requestKey, queryFn: fetchRequest, retry: false, enabled: !approved });
   const data = request.data;
   // The shell's notice follows the state, so it is read again after every change of it.
   const refresh = () => Promise.all([queryClient.invalidateQueries({ queryKey: requestKey }), queryClient.invalidateQueries({ queryKey: sessionQueryKey })]);
@@ -30,6 +33,7 @@ export function useOrganisationRequestController() {
   const uploadError: RequestError | FileProblem | null = pickProblem?.problem ?? failure(upload.error);
 
   return {
+    approved,
     request: data ?? null,
     loading: request.isPending,
     forbidden: request.error instanceof ApiError && request.error.status === 403,

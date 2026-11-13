@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
 import { Link, NavLink } from 'react-router';
-import { Bell, Menu, Search } from 'lucide-react';
-import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, cn } from '@medvya/ui';
+import { Bell, Menu, PanelLeftClose, PanelLeftOpen, Search } from 'lucide-react';
+import { useI18n, type Locale } from '@medvya/i18n';
+import { AccountMenu, Button, buttonVariants, cn, NavRailItem } from '@medvya/ui';
 import type { Role } from '../../session/domain/session';
 import type { NavGroup, NavItem } from '../domain/navigation';
 import { navIcons, railColour } from './navIcons';
@@ -13,13 +13,15 @@ type Props = {
   facilityName: string;
   groups: { group: NavGroup; items: NavItem[] }[];
   tabs: NavItem[];
-  languageSwitcher: ReactNode;
-  signingOut: boolean;
-  /** More than one active membership: offer the facility picker (MDV-P0-012). */
-  canSwitchFacility: boolean;
+  onLocaleChange: (locale: Locale) => void;
   onSignOut: () => void;
-  /** Where "My devices" lives (MDV-P0-012). */
-  devicesPath: string;
+  /** "My devices" in the account menu (MDV-P0-012). */
+  onMyDevices: () => void;
+  /** Only with more than one active membership: the facility picker (MDV-P0-012). */
+  onChangeFacility?: () => void;
+  /** From 1280 px the user has folded the sidebar to the labelled rail (their own choice, MDV-P1-093). */
+  navCollapsed: boolean;
+  onToggleNav: () => void;
   /** Patient search target (D-02 header entry), when this membership may search patients. */
   searchPath?: string | null;
   /** The ⌘K patient search (D-02, MDV-P2-003), composed by the app for roles that treat patients; it replaces the plain link to the directory. */
@@ -29,75 +31,90 @@ type Props = {
   children: ReactNode;
 };
 
-const initials = (name: string) => name.replace(/^Dr\.?\s+/i, '').split(/\s+/).map(p => p[0]).slice(0, 2).join('').toUpperCase();
-
 /**
- * Responsive shell (docs/02-design/responsive-and-dark.md): bottom tabs below 768 px, 72 px icon rail from 768 px,
- * full navy sidebar from 1280 px (the md/lg breakpoints in packages/ui/src/styles.css).
+ * Responsive shell (DESIGN.md Navigation): bottom tabs and account in More below 768 px; a 72 px rail with a label under every icon
+ * from 768 px (never icon-only, ruling 8); the 232 px sidebar from 1280 px unless the user folds it. A 48 px top bar holds clinic,
+ * search, bell and the account menu (56 px on phones, account in More).
  */
-export default function AppShell({ displayName, role, facilityName, groups, tabs, languageSwitcher, signingOut, canSwitchFacility, onSignOut, devicesPath, searchPath, globalSearch, notifications, children }: Props) {
+export default function AppShell({ displayName, role, facilityName, groups, tabs, onLocaleChange, onSignOut, onMyDevices, onChangeFacility,
+  navCollapsed, onToggleNav, searchPath, globalSearch, notifications, children }: Props) {
   const { t } = useI18n();
+  // From 1280 px: the sidebar, or the rail when folded. Below 1280 the rail is the only choice.
+  const sidebarOnly = navCollapsed ? 'hidden' : 'hidden lg:flex';
+  const railOnly = navCollapsed ? '' : 'lg:hidden';
   return (
-    <div className="min-h-screen md:grid md:grid-cols-[72px_minmax(0,1fr)] lg:grid-cols-[clamp(196px,22vw,232px)_minmax(0,1fr)]">
+    <div className="min-h-screen md:grid md:grid-cols-[auto_minmax(0,1fr)]">
       <a href="#main" className="sr-only rounded-md bg-card px-4 py-3 font-bold text-foreground focus:not-sr-only focus:fixed focus:start-4 focus:top-4 focus:z-50">
         {t('shell.skip')}
       </a>
 
-      {/* Sidebar (≥1280) and icon rail (768–1279). Navy surface: focus ring switches to white for contrast. */}
+      {/* Navy surface: the focus ring switches to white for contrast. */}
       <nav aria-label={t('shell.mainNav')}
-        className="sticky top-0 hidden h-screen flex-col gap-1 overflow-y-auto bg-brand-950 px-3 py-4 text-nav-ink md:flex print:hidden [&_:focus-visible]:outline-white">
-        <div className="flex items-center gap-2.5 pb-4 max-lg:justify-center lg:px-2">
+        className={cn('sticky top-0 hidden h-screen w-rail flex-col gap-1 overflow-y-auto bg-brand-950 px-1 py-3 text-nav-ink md:flex print:hidden [&_:focus-visible]:outline-white',
+          !navCollapsed && 'lg:w-sidebar lg:px-3')}>
+        <div className={cn('flex items-center justify-center gap-2.5 pb-3', !navCollapsed && 'lg:justify-start lg:px-2')}>
           <span aria-hidden className="grid size-9 shrink-0 place-items-center rounded-[10px] bg-brand-700 font-extrabold text-white">{t('app.name').charAt(0)}</span>
-          <div className="hidden min-w-0 lg:block">
-            <p className="text-[17px] font-extrabold text-white">{t('app.name')}</p>
-            <p className="truncate text-xs text-nav-muted">{facilityName}</p>
-          </div>
+          <p className={cn(sidebarOnly, 'text-heading text-white')}>{t('app.name')}</p>
         </div>
-        {groups.map(g => (
-          <div key={g.group} className="flex flex-col gap-1 max-lg:pt-2">
-            <h2 className="hidden px-2.5 pt-3 pb-1 text-[11px] font-bold tracking-[.09em] text-nav-muted uppercase lg:block">{t(`nav.group.${g.group}`)}</h2>
-            <ul className="flex flex-col gap-1">
-              {g.items.map(item => {
-                const Icon = navIcons[item.id];
-                return (
-                  <li key={item.id}>
-                    <NavLink to={item.path} end
-                      className={({ isActive }) => cn(
-                        'relative flex min-h-11 items-center gap-2.5 rounded-lg px-2.5 text-sm font-semibold hover:bg-nav-hover max-lg:mx-auto max-lg:size-12 max-lg:justify-center max-lg:px-0',
-                        isActive && `bg-nav-hover text-white before:absolute before:inset-y-2 before:start-0 before:w-[3px] before:rounded-full ${railColour[item.group]}`,
-                      )}>
-                      <Icon className="size-5 shrink-0" aria-hidden />
-                      <span className="truncate max-lg:sr-only">{t(`nav.${item.id}`)}</span>
-                    </NavLink>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ))}
-        <div className="mt-auto flex items-center gap-2.5 border-t border-nav-line pt-3 max-lg:justify-center lg:px-2">
-          <span aria-hidden className="grid size-8 shrink-0 place-items-center rounded-full bg-nav-line text-xs font-bold text-white">{initials(displayName)}</span>
-          <div className="min-w-0 max-lg:sr-only">
-            <p className="truncate text-[13px] font-semibold text-white">{displayName}</p>
-            <p className="truncate text-xs text-nav-muted">{t(`role.${role}`)}</p>
-          </div>
+
+        <ul className={cn('flex flex-col gap-1', railOnly)}>
+          {groups.flatMap(g => g.items).map(item => (
+            <li key={item.id}>
+              <NavRailItem asChild icon={navIcons[item.id]} label={t(`nav.${item.id}`)}><NavLink to={item.path} end /></NavRailItem>
+            </li>
+          ))}
+        </ul>
+
+        <div className={cn(sidebarOnly, 'flex-col gap-1')}>
+          {groups.map(g => (
+            <div key={g.group} className="flex flex-col gap-1">
+              <h2 className="px-2.5 pt-3 pb-1 text-caption tracking-[.09em] text-nav-muted uppercase">{t(`nav.group.${g.group}`)}</h2>
+              <ul className="flex flex-col gap-1">
+                {g.items.map(item => {
+                  const Icon = navIcons[item.id];
+                  return (
+                    <li key={item.id}>
+                      <NavLink to={item.path} end
+                        className={({ isActive }) => cn(
+                          'relative flex min-h-control items-center gap-2.5 rounded-lg px-2.5 text-label hover:bg-nav-hover',
+                          isActive && `bg-nav-hover text-white before:absolute before:inset-y-2 before:start-0 before:w-[3px] before:rounded-full ${railColour[item.group]}`,
+                        )}>
+                        <Icon className="size-5 shrink-0" aria-hidden />
+                        <span className="truncate">{t(`nav.${item.id}`)}</span>
+                      </NavLink>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+        </div>
+
+        {/* The fold toggle exists only where there is a choice (1280 px and up). The icons follow the reading direction. */}
+        <div className="mt-auto hidden border-t border-nav-line pt-3 lg:block">
+          {navCollapsed
+            ? <NavRailItem asChild icon={PanelLeftOpen} label={t('shell.expandNav')} className="rtl:[&_svg]:-scale-x-100"><button type="button" onClick={onToggleNav} /></NavRailItem>
+            : <button type="button" onClick={onToggleNav} className="flex min-h-control w-full items-center gap-2.5 rounded-lg px-2.5 text-label hover:bg-nav-hover">
+                <PanelLeftClose className="size-5 shrink-0 rtl:-scale-x-100" aria-hidden />{t('shell.collapseNav')}
+              </button>}
         </div>
       </nav>
 
       <div className="flex min-w-0 flex-col">
-        <header className="sticky top-0 z-10 flex min-h-15 items-center gap-3 border-b bg-card px-4 md:px-6 print:hidden">
-          <p className="min-w-0 flex-1 truncate font-bold lg:invisible">{facilityName}</p>
+        <header className="sticky top-0 z-10 flex h-topbar-phone items-center gap-3 border-b bg-card px-4 md:h-topbar md:px-6 print:hidden">
+          <p className="min-w-0 flex-1 truncate font-bold">{facilityName}</p>
           {globalSearch ?? (searchPath && (
             <Link to={searchPath} className={cn(buttonVariants({ variant: 'outline' }), 'max-sm:size-11 max-sm:px-0')}>
               <Search aria-hidden /><span className="max-sm:sr-only">{t('patients.search.open')}</span>
             </Link>
           ))}
-          <div className="hidden md:block">{languageSwitcher}</div>
-          {canSwitchFacility && <Link to="/choose-facility" className={buttonVariants({ variant: 'outline', className: 'hidden md:inline-flex' })}>{t('session.switchFacility')}</Link>}
-          <Link to={devicesPath} className={buttonVariants({ variant: 'outline', className: 'max-lg:hidden' })}>{t('myDevices.link')}</Link>
-          <Button variant="outline" className="hidden md:inline-flex" loading={signingOut} onClick={onSignOut}>{t('session.signOut')}</Button>
           {/* The notification centre (D-03) for roles that may see any notification; others keep the inert bell. */}
           {notifications ?? <Button variant="ghost" size="icon" disabled aria-label={t('shell.notifications')}><Bell className="size-5" aria-hidden /></Button>}
+          {/* Under 768 px the account items are in More. */}
+          <div className="hidden md:block">
+            <AccountMenu name={displayName} roleLabel={t(`role.${role}`)} onLocaleChange={onLocaleChange} onMyDevices={onMyDevices}
+              onChangeFacility={onChangeFacility} onSignOut={onSignOut} />
+          </div>
         </header>
         <main id="main" tabIndex={-1} className="flex-1 p-4 pb-28 focus:outline-none md:p-6">{children}</main>
       </div>

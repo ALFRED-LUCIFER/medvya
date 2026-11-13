@@ -39,8 +39,9 @@ test('receptionist sees only Practice items and lands on the front desk', async 
   const nav = page.getByRole('navigation');
   await expect(nav.getByRole('heading')).toHaveText(['Practice']);
   await expect(nav.getByRole('link')).toHaveText(['Front desk', 'Schedule', 'Register patient']);
-  await expect(nav).toContainText('A. Joseph');
-  await expect(nav).toContainText('Receptionist');
+  // Name and role are in the account menu (MDV-P1-093), not the sidebar.
+  await page.getByRole('button', { name: 'Signed in as A. Joseph' }).click();
+  await expect(page.getByRole('menu')).toContainText('Receptionist');
   // A clinical address is not a route for this role.
   await page.goto('/patients');
   await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible();
@@ -108,10 +109,9 @@ for (const locale of ['en', 'ar']) {
     await page.setViewportSize({ width: 1366, height: 800 });
     await page.goto('/today');
     let box = (await sidebar(page).boundingBox())!;
-    expect(box.width).toBeGreaterThanOrEqual(196);
-    expect(box.width).toBeLessThanOrEqual(232);
+    expect(box.width).toBe(232);
     expect(rtl ? box.x + box.width : box.x).toBe(rtl ? 1366 : 0); // sidebar sits on the reading-start side
-    await expect(sidebar(page)).toContainText('Iyer Family Clinic · Adyar');
+    await expect(page.getByRole('banner')).toContainText('Iyer Family Clinic · Adyar');
 
     await page.setViewportSize({ width: 900, height: 800 });
     box = (await sidebar(page).boundingBox())!;
@@ -148,7 +148,7 @@ test('keyboard: skip link is first, visible on focus and moves focus to main', a
 });
 
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
-for (const [name, width] of [['desktop', 1366], ['tablet', 900], ['mobile', 375]] as const)
+for (const [name, width] of [['wide', 1440], ['desktop', 1366], ['laptop', 1024], ['tablet', 900], ['tablet-768', 768], ['mobile', 375]] as const)
   for (const locale of ['en', 'ar'])
     test(`axe finds no violations on the shell (${name}, ${locale})`, async ({ page }) => {
       await signInAs(page, doctor, locale);
@@ -161,3 +161,124 @@ for (const [name, width] of [['desktop', 1366], ['tablet', 900], ['mobile', 375]
           .map(v => `${v.id} (${v.nodes.length})`));
       expect(violations).toEqual([]);
     });
+
+// MDV-P1-093: one account menu, a 48 px top bar and a labelled rail.
+const practiceAdmin = {
+  user: { id: 'u-lakshmi', displayName: 'K. Lakshmi' },
+  memberships: [membership('PracticeAdmin')],
+  active: {
+    membershipId: 'm-1', tenantId: 't-1', facilityId: 'f-1', role: 'PracticeAdmin', flags: [],
+    capabilities: { RegisterBookPatients: 'Full', CheckInQueue: 'Full', StaffRolesIntegrations: 'Config' },
+  },
+};
+const roles = { receptionist, doctor, nurse, practiceAdmin } as const;
+const startPageReady = (page: Page) => expect(page).not.toHaveURL(/\/$/);
+
+for (const [roleName, context] of Object.entries(roles)) {
+  for (const width of [768, 375])
+    test(`${roleName} at ${width} px: no sideways page scroll, and Sign out in two actions`, async ({ page }) => {
+      await signInAs(page, context);
+      await page.setViewportSize({ width, height: 800 });
+      await page.goto('/');
+      await startPageReady(page);
+      await expect(page.getByRole('main')).toBeVisible();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
+      if (width >= 768) {
+        await page.getByRole('button', { name: /^Signed in as / }).click();
+        await expect(page.getByRole('menuitem', { name: 'Sign out' })).toBeVisible();
+      } else {
+        await page.getByRole('link', { name: 'More' }).click();
+        await expect(page.getByRole('main').getByRole('button', { name: 'Sign out' })).toBeVisible();
+      }
+    });
+
+  test(`${roleName} at 1024 by 768: every rail item shows its name under the icon`, async ({ page }) => {
+    await signInAs(page, context);
+    await page.setViewportSize({ width: 1024, height: 768 });
+    await page.goto('/');
+    await startPageReady(page);
+    const links = sidebar(page).getByRole('link');
+    await expect(links.first()).toBeVisible();
+    for (const link of await links.all()) {
+      const icon = (await link.locator('svg').boundingBox())!;
+      const label = link.locator('span').last();
+      await expect(label).toBeVisible();
+      expect((await label.textContent())!.trim()).toBe((await link.textContent())!.trim()); // the whole name is the visible label
+      const box = (await label.boundingBox())!;
+      expect(box.width).toBeGreaterThan(10);
+      expect(box.y).toBeGreaterThanOrEqual(icon.y + icon.height - 1); // under the icon, not beside or hidden
+    }
+  });
+}
+
+test('at 1440 px the sidebar shows until the user folds it; the labelled rail is kept on reload', async ({ page }) => {
+  await signInAs(page, doctor);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/today');
+  await expect(sidebar(page).getByRole('link', { name: 'Today' })).toBeVisible();
+  expect((await sidebar(page).boundingBox())!.width).toBe(232);
+  await page.getByRole('button', { name: 'Collapse menu' }).click();
+  expect((await sidebar(page).boundingBox())!.width).toBe(72);
+  await expect(sidebar(page).getByRole('link', { name: 'Today' })).toBeVisible(); // labelled, never icon-only
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Expand menu' })).toBeVisible();
+  expect((await sidebar(page).boundingBox())!.width).toBe(72);
+  await page.getByRole('button', { name: 'Expand menu' }).click();
+  expect((await sidebar(page).boundingBox())!.width).toBe(232);
+  // Below 1280 there is no choice to make: the rail, and no toggle.
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await expect(page.getByRole('button', { name: /Collapse menu|Expand menu/ })).toHaveCount(0);
+});
+
+for (const [roleName, context] of [['doctor', doctor], ['receptionist', receptionist]] as const)
+  test(`at 1024 px the top bar is 48 px and holds clinic, search, bell and avatar only (${roleName})`, async ({ page }) => {
+    await signInAs(page, context);
+    await page.setViewportSize({ width: 1024, height: 768 });
+    await page.goto('/');
+    await startPageReady(page);
+    const bar = page.getByRole('banner');
+    await expect(bar).toContainText('Iyer Family Clinic · Adyar');
+    expect((await bar.boundingBox())!.height).toBe(48);
+    await expect(bar.getByRole('button').or(bar.getByRole('link'))).toHaveCount(3);
+    await expect(bar.getByRole('button', { name: /^Signed in as / })).toBeVisible();
+    await expect(bar.getByRole('button', { name: 'Sign out' })).toHaveCount(0);
+  });
+
+test('the account menu opens and closes by keyboard and gives focus back to the avatar; the skip link stays first', async ({ page }) => {
+  await signInAs(page, receptionist);
+  await page.goto('/front-desk');
+  const board = page.getByRole('main').getByRole('heading', { name: /^Reception board/ }); // the shell has rendered: a Tab before it lands nowhere
+  await expect(board).toBeVisible();
+  const avatar = page.getByRole('button', { name: 'Signed in as A. Joseph' });
+  await avatar.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('menu')).toBeVisible();
+  await expect(page.getByRole('menuitem').last()).toHaveText('Sign out'); // last, separated
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('menu')).toHaveCount(0);
+  await expect(avatar).toBeFocused();
+  await page.reload();
+  await expect(board).toBeVisible();
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('link', { name: 'Skip to main content' })).toBeFocused();
+});
+
+for (const locale of ['en', 'ar'])
+  test(`the shell mirrors in Arabic, the search key hint reads left to right, and the open account menu passes axe (${locale})`, async ({ page }) => {
+    await signInAs(page, doctor, locale);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/today');
+    const avatar = page.getByRole('banner').getByRole('button', { name: locale === 'ar' ? 'تم تسجيل الدخول باسم Dr. Arjun Rao' : 'Signed in as Dr. Arjun Rao' });
+    await expect(avatar).toBeVisible();
+    const box = (await avatar.boundingBox())!;
+    expect(locale === 'ar' ? box.x < 720 : box.x > 720).toBe(true); // the avatar sits at the reading end
+    await expect(page.getByRole('banner').locator('kbd')).toHaveAttribute('dir', 'ltr');
+    await avatar.click();
+    await expect(page.getByRole('menu')).toBeVisible();
+    // The open menu is modal (the page behind is hidden from assistive technology), so it is checked on its own; the shell is checked closed above.
+    await page.addScriptTag({ path: axePath });
+    const violations = await page.evaluate(async () =>
+      (await (window as unknown as { axe: { run: (c: Element) => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run(document.querySelector('[role=menu]')!)).violations
+        .map(v => `${v.id} (${v.nodes.length})`));
+    expect(violations).toEqual([]);
+  });

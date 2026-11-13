@@ -16,7 +16,8 @@ type AccountMenuProps = {
   onSignOut: () => void
 }
 
-const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join("").toUpperCase()
+// "Dr. Arjun Rao" is AR, not DA: the title is not part of the name.
+const initials = (name: string) => name.replace(/^Dr\.?\s+/i, "").split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join("").toUpperCase()
 
 /** The avatar button and its menu: name and role, language, my devices, change facility, and sign out last and separated (DESIGN.md Navigation). */
 function AccountMenu({ name, roleLabel, onLocaleChange, onMyDevices, onChangeFacility, onSignOut }: AccountMenuProps) {

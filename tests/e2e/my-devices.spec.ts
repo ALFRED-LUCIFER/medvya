@@ -45,11 +45,12 @@ test('lists this device first without a Sign out, and ends another device', asyn
   expect(state.ended).toEqual([{ id: 'desk', csrf: '1' }]);
 });
 
-test('every staff role reaches it from the header', async ({ page }) => {
+test('every staff role reaches it from the account menu', async ({ page }) => {
   await open(page);
-  await page.setViewportSize({ width: 1366, height: 800 }); // the header link shows from 1024 px; narrower screens use More
+  await page.setViewportSize({ width: 1366, height: 800 }); // the account menu shows from 768 px; phones use More
   await page.goto('/schedule');
-  await page.getByRole('link', { name: 'My devices' }).click();
+  await page.getByRole('button', { name: /^Signed in as / }).click();
+  await page.getByRole('menuitem', { name: 'My devices' }).click();
   await expect(page).toHaveURL(/\/account\/devices$/);
   await expect(page.getByRole('heading', { name: 'My devices' })).toBeVisible();
 });

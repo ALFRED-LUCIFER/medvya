@@ -8,13 +8,13 @@ import {
   type DuplicateDecision, type DuplicateQuery, type DuplicateResolution, type FormField, type RegisterRequest, type RegistrationForm,
   type RegistrationResult, type Step,
 } from '../domain/registration';
-
-type FormStep = Exclude<Step, 'review'>;
 import { missingParts } from '../../patients/domain/directory';
 import { forgetKey, type HeldKey, keyFor } from '../../api/services/idempotencyKey';
 import { ApiError } from '../../patients/services/patientsApi';
 import { checkDuplicates, registerPatient } from '../services/registrationApi';
 import { patientDataGcTime } from '../../patients/hooks/usePatientDirectoryController';
+
+type FormStep = Exclude<Step, 'review'>;
 
 /** Typing pauses this long before the duplicate check runs; each check is audited and rate-limited. */
 export const duplicateCheckDelayMs = 500;

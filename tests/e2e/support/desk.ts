@@ -60,7 +60,7 @@ export const fixtures: Record<string, unknown> = {
   '**/v1/queue/displays?*': [{ id: 'q-1', facilityId: 'f-1', name: 'Lobby TV', createdAt: '2026-10-01T04:00:00Z', revokedAt: null }],
   '**/v1/audit/access-log**': { next: null, actions: ['patient.read'], items: [{ id: 'e1', occurredAt: '2026-10-19T05:30:00Z', actorUserId: 'u-rao', actorName: 'Dr. Arjun Rao (synthetic)',
     role: 'SoloDoctor', action: 'patient.read', resourceType: 'patient', patientId: 'p-1', patientMrn: '000001', patientName: null, purpose: 'treatment', outcome: 'Allowed', detail: null }] },
-  '**/v1/schedule/metrics**': { from: '2026-10-05T05:30:00Z', to: '2026-10-19T05:30:00Z', checkIn: { returningMedianSeconds: 74, returningCount: 18, medianSeconds: 81, count: 25, targetSeconds: 60 },
+  '**/v1/schedule/metrics**': { from: '2026-10-05T05:30:00Z', to: '2026-10-19T05:30:00Z', checkIn: { returningMedianSeconds: 74, returningCount: 18, medianSeconds: 81, count: 25, targetSeconds: 60, unmeasured: 0 },
     noShows: { noShows: 6, attended: 54, percent: 10 }, doubleBookingRefusals: 0, baselines: [] },
   '**/v1/notifications/delivery**': { channels: [{ channel: 'Email', total: 40, delivered: 36, failed: 2, pending: 2 }], failures: [] },
   '**/v1/settings/notifications': { confirmation: true, reminder24h: true, reminder2h: true, changes: true, email: true, sms: true, quietStart: '21:00:00', quietEnd: '08:00:00', senderName: null },

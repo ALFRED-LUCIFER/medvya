@@ -3089,6 +3089,7 @@
   "pilotMetrics.checkInGap": "{target} सेकंड के लक्ष्य से {gap} सेकंड ज़्यादा।",
   "pilotMetrics.checkInNoReturning": "लौटने वाले मरीज़ का अभी कोई समयबद्ध चेक-इन नहीं (लक्ष्य {target} सेकंड)।",
   "pilotMetrics.checkInCounts": "{all} समयबद्ध चेक-इन में से {returning} लौटने वाले; सभी मरीज़: {median}।",
+  "pilotMetrics.checkInUnmeasured": "मापे नहीं गए और गिनती से बाहर: {count} (शुरुआत का समय नहीं, या 1 सेकंड से कम)।",
   "pilotMetrics.noShow": "नो-शो दर",
   "pilotMetrics.noShowCounts": "परिणाम वाली {total} बुक की गई विज़िट में से {noShows} नो-शो।",
   "pilotMetrics.doubleBookings": "रोकी गई डबल बुकिंग",

@@ -20,6 +20,7 @@ type Props = {
   saving: boolean;
   onConfirm: () => void;
   onConfirmRepeat: () => void;
+  onRegister: () => void;
   result: (WalkInVisit & { token: string | null }) | null;
   error: WalkInError | 'forbidden' | null;
   boardPath: string;
@@ -65,7 +66,7 @@ export default function WalkInPage(p: Props) {
         <div className="flex flex-col gap-1">
           {p.patient?.loading && <p className="text-sm text-muted-foreground">{t('patients.loading')}</p>}
           {p.patient?.match && <p className="font-bold" role="status">{t('walkIn.patient', { name: p.patient.match.fullName, mrn: p.patient.match.mrn })}</p>}
-          <Link to={p.registerPath} className={cn(buttonVariants({ variant: 'link' }), 'self-start px-0')}><UserPlus aria-hidden />{t('walkIn.register')}</Link>
+          <Link to={p.registerPath} onClick={p.onRegister} className={cn(buttonVariants({ variant: 'link' }), 'self-start px-0')}><UserPlus aria-hidden />{t('walkIn.register')}</Link>
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">

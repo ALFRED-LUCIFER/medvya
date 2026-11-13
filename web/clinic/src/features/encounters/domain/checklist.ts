@@ -1,6 +1,6 @@
 import type { MessageKey } from '@medvya/i18n';
 import type { AllergyState } from '../../patient360/domain/chart';
-import { isBlank, structuredIds, type NoteSections, type NoteTemplate, type RecordingConsent } from './note';
+import { isBlank, recordingAvailable, structuredIds, type NoteSections, type NoteTemplate, type RecordingConsent } from './note';
 
 // The review-and-sign checklist (MDV-P2-044, E-04/E-06). Worked out from the note, the encounter banner and the reconciliation every time;
 // nothing of it is stored. The server refuses a signature without a recorded consent, with an undecided AI draft or a blank required section,
@@ -47,7 +47,7 @@ export function signChecklist(i: ChecklistInput): ChecklistItem[] {
     diagnoses: reviewed(i.sections, i.undecidedAi, 'assessment', ['assessment']),
     plan: reviewed(i.sections, i.undecidedAi, 'plan', ['plan']),
   };
-  return checklistIds.map(id => ({
+  return checklistIds.filter(id => id !== 'consent' || recordingAvailable).map(id => ({
     id,
     state: id === 'diagnoses' && done.diagnoses && !i.diagnosisRecorded ? 'warn' : done[id] ? 'done' : 'todo',
   }));

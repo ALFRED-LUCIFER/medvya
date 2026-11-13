@@ -103,9 +103,8 @@ journey('J2', {
     const note = page.getByRole('region', { name: 'Consultation note' });
     await expect(note.getByRole('navigation', { name: 'Note sections' }).getByRole('link')).toHaveCount(7);
     const sign = note.getByRole('button', { name: 'Sign note' });
-    await expect(sign).toBeDisabled();
-    await expect(sign).toHaveAccessibleDescription('1 item still needs your review before signing');
-    await note.getByRole('radio', { name: 'Patient declined: I type the note' }).check();
+    await expect(note.getByRole('group', { name: 'Recording consent for this visit' })).toHaveCount(0); // MDV-AUDIT-1092
+    await expect(sign).toBeEnabled();
     await expect(sign).toHaveAccessibleDescription('Everything reviewed. Ready to sign.');
   },
   // E-06 (MDV-P2-012): signed after the step-up; the gates are proven on PostgreSQL in ConsultNoteTests.

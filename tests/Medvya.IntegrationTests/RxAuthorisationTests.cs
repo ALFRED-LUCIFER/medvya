@@ -230,7 +230,8 @@ public sealed class RxAuthorisationTests(PostgresFixture sql, AzuriteFixture blo
     {
         using (var empty = await AuthoriseAsync(h.Doctor)) Assert.Equal((HttpStatusCode.Conflict, "nothing_to_authorise"), (empty.StatusCode, await Code(empty)));
         await PrescribeAsync("Metformin", new UpdateRxLine(null, null, null, null, null, null, null, null));
-        using (var blank = await AuthoriseAsync(h.Doctor)) Assert.Equal(HttpStatusCode.BadRequest, blank.StatusCode); // lines: no_instructions
+        // MDV-AUDIT-1096: a draft that cannot be authorised is refused before the step-up, so no re-authentication is asked for nothing.
+        using (var blank = await AuthoriseAsync(h.Doctor, null)) Assert.Equal(HttpStatusCode.BadRequest, blank.StatusCode); // lines: no_instructions
         Assert.Empty(await AuthorisedAsync());
     }
 

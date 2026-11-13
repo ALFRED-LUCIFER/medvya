@@ -1,9 +1,9 @@
 import type { FormEventHandler, ReactNode } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { Link } from 'react-router';
-import { CircleAlert, CircleSlash, TrendingDown, CircleX, FilePen, History, Plus, Printer, ShieldCheck, UserRound } from 'lucide-react';
+import { CircleAlert, CircleSlash, TrendingDown, CircleX, FilePen, History, Plus, Printer, ShieldCheck, Trash2, UserRound } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, ClinicalAlert, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Switch } from '@medvya/ui';
+import { Button, buttonVariants, ClinicalAlert, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
 import { isCurrent, type AuthoriseProblem, type RxAuthorisationState } from '../domain/authorisation';
 import { describedBy, fieldError } from '../../settings/components/fieldStyles';
 import { Field } from '../../settings/components/Field';
@@ -59,10 +59,11 @@ const sourceIcon = { AddedByYou: UserRound, AddedByColleague: UserRound, ChartRe
  */
 export default function PrescriptionPanel(p: Props) {
   const { t } = useI18n();
-  const prescribed = p.lines.filter(l => l.kind === 'Prescribe');
+  // A removed line (switched off on the server, kept for the record) is not shown: only the lines that would be prescribed.
+  const prescribed = p.lines.filter(l => l.kind === 'Prescribe' && l.included);
   // Stops, changes and tapers follow the reconciliation (MDV-P2-011, MDV-P2-043): read here, decided there.
   const stopped = p.lines.filter(l => l.kind !== 'Prescribe');
-  const status = p.loading ? t('rx.loading') : p.failed ? t('rx.loadFailed') : p.lines.length === 0 ? t('rx.empty') : null;
+  const status = p.loading ? t('rx.loading') : p.failed ? t('rx.loadFailed') : prescribed.length === 0 && stopped.length === 0 ? t('rx.empty') : null;
 
   return (
     <Section title={t('rx.title')} intro={t(p.ended ? 'rx.ended' : 'rx.intro')}>
@@ -221,7 +222,7 @@ function Line({ line, ended, busy, language, checks, draftOf, saveOf, invalidOf,
   const draft = draftOf(line);
   const invalid = invalidOf(line);
   const save = saveOf(id);
-  const locked = ended || !line.included;
+  const locked = ended;
   const fieldId = (f: SigField) => `rx-${id}-${f}`;
   const text = (f: 'dose' | 'durationDays' | 'quantity' | 'instructions', className = '') => (
     <Field id={fieldId(f)} label={t(`rx.field.${f}`)} error={invalid.includes(f) ? t(`rx.invalid.${f}`) : null} className={className}>
@@ -248,8 +249,7 @@ function Line({ line, ended, busy, language, checks, draftOf, saveOf, invalidOf,
         {(line.strength || line.form) && <span className="text-sm">{[line.strength, line.form].filter(Boolean).join(' · ')}</span>}
         <SourceChip line={line} />
         {checks && line.included && <SafetyChip state={lineSafety(checks, id)} />}
-        {!line.included && <span className="text-sm font-bold">{t('rx.notIncluded')}</span>}
-        {!ended && <Switch className="ms-auto" checked={line.included} disabled={busy} aria-label={t('rx.include', { name: line.medicine })} onCheckedChange={on => onInclude(id, on)} />}
+        {!ended && <Button variant="outline" className="ms-auto min-h-11" disabled={busy} aria-label={t('rx.remove', { name: line.medicine })} onClick={() => onInclude(id, false)}><Trash2 aria-hidden className="size-4" />{t('rx.removeShort')}</Button>}
       </div>
       {line.freeText && <ClinicalAlert severity="attention">{t('rx.freeTextWarning')}</ClinicalAlert>}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

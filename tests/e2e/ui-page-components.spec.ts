@@ -26,7 +26,7 @@ for (const locale of ['en', 'ar'] as const) {
       await expect(messages).toHaveCount(4);
       for (const m of await messages.all()) {
         await expect(m.locator('svg[aria-hidden]')).toHaveCount(1);
-        await expect(m.locator('p')).not.toBeEmpty();
+        await expect(m.locator('p').last()).not.toBeEmpty(); // the sentence; an optional title line sits above it
         expect(await m.getByRole('button').count()).toBeLessThanOrEqual(1);
       }
       if (locale === 'ar') await expect(messages.first().locator('p')).not.toHaveText('Loading the board…');

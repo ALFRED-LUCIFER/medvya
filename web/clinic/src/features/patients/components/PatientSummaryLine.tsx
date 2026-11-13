@@ -1,8 +1,7 @@
 import { TriangleAlert } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
+import { Tag } from '@medvya/ui';
 import type { PatientSummary } from '../domain/directory';
-
-const chip = 'inline-flex items-center gap-1 rounded-sm border bg-card px-2 py-1 text-xs font-bold';
 
 /**
  * A result row's content on two lines (MDV-AUDIT-1100, MDV-P1-101): the full name with age and sex, then the date of birth, the last four of the MRN
@@ -29,9 +28,9 @@ export default function PatientSummaryLine({ row, spoken = false }: { row: Omit<
         </span>{' '}
         {(row.duplicate || row.status === 'Incomplete') && (
           <span className="flex flex-wrap gap-1">
-            {row.duplicate === 'PossibleDuplicate' && <span className={`${chip} text-warning-700`}><TriangleAlert className="size-3.5" aria-hidden />{t('patients.duplicate.PossibleDuplicate')}</span>}{' '}
-            {row.duplicate === 'MainRecord' && <span className={chip}>{t('patients.duplicate.MainRecord')}</span>}{' '}
-            {row.status === 'Incomplete' && <span className={`${chip} text-warning-700`}><TriangleAlert className="size-3.5" aria-hidden />{t('patients.status.Incomplete')}</span>}
+            {row.duplicate === 'PossibleDuplicate' && <Tag size="sm" tone="warning" icon={TriangleAlert} label={t('patients.duplicate.PossibleDuplicate')} />}{' '}
+            {row.duplicate === 'MainRecord' && <Tag size="sm" tone="neutral" label={t('patients.duplicate.MainRecord')} />}{' '}
+            {row.status === 'Incomplete' && <Tag size="sm" tone="warning" icon={TriangleAlert} label={t('patients.status.Incomplete')} />}
           </span>
         )}
       </span>

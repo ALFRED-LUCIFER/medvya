@@ -184,7 +184,7 @@ journey('J2', {
       await expect(checks).toContainText('Augmentin 625 Duo: typed as free text, so not checked for allergies, interactions or dose.'); // the honest note stays
       await rx.getByRole('button', { name: 'Authorise prescription' }).click();
       await expect(rx.getByRole('alert').filter({ hasText: 'A severe alert has no reason yet.' })).toBeVisible(); // the server's refusal: still a draft
-      await expect(status).toHaveCount(0);
+      await expect(rx.getByRole('status').filter({ hasText: /^Draft/ })).toBeVisible();
 
       // The reason step by keyboard alone, then axe with the alert and the field open, in English and in Arabic.
       await checks.getByRole('button', { name: 'Give a reason to go ahead' }).focus();

@@ -37,7 +37,7 @@ function TextField({ form, name, label, ltr, autoFocus }: { form: UseFormReturn<
   return (
     <div className="flex flex-col gap-1.5">
       <Label htmlFor={id}>{label}</Label>
-      <Input id={id} type={name === 'email' ? 'email' : 'text'} dir={ltr ? 'ltr' : undefined} className="min-h-11" spellCheck={false} autoFocus={autoFocus}
+      <Input id={id} type={name === 'email' ? 'email' : 'text'} dir={ltr ? 'ltr' : undefined} spellCheck={false} autoFocus={autoFocus}
         autoComplete={name === 'email' ? 'email' : name === 'fullName' ? 'name' : 'off'}
         aria-invalid={error ? true : undefined} aria-describedby={error ? `${id}-error` : undefined} {...form.register(name)} />
       {error && (

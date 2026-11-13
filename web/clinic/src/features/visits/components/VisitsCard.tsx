@@ -8,7 +8,7 @@ type Props = { visits: VisitRow[]; timeZone: string; loading: boolean; failed: b
 /** The chart's Visits block (MDV-1088): each past visit with its doctor, diagnosis, medicines and tests; a row opens the visit (the signed note, read-only) and its prescription. */
 export default function VisitsCard(p: Props) {
   const { t, formatDate, formatTime } = useI18n();
-  const link = buttonVariants({ variant: 'link', className: 'min-h-11 px-0' });
+  const link = buttonVariants({ variant: 'link', className: 'px-0' });
   return (
     <section aria-label={t('visits.title')} className="flex flex-col gap-3 rounded-xl border bg-card p-4">
       <h2 className="text-base font-extrabold">{t('visits.title')}</h2>

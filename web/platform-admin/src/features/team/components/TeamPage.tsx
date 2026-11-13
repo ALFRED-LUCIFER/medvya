@@ -76,7 +76,7 @@ export default function TeamPage({ vm }: Props) {
               <Label htmlFor={ids.role}>{t('platform.team.role')}</Label>
               <Controller control={vm.inviteForm.control} name="role" render={({ field }) => (
                 <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger id={ids.role} className="min-h-11"><SelectValue /></SelectTrigger>
+                  <SelectTrigger id={ids.role}><SelectValue /></SelectTrigger>
                   <SelectContent>{roles.map(r => <SelectItem key={r} value={r}>{t(`platform.role.${r}`)}</SelectItem>)}</SelectContent>
                 </Select>
               )} />

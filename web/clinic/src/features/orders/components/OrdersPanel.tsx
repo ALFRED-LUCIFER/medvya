@@ -70,44 +70,44 @@ export default function OrdersPanel(p: Props) {
             <Field id="order-kind" label={t('orders.field.kind')}>
               <Controller control={p.form.control} name="kind" render={({ field }) => (
                 <Select value={field.value ?? 'Lab'} onValueChange={field.onChange}>
-                  <SelectTrigger id="order-kind" className="h-11 w-full"><SelectValue /></SelectTrigger>
+                  <SelectTrigger id="order-kind" className="w-full"><SelectValue /></SelectTrigger>
                   <SelectContent>{orderKinds.map(k => <SelectItem key={k} value={k}>{t(`orders.kind.${k}`)}</SelectItem>)}</SelectContent>
                 </Select>
               )} />
             </Field>
             <Field id="order-name" label={t('orders.field.name')} error={nameError}>
-              <Input id="order-name" className="h-11" autoComplete="off" {...describedBy('order-name', !!errors.name)} {...p.form.register('name')} />
+              <Input id="order-name" autoComplete="off" {...describedBy('order-name', !!errors.name)} {...p.form.register('name')} />
             </Field>
             <Field id="order-note" label={t('orders.field.note')} className="sm:col-span-2">
-              <Input id="order-note" className="h-11" autoComplete="off" {...p.form.register('note')} />
+              <Input id="order-note" autoComplete="off" {...p.form.register('note')} />
             </Field>
-            <Button type="submit" variant="outline" className="min-h-11 self-start" disabled={p.busy}>{t('orders.add')}</Button>
+            <Button type="submit" variant="outline" className="self-start" disabled={p.busy}>{t('orders.add')}</Button>
           </form>
 
           {p.sets.length > 0 && (
             <div className="flex flex-wrap items-end gap-3">
               <Field id="order-set" label={t('orders.set.field')} className="min-w-64">
                 <Select value={p.setId} onValueChange={p.onSetId}>
-                  <SelectTrigger id="order-set" className="h-11 w-full"><SelectValue placeholder={t('orders.set.choose')} /></SelectTrigger>
+                  <SelectTrigger id="order-set" className="w-full"><SelectValue placeholder={t('orders.set.choose')} /></SelectTrigger>
                   <SelectContent>{p.sets.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
                 </Select>
               </Field>
-              <Button type="button" variant="outline" className="min-h-11" disabled={p.busy || !p.setId} onClick={p.onAddSet}>{t('orders.set.add')}</Button>
+              <Button type="button" variant="outline" disabled={p.busy || !p.setId} onClick={p.onAddSet}>{t('orders.set.add')}</Button>
             </div>
           )}
 
           <div className="flex flex-wrap items-end gap-3 border-t pt-4">
             <Field id="order-destination" label={t('orders.destination')} className="min-w-64">
-              <Input id="order-destination" className="h-11" maxLength={100} autoComplete="off" value={p.destination} onChange={e => p.onDestination(e.target.value)} />
+              <Input id="order-destination" maxLength={100} autoComplete="off" value={p.destination} onChange={e => p.onDestination(e.target.value)} />
             </Field>
-            <Button type="button" className="min-h-11" disabled={p.busy || !hasDrafts(p.orders)} onClick={p.onPlace}>{t('orders.place')}</Button>
+            <Button type="button" disabled={p.busy || !hasDrafts(p.orders)} onClick={p.onPlace}>{t('orders.place')}</Button>
           </div>
         </>
       )}
 
       {p.problem && <p role="alert" className={fieldError}>{t(`orders.error.${p.problem}`)}</p>}
       {p.placed && <p role="status" className="flex items-center gap-2 font-bold"><CircleCheck aria-hidden className="size-5" />{t('orders.placed')}</p>}
-      {hasPlaced(p.orders) && <Link to={`/consult/${p.encounterId}/slip`} className={buttonVariants({ variant: 'outline', className: 'min-h-11 self-start' })}>{t('orders.slipLink')}</Link>}
+      {hasPlaced(p.orders) && <Link to={`/consult/${p.encounterId}/slip`} className={buttonVariants({ variant: 'outline', className: 'self-start' })}>{t('orders.slipLink')}</Link>}
     </Section>
   );
 }

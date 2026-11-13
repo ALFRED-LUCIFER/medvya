@@ -37,7 +37,7 @@ export default function MyDevicesPage(p: Props) {
                 <TableCell>{when(d.lastSeenAt)}</TableCell>
                 <TableCell>
                   {canEnd(d) && (
-                    <Button type="button" variant="outline" className="min-h-11 min-w-11" loading={p.endingId === d.id} disabled={p.endingId !== null}
+                    <Button type="button" variant="outline" className="min-w-11" loading={p.endingId === d.id} disabled={p.endingId !== null}
                       aria-label={t('myDevices.endNamed', { device: d.device, date: when(d.lastSeenAt) })} onClick={() => p.onEnd(d.id)}>{t('myDevices.end')}</Button>
                   )}
                 </TableCell>

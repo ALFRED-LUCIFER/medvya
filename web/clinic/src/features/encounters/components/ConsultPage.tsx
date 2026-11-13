@@ -34,12 +34,12 @@ export default function ConsultPage(p: Props) {
       <IdentityBanner banner={p.banner} />
       <div className="flex flex-wrap items-center gap-3">
         {ended && <p role="status" className="font-bold">{t('consult.ended', { time: formatTime(new Date(encounter.endedAt!), p.banner.timeZone) })}</p>}
-        {p.canReconcile && <Link to={`/consult/${encounter.id}/problems`} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t('consult.codeProblems')}</Link>}
-        {p.canReconcile && <Link to={`/consult/${encounter.id}/medicines`} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t('consult.reconcileMedicines')}</Link>}
-        <Link to={p.boardPath} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t(ended ? 'consult.backToBoard' : 'consult.leave')}</Link>
+        {p.canReconcile && <Link to={`/consult/${encounter.id}/problems`} className={buttonVariants({ variant: 'outline' })}>{t('consult.codeProblems')}</Link>}
+        {p.canReconcile && <Link to={`/consult/${encounter.id}/medicines`} className={buttonVariants({ variant: 'outline' })}>{t('consult.reconcileMedicines')}</Link>}
+        <Link to={p.boardPath} className={buttonVariants({ variant: 'outline' })}>{t(ended ? 'consult.backToBoard' : 'consult.leave')}</Link>
         <div role="group" aria-label={t('studio.view.label')} className="ms-auto flex gap-1">
           {(['page', 'steps'] as const).map(v => (
-            <Button key={v} variant={p.view === v ? 'selected' : 'outline'} className="min-h-11" aria-pressed={p.view === v} onClick={() => p.onView(v)}>{t(`studio.view.${v}`)}</Button>
+            <Button key={v} variant={p.view === v ? 'selected' : 'outline'} aria-pressed={p.view === v} onClick={() => p.onView(v)}>{t(`studio.view.${v}`)}</Button>
           ))}
         </div>
       </div>
@@ -63,7 +63,7 @@ export default function ConsultPage(p: Props) {
 
 export function EndConsultation({ ending, onEnd }: { ending: boolean; onEnd: () => void }) {
   const { t } = useI18n();
-  return <Button variant="outline" className="min-h-11" loading={ending} onClick={onEnd}>{t('consult.end')}</Button>;
+  return <Button variant="outline" loading={ending} onClick={onEnd}>{t('consult.end')}</Button>;
 }
 
 function Message({ title, body, boardPath }: { title: string; body?: string; boardPath: string }) {
@@ -72,7 +72,7 @@ function Message({ title, body, boardPath }: { title: string; body?: string; boa
     <div role="alert" className="flex flex-col items-start gap-3 rounded-xl border bg-card p-6">
       <h1 className="text-lg font-extrabold">{title}</h1>
       {body && <p>{body}</p>}
-      <Link to={boardPath} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t('consult.backToBoard')}</Link>
+      <Link to={boardPath} className={buttonVariants({ variant: 'outline' })}>{t('consult.backToBoard')}</Link>
     </div>
   );
 }

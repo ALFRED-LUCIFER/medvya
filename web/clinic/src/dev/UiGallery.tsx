@@ -5,6 +5,7 @@ import {
   RecordingPill, recordingLooks, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, StatusChip, statusLooks,
   Switch, SystemState, systemStates, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Textarea,
 } from '@medvya/ui';
+import PageComponentsGallery from './PageComponentsGallery';
 
 const keys = <T extends object>(o: T) => Object.keys(o) as (keyof T)[];
 
@@ -139,6 +140,7 @@ export default function UiGallery({ switcher }: { switcher: ReactNode }) {
           <Measured key={c} name={c} className={`${c} size-11 shrink-0 border bg-card`} read={s => (c.startsWith('shadow') ? 'elevation' : s.borderRadius)} />)}
         <Measured name="duration-fast ease-out" className="transition-colors duration-fast ease-out" read={s => `${s.transitionDuration} ${s.transitionTimingFunction}`}>Motion</Measured>
       </section>
+      <PageComponentsGallery />
     </main>
   );
 }

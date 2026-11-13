@@ -36,13 +36,13 @@ export default function RxPrintPage(p: Props) {
       <div className="flex flex-wrap items-end gap-3 print:hidden">
         <Field id="rx-second" label={t('rxPrint.second')} className="min-w-56">
           <Select value={p.second} onValueChange={l => p.onSecond(l as SecondLanguage)}>
-            <SelectTrigger id="rx-second" className="h-11 w-full"><SelectValue /></SelectTrigger>
+            <SelectTrigger id="rx-second" className="w-full"><SelectValue /></SelectTrigger>
             <SelectContent>{secondLanguages.map(l => <SelectItem key={l} value={l}>{l === 'none' ? t('rxPrint.secondNone') : t(`rx.lang.${l}`)}</SelectItem>)}</SelectContent>
           </Select>
         </Field>
-        <Button className="min-h-11" onClick={p.onPrint}><Printer aria-hidden className="size-4" />{t('rxPrint.print')}</Button>
+        <Button onClick={p.onPrint}><Printer aria-hidden className="size-4" />{t('rxPrint.print')}</Button>
         {(['A4', 'A5'] as const).map(paper => (
-          <Button key={paper} variant="outline" className="min-h-11" loading={p.downloading === paper} disabled={p.downloading !== null} onClick={() => p.onPdf(paper)}>
+          <Button key={paper} variant="outline" loading={p.downloading === paper} disabled={p.downloading !== null} onClick={() => p.onPdf(paper)}>
             <FileDown aria-hidden className="size-4" />{t(paper === 'A4' ? 'rxPrint.pdfA4' : 'rxPrint.pdfA5')}
           </Button>
         ))}
@@ -103,7 +103,7 @@ export default function RxPrintPage(p: Props) {
           ? <p role="status" className="flex items-center gap-2"><ShieldCheck aria-hidden className="size-4" />{t('rxPrint.layout.approved', { version: p.layout.layoutVersion, date: formatDate(new Date(p.layout.approvedAt), v.timeZone) })}</p>
           : <>
             <p className="text-sm">{t('rxPrint.layout.intro')}</p>
-            <Button variant="outline" className="min-h-11 self-start" loading={p.approving} onClick={p.onApprove}>{t('rxPrint.layout.approve')}</Button>
+            <Button variant="outline" className="self-start" loading={p.approving} onClick={p.onApprove}>{t('rxPrint.layout.approve')}</Button>
           </>}
         {p.layoutFailed && <p role="alert" className="font-bold text-danger-700">{t('rxPrint.layout.failed')}</p>}
       </section>
@@ -114,7 +114,7 @@ export default function RxPrintPage(p: Props) {
 
 function Back({ consultPath }: { consultPath: string }) {
   const { t } = useI18n();
-  return <Link to={consultPath} className={buttonVariants({ variant: 'outline', className: 'min-h-11 self-start' })}>{t('rxPrint.back')}</Link>;
+  return <Link to={consultPath} className={buttonVariants({ variant: 'outline', className: 'self-start' })}>{t('rxPrint.back')}</Link>;
 }
 
 /** Generic name first (the composer prescribes by generic), the English instruction, the second language's beside it, then the class's notes. */

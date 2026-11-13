@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { fireEvent, render } from '@testing-library/react';
 import axe from 'axe-core';
+import { Button } from './components/ui/button';
 import { Input } from './components/ui/input';
 import { Select, SelectTrigger, SelectValue } from './components/ui/select';
 import { Textarea } from './components/ui/textarea';
@@ -18,6 +19,14 @@ describe('library control defaults (MDV-P1-077)', () => {
     expect(cls(container.querySelector('[data-slot=input]'))).toContain('h-11');
     expect(cls(container.querySelector('[data-slot=select-trigger]'))).toContain('data-[size=default]:h-11');
     expect(cls(container.querySelector('[data-slot=textarea]'))).toContain('min-h-16'); // 64 px
+  });
+
+  it('every Button size is at least 44 px tall, so a call site never patches it (MDV-P1-078)', () => {
+    const { getAllByRole } = render(<><Button>a</Button><Button size="sm">b</Button><Button size="icon" aria-label="c" /></>);
+    const [base, sm, icon] = getAllByRole('button').map(cls);
+    expect(base).toContain('min-h-11');
+    expect(sm).toContain('min-h-11');
+    expect(icon).toContain('size-11');
   });
 
   it('Switch is a 44 by 44 px target around an unchanged 32 by 18 px track', () => {

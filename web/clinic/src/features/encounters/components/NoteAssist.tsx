@@ -43,7 +43,7 @@ export default function NoteAssist({ assist: a, template, timeZone, showVitals =
             : (
               <>
                 <VitalList vitals={a.vitals} />
-                <div><Button variant="outline" className="min-h-11" onClick={a.onInsertVitals}>{t('noteAssist.vitals.insert')}</Button></div>
+                <div><Button variant="outline" onClick={a.onInsertVitals}>{t('noteAssist.vitals.insert')}</Button></div>
               </>
             )}
         </div>
@@ -51,7 +51,7 @@ export default function NoteAssist({ assist: a, template, timeZone, showVitals =
       <p className="text-sm text-muted-foreground">{t('noteAssist.target', { section: t(sectionLabelKey(a.target)) })}</p>
       {a.phrases.length > 0 && (
         <div role="group" aria-label={t('noteAssist.phrases')} className="flex flex-wrap gap-2">
-          {a.phrases.map(key => <Button key={key} variant="outline" className="min-h-11" onClick={() => a.onInsertPhrase(key)}>{t(phraseKey(key))}</Button>)}
+          {a.phrases.map(key => <Button key={key} variant="outline" onClick={() => a.onInsertPhrase(key)}>{t(phraseKey(key))}</Button>)}
         </div>
       )}
       {!a.loading && !a.failed && (
@@ -72,7 +72,7 @@ export default function NoteAssist({ assist: a, template, timeZone, showVitals =
                         <p className="font-bold">{t(sectionLabelKey(id))}</p>
                         <p className="line-clamp-3 whitespace-pre-wrap">{n.sections[id]}</p>
                       </div>
-                      <Button variant="outline" className="min-h-11" aria-label={t('noteAssist.previous.insertLabel', { section: t(sectionLabelKey(id)), date })} onClick={() => a.onInsertSnippet(n.id, id)}>
+                      <Button variant="outline" aria-label={t('noteAssist.previous.insertLabel', { section: t(sectionLabelKey(id)), date })} onClick={() => a.onInsertSnippet(n.id, id)}>
                         {t('noteAssist.previous.insert')}
                       </Button>
                     </li>

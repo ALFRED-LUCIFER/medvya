@@ -43,7 +43,7 @@ export default function CustomRolesPanel(p: Props) {
               <span className="font-bold">{r.name}</span>
               <span className="text-sm text-muted-foreground">{[t(`role.${r.baseRole}`), ...r.capabilities.map(c => t(`capability.${c}`))].join(' · ')}</span>
             </span>
-            <Button type="button" variant="outline" className="min-h-11 min-w-11" aria-label={t('staff.roles.editNamed', { name: r.name })} onClick={() => p.onOpen(r)}>{t('settings.edit')}</Button>
+            <Button type="button" variant="outline" className="min-w-11" aria-label={t('staff.roles.editNamed', { name: r.name })} onClick={() => p.onOpen(r)}>{t('settings.edit')}</Button>
           </li>
         ))}
       </ul>
@@ -52,11 +52,11 @@ export default function CustomRolesPanel(p: Props) {
         <form noValidate onSubmit={p.onSubmit} className="flex flex-col gap-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <Field id="role-name" label={t('staff.roles.name')} error={errors.name && t('settings.error.required')}>
-              <Input id="role-name" className="h-11" autoComplete="off" maxLength={60} {...describedBy('role-name', !!errors.name)} {...p.form.register('name')} />
+              <Input id="role-name" autoComplete="off" maxLength={60} {...describedBy('role-name', !!errors.name)} {...p.form.register('name')} />
             </Field>
             <Field id="role-base" label={t('staff.roles.base')} hint={t('staff.roles.baseHint', { count: lockedCount })}>
               <Select value={base} onValueChange={v => p.onBase(v as RoleForm['baseRole'])}>
-                <SelectTrigger id="role-base" className="h-11 w-full"><SelectValue /></SelectTrigger>
+                <SelectTrigger id="role-base" className="w-full"><SelectValue /></SelectTrigger>
                 <SelectContent>{assignableRoles.map(r => <SelectItem key={r} value={r}>{t(`role.${r}`)}</SelectItem>)}</SelectContent>
               </Select>
             </Field>

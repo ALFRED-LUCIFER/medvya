@@ -31,7 +31,7 @@ export default function TimelinePage(p: Props) {
       {p.patient && <PatientBanner data={p.patient} />}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-extrabold">{t('timeline.title')}</h1>
-        <Link to={p.backPath} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t('timeline.backToChart')}</Link>
+        <Link to={p.backPath} className={buttonVariants({ variant: 'outline' })}>{t('timeline.backToChart')}</Link>
       </div>
       <Filters {...p} />
       <div className="grid gap-4 lg:grid-cols-[3fr_2fr]">
@@ -40,7 +40,7 @@ export default function TimelinePage(p: Props) {
             : p.entries.length === 0 ? <Empty {...p} />
             : <ol className="flex flex-col gap-3">{p.entries.map(e => <Entry key={e.id} entry={e} zone={p.timeZone} consultPath={p.consultPath} printRx={p.printRx} />)}</ol>}
           {p.canLoadMore && (
-            <Button variant="outline" className="min-h-11 self-start" loading={p.loadingMore} onClick={p.onMore}>{t('timeline.loadEarlier')}</Button>
+            <Button variant="outline" className="self-start" loading={p.loadingMore} onClick={p.onMore}>{t('timeline.loadEarlier')}</Button>
           )}
           {p.loadMoreFailed && <p role="alert" className="font-bold text-danger-700">{t('timeline.loadMoreFailed')}</p>}
           {!p.loading && !p.canLoadMore && p.entries.length > 0 && <p role="status" className="text-sm text-muted-foreground">{t('timeline.end')}</p>}
@@ -56,19 +56,19 @@ function Filters(p: Props) {
   const all = p.filters.kinds.length === 0;
   return (
     <section aria-label={t('timeline.filters')} className="flex flex-wrap items-center gap-2">
-      <Button variant={all ? 'selected' : 'outline'} className="min-h-11" aria-pressed={all} onClick={p.onAllKinds}>{t('timeline.kind.All')}</Button>
+      <Button variant={all ? 'selected' : 'outline'} aria-pressed={all} onClick={p.onAllKinds}>{t('timeline.kind.All')}</Button>
       {timelineKinds.map(k => {
         const on = p.filters.kinds.includes(k);
-        return <Button key={k} variant={on ? 'selected' : 'outline'} className="min-h-11" aria-pressed={on} onClick={() => p.onKind(k)}>{t(`timeline.kind.${k}`)}</Button>;
+        return <Button key={k} variant={on ? 'selected' : 'outline'} aria-pressed={on} onClick={() => p.onKind(k)}>{t(`timeline.kind.${k}`)}</Button>;
       })}
       <Select value={p.filters.source ?? 'all'} onValueChange={v => p.onSource(v === 'all' ? null : (v as ChartSource))}>
-        <SelectTrigger className="h-11 w-56" aria-label={t('timeline.source')}><SelectValue /></SelectTrigger>
+        <SelectTrigger className="w-56" aria-label={t('timeline.source')}><SelectValue /></SelectTrigger>
         <SelectContent>
           <SelectItem value="all">{t('timeline.source.all')}</SelectItem>
           {timelineSources.map(s => <SelectItem key={s} value={s}>{t(`timeline.source.${s}`)}</SelectItem>)}
         </SelectContent>
       </Select>
-      {hasFilters(p.filters) && <Button variant="ghost" className="min-h-11" onClick={p.onClear}>{t('timeline.clear')}</Button>}
+      {hasFilters(p.filters) && <Button variant="ghost" onClick={p.onClear}>{t('timeline.clear')}</Button>}
     </section>
   );
 }
@@ -78,7 +78,7 @@ function Empty(p: Props) {
   return (
     <div className="flex flex-col items-start gap-2">
       <p className="font-bold">{t(hasFilters(p.filters) ? 'timeline.empty.filtered' : 'timeline.empty')}</p>
-      {hasFilters(p.filters) && <Button variant="outline" className="min-h-11" onClick={p.onClear}>{t('timeline.clear')}</Button>}
+      {hasFilters(p.filters) && <Button variant="outline" onClick={p.onClear}>{t('timeline.clear')}</Button>}
     </div>
   );
 }
@@ -96,7 +96,7 @@ export function Entry({ entry: e, zone, consultPath, printRx }: { entry: Timelin
         <time dateTime={e.at} className="text-sm text-muted-foreground">{`${formatDate(when, zone)} ${formatTime(when, zone)}`}</time>
         <strong>{title}</strong>
         <span className="text-sm">{subtitle}</span>
-        {e.kind === 'Encounter' && <Link to={consultPath(e.id)} className={buttonVariants({ variant: 'link', className: 'min-h-11 px-0' })}>{t('visits.open')}</Link>}
+        {e.kind === 'Encounter' && <Link to={consultPath(e.id)} className={buttonVariants({ variant: 'link', className: 'px-0' })}>{t('visits.open')}</Link>}
         {e.encounterId && <PrescribedLinks encounterId={e.encounterId} consultPath={consultPath} printRx={printRx} />}
       </div>
       <ProvenanceTag source={provenanceOf[e.source]} />
@@ -113,7 +113,7 @@ function Trends(p: Props) {
       <h2 className="text-base font-extrabold">{t('patient360.trends')}</h2>
       <div className="flex flex-wrap gap-2">
         {trendChoices.map(c => (
-          <Button key={c} variant={c === p.choice ? 'selected' : 'outline'} className="min-h-11" aria-pressed={c === p.choice} onClick={() => p.onChoice(c)}>{t(`patient360.trend.${c}`)}</Button>
+          <Button key={c} variant={c === p.choice ? 'selected' : 'outline'} aria-pressed={c === p.choice} onClick={() => p.onChoice(c)}>{t(`patient360.trend.${c}`)}</Button>
         ))}
       </div>
       {p.trendsLoading ? <p role="status">{t('timeline.loading')}</p>
@@ -157,7 +157,7 @@ function Message({ title, body, backPath }: { title: string; body?: string; back
     <div role="alert" className="flex flex-col items-start gap-3 rounded-xl border bg-card p-6">
       <h1 className="text-lg font-extrabold">{title}</h1>
       {body && <p>{body}</p>}
-      <Link to={backPath} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t('timeline.backToChart')}</Link>
+      <Link to={backPath} className={buttonVariants({ variant: 'outline' })}>{t('timeline.backToChart')}</Link>
     </div>
   );
 }

@@ -27,7 +27,7 @@ export default function NurseQueuePage(p: Props) {
   let body;
   if (p.forbidden) body = <State title={t('err.403')} body={t('board.forbidden.body')} />;
   else if (p.offline) body = <State title={t('state.offline.title')} body={t('board.offline')} />;
-  else if (p.failed) body = <State title={t('board.error.title')} body={t('board.error.body')} action={<button type="button" className={buttonVariants({ className: 'min-h-11' })} onClick={p.onRetry}>{t('schedule.retry')}</button>} />;
+  else if (p.failed) body = <State title={t('board.error.title')} body={t('board.error.body')} action={<button type="button" className={buttonVariants()} onClick={p.onRetry}>{t('schedule.retry')}</button>} />;
   else if (p.loading || !p.board) body = <State busy title={t('intake.queue.loading')} />;
   else if (total === 0) body = <State title={t('intake.queue.empty.title')} body={t('intake.queue.empty.body')} />;
   else body = (
@@ -35,7 +35,7 @@ export default function NurseQueuePage(p: Props) {
       {p.withNurse.rows.length > 0 && (
         <Section id="nq-with" title={t('intake.queue.withNurse')}>
           <QueueTable {...p.withNurse} label={t('intake.queue.withNurse')} timeZone={p.board.timeZone} now={p.now} action={r => (
-            <Link to={p.intakePath(r.id)} className={buttonVariants({ className: 'min-h-11 whitespace-normal' })} aria-label={t('intake.queue.openFor', { name: name(r) })}>
+            <Link to={p.intakePath(r.id)} className={buttonVariants({ className: 'whitespace-normal' })} aria-label={t('intake.queue.openFor', { name: name(r) })}>
               {t('intake.queue.open')}
             </Link>
           )} />
@@ -45,7 +45,7 @@ export default function NurseQueuePage(p: Props) {
         <Section id="nq-in" title={t('intake.queue.checkedIn')}>
           <QueueTable {...p.checkedIn} label={t('intake.queue.checkedIn')} timeZone={p.board.timeZone} now={p.now}
             action={r => (
-              <button type="button" disabled={p.pendingId === r.id} onClick={() => p.onTake(r.id)} className={buttonVariants({ variant: 'outline', className: 'min-h-11 whitespace-normal' })}
+              <button type="button" disabled={p.pendingId === r.id} onClick={() => p.onTake(r.id)} className={buttonVariants({ variant: 'outline', className: 'whitespace-normal' })}
                 aria-label={t('intake.queue.takeFor', { name: name(r) })}>
                 {t('intake.queue.take')}
               </button>

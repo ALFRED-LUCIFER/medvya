@@ -35,7 +35,7 @@ export default function NoteTemplateChoice(p: Props) {
         )} />
         {p.form.formState.errors.keys && <p role="alert" className="font-bold text-danger-700">{t('noteTemplates.choice.minOne')}</p>}
         <div className="flex flex-wrap items-center gap-3" aria-live="polite">
-          <Button type="submit" className="min-h-11" loading={p.saving}>{t('noteTemplates.choice.save')}</Button>
+          <Button type="submit" loading={p.saving}>{t('noteTemplates.choice.save')}</Button>
           {p.saved && <span>{t('noteTemplates.choice.saved')}</span>}
           {p.saveFailed && <span role="alert" className="font-bold text-danger-700">{t('noteTemplates.choice.saveFailed')}</span>}
         </div>

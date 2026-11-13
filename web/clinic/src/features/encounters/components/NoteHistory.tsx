@@ -35,8 +35,8 @@ export default function NoteHistory(p: Props) {
       <Versions lastRef={lastRef} signature={p.signature} addenda={p.addenda} timeZone={p.timeZone} />
       <p className="text-sm text-muted-foreground">{t('notePrint.corrections')}</p>
       <div className="flex flex-wrap gap-3">
-        {p.canAdd && !p.composing && <Button ref={addRef} className="min-h-11" onClick={p.onCompose}>{t('noteAddendum.add')}</Button>}
-        <Link to={p.printPath} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t('notePrint.open')}</Link>
+        {p.canAdd && !p.composing && <Button ref={addRef} onClick={p.onCompose}>{t('noteAddendum.add')}</Button>}
+        <Link to={p.printPath} className={buttonVariants({ variant: 'outline' })}>{t('notePrint.open')}</Link>
       </div>
       {p.composing && (
         <form className="flex flex-col gap-3" noValidate onSubmit={e => { e.preventDefault(); p.onSubmit(); }}>
@@ -47,18 +47,18 @@ export default function NoteHistory(p: Props) {
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="addendum-reason">{t('noteAddendum.reason')}</Label>
-            <Input id="addendum-reason" className="min-h-11" maxLength={maxReasonLength} aria-required {...p.register('reason')} />
+            <Input id="addendum-reason" maxLength={maxReasonLength} aria-required {...p.register('reason')} />
           </div>
           {p.invalid && <p role="alert" className="font-bold text-danger-700">{t('noteAddendum.required')}</p>}
           {p.problem && (
             <div role="alert" className="flex flex-wrap items-center gap-3 font-bold text-danger-700">
               <span>{t(`noteAddendum.${p.problem}`)}</span>
-              {p.problem === 'reauth' && <Button type="button" variant="outline" className="min-h-11" onClick={p.onConfirmIdentity}>{t('noteAddendum.confirmIdentity')}</Button>}
+              {p.problem === 'reauth' && <Button type="button" variant="outline" onClick={p.onConfirmIdentity}>{t('noteAddendum.confirmIdentity')}</Button>}
             </div>
           )}
           <div className="flex flex-wrap gap-3">
-            <Button type="submit" className="min-h-11" loading={p.submitting}>{t('noteAddendum.sign')}</Button>
-            <Button type="button" variant="outline" className="min-h-11" disabled={p.submitting} onClick={p.onCancel}>{t('noteAddendum.cancel')}</Button>
+            <Button type="submit" loading={p.submitting}>{t('noteAddendum.sign')}</Button>
+            <Button type="button" variant="outline" disabled={p.submitting} onClick={p.onCancel}>{t('noteAddendum.cancel')}</Button>
           </div>
         </form>
       )}

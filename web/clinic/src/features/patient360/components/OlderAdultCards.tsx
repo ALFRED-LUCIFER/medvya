@@ -51,7 +51,7 @@ export default function OlderAdultCards(p: Props) {
             </>
           ) : <p className="text-muted-foreground">{t('olderAdult.empty')}</p>}
         {!p.rulesSignedOff && !p.loading && <p className="text-sm text-muted-foreground">{t('olderAdult.rulesDraft')}</p>}
-        {p.recording ? <AssessmentForm {...p} /> : <div><Button variant="outline" className="min-h-11" onClick={p.onRecord}>{t('olderAdult.record')}</Button></div>}
+        {p.recording ? <AssessmentForm {...p} /> : <div><Button variant="outline" onClick={p.onRecord}>{t('olderAdult.record')}</Button></div>}
       </Section>
       {p.review && !p.reviewHidden && p.review.olderAdult && <ReviewCard review={p.review} consultPath={p.consultPath} planHint={p.planHint} onPlanChange={p.onPlanChange} />}
       {p.reviewFailed && <p role="alert" className={fieldError}>{t('olderAdult.review.failed')}</p>}
@@ -68,7 +68,7 @@ function AssessmentForm(p: Props) {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {geriatricFields.map(f => (
           <Field key={f} id={`geri-${f}`} label={t(`olderAdult.field.${f}`)} error={message(errors[f]?.message)}>
-            <Input id={`geri-${f}`} inputMode={f === 'timedUpAndGoSeconds' ? 'decimal' : 'numeric'} dir="ltr" autoComplete="off" className="h-11"
+            <Input id={`geri-${f}`} inputMode={f === 'timedUpAndGoSeconds' ? 'decimal' : 'numeric'} dir="ltr" autoComplete="off"
               {...describedBy(`geri-${f}`, !!errors[f])} {...p.form.register(f)} />
           </Field>
         ))}
@@ -82,8 +82,8 @@ function AssessmentForm(p: Props) {
         {p.saveForbidden && <p role="alert" className={fieldError}>{t('olderAdult.saveForbidden')}</p>}
       </div>
       <div className="flex flex-wrap gap-3">
-        <Button type="submit" className="min-h-11" loading={p.saving}>{t('olderAdult.save')}</Button>
-        <Button type="button" variant="outline" className="min-h-11" onClick={p.onCancel}>{t('olderAdult.cancel')}</Button>
+        <Button type="submit" loading={p.saving}>{t('olderAdult.save')}</Button>
+        <Button type="button" variant="outline" onClick={p.onCancel}>{t('olderAdult.cancel')}</Button>
       </div>
     </form>
   );
@@ -108,8 +108,8 @@ function ReviewCard({ review, consultPath, planHint, onPlanChange }: { review: M
                 </span>
               </span>
               {consultPath
-                ? <Link to={`${consultPath}#${planHeading}`} aria-label={t('olderAdult.review.planFor', { medicine: s.medicine })} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t('olderAdult.review.plan')}</Link>
-                : <Button variant="outline" className="min-h-11" aria-label={t('olderAdult.review.planFor', { medicine: s.medicine })} onClick={() => onPlanChange(s.medicine)}>{t('olderAdult.review.plan')}</Button>}
+                ? <Link to={`${consultPath}#${planHeading}`} aria-label={t('olderAdult.review.planFor', { medicine: s.medicine })} className={buttonVariants({ variant: 'outline' })}>{t('olderAdult.review.plan')}</Link>
+                : <Button variant="outline" aria-label={t('olderAdult.review.planFor', { medicine: s.medicine })} onClick={() => onPlanChange(s.medicine)}>{t('olderAdult.review.plan')}</Button>}
             </li>
           ))}
         </ul>

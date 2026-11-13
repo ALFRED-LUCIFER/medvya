@@ -9,7 +9,7 @@ export default function LanguageSwitcher({ value, onChange, inline = false }: { 
     <div className={inline ? 'flex items-center gap-2' : 'flex flex-col gap-1.5'}>
       <Label htmlFor={id}>{t('app.language')}</Label>
       <Select value={value} onValueChange={v => onChange(v as Locale)}>
-        <SelectTrigger id={id} className="min-h-11 min-w-40"><SelectValue /></SelectTrigger>
+        <SelectTrigger id={id} className="min-w-40"><SelectValue /></SelectTrigger>
         <SelectContent>
           {locales.map(l => <SelectItem key={l.code} value={l.code} lang={l.code}>{l.label}</SelectItem>)}
         </SelectContent>

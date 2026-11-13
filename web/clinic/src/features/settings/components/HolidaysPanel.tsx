@@ -36,12 +36,12 @@ export default function HolidaysPanel({ choice, holidays: h, zoneOf }: Props) {
       <Section title={t('settings.holidays.title')} intro={t('settings.holidays.intro')}>
         <form noValidate onSubmit={h.onSubmit} className="flex flex-wrap items-start gap-3">
           <Field id="holiday-date" label={t('settings.holidays.date')} error={errors.date && t('settings.error.required')}>
-            <Input id="holiday-date" type="date" dir="ltr" className="h-11 w-48" {...describedBy('holiday-date', !!errors.date)} {...h.form.register('date')} />
+            <Input id="holiday-date" type="date" dir="ltr" className="w-48" {...describedBy('holiday-date', !!errors.date)} {...h.form.register('date')} />
           </Field>
           <Field id="holiday-name" label={t('settings.holidays.name')} error={errors.name && t('settings.error.required')} className="min-w-60 flex-1">
-            <Input id="holiday-name" className="h-11" autoComplete="off" placeholder={t('settings.holidays.placeholder')} {...describedBy('holiday-name', !!errors.name)} {...h.form.register('name')} />
+            <Input id="holiday-name" autoComplete="off" placeholder={t('settings.holidays.placeholder')} {...describedBy('holiday-name', !!errors.name)} {...h.form.register('name')} />
           </Field>
-          <div className="pt-[1.875rem]"><Button type="submit" className="min-h-11" loading={h.adding}>{t('settings.holidays.add')}</Button></div>
+          <div className="pt-[1.875rem]"><Button type="submit" loading={h.adding}>{t('settings.holidays.add')}</Button></div>
         </form>
         <div aria-live="polite">
           {h.addError && <p role="alert" className={fieldError}>{t(h.addError === 'duplicate' ? 'settings.holidays.duplicate' : 'settings.saveFailed')}</p>}
@@ -58,7 +58,7 @@ export default function HolidaysPanel({ choice, holidays: h, zoneOf }: Props) {
                     <span className="font-bold">{closure.name}</span>
                     <span className="text-sm text-muted-foreground">{formatShortDay(closure.date)}</span>
                   </span>
-                  <Button type="button" variant="outline" className="min-h-11" loading={h.removingId === closure.id} onClick={() => h.onRemove(closure.id)}
+                  <Button type="button" variant="outline" loading={h.removingId === closure.id} onClick={() => h.onRemove(closure.id)}
                     aria-label={t('settings.holidays.removeNamed', { name: closure.name, date: formatShortDay(closure.date) })}>{t('settings.remove')}</Button>
                 </div>
                 {appointmentsToMove.length > 0 && (

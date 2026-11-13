@@ -10,7 +10,7 @@ export function LocationSelect({ id, locations, value, onChange }: { id: string;
   return (
     <Field id={id} label={t('settings.location')} className="max-w-sm">
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger id={id} className="h-11 w-full"><SelectValue /></SelectTrigger>
+        <SelectTrigger id={id} className="w-full"><SelectValue /></SelectTrigger>
         <SelectContent>{locations.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}</SelectContent>
       </Select>
     </Field>

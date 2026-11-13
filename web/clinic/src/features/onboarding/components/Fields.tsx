@@ -18,7 +18,7 @@ export function FieldError({ id, code }: { id: string; code: string | undefined 
   );
 }
 
-type InputA11y = { id: string; 'aria-invalid'?: true; 'aria-describedby'?: string; 'aria-required'?: true; className: string };
+type InputA11y = { id: string; 'aria-invalid'?: true; 'aria-describedby'?: string; 'aria-required'?: true };
 
 export function Field({ id, label, required = false, optional = false, error, hint, wide = false, children }: {
   id: string; label: string; required?: boolean; optional?: boolean; error?: string; hint?: ReactNode; wide?: boolean; children: (a: InputA11y) => ReactNode;
@@ -32,7 +32,7 @@ export function Field({ id, label, required = false, optional = false, error, hi
         {required && <span className="text-danger-700" aria-hidden> {t('registration.requiredMark')}</span>}
         {optional && <span className="font-normal text-muted-foreground"> {t('onboarding.optional')}</span>}
       </Label>
-      {children({ id, 'aria-invalid': error ? true : undefined, 'aria-describedby': described, 'aria-required': required || undefined, className: 'min-h-11' })}
+      {children({ id, 'aria-invalid': error ? true : undefined, 'aria-describedby': described, 'aria-required': required || undefined })}
       {hint && <p id={`${id}-hint`} className="text-xs text-muted-foreground">{hint}</p>}
       <FieldError id={`${id}-error`} code={error} />
     </div>
@@ -59,7 +59,7 @@ export function SelectField({ form, name, label, required, hint, options, option
       {a => (
         <Controller control={form.control} name={name} render={({ field }) => (
           <Select value={field.value as string} onValueChange={field.onChange}>
-            <SelectTrigger {...a} className="min-h-11 w-full" onBlur={field.onBlur}><SelectValue placeholder={placeholder} /></SelectTrigger>
+            <SelectTrigger {...a} className="w-full" onBlur={field.onBlur}><SelectValue placeholder={placeholder} /></SelectTrigger>
             <SelectContent>{options.map(o => <SelectItem key={o} value={o}>{optionLabel(o)}</SelectItem>)}</SelectContent>
           </Select>
         )} />

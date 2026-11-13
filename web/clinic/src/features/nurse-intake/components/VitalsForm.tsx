@@ -38,7 +38,7 @@ export default function VitalsForm(p: VitalsFormProps) {
         ))}
       </div>
       {p.problem?.kind === 'invalid' && p.badKind === null && isVitalsField(p.problem.field) && <p role="alert" className={fieldError}>{t(problemKey(p.problem))}</p>}
-      {!p.readOnly && <Button type="submit" className="min-h-11 self-start" loading={p.saving} disabled={!p.online}>{t('intake.save')}</Button>}
+      {!p.readOnly && <Button type="submit" className="self-start" loading={p.saving} disabled={!p.online}>{t('intake.save')}</Button>}
     </form>
   );
 }
@@ -77,8 +77,8 @@ function VitalField({ kind, form, view, timeZone, readOnly, invalid, keeping, on
             ? <p className="inline-flex items-center gap-1.5 text-sm font-semibold"><CircleCheck aria-hidden className="size-4" />{t('intake.flag.kept')}</p>
             : undecided(view) && !readOnly && (
               <div className="flex flex-wrap gap-2">
-                <Button type="button" variant="outline" className="min-h-11 whitespace-normal" aria-label={t('intake.action.remeasureFor', { name })} onClick={() => onRemeasure(kind)}>{t('intake.action.remeasure')}</Button>
-                <Button type="button" variant="outline" className="min-h-11 whitespace-normal" loading={keeping} aria-label={t('intake.action.keepFor', { name })} onClick={() => onKeep(kind)}>{t('intake.action.keep')}</Button>
+                <Button type="button" variant="outline" className="whitespace-normal" aria-label={t('intake.action.remeasureFor', { name })} onClick={() => onRemeasure(kind)}>{t('intake.action.remeasure')}</Button>
+                <Button type="button" variant="outline" className="whitespace-normal" loading={keeping} aria-label={t('intake.action.keepFor', { name })} onClick={() => onKeep(kind)}>{t('intake.action.keep')}</Button>
               </div>
             )}
         </div>

@@ -66,10 +66,13 @@ export const emptyDoctor = (facilityId: string, fees: { newVisitFee: number; fol
   newVisitFee: String(fees.newVisitFee / 100), followUpFee: String(fees.followUpFee / 100),
 });
 
+/** The licence fields in screen order (the licence step, and renewing a licence). */
+export const licenceFields = ['authority', 'number', 'category', 'expiresOn', 'certificateName', 'attested'] as const satisfies readonly (keyof LicenceForm)[];
+
 /** Fields each wizard step asks for, so Next validates only its own step. */
 export const stepFields: Record<DoctorStep, (keyof DoctorForm)[]> = {
   details: ['fullName', 'email', 'specialty', 'qualifications', 'languages'],
-  licence: ['authority', 'number', 'category', 'expiresOn', 'certificateName', 'attested'],
+  licence: [...licenceFields],
   schedule: [],
   fees: ['newVisitFee', 'followUpFee'],
   access: ['facilityId', 'alsoFacilityIds'],

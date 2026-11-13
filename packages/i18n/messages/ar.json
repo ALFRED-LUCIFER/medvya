@@ -2020,7 +2020,7 @@
   "doctors.access.facilityHint": "الموقع الرئيسي للطبيب. حدد المواقع الأخرى أدناه إن كان يعمل فيها أيضًا.",
   "doctors.alsoAtHint": "لكل موقع جدوله ورسومه وتوقيعه. مقعد واحد في الباقة يغطيها كلها.",
   "doctors.signature.notice": "التوقيع في Medvya هو دائمًا إجراء موثَّق يقوم به الطبيب (مفتاح المرور / المصادقة متعددة العوامل)، وليس الصورة وحدها أبدًا.",
-  "doctors.signature.choose": "صورة التوقيع (اختياري)",
+  "doctors.signature.choose": "صورة التوقيع",
   "doctors.signature.replace": "استبدال صورة التوقيع",
   "doctors.signature.remove": "حذف صورة التوقيع",
   "doctors.signature.hint": "PNG أو JPEG حتى 512 كيلوبايت. تُخزَّن بشكل خاص وتظهر فقط على الوصفات المطبوعة.",

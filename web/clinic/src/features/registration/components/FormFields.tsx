@@ -15,14 +15,13 @@ function useFieldError(f: FormProps, name: FormField): string | undefined {
   return code ? t(`registration.error.${errorCode(code)}`) : undefined;
 }
 
-/** After a failed submit: each field in error as "label: what is wrong", linked to the field; it takes focus when focusKey changes. */
+/** After a failed submit: each field in error with its label, linked to the field; it takes focus when focusKey changes. */
 export function FormErrorSummary({ f, summary, country, values, quick }: {
   f: FormProps; summary: { focusKey: string; fields: FormField[] }; country: Country; values: RegistrationForm; quick: boolean;
 }) {
   const { t } = useI18n();
   const errors = summary.fields.map(field => ({
-    id: field,
-    message: t('field.errorItem', { field: t(fieldLabel(field, country, values, quick)), error: t(`registration.error.${errorCode(f.errors[field]?.message)}`) }),
+    id: field, label: t(fieldLabel(field, country, values, quick)), message: t(`registration.error.${errorCode(f.errors[field]?.message)}`),
   }));
   return <ErrorSummary title={t('field.errorSummary')} focusKey={summary.focusKey} errors={errors} />;
 }

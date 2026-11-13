@@ -2021,7 +2021,7 @@
   "doctors.access.facilityHint": "The doctor's main location. Tick other locations below if they also work there.",
   "doctors.alsoAtHint": "Each location keeps its own schedule, fees and signature. One plan seat covers all of them.",
   "doctors.signature.notice": "Signing in Medvya is always an authenticated action by the doctor (passkey / MFA), never the image alone.",
-  "doctors.signature.choose": "Signature image (optional)",
+  "doctors.signature.choose": "Signature image",
   "doctors.signature.replace": "Replace signature image",
   "doctors.signature.remove": "Remove signature image",
   "doctors.signature.hint": "PNG or JPEG, up to 512 KB. Stored privately and shown only on printed prescriptions.",

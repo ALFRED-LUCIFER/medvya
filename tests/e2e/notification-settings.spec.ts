@@ -53,7 +53,9 @@ test('the email sender name is saved, and one with a web address is refused unde
   const name = page.getByLabel('Sender name in emails');
   await name.fill('Visit iyer-clinic.example');
   await page.getByRole('button', { name: 'Save changes' }).click();
-  await expect(page.getByText('Remove the web address', { exact: false })).toBeVisible();
+  // MDV-P2-058: the server's refusal moves focus to the error summary, which links to the field.
+  await expect(page.getByRole('group', { name: 'There is a problem' })).toBeFocused();
+  await expect(page.locator('#sender-name-error')).toContainText('Remove the web address');
   await name.fill('Iyer Family Clinic');
   await page.getByRole('button', { name: 'Save changes' }).click();
   await expect(page.getByText('Saved.')).toBeVisible();

@@ -1,8 +1,7 @@
 import { useI18n } from '@medvya/i18n';
-import { Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Switch } from '@medvya/ui';
+import { Button, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Switch } from '@medvya/ui';
 import { slotLengths, weekdays, type CalendarTemplate, type HoursRow, type LocationChoice, type SessionRow, type Weekday } from '../domain/settings';
 import { fieldError } from './fieldStyles';
-import { Field } from './Field';
 import { LocationSelect } from './LocationSelect';
 import { Section } from './Section';
 
@@ -96,18 +95,18 @@ export default function HoursPanel({ choice, hours, schedules }: Props) {
           : schedules.calendars.length === 0 ? <p className="text-muted-foreground">{t('settings.schedules.none')}</p> : (
           <>
             <div className="flex flex-wrap gap-4">
-              <Field id="schedule-calendar" label={t('settings.schedules.calendar')} className="min-w-60 flex-1">
-                <Select value={schedules.calendarId} onValueChange={schedules.onCalendar}>
-                  <SelectTrigger id="schedule-calendar" className="w-full"><SelectValue /></SelectTrigger>
-                  <SelectContent>{schedules.calendars.map(c => <SelectItem key={c.calendarId} value={c.calendarId}>{c.name}</SelectItem>)}</SelectContent>
-                </Select>
-              </Field>
-              <Field id="schedule-slot" label={t('settings.schedules.slot')} className="w-40">
-                <Select value={String(schedules.slotMinutes)} onValueChange={v => schedules.onSlot(Number(v))}>
-                  <SelectTrigger id="schedule-slot" className="w-full"><SelectValue /></SelectTrigger>
-                  <SelectContent>{slotLengths.map(m => <SelectItem key={m} value={String(m)}>{t('settings.schedules.minutes', { minutes: m })}</SelectItem>)}</SelectContent>
-                </Select>
-              </Field>
+              <Select value={schedules.calendarId} onValueChange={schedules.onCalendar}>
+                <Field id="schedule-calendar" label={t('settings.schedules.calendar')} className="min-w-60 flex-1">
+                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                </Field>
+                <SelectContent>{schedules.calendars.map(c => <SelectItem key={c.calendarId} value={c.calendarId}>{c.name}</SelectItem>)}</SelectContent>
+              </Select>
+              <Select value={String(schedules.slotMinutes)} onValueChange={v => schedules.onSlot(Number(v))}>
+                <Field id="schedule-slot" label={t('settings.schedules.slot')} className="w-40">
+                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                </Field>
+                <SelectContent>{slotLengths.map(m => <SelectItem key={m} value={String(m)}>{t('settings.schedules.minutes', { minutes: m })}</SelectItem>)}</SelectContent>
+              </Select>
             </div>
             {schedules.sessions.length === 0 && <p className="text-muted-foreground">{t('settings.schedules.noSessions')}</p>}
             <ul className="flex flex-col divide-y rounded-lg border">

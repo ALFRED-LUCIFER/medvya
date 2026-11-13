@@ -11,7 +11,7 @@ import { fetchLogoLink, fetchProfile, removeLogo, saveProfile, uploadLogo } from
 export function useProfileController() {
   const queryClient = useQueryClient();
   const profile = useQuery({ queryKey: ['settings', 'profile'], queryFn: fetchProfile });
-  const form = useForm<ProfileForm>({ resolver: zodResolver(profileSchema), defaultValues: toProfileForm({ name: '', address: null, registrationNumber: null, taxNumber: null, phone: null, email: null, hasLogo: false, version: 0 }) });
+  const form = useForm<ProfileForm>({ resolver: zodResolver(profileSchema), defaultValues: toProfileForm({ name: '', address: null, registrationNumber: null, taxNumber: null, phone: null, email: null, hasLogo: false, version: 0 }), shouldFocusError: false });
   const loaded = useRef<unknown>(null);
   useEffect(() => {
     if (profile.data && loaded.current !== profile.data) {

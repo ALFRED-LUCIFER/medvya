@@ -15,7 +15,7 @@ export function useNotificationSettingsController() {
   const { locale } = useI18n();
   const prefs = useQuery({ queryKey: ['settings', 'notifications'], queryFn: fetchNotificationPrefs });
   const previews = useQuery({ queryKey: ['settings', 'notification-templates', locale], queryFn: () => fetchTemplatePreviews(locale), staleTime: Infinity });
-  const form = useForm<NotificationPrefsForm>({ resolver: zodResolver(notificationPrefsSchema), defaultValues: blank });
+  const form = useForm<NotificationPrefsForm>({ resolver: zodResolver(notificationPrefsSchema), defaultValues: blank, shouldFocusError: false });
   const loaded = useRef<unknown>(null);
   useEffect(() => {
     if (prefs.data && loaded.current !== prefs.data) {

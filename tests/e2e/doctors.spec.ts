@@ -66,6 +66,9 @@ test('the Doctors tab lists doctors with who attested the licence, and an expire
   await page.getByLabel('Registration category').fill('Permanent');
   await page.getByRole('button', { name: 'Save and confirm' }).click();
   await expect(page.getByLabel('Expiry date')).toHaveAttribute('aria-invalid', 'true'); // expiry is required
+  // MDV-P2-058: the failed save puts focus on the error summary; its first link is the expiry date.
+  await expect(page.getByRole('group', { name: 'There is a problem' })).toBeFocused();
+  await expect(page.getByRole('group', { name: 'There is a problem' }).getByRole('link').first()).toHaveText('Expiry date: Check this value.');
   await page.getByLabel('Expiry date').fill('2031-12-31');
   await page.getByRole('button', { name: 'Save and confirm' }).click();
   await expect(page.getByLabel(/I confirm this licence belongs to this doctor/)).toHaveAttribute('aria-invalid', 'true'); // the owner must attest
@@ -85,6 +88,12 @@ test('Add doctor: six steps, fees prefilled in whole currency units, then one re
   await page.getByRole('button', { name: 'Next' }).click(); // nothing typed: refused, still on step 1
   await expect(page.getByText('Step 1 of 6: Details')).toBeVisible();
   await expect(page.getByLabel('Full name')).toHaveAttribute('aria-invalid', 'true');
+  // MDV-P2-058: a refused Next puts focus on the error summary; each link names its field and focuses it.
+  const summary = page.getByRole('group', { name: 'There is a problem' });
+  await expect(summary).toBeFocused();
+  await expect(summary.getByRole('link')).toHaveText(['Full name: Check this value.', 'Email for the invitation: Check this value.', 'Specialty: Check this value.']);
+  await summary.getByRole('link').nth(1).click();
+  await expect(page.getByLabel('Email for the invitation')).toBeFocused();
 
   await page.getByLabel('Full name').fill('Dr. Sana Khan (synthetic)');
   await page.getByLabel('Email for the invitation').fill('sana.khan@example.test');
@@ -117,7 +126,7 @@ test('Add doctor: six steps, fees prefilled in whole currency units, then one re
   await expect(page.getByText('Signing in Medvya is always an authenticated action by the doctor (passkey / MFA), never the image alone.')).toBeVisible();
   expect(await axe(page)).toEqual([]);
   const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
-  await page.getByLabel('Signature image (optional)').setInputFiles({ name: 'signature.png', mimeType: 'image/png', buffer: png });
+  await page.getByLabel('Signature image', { exact: true }).setInputFiles({ name: 'signature.png', mimeType: 'image/png', buffer: png });
   await page.getByRole('button', { name: 'Add doctor and send invitation' }).click();
 
   await expect(page.getByText('Dr. Sana Khan (synthetic) was added and the invitation was sent.')).toBeVisible();

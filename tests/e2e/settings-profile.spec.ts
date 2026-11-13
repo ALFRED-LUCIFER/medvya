@@ -66,6 +66,34 @@ for (const locale of ['en', 'ar'])
     await expect(alert).toHaveCount(0);
   });
 
+// MDV-P2-058: a failed save puts focus on the error summary, in view on a phone and a desktop; its link focuses the field. Axe is clean with
+// the errors showing, and required is marked in words.
+for (const locale of ['en', 'ar'])
+  for (const width of [375, 1440])
+    test(`a failed save focuses the error summary, whose link focuses the field (${locale}, ${width}px)`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 800 });
+      const saved = await open(page, locale);
+      await expect(page.locator('#profile-name')).toHaveAccessibleName(locale === 'en' ? 'Clinic name (required)' : /\(مطلوب\)$/);
+      await page.locator('#profile-name').fill('');
+      await page.locator('#profile-email').fill('not an email');
+      await page.locator('form button[type=submit]').first().click();
+      const summary = page.getByRole('group', { name: locale === 'en' ? 'There is a problem' : 'توجد مشكلة' });
+      await expect(summary).toBeFocused();
+      await expect(summary).toBeInViewport();
+      const links = summary.getByRole('link');
+      await expect(links).toHaveCount(2);
+      if (locale === 'en') await expect(links.first()).toHaveText(/^Clinic name: /);
+      await links.nth(0).click();
+      await expect(page.locator('#profile-name')).toBeFocused();
+      await links.nth(1).click();
+      await expect(page.locator('#profile-email')).toBeFocused();
+      expect(saved).toHaveLength(0);
+      await page.addScriptTag({ path: axePath });
+      const violations = await page.evaluate(async () =>
+        (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations.map(v => `${v.id} (${v.nodes.length})`));
+      expect(violations).toEqual([]);
+    });
+
 for (const locale of ['en', 'ar'])
   test(`axe finds no violations on the profile tab (${locale})`, async ({ page }) => {
     await open(page, locale);

@@ -10,7 +10,7 @@ export function useHolidaysController(locationId: string) {
   const queryClient = useQueryClient();
   const key = ['settings', 'closures', locationId];
   const closures = useQuery({ queryKey: key, queryFn: () => fetchClosures(locationId), enabled: !!locationId });
-  const form = useForm<ClosureForm>({ resolver: zodResolver(closureSchema), defaultValues: { date: '', name: '' } });
+  const form = useForm<ClosureForm>({ resolver: zodResolver(closureSchema), defaultValues: { date: '', name: '' }, shouldFocusError: false });
   const refresh = () => void queryClient.invalidateQueries({ queryKey: key });
   const add = useMutation({
     mutationFn: (values: ClosureForm) => addClosure(locationId, values),

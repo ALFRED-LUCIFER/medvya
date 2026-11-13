@@ -90,19 +90,15 @@ public sealed class EncounterService(
         var me = user.UserId ?? throw new InvalidOperationException("No user.");
         // Only the doctor in the room with the patient can say they confirmed it with them, not a colleague who may open the chart.
         if (encounter.LeadClinicianId != me) throw new ClinicalAccessDeniedException(canRequest: false, requestPending: false);
-        if (encounter.Status == EncounterStatus.Ended) throw new EncounterEndedException();
+        // Allowed after End too: a note is often signed from Today after the consultation ended, and without this item it could never be signed.
         var now = clock.GetUtcNow();
 
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
-        // The first confirmation stands (a second tap, or two tabs at once, keeps who and when it was); a consultation ended meanwhile takes none.
-        if (await db.Encounters.Where(e => e.Id == encounterId && e.IdentityConfirmedAt == null && e.Status == EncounterStatus.Active)
+        // The first confirmation stands (a second tap, or two tabs at once, keeps who and when it was).
+        if (await db.Encounters.Where(e => e.Id == encounterId && e.IdentityConfirmedAt == null)
                 .ExecuteUpdateAsync(s => s.SetProperty(e => e.IdentityConfirmedAt, now).SetProperty(e => e.IdentityConfirmedBy, me), cancellationToken) == 1)
             (encounter.IdentityConfirmedAt, encounter.IdentityConfirmedBy) = (now, me);
-        else
-        {
-            encounter = await db.Encounters.AsNoTracking().SingleAsync(e => e.Id == encounterId, cancellationToken);
-            if (encounter.IdentityConfirmedAt is null) throw new EncounterEndedException();
-        }
+        else encounter = await db.Encounters.AsNoTracking().SingleAsync(e => e.Id == encounterId, cancellationToken);
         await audit.WriteAsync(Event(ConfirmIdentityAction, encounter), tx.GetDbTransaction(), cancellationToken);
         await tx.CommitAsync(cancellationToken);
         return View(encounter, (await visits.FindAsync(encounter.AppointmentId, cancellationToken))?.Room);

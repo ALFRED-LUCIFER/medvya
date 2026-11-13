@@ -94,6 +94,9 @@ journey('J2', {
 
     // MDV audit P0-2: the doctor records allergies while the consultation is open; once it has ended the vitals and allergies are read only, so this comes before End.
     await note.getByRole('button', { name: 'Confirm: no known allergies' }).click();
+    // MDV-P1-091: the doctor confirms name and date of birth with the patient while they are in the room; the server stores who and when.
+    await page.getByRole('region', { name: 'Patient identity' }).getByRole('button', { name: 'Confirmed with the patient' }).click();
+    await expect(page.getByRole('region', { name: 'Patient identity' })).toContainText(/Identity confirmed with the patient at \d\d:\d\d/);
     await expect(note).toContainText('No known allergies, confirmed at this visit.');
 
     await page.getByRole('button', { name: 'End consultation' }).click(); // leaves no open consultation for a later run

@@ -33,7 +33,7 @@ export default function ConsultPage(p: Props) {
   const ended = encounter.status === 'Ended';
   return (
     <div className="flex flex-col gap-4">
-      <IdentityBanner banner={p.banner} identity={{ canConfirm: p.canConfirmIdentity && !ended, confirming: p.confirming, confirmFailed: p.confirmFailed, onConfirm: p.onConfirmIdentity }} />
+      <IdentityBanner banner={p.banner} identity={{ canConfirm: p.canConfirmIdentity, confirming: p.confirming, confirmFailed: p.confirmFailed, onConfirm: p.onConfirmIdentity }} />
       <div className="flex flex-wrap items-center gap-3">
         {ended && <p role="status" className="font-bold">{t('consult.ended', { time: formatTime(new Date(encounter.endedAt!), p.banner.timeZone) })}</p>}
         {p.canReconcile && <Link to={`/consult/${encounter.id}/problems`} className={buttonVariants({ variant: 'outline' })}>{t('consult.codeProblems')}</Link>}

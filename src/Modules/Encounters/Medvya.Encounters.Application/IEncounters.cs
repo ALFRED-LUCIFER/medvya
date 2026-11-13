@@ -41,10 +41,10 @@ public interface IEncounters
 
     /// <summary>
     /// The treating doctor (the clinician who leads this encounter, with clinical access) confirmed name and date of birth with the patient
-    /// (MDV-P1-091). The first confirmation stands: confirming again answers it unchanged. Null: no such encounter.
+    /// (MDV-P1-091). The first confirmation stands: confirming again answers it unchanged. Also after the encounter ended, while its note may
+    /// still be signed. Null: no such encounter.
     /// </summary>
     /// <exception cref="Medvya.Tenancy.Application.ClinicalAccessDeniedException">Not the clinician who leads this encounter.</exception>
-    /// <exception cref="EncounterEndedException"/>
     Task<EncounterView?> ConfirmIdentityAsync(Guid encounterId, CancellationToken cancellationToken = default);
 
     /// <summary>Ends the encounter (the visit moves on to Billing); ending an ended one returns it. Null: no such encounter.</summary>

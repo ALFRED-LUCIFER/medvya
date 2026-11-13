@@ -198,7 +198,7 @@ public sealed class EncounterEndpointTests(PostgresFixture sql) : IClassFixture<
     }
 
     [Fact]
-    public async Task OnlyTheDoctorLeadingTheConsultationCanConfirmIdentityAndNotOnceItHasEnded()
+    public async Task OnlyTheDoctorLeadingTheConsultationCanConfirmIdentityAlsoAfterItEnded()
     {
         var id = await StartedAsync(h.Patient, 10);
         using (var colleague = await Confirm(h.SecondDoctor, id)) // may open the chart (the clinic's default policy), but is not in the room
@@ -212,11 +212,14 @@ public sealed class EncounterEndpointTests(PostgresFixture sql) : IClassFixture<
         await using (var db = sql.Encounters(h.Tenant))
             Assert.Null((await db.Encounters.SingleAsync(e => e.Id == id)).IdentityConfirmedAt);
 
+        // Ended first, signed later from Today: the item must stay reachable for the doctor who led it, and for nobody else.
         using (await Client(h.Doctor).PostAsync(U($"/v1/encounters/{id}/end"), null)) { }
+        using (var colleagueAfter = await Confirm(h.SecondDoctor, id))
+            Assert.Equal(HttpStatusCode.Forbidden, colleagueAfter.StatusCode);
         using (var ended = await Confirm(h.Doctor, id))
-            Assert.Equal((HttpStatusCode.Conflict, "ended"), (ended.StatusCode, (await Json(ended)).GetProperty("code").GetString()));
+            Assert.Equal(HttpStatusCode.OK, ended.StatusCode);
         await using (var db = sql.Encounters(h.Tenant))
-            Assert.Null((await db.Encounters.SingleAsync(e => e.Id == id)).IdentityConfirmedAt);
+            Assert.Equal((Guid?)h.Doctor, (await db.Encounters.SingleAsync(e => e.Id == id)).IdentityConfirmedBy);
 
         await using var audit = sql.Audit(h.Tenant);
         Assert.Equal([AuditOutcome.Denied, AuditOutcome.Denied, AuditOutcome.Denied, AuditOutcome.NotFound],

@@ -1,10 +1,9 @@
 import type { FormEventHandler } from 'react';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 import { useI18n } from '@medvya/i18n';
-import { Button, Input, Switch } from '@medvya/ui';
+import { Button, ErrorSummary, Field, Input, Switch } from '@medvya/ui';
 import { channelToggles, messageToggles, previewGroups, type NotificationPrefsForm, type TemplatePreview } from '../domain/notifications';
-import { describedBy, fieldError } from './fieldStyles';
-import { Field } from './Field';
+import { fieldError } from './fieldStyles';
 import { Section } from './Section';
 
 type Props = {
@@ -23,12 +22,21 @@ type Props = {
 /** Notifications (F-08): which patient messages go out, on which channels, the quiet hours, and each template with placeholders only. */
 export default function NotificationsPanel(p: Props) {
   const { t } = useI18n();
-  const { errors } = p.form.formState;
+  const { errors, submitCount } = p.form.formState;
+  const fields = [
+    { id: 'sender-name', label: t('settings.notifications.senderName'),
+      message: (errors.senderName || p.senderNameError === 'tooLong') ? t('settings.error.tooLong') : p.senderNameError === 'link' ? t('settings.error.link') : undefined },
+    { id: 'quiet-start', label: t('settings.notifications.quietStart'), message: errors.quietStart && t('settings.error.required') },
+    { id: 'quiet-end', label: t('settings.notifications.quietEnd'), message: errors.quietEnd && t('settings.error.required') },
+  ];
   if (p.loading) return <p role="status">{t('settings.loading')}</p>;
   if (p.loadFailed) return <p role="alert" className={fieldError}>{t(p.forbidden ? 'settings.forbidden' : 'settings.loadFailed')}</p>;
   return (
     <div className="flex flex-col gap-4">
       <form noValidate onSubmit={p.onSubmit} className="flex flex-col gap-4">
+        {/* The server's refusal of the sender name moves focus too, once it arrives. */}
+        <ErrorSummary title={t('field.errorSummary')} focusKey={`${submitCount}:${p.senderNameError}`}
+          errors={fields.flatMap(f => (f.message ? [{ id: f.id, label: f.label, message: f.message }] : []))} />
         <Section title={t('settings.notifications.messages')} intro={t('settings.notifications.messagesIntro')}>
           <ul className="flex flex-col divide-y rounded-lg border">
             {messageToggles.map(name => (
@@ -67,20 +75,19 @@ export default function NotificationsPanel(p: Props) {
               <p id="notifications-whatsapp" className="text-sm text-muted-foreground">{t('settings.notifications.whatsappLater')}</p>
             </li>
           </ul>
-          <Field id="sender-name" label={t('settings.notifications.senderName')} hint={t('settings.notifications.senderNameHint')}
-            error={(errors.senderName || p.senderNameError === 'tooLong') ? t('settings.error.tooLong') : p.senderNameError === 'link' ? t('settings.error.link') : undefined}>
-            <Input id="sender-name" maxLength={60} autoComplete="organization" {...describedBy('sender-name', !!errors.senderName || !!p.senderNameError, true)} {...p.form.register('senderName')} />
+          <Field id="sender-name" label={t('settings.notifications.senderName')} hint={t('settings.notifications.senderNameHint')} error={fields[0]!.message}>
+            <Input maxLength={60} autoComplete="organization" {...p.form.register('senderName')} />
           </Field>
           <p className="text-sm text-muted-foreground">{t('settings.notifications.senderNote')}</p>
         </Section>
 
         <Section title={t('settings.notifications.quiet')} intro={t('settings.notifications.quietIntro')}>
           <div className="flex flex-wrap gap-4">
-            <Field id="quiet-start" label={t('settings.notifications.quietStart')} error={errors.quietStart && t('settings.error.required')}>
-              <Input id="quiet-start" type="time" dir="ltr" className="w-32" {...describedBy('quiet-start', !!errors.quietStart)} {...p.form.register('quietStart')} />
+            <Field id="quiet-start" label={t('settings.notifications.quietStart')} required error={fields[1]!.message}>
+              <Input type="time" dir="ltr" className="w-32" {...p.form.register('quietStart')} />
             </Field>
-            <Field id="quiet-end" label={t('settings.notifications.quietEnd')} error={errors.quietEnd && t('settings.error.required')}>
-              <Input id="quiet-end" type="time" dir="ltr" className="w-32" {...describedBy('quiet-end', !!errors.quietEnd)} {...p.form.register('quietEnd')} />
+            <Field id="quiet-end" label={t('settings.notifications.quietEnd')} required error={fields[2]!.message}>
+              <Input type="time" dir="ltr" className="w-32" {...p.form.register('quietEnd')} />
             </Field>
           </div>
         </Section>

@@ -1,10 +1,9 @@
 import { useI18n } from '@medvya/i18n';
-import { Button, Input } from '@medvya/ui';
+import { Button, ErrorSummary, Field, Input } from '@medvya/ui';
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import type { ClosureForm, ClosureWithVisits, LocationChoice } from '../domain/settings';
-import { describedBy, fieldError } from './fieldStyles';
-import { Field } from './Field';
+import { fieldError } from './fieldStyles';
 import { LocationSelect } from './LocationSelect';
 import { Section } from './Section';
 
@@ -27,7 +26,12 @@ type Props = { choice: LocationChoice; holidays: Holidays; zoneOf: (locationId: 
 /** Holidays (F-08): closed dates. A closed date takes no new bookings; visits already booked are listed so the desk can move them. */
 export default function HolidaysPanel({ choice, holidays: h, zoneOf }: Props) {
   const { t, formatShortDay, formatTime } = useI18n();
-  const { errors } = h.form.formState;
+  const { errors, submitCount } = h.form.formState;
+  const required = t('settings.error.required');
+  const fields = [
+    { id: 'holiday-date', label: t('settings.holidays.date'), message: errors.date && required },
+    { id: 'holiday-name', label: t('settings.holidays.name'), message: errors.name && required },
+  ];
   if (choice.locationsLoading) return <p role="status">{t('settings.loading')}</p>;
   if (choice.locationsFailed) return <p role="alert" className={fieldError}>{t('settings.loadFailed')}</p>;
   return (
@@ -35,13 +39,15 @@ export default function HolidaysPanel({ choice, holidays: h, zoneOf }: Props) {
       <LocationSelect id="holidays-location" locations={choice.locations} value={choice.locationId} onChange={choice.onLocation} />
       <Section title={t('settings.holidays.title')} intro={t('settings.holidays.intro')}>
         <form noValidate onSubmit={h.onSubmit} className="flex flex-wrap items-start gap-3">
-          <Field id="holiday-date" label={t('settings.holidays.date')} error={errors.date && t('settings.error.required')}>
-            <Input id="holiday-date" type="date" dir="ltr" className="w-48" {...describedBy('holiday-date', !!errors.date)} {...h.form.register('date')} />
+          <ErrorSummary title={t('field.errorSummary')} focusKey={submitCount} className="basis-full"
+            errors={fields.flatMap(f => (f.message ? [{ id: f.id, label: f.label, message: f.message }] : []))} />
+          <Field id="holiday-date" label={t('settings.holidays.date')} required error={fields[0]!.message}>
+            <Input type="date" dir="ltr" className="w-48" {...h.form.register('date')} />
           </Field>
-          <Field id="holiday-name" label={t('settings.holidays.name')} error={errors.name && t('settings.error.required')} className="min-w-60 flex-1">
-            <Input id="holiday-name" autoComplete="off" placeholder={t('settings.holidays.placeholder')} {...describedBy('holiday-name', !!errors.name)} {...h.form.register('name')} />
+          <Field id="holiday-name" label={t('settings.holidays.name')} required error={fields[1]!.message} className="min-w-60 flex-1">
+            <Input autoComplete="off" placeholder={t('settings.holidays.placeholder')} {...h.form.register('name')} />
           </Field>
-          <div className="pt-[1.875rem]"><Button type="submit" loading={h.adding}>{t('settings.holidays.add')}</Button></div>
+          <div className="pt-[1.625rem]"><Button type="submit" loading={h.adding}>{t('settings.holidays.add')}</Button></div>
         </form>
         <div aria-live="polite">
           {h.addError && <p role="alert" className={fieldError}>{t(h.addError === 'duplicate' ? 'settings.holidays.duplicate' : 'settings.saveFailed')}</p>}

@@ -28,7 +28,9 @@ export function useDoctorsController(defaultFacilityId: string) {
   const [signature, setSignature] = useState<File | null>(null);
   const [signatureProblemKind, setSignatureProblemKind] = useState<'type' | 'size' | null>(null);
   const [added, setAdded] = useState<{ name: string; signatureFailed: boolean } | null>(null);
-  const form = useForm<DoctorForm>({ resolver: zodResolver(doctorSchema), defaultValues: emptyDoctor(defaultFacilityId) });
+  const form = useForm<DoctorForm>({ resolver: zodResolver(doctorSchema), defaultValues: emptyDoctor(defaultFacilityId), shouldFocusError: false }); // the error summary takes focus
+  // Each failed Next or save: the error summary takes focus once.
+  const [failures, setFailures] = useState(0);
 
   const open = () => {
     form.reset(emptyDoctor(defaultFacilityId, list.data?.defaults));
@@ -52,13 +54,14 @@ export function useDoctorsController(defaultFacilityId: string) {
       // "licence.number:format" → under that field, on its step.
       const [path, code] = (e instanceof ApiError ? e.code ?? '' : '').split(':');
       const target = errorTarget(path ?? '');
-      if (target && code) { form.setError(target.field, { type: 'server', message: code }); setStep(target.step); }
+      if (target && code) { form.setError(target.field, { type: 'server', message: code }); setStep(target.step); setFailures(n => n + 1); }
     },
   });
 
   const index = doctorSteps.indexOf(step);
   const next = async () => {
     if (await form.trigger(stepFields[step])) setStep(doctorSteps[index + 1] ?? step);
+    else setFailures(n => n + 1);
   };
   const lastStep = index === doctorSteps.length - 1;
 
@@ -67,7 +70,7 @@ export function useDoctorsController(defaultFacilityId: string) {
 
   // ---- Correct a rejected licence ----
   const [correcting, setCorrecting] = useState<Doctor | null>(null);
-  const licenceForm = useForm<LicenceForm>({ resolver: zodResolver(licenceSchema), defaultValues: emptyLicence });
+  const licenceForm = useForm<LicenceForm>({ resolver: zodResolver(licenceSchema), defaultValues: emptyLicence, shouldFocusError: false });
   const correct = useMutation({ mutationFn: (values: LicenceForm) => resubmitLicence(correcting!.id, values), onSuccess: () => { setCorrecting(null); refresh(); } });
   const licenceErrors = Object.fromEntries(Object.entries(licenceForm.formState.errors).map(([k, v]) => [k, v ? fieldProblem(undefined) : undefined]));
 
@@ -103,6 +106,7 @@ export function useDoctorsController(defaultFacilityId: string) {
     lastStep,
     form,
     fieldErrors,
+    errorFocusKey: failures,
     onBack: () => setStep(doctorSteps[Math.max(0, index - 1)] ?? step),
     onNext: next,
     onSubmit: form.handleSubmit(values => add.mutate(values)),

@@ -2,16 +2,16 @@ import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { BadgeCheck, CalendarX, Info } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, Input } from '@medvya/ui';
+import { Button, Field, Input } from '@medvya/ui';
 import type { Authority, Doctor, DoctorForm, DoctorStep, FieldProblem, LicenceForm } from '../domain/doctors';
 import type { Location } from '../domain/settings';
-import DoctorWizard, { LicenceFields } from './DoctorWizard';
-import { describedBy, fieldError } from './fieldStyles';
-import { Field } from './Field';
+import { licenceFields } from '../domain/doctors';
+import DoctorWizard, { LicenceFields, StepErrorSummary } from './DoctorWizard';
+import { fieldError } from './fieldStyles';
 import { Section } from './Section';
 
 type Wizard = {
-  adding: boolean; step: DoctorStep; stepIndex: number; lastStep: boolean; form: UseFormReturn<DoctorForm>; fieldErrors: Record<string, FieldProblem | undefined>;
+  adding: boolean; step: DoctorStep; stepIndex: number; lastStep: boolean; form: UseFormReturn<DoctorForm>; fieldErrors: Record<string, FieldProblem | undefined>; errorFocusKey: number;
   submitting: boolean; submitFailed: boolean; emailFailed: boolean; planFull: boolean; signature: File | null; signatureProblem: 'type' | 'size' | null;
   onPickSignature: (file: File | undefined) => void; onBack: () => void; onNext: () => void; onClose: () => void; onSubmit: FormEventHandler<HTMLFormElement>;
 };
@@ -104,6 +104,7 @@ function DoctorRow({ doctor: d, ...p }: Props & { doctor: Doctor }) {
       {!editing && <div><Button type="button" variant="outline" onClick={() => p.onCorrect(d)}>{t(d.expired ? 'doctors.licence.renew' : 'doctors.licence.correct')}</Button></div>}
       {editing && (
         <form noValidate onSubmit={p.onSubmitLicence} className="grid gap-4 sm:grid-cols-2" aria-label={t('doctors.licence.correct')}>
+          <StepErrorSummary errors={p.licenceErrors} fields={licenceFields} prefix={`c-${d.id}`} focusKey={p.licenceForm.formState.submitCount} />
           <LicenceFields form={p.licenceForm} errors={p.licenceErrors} authorities={p.authorities} prefix={`c-${d.id}`} />
           <div className="flex flex-wrap items-center gap-3 sm:col-span-2" aria-live="polite">
             <Button type="submit" loading={p.correctingBusy}>{t('doctors.licence.resubmit')}</Button>
@@ -117,8 +118,8 @@ function DoctorRow({ doctor: d, ...p }: Props & { doctor: Doctor }) {
         <p className="text-sm text-muted-foreground">{t('doctors.signature.notice')}</p>
         <div className="flex flex-wrap items-end gap-3">
           <Field id={`sig-${d.id}`} label={d.hasSignature ? t('doctors.signature.replace') : t('doctors.signature.choose')} hint={t('doctors.signature.hint')}
-            error={problem ? t(`doctors.signature.error.${problem}`) : null} className="min-w-60">
-            <Input id={`sig-${d.id}`} type="file" accept="image/png,image/jpeg" className="h-auto py-2" disabled={busy} {...describedBy(`sig-${d.id}`, !!problem, true)}
+            error={problem ? t(`doctors.signature.error.${problem}`) : undefined} className="min-w-60">
+            <Input type="file" accept="image/png,image/jpeg" className="h-auto py-2" disabled={busy}
               onChange={e => { p.onSignature(d.id, e.currentTarget.files?.[0]); e.currentTarget.value = ''; }} />
           </Field>
           {d.hasSignature && <Button type="button" variant="outline" loading={busy} onClick={() => p.onRemoveSignature(d.id)}>{t('doctors.signature.remove')}</Button>}

@@ -46,10 +46,15 @@ test('a missing certificate and a server refusal are announced under the field o
   await page.getByLabel('Location name').fill('Velachery (synthetic)');
   await page.getByLabel('Tax number of this location').fill('bad');
   await page.getByRole('button', { name: 'Add location' }).click();
-  await expect(page.getByRole('alert').filter({ hasText: 'Choose the registration certificate.' })).toBeVisible();
+  // MDV-P2-058: each refusal puts focus on the error summary, which names the field; the error is also under the field.
+  const summary = page.getByRole('group', { name: 'There is a problem' });
+  await expect(summary).toBeFocused();
+  await expect(summary.getByRole('link')).toHaveText(['Registration certificate: Choose the registration certificate.']);
+  await expect(page.locator('#location-certificate-error')).toHaveText('Choose the registration certificate.');
   await page.getByLabel('Registration certificate').setInputFiles(certificate);
   await page.getByRole('button', { name: 'Add location' }).click();
-  await expect(page.getByRole('alert').filter({ hasText: 'not a valid GSTIN or TRN' })).toBeVisible();
+  await expect(summary).toBeFocused();
+  await expect(page.locator('#location-tax-error')).toContainText('not a valid GSTIN or TRN');
 });
 
 test('a location in another country is refused with a plain message', async ({ page }) => {

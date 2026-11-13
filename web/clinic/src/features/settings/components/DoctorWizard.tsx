@@ -2,55 +2,92 @@ import type { FormEventHandler } from 'react';
 import { Controller, type FieldValues, type UseFormReturn } from 'react-hook-form';
 import { Info } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
-import { doctorSteps, type Authority, type FieldProblem, type DoctorForm, type DoctorStep, type LicenceForm } from '../domain/doctors';
+import { Button, ErrorSummary, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
+import { doctorSteps, stepFields, type Authority, type FieldProblem, type DoctorForm, type DoctorStep, type LicenceForm } from '../domain/doctors';
 import type { Location } from '../domain/settings';
-import { describedBy, fieldError } from './fieldStyles';
-import { Field } from './Field';
+import { fieldError } from './fieldStyles';
 import { Section } from './Section';
 
 type Errors = Record<string, FieldProblem | undefined>;
+type Labels = Partial<Record<keyof DoctorForm, readonly [id: string, label: string]>>;
+
+/** Each field's control id and label: the fields use them, and the error summary links to them. */
+function useLabels(prefix: string, currency = ''): Labels {
+  const { t, country } = useI18n();
+  return {
+    fullName: [`${prefix}-name`, t('onboarding.field.fullName')],
+    email: [`${prefix}-email`, t('doctors.email')],
+    specialty: [`${prefix}-specialty`, t('onboarding.field.specialty')],
+    qualifications: [`${prefix}-qualifications`, t('onboarding.field.qualifications')],
+    languages: [`${prefix}-languages`, t('onboarding.field.languages')],
+    authority: [`${prefix}-authority`, t(`onboarding.field.authority.${country}`)],
+    number: [`${prefix}-number`, t(`onboarding.field.licenceNumber.${country}`)],
+    category: [`${prefix}-category`, t('doctors.licence.category')],
+    expiresOn: [`${prefix}-expires`, t('doctors.licence.expires')],
+    certificateName: [`${prefix}-certificate`, t('onboarding.field.certificate')],
+    attested: [`${prefix}-attested`, t('doctors.licence.attest')],
+    newVisitFee: [`${prefix}-new-fee`, t('onboarding.field.newFee', { currency })],
+    followUpFee: [`${prefix}-follow-fee`, t('onboarding.field.followUpFee', { currency })],
+    facilityId: [`${prefix}-facility`, t('doctors.access.facility')],
+  };
+}
 
 /** The text under an invalid field: what the server said (required, format, past, …) or "invalid" for what the form itself refused. */
 function useFieldError(errors: Errors) {
   const { t } = useI18n();
-  return (name: string) => (errors[name] ? t(`doctors.error.${errors[name]!}`) : null);
+  return (name: string) => (errors[name] ? t(`doctors.error.${errors[name]!}`) : undefined);
+}
+
+/** After a failed Next or save: this step's fields in error, as links; it takes focus when focusKey changes. */
+export function StepErrorSummary({ errors, fields, prefix, currency, focusKey }: {
+  errors: Errors; fields: readonly (keyof DoctorForm)[]; prefix: string; currency?: string; focusKey: number;
+}) {
+  const { t } = useI18n();
+  const error = useFieldError(errors);
+  const labels = useLabels(prefix, currency);
+  const list = fields.flatMap(name => {
+    const message = error(name), at = labels[name];
+    return message && at ? [{ id: at[0], label: at[1], message }] : [];
+  });
+  return <ErrorSummary title={t('field.errorSummary')} focusKey={focusKey} errors={list} className="sm:col-span-2" />;
 }
 
 /** Authority, number, category, expiry, certificate file name and the owner's attestation: the licence step, also used to renew a licence. */
 export function LicenceFields<T extends FieldValues>({ form, errors, authorities, prefix }: { form: UseFormReturn<T>; errors: Errors; authorities: Authority[]; prefix: string }) {
-  const { t, country } = useI18n();
+  const { t } = useI18n();
   const error = useFieldError(errors);
+  const l = useLabels(prefix);
   const f = form as unknown as UseFormReturn<LicenceForm>;
   return (
     <>
-      <Field id={`${prefix}-authority`} label={t(`onboarding.field.authority.${country}`)} error={error('authority')}>
-        <Controller control={f.control} name="authority" render={({ field }) => (
-          <Select value={field.value} onValueChange={field.onChange}>
-            <SelectTrigger id={`${prefix}-authority`} className="w-full" {...describedBy(`${prefix}-authority`, !!errors.authority)}><SelectValue placeholder={t('doctors.choose')} /></SelectTrigger>
-            <SelectContent>{authorities.map(a => <SelectItem key={a.code} value={a.code}>{a.name}</SelectItem>)}</SelectContent>
-          </Select>
-        )} />
+      <Controller control={f.control} name="authority" render={({ field }) => (
+        <Select value={field.value} onValueChange={field.onChange}>
+          <Field id={l.authority![0]} label={l.authority![1]} required error={error('authority')}>
+            <SelectTrigger className="w-full"><SelectValue placeholder={t('doctors.choose')} /></SelectTrigger>
+          </Field>
+          <SelectContent>{authorities.map(a => <SelectItem key={a.code} value={a.code}>{a.name}</SelectItem>)}</SelectContent>
+        </Select>
+      )} />
+      <Field id={l.number![0]} label={l.number![1]} required error={error('number')}>
+        <Input dir="ltr" autoComplete="off" {...f.register('number')} />
       </Field>
-      <Field id={`${prefix}-number`} label={t(`onboarding.field.licenceNumber.${country}`)} error={error('number')}>
-        <Input id={`${prefix}-number`} dir="ltr" autoComplete="off" {...describedBy(`${prefix}-number`, !!errors.number)} {...f.register('number')} />
+      <Field id={l.category![0]} label={l.category![1]} required hint={t('doctors.licence.categoryHint')} error={error('category')}>
+        <Input autoComplete="off" {...f.register('category')} />
       </Field>
-      <Field id={`${prefix}-category`} label={t('doctors.licence.category')} hint={t('doctors.licence.categoryHint')} error={error('category')}>
-        <Input id={`${prefix}-category`} autoComplete="off" {...describedBy(`${prefix}-category`, !!errors.category, true)} {...f.register('category')} />
+      <Field id={l.expiresOn![0]} label={l.expiresOn![1]} required error={error('expiresOn')}>
+        <Input type="date" dir="ltr" {...f.register('expiresOn')} />
       </Field>
-      <Field id={`${prefix}-expires`} label={t('doctors.licence.expires')} error={error('expiresOn')}>
-        <Input id={`${prefix}-expires`} type="date" dir="ltr" {...describedBy(`${prefix}-expires`, !!errors.expiresOn)} {...f.register('expiresOn')} />
-      </Field>
-      <Field id={`${prefix}-certificate`} label={t('onboarding.field.certificate')} hint={t('doctors.licence.certificateHint')} error={error('certificateName')} className="sm:col-span-2">
-        <Input id={`${prefix}-certificate`} autoComplete="off" {...describedBy(`${prefix}-certificate`, !!errors.certificateName, true)} {...f.register('certificateName')} />
+      <Field id={l.certificateName![0]} label={l.certificateName![1]} hint={t('doctors.licence.certificateHint')} error={error('certificateName')} className="sm:col-span-2">
+        <Input autoComplete="off" {...f.register('certificateName')} />
       </Field>
       <div className="flex flex-col gap-2 sm:col-span-2">
         <label className="flex min-h-11 items-start gap-3 text-sm font-semibold">
-          <input id={`${prefix}-attested`} type="checkbox" className="mt-1 size-4 accent-brand-700" {...describedBy(`${prefix}-attested`, !!errors.attested)} {...f.register('attested')} />
+          <input id={l.attested![0]} type="checkbox" className="mt-1 size-4 accent-brand-700" aria-invalid={errors.attested ? true : undefined}
+            aria-describedby={errors.attested ? `${l.attested![0]}-error` : undefined} {...f.register('attested')} />
           {t('doctors.licence.attest')}
         </label>
         <p className="text-sm">{t('doctors.licence.reminder')}</p>
-        {error('attested') && <p id={`${prefix}-attested-error`} role="alert" className={fieldError}>{error('attested')}</p>}
+        {error('attested') && <p id={`${l.attested![0]}-error`} role="alert" className={fieldError}>{error('attested')}</p>}
       </div>
     </>
   );
@@ -59,6 +96,8 @@ export function LicenceFields<T extends FieldValues>({ form, errors, authorities
 type Props = {
   form: UseFormReturn<DoctorForm>;
   fieldErrors: Errors;
+  /** Changes once per failed Next or save: the error summary takes focus then. */
+  errorFocusKey: number;
   step: DoctorStep;
   stepIndex: number;
   lastStep: boolean;
@@ -82,6 +121,7 @@ type Props = {
 export default function DoctorWizard(p: Props) {
   const { t } = useI18n();
   const error = useFieldError(p.fieldErrors);
+  const l = useLabels('d', p.currency);
   const { register, control, watch } = p.form;
   const title = t(`doctors.step.${p.step}`);
   return (
@@ -89,22 +129,23 @@ export default function DoctorWizard(p: Props) {
       <p aria-live="polite" className="font-bold">{t('doctors.add.progress', { n: p.stepIndex + 1, total: doctorSteps.length, title })}</p>
       <form noValidate onSubmit={p.onSubmit} className="flex flex-col gap-4">
         <div className="grid gap-4 sm:grid-cols-2">
+          <StepErrorSummary errors={p.fieldErrors} fields={stepFields[p.step]} prefix="d" currency={p.currency} focusKey={p.errorFocusKey} />
           {p.step === 'details' && (
             <>
-              <Field id="d-name" label={t('onboarding.field.fullName')} error={error('fullName')}>
-                <Input id="d-name" autoComplete="off" {...describedBy('d-name', !!p.fieldErrors.fullName)} {...register('fullName')} />
+              <Field id={l.fullName![0]} label={l.fullName![1]} required error={error('fullName')}>
+                <Input autoComplete="off" {...register('fullName')} />
               </Field>
-              <Field id="d-email" label={t('doctors.email')} hint={t('doctors.emailHint')} error={error('email')}>
-                <Input id="d-email" type="email" dir="ltr" autoComplete="off" {...describedBy('d-email', !!p.fieldErrors.email, true)} {...register('email')} />
+              <Field id={l.email![0]} label={l.email![1]} required hint={t('doctors.emailHint')} error={error('email')}>
+                <Input type="email" dir="ltr" autoComplete="off" {...register('email')} />
               </Field>
-              <Field id="d-specialty" label={t('onboarding.field.specialty')} error={error('specialty')}>
-                <Input id="d-specialty" autoComplete="off" {...describedBy('d-specialty', !!p.fieldErrors.specialty)} {...register('specialty')} />
+              <Field id={l.specialty![0]} label={l.specialty![1]} required error={error('specialty')}>
+                <Input autoComplete="off" {...register('specialty')} />
               </Field>
-              <Field id="d-qualifications" label={t('onboarding.field.qualifications')} error={error('qualifications')}>
-                <Input id="d-qualifications" autoComplete="off" {...describedBy('d-qualifications', !!p.fieldErrors.qualifications)} {...register('qualifications')} />
+              <Field id={l.qualifications![0]} label={l.qualifications![1]} error={error('qualifications')}>
+                <Input autoComplete="off" {...register('qualifications')} />
               </Field>
-              <Field id="d-languages" label={t('onboarding.field.languages')} error={error('languages')} className="sm:col-span-2">
-                <Input id="d-languages" autoComplete="off" {...describedBy('d-languages', !!p.fieldErrors.languages)} {...register('languages')} />
+              <Field id={l.languages![0]} label={l.languages![1]} error={error('languages')} className="sm:col-span-2">
+                <Input autoComplete="off" {...register('languages')} />
               </Field>
             </>
           )}
@@ -112,27 +153,27 @@ export default function DoctorWizard(p: Props) {
           {p.step === 'schedule' && <p className="sm:col-span-2">{t('doctors.schedule.body')}</p>}
           {p.step === 'fees' && (
             <>
-              <Field id="d-new-fee" label={t('onboarding.field.newFee', { currency: p.currency })} hint={t('doctors.fees.hint')} error={error('newVisitFee')}>
-                <Input id="d-new-fee" inputMode="decimal" dir="ltr" autoComplete="off" {...describedBy('d-new-fee', !!p.fieldErrors.newVisitFee, true)} {...register('newVisitFee')} />
+              <Field id={l.newVisitFee![0]} label={l.newVisitFee![1]} required hint={t('doctors.fees.hint')} error={error('newVisitFee')}>
+                <Input inputMode="decimal" dir="ltr" autoComplete="off" {...register('newVisitFee')} />
               </Field>
-              <Field id="d-follow-fee" label={t('onboarding.field.followUpFee', { currency: p.currency })} error={error('followUpFee')}>
-                <Input id="d-follow-fee" inputMode="decimal" dir="ltr" autoComplete="off" {...describedBy('d-follow-fee', !!p.fieldErrors.followUpFee)} {...register('followUpFee')} />
+              <Field id={l.followUpFee![0]} label={l.followUpFee![1]} required error={error('followUpFee')}>
+                <Input inputMode="decimal" dir="ltr" autoComplete="off" {...register('followUpFee')} />
               </Field>
             </>
           )}
           {p.step === 'access' && (
             <>
               <Field id="d-role" label={t('doctors.access.role')} hint={t('doctors.access.roleHint')}>
-                <Input id="d-role" readOnly value={t('doctors.access.roleValue')} {...describedBy('d-role', false, true)} />
+                <Input readOnly value={t('doctors.access.roleValue')} />
               </Field>
-              <Field id="d-facility" label={t('doctors.access.facility')} hint={t('doctors.access.facilityHint')} error={error('facilityId')}>
-                <Controller control={control} name="facilityId" render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger id="d-facility" className="w-full" {...describedBy('d-facility', !!p.fieldErrors.facilityId, true)}><SelectValue /></SelectTrigger>
-                    <SelectContent>{p.locations.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}</SelectContent>
-                  </Select>
-                )} />
-              </Field>
+              <Controller control={control} name="facilityId" render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <Field id={l.facilityId![0]} label={l.facilityId![1]} required hint={t('doctors.access.facilityHint')} error={error('facilityId')}>
+                    <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                  </Field>
+                  <SelectContent>{p.locations.map(loc => <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>)}</SelectContent>
+                </Select>
+              )} />
               {p.locations.length > 1 && (
                 <Controller control={control} name="alsoFacilityIds" render={({ field }) => (
                   <fieldset className="flex flex-col gap-2 sm:col-span-2">
@@ -155,9 +196,8 @@ export default function DoctorWizard(p: Props) {
               <p role="note" className="flex items-start gap-2 rounded-md border bg-muted p-3 text-sm font-semibold">
                 <Info className="mt-0.5 size-4 shrink-0" aria-hidden />{t('doctors.signature.notice')}
               </p>
-              <Field id="d-signature" label={t('doctors.signature.choose')} hint={t('doctors.signature.hint')} error={p.signatureProblem ? t(`doctors.signature.error.${p.signatureProblem}`) : null}>
-                <Input id="d-signature" type="file" accept="image/png,image/jpeg" className="h-auto py-2" {...describedBy('d-signature', !!p.signatureProblem, true)}
-                  onChange={e => p.onPickSignature(e.currentTarget.files?.[0])} />
+              <Field id="d-signature" label={t('doctors.signature.choose')} hint={t('doctors.signature.hint')} error={p.signatureProblem ? t(`doctors.signature.error.${p.signatureProblem}`) : undefined}>
+                <Input type="file" accept="image/png,image/jpeg" className="h-auto py-2" onChange={e => p.onPickSignature(e.currentTarget.files?.[0])} />
               </Field>
               {p.signature && <p role="status">{t('doctors.signature.chosen')}</p>}
             </div>

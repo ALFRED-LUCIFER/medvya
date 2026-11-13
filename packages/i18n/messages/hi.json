@@ -2017,7 +2017,7 @@
   "doctors.access.facilityHint": "डॉक्टर का मुख्य स्थान। यदि वे अन्य स्थानों पर भी काम करते हैं तो नीचे उन्हें चुनें।",
   "doctors.alsoAtHint": "हर स्थान का अपना शेड्यूल, शुल्क और हस्ताक्षर रहता है। एक प्लान सीट सभी को कवर करती है।",
   "doctors.signature.notice": "Medvya में हस्ताक्षर हमेशा डॉक्टर की प्रमाणित क्रिया होती है (पासकी / MFA), केवल छवि कभी नहीं।",
-  "doctors.signature.choose": "हस्ताक्षर की छवि (वैकल्पिक)",
+  "doctors.signature.choose": "हस्ताक्षर की छवि",
   "doctors.signature.replace": "हस्ताक्षर की छवि बदलें",
   "doctors.signature.remove": "हस्ताक्षर की छवि हटाएँ",
   "doctors.signature.hint": "PNG या JPEG, 512 KB तक। निजी रूप से सहेजी जाती है और केवल छपे हुए पर्चों पर दिखती है।",

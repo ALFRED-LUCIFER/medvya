@@ -17,12 +17,14 @@ export function useLocationsController(defaultId: string, country: 'IN' | 'AE' |
 
   // The form edits one location, or adds a new one when none is being edited.
   const [editingId, setEditingId] = useState<string | null>(null);
-  const form = useForm<AddLocationForm>({ resolver: zodResolver(addLocationSchema), defaultValues: emptyAddLocation });
+  const form = useForm<AddLocationForm>({ resolver: zodResolver(addLocationSchema), defaultValues: emptyAddLocation, shouldFocusError: false });
   // The registration certificate of a new location (a file is not form state).
   const [certificate, setCertificate] = useState<File | null>(null);
   const [certificateError, setCertificateError] = useState<MessageKey | null>(null);
   const [problem, setProblem] = useState<MessageKey | null>(null);
   const [added, setAdded] = useState<string | null>(null);
+  // The server's refusal of a field arrives after the submit: it moves the error summary's focus once more.
+  const [refusals, setRefusals] = useState(0);
   const reset = (values: AddLocationForm) => { form.reset(values); setCertificate(null); setCertificateError(null); };
   const save = useMutation({
     mutationFn: async (values: AddLocationForm) => {
@@ -35,6 +37,7 @@ export function useLocationsController(defaultId: string, country: 'IN' | 'AE' |
       if (p.field === 'taxNumber') form.setError('taxNumber', { type: 'server', message: p.key });
       else if (p.field === 'certificate') setCertificateError(p.key);
       else setProblem(p.key);
+      if (p.field !== 'form') setRefusals(n => n + 1);
     },
   });
   const edit = (id: string | null) => {
@@ -46,7 +49,7 @@ export function useLocationsController(defaultId: string, country: 'IN' | 'AE' |
 
   // Rooms and resources are scheduling calendars of the location.
   const calendars = useQuery({ queryKey: ['settings', 'templates', choice.locationId], queryFn: () => fetchTemplates(choice.locationId), enabled: !!choice.locationId });
-  const resourceForm = useForm<ResourceForm>({ resolver: zodResolver(resourceSchema), defaultValues: { name: '' } });
+  const resourceForm = useForm<ResourceForm>({ resolver: zodResolver(resourceSchema), defaultValues: { name: '' }, shouldFocusError: false });
   const addRoom = useMutation({
     mutationFn: (values: ResourceForm) => addResource(choice.locationId, values.name),
     onSuccess: () => { resourceForm.reset({ name: '' }); void queryClient.invalidateQueries({ queryKey: ['settings', 'templates'] }); },
@@ -62,6 +65,7 @@ export function useLocationsController(defaultId: string, country: 'IN' | 'AE' |
     /** Beside the button: a wrong country, or any refusal that has no field of its own. */
     saveProblem: problem,
     certificateError,
+    errorFocusKey: `${form.formState.submitCount}:${refusals}`,
     certificateName: certificate?.name ?? null,
     onCertificate: (file: File | undefined) => { setCertificate(file ?? null); setCertificateError(null); },
     added,

@@ -71,6 +71,11 @@ describe('ErrorSummary', () => {
     expect((await axe.run(container)).violations).toEqual([]);
   });
 
+  it('puts the label first for a message that does not name its field (MDV-P2-058)', () => {
+    render(<ErrorSummary title="There is a problem" focusKey={1} errors={[{ id: 'n', label: 'Full name', message: 'Required.' }, { id: 'm', message: 'Enter a mobile number' }]} />);
+    expect(screen.getAllByRole('link').map(l => l.textContent)).toEqual(['Full name: Required.', 'Enter a mobile number']);
+  });
+
   it('does not take focus back while the user types, only on the next submit', () => {
     render(<Form />);
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));

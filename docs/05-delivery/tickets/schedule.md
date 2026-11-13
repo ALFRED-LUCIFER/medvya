@@ -62,7 +62,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P0-017](P0-foundation/MDV-P0-017.md) | Append-only audit log on hash-chained PostgreSQL tables with audit middleware | P0 | wk 2–3 | 85% |
 | [MDV-P0-019](P0-foundation/MDV-P0-019.md) | Backups, point-in-time restore and a timed restore drill | P0 | wk 3–3 | 90% |
 | [MDV-P0-022](P0-foundation/MDV-P0-022.md) | App shell with role-based navigation (desktop sidebar, tablet rail, mobile tabs) | P0 | wk 3–3 | 85% |
-| [MDV-P0-023](P0-foundation/MDV-P0-023.md) | Six end-to-end journeys as Playwright specs and clinical advisor sign-off (X-03) | P0 | wk 3–3 | 80% |
+| [MDV-P0-023](P0-foundation/MDV-P0-023.md) | Six end-to-end journeys as Playwright specs (X-03) | P0 | wk 3–3 | 90% |
 | [MDV-P0-024](P0-foundation/MDV-P0-024.md) | Threat model, data map, DPIA draft (DPDP) and record-retention map per country | P0 | wk 1–3 | 75% |
 | [MDV-P0-027](P0-foundation/MDV-P0-027.md) | Synthetic data generator and seeded staging tenant | P0 | wk 3–3 | 90% |
 | [MDV-P0-028](P0-foundation/MDV-P0-028.md) | Per-tenant feature flags with owner and kill switch | P0 | wk 3–3 | 85% |
@@ -89,7 +89,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P1-044](P1-front-desk/MDV-P1-044.md) | Legal review of privacy notice, ToS, DPA and consent wording (DPDP India; UAE health data) | P1 | wk 4–6 | 60% |
 | [MDV-P1-045](P1-front-desk/MDV-P1-045.md) | Register India DLT sender ID and SMS templates (and UAE SMS sender if applicable) | P1 | wk 4–6 | 62% |
 
-## Week 5 · 23 Nov 2026 – 27 Nov 2026 · load 13.8 dev-days ⚠ over capacity
+## Week 5 · 23 Nov 2026 – 27 Nov 2026 · load 14.8 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -103,8 +103,9 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P1-043](P1-front-desk/MDV-P1-043.md) | Sign pilot agreements with two partner clinics | P1 | wk 4–6 | 60% |
 | [MDV-P1-044](P1-front-desk/MDV-P1-044.md) | Legal review of privacy notice, ToS, DPA and consent wording (DPDP India; UAE health data) | P1 | wk 4–6 | 60% |
 | [MDV-P1-045](P1-front-desk/MDV-P1-045.md) | Register India DLT sender ID and SMS templates (and UAE SMS sender if applicable) | P1 | wk 4–6 | 62% |
+| [MDV-P1-074](P1-front-desk/MDV-P1-074.md) | Keep Azure logs flowing all day: PostgreSQL audit and connection logs must not exhaust the Log Analytics daily cap | P1 | wk 5–5 | 70% |
 
-## Week 6 · 30 Nov 2026 – 04 Dec 2026 · load 21.8 dev-days ⚠ over capacity
+## Week 6 · 30 Nov 2026 – 04 Dec 2026 · load 22.8 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -125,6 +126,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P1-044](P1-front-desk/MDV-P1-044.md) | Legal review of privacy notice, ToS, DPA and consent wording (DPDP India; UAE health data) | P1 | wk 4–6 | 60% |
 | [MDV-P1-045](P1-front-desk/MDV-P1-045.md) | Register India DLT sender ID and SMS templates (and UAE SMS sender if applicable) | P1 | wk 4–6 | 62% |
 | [MDV-P1-046](P1-front-desk/MDV-P1-046.md) | Start UAE regulator onboarding applications early (risk mitigation) | P1 | wk 6–8 | 55% |
+| [MDV-P1-073](P1-front-desk/MDV-P1-073.md) | Clinical advisor walks the six journeys and signs off (moved from MDV-P0-023) | P1 | wk 6–6 | 60% |
 
 ## Week 7 · 07 Dec 2026 – 11 Dec 2026 · load 18.2 dev-days ⚠ over capacity
 

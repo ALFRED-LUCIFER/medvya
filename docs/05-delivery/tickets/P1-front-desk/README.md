@@ -8,9 +8,9 @@
 **Day one:** Register patients, book, reschedule and cancel appointments, check patients in, run the waiting room and send automatic confirmations and reminders.  
 **Goal:** A clinic can run its entire appointment day in Medvya. This is the workflow to validate with real clinics before anything clinical is built on top.
 
-**Tickets:** 71 · **Estimate:** 160.5 dev-days vs **35 working days** in the window (OVER by 125.5 days: needs scope trade-off or overlap) · **Average confidence:** 77%
+**Tickets:** 73 · **Estimate:** 162.5 dev-days vs **35 working days** in the window (OVER by 127.5 days: needs scope trade-off or overlap) · **Average confidence:** 77%
 
-**Status:** To do 43 · Partly done 16 · Done 12
+**Status:** To do 45 · Partly done 16 · Done 12
 
 ## Epics
 
@@ -44,6 +44,7 @@
 | [MDV-P1-008](MDV-P1-008.md) | Done | Add staff with role, facility scope, permissions and invite; custom roles (F-10) | Story | MUST | P1-03 | F-10 | 2.5 | 5–5 | 23 Nov → 27 Nov 2026 | 78% Medium |
 | [MDV-P1-011](MDV-P1-011.md) | Done | Schedule templates: working hours, breaks, slot length per service, per-location calendars, time zones | Story | MUST | P1-04 | P-04 | 3 | 5–6 | 23 Nov → 04 Dec 2026 | 80% Medium |
 | [MDV-P1-013](MDV-P1-013.md) | Partly done | Patient registration — India full flow (identity, ABHA optional, Aadhaar last 4, Indian address, payer) | Story | MUST | P1-05 | P-02 | 4 | 5–6 | 23 Nov → 04 Dec 2026 | 88% High |
+| [MDV-P1-074](MDV-P1-074.md) | To do | Keep Azure logs flowing all day: PostgreSQL audit and connection logs must not exhaust the Log Analytics daily cap | Task | MUST | P1-12 | — | 1 | 5–5 | 23 Nov → 27 Nov 2026 | 70% Medium |
 | [MDV-P1-006](MDV-P1-006.md) | To do | Practice settings: notification preferences and data tab | Story | MUST | P1-02 | F-08 | 1.5 | 6–6 | 30 Nov → 04 Dec 2026 | 72% Medium |
 | [MDV-P1-009](MDV-P1-009.md) | Partly done | Staff offboarding removes access immediately and ends all sessions | Story | MUST | P1-11 | F-10 | 1 | 6–6 | 30 Nov → 04 Dec 2026 | 90% High |
 | [MDV-P1-012](MDV-P1-012.md) | To do | Leave and schedule exceptions with re-offer of affected appointments | Story | MUST | P1-04 | P-04 | 1.5 | 6–6 | 30 Nov → 04 Dec 2026 | 82% Medium |
@@ -55,6 +56,7 @@
 | [MDV-P1-021](MDV-P1-021.md) | Partly done | Create an appointment from the calendar with a short slot hold | Story | MUST | P1-06, P1-07 | P-04 | 2.5 | 6–7 | 30 Nov → 11 Dec 2026 | 88% High |
 | [MDV-P1-023](MDV-P1-023.md) | Partly done | Calendar views: day, week and list (per doctor and resource), mobile/tablet responsive | Story | MUST | P1-06 | P-04 | 3 | 6–7 | 30 Nov → 11 Dec 2026 | 86% High |
 | [MDV-P1-046](MDV-P1-046.md) | To do | Start UAE regulator onboarding applications early (risk mitigation) | Chore | SHOULD | — | — | 0.5 | 6–8 | 30 Nov → 18 Dec 2026 | 55% Low |
+| [MDV-P1-073](MDV-P1-073.md) | To do | Clinical advisor walks the six journeys and signs off (moved from MDV-P0-023) | Gate | MUST | P0-07 | X-03 | 1 | 6–6 | 30 Nov → 04 Dec 2026 | 60% Low |
 | [MDV-P1-010](MDV-P1-010.md) | To do | Licence/registration expiry reminders and quarterly access review prompt | Story | MUST | P1-11 | — | 1.5 | 7–7 | 07 Dec → 11 Dec 2026 | 85% High |
 | [MDV-P1-017](MDV-P1-017.md) | To do | Duplicate / merge review with second approver when both records hold clinical data (P-03) | Story | MUST | P1-05 | P-03 | 2.5 | 7–7 | 07 Dec → 11 Dec 2026 | 82% Medium |
 | [MDV-P1-018](MDV-P1-018.md) | Done | Patient directory and privacy-safe search for the front desk | Story | MUST | P1-05 | P-02 | 2 | 7–7 | 07 Dec → 11 Dec 2026 | 84% Medium |

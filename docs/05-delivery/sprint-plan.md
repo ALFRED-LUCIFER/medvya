@@ -5,7 +5,7 @@ Generated 6 Nov 2026 from the ticket sources and issue statuses. **Seq** is the 
 Fixed dates and waits:
 - **India DLT sender and SMS templates (MDV-P1-045) land end of December 2026.** Every ticket that needs SMS starts on or after 4 Jan 2027.
 - R1 pilot (MDV-P1-042) is a 2-week calendar wait; the 30-day availability window (MDV-P5-027) is a 22-working-day wait.
-- Legal wording (P1-044), pilot agreements (P1-043), clinical sign-off (P0-023) and the external security reviews are people items with no date yet: any slip moves everything after them.
+- Legal wording (P1-044), pilot agreements (P1-043), clinical sign-off (P1-073, moved from P0-023) and the external security reviews are people items with no date yet: any slip moves everything after them.
 
 | Journey | Open days | Starts | Ends |
 |---|---|---|---|

@@ -94,7 +94,7 @@ export default function AppShell({ displayName, role, facilityName, groups, tabs
           ))}
           <div className="hidden md:block">{languageSwitcher}</div>
           {canSwitchFacility && <Link to="/choose-facility" className={buttonVariants({ variant: 'outline', className: 'hidden md:inline-flex' })}>{t('session.switchFacility')}</Link>}
-          <Link to={devicesPath} className={buttonVariants({ variant: 'outline', className: 'hidden md:inline-flex' })}>{t('myDevices.link')}</Link>
+          <Link to={devicesPath} className={buttonVariants({ variant: 'outline', className: 'max-lg:hidden' })}>{t('myDevices.link')}</Link>
           <Button variant="outline" className="hidden md:inline-flex" loading={signingOut} onClick={onSignOut}>{t('session.signOut')}</Button>
           {/* The notification centre (D-03) for roles that may see any notification; others keep the inert bell. */}
           {notifications ?? <Button variant="ghost" size="icon" disabled aria-label={t('shell.notifications')}><Bell className="size-5" aria-hidden /></Button>}

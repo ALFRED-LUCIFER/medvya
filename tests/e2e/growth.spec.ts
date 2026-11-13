@@ -46,7 +46,7 @@ async function open(page: Page, { locale = 'en', ageYears = 4, vitals = 'Full', 
   await page.goto('/patients/p-1');
 }
 
-const card = (page: Page) => page.getByRole('region', { name: 'Growth' });
+const card = (page: Page) => page.getByRole('region', { name: 'Growth', exact: true });
 
 test('the chart has a text alternative with the latest centile and the trend, states it in words and flags the fall', async ({ page }) => {
   await open(page);

@@ -115,7 +115,7 @@ export default function TeamPage({ vm }: Props) {
       )}
 
       <TableState state={vm.state} messages={{ loading: t('platform.state.loading'), error: t(vm.forbidden ? 'platform.state.forbidden' : 'platform.state.error'), empty: '' }}>
-        <Table>
+        <Table label={t('platform.team.title')}>
           <TableHeader>
             <TableRow>
               <TableHead>{t('platform.team.person')}</TableHead>

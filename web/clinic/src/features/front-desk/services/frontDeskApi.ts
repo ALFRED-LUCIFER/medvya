@@ -13,9 +13,12 @@ export const fetchBoard = (facilityId: string) => send<Board>(`/v1/front-desk/bo
 /** Appointments with a failed or bounced message to the patient (MDV-P1-034): ids only. Roles that may not see messages get 403, and the board then shows no marks. */
 export const fetchFailedVisits = (facilityId: string) => send<string[]>(`/v1/notifications/failed-visits?${new URLSearchParams({ facilityId })}`);
 
-/** Check-in; `elapsedMs` is how long the desk took from tapping "Check in" to confirming (a number, never patient data). */
-export const checkIn = (appointmentId: string, elapsedMs: number) =>
-  post<BoardCard>(`/v1/appointments/${appointmentId}/check-in`, { elapsedMs: Math.round(elapsedMs) }, newIdempotencyKey()); // idempotent by state; the key lets the client retry it
+/**
+ * Check-in; `elapsedMs` is how long the desk took, from opening Walk-in or tapping "Check in" to now (a number, never patient
+ * data), or null when the start was not seen: the server stores that as not measured, never as zero (MDV-P1-106).
+ */
+export const checkIn = (appointmentId: string, elapsedMs: number | null) =>
+  post<BoardCard>(`/v1/appointments/${appointmentId}/check-in`, { elapsedMs: elapsedMs === null ? null : Math.round(elapsedMs) }, newIdempotencyKey()); // idempotent by state; the key lets the client retry it
 
 /** Clinic overview of the facility today (MDV-P1-030). Ids only in the URL. */
 export const fetchOverview = (facilityId: string) => send<ClinicOverview>(`/v1/front-desk/overview?${new URLSearchParams({ facilityId })}`);
@@ -28,3 +31,9 @@ export const moveVisit = (appointmentId: string, state: BoardColumn) => post<Boa
 
 /** Milliseconds on a monotonic clock, for timing a check-in. */
 export const monotonicNow = () => performance.now();
+
+// When Walk-in was opened, kept in memory while the desk is away in quick registration, so a new patient's check-in is timed from
+// opening Walk-in and not from coming back (MDV-P1-106). A clock reading only: no patient data, nothing in browser storage.
+let walkInStart: number | null = null;
+export const holdWalkInStart = (startedAt: number | null) => { walkInStart = startedAt; };
+export const heldWalkInStart = () => walkInStart;

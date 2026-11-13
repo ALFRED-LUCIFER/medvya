@@ -35,7 +35,7 @@ export default function AuditPage({ vm }: Props) {
         </ReasonPanel>
       )}
       <TableState state={vm.state} messages={{ loading: t('platform.state.loading'), error: t(vm.forbidden ? 'platform.state.forbidden' : 'platform.state.error'), empty: t('platform.audit.empty') }}>
-        <Table>
+        <Table label={t('platform.audit.title')}>
           <TableHeader>
             <TableRow>
               <TableHead>{t('platform.audit.when')}</TableHead>

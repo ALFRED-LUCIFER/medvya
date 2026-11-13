@@ -14,7 +14,7 @@ export default function DaySheetView({ sheet, printedBy }: { sheet: DaySheet; pr
           <h1 className="text-sm font-bold">{`${t('schedule.sheet.title')}, ${formatDay(sheet.date)}, ${sheet.timeZone}`}</h1>
           <h2 id={`sheet-${page.calendarId}`} className="mb-2 text-xl font-extrabold">{page.doctorName || t('schedule.doctor')}</h2>
           <TableState state={page.rows.length === 0 ? 'empty' : 'ready'} messages={{ loading: '', error: '', empty: t('schedule.sheet.empty') }}>
-            <Table className="border-collapse text-base" containerClassName="overflow-visible rounded-none border-0">
+            <Table label={`${t('schedule.sheet.title')}, ${page.doctorName || t('schedule.doctor')}`} className="border-collapse text-base" containerClassName="overflow-visible rounded-none border-0">
               <TableHeader className="bg-transparent">
                 <TableRow className="border-b-2 border-black hover:bg-transparent">
                   {(['time', 'token', 'patient', 'age', 'type', 'status'] as const).map(c => <TableHead key={c} scope="col" className="h-auto py-1 ps-0 pe-3">{t(`schedule.sheet.${c}`)}</TableHead>)}

@@ -126,7 +126,7 @@ function Trends(p: Props) {
               <path d={pathOf(lines.main)} stroke="currentColor" strokeWidth="1.5" />
               {lines.main.map((pt, i) => <circle key={i} cx={pt.x} cy={pt.y} r="1.6" fill="currentColor" />)}
             </svg>
-            <Table>
+            <Table label={t('timeline.trends.table', { name, unit: p.series.unit })}>
               <TableCaption className="sr-only">{t('timeline.trends.table', { name, unit: p.series.unit })}</TableCaption>
               <TableHeader>
                 <TableRow>

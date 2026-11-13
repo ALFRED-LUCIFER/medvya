@@ -8287,7 +8287,8 @@
           "returningCount",
           "medianSeconds",
           "count",
-          "targetSeconds"
+          "targetSeconds",
+          "unmeasured"
         ],
         "type": "object",
         "properties": {
@@ -8326,6 +8327,14 @@
             "format": "int32"
           },
           "targetSeconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "unmeasured": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",

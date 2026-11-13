@@ -173,3 +173,27 @@ test('while loading and when refused, the record page still has its one h1 and i
     release();
   }
 });
+
+// MDV-AUDIT-1101: the desk record's Book, Check in and Edit details; a phone is corrected alone and only what was typed is sent.
+test('the record offers Book, Check in and Edit details; editing a phone sends only the phone', async ({ page }) => {
+  const saves = await open(page);
+  await expect(page.getByRole('link', { name: 'Book', exact: true })).toHaveAttribute('href', `/schedule?patient=${id}`);
+  await expect(page.getByRole('link', { name: 'Check in', exact: true })).toHaveAttribute('href', `/front-desk/walk-in?patient=${id}`);
+  await page.getByRole('link', { name: 'Edit details' }).click();
+  await expect(page).toHaveURL(`/patients/directory/${id}/complete`);
+
+  await page.getByLabel('Mobile', { exact: true }).fill('12');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByText('Check the mobile number: every digit, with or without the country code.')).toBeVisible();
+  expect(saves).toHaveLength(0);
+
+  await page.getByLabel('Mobile', { exact: true }).fill('+91 90000 00152');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.locator('form')).toHaveCount(0);
+  expect(saves[0]!.postDataJSON()).toEqual({ address: null, payer: null, emergencyContact: null, contact: { mobile: '+91 90000 00152', alternatePhone: null, email: null }, version: 7 });
+});
+
+test('a role that may only read patients is offered none of Book, Check in or Edit details', async ({ page }) => {
+  await open(page, { capabilities: { RegisterBookPatients: 'Read' } });
+  for (const name of ['Book', 'Check in', 'Edit details']) await expect(page.getByRole('link', { name, exact: true })).toHaveCount(0);
+});

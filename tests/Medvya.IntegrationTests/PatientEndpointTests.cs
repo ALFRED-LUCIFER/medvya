@@ -314,6 +314,28 @@ public sealed class PatientEndpointTests(PostgresFixture sql) : IClassFixture<Po
         Assert.Equal(HttpStatusCode.OK, (await desk.PostAsJsonAsync(url, Save("3 Third Road", now.GetProperty("version").GetUInt32()))).StatusCode); // reload, then save
     }
 
+    /// <summary>MDV-AUDIT-1101: "Edit details" corrects the phone through the completion endpoint: Full register access only, versioned, audited as patient.update.</summary>
+    [Fact]
+    public async Task TheDeskCanCorrectAPhoneAndANurseCannot()
+    {
+        using var host = Host();
+        using var desk = Client(host, "receptionist");
+        using var nurse = Client(host, "nurse");
+        var id = await Register(facility, "Hema Pillai (synthetic)", "+91 90000 00151", c => c with { DateOfBirth = new DateOnly(1990, 7, 8), Quick = true, Address = null, Payer = null });
+        var url = new Uri($"/v1/patients/{id}/completion", UriKind.Relative);
+        var record = new Uri($"/v1/patients/{id}", UriKind.Relative);
+        async Task<uint> Version() => (await desk.GetFromJsonAsync<JsonElement>(record)).GetProperty("version").GetUInt32();
+
+        Assert.Equal(HttpStatusCode.Forbidden, (await nurse.PostAsJsonAsync(url, new { contact = new { mobile = "+91 90000 00152" }, version = await Version() })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await desk.PostAsJsonAsync(url, new { contact = new { mobile = "123" }, version = await Version() })).StatusCode);
+        Assert.Equal("+919000000151", (await desk.GetFromJsonAsync<JsonElement>(record)).GetProperty("mobile").GetString()); // neither attempt saved
+
+        Assert.Equal(HttpStatusCode.OK, (await desk.PostAsJsonAsync(url, new { contact = new { mobile = "+91 90000 00152" }, version = await Version() })).StatusCode);
+        Assert.Equal("+919000000152", (await desk.GetFromJsonAsync<JsonElement>(record)).GetProperty("mobile").GetString());
+        await using var audit = sql.Audit(tenant);
+        Assert.Equal(Medvya.Audit.Domain.AuditOutcome.Allowed, Assert.Single(await audit.Events.Where(e => e.PatientId == id && e.Action == "patient.update").ToListAsync(), e => e.Outcome == Medvya.Audit.Domain.AuditOutcome.Allowed).Outcome);
+    }
+
     [Fact]
     public async Task AnUnreadableSearchAnswersACodeWithoutEchoingTheInput()
     {

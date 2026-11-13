@@ -104,7 +104,7 @@ export default function App({ locale, onLocaleChange }: Props) {
   const waitlistPath = pathOf('frontDesk') && active?.capabilities.RegisterBookPatients === 'Full' ? `${pathOf('frontDesk')}/waitlist` : null;
   // Leave and schedule exceptions (MDV-P1-012) change who can be booked: Register / book patients at Full.
   const leavePath = pathOf('schedule') && active?.capabilities.RegisterBookPatients === 'Full' ? `${pathOf('schedule')}/leave` : null;
-  const registration = <RegistrationRoute country={country} actorName={shell.displayName ?? ''} timeZone={active?.timeZone} bookPath={pathOf('schedule')} checkInPath={walkInPath} />;
+  const registration = <RegistrationRoute country={country} scope={active?.facilityId ?? ''} actorName={shell.displayName ?? ''} timeZone={active?.timeZone} bookPath={pathOf('schedule')} checkInPath={walkInPath} />;
 
   // F-05a: an ended session replaces every screen; signing in again comes back to this route.
   const routes = shell.loading ? <Route path="*" element={<ShellMessage standalone busy title={t('shell.loading')} />} />
@@ -204,7 +204,7 @@ export default function App({ locale, onLocaleChange }: Props) {
             <Route path={searchPath} element={<PatientDirectoryRoute registerPath={registerPath} mergePath={`${searchPath}/merge`} />} />
             <Route path={`${searchPath}/merge/:requestId?`} element={<MergeReviewRoute can={{ request: active.capabilities.RegisterBookPatients === 'Full',
               approve: active.capabilities.ClinicalNotes === 'Sign', undo: active.capabilities.StaffRolesIntegrations === 'Config' }} />} />
-            <Route path={`${searchPath}/:patientId`} element={<PatientRecordRoute canReveal={active.capabilities.RegisterBookPatients === 'Full'} canDocs={deskDocuments} facilityId={active.facilityId} timeZone={active.timeZone} />} />
+            <Route path={`${searchPath}/:patientId`} element={<PatientRecordRoute canReveal={active.capabilities.RegisterBookPatients === 'Full'} canDocs={deskDocuments} facilityId={active.facilityId} timeZone={active.timeZone} bookPath={pathOf('schedule')} checkInPath={walkInPath} />} />
             {active.capabilities.RegisterBookPatients === 'Full' &&
               <Route path={`${searchPath}/:patientId/complete`} element={<CompleteRegistrationRoute country={country} />} />}
           </>}

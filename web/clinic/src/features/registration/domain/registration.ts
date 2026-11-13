@@ -281,11 +281,14 @@ export function completionSchema(country: Country) {
   return shape.pick({
     line1: true, line2: true, city: true, district: true, region: true, postalCode: true, makani: true, poBox: true,
     payerKind: true, payerName: true, plan: true, memberNumber: true, validTo: true, network: true,
-    ecName: true, ecRelationship: true, ecPhone: true,
-  }).superRefine((v, ctx) => {
+    ecName: true, ecRelationship: true, ecPhone: true, mobile: true, alternatePhone: true, email: true,
+  }).extend({ mobile: z.string().max(25, 'format') }).superRefine((v, ctx) => { // blank mobile = keep the current one
     const issue: Issue = (path, message) => ctx.addIssue({ code: 'custom', path: [path], message });
     const form = { ...emptyForm, ...v };
-    if (!hasAddress(form, country) && v.payerKind === '' && !hasContact(form, 'ec')) issue('line1', 'nothing_to_complete');
+    if (!hasAddress(form, country) && v.payerKind === '' && !hasContact(form, 'ec') && !filled(v.mobile) && !filled(v.alternatePhone) && !filled(v.email)) issue('line1', 'nothing_to_complete');
+    if (filled(v.mobile) && !isMobile(v.mobile, country)) issue('mobile', 'format.phone');
+    if (filled(v.alternatePhone) && !isMobile(v.alternatePhone, country)) issue('alternatePhone', 'format.phone');
+    if (filled(v.email) && !email.test(v.email.trim())) issue('email', 'format.email');
     checkAddressAndPayer(form, country, issue);
     checkContact(form, country, 'ec', null, issue);
   });
@@ -444,12 +447,20 @@ function payerInput(v: RegistrationForm, country: Country): PayerInput | null {
   };
 }
 
-export type CompletionRequest = { address: AddressInput | null; payer: PayerInput | null; emergencyContact: ContactInput | null };
+/** contact: only the phones and email that were typed; a blank one is left as it is on the record. */
+export type CompletionRequest = {
+  address: AddressInput | null; payer: PayerInput | null; emergencyContact: ContactInput | null;
+  contact?: { mobile: string | null; alternatePhone: string | null; email: string | null };
+};
 
-/** Only the address, payer and emergency contact go; the form's other fields (the completion form has none) are never sent. */
+/** Only the address, payer, emergency contact and typed phones/email go; the form's other fields (the completion form has none) are never sent. */
 export function toCompletionRequest(v: Partial<RegistrationForm>, country: Country): CompletionRequest {
   const form = { ...emptyForm, ...v };
-  return { address: addressInput(form, country), payer: payerInput(form, country), emergencyContact: contactInput(form, 'ec') };
+  const contact = { mobile: orNull(form.mobile), alternatePhone: orNull(form.alternatePhone), email: orNull(form.email) };
+  return {
+    address: addressInput(form, country), payer: payerInput(form, country), emergencyContact: contactInput(form, 'ec'),
+    contact: Object.values(contact).some(Boolean) ? contact : undefined,
+  };
 }
 
 /**

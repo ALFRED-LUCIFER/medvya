@@ -17,6 +17,15 @@ import { patientDataGcTime } from '../../patients/hooks/usePatientDirectoryContr
 /** Typing pauses this long before the duplicate check runs; each check is audited and rate-limited. */
 export const duplicateCheckDelayMs = 500;
 
+/**
+ * An interrupted registration is kept in memory (never browser storage, AGENTS.md 1.2) and restored when the desk comes back to this screen
+ * in the same facility. shortcut: no leave-page prompt, because the app uses BrowserRouter (no blocker); the draft is what protects the typing.
+ * Move to a data router if a prompt is wanted.
+ */
+type Draft = { scope: string; values: RegistrationForm; step: Step; reached: number };
+let draft: Draft | null = null;
+const draftFor = (scope: string) => (draft?.scope === scope ? draft : null);
+
 function useDebounced<T>(value: T, ms: number): T {
   const [debounced, setDebounced] = useState(value);
   useEffect(() => {
@@ -31,19 +40,20 @@ function useDebounced<T>(value: T, ms: number): T {
  * with the duplicate warning while typing and the decision before save (MDV-P1-016). Switching mode keeps what was typed.
  * Save stays blocked until the desk has decided about every possible match; the server enforces the same rule.
  */
-export function useRegistrationController(country: Country, quick: boolean) {
+export function useRegistrationController(country: Country, quick: boolean, scope = '') {
   // The desk's calendar day for the expired-ID warning, the preview age and the under-18 guardian rule; the server decides
   // with the facility's day.
   const [today] = useState(() => isoDay(new Date()));
   const schema = useMemo(() => registrationSchema(country, quick, today), [country, quick, today]);
-  const form = useForm<RegistrationForm>({ resolver: zodResolver(schema), defaultValues: emptyForm, mode: 'onTouched' });
+  const [restored] = useState(() => draftFor(scope));
+  const form = useForm<RegistrationForm>({ resolver: zodResolver(schema), defaultValues: restored?.values ?? emptyForm, mode: 'onTouched' });
   const values = useWatch({ control: form.control }) as RegistrationForm;
   const query = duplicateQuery(values, country, quick);
   const key = JSON.stringify(query);
   const debouncedKey = useDebounced(key, duplicateCheckDelayMs);
   const debounced = useMemo(() => JSON.parse(debouncedKey) as DuplicateQuery | null, [debouncedKey]);
-  const [step, setStep] = useState<Step>('identity');
-  const [reached, setReached] = useState(0);
+  const [step, setStep] = useState<Step>(restored?.step ?? 'identity');
+  const [reached, setReached] = useState(restored?.reached ?? 0);
 
   const duplicates = useQuery({
     queryKey: ['patients', 'duplicates', debounced],
@@ -85,10 +95,21 @@ export function useRegistrationController(country: Country, quick: boolean) {
     errors => { if (!quick) goTo(firstErrorStep(errors)); },
   );
 
+  // Keep the draft when leaving the screen; a saved or cleared form leaves none.
+  const latest = useRef({ step, reached, saved: false });
+  useEffect(() => { latest.current = { step, reached, saved: save.isSuccess }; });
+  useEffect(() => () => {
+    const { step: s, reached: r, saved } = latest.current;
+    const values = form.getValues();
+    draft = saved || JSON.stringify(values) === JSON.stringify(emptyForm) ? null : { scope, values, step: s, reached: r };
+  }, [form, scope]);
+
   const failure = save.error instanceof ApiError ? save.error : save.error ? new ApiError(0) : null;
   const index = steps.indexOf(step);
   return {
     form,
+    /** A draft from an earlier visit to this screen was put back. */
+    restored: restored !== null,
     country,
     quick,
     values,
@@ -122,7 +143,7 @@ export function useRegistrationController(country: Country, quick: boolean) {
     result: save.data ?? null as RegistrationResult | null,
     registeredName: save.variables?.fullName ?? '',
     missing: save.variables ? missingParts(save.variables) : [],
-    onRegisterAnother: () => { save.reset(); setResolution(null); form.reset(emptyForm); setStep('identity'); setReached(0); },
+    onRegisterAnother: () => { draft = null; save.reset(); setResolution(null); form.reset(emptyForm); setStep('identity'); setReached(0); },
   };
 }
 

@@ -59,7 +59,7 @@ test('a draft changed since it was authorised must be authorised again before it
   await expect(page.getByRole('alert')).toContainText('Only an authorised prescription prints.');
 });
 
-const verified = { status: 'Valid', number: 'RX-3F9A21C7', versionNo: 1, authorisedAt: '2026-10-19T04:50:00Z', timeZone: 'Asia/Kolkata', clinic: 'Iyer Family Clinic · Adyar', doctor: 'Dr. Arjun Rao (synthetic)', lines: 2 };
+const verified = { status: 'Valid', number: 'RX-3F9A21C7', versionNo: 1, authorisedAt: '2026-10-19T04:50:00Z', timeZone: 'Asia/Kolkata', clinic: 'Iyer Family Clinic · Adyar', doctor: 'Dr. Arjun Rao (synthetic)', lines: 2, contentHash: 'a'.repeat(64) };
 
 test('the QR check shows validity only, and an unknown code says not to dispense', async ({ page }) => {
   const tokens: string[] = [];
@@ -72,6 +72,7 @@ test('the QR check shows validity only, and an unknown code says not to dispense
   await expect(page.getByRole('status').filter({ hasText: 'Valid prescription' })).toBeVisible();
   await expect(page.getByText('Issued by Dr. Arjun Rao (synthetic), Iyer Family Clinic · Adyar, on')).toBeVisible();
   await expect(page.getByText('2 medicines')).toBeVisible();
+  await expect(page.getByText('SHA-256 of the authorised lines: ' + 'a'.repeat(64))).toBeVisible(); // moved here from the patient's copy
   await expect(page.getByText('It never shows the patient or the medicines.')).toBeVisible();
   await page.goto('/verify/rx/made-up');
   await expect(page.getByRole('alert')).toContainText('This code does not match a prescription. Do not dispense from it without checking with the clinic.');
@@ -101,6 +102,9 @@ for (const locale of ['en', 'ar'])
     await page.setViewportSize({ width: 640, height: 800 });
     await rx.getByRole('link', { name: locale === 'ar' ? 'طباعة الوصفة' : 'Print prescription' }).click();
     await expect(page.getByRole('article')).toContainText('000001');
+    await expect(page.getByRole('article')).not.toContainText('a'.repeat(64)); // the hash is on the QR page, not the patient's copy
+    if (locale === 'en') await expect(page.getByRole('article')).toContainText('Age 53');
+    if (locale === 'en') await expect(page.getByRole('article')).toContainText('Diagnosis: Type 2 diabetes (synthetic)');
     await expect(page.getByRole('img', { name: locale === 'ar' ? 'رمز QR للتحقق من صلاحية هذه الوصفة' : 'QR code to check this prescription is valid' })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     for (const target of await page.locator('main button, main a').all()) expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(44);

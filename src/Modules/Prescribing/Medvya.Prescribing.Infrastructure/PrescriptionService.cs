@@ -467,11 +467,15 @@ public sealed class PrescriptionService(
         var rules = classes.Count == 0 ? null : FormularyRules.For(await staff.TenantCountryAsync(cancellationToken) ?? throw new InvalidOperationException("No tenant country."));
         var stopped = await stops.StopsAsync(encounterId, cancellationToken);
         var changed = await stops.ChangesAsync(encounterId, cancellationToken);
+        // MDV-P1-087: the latest reason given for a free-text line that could not be allergy-checked is frozen with the line, so the paper carries it.
+        // Read from the rows, not the current check: a later chart or rule-set change must not alter what an authorised prescription says.
+        var reasons = (await db.RxAlertOverrides.AsNoTracking().Where(o => o.EncounterId == encounterId && o.Kind == RxAlertKind.FreeTextAllergy)
+            .OrderBy(o => o.OverriddenAt).ThenBy(o => o.Id).ToListAsync(cancellationToken)).GroupBy(o => o.AlertKey.Split(':')[1]).ToDictionary(g => g.Key, g => g.Last().Reason);
         return
         [
             .. items.Select(i => new AuthorisedLine(false, i.Medicine, i.Strength, i.Form, i.FormularyItemId is null,
                 Sig.Languages.ToDictionary(l => l, l => Sig.Render(new SigParts(i.Dose, i.DoseUnit, i.Route, i.Frequency, i.Timing, i.DurationDays, i.Quantity, i.Instructions), l)),
-                i.FormularyItemId is { } f && classes.TryGetValue(f, out var c) ? [.. rules!.PrintRequirements(c)] : [], null)),
+                i.FormularyItemId is { } f && classes.TryGetValue(f, out var c) ? [.. rules!.PrintRequirements(c)] : [], reasons.GetValueOrDefault(i.Id.ToString()))),
             .. stopped.Select(s => new AuthorisedLine(true, s.Name, null, null, false, Sig.Languages.ToDictionary(l => l, Sig.Stop), [], s.Reason)),
             // A change or taper prints as a numbered line whose instruction says so in words, with the doctor's reason.
             .. changed.Select(c => new AuthorisedLine(false, c.Name, null, null, false, ChangeSig(c), [], c.Reason)),

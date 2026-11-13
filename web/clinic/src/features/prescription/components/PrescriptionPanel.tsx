@@ -74,7 +74,7 @@ export default function PrescriptionPanel(p: Props) {
       <div className="flex flex-wrap items-end gap-3">
         <Field id="rx-language" label={t('rx.language')} className="min-w-56">
           <Select value={p.language} onValueChange={v => p.onLanguage(v as PrintLanguage)}>
-            <SelectTrigger id="rx-language" className="h-11 w-full"><SelectValue /></SelectTrigger>
+            <SelectTrigger id="rx-language" className="w-full"><SelectValue /></SelectTrigger>
             <SelectContent>{printLanguages.map(l => <SelectItem key={l} value={l}>{t(`rx.lang.${l}`)}</SelectItem>)}</SelectContent>
           </Select>
         </Field>
@@ -124,14 +124,14 @@ export default function PrescriptionPanel(p: Props) {
         <form noValidate onSubmit={p.onAddFreeText} className="flex flex-col gap-3 border-t pt-4">
           <h3 className="font-bold">{t('rx.add.title')}</h3>
           <Field id="rx-medicine" label={t('rx.add.search')} hint={t('rx.add.hint')} error={p.add.formState.errors.medicine && t('rx.error.required')}>
-            <Input id="rx-medicine" className="h-11" autoComplete="off" {...describedBy('rx-medicine', !!p.add.formState.errors.medicine, true)} {...p.add.register('medicine')} />
+            <Input id="rx-medicine" autoComplete="off" {...describedBy('rx-medicine', !!p.add.formState.errors.medicine, true)} {...p.add.register('medicine')} />
           </Field>
           {p.suggestions.length > 0 && <h4 id="rx-suggestions" className="text-sm font-bold">{t('rx.didYouMean')}</h4>}
           {[p.results, p.suggestions].map((rows, suggested) => rows.length > 0 && (
             <ul key={suggested} {...(suggested ? { 'aria-labelledby': 'rx-suggestions' } : { 'aria-label': t('rx.add.results') })} className="flex flex-col gap-2">
               {rows.map(m => (
                 <li key={m.id}>
-                  <Button type="button" variant="outline" className="min-h-11 w-full justify-start" disabled={p.busy} onClick={() => p.onAddMedicine(m.id)}>
+                  <Button type="button" variant="outline" className="w-full justify-start" disabled={p.busy} onClick={() => p.onAddMedicine(m.id)}>
                     <Plus aria-hidden className="size-4" />{t('rx.add.medicine', { generic: m.generic, strength: m.strength, form: m.form })}
                   </Button>
                 </li>
@@ -139,7 +139,7 @@ export default function PrescriptionPanel(p: Props) {
             </ul>
           ))}
           {p.searching && <p role="status" className="text-sm text-muted-foreground">{t('rx.add.searching')}</p>}
-          <Button type="submit" variant="outline" className="min-h-11 self-start" disabled={p.busy}>{t('rx.add.freeText')}</Button>
+          <Button type="submit" variant="outline" className="self-start" disabled={p.busy}>{t('rx.add.freeText')}</Button>
         </form>
       )}
 
@@ -173,37 +173,37 @@ function Authorise(p: Props) {
       {cancellation && <p className="text-sm">{t('rx.auth.cancelledReason', { reason: cancellation.reason })}</p>}
       <div className="flex flex-wrap gap-3">
         {!current && (
-          <Button className="min-h-11" loading={p.authorising} disabled={p.busy} onClick={p.onAuthorise}>
+          <Button loading={p.authorising} disabled={p.busy} onClick={p.onAuthorise}>
             <ShieldCheck aria-hidden className="size-4" />{t(cancellation ? 'rx.auth.reissue' : state?.authorised ? 'rx.auth.again' : 'rx.auth.authorise')}
           </Button>
         )}
-        {current && <Link to={p.printPath} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}><Printer aria-hidden className="size-4" />{t('rx.auth.print')}</Link>}
+        {current && <Link to={p.printPath} className={buttonVariants({ variant: 'outline' })}><Printer aria-hidden className="size-4" />{t('rx.auth.print')}</Link>}
         {current && !p.cancelling && (
-          <Button variant="outline" className="min-h-11" onClick={() => p.onCancelling(true)}><CircleX aria-hidden className="size-4" />{t('rx.auth.cancel')}</Button>
+          <Button variant="outline" onClick={() => p.onCancelling(true)}><CircleX aria-hidden className="size-4" />{t('rx.auth.cancel')}</Button>
         )}
       </div>
       {current && p.cancelling && (
         <form noValidate onSubmit={p.onCancel} className="flex flex-col gap-2">
           <Field id="rx-cancel-reason" label={t('rx.auth.cancelReason')} hint={t('rx.auth.cancelHint')} error={reasonError && t('rx.auth.cancelReasonRequired')}>
-            <Input id="rx-cancel-reason" className="h-11" autoComplete="off" {...describedBy('rx-cancel-reason', !!reasonError, true)} {...p.cancelForm.register('reason')} />
+            <Input id="rx-cancel-reason" autoComplete="off" {...describedBy('rx-cancel-reason', !!reasonError, true)} {...p.cancelForm.register('reason')} />
           </Field>
           <div className="flex flex-wrap gap-2">
-            <Button type="submit" className="min-h-11" loading={p.cancelPending}>{t('rx.auth.cancelConfirm')}</Button>
-            <Button type="button" variant="outline" className="min-h-11" onClick={() => p.onCancelling(false)}>{t('rx.auth.keep')}</Button>
+            <Button type="submit" loading={p.cancelPending}>{t('rx.auth.cancelConfirm')}</Button>
+            <Button type="button" variant="outline" onClick={() => p.onCancelling(false)}>{t('rx.auth.keep')}</Button>
           </div>
         </form>
       )}
       {p.cancelProblem === 'reauth' && (
         <div role="alert" className="flex flex-wrap items-center gap-3">
           <p className="font-bold">{t('rx.auth.cancelReauth')}</p>
-          <Button variant="outline" className="min-h-11" onClick={p.onConfirmIdentity}>{t('rx.auth.confirm')}</Button>
+          <Button variant="outline" onClick={p.onConfirmIdentity}>{t('rx.auth.confirm')}</Button>
         </div>
       )}
       {p.cancelProblem === 'failed' && <p role="alert" className={fieldError}>{t('rx.auth.cancelFailed')}</p>}
       {p.authProblem === 'reauth' && (
         <div role="alert" className="flex flex-wrap items-center gap-3">
           <p className="font-bold">{t('rx.auth.reauth')}</p>
-          <Button variant="outline" className="min-h-11" onClick={p.onConfirmIdentity}>{t('rx.auth.confirm')}</Button>
+          <Button variant="outline" onClick={p.onConfirmIdentity}>{t('rx.auth.confirm')}</Button>
         </div>
       )}
       {p.authProblem && p.authProblem !== 'reauth' && <p role="alert" className={fieldError}>{t(`rx.auth.error.${p.authProblem}`)}</p>}
@@ -239,7 +239,7 @@ function Line({ line, ended, busy, language, checks, draftOf, saveOf, invalidOf,
   // One row per medicine: each control is named by its column header, and a wrong value is said under it.
   const text = (f: 'dose' | 'durationDays' | 'quantity' | 'instructions') => (
     <TableCell key={f} className="align-top">
-      <Input id={fieldId(f)} aria-label={t(`rx.field.${f}`)} className={`h-11 ${f === 'instructions' ? 'min-w-48' : 'w-20'}`} autoComplete="off" inputMode={f === 'dose' ? 'decimal' : f === 'instructions' ? undefined : 'numeric'} disabled={locked} value={draft[f]}
+      <Input id={fieldId(f)} aria-label={t(`rx.field.${f}`)} className={`${f === 'instructions' ? 'min-w-48' : 'w-20'}`} autoComplete="off" inputMode={f === 'dose' ? 'decimal' : f === 'instructions' ? undefined : 'numeric'} disabled={locked} value={draft[f]}
         {...describedBy(fieldId(f), invalid.includes(f))} onChange={e => onField(line, f, e.target.value)} />
       {invalid.includes(f) && <p id={`${fieldId(f)}-error`} role="alert" className={`${fieldError} mt-1 max-w-48`}>{t(`rx.invalid.${f}`)}</p>}
     </TableCell>
@@ -247,7 +247,7 @@ function Line({ line, ended, busy, language, checks, draftOf, saveOf, invalidOf,
   const pick = (f: 'doseUnit' | 'route' | 'frequency' | 'timing', options: { value: string; label: string }[]) => (
     <TableCell key={f} className="align-top">
       <Select value={draft[f] || none} disabled={locked} onValueChange={v => onField(line, f, v === none ? '' : v)}>
-        <SelectTrigger id={fieldId(f)} aria-label={t(`rx.field.${f}`)} className="h-11 w-32"><SelectValue /></SelectTrigger>
+        <SelectTrigger id={fieldId(f)} aria-label={t(`rx.field.${f}`)} className="w-32"><SelectValue /></SelectTrigger>
         <SelectContent>
           <SelectItem value={none}>{t('rx.notGiven')}</SelectItem>
           {options.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
@@ -280,7 +280,7 @@ function Line({ line, ended, busy, language, checks, draftOf, saveOf, invalidOf,
       </TableHead>
       {sigFields.map(f => cells[f])}
       <TableCell className="align-top">
-        {!ended && <Button variant="outline" className="min-h-11" disabled={busy} aria-label={t('rx.remove', { name: line.medicine })} onClick={() => onInclude(id, false)}><Trash2 aria-hidden className="size-4" />{t('rx.removeShort')}</Button>}
+        {!ended && <Button variant="outline" disabled={busy} aria-label={t('rx.remove', { name: line.medicine })} onClick={() => onInclude(id, false)}><Trash2 aria-hidden className="size-4" />{t('rx.removeShort')}</Button>}
       </TableCell>
     </TableRow>
   );

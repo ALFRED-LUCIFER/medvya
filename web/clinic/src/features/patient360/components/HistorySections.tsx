@@ -30,7 +30,7 @@ export default function HistorySections(p: Props) {
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="history-blood-group">{t('history.bloodGroup.choose')}</Label>
                 <Select value={p.bloodForm.watch('text') || undefined} onValueChange={v => p.bloodForm.setValue('text', v as BloodGroupForm['text'], { shouldValidate: true })}>
-                  <SelectTrigger id="history-blood-group" className="min-h-11 w-32"><SelectValue placeholder={t('history.bloodGroup.placeholder')} /></SelectTrigger>
+                  <SelectTrigger id="history-blood-group" className="w-32"><SelectValue placeholder={t('history.bloodGroup.placeholder')} /></SelectTrigger>
                   <SelectContent>{bloodGroups.map(g => <SelectItem key={g} value={g}>{ltr(g)}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
@@ -53,7 +53,7 @@ function Head({ name, edit }: { name: string; edit?: () => void }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-2">
       <h3 className="font-bold">{name}</h3>
-      {edit && <Button type="button" variant="outline" className="min-h-11" onClick={edit}>{t('history.edit', { section: name })}</Button>}
+      {edit && <Button type="button" variant="outline" onClick={edit}>{t('history.edit', { section: name })}</Button>}
     </div>
   );
 }
@@ -99,8 +99,8 @@ function Actions({ saving, onCancel }: { saving: boolean; onCancel: () => void }
   const { t } = useI18n();
   return (
     <>
-      <Button type="submit" className="min-h-11" disabled={saving}>{t('history.save')}</Button>
-      <Button type="button" variant="outline" className="min-h-11" onClick={onCancel}>{t('history.cancel')}</Button>
+      <Button type="submit" disabled={saving}>{t('history.save')}</Button>
+      <Button type="button" variant="outline" onClick={onCancel}>{t('history.cancel')}</Button>
     </>
   );
 }

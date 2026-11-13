@@ -33,7 +33,7 @@ export default function ClinicalPolicyPanel(p: Props) {
         </fieldset>
         <p className="text-sm text-muted-foreground">{t('clinicalAccess.policy.requestNote')}</p>
         <div className="flex flex-wrap items-center gap-3">
-          <Button type="submit" className="min-h-11" loading={p.saving}>{t('settings.save')}</Button>
+          <Button type="submit" loading={p.saving}>{t('settings.save')}</Button>
           {p.saved && <p role="status">{t('settings.saved')}</p>}
           {p.saveFailed && <p role="alert" className={fieldError}>{t('settings.saveFailed')}</p>}
         </div>

@@ -133,7 +133,7 @@ function MoveButton({ visit, overview, canMove, online, movingId, onStartMove }:
   const { t } = useI18n();
   if (!canMove || others(overview, visit).length === 0 || movingId === visit.id) return null;
   return (
-    <Button variant="outline" className="min-h-11" disabled={!online} aria-label={t('overview.moveFor', { name: visit.patientName || t('board.unknownPatient') })} onClick={() => onStartMove(visit.id)}>
+    <Button variant="outline" disabled={!online} aria-label={t('overview.moveFor', { name: visit.patientName || t('board.unknownPatient') })} onClick={() => onStartMove(visit.id)}>
       <ArrowLeftRight aria-hidden />{t('overview.move')}
     </Button>
   );
@@ -152,7 +152,7 @@ function MoveForm({ visit, overview, canMove, online, form, movingId, moving, fa
             <Label htmlFor={`move-to-${visit.id}`}>{t('overview.moveTo')}</Label>
             <Controller control={form.control} name="calendarId" render={({ field }) => (
               <Select value={field.value} onValueChange={field.onChange}>
-                <SelectTrigger id={`move-to-${visit.id}`} className="h-11 w-full" aria-invalid={!!errors.calendarId}>
+                <SelectTrigger id={`move-to-${visit.id}`} className="w-full" aria-invalid={!!errors.calendarId}>
                   <SelectValue placeholder={t('overview.chooseDoctor')} />
                 </SelectTrigger>
                 <SelectContent>{others(overview, visit).map(d => <SelectItem key={d.calendarId} value={d.calendarId}>{d.name}</SelectItem>)}</SelectContent>
@@ -163,13 +163,13 @@ function MoveForm({ visit, overview, canMove, online, form, movingId, moving, fa
             <Label htmlFor={`move-why-${visit.id}`}>{t('overview.reason')}</Label>
             <Controller control={form.control} name="reason" render={({ field }) => (
               <Select value={field.value} onValueChange={field.onChange}>
-                <SelectTrigger id={`move-why-${visit.id}`} className="h-11 w-full"><SelectValue /></SelectTrigger>
+                <SelectTrigger id={`move-why-${visit.id}`} className="w-full"><SelectValue /></SelectTrigger>
                 <SelectContent>{reassignReasons.map(r => <SelectItem key={r} value={r}>{t(`overview.reason.${r}`)}</SelectItem>)}</SelectContent>
               </Select>
             )} />
           </div>
-          <Button type="submit" className="min-h-11" loading={moving} disabled={!online}>{t('overview.confirmMove')}</Button>
-          <Button type="button" variant="outline" className="min-h-11" onClick={onCancelMove}>{t('booking.cancel')}</Button>
+          <Button type="submit" loading={moving} disabled={!online}>{t('overview.confirmMove')}</Button>
+          <Button type="button" variant="outline" onClick={onCancelMove}>{t('booking.cancel')}</Button>
           {errors.calendarId && <p role="alert" className="basis-full text-sm font-semibold text-danger-700">{t('overview.chooseDoctor')}</p>}
         </form>
       )}

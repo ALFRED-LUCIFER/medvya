@@ -47,7 +47,6 @@ export default function AdjustmentsPage(p: Props) {
   const calendarId = watch('calendarId');
   const zone = p.timeZone ?? 'UTC';
   const fieldError = (m: 'calendar' | 'range' | 'window' | 'tooLong') => t(`adjustment.error.${m}`);
-  const control = 'min-h-11';
 
   return (
     <PageContainer width="form" className="gap-5">
@@ -70,7 +69,7 @@ export default function AdjustmentsPage(p: Props) {
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="adj-calendar">{t('adjustment.calendar')}</Label>
             <Select value={calendarId ?? ''} onValueChange={v => setValue('calendarId', v, { shouldValidate: true })} disabled={p.loading || !!p.editingId}>
-              <SelectTrigger id="adj-calendar" className={cn(control, 'w-full')} aria-invalid={!!errors.calendarId}><SelectValue placeholder={t('adjustment.calendar.choose')} /></SelectTrigger>
+              <SelectTrigger id="adj-calendar" className="w-full" aria-invalid={!!errors.calendarId}><SelectValue placeholder={t('adjustment.calendar.choose')} /></SelectTrigger>
               <SelectContent>{p.manageable.map(c => <SelectItem key={c.id} value={c.id}>{c.name || t('schedule.doctor')}</SelectItem>)}</SelectContent>
             </Select>
             {errors.calendarId && <p role="alert" className="text-sm font-bold text-destructive">{fieldError('calendar')}</p>}
@@ -78,7 +77,7 @@ export default function AdjustmentsPage(p: Props) {
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="adj-kind">{t('adjustment.kind')}</Label>
             <Select value={kind} onValueChange={v => setValue('kind', v as typeof kind, { shouldValidate: true })}>
-              <SelectTrigger id="adj-kind" className={cn(control, 'w-full')}><SelectValue /></SelectTrigger>
+              <SelectTrigger id="adj-kind" className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>{adjustmentKinds.map(k => <SelectItem key={k} value={k}>{t(`adjustment.kind.${k}`)}</SelectItem>)}</SelectContent>
             </Select>
           </div>
@@ -87,13 +86,13 @@ export default function AdjustmentsPage(p: Props) {
         <div className="grid gap-4 md:grid-cols-2">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="adj-from">{kind === 'Leave' ? t('adjustment.from') : t('adjustment.date')}</Label>
-            <Input id="adj-from" type="date" className={control} aria-invalid={!!errors.fromDate} {...register('fromDate')} />
+            <Input id="adj-from" type="date" aria-invalid={!!errors.fromDate} {...register('fromDate')} />
             {errors.fromDate && <p role="alert" className="text-sm font-bold text-destructive">{fieldError('range')}</p>}
           </div>
           {kind === 'Leave' && (
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="adj-to">{t('adjustment.to')}</Label>
-              <Input id="adj-to" type="date" className={control} aria-invalid={!!errors.toDate} {...register('toDate')} />
+              <Input id="adj-to" type="date" aria-invalid={!!errors.toDate} {...register('toDate')} />
               {errors.toDate && <p role="alert" className="text-sm font-bold text-destructive">{fieldError('range')}</p>}
             </div>
           )}
@@ -103,11 +102,11 @@ export default function AdjustmentsPage(p: Props) {
           <div className="grid gap-4 md:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="adj-start">{t('adjustment.start')}</Label>
-              <Input id="adj-start" type="time" step={300} className={control} aria-invalid={!!errors.start} {...register('start')} />
+              <Input id="adj-start" type="time" step={300} aria-invalid={!!errors.start} {...register('start')} />
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="adj-end">{t('adjustment.end')}</Label>
-              <Input id="adj-end" type="time" step={300} className={control} {...register('end')} />
+              <Input id="adj-end" type="time" step={300} {...register('end')} />
             </div>
             {errors.start && <p role="alert" className="text-sm font-bold text-destructive md:col-span-2">{fieldError('window')}</p>}
           </div>

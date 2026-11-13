@@ -49,7 +49,7 @@ export default function ProblemsPage(p: Props) {
                   <TableCell><VerificationTag row={r} /></TableCell>
                   <TableCell>{r.onsetOn ? ltr(r.onsetOn) : <span className="text-muted-foreground">{t('problems.onsetBlank')}</span>}</TableCell>
                   <TableCell>{t(`problems.status.${r.status}`)}</TableCell>
-                  <TableCell>{!view.locked && <Button type="button" variant="outline" size="sm" className="min-h-11" disabled={!p.online} aria-label={t('problems.editFor', { name: r.description })} onClick={() => p.onEdit(r)}>{t('problems.edit')}</Button>}</TableCell>
+                  <TableCell>{!view.locked && <Button type="button" variant="outline" size="sm" disabled={!p.online} aria-label={t('problems.editFor', { name: r.description })} onClick={() => p.onEdit(r)}>{t('problems.edit')}</Button>}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -57,7 +57,7 @@ export default function ProblemsPage(p: Props) {
         </TableState>
         {view.locked ? <p role="status" className="font-bold">{t('problems.locked')}</p> : <AddForm {...p} />}
         {p.problem && <p role="alert" className="font-bold text-danger-700">{t(`problems.error.${p.problem}`)}</p>}
-        <div><Link to={p.consultPath} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t('problems.backToConsult')}</Link></div>
+        <div><Link to={p.consultPath} className={buttonVariants({ variant: 'outline' })}>{t('problems.backToConsult')}</Link></div>
       </section>
     </div>
   );
@@ -80,37 +80,37 @@ function AddForm(p: Props) {
       {p.picked ? (
         <div className="flex flex-wrap items-center gap-2">
           <p role="status"><span className="font-bold">{ltr(p.picked.code)}</span>{` · ${p.picked.title}`}</p>
-          <Button type="button" variant="outline" size="sm" className="min-h-11" onClick={p.onClearPick}>{t('problems.add.clearCode')}</Button>
+          <Button type="button" variant="outline" size="sm" onClick={p.onClearPick}>{t('problems.add.clearCode')}</Button>
         </div>
       ) : (
         <Field id="problem-search" label={t('problems.add.search')} hint={t('problems.add.searchHint')}>
-          <Input id="problem-search" type="search" autoComplete="off" className="h-11" value={p.search} onChange={e => p.onSearch(e.target.value)} {...describedBy('problem-search', false, true)} />
+          <Input id="problem-search" type="search" autoComplete="off" value={p.search} onChange={e => p.onSearch(e.target.value)} {...describedBy('problem-search', false, true)} />
           {p.search.trim() !== '' && (p.results.length === 0
             ? <p role="status" className="text-sm">{t('problems.add.noResults')}</p>
             : <ul aria-label={t('problems.add.results')} className="flex flex-col gap-1">
                 {p.results.map(c => (
-                  <li key={c.code}><Button type="button" variant="ghost" className="min-h-11 w-full justify-start text-start" onClick={() => p.onPick(c)}><span className="font-bold">{ltr(c.code)}</span>{` · ${c.title}`}</Button></li>
+                  <li key={c.code}><Button type="button" variant="ghost" className="w-full justify-start text-start" onClick={() => p.onPick(c)}><span className="font-bold">{ltr(c.code)}</span>{` · ${c.title}`}</Button></li>
                 ))}
               </ul>)}
         </Field>
       )}
       <div className="grid gap-3 sm:grid-cols-3">
         <Field id="problem-description" label={t('problems.add.description')} hint={t(p.picked ? 'problems.add.descriptionFromCode' : 'problems.add.descriptionHint')} error={errors.description ? t('problems.add.descriptionRequired') : null}>
-          <Input id="problem-description" autoComplete="off" maxLength={200} className="h-11" placeholder={p.picked?.title} {...describedBy('problem-description', !!errors.description, true)} {...p.addForm.register('description')} />
+          <Input id="problem-description" autoComplete="off" maxLength={200} placeholder={p.picked?.title} {...describedBy('problem-description', !!errors.description, true)} {...p.addForm.register('description')} />
         </Field>
         <Field id="problem-verification" label={t('problems.col.verification')}>
           <Controller control={p.addForm.control} name="verification" render={({ field }) => (
             <Select value={field.value} onValueChange={field.onChange}>
-              <SelectTrigger id="problem-verification" className="h-11 w-full"><SelectValue /></SelectTrigger>
+              <SelectTrigger id="problem-verification" className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>{verifications.map(v => <SelectItem key={v} value={v}>{t(`problems.verification.${v}`)}</SelectItem>)}</SelectContent>
             </Select>
           )} />
         </Field>
         <Field id="problem-onset" label={t('problems.col.onset')}>
-          <Input id="problem-onset" type="date" className="h-11" {...p.addForm.register('onsetOn')} />
+          <Input id="problem-onset" type="date" {...p.addForm.register('onsetOn')} />
         </Field>
       </div>
-      <div><Button type="submit" className="min-h-11" loading={p.adding} disabled={!p.online}>{t('problems.add.submit')}</Button></div>
+      <div><Button type="submit" loading={p.adding} disabled={!p.online}>{t('problems.add.submit')}</Button></div>
     </form>
   );
 }
@@ -127,7 +127,7 @@ function EditRow(p: Props & { row: ProblemRow }) {
             <Field id={`edit-verification-${row.id}`} label={t('problems.col.verification')}>
               <Controller control={p.editForm.control} name="verification" render={({ field }) => (
                 <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger id={`edit-verification-${row.id}`} className="h-11 w-full"><SelectValue /></SelectTrigger>
+                  <SelectTrigger id={`edit-verification-${row.id}`} className="w-full"><SelectValue /></SelectTrigger>
                   <SelectContent>{verifications.map(v => <SelectItem key={v} value={v}>{t(`problems.verification.${v}`)}</SelectItem>)}</SelectContent>
                 </Select>
               )} />
@@ -135,18 +135,18 @@ function EditRow(p: Props & { row: ProblemRow }) {
             <Field id={`edit-status-${row.id}`} label={t('problems.col.status')}>
               <Controller control={p.editForm.control} name="status" render={({ field }) => (
                 <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger id={`edit-status-${row.id}`} className="h-11 w-full"><SelectValue /></SelectTrigger>
+                  <SelectTrigger id={`edit-status-${row.id}`} className="w-full"><SelectValue /></SelectTrigger>
                   <SelectContent>{statuses.map(s => <SelectItem key={s} value={s}>{t(`problems.status.${s}`)}</SelectItem>)}</SelectContent>
                 </Select>
               )} />
             </Field>
             <Field id={`edit-onset-${row.id}`} label={t('problems.col.onset')}>
-              <Input id={`edit-onset-${row.id}`} type="date" className="h-11" {...p.editForm.register('onsetOn')} />
+              <Input id={`edit-onset-${row.id}`} type="date" {...p.editForm.register('onsetOn')} />
             </Field>
           </div>
           <div className="flex gap-2">
-            <Button type="submit" className="min-h-11" loading={p.saving} disabled={!p.online}>{t('problems.save')}</Button>
-            <Button type="button" variant="outline" className="min-h-11" onClick={p.onCancelEdit}>{t('problems.cancel')}</Button>
+            <Button type="submit" loading={p.saving} disabled={!p.online}>{t('problems.save')}</Button>
+            <Button type="button" variant="outline" onClick={p.onCancelEdit}>{t('problems.cancel')}</Button>
           </div>
         </form>
       </TableCell>
@@ -160,7 +160,7 @@ function Message({ title, body, boardPath }: { title: string; body?: string; boa
     <div role="alert" className="flex flex-col items-start gap-3 rounded-xl border bg-card p-6">
       <h1 className="text-lg font-extrabold">{title}</h1>
       {body && <p>{body}</p>}
-      <Link to={boardPath} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t('consult.backToBoard')}</Link>
+      <Link to={boardPath} className={buttonVariants({ variant: 'outline' })}>{t('consult.backToBoard')}</Link>
     </div>
   );
 }

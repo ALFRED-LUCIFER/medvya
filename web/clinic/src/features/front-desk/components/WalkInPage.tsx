@@ -73,7 +73,7 @@ export default function WalkInPage(p: Props) {
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="walk-in-doctor">{t('walkIn.doctor')}</Label>
             <Select value={p.choice.calendarId || nextAvailable} onValueChange={v => p.onChoice({ calendarId: v === nextAvailable ? '' : v })} disabled={p.doctorsLoading}>
-              <SelectTrigger id="walk-in-doctor" className="min-h-11 w-full"><SelectValue /></SelectTrigger>
+              <SelectTrigger id="walk-in-doctor" className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value={nextAvailable}>{t('walkIn.nextAvailable')}</SelectItem>
                 {p.doctors.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
@@ -83,14 +83,14 @@ export default function WalkInPage(p: Props) {
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="walk-in-type">{t('booking.visitType')}</Label>
             <Select value={p.choice.visitType} onValueChange={v => p.onChoice({ visitType: v as WalkInChoice['visitType'] })}>
-              <SelectTrigger id="walk-in-type" className="min-h-11 w-full"><SelectValue /></SelectTrigger>
+              <SelectTrigger id="walk-in-type" className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>{visitTypes.map(v => <SelectItem key={v} value={v}>{t(`visitType.${v}`)}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="walk-in-reason">{t('booking.reasonCategory')}</Label>
             <Select value={p.choice.reasonCategory} onValueChange={v => p.onChoice({ reasonCategory: v as WalkInChoice['reasonCategory'] })}>
-              <SelectTrigger id="walk-in-reason" className="min-h-11 w-full"><SelectValue /></SelectTrigger>
+              <SelectTrigger id="walk-in-reason" className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>{reasonCategories.map(r => <SelectItem key={r} value={r}>{t(`reasonCategory.${r}`)}</SelectItem>)}</SelectContent>
             </Select>
           </div>

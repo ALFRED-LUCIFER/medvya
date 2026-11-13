@@ -105,13 +105,13 @@ export default function PatientRecord(props: Props) {
 
       {(props.actions.bookPath || props.actions.checkInPath || props.actions.editPath) && (
         <div className="flex flex-wrap gap-2">
-          {props.actions.bookPath && <Link to={props.actions.bookPath} className={buttonVariants({ className: 'min-h-11' })}>{t('patients.record.book')}</Link>}
-          {props.actions.checkInPath && <Link to={props.actions.checkInPath} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t('patients.record.checkIn')}</Link>}
-          {props.actions.editPath && <Link to={props.actions.editPath} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t('patients.record.edit')}</Link>}
+          {props.actions.bookPath && <Link to={props.actions.bookPath} className={buttonVariants()}>{t('patients.record.book')}</Link>}
+          {props.actions.checkInPath && <Link to={props.actions.checkInPath} className={buttonVariants({ variant: 'outline' })}>{t('patients.record.checkIn')}</Link>}
+          {props.actions.editPath && <Link to={props.actions.editPath} className={buttonVariants({ variant: 'outline' })}>{t('patients.record.edit')}</Link>}
         </div>
       )}
 
-      {props.documentsPath && <Link to={props.documentsPath} className={buttonVariants({ variant: 'outline', className: 'min-h-11 self-start' })}>{t('documents.title')}</Link>}
+      {props.documentsPath && <Link to={props.documentsPath} className={buttonVariants({ variant: 'outline', className: 'self-start' })}>{t('documents.title')}</Link>}
 
       {p.status === 'Incomplete' && props.completePath && (
         // The desk's completion task (MDV-P1-015): what quick registration left out, closed once address and payer exist.
@@ -185,7 +185,7 @@ export default function PatientRecord(props: Props) {
                   <span className="flex items-center gap-3">
                     <span className="text-sm font-bold">{state ? t(state.granted ? 'registration.consents.on' : 'registration.consents.off') : t('patients.consents.notRecorded')}</span>
                     {props.canReveal && (
-                      <Button variant="outline" className="min-h-11" disabled={props.consents.loading} loading={props.consents.changing === row.id}
+                      <Button variant="outline" disabled={props.consents.loading} loading={props.consents.changing === row.id}
                         aria-label={`${action}: ${label}`} onClick={() => props.consents.onChange(row, !state?.granted)}>
                         {action}
                       </Button>

@@ -35,7 +35,7 @@ export default function FormularyPanel(p: Props) {
       <Section title={t('formulary.title')} intro={t('formulary.intro')}>
         <p role="note" className="flex items-start gap-2 rounded-md border border-warning-700 px-3 py-2 text-sm font-semibold"><TriangleAlert aria-hidden className="mt-0.5 size-4 shrink-0" />{t('formulary.starterNotice')}</p>
         <Field id="formulary-search" label={t('formulary.search')}>
-          <Input id="formulary-search" type="search" className="h-11" autoComplete="off" value={p.query} onChange={e => p.onQuery(e.target.value)} />
+          <Input id="formulary-search" type="search" autoComplete="off" value={p.query} onChange={e => p.onQuery(e.target.value)} />
         </Field>
         <TableState state={tableState} messages={{ loading: t('formulary.loading'), error: t('formulary.loadFailed'), empty: t('formulary.empty') }}>
           <Table label={t('formulary.tableLabel')} className="min-w-[760px]">
@@ -65,15 +65,15 @@ export default function FormularyPanel(p: Props) {
       <Section title={t('formulary.add.title')} intro={t('formulary.add.intro')}>
         <form noValidate onSubmit={p.onSubmit} className="grid gap-4 sm:grid-cols-2">
           <Field id="med-generic" label={t('formulary.field.generic')} error={problem(errors.generic)}>
-            <Input id="med-generic" className="h-11" autoComplete="off" {...describedBy('med-generic', !!errors.generic)} {...p.form.register('generic')} />
+            <Input id="med-generic" autoComplete="off" {...describedBy('med-generic', !!errors.generic)} {...p.form.register('generic')} />
           </Field>
           <Field id="med-strength" label={t('formulary.field.strength')} error={problem(errors.strength)}>
-            <Input id="med-strength" dir="ltr" className="h-11" autoComplete="off" {...describedBy('med-strength', !!errors.strength)} {...p.form.register('strength')} />
+            <Input id="med-strength" dir="ltr" autoComplete="off" {...describedBy('med-strength', !!errors.strength)} {...p.form.register('strength')} />
           </Field>
           <Field id="med-form" label={t('formulary.field.form')} error={problem(errors.form)}>
             <Controller control={p.form.control} name="form" render={({ field }) => (
               <Select value={field.value ?? ''} onValueChange={field.onChange}>
-                <SelectTrigger id="med-form" className="h-11 w-full" {...describedBy('med-form', !!errors.form)}><SelectValue placeholder={t('formulary.choose')} /></SelectTrigger>
+                <SelectTrigger id="med-form" className="w-full" {...describedBy('med-form', !!errors.form)}><SelectValue placeholder={t('formulary.choose')} /></SelectTrigger>
                 <SelectContent>{forms.map(f => <SelectItem key={f} value={f}>{t(`formulary.form.${f}`)}</SelectItem>)}</SelectContent>
               </Select>
             )} />
@@ -81,22 +81,22 @@ export default function FormularyPanel(p: Props) {
           <Field id="med-class" label={t('formulary.field.regClass')} hint={t('formulary.field.regClass.hint')} error={problem(errors.regClass)}>
             <Controller control={p.form.control} name="regClass" render={({ field }) => (
               <Select value={field.value ?? ''} onValueChange={field.onChange}>
-                <SelectTrigger id="med-class" className="h-11 w-full" {...describedBy('med-class', !!errors.regClass, true)}><SelectValue placeholder={t('formulary.choose')} /></SelectTrigger>
+                <SelectTrigger id="med-class" className="w-full" {...describedBy('med-class', !!errors.regClass, true)}><SelectValue placeholder={t('formulary.choose')} /></SelectTrigger>
                 <SelectContent>{classesFor(p.country).map(c => <SelectItem key={c} value={c}>{t(`formulary.class.${c}`)}</SelectItem>)}</SelectContent>
               </Select>
             )} />
           </Field>
           <Field id="med-brands" label={t('formulary.field.brands')} hint={t('formulary.field.brands.hint')} error={problem(errors.brands)} className="sm:col-span-2">
-            <Input id="med-brands" className="h-11" autoComplete="off" {...describedBy('med-brands', !!errors.brands, true)} {...p.form.register('brands')} />
+            <Input id="med-brands" autoComplete="off" {...describedBy('med-brands', !!errors.brands, true)} {...p.form.register('brands')} />
           </Field>
           <Field id="med-code" label={t('formulary.field.nationalCode')} error={problem(errors.nationalCode)}>
-            <Input id="med-code" dir="ltr" className="h-11" autoComplete="off" {...describedBy('med-code', !!errors.nationalCode)} {...p.form.register('nationalCode')} />
+            <Input id="med-code" dir="ltr" autoComplete="off" {...describedBy('med-code', !!errors.nationalCode)} {...p.form.register('nationalCode')} />
           </Field>
           <Field id="med-atc" label={t('formulary.field.atc')} error={problem(errors.atc)}>
-            <Input id="med-atc" dir="ltr" className="h-11" autoComplete="off" {...describedBy('med-atc', !!errors.atc)} {...p.form.register('atc')} />
+            <Input id="med-atc" dir="ltr" autoComplete="off" {...describedBy('med-atc', !!errors.atc)} {...p.form.register('atc')} />
           </Field>
           <Field id="med-sig" label={t('formulary.field.defaultSig')} error={problem(errors.defaultSig)} className="sm:col-span-2">
-            <Input id="med-sig" className="h-11" autoComplete="off" {...describedBy('med-sig', !!errors.defaultSig)} {...p.form.register('defaultSig')} />
+            <Input id="med-sig" autoComplete="off" {...describedBy('med-sig', !!errors.defaultSig)} {...p.form.register('defaultSig')} />
           </Field>
           <div className="flex flex-col gap-2 sm:col-span-2">
             {p.formError && <p role="alert" className={fieldError}>{t(`formulary.error.${p.formError}`)}</p>}

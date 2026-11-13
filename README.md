@@ -77,7 +77,7 @@ medvya/
 │   ├── bicep/               # exists; PostgreSQL replaces Azure SQL (MDV-P0-038)
 │   ├── entra/               # exists; hosted sign-in page branding, run by a tenant admin (MDV-P1-060)
 │   └── postgres · monitoring     # planned (roles and RLS policies, alerts); runbooks stay in docs/runbooks
-├── tools/                   # tickets, prd-extract, erd, synthetic data, db scripts
+├── tools/                   # tickets, prd-extract, erd, synthetic data, db scripts, UI drift count, oxlint plugin, codemods
 ├── docs/                    # 01-prd · 02-design · 03-architecture · 04-security-compliance · 05-delivery · adr · compliance · runbooks
 │   ├── 02-design/source/    #   imported design files
 │   └── 05-delivery/tickets/ #   ticket sources, generated pages, schedule

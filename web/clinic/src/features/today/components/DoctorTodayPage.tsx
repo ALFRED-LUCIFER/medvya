@@ -54,7 +54,7 @@ export default function DoctorTodayPage(p: Props) {
 
 function ScopeButton({ scope, active, onScope }: { scope: Scope; active: boolean; onScope: (s: Scope) => void }) {
   const { t } = useI18n();
-  return <Button variant={active ? 'selected' : 'outline'} className="min-h-11" aria-pressed={active} onClick={() => onScope(scope)}>{t(`today.scope.${scope}`)}</Button>;
+  return <Button variant={active ? 'selected' : 'outline'} aria-pressed={active} onClick={() => onScope(scope)}>{t(`today.scope.${scope}`)}</Button>;
 }
 
 function Message({ title, body, action, busy = false }: { title: string; body?: string; action?: { label: string; run: () => void }; busy?: boolean }) {
@@ -204,7 +204,7 @@ function PendingRow({ note: n, timeZone, consultPath }: Props & { note: PendingN
         <span className="text-muted-foreground">{formatDate(new Date(n.startedAt), timeZone ?? undefined)}{' · '}{t(state)}</span>
         {n.openPastDay && <span className="font-bold">{t('today.open.pastDay')}</span>}
       </span>
-      <Link to={consultPath(n.encounterId)} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t(n.noteSigned ? 'today.open.action' : 'today.pending.open')}</Link>
+      <Link to={consultPath(n.encounterId)} className={buttonVariants({ variant: 'outline' })}>{t(n.noteSigned ? 'today.open.action' : 'today.pending.open')}</Link>
     </li>
   );
 }

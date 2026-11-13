@@ -13,7 +13,7 @@ export default function TimelinePreview(p: Props) {
     <section aria-label={t('timeline.title')} className="flex flex-col gap-3 rounded-xl border bg-card p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-base font-extrabold">{t('timeline.title')}</h2>
-        <Link to={p.timelinePath} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t('timeline.openFull')}</Link>
+        <Link to={p.timelinePath} className={buttonVariants({ variant: 'outline' })}>{t('timeline.openFull')}</Link>
       </div>
       {p.loading ? <p role="status">{t('timeline.loading')}</p>
         : p.failed ? <p role="alert" className="font-bold">{t('timeline.loadFailed')}</p>

@@ -34,7 +34,6 @@ type Props = {
 };
 
 const anyDoctor = 'any';
-const control = 'min-h-11';
 
 /** P-05 Waitlist (MDV-P1-027): who wants a slot, the free slot that suits each, "Offer {time}", and the patient's answer. */
 export default function WaitlistPage(p: Props) {
@@ -119,7 +118,7 @@ export default function WaitlistPage(p: Props) {
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="waitlist-doctor">{t('walkIn.doctor')}</Label>
             <Select value={watch('calendarId') || anyDoctor} onValueChange={v => setValue('calendarId', v === anyDoctor ? '' : v)}>
-              <SelectTrigger id="waitlist-doctor" className={cn(control, 'w-full')}><SelectValue /></SelectTrigger>
+              <SelectTrigger id="waitlist-doctor" className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value={anyDoctor}>{t('waitlist.anyDoctor')}</SelectItem>
                 {p.doctors.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
@@ -129,14 +128,14 @@ export default function WaitlistPage(p: Props) {
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="waitlist-type">{t('booking.visitType')}</Label>
             <Select value={watch('visitType')} onValueChange={v => setValue('visitType', v as WaitlistForm['visitType'])}>
-              <SelectTrigger id="waitlist-type" className={cn(control, 'w-full')}><SelectValue /></SelectTrigger>
+              <SelectTrigger id="waitlist-type" className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>{visitTypes.map(v => <SelectItem key={v} value={v}>{t(`visitType.${v}`)}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="waitlist-reason">{t('booking.reasonCategory')}</Label>
             <Select value={watch('reasonCategory')} onValueChange={v => setValue('reasonCategory', v as WaitlistForm['reasonCategory'])}>
-              <SelectTrigger id="waitlist-reason" className={cn(control, 'w-full')}><SelectValue /></SelectTrigger>
+              <SelectTrigger id="waitlist-reason" className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>{reasonCategories.map(r => <SelectItem key={r} value={r}>{t(`reasonCategory.${r}`)}</SelectItem>)}</SelectContent>
             </Select>
           </div>
@@ -157,11 +156,11 @@ export default function WaitlistPage(p: Props) {
         <div className="flex flex-wrap gap-4">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="waitlist-from">{t('waitlist.from')}</Label>
-            <Input id="waitlist-from" type="time" step={300} dir="ltr" className={cn(control, 'w-32')} {...register('from')} />
+            <Input id="waitlist-from" type="time" step={300} dir="ltr" className="w-32" {...register('from')} />
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="waitlist-until">{t('waitlist.until')}</Label>
-            <Input id="waitlist-until" type="time" step={300} dir="ltr" className={cn(control, 'w-32')} aria-invalid={!!errors.until} aria-describedby={errors.until ? 'waitlist-until-error' : undefined} {...register('until')} />
+            <Input id="waitlist-until" type="time" step={300} dir="ltr" className="w-32" aria-invalid={!!errors.until} aria-describedby={errors.until ? 'waitlist-until-error' : undefined} {...register('until')} />
             {errors.until && <p id="waitlist-until-error" className="text-sm font-bold text-destructive">{t('waitlist.error.before_from')}</p>}
           </div>
         </div>

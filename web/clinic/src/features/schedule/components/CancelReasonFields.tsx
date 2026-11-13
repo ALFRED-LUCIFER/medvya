@@ -15,7 +15,7 @@ export default function CancelReasonFields({ form, onReason }: { form: UseFormRe
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="cancel-reason">{t('appointment.cancel.reason')}</Label>
         <Select value={reason ?? ''} onValueChange={v => onReason(v as CancelForm['reason'])}>
-          <SelectTrigger id="cancel-reason" aria-invalid={!!reasonError} aria-describedby={reasonError ? 'cancel-reason-error' : undefined} className="h-11 w-full">
+          <SelectTrigger id="cancel-reason" aria-invalid={!!reasonError} aria-describedby={reasonError ? 'cancel-reason-error' : undefined} className="w-full">
             <SelectValue placeholder={t('appointment.cancel.choose')} />
           </SelectTrigger>
           <SelectContent>{cancelReasons.map(r => <SelectItem key={r} value={r}>{t(`cancelReason.${r}`)}</SelectItem>)}</SelectContent>

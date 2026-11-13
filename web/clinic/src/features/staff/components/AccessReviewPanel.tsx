@@ -33,7 +33,7 @@ export default function AccessReviewPanel(p: Props) {
             </span>
             {m.decision
               ? <span className="inline-flex items-center gap-1.5 font-bold"><CircleCheck aria-hidden className="size-4" />{t(`accessReview.decision.${m.decision}`)}</span>
-              : <Button variant="outline" className="min-h-11" loading={p.confirmingId === m.membershipId} aria-label={t('accessReview.confirmFor', { name: m.name ?? t('accessReview.unnamed') })}
+              : <Button variant="outline" loading={p.confirmingId === m.membershipId} aria-label={t('accessReview.confirmFor', { name: m.name ?? t('accessReview.unnamed') })}
                   onClick={() => p.onConfirm(m.membershipId)}>{t('accessReview.confirm')}</Button>}
           </li>
         ))}

@@ -12,8 +12,13 @@ type SortDirection = "ascending" | "descending" | "none"
 const TableLayout = React.createContext({ compact: false, stacked: false })
 
 // Compact rows are 36 px with a mouse and 48 px on any coarse pointer (DESIGN.md, Density). Stacked phone rows keep their own height.
-const compactRows = "[&>tr]:h-row-compact [&>tr>*]:h-auto [&>tr>*]:py-1.5 any-pointer-coarse:[&>tr]:h-row any-pointer-coarse:[&>tr>*]:py-3"
-const compactWideRows = "md:[&>tr]:h-row-compact md:[&>tr>*]:h-auto md:[&>tr>*]:py-1.5 md:any-pointer-coarse:[&>tr]:h-row md:any-pointer-coarse:[&>tr>*]:py-3"
+// A row's button is 32 px with a mouse, so with the row's rule the row stays 36 px, and 44 px on a coarse pointer; its cell has no padding.
+const compactRows =
+  "[&>tr]:h-row-compact [&>tr>*]:h-auto [&>tr>*]:py-1.5 any-pointer-coarse:[&>tr]:h-row any-pointer-coarse:[&>tr>*]:py-3 " +
+  "[&>tr>td:has(button)]:py-0 [&_button]:min-h-8 any-pointer-coarse:[&_button]:min-h-11"
+const compactWideRows =
+  "md:[&>tr]:h-row-compact md:[&>tr>*]:h-auto md:[&>tr>*]:py-1.5 md:any-pointer-coarse:[&>tr]:h-row md:any-pointer-coarse:[&>tr>*]:py-3 " +
+  "md:[&>tr>td:has(button)]:py-0 md:[&_button]:min-h-8 md:any-pointer-coarse:[&_button]:min-h-11"
 
 /**
  * `label` is required: the scroll wrapper is a named, focusable region, so a keyboard user can scroll a wide table (WCAG 2.1.1).

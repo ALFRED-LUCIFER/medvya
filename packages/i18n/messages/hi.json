@@ -1858,6 +1858,7 @@
   "staff.col.mfa": "दूसरा चरण",
   "staff.col.status": "स्थिति",
   "staff.col.actions": "कार्रवाई",
+  "staff.actionsNamed": "{name} के लिए कार्रवाई",
   "staff.status.Invited": "आमंत्रित",
   "staff.status.Active": "सक्रिय",
   "staff.status.Suspended": "निलंबित",

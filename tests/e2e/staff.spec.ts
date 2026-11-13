@@ -37,6 +37,12 @@ async function axe(page: Page) {
       .map(v => `${v.id} (${v.nodes.length})`));
 }
 
+// MDV-P2-054: a row shows one action that opens a form; the rest (and always Offboard and Revoke) are 44 px items in its Actions menu.
+async function rowAction(page: Page, menu: string, item: string) {
+  await page.getByRole('button', { name: menu }).first().click();
+  await page.getByRole('menuitem', { name: item }).click();
+}
+
 async function setUp(page: Page, locale = 'en') {
   await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
   await page.route('**/v1/me/context', r => r.fulfill({ json: admin }));
@@ -53,17 +59,18 @@ test('staff table shows role, location, second factor and status, with resend an
   await expect(row).toContainText('Invited');
   await expect(row).toContainText('Not yet');
   await expect(page.getByRole('row', { name: /K\. Lakshmi/ })).toContainText('Set up');
-  await expect(row.getByRole('button', { name: 'Resend invitation to joseph@example.test' })).toBeVisible();
-  await expect(row.getByRole('button', { name: 'Revoke invitation to joseph@example.test' })).toBeVisible();
+  await row.getByRole('button', { name: 'Actions for joseph@example.test' }).click();
+  await expect(page.getByRole('menuitem', { name: 'Resend invitation to joseph@example.test' })).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: 'Revoke invitation to joseph@example.test' })).toBeVisible();
+  await page.keyboard.press('Escape');
   // MDV-P1-052: a revoked invitation reads as revoked in the status column, not as Invited, and cannot be revoked again.
   const gone = page.getByRole('row', { name: /revoked@example\.test/ });
-  await expect(gone.getByRole('cell').nth(3)).toHaveText('Invitation revoked');
-  await expect(gone.getByRole('button', { name: /Revoke/ })).toHaveCount(0);
-  await expect(gone.getByRole('button', { name: /Resend/ })).toHaveCount(0); // #912: revoked stays revoked
+  await expect(gone.getByRole('cell').nth(3)).toHaveText('Invitation revoked', { useInnerText: true });
+  await expect(gone.getByRole('button')).toHaveCount(0); // #912: revoked stays revoked: no Resend, no Revoke, no menu
 
   let revoked = false;
   await page.route('**/v1/invitations/i-1', r => { revoked = r.request().method() === 'DELETE'; return r.fulfill({ status: 204 }); });
-  await row.getByRole('button', { name: /Revoke/ }).click();
+  await rowAction(page, 'Actions for joseph@example.test', 'Revoke invitation to joseph@example.test');
   await expect(page.getByText('Invitation revoked. The link no longer works.')).toBeVisible();
   expect(revoked).toBe(true);
   expect(await axe(page)).toEqual([]);
@@ -119,7 +126,7 @@ test('offboarding asks for a reason, confirms, and says the last administrator c
   await page.route('**/v1/staff/c/offboard', r => { body = r.request().postData() ?? ''; return r.fulfill({ json: { openVisits: 0 } }); });
   await page.route('**/v1/staff/e/offboard', r => r.fulfill({ status: 400, json: { errors: { membershipId: ['last_admin'] } } }));
   await page.goto('/settings?tab=staff');
-  await page.getByRole('button', { name: 'Offboard A. Joseph (synthetic)' }).click();
+  await rowAction(page, 'Actions for A. Joseph (synthetic)', 'Offboard A. Joseph (synthetic)');
   // #912: the form opens below the table; it is brought into view with the reason field focused.
   await expect(page.getByLabel('Reason (kept in the audit trail)')).toBeFocused();
   await expect(page.getByLabel('Reason (kept in the audit trail)')).toBeInViewport();
@@ -132,7 +139,7 @@ test('offboarding asks for a reason, confirms, and says the last administrator c
   expect(JSON.parse(body)).toEqual({ reason: 'Left the practice', offerRebooking: false });
   await expect(page.getByText(/Patients already checked in/)).toHaveCount(0);
 
-  await page.getByRole('button', { name: 'Offboard R. Iyer (synthetic)' }).click();
+  await rowAction(page, 'Actions for R. Iyer (synthetic)', 'Offboard R. Iyer (synthetic)');
   await page.getByLabel('Reason (kept in the audit trail)').fill('Testing');
   await page.getByRole('button', { name: 'Offboard and sign out everywhere' }).click();
   // scoped: the page can also show an unrelated 'settings could not be loaded' alert while its request fails
@@ -146,7 +153,7 @@ test('offboarding a doctor asks what happens to their patients and names the one
   let body = '';
   await page.route('**/v1/staff/d/offboard', r => { body = r.request().postData() ?? ''; return r.fulfill({ json: { openVisits: 2 } }); });
   await page.goto('/settings?tab=staff');
-  await page.getByRole('button', { name: 'Offboard Dr. R. Menon (synthetic)' }).click();
+  await rowAction(page, 'Actions for Dr. R. Menon (synthetic)', 'Offboard Dr. R. Menon (synthetic)');
   await page.getByLabel('Reason (kept in the audit trail)').fill('Left the practice');
   await page.getByRole('button', { name: 'Offboard and sign out everywhere' }).click();
   await expect(page.getByText('Choose what happens to their booked patients.')).toBeVisible();
@@ -208,7 +215,7 @@ test('the offboarding form lays out right to left in Arabic', async ({ page }) =
   await setUp(page, 'ar');
   await page.route('**/v1/staff', r => r.request().method() === 'GET' ? r.fulfill({ json: [member({ membershipId: 'c', name: 'A. Joseph (synthetic)' })] }) : r.fallback());
   await page.goto('/settings?tab=staff');
-  await page.getByRole('button', { name: 'إنهاء الخدمة لـ A. Joseph (synthetic)' }).click();
+  await rowAction(page, 'الإجراءات لـ A. Joseph (synthetic)', 'إنهاء الخدمة لـ A. Joseph (synthetic)');
   await expect(page.getByLabel('السبب (يُحفظ في سجل التدقيق)')).toBeVisible();
   expect(await axe(page)).toEqual([]);
 });
@@ -240,9 +247,9 @@ for (const locale of ['en', 'ar'])
 // Mocked like the rest of this file; the server rules (403 at an unassigned location, one seat per person, offboarding at every location) are in StaffLocationsTests.cs.
 const velachery = '22222222-2222-4222-8222-222222222222';
 const twoLocations = [{ id: facility, name: 'Adyar (synthetic)', address: null, timeZone: 'Asia/Kolkata' }, { id: velachery, name: 'Velachery (synthetic)', address: null, timeZone: 'Asia/Kolkata' }];
-for (const [locale, button, reasonLabel, saved] of [
-  ['en', 'Locations of P. Devi (synthetic)', 'Reason (kept in the audit trail)', 'Locations saved.'],
-  ['ar', 'المواقع لـ P. Devi (synthetic)', 'السبب (يُحفظ في سجل التدقيق)', 'تم حفظ المواقع.'],
+for (const [locale, menu, item, reasonLabel, saved] of [
+  ['en', 'Actions for P. Devi (synthetic)', 'Locations of P. Devi (synthetic)', 'Reason (kept in the audit trail)', 'Locations saved.'],
+  ['ar', 'الإجراءات لـ P. Devi (synthetic)', 'المواقع لـ P. Devi (synthetic)', 'السبب (يُحفظ في سجل التدقيق)', 'تم حفظ المواقع.'],
 ] as const)
   test(`the owner sets a member's locations, and taking one away needs a reason (${locale})`, async ({ page }) => {
     await setUp(page, locale);
@@ -253,7 +260,7 @@ for (const [locale, button, reasonLabel, saved] of [
     let body: { facilityIds: string[]; reason: string } | null = null;
     await page.route('**/v1/staff/d1/locations', r => { body = r.request().postDataJSON(); return r.fulfill({ status: 204 }); });
     await page.goto('/settings?tab=staff');
-    await page.getByRole('button', { name: button }).first().click();
+    await rowAction(page, menu, item);
     const boxes = page.getByRole('checkbox');
     await expect(boxes).toHaveCount(2);
     await expect(boxes.nth(0)).toBeChecked();
@@ -287,11 +294,13 @@ for (const locale of ['en', 'ar'])
     if (locale === 'en') {
       for (const [name, why] of [['Dr. Arjun Rao', 'Only an owner can offboard an owner.'], ['Dr. R. Menon', 'Only an owner can offboard a doctor.'], ['R. Iyer', 'You cannot offboard yourself.']] as const) {
         const row = page.getByRole('row', { name });
-        await expect(row.getByRole('button', { name: /^Offboard/ })).toHaveCount(0);
+        await expect(row.getByRole('button', { name: /^(Offboard|Actions)/ })).toHaveCount(0); // nothing else to do on these rows, so no menu
         await expect(row).toContainText(why);
       }
       await expect(page.getByRole('row', { name: /Dr\. Arjun Rao/ }).getByRole('button', { name: /^Change role/ })).toHaveCount(0); // an owner's role stays
-      await expect(page.getByRole('button', { name: 'Offboard A. Joseph (synthetic)' })).toBeVisible();
+      await page.getByRole('button', { name: 'Actions for A. Joseph (synthetic)' }).click();
+      await expect(page.getByRole('menuitem', { name: 'Offboard A. Joseph (synthetic)' })).toBeVisible();
+      await page.keyboard.press('Escape');
     }
     expect(await axe(page)).toEqual([]);
   });
@@ -322,11 +331,81 @@ test('an offboarding without a recent step-up asks to confirm identity first, an
   let asked: unknown = null;
   await page.route('**/bff/reauth', r => { asked = r.request().postDataJSON(); return r.fulfill({ json: { location: '/settings?tab=staff' } }); });
   await page.goto('/settings?tab=staff');
-  await page.getByRole('button', { name: 'Offboard A. Joseph (synthetic)' }).click();
+  await rowAction(page, 'Actions for A. Joseph (synthetic)', 'Offboard A. Joseph (synthetic)');
   await page.getByLabel('Reason (kept in the audit trail)').fill('Left the practice');
   await page.getByRole('button', { name: 'Offboard and sign out everywhere' }).click();
   await expect(page.getByRole('alert').filter({ hasText: 'Confirm your identity first, then press Offboard again. Nothing has changed.' })).toBeVisible();
   expect(await axe(page)).toEqual([]);
   await page.getByRole('button', { name: 'Confirm your identity' }).click();
   await expect.poll(() => asked).toEqual({ returnUrl: '/settings?tab=staff' });
+});
+
+// MDV-P2-054: the staff list is a compact table: 36 px rows with a mouse, sorted from the keyboard with the order announced, paged over 50.
+const many = Array.from({ length: 55 }, (_, i) => member({ membershipId: `s-${i}`, userId: `u-${i}`, name: `Staff ${String(i).padStart(2, '0')} (synthetic)` }));
+for (const locale of ['en', 'ar'])
+  test(`over 50 staff are paged, and a keyboard sort is announced and goes back to page 1 (${locale})`, async ({ page }) => {
+    await setUp(page, locale);
+    await page.route('**/v1/staff', r => r.request().method() === 'GET' ? r.fulfill({ json: [staff[0], ...many] }) : r.fallback());
+    await page.goto('/settings?tab=staff');
+    const table = page.getByRole('region', { name: locale === 'en' ? 'Staff list' : 'قائمة الموظفين' });
+    await expect(table.getByRole('rowheader')).toHaveCount(50);
+    const pager = page.getByRole('navigation', { name: locale === 'en' ? 'Pages' : 'الصفحات' });
+    await pager.getByRole('button').last().click();
+    await expect(table.getByRole('rowheader')).toHaveCount(6);
+    const name = table.getByRole('columnheader').first().getByRole('button');
+    await name.press('Enter');
+    await name.press('Enter');
+    await expect(table.getByRole('columnheader').first()).toHaveAttribute('aria-sort', 'descending');
+    if (locale === 'en') await expect(table.getByRole('status')).toHaveText('Sorted by Name, descending');
+    else await expect(table.getByRole('status')).not.toBeEmpty();
+    await expect(table.getByRole('rowheader')).toHaveCount(50);
+    await expect(table.getByRole('rowheader').first()).toHaveText('Staff 54 (synthetic)');
+    expect(await axe(page)).toEqual([]);
+  });
+
+test('rows are 36 px with a mouse; Offboard is a 44 px menu item that opens a confirmation', async ({ page }) => {
+  await setUp(page);
+  await page.route('**/v1/staff', r => r.request().method() === 'GET' ? r.fulfill({ json: [staff[0], member({ membershipId: 'c', userId: 'u-joseph', name: 'A. Joseph (synthetic)' })] }) : r.fallback());
+  await page.goto('/settings?tab=staff');
+  const row = page.getByRole('row', { name: /A\. Joseph/ });
+  await expect(row.getByRole('button', { name: 'Change role for A. Joseph (synthetic)' })).toBeVisible(); // the one visible action
+  expect(Math.round((await row.boundingBox())!.height)).toBe(36);
+  expect(await axe(page)).toEqual([]);
+  await row.getByRole('button', { name: 'Actions for A. Joseph (synthetic)' }).click();
+  const offboard = page.getByRole('menuitem', { name: 'Offboard A. Joseph (synthetic)' });
+  expect((await offboard.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  await offboard.click();
+  // A confirmation, not an action: the reason and the destructive button come first, and nothing was sent.
+  await expect(page.getByLabel('Reason (kept in the audit trail)')).toBeFocused();
+  await expect(page.getByRole('button', { name: 'Offboard and sign out everywhere' })).toBeVisible();
+});
+
+test.describe('on a coarse pointer', () => {
+  test.use({ hasTouch: true, isMobile: true, viewport: { width: 1024, height: 768 } });
+  test('the compact staff table ignores its density: rows are 48 px and row buttons 44 px', async ({ page }) => {
+    await setUp(page);
+    await page.route('**/v1/staff', r => r.request().method() === 'GET' ? r.fulfill({ json: [staff[0], member({ membershipId: 'c', userId: 'u-joseph', name: 'A. Joseph (synthetic)' })] }) : r.fallback());
+    await page.goto('/settings?tab=staff');
+    expect(await page.evaluate(() => matchMedia('(any-pointer: coarse)').matches)).toBe(true);
+    const row = page.getByRole('row', { name: /A\. Joseph/ });
+    await expect(row).toBeVisible();
+    expect(Math.round((await row.boundingBox())!.height)).toBeGreaterThanOrEqual(48);
+    for (const button of await row.getByRole('button').all()) expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  });
+});
+
+test.describe('at 375 px', () => {
+  test.use({ viewport: { width: 375, height: 812 } });
+  for (const locale of ['en', 'ar'])
+    test(`staff rows are stacked with the name first and every field labelled, and nothing scrolls sideways (${locale})`, async ({ page }) => {
+      await setUp(page, locale);
+      await page.goto('/settings?tab=staff');
+      const table = page.getByRole('region', { name: locale === 'en' ? 'Staff list' : 'قائمة الموظفين' });
+      await expect(table.getByRole('rowheader', { name: 'K. Lakshmi (synthetic)' })).toBeInViewport();
+      const role = table.getByRole('row', { name: /joseph/ }).getByRole('cell').first();
+      await expect(role.getByText(locale === 'en' ? 'Role' : 'الدور', { exact: true })).toBeVisible(); // the column's name above its value
+      expect(await table.evaluate(e => e.scrollWidth - e.clientWidth)).toBeLessThanOrEqual(0);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+      expect(await axe(page)).toEqual([]);
+    });
 });

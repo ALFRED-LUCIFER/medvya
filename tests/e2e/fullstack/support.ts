@@ -43,7 +43,8 @@ export function watchUrls(page: Page) {
   page.on('framenavigated', f => urls.push(f.url()));
   return {
     urls,
-    leaks: (words: string[]) => urls.filter(u => { const d = decodeURIComponent(u).toLowerCase(); return words.some(w => d.includes(w.toLowerCase())); }),
+    // The build's hashed bundle names (/app/assets/) are chosen by the bundler, not by patient data ("trash-….js" holds "rash"); every other URL is checked.
+    leaks: (words: string[]) => urls.filter(u => { const d = decodeURIComponent(u).toLowerCase(); return !new URL(u).pathname.startsWith('/app/assets/') && words.some(w => d.includes(w.toLowerCase())); }),
   };
 }
 

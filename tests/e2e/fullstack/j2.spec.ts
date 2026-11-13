@@ -92,6 +92,10 @@ journey('J2', {
     // has been found again on Today.
     await expect(note).not.toContainText('Only a doctor can sign this note.');
 
+    // MDV audit P0-2: the doctor records allergies while the consultation is open; once it has ended the vitals and allergies are read only, so this comes before End.
+    await note.getByRole('button', { name: 'Confirm: no known allergies' }).click();
+    await expect(note).toContainText('No known allergies, confirmed at this visit.');
+
     await page.getByRole('button', { name: 'End consultation' }).click(); // leaves no open consultation for a later run
     await expect(page.getByRole('status').filter({ hasText: 'Consultation ended' })).toHaveText(/^Consultation ended at \d\d:\d\d\.$/);
     // MDV-P2-002: the unsigned note waits on Today (from any day) until it is signed, and opens its consultation again.
@@ -107,10 +111,8 @@ journey('J2', {
     await note.getByLabel('Assessment').fill('Raised blood sugar, review (synthetic)');
     await note.getByLabel('Plan').fill('Diet advice, review in two weeks (synthetic)');
     // MDV-AUDIT-1092: no recording consent step before recording exists. MDV audit P0-2: Sign stays locked until allergies are
-    // recorded; with no nurse step the doctor asks and records "no known allergies" in the Vitals section of the consultation.
-    await expect(note.getByRole('button', { name: 'Sign note' })).toBeDisabled();
-    await note.getByRole('button', { name: 'Confirm: no known allergies' }).click();
-    await expect(note).toContainText('No known allergies, confirmed at this visit.');
+    // recorded (done above, before End consultation).
+    await expect(note.getByRole('button', { name: 'Sign note' })).toBeEnabled();
     await expect(note.getByRole('status').filter({ hasText: /^Saved$/ })).toBeVisible(); // the one-page view has a second status (the chart panel)
     await expect(note.getByRole('button', { name: 'Sign note' })).toHaveAccessibleDescription('Everything reviewed. Ready to sign.');
     await note.getByRole('button', { name: 'Sign note' }).click();
@@ -335,12 +337,23 @@ journey('J2', {
     await note.getByRole('textbox', { name: /^Assessment/ }).fill('Type 2 diabetes, fair control (synthetic)');
     await note.getByRole('textbox', { name: /^Plan/ }).fill('Continue metformin, HbA1c in three months (synthetic)');
     await expect(note.getByRole('status').filter({ hasText: /^Saved$/ })).toBeVisible();
+    // Step 6's authorised metformin is on Meera's chart, so this visit's medicines need their reconciliation (MDV-1087); there is no consent step (MDV-AUDIT-1092).
+    await expect(sign).toBeDisabled();
+    await expect(sign).toHaveAccessibleDescription('1 item still needs your review before signing');
     const tools = note.getByRole('complementary', { name: 'Consultation tools' });
-    await tools.getByRole('tab', { name: /^Checklist 7\/7$/ }).click();
+    await tools.getByRole('tab', { name: /^Checklist 6\/7$/ }).click();
+    await expect(tools.getByRole('region', { name: 'Review and sign' }).getByRole('listitem').filter({ hasText: 'Medicines reconciled' })).toContainText('To do');
     await expect(tools.getByRole('region', { name: 'Review and sign' }).getByRole('listitem').filter({ hasText: 'Recording consent' })).toHaveCount(0);
     await expect(tools.getByRole('region', { name: 'Review and sign' }).getByRole('listitem').filter({ hasText: 'Allergies reconciled' })).toContainText('Done');
     await expectNoAxeViolations(page);
 
+    await page.goto(`${studioPath}/medicines`);
+    const metformin = page.getByRole('group', { name: /^Decision for Metformin/ });
+    await metformin.getByRole('button', { name: 'Keep' }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'decided' })).toContainText('1 of 1 decided');
+    await page.getByRole('button', { name: 'Confirm changes' }).click();
+    await expect(page.getByText(/^Confirmed at \d\d:\d\d\./)).toBeVisible();
+    await page.goto(studioPath);
     await expect(sign).toBeEnabled();
     await expect(sign).toHaveAccessibleDescription('Everything reviewed. Ready to sign.');
     await expectArabicAxeClean(browser, rao, studioPath);

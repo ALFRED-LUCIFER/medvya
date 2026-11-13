@@ -1595,7 +1595,7 @@ Deliberately NOT in this ticket: (1) A new typeface or palette. (2) Layout redes
 * Given Register patient at 375 px, when the stepper renders, then no step label is clipped
 * Given a feature file, when text-[13.5px] or sm:grid-cols-2 is added, then lint fails
 * Given captures before and after in English and Arabic, when compared, then no text is truncated or overlapping, and axe finds no violation"
-MDV-P2-058,To do,Story,"Move the forms to Field and ErrorSummary, one feature at a time: registration first",MDV-P1-E12,High,phase-P2 registration a11y ui settings onboarding epic-ux-programme track-design wave-d3,3,2027-01-25,2027-01-29,R2 · Consult,P1-05,P-02,MDV-P1-085,75,Medium,"Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Track D (design rules and UI component setup), wave D3. This is audit backlog UX-20 of the Nov 2026 product UX audit (an audit id, not an MDV key).
+MDV-P2-058,To do,Story,"Move the forms to Field and ErrorSummary, one feature at a time: registration first",MDV-P1-E12,High,phase-P2 registration a11y ui settings onboarding epic-ux-programme track-design wave-d3,2.75,2027-01-25,2027-01-29,R2 · Consult,P1-05,P-02,MDV-P1-085,75,Medium,"Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Track D (design rules and UI component setup), wave D3. This is audit backlog UX-20 of the Nov 2026 product UX audit (an audit id, not an MDV key).
 
 Persona and route: /patients/new first; then settings, onboarding, the pregnancy card, sign-up, the platform console · receptionist, admin, owner.
 Findings and reviewers: F-23 · reviewers B-13, B-21, C-12. Part 2 of 2 of audit backlog UX-20.

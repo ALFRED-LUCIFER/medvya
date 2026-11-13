@@ -1500,7 +1500,7 @@ screens: P-02
 priority: SHOULD
 roles: Receptionist, Practice admin, Owner
 labels: registration, a11y, ui, settings, onboarding, epic: ux programme, track: design, wave: D3
-estimate: 3
+estimate: 2.75
 weeks: 14
 depends: MDV-P1-085
 confidence: 75 | Registration's own field is the base of the library one, so it moves first and cheaply; the others by hand.

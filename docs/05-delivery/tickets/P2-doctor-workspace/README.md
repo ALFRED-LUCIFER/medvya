@@ -8,7 +8,7 @@
 **Day one:** Open Doctor Today, see the patient chart, record vitals, write and sign a note, and print a prescription, without AI.  
 **Goal:** A doctor completes a full visit, from chart to signed note and prescription, in Medvya. This is also the fallback that AI must never break.
 
-**Tickets:** 61 · **Estimate:** 137 dev-days vs **35 working days** in the window (OVER by 102 days: needs scope trade-off or overlap) · **Average confidence:** 79%
+**Tickets:** 61 · **Estimate:** 136.75 dev-days vs **35 working days** in the window (OVER by 101.75 days: needs scope trade-off or overlap) · **Average confidence:** 79%
 
 **Status:** To do 61
 
@@ -70,7 +70,7 @@
 | [MDV-P2-026](MDV-P2-026.md) | To do | Doctor and nurse training (30 min each) and R2 materials | Chore | MUST | P2-03, P2-05 | — | 1 | 14–14 | 25 Jan → 29 Jan 2027 | 88% High |
 | [MDV-P2-027](MDV-P2-027.md) | To do | Print, accessibility and zoom verification across clinical screens | Task | MUST | P2-05, P2-06 | — | 1 | 14–14 | 25 Jan → 29 Jan 2027 | 90% High |
 | [MDV-P2-056](MDV-P2-056.md) | To do | Truthful status and small motion: an Updated mark on live board changes, skeletons, an offline strip, named transition properties | Story | COULD | P0-07 | — | 2.5 | 14–14 | 25 Jan → 29 Jan 2027 | 75% Medium |
-| [MDV-P2-058](MDV-P2-058.md) | To do | Move the forms to Field and ErrorSummary, one feature at a time: registration first | Story | SHOULD | P1-05 | P-02 | 3 | 14–14 | 25 Jan → 29 Jan 2027 | 75% Medium |
+| [MDV-P2-058](MDV-P2-058.md) | To do | Move the forms to Field and ErrorSummary, one feature at a time: registration first | Story | SHOULD | P1-05 | P-02 | 2.75 | 14–14 | 25 Jan → 29 Jan 2027 | 75% Medium |
 | [MDV-P2-061](MDV-P2-061.md) | To do | Patient record and list chrome found only in the reviewers' reports: empty sections collapse, one-row filters, sideways scrolling inside tables | Story | COULD | P2-02 | E-01 | 2 | 14–14 | 25 Jan → 29 Jan 2027 | 72% Medium |
 | [MDV-P2-028](MDV-P2-028.md) | To do | R2 pilot, exit gate review (≥ 20 signed visits per doctor) and release notes | Gate | MUST | P2-05 | — | 1.5 | 15–15 | 01 Feb → 05 Feb 2027 | 72% Medium |
 | [MDV-P2-030](MDV-P2-030.md) | To do | Import the 12 Nov 2026 design (one-page chart, one-page consultation, Add medicine) and plan the upgrade epic | Task | MUST | P2-02, P2-04 | — | 0.5 | 15–15 | 01 Feb → 05 Feb 2027 | 95% High |

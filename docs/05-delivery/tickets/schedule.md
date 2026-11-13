@@ -331,7 +331,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P3-022](P3-ai-scribe/MDV-P3-022.md) | AI vendor DPA, no-training guarantee and regional processing confirmed per country | P3 | wk 13–15 | 75% |
 | [MDV-P3-023](P3-ai-scribe/MDV-P3-023.md) | Legal review of recording consent in each market | P3 | wk 13–14 | 60% |
 
-## Week 14 · 25 Jan 2027 – 29 Jan 2027 · load 34.7 dev-days ⚠ over capacity
+## Week 14 · 25 Jan 2027 – 29 Jan 2027 · load 34.5 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|

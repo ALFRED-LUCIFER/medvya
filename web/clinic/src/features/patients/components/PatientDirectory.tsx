@@ -1,10 +1,10 @@
 import { useRef } from 'react';
 import { Link } from 'react-router';
-import { ChevronLeft, ChevronRight, CircleAlert, Search, TriangleAlert } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CircleAlert, Info, Search, TriangleAlert } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, Input, Label, buttonVariants, cn, PageContainer, PageHeader, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@medvya/ui';
+import { Button, EmptyState, Input, Label, PageContainer, PageHeader, PageMessage, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead,
+  TableHeader, TableRow, Tag, Tooltip, buttonVariants, cn } from '@medvya/ui';
 import { directoryColumns, directoryFilters, pageCount, spokenExtras, type DirectoryFilter, type PatientSummary, type SearchErrorCode, type SearchResult } from '../domain/directory';
-import PatientsMessage from './PatientsMessage';
 
 type Props = {
   text: string;
@@ -38,36 +38,38 @@ export default function PatientDirectory(p: Props) {
     : p.state === 'ready' && p.result ? (p.result.items.length === 0 ? t('patients.empty') : t(`patients.matchedOn.${p.result.matchedOn}`, { n: p.result.total }))
     : '';
   return (
-    <PageContainer width="reading" className="gap-5">
-      <PageHeader title={t('patients.directory.title')} description={t('patients.directory.intro')}>
-        {p.mergePath && <Link to={p.mergePath} className={cn(buttonVariants({ variant: 'link' }), 'self-start px-0')}>{t('merge.open')}</Link>}
-      </PageHeader>
+    <PageContainer width="reading">
+      <PageHeader title={t('patients.directory.title')}
+        actions={p.mergePath && <Link to={p.mergePath} className={buttonVariants({ variant: 'link' })}>{t('merge.open')}</Link>} />
 
-      <form role="search" className="flex flex-col gap-2 rounded-xl border bg-card p-4" onSubmit={e => { e.preventDefault(); p.onSubmit(); }}>
-        <Label htmlFor="patient-search">{t('patients.search.label')}</Label>
-        <div className="flex flex-wrap gap-2">
-          <Input id="patient-search" type="search" autoComplete="off" spellCheck={false} maxLength={100} value={p.text}
+      {/* Search and filter on one 44 px row (audit B-16): the Search button names the field (WCAG G167), the hint sits behind the info button. */}
+      <div>
+        <form role="search" className="flex flex-wrap items-center gap-2" onSubmit={e => { e.preventDefault(); p.onSubmit(); }}>
+          <Label htmlFor="patient-search" className="sr-only">{t('patients.search.label')}</Label>
+          <Input id="patient-search" type="search" autoComplete="off" spellCheck={false} maxLength={100} value={p.text} placeholder={t('patients.search.label')}
             onChange={e => p.onTextChange(e.target.value)} aria-describedby={invalid ? `${errorId} ${hintId}` : hintId}
             aria-invalid={invalid || undefined} className="min-w-0 flex-1 basis-60" />
+          <Tooltip content={t('patients.search.hint')}>
+            <Button type="button" variant="ghost" size="icon" aria-label={t('patients.search.about')}><Info aria-hidden /></Button>
+          </Tooltip>
           <Button type="submit"><Search aria-hidden />{t('patients.search.submit')}</Button>
-        </div>
-        <p id={hintId} className="text-sm text-muted-foreground">{t('patients.search.hint')}</p>
+          <span className="flex items-center gap-2">
+            <Label htmlFor="patient-filter">{t('patients.filter.label')}</Label>
+            <Select value={p.filter} onValueChange={v => p.onFilterChange(v as DirectoryFilter)}>
+              <SelectTrigger id="patient-filter" className="w-auto"><SelectValue /></SelectTrigger>
+              <SelectContent>{directoryFilters.map(f => <SelectItem key={f} value={f}>{t(`patients.filter.${f}`)}</SelectItem>)}</SelectContent>
+            </Select>
+          </span>
+          <p id={hintId} className="sr-only">{t('patients.search.hint')}</p>
+        </form>
         <div aria-live="polite">
           {invalid && (
-            <p id={errorId} className="flex items-center gap-1.5 text-sm font-semibold text-danger-700">
+            <p id={errorId} className="mt-2 flex items-center gap-1.5 text-sm font-semibold text-danger-700">
               <CircleAlert className="size-4 shrink-0" aria-hidden />
               {t(p.errorCode ? `patients.invalid.${p.errorCode}` : 'patients.invalid.generic')}
             </p>
           )}
         </div>
-      </form>
-
-      <div role="group" aria-label={t('patients.filter.label')} className="flex flex-wrap gap-2">
-        {directoryFilters.map(f => (
-          <Button key={f} variant={p.filter === f ? 'selected' : 'outline'} aria-pressed={p.filter === f} onClick={() => p.onFilterChange(f)}>
-            {t(`patients.filter.${f}`)}
-          </Button>
-        ))}
       </div>
 
       <p role="status" className="sr-only">{status}</p>
@@ -79,10 +81,11 @@ export default function PatientDirectory(p: Props) {
 function Results(p: Props) {
   const { t } = useI18n();
   const heading = useRef<HTMLHeadingElement>(null);
-  if (p.state === 'loading') return <PatientsMessage title={t('patients.loading')} />;
-  if (p.state === 'forbidden') return <PatientsMessage title={t('err.403')} body={t('patients.forbidden.body')} />;
+  // role={undefined}: the page's one status region above announces each change.
+  if (p.state === 'loading') return <PageMessage kind="busy" role={undefined}>{t('patients.loading')}</PageMessage>;
+  if (p.state === 'forbidden') return <PageMessage kind="denied" title={t('err.403')}>{t('patients.forbidden.body')}</PageMessage>;
   if (p.state === 'error' || p.state === 'notFound')
-    return <PatientsMessage title={t('patients.error.title')} body={t('patients.error.body')} action={{ label: t('patients.retry'), onClick: p.onRetry }} />;
+    return <PageMessage kind="error" role={undefined} title={t('patients.error.title')} action={<Button variant="outline" onClick={p.onRetry}>{t('patients.retry')}</Button>}>{t('patients.error.body')}</PageMessage>;
   if (p.state === 'invalid' || !p.result) return null;
 
   const r = p.result;
@@ -90,10 +93,9 @@ function Results(p: Props) {
   const toPage = (page: number) => { p.onPageChange(page); heading.current?.focus(); };
   if (r.items.length === 0)
     return (
-      <div className="flex flex-col items-start gap-2 rounded-xl border bg-card p-6">
-        <p className="font-bold">{t('patients.empty')}</p>
-        {p.registerPath && <Link to={p.registerPath} className={cn(buttonVariants({ variant: 'link' }), 'px-0')}>{t('patients.empty.register')}</Link>}
-      </div>
+      <EmptyState action={p.registerPath && <Link to={p.registerPath} className={buttonVariants({ variant: 'outline' })}>{t('patients.empty.register')}</Link>}>
+        {t('patients.empty')}
+      </EmptyState>
     );
 
   const pages = pageCount(r);
@@ -123,9 +125,6 @@ function Results(p: Props) {
   );
 }
 
-// One chip style for the row's marks, until the shared Tag exists (MDV-P1-083).
-const chip = 'inline-flex items-center gap-1 rounded-sm border bg-card px-2 py-1 text-xs font-bold';
-
 function Row({ row, to }: { row: PatientSummary; to: string }) {
   const { t, formatCalendarDate } = useI18n();
   const age = t(row.ageEstimated ? 'patients.ageEstimated' : 'patients.age', { age: row.ageYears });
@@ -147,21 +146,17 @@ function Row({ row, to }: { row: PatientSummary; to: string }) {
       <TableCell>{age}</TableCell>
       <TableCell>{sex}</TableCell>
       <TableCell className="whitespace-nowrap">{row.dateOfBirth && formatCalendarDate(row.dateOfBirth)}</TableCell>
-      <TableCell className="font-mono"><bdi dir="ltr">{t('patients.mrnTail', { mrn: row.mrnTail })}</bdi></TableCell>
-      <TableCell className="font-mono"><bdi dir="ltr">{t('patients.mobileTail', { phone: row.mobileTail })}</bdi></TableCell>
+      {/* The column heads say MRN and Phone; the cells show only the masked ending (audit B-16). */}
+      <TableCell className="font-mono"><bdi dir="ltr">{`··${row.mrnTail}`}</bdi></TableCell>
+      <TableCell className="font-mono"><bdi dir="ltr">{`··${row.mobileTail}`}</bdi></TableCell>
       <TableCell className="whitespace-nowrap">{row.lastVisitOn ? formatCalendarDate(row.lastVisitOn) : t('patients.row.noVisit')}</TableCell>
       <TableCell>
         <span className="flex flex-wrap gap-1">
           {row.duplicate && (
-            <span className={cn(chip, row.duplicate === 'PossibleDuplicate' && 'text-warning-700')}>
-              {row.duplicate === 'PossibleDuplicate' && <TriangleAlert className="size-3.5" aria-hidden />}{t(`patients.duplicate.${row.duplicate}`)}
-            </span>
+            <Tag size="sm" tone={row.duplicate === 'PossibleDuplicate' ? 'warning' : 'neutral'} label={t(`patients.duplicate.${row.duplicate}`)}
+              icon={row.duplicate === 'PossibleDuplicate' ? TriangleAlert : undefined} />
           )}
-          {incomplete && (
-            <span className={cn(chip, 'text-warning-700')}>
-              <TriangleAlert className="size-3.5" aria-hidden />{t('patients.status.Incomplete')}
-            </span>
-          )}
+          {incomplete && <Tag size="sm" tone="warning" icon={TriangleAlert} label={t('patients.status.Incomplete')} />}
         </span>
       </TableCell>
     </TableRow>

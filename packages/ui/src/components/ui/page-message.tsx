@@ -9,8 +9,10 @@ const kinds = {
   denied: { icon: Ban, tone: "text-danger-text", role: undefined },
 } satisfies Record<string, { icon: LucideIcon; tone: string; role?: "status" | "alert" }>
 
-type PageMessageProps = Omit<React.ComponentProps<"div">, "children" | "role"> & {
+type PageMessageProps = Omit<React.ComponentProps<"div">, "children"> & {
   kind: keyof typeof kinds
+  /** A short bold line above the sentence, when the sentence alone does not say what failed ("Patients could not be loaded"). Not a heading: the page keeps its PageHeader. */
+  title?: React.ReactNode
   /** One sentence: what is happening, or what is wrong and what to do. */
   children: React.ReactNode
   /** At most one next action, usually a Button. */
@@ -19,8 +21,11 @@ type PageMessageProps = Omit<React.ComponentProps<"div">, "children" | "role"> &
   icon?: LucideIcon
 }
 
-/** One message for busy, error, empty and denied: an icon, a sentence and at most one action (F-17, F-19). Busy is announced politely, error assertively. */
-function PageMessage({ kind, children, action, icon, className, ...props }: PageMessageProps) {
+/**
+ * One message for busy, error, empty and denied: an icon, a sentence and at most one action (F-17, F-19). Busy is announced politely, error assertively;
+ * a page that already keeps one live status region passes role={undefined}, so the change is not announced twice.
+ */
+function PageMessage({ kind, title, children, action, icon, className, ...props }: PageMessageProps) {
   const k = kinds[kind], Icon = icon ?? k.icon
   return (
     <div
@@ -32,6 +37,7 @@ function PageMessage({ kind, children, action, icon, className, ...props }: Page
       {...props}
     >
       <Icon className={cn("size-8", k.tone, kind === "busy" && "motion-safe:animate-spin")} aria-hidden />
+      {title && <p className="max-w-measure text-heading">{title}</p>}
       <p className="max-w-measure text-body-large">{children}</p>
       {action}
     </div>

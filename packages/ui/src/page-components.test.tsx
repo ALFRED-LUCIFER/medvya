@@ -43,6 +43,17 @@ describe('PageMessage and EmptyState', () => {
     expect(box.getAttribute('aria-busy')).toBe(kind === 'busy' ? 'true' : null);
   });
 
+  it('a title is a bold line above the sentence, not a heading', () => {
+    render(<PageMessage kind="error" title="Patients could not be loaded">Nothing was changed.</PageMessage>);
+    expect(screen.getByText('Patients could not be loaded').tagName).toBe('P');
+    expect(screen.queryByRole('heading')).toBeNull();
+  });
+
+  it('a page with its own live region can silence the message', () => {
+    const { container } = render(<PageMessage kind="error" role={undefined}>Nothing was changed.</PageMessage>);
+    expect(container.firstElementChild!.hasAttribute('role')).toBe(false);
+  });
+
   it('EmptyState is the empty PageMessage', () => {
     const { container } = render(<EmptyState>No patients match.</EmptyState>);
     expect(container.firstElementChild!.getAttribute('data-kind')).toBe('empty');

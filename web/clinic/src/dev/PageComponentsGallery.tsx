@@ -21,7 +21,7 @@ export default function PageComponentsGallery() {
       </div>
       <div className="grid gap-4 wide:grid-cols-2">
         <Card size="item"><PageMessage kind="busy">{t('board.loading')}</PageMessage></Card>
-        <Card size="item"><PageMessage kind="error" action={<Button variant="outline">{t('schedule.retry')}</Button>}>{t('appointment.messages.error')}</PageMessage></Card>
+        <Card size="item"><PageMessage kind="error" title={t('patients.error.title')} action={<Button variant="outline">{t('schedule.retry')}</Button>}>{t('patients.error.body')}</PageMessage></Card>
         <Card size="item"><EmptyState>{t('board.empty.body')}</EmptyState></Card>
         <Card size="item"><PageMessage kind="denied" action={<Button variant="outline">{t('session.signOut')}</Button>}>{t('state.removed.body')}</PageMessage></Card>
       </div>

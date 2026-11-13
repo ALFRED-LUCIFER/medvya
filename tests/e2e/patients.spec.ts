@@ -88,8 +88,10 @@ test('the desk finds a patient from the header, sees the full name and opens the
 test('filters reset to page one and reach the server as a filter, not as text', async ({ page }) => {
   const searches = await deskWith(page, found);
   await page.goto('/patients/directory');
-  await page.getByRole('button', { name: 'Incomplete registration' }).click();
-  await expect(page.getByRole('button', { name: 'Incomplete registration' })).toHaveAttribute('aria-pressed', 'true');
+  const show = page.getByRole('combobox', { name: 'Show' });
+  await show.click();
+  await page.getByRole('option', { name: 'Incomplete registration' }).click();
+  await expect(show).toHaveText('Incomplete registration');
   await expect.poll(() => searches.at(-1)?.postDataJSON()).toEqual({ query: null, filter: 'Incomplete', page: 1 });
 });
 
@@ -123,13 +125,27 @@ test('keyboard only: search, then open the first result', async ({ page }) => {
   await page.keyboard.type('meera');
   await page.keyboard.press('Enter');
   await expect(page.getByRole('heading', { name: 'Name matches: 2' })).toBeVisible();
+  await page.keyboard.press('Tab'); // "How search works"
   await page.keyboard.press('Tab'); // Search button
-  for (let i = 0; i < 3; i++) await page.keyboard.press('Tab'); // the three filters
+  await page.keyboard.press('Tab'); // the filter
   await page.keyboard.press('Tab'); // the results table's scroll area (focusable so a wide table scrolls by keyboard)
   await page.keyboard.press('Tab');
   await expect(page.getByRole('link', { name: /Meera Iyer \(synthetic\), 54 y/ })).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(page.getByRole('heading', { name: 'Meera Iyer (synthetic)' })).toBeVisible();
+});
+
+// MDV-P2-059 AC5 (audit B-16): search and filter share one 44 px row, so on a 1024 x 768 laptop the list starts by 300 px; cells do not repeat their column's name.
+test('at 1024 x 768 the first patient row starts at or above 300 px', async ({ page }) => {
+  await deskWith(page, found);
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await page.goto('/patients/directory');
+  const search = (await page.getByRole('search').boundingBox())!;
+  expect(search.height).toBe(44);
+  const first = page.getByRole('main').getByRole('table').getByRole('row').nth(1);
+  expect((await first.boundingBox())!.y).toBeLessThanOrEqual(300);
+  await expect(first.getByRole('cell').nth(3)).toHaveText('··4482');
+  await expect(first.getByRole('cell').nth(4)).toHaveText('··0101');
 });
 
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');

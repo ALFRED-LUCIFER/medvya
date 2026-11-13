@@ -2,14 +2,14 @@ import { expect, test, type Page } from '@playwright/test';
 import { choosePatient, expectNoAxeViolations, signIn, syntheticPatient, watchUrls } from './support';
 
 // MDV-P1-026: a recurring series through the real browser, Host.Api and PostgreSQL (no mocked API). A weekly series of four from the first
-// free slot of Dr. Rao next Tuesday; the second week is already taken, so the review shows the conflict and the desk moves it a day later. Then "this and
+// free slot of Dr. Rao four Tuesdays on; the second week is already taken, so the review shows the conflict and the desk moves it a day later. Then "this and
 // following" from the third visit cancels the third and fourth and keeps the first two. Synthetic people only (docs/00-overview/personas.md).
 const joseph = /A\. Joseph/;
 const doctor = 'Dr. Arjun Rao (synthetic)';
 const patient = syntheticPatient('Kavya', 'Pillai');
-// The browser's today is Tuesday 3 November 2026 (E2E_CLOCK_START). The series starts a week later, not today: the journey specs that run
-// before this one fill Dr. Rao's today (#1251). It falls on four Tuesdays, the second moved to Wednesday.
-const days = { first: '2026-11-10', taken: '2026-11-17', moved: '2026-11-18', third: '2026-11-24', fourth: '2026-12-01' };
+// The browser's today is Tuesday 3 November 2026 (E2E_CLOCK_START). The series starts four weeks later, on days no other spec books (#1251):
+// the journey specs that run before this one fill Dr. Rao's today and book a follow-up two weeks on (17 Nov). It falls on four Tuesdays, the second moved to Wednesday.
+const days = { first: '2026-11-24', taken: '2026-12-01', moved: '2026-12-02', third: '2026-12-08', fourth: '2026-12-15' };
 
 const rao = (page: Page) => page.getByRole('list', { name: /Dr\. Arjun Rao/ });
 const slot = (page: Page, time: string) => rao(page).getByRole('button', { name: `Book ${doctor} at ${time}` });
@@ -53,8 +53,8 @@ test('a weekly series: the review shows the conflict, the desk moves it, four vi
     await panel.getByRole('button', { name: 'Review series' }).click();
     const rows = panel.getByRole('listitem');
     await expect(rows).toHaveCount(4);
-    await expect(rows.nth(0)).toContainText(`Tue, 10 Nov at ${time}`);
-    await expect(rows.nth(1)).toContainText(`Tue, 17 Nov at ${time}`);
+    await expect(rows.nth(0)).toContainText(`Tue, 24 Nov at ${time}`);
+    await expect(rows.nth(1)).toContainText(`Tue, 1 Dec at ${time}`);
     await expect(rows.nth(1)).toContainText('This slot is no longer available'); // words, not colour alone
     await expect(rows.nth(1).getByRole('checkbox')).not.toBeChecked(); // a conflict starts skipped
     for (const i of [0, 2, 3]) await expect(rows.nth(i)).toContainText('Free');
@@ -67,7 +67,7 @@ test('a weekly series: the review shows the conflict, the desk moves it, four vi
     const day = rows.nth(1).getByLabel('Move to (day)');
     await day.fill(days.moved);
     await day.blur();
-    await expect(rows.nth(1)).toContainText(`Wed, 18 Nov at ${time}`);
+    await expect(rows.nth(1)).toContainText(`Wed, 2 Dec at ${time}`);
     await expect(rows.nth(1).getByRole('checkbox')).toBeChecked();
     const booked = page.waitForResponse(r => r.request().method() === 'POST' && new URL(r.url()).pathname === '/v1/appointments/series');
     await panel.getByRole('button', { name: 'Book visits (4)' }).click();

@@ -15,13 +15,16 @@ type Slots = {
   actions?: React.ReactNode
 }
 
-function Head({ title, intro, actions, level, id }: Slots & { level: 2 | 3; id?: string }) {
+function Head({ title, intro, actions, level, id, focusable }: Slots & { level: 2 | 3; id?: string; focusable?: boolean }) {
   if (!title && !intro && !actions) return null
   const H = level === 2 ? "h2" : "h3"
   return (
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div className="flex min-w-0 flex-col gap-1">
-        {title && <H id={id} className={level === 2 ? "text-heading" : "text-subheading"}>{title}</H>}
+        {title && (
+          <H id={id} tabIndex={focusable ? -1 : undefined}
+            className={cn(level === 2 ? "text-heading" : "text-subheading", focusable && "scroll-mt-20 focus:outline-none focus-visible:outline-2 focus-visible:outline-ring")}>{title}</H>
+        )}
         {intro && <p className="text-body text-muted-foreground">{intro}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
@@ -33,12 +36,16 @@ const InCard = React.createContext(false)
 // Vite and Vitest replace process.env.NODE_ENV; declared here so apps without Node types still compile.
 declare const process: { env: { NODE_ENV?: string } }
 
-type CardProps = Omit<React.ComponentProps<"section">, "title"> & Slots & { size?: keyof typeof cardSizes }
+type CardProps = Omit<React.ComponentProps<"section">, "title"> & Slots & {
+  size?: keyof typeof cardSizes
+  /** Gives the title this id and lets it take focus, for a link or a summary that jumps to the card. */
+  headingId?: string
+}
 
 /** A bordered surface. A section card titles with h2, a list-item card with h3; a titled section card is a region named by its title (item cards repeat in lists, so they are not landmarks). Never put a Card directly inside a Card. */
-function Card({ size = "section", title, intro, actions, className, children, ...props }: CardProps) {
+function Card({ size = "section", title, intro, actions, headingId, className, children, ...props }: CardProps) {
   const nested = React.useContext(InCard)
-  const id = React.useId()
+  const generated = React.useId(), id = headingId ?? generated
   // A bordered card in a bordered card is the pattern this component replaces (F-19); say so while developing.
   if (nested && process.env.NODE_ENV !== "production") console.error("Card: a bordered Card is nested in another Card. Use Section inside a Card.")
   return (
@@ -50,7 +57,7 @@ function Card({ size = "section", title, intro, actions, className, children, ..
       className={cn("flex min-w-0 flex-col border bg-card text-card-foreground", cardSizes[size], className)}
       {...props}
     >
-      <Head title={title} intro={intro} actions={actions} level={size === "section" ? 2 : 3} id={id} />
+      <Head title={title} intro={intro} actions={actions} level={size === "section" ? 2 : 3} id={id} focusable={!!headingId} />
       <InCard.Provider value>{children}</InCard.Provider>
     </section>
   )

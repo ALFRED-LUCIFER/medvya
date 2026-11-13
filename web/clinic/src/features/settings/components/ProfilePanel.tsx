@@ -100,12 +100,15 @@ export default function ProfilePanel(p: Props) {
             <p id="logo-file-hint" className="text-caption text-muted-foreground">{t('settings.logo.hint')}</p>
             {/* #896: the browser's own file button is in the browser's language, not the app's; a translated button stands in for it.
                 A bare input: the house Input's full width outlasts sr-only, which made the page scroll sideways. */}
-            <input id="logo-file" type="file" accept="image/png,image/jpeg" className="peer sr-only" disabled={p.uploading}
-              aria-invalid={logoError ? true : undefined} aria-describedby={logoError ? 'logo-file-hint logo-file-error' : 'logo-file-hint'}
-              onChange={e => { p.onLogo(e.currentTarget.files?.[0]); e.currentTarget.value = ''; }} />
-            <label htmlFor="logo-file" className={buttonVariants({ variant: 'outline', className: 'w-fit cursor-pointer peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring peer-disabled:pointer-events-none peer-disabled:opacity-50' })}>
-              {t('settings.logo.pick')}
-            </label>
+            {/* The wrapper anchors the hidden input on the button, so focusing it scrolls the button into view, not the field's label above it. */}
+            <span className="relative flex w-fit">
+              <input id="logo-file" type="file" accept="image/png,image/jpeg" className="peer sr-only" disabled={p.uploading}
+                aria-invalid={logoError ? true : undefined} aria-describedby={logoError ? 'logo-file-hint logo-file-error' : 'logo-file-hint'}
+                onChange={e => { p.onLogo(e.currentTarget.files?.[0]); e.currentTarget.value = ''; }} />
+              <label htmlFor="logo-file" className={buttonVariants({ variant: 'outline', className: 'w-fit cursor-pointer peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring peer-disabled:pointer-events-none peer-disabled:opacity-50' })}>
+                {t('settings.logo.pick')}
+              </label>
+            </span>
             {logoError && <p id="logo-file-error" role="alert" className="text-label text-danger-text">{logoError}</p>}
           </div>
           {p.hasLogo && <Button type="button" variant="outline" loading={p.removing} onClick={p.onRemoveLogo}>{t('settings.logo.remove')}</Button>}

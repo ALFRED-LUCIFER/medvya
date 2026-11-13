@@ -87,7 +87,6 @@
     "web/clinic/src/features/registration/components/Registration.tsx": 2,
     "web/clinic/src/features/registration/components/RegistrationSidePanel.tsx": 2,
     "web/clinic/src/features/registration/components/RegistrationSuccess.tsx": 1,
-    "web/clinic/src/features/settings/components/Section.tsx": 1,
     "web/clinic/src/features/settings/components/SettingsPage.tsx": 1,
     "web/clinic/src/features/shell/components/MorePage.tsx": 2,
     "web/clinic/src/features/shell/components/ShellMessage.tsx": 1,

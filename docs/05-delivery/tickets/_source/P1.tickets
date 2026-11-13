@@ -1125,7 +1125,7 @@ roles: Founder, Clinical advisor, pilot users
 labels: release, gate, pilot
 estimate: 2
 weeks: 10
-depends: MDV-P1-039, MDV-P1-040, MDV-P1-041, MDV-P1-022, MDV-P1-038
+depends: MDV-P1-039, MDV-P1-040, MDV-P1-041, MDV-P1-022, MDV-P1-038, MDV-P1-073
 confidence: 65 | Week 10 ends 01 Jan 2027; year-end holidays may prevent "2 consecutive weeks" in-window (open question Q-08).
 sources: PRD v2 §08 release process, P1 exit criteria; docs/01-prd/roadmap.md (calendar risks)
 desc:
@@ -1851,3 +1851,24 @@ tests:
 - Playwright: register at one location, find and open at another (journey J3 variant).
 - Security: ponytail-review (tenancy and consent), access log content, no PHI in logs.
 - Browser: English and Arabic, axe clean.
+
+=== MDV-P1-073
+title: Clinical advisor walks the six journeys and signs off (moved from MDV-P0-023)
+type: Gate
+epic: MDV-P1-E10
+prd: P0-07
+screens: X-03
+priority: MUST
+roles: Pilot clinic doctor, Founder
+labels: journeys, clinical, pilot
+estimate: 1
+weeks: 6
+depends: MDV-P0-023, MDV-P1-043
+confidence: 60 | Needs the pilot clinic's doctor and their time, so it follows the signed agreement (MDV-P1-043); the journeys and specs exist (MDV-P0-023).
+sources: docs/02-design/journeys.md; docs/02-design/source/Medvya Journeys
+desc:
+A person's task, moved out of MDV-P0-023 (it is P0 exit criterion 1) so the design-system epic could close. Decision 12 Nov 2026 (docs/releases/r0.md): the founder approves R0, and the clinician walk-through becomes the pilot entry check, done by the pilot clinic's own doctor; nothing clinical reaches a patient before it. Walk that doctor through J1–J6: the built steps on the Azure India dev environment, the rest on the storyboard. Record sign-off, or change requests with owners, per journey. Do it before the R1 pilot (MDV-P1-042) with at least one sprint left to build what the advisor asks for in the pilot clinic flow.
+ac:
+- Clinical advisor sign-off (or a list of requested changes with owners) for each of J1–J6 is recorded in docs/02-design/journeys.md with the date and the advisor's role.
+- Any change requested by the advisor is raised as a ticket in the relevant phase; changes to the pilot clinic flow are scheduled before MDV-P1-042.
+- The P0 exit gate item "Clinical advisor walks all six journeys and signs off" is evidenced.

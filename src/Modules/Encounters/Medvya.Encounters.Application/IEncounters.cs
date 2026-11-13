@@ -5,10 +5,13 @@ namespace Medvya.Encounters.Application;
 /// <summary>Start (or reopen) the consultation of one visit. <see cref="LeaveOpen"/>: the doctor chose to leave their other open consultation as it is.</summary>
 public sealed record StartEncounter(Guid AppointmentId, bool LeaveOpen = false);
 
-/// <summary>An encounter with its visit's room. Ids and codes only; the screen adds the patient's identity from the Patients module.</summary>
+/// <summary>
+/// An encounter with its visit's room. Ids and codes only; the screen adds the patient's identity from the Patients module.
+/// <see cref="IdentityConfirmedAt"/> and <see cref="IdentityConfirmedBy"/>: when and by whom identity was confirmed with the patient (MDV-P1-091).
+/// </summary>
 public sealed record EncounterView(
     Guid Id, Guid AppointmentId, Guid PatientId, Guid FacilityId, Guid LeadClinicianId, EncounterStatus Status, AuthorityMode AuthorityMode,
-    DateTimeOffset StartedAt, DateTimeOffset? EndedAt, string? Room);
+    DateTimeOffset StartedAt, DateTimeOffset? EndedAt, string? Room, DateTimeOffset? IdentityConfirmedAt, Guid? IdentityConfirmedBy);
 
 /// <summary>The doctor has another consultation open (with this or another patient): end it, or say to leave it open.</summary>
 public sealed class OpenEncounterException(Guid encounterId) : Exception("Another consultation is open.")
@@ -35,6 +38,14 @@ public interface IEncounters
 
     /// <summary>The allergy answer for the encounter's banner; same access as <see cref="GetAsync"/>, whose audit event covers it. Null: no such encounter.</summary>
     Task<AllergyBanner?> AllergiesAsync(Guid encounterId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The treating doctor (the clinician who leads this encounter, with clinical access) confirmed name and date of birth with the patient
+    /// (MDV-P1-091). The first confirmation stands: confirming again answers it unchanged. Also after the encounter ended, while its note may
+    /// still be signed. Null: no such encounter.
+    /// </summary>
+    /// <exception cref="Medvya.Tenancy.Application.ClinicalAccessDeniedException">Not the clinician who leads this encounter.</exception>
+    Task<EncounterView?> ConfirmIdentityAsync(Guid encounterId, CancellationToken cancellationToken = default);
 
     /// <summary>Ends the encounter (the visit moves on to Billing); ending an ended one returns it. Null: no such encounter.</summary>
     Task<EncounterView?> EndAsync(Guid encounterId, CancellationToken cancellationToken = default);

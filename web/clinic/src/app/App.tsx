@@ -175,7 +175,7 @@ export default function App({ locale, onLocaleChange }: Props) {
           {nursePath && <Route path={`${nursePath}/:appointmentId`} element={<NurseIntakeRoute online={online} nursePath={nursePath} />} />}
           {/* A consultation (MDV-P2-001) for any role that treats patients; the server checks the care relationship on every call. */}
           {['Read', 'Limited', 'Full', 'Sign'].includes(active.capabilities.Patient360Chart ?? 'None') &&
-            <Route path="/consult/:encounterId" element={<ConsultRoute boardPath={pathOf('frontDesk') ?? '/'} online={online} canOrder={active.capabilities.PrescriptionsOrders === 'Sign'} canReconcile={active.capabilities.Patient360Chart === 'Full'} canSign={active.capabilities.ClinicalNotes === 'Sign'} />} />}
+            <Route path="/consult/:encounterId" element={<ConsultRoute boardPath={pathOf('frontDesk') ?? '/'} online={online} canOrder={active.capabilities.PrescriptionsOrders === 'Sign'} canReconcile={active.capabilities.Patient360Chart === 'Full'} canSign={active.capabilities.ClinicalNotes === 'Sign'} userId={shell.session?.user.id ?? ''} />} />}
           {/* The signed note's print view and PDF (MDV-P2-013): the note's readers (Patient 360 at Full); the server decides for this patient. */}
           {active.capabilities.Patient360Chart === 'Full' &&
             <Route path="/consult/:encounterId/note/print" element={<NotePrintRoute />} />}

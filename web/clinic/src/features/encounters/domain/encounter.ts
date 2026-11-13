@@ -8,6 +8,8 @@ export type EncounterStatus = 'Active' | 'Ended';
 export type Encounter = {
   id: string; appointmentId: string; patientId: string; facilityId: string; leadClinicianId: string;
   status: EncounterStatus; authorityMode: 'Medvya'; startedAt: string; endedAt: string | null; room: string | null;
+  /** MDV-P1-091: when and by whom the treating doctor confirmed name and date of birth with the patient; null until they press it. */
+  identityConfirmedAt: string | null; identityConfirmedBy: string | null;
 };
 
 /** The identity banner of every clinical screen: who the encounter is for, and their treatment consent. */

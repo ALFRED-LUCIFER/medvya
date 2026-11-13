@@ -53,10 +53,18 @@ export type NoteMock = {
   problems: { id: string; code: string | null; description: string; verification: string; status: 'Active' | 'Resolved'; addedHere: boolean; confirmed: boolean }[];
   /** The visit's vitals and allergies entry in the consultation (MDV audit P0-2): nothing recorded until the doctor confirms "no known allergies". */
   noKnownAllergies: boolean;
+  /** MDV-P1-091: when the doctor pressed "Confirmed with the patient" (the encounter's stored confirmation); confirmed unless a spec clears it. */
+  identityConfirmedAt: string | null; identityConfirms: number;
 };
 
+/** The encounter as the server sends it in the banner, with the stored identity confirmation of the mock (MDV-P1-091). */
+export const encounterOf = (mock: Pick<NoteMock, 'identityConfirmedAt'> | null) => ({
+  id: 'e-1', appointmentId: 'a1', patientId: 'p-a1', facilityId: 'f-1', leadClinicianId: 'u-rao', status: 'Active', authorityMode: 'Medvya',
+  startedAt: '2026-10-19T04:35:00Z', endedAt: null, room: 'Room 3', identityConfirmedAt: mock?.identityConfirmedAt ?? null, identityConfirmedBy: mock?.identityConfirmedAt ? 'u-rao' : null,
+});
+
 export async function mockNote(page: Page, seed: Partial<Note> = {}): Promise<NoteMock> {
-  const mock: NoteMock = { note: { templateKey: 'general-opd', sections: {}, version: 0, status: 'Draft', signAsName: signer, recordingConsent: null, undecidedAi: [], ...seed }, puts: [], chosen: [], next: null, saveDelayMs: 0, signs: [], reauths: [], reauthed: false, signNext: null, reconciliation: { confirmedAt: null, total: 0 }, addendumPosts: [], pdfs: 0, pdfNext: null, vitals: [], previous: [], chiefComplaint: null, noKnownAllergies: false,
+  const mock: NoteMock = { note: { templateKey: 'general-opd', sections: {}, version: 0, status: 'Draft', signAsName: signer, recordingConsent: null, undecidedAi: [], ...seed }, puts: [], chosen: [], next: null, saveDelayMs: 0, signs: [], reauths: [], reauthed: false, signNext: null, reconciliation: { confirmedAt: null, total: 0 }, addendumPosts: [], pdfs: 0, pdfNext: null, vitals: [], previous: [], chiefComplaint: null, noKnownAllergies: false, identityConfirmedAt: '2026-10-19T04:36:00Z', identityConfirms: 0,
     problems: [{ id: 'pr-1', code: 'E11.9', description: 'Type 2 diabetes (synthetic)', verification: 'Verified', status: 'Active', addedHere: false, confirmed: true }] };
   await page.route('**/v1/encounters/e-1/medicines/reconciliation', r => r.fulfill({ json: { encounterId: 'e-1', patientId: 'p-a1', rows: [], decided: 0, disagree: 0, ...mock.reconciliation } }));
   await page.route('**/v1/encounters/e-1/problems', r => r.fulfill({ json: { encounterId: 'e-1', patientId: 'p-a1', rows: mock.problems, locked: false } }));
@@ -67,6 +75,11 @@ export async function mockNote(page: Page, seed: Partial<Note> = {}): Promise<No
   await page.route('**/v1/intake/a1', r => r.fulfill({ json: { intake: intake(), timeZone: 'Asia/Kolkata',
     patient: { id: 'p-a1', fullName: 'Meera Iyer (synthetic)', mrn: '000001', dateOfBirth: '1972-03-12', ageYears: 54, sexAtBirth: 'Female' } } }));
   await page.route('**/v1/intake/a1/no-known-allergies', r => { mock.noKnownAllergies = true; return r.fulfill({ json: intake() }); });
+  await page.route('**/v1/encounters/e-1/identity-confirmation', r => {
+    mock.identityConfirms++;
+    mock.identityConfirmedAt ??= '2026-10-19T04:37:00Z';
+    return r.fulfill({ json: { ...encounterOf(mock), room: 'Room 3' } });
+  });
   const view = () => ({ encounterId: 'e-1', templateVersion: 1, manual: true, updatedAt: null, ...mock.note });
   await page.route('**/v1/encounters/e-1/note', async r => {
     if (r.request().method() === 'GET') return r.fulfill({ json: view() });

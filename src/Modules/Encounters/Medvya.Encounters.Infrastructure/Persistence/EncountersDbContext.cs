@@ -49,7 +49,11 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
             e.HasIndex(x => new { x.TenantId, x.AppointmentId }).IsUnique(); // one encounter per visit, even for two simultaneous starts
             e.HasIndex(x => new { x.TenantId, x.LeadClinicianId, x.Status }); // the doctor's open consultation
             e.HasIndex(x => new { x.TenantId, x.PatientId }); // care relationship and merges
-            e.ToTable(t => t.HasCheckConstraint("CK_Encounters_EndedHasTime", "(\"Status\" = 'Ended') = (\"EndedAt\" IS NOT NULL)"));
+            e.ToTable(t =>
+            {
+                t.HasCheckConstraint("CK_Encounters_EndedHasTime", "(\"Status\" = 'Ended') = (\"EndedAt\" IS NOT NULL)");
+                t.HasCheckConstraint("CK_Encounters_IdentityConfirmedHasWho", "(\"IdentityConfirmedAt\" IS NULL) = (\"IdentityConfirmedBy\" IS NULL)");
+            });
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         // Chart facts (MDV-P2-004): one table each, by patient. Enums are stored as their names.

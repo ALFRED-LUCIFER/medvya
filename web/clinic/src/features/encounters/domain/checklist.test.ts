@@ -3,14 +3,14 @@ import { remainingItems, sectionTicks, signChecklist, templateOwnSections, type 
 import { signFailure } from './note';
 
 const ready: ChecklistInput = {
-  identityShown: true, allergyState: 'NoKnownAllergies', reconciliation: { confirmedAt: null, total: 0 }, recordingConsent: 'Declined', undecidedAi: [],
+  identityConfirmed: true, allergyState: 'NoKnownAllergies', reconciliation: { confirmedAt: null, total: 0 }, recordingConsent: 'Declined', undecidedAi: [],
   sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' }, diagnosisRecorded: true,
 };
 const state = (i: ChecklistInput) => Object.fromEntries(signChecklist(i).map(x => [x.id, x.state]));
 
 describe('review and sign checklist (MDV-P2-044)', () => {
-  it('is complete for a reviewed note and lists the seven items in order, with no recording consent row until recording exists (MDV-AUDIT-1092)', () => {
-    expect(signChecklist(ready).map(x => x.id)).toEqual(['identity', 'allergies', 'medicines', 'history', 'ai', 'diagnoses', 'plan']);
+  it('is complete for a reviewed note and lists the six items in order, with no recording consent row until recording exists (MDV-AUDIT-1092) and no AI row until AI drafting exists (MDV-P1-091)', () => {
+    expect(signChecklist(ready).map(x => x.id)).toEqual(['identity', 'allergies', 'medicines', 'history', 'diagnoses', 'plan']);
     expect(remainingItems(signChecklist(ready))).toBe(0);
   });
 
@@ -24,6 +24,21 @@ describe('review and sign checklist (MDV-P2-044)', () => {
   it('a reconciliation with medicines is done only once confirmed', () => {
     expect(state({ ...ready, reconciliation: { confirmedAt: null, total: 2 } }).medicines).toBe('todo');
     expect(state({ ...ready, reconciliation: { confirmedAt: '2026-11-12T05:00:00Z', total: 2 } }).medicines).toBe('done');
+  });
+
+  // MDV-P1-091: the identity item reports only what happened. The banner is on screen on every consultation; only the doctor's stored
+  // "Confirmed with the patient" makes the item done, and until then it counts against signing.
+  it('identity is not done on a newly opened consultation, and is done only by the stored confirmation', () => {
+    const opened = { ...ready, identityConfirmed: false };
+    expect(state(opened).identity).toBe('todo');
+    expect(remainingItems(signChecklist(opened))).toBe(1); // signing stays locked
+    expect(state(ready).identity).toBe('done');
+    expect(remainingItems(signChecklist(ready))).toBe(0);
+  });
+
+  it('no AI line while the clinic has no AI drafting; one the server reports undecided is still shown and locks signing', () => {
+    expect(signChecklist(ready).some(x => x.id === 'ai')).toBe(false);
+    expect(state({ ...ready, undecidedAi: ['plan'] }).ai).toBe('todo');
   });
 
   it('an undecided AI draft locks signing and its section stays unreviewed', () => {

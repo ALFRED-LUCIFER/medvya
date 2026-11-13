@@ -20,12 +20,13 @@ const at = '2026-10-19T04:30:00Z'; // 10:00 IST
 // Steps 9 to 12 (MDV-P2-045): Meera's one-page chart with her penicillin allergy and the consultation e-1 open; on the real stack in fullstack/j2.spec.ts.
 const meera = { id: 'p-a1', fullName: 'Meera Iyer', mrn: '000001', dateOfBirth: '1972-03-14', ageYears: 54, sexAtBirth: 'Female', preferredLanguage: null };
 const penicillin = { substance: 'Penicillin', reaction: 'Rash', status: 'PatientReported', source: 'PatientReported' };
-async function mockChart(page: Page) {
+async function mockChart(page: Page, identityConfirmedAt: string | null = at) {
   await page.route('**/v1/me/context', r => r.fulfill({ json: doctor }));
   await page.route('**/v1/patients/p-a1/chart', r => r.fulfill({ json: { patient: meera, treatmentConsent: true, timeZone: 'Asia/Kolkata', lifeStage: 'Adult', historySections: [], pregnancy: { open: null, ruledOut: null },
     chart: { allergyState: 'Listed', allergies: [penicillin], medicines: [], problems: [], lastVitals: [], lastLabs: [], bmi: null, trends: [], recentEncounters: [], openEncounterId: 'e-1', history: [], bloodGroup: null, careTeam: [] } } }));
   await page.route('**/v1/encounters/e-1', r => r.fulfill({ json: { timeZone: 'Asia/Kolkata', treatmentConsent: true, patient: meera, allergies: { state: 'Listed', allergies: [penicillin] },
-    encounter: { id: 'e-1', appointmentId: 'a1', patientId: 'p-a1', facilityId: 'f-1', leadClinicianId: 'u-rao', status: 'Active', authorityMode: 'Medvya', startedAt: at, endedAt: null, room: 'Room 3' } } }));
+    encounter: { id: 'e-1', appointmentId: 'a1', patientId: 'p-a1', facilityId: 'f-1', leadClinicianId: 'u-rao', status: 'Active', authorityMode: 'Medvya', startedAt: at, endedAt: null, room: 'Room 3',
+      identityConfirmedAt, identityConfirmedBy: identityConfirmedAt && 'u-rao' } } }));
 }
 
 // J2.5 is "Resolve conflicts & sign": signing is MDV-P2-012, so the step stays pending below. Its conflict half is built (MDV-P2-011, E-07):
@@ -96,15 +97,20 @@ journey('J2', {
     await expect(panel.getByText('A serious finding blocks this medicine.', { exact: false })).toBeVisible();
     await expect(panel.getByRole('button', { name: 'Add to prescription' })).toBeDisabled();
   },
-  // E-04 (MDV-P2-041, MDV-P2-044): the one-page consultation; Sign stays locked until the checklist is complete (here, the recording consent).
+  // E-04 (MDV-P2-041, MDV-P2-044): the one-page consultation; Sign stays locked until the checklist is complete. Here the last item is the doctor's
+  // own "Confirmed with the patient" (MDV-P1-091): showing the patient is never counted as a confirmation.
   11: async ({ page }) => {
-    await mockChart(page);
+    await mockChart(page, null);
     await mockNote(page, { version: 1, sections: { chiefComplaint: 'Review of sugars', assessment: 'Type 2 diabetes', plan: 'Continue metformin' } });
     await page.goto('/consult/e-1');
     const note = page.getByRole('region', { name: 'Consultation note' });
     await expect(note.getByRole('navigation', { name: 'Note sections' }).getByRole('link')).toHaveCount(7);
     const sign = note.getByRole('button', { name: 'Sign note' });
     await expect(note.getByRole('group', { name: 'Recording consent for this visit' })).toHaveCount(0); // MDV-AUDIT-1092
+    await expect(sign).toBeDisabled();
+    await expect(sign).toHaveAccessibleDescription('1 item still needs your review before signing');
+    await page.getByRole('region', { name: 'Patient identity' }).getByRole('button', { name: 'Confirmed with the patient' }).click();
+    await expect(page.getByRole('region', { name: 'Patient identity' })).toContainText(/Identity confirmed with the patient at \d\d:\d\d/);
     await expect(sign).toBeEnabled();
     await expect(sign).toHaveAccessibleDescription('Everything reviewed. Ready to sign.');
   },

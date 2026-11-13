@@ -72,6 +72,11 @@ public static class EncounterEndpoints
                 await service.EndAsync(encounterId, ct) is { } ended ? Results.Ok(ended) : Results.NotFound())
             .AuditedByUseCase("encounter.end", "encounter", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
 
+        // MDV-P1-091: "Confirmed with the patient". The use case allows only the clinician who leads this encounter, and audits who and when.
+        encounters.MapPost("/{encounterId:guid}/identity-confirmation", async (Guid encounterId, [FromServices] IEncounters service, CancellationToken ct) =>
+                await service.ConfirmIdentityAsync(encounterId, ct) is { } confirmed ? Results.Ok(confirmed) : Results.NotFound())
+            .AuditedByUseCase("encounter.identity.confirm", "encounter", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
+
         // Patient 360 (E-01). Policy: a role with the Patient 360 capability (reception has none: refused, audited as denied). The use case
         // then checks the care relationship at the session's facility and audits the read with the patient and purpose treatment.
         app.MapGet("/v1/patients/{patientId:guid}/chart", Chart)

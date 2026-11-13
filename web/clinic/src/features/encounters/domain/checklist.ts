@@ -1,11 +1,11 @@
 import type { MessageKey } from '@medvya/i18n';
 import type { AllergyState } from '../../patient360/domain/chart';
-import { isBlank, recordingAvailable, structuredIds, type NoteSections, type NoteTemplate, type RecordingConsent } from './note';
+import { aiDraftingAvailable, isBlank, recordingAvailable, structuredIds, type NoteSections, type NoteTemplate, type RecordingConsent } from './note';
 
 // The review-and-sign checklist (MDV-P2-044, E-04/E-06). Worked out from the note, the encounter banner and the reconciliation every time;
 // nothing of it is stored. The server refuses a signature without a recorded consent, with an undecided AI draft or a blank required section,
 // so the locked button is not the only control; it also refuses one while allergies are not recorded (MDV audit P0-2). Identity and medicines
-// are checked here only.
+// are checked here only. Each item reports only what happened (MDV-P1-091): identity is done only by the doctor's stored confirmation.
 export const checklistIds = ['identity', 'allergies', 'medicines', 'consent', 'history', 'ai', 'diagnoses', 'plan'] as const;
 export type ChecklistId = (typeof checklistIds)[number];
 /**
@@ -17,8 +17,8 @@ export type ChecklistState = 'done' | 'todo' | 'warn';
 export type ChecklistItem = { id: ChecklistId; state: ChecklistState };
 
 export type ChecklistInput = {
-  /** The banner with the patient's name and date of birth is on screen; the sign dialog repeats them. */
-  identityShown: boolean;
+  /** The treating doctor pressed "Confirmed with the patient" and the server stored who and when (MDV-P1-091); showing the banner is not a confirmation. */
+  identityConfirmed: boolean;
   allergyState: AllergyState | null;
   /** The visit's reconciliation; null when it could not be read. */
   reconciliation: { confirmedAt: string | null; total: number } | null;
@@ -38,7 +38,7 @@ const reviewed = (sections: NoteSections, undecidedAi: string[], key: string, id
 
 export function signChecklist(i: ChecklistInput): ChecklistItem[] {
   const done: Record<ChecklistId, boolean> = {
-    identity: i.identityShown,
+    identity: i.identityConfirmed,
     allergies: i.allergyState !== null && i.allergyState !== 'NotRecorded',
     medicines: !!i.reconciliation && (i.reconciliation.confirmedAt !== null || i.reconciliation.total === 0),
     consent: i.recordingConsent !== null,
@@ -47,7 +47,9 @@ export function signChecklist(i: ChecklistInput): ChecklistItem[] {
     diagnoses: reviewed(i.sections, i.undecidedAi, 'assessment', ['assessment']),
     plan: reviewed(i.sections, i.undecidedAi, 'plan', ['plan']),
   };
-  return checklistIds.filter(id => id !== 'consent' || recordingAvailable).map(id => ({
+  // The AI line only where AI drafting exists, or when the server reports an undecided AI draft anyway: never a Done for something that cannot happen.
+  const shown = (id: ChecklistId) => (id !== 'consent' || recordingAvailable) && (id !== 'ai' || aiDraftingAvailable || i.undecidedAi.length > 0);
+  return checklistIds.filter(shown).map(id => ({
     id,
     state: id === 'diagnoses' && done.diagnoses && !i.diagnosisRecorded ? 'warn' : done[id] ? 'done' : 'todo',
   }));

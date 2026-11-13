@@ -20,6 +20,8 @@ export const withTitle = (name: string) => (/^dr\.?\s/i.test(name) ? name : `Dr.
 export type NoteAddendum = { versionNo: number; amendsVersionNo: number; reason: string; text: string; signedBy: string; signedAt: string; contentHash: string; signerName?: string | null };
 /** shortcut: no recording exists before MDV-P3, so the consent step and its checklist row are hidden and signing never needs it (MDV-AUDIT-1092); flip to a tenant setting when recording ships. */
 export const recordingAvailable = false;
+/** shortcut: no AI drafting exists before MDV-P3, so the checklist's AI line is hidden (MDV-P1-091); flip to a tenant setting when AI drafting ships. */
+export const aiDraftingAvailable = false;
 /** The doctor's record of the patient's answer about recording this visit (MDV-P2-044); none yet means the note cannot be signed. */
 export const recordingConsents = ['Agreed', 'Declined', 'Withdrawn'] as const;
 export type RecordingConsent = (typeof recordingConsents)[number];

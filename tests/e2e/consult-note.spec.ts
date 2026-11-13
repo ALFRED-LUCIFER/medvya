@@ -1,6 +1,6 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
-import { mockNote } from './support/note';
+import { encounterOf, mockNote, type NoteMock } from './support/note';
 
 // MDV-P2-009: the consultation note editor on the consultation page, and the doctor's template choice (MDV-P2-025). CI has no API: the note and
 // template endpoints are mocked in the shapes the server sends (versioning, 409 stale_note and the audit rows are ConsultNoteTests on PostgreSQL).
@@ -17,15 +17,17 @@ const signer = 'Dr Asha Raman (synthetic)';
 // These specs cover the guided steps (the note as one card); the one-page view (MDV-P2-041) is consult-studio.spec.ts, over the same mocks.
 async function open(page: Page, seed: Parameters<typeof mockNote>[1] = {}, locale = 'en', context: typeof doctor = doctor, allergies = 'NoKnownAllergies') {
   await page.addInitScript(l => { localStorage.setItem('medvya.locale', l); localStorage.setItem('medvya.consultView', 'steps'); }, locale);
+  let mock: NoteMock | null = null; // the encounter route reads the mock's identity confirmation when it is asked, after the mock exists
   await page.route('**/v1/me/context', r => r.fulfill({ json: context }));
   await page.route('**/v1/encounters/e-1', r => r.fulfill({ json: {
-    encounter: { id: 'e-1', appointmentId: 'a1', patientId: 'p-a1', facilityId: 'f-1', leadClinicianId: 'u-rao', status: 'Active', authorityMode: 'Medvya', startedAt: at, endedAt: null, room: 'Room 3' },
+    encounter: encounterOf(mock),
     timeZone: 'Asia/Kolkata', treatmentConsent: true,
     patient: { id: 'p-a1', fullName: 'Meera Iyer (synthetic)', mrn: '000001', dateOfBirth: '1972-03-12', ageYears: 54, sexAtBirth: 'Female' },
     allergies: { state: allergies, allergies: [] } } }));
-  const mock = await mockNote(page, seed);
+  const made = await mockNote(page, seed);
+  mock = made;
   await page.goto('/consult/e-1');
-  return mock;
+  return made;
 }
 const note = (page: Page) => page.getByRole('region', { name: 'Consultation note' });
 
@@ -256,8 +258,8 @@ test('checklist: no recording consent step or row until recording exists, and Si
   await expect(sign).toHaveAccessibleDescription('Everything reviewed. Ready to sign.');
   const checklist = note(page).getByRole('region', { name: 'Review and sign' });
   await expect(checklist.getByRole('listitem')).toHaveText([
-    'Identity confirmed (name and date of birth)Done', 'Allergies reconciledDone', 'Medicines reconciledDone',
-    'History reviewedDone', 'Every AI suggestion accepted or dismissedDone', 'Diagnoses reviewedDone', 'Plan reviewedDone',
+    'Confirmed with the patient (name and date of birth)Done', 'Allergies reconciledDone', 'Medicines reconciledDone',
+    'History reviewedDone', 'Diagnoses reviewedDone', 'Plan reviewedDone', // no AI line while there is no AI drafting (MDV-P1-091)
   ]);
   await expect(note(page).getByRole('group', { name: 'Recording consent for this visit' })).toHaveCount(0); // MDV-AUDIT-1092
   await sign.click();

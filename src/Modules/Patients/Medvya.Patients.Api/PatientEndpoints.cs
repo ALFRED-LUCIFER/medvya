@@ -53,7 +53,7 @@ public sealed record DuplicateCheckRequest(string? FullName = null, DateOnly? Da
 
 /// <summary>The details that complete a quick registration (MDV-P1-015): address, payer or both.</summary>
 /// <summary>Version is the one the record was read at (PatientDetails.Version); required, so a save never overwrites a change it has not seen (#889).</summary>
-public sealed record CompletionRequest(PatientAddress? Address = null, PayerInput? Payer = null, ContactInput? EmergencyContact = null, uint? Version = null);
+public sealed record CompletionRequest(PatientAddress? Address = null, PayerInput? Payer = null, ContactInput? EmergencyContact = null, uint? Version = null, ContactChange? Contact = null);
 
 /// <summary>A registration from the desk (P-02). Facility and country are not here: the server takes them from the session.</summary>
 public sealed record RegisterRequest
@@ -260,7 +260,7 @@ public static class PatientEndpoints
         if (request.Version is null) return Invalid(new PatientValidationException([new("version", "required")]));
         try
         {
-            return await registry.CompleteRegistrationAsync(patientId, request.Address, request.Payer, request.EmergencyContact, request.Version, ct) is { } status
+            return await registry.CompleteRegistrationAsync(patientId, request.Address, request.Payer, request.EmergencyContact, request.Version, request.Contact, ct) is { } status
                 ? Results.Ok(new { status })
                 : Results.NotFound();
         }

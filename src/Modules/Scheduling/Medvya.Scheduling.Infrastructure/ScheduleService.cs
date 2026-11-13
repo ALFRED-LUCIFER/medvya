@@ -170,6 +170,9 @@ public sealed class ScheduleService(SchedulingDbContext db, SchedulingContext co
         return [.. visits.Where(a => a.State == AppointmentState.Booked).Select(a => new AppointmentToMove(a.Id, AppointmentReference.Of(a.Id), names.GetValueOrDefault(a.CalendarId, ""), a.VisitType, a.Start, a.End))];
     }
 
+    public Task<int> CountWithNurseAsync(CancellationToken cancellationToken = default) =>
+        db.Appointments.CountAsync(a => a.State == AppointmentState.WithNurse, cancellationToken);
+
     public async Task<ResourceView> AddResourceAsync(AddResource command, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);

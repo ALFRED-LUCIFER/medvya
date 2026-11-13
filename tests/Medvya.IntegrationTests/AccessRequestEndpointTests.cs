@@ -149,4 +149,52 @@ public sealed class AccessRequestEndpointTests(PostgresFixture sql) : IClassFixt
         var rows = (await db.Events.Where(e => e.Action.StartsWith("flag.")).ToListAsync()).OrderBy(e => e.Id).Select(e => (e.Action, e.ActorUserId)).ToList();
         Assert.Equal([("flag.enable", (Guid?)h.Admin), ("flag.disable", (Guid?)h.Admin)], rows);
     }
+
+    static async Task WithNurseAsync(SchedulingHarness at, int hour, Guid? patient = null)
+    {
+        var visit = await at.BookAsync(hour, patient: patient);
+        await at.FrontDesk(at.Reception).CheckInAsync(visit.Id, new Medvya.Scheduling.Application.CheckIn());
+        await at.FrontDesk(at.Reception).MoveAsync(visit.Id, new Medvya.Scheduling.Application.MoveVisit { State = Medvya.Scheduling.Domain.AppointmentState.WithNurse });
+    }
+
+    /// <summary>
+    /// MDV-P2-055: the switch tells the owner how many of this organisation's patients are with the nurse now, before and after a change; a booked
+    /// visit and another organisation's patient with the nurse do not count, and switching off moves nobody.
+    /// SAFETY, mutation check: drop the WithNurse condition in ScheduleService.CountWithNurseAsync and the booked visit counts (3).
+    /// </summary>
+    [Fact]
+    public async Task TheSwitchSaysHowManyOfThisOrganisationsPatientsAreWithTheNurseNow()
+    {
+        var other = new SchedulingHarness(sql);
+        await other.SeedAsync();
+        try
+        {
+            foreach (var at in new[] { h, other })
+            {
+                await at.DoctorTemplateAsync();
+                await at.StepsAsync(nurse: true, billing: false);
+            }
+            await WithNurseAsync(other, 10);
+            await WithNurseAsync(h, 10);
+            await WithNurseAsync(h, 11, h.SecondPatient);
+            await h.BookAsync(11, 40); // booked, not with the nurse
+
+            using (var read = await Client(h.Admin).GetAsync(U("/v1/settings/nurse-intake")))
+            {
+                var body = await read.Content.ReadFromJsonAsync<JsonElement>();
+                Assert.Equal((true, 2), (body.GetProperty("enabled").GetBoolean(), body.GetProperty("withNurse").GetInt32()));
+            }
+            using (var off = await Client(h.Admin).PutAsJsonAsync(U("/v1/settings/nurse-intake"), new { enabled = false }))
+            {
+                var body = await off.Content.ReadFromJsonAsync<JsonElement>();
+                Assert.Equal((false, 2), (body.GetProperty("enabled").GetBoolean(), body.GetProperty("withNurse").GetInt32())); // they stay with the nurse
+            }
+            using var nurse = await Client(h.Nurse).GetAsync(U("/v1/settings/nurse-intake"));
+            Assert.Equal(HttpStatusCode.Forbidden, nurse.StatusCode); // the count is the owner's, as the switch is
+        }
+        finally
+        {
+            await other.CloseAsync();
+        }
+    }
 }

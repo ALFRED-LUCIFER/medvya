@@ -15,8 +15,8 @@ const pending = () => [
   { id: 'r-2', patientId: 'p-2', patientName: 'Deepak Nair (synthetic)', mrn: '000002', requestedBy: 'u-nurse', requesterName: 'R. Priya (synthetic)', reason: 'SeeingPatientToday', requestedAt: '2026-11-06T05:00:00Z' },
 ];
 
-async function open(page: Page, { locale = 'en', path = '/settings?tab=requests', refuse = '' } = {}) {
-  const state = { requests: pending(), policy: 'AllFacilityClinicians', decisions: [] as { url: string; body: string; csrf: string | undefined }[], saved: [] as string[], intake: false, intakeSaves: [] as boolean[], contextLoads: 0,
+async function open(page: Page, { locale = 'en', path = '/settings?tab=requests', refuse = '', intake = false, withNurse = 0 } = {}) {
+  const state = { requests: pending(), policy: 'AllFacilityClinicians', decisions: [] as { url: string; body: string; csrf: string | undefined }[], saved: [] as string[], intake, intakeSaves: [] as boolean[], contextLoads: 0,
     queue: { order: 'Arrival', bookedFirst: false }, queueSaves: [] as unknown[] };
   await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
   await page.route('**/v1/me/context', r => {
@@ -28,7 +28,7 @@ async function open(page: Page, { locale = 'en', path = '/settings?tab=requests'
       state.intake = (JSON.parse(r.request().postData() ?? '{}') as { enabled: boolean }).enabled;
       state.intakeSaves.push(state.intake);
     }
-    return r.fulfill({ json: { enabled: state.intake } });
+    return r.fulfill({ json: { enabled: state.intake, withNurse } });
   });
   await page.route('**/v1/settings/queue-rule', r => {
     if (r.request().method() === 'PUT') {
@@ -104,10 +104,47 @@ test('the owner turns nurse intake on', async ({ page }) => {
   await expect(toggle).toHaveAttribute('aria-checked', 'false');
   const loads = state.contextLoads;
   await toggle.click();
+  const dialog = page.getByRole('dialog', { name: 'Switch nurse intake on?' }); // MDV-P2-055: every board changes, so it asks first
+  await expect(dialog).toContainText('From now on, checked-in patients go to the nurse first.');
+  await dialog.getByRole('button', { name: 'Switch on' }).click();
   await expect(toggle).toHaveAttribute('aria-checked', 'true');
   expect(state.intakeSaves).toEqual([true]);
   await expect.poll(() => state.contextLoads).toBeGreaterThan(loads);
 });
+
+async function axe(page: Page) {
+  await page.addScriptTag({ path: axePath });
+  return page.evaluate(async () => (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string }[] }> } }).axe.run()).violations.map(v => v.id));
+}
+
+// MDV-P2-055 AC3: switching off says how many patients are with the nurse now and what happens to them; nothing changes until confirmed.
+for (const [locale, t] of [
+  ['en', { title: 'Switch nurse intake off?', count: 'Patients with the nurse now: 2.', stay: 'stay in the With nurse column', keep: 'Keep it as it is', off: 'Switch off' }],
+  ['ar', { title: 'إيقاف الاستقبال التمريضي؟', count: 'المرضى مع الممرضة الآن: 2.', stay: 'في عمود «مع الممرضة»', keep: 'الإبقاء على الوضع الحالي', off: 'إيقاف' }],
+] as const)
+  test(`switching nurse intake off asks first, with how many are with the nurse, axe clean (${locale})`, async ({ page }) => {
+    const state = await open(page, { locale, path: '/settings?tab=nurse', intake: true, withNurse: 2 });
+    const toggle = page.getByRole('switch', { includeHidden: true }); // the modal dialog hides the page from the accessibility tree while open
+    await expect(toggle).toHaveAttribute('aria-checked', 'true');
+    await toggle.click();
+    const dialog = page.getByRole('dialog', { name: t.title });
+    await expect(dialog).toContainText(t.count);
+    await expect(dialog).toContainText(t.stay);
+    await expect(toggle).toHaveAttribute('aria-checked', 'true'); // nothing changes until confirmed
+    expect(state.intakeSaves).toEqual([]);
+    expect(await page.evaluate(() => document.documentElement.dir)).toBe(locale === 'ar' ? 'rtl' : 'ltr');
+    expect(await axe(page)).toEqual([]);
+
+    await dialog.getByRole('button', { name: t.keep, exact: true }).click(); // cancel: nothing saved, focus back on the switch
+    await expect(dialog).toHaveCount(0);
+    await expect(toggle).toBeFocused();
+    expect(state.intakeSaves).toEqual([]);
+
+    await toggle.click();
+    await page.getByRole('dialog').getByRole('button', { name: t.off, exact: true }).click();
+    await expect(toggle).toHaveAttribute('aria-checked', 'false');
+    expect(state.intakeSaves).toEqual([false]);
+  });
 
 // MDV-P1-103: the owner chooses the queue rule in Settings -> Clinical (the server allows only an owner or practice admin and audits it).
 // Clinics start on arrival order, the order the board already used.

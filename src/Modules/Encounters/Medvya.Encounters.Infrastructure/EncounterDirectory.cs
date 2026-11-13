@@ -16,7 +16,7 @@ public sealed class EncounterDirectory(EncountersDbContext db, IFollowUpBookings
 
     public async Task<EncounterView?> FindAsync(Guid encounterId, CancellationToken cancellationToken = default) =>
         await db.Encounters.AsNoTracking().Where(e => e.Id == encounterId)
-            .Select(e => new EncounterView(e.Id, e.AppointmentId, e.PatientId, e.FacilityId, e.LeadClinicianId, e.Status, e.AuthorityMode, e.StartedAt, e.EndedAt, null))
+            .Select(e => new EncounterView(e.Id, e.AppointmentId, e.PatientId, e.FacilityId, e.LeadClinicianId, e.Status, e.AuthorityMode, e.StartedAt, e.EndedAt, null, e.IdentityConfirmedAt, e.IdentityConfirmedBy))
             .SingleOrDefaultAsync(cancellationToken);
 }
 

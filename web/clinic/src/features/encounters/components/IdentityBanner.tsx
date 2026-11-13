@@ -1,5 +1,6 @@
 import { CircleAlert, CircleCheck, CircleHelp, DoorOpen } from 'lucide-react';
 import { ltr, useI18n } from '@medvya/i18n';
+import { Button } from '@medvya/ui';
 import { allergyStatusOf, bannerAllergies } from '../../patient360/domain/chart';
 import type { EncounterBanner } from '../domain/encounter';
 
@@ -8,8 +9,11 @@ import type { EncounterBanner } from '../domain/encounter';
  * wrong person. Allergy and consent state are words with an icon, never colour alone.
  * Allergies are the chart's: listed (with each status), no known allergies, or not recorded. Unknown is never worded as "none".
  * shortcut: the one-page consultation's patient strip (MDV-P2-041) is this banner; the life stage joins it when MDV-P2-032 adds it to the encounter.
+ * MDV-P1-091: "Confirmed with the patient" is the doctor's own tap, stored by the server with who and when; until then the banner says so in words.
  */
-export default function IdentityBanner({ banner }: { banner: EncounterBanner }) {
+export type IdentityConfirmation = { canConfirm: boolean; confirming: boolean; confirmFailed: boolean; onConfirm: () => void };
+
+export default function IdentityBanner({ banner, identity }: { banner: EncounterBanner; identity?: IdentityConfirmation }) {
   const { t, formatDate, formatTime, formatCalendarDate } = useI18n();
   const { patient, encounter, timeZone } = banner;
   const started = new Date(encounter.startedAt);
@@ -34,12 +38,24 @@ export default function IdentityBanner({ banner }: { banner: EncounterBanner }) 
             : <><CircleAlert aria-hidden className="size-4" />{t('consult.banner.consentNotRecorded')}</>}
         </li>
         <li className="inline-flex items-center gap-1.5">
+          {encounter.identityConfirmedAt
+            ? <><CircleCheck aria-hidden className="size-4" />{t('consult.banner.identityConfirmed', { time: formatTime(new Date(encounter.identityConfirmedAt), timeZone) })}</>
+            : <><CircleAlert aria-hidden className="size-4" />{t('consult.banner.identityNotConfirmed')}</>}
+        </li>
+        <li className="inline-flex items-center gap-1.5">
           <DoorOpen aria-hidden className="size-4" />
           {encounter.room
             ? t('consult.banner.when', { date: formatDate(started, timeZone), time: formatTime(started, timeZone), room: encounter.room })
             : t('consult.banner.whenNoRoom', { date: formatDate(started, timeZone), time: formatTime(started, timeZone) })}
         </li>
       </ul>
+      {!encounter.identityConfirmedAt && identity?.canConfirm && (
+        <div className="flex flex-wrap items-center gap-3">
+          <Button variant="outline" loading={identity.confirming} aria-describedby="identity-confirm-hint" onClick={identity.onConfirm}>{t('consult.banner.confirmIdentity')}</Button>
+          <span id="identity-confirm-hint" className="text-sm text-muted-foreground">{t('consult.banner.confirmIdentityHint')}</span>
+          {identity.confirmFailed && <span role="alert" className="font-bold text-danger-700">{t('consult.banner.confirmFailed')}</span>}
+        </div>
+      )}
     </section>
   );
 }

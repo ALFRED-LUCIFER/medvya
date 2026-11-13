@@ -36,14 +36,14 @@ import { useNoteTemplatesController } from '../features/encounters/hooks/useNote
 import { useAddendumController, useNotePrintController } from '../features/encounters/hooks/useSignedNoteController';
 
 /** Composition only: one consultation (MDV-P2-001) by its id in the address, with its note (MDV-P2-009); the server checks clinical access on every call. */
-type Props = { boardPath: string; online: boolean; canOrder: boolean; canReconcile: boolean; canSign: boolean };
+type Props = { boardPath: string; online: boolean; canOrder: boolean; canReconcile: boolean; canSign: boolean; userId: string };
 
 export default function ConsultRoute({ boardPath, ...rest }: Props) {
   const { encounterId = '' } = useParams();
   return <Consult key={encounterId} encounterId={encounterId} boardPath={boardPath} {...rest} />;
 }
 
-function Consult({ encounterId, boardPath, online, canOrder, canReconcile, canSign }: Props & { encounterId: string }) {
+function Consult({ encounterId, boardPath, online, canOrder, canReconcile, canSign, userId }: Props & { encounterId: string }) {
   const consult = useConsultController(encounterId);
   // One controller for both views (MDV-P2-041): switching keeps the form, the autosave and every typed word.
   const note = { ...useNoteController(encounterId, canSign, consult.banner?.timeZone, consult.banner), timeZone: consult.banner?.timeZone,
@@ -56,7 +56,8 @@ function Consult({ encounterId, boardPath, online, canOrder, canReconcile, canSi
     && <Entry appointmentId={consult.banner.encounter.appointmentId} online={online} onChanged={consult.onChartChanged} titled={titled} />;
   return (
     <div className="flex flex-col gap-4">
-      <ConsultPage {...consult} boardPath={boardPath} canReconcile={canReconcile}>
+      <ConsultPage {...consult} boardPath={boardPath} canReconcile={canReconcile}
+        canConfirmIdentity={canSign && consult.banner?.encounter.leadClinicianId === userId}>
         {consult.view === 'page' ? <ConsultStudio {...note} panel={consult.panel} onPanel={consult.onPanel} chart={consult.chart} plan={plan} entry={entry(false)}
           finish={!ended && <EndConsultation ending={consult.ending} onEnd={consult.onEnd} />} /> : <>{entry(true)}<NoteEditor {...note} /></>}
         <NoteHistory {...useAddendumController(encounterId, canSign)} timeZone={consult.banner?.timeZone} printPath={`/consult/${encounterId}/note/print`} />

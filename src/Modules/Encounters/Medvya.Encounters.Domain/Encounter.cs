@@ -31,4 +31,7 @@ public sealed class Encounter
     [Classification(DataClass.Internal)] public DateTimeOffset StartedAt { get; init; }
     [Classification(DataClass.Internal)] public DateTimeOffset? EndedAt { get; set; }
     [Classification(DataClass.Internal)] public Guid? EndedBy { get; set; }
+    /// <summary>MDV-P1-091: the treating doctor confirmed name and date of birth with the patient (one tap); null until then. Set once, never cleared.</summary>
+    [Classification(DataClass.Internal)] public DateTimeOffset? IdentityConfirmedAt { get; set; }
+    [Classification(DataClass.Internal)] public Guid? IdentityConfirmedBy { get; set; }
 }

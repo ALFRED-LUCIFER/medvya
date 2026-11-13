@@ -152,4 +152,89 @@ public sealed class EncounterEndpointTests(PostgresFixture sql) : IClassFixture<
         using var booked = await Client(h.Doctor).PostAsJsonAsync(U("/v1/encounters"), new { appointmentId = (await h.BookAsync(11, 20)).Id, leaveOpen = true });
         Assert.Equal((HttpStatusCode.Conflict, "not_arrived"), (booked.StatusCode, (await Json(booked)).GetProperty("code").GetString()));
     }
+
+    // MDV-P1-091: "Confirmed with the patient" is a stored act of the treating doctor, with who and when; nothing else ticks the identity item.
+    async Task<Guid> StartedAsync(Guid patient, int hour)
+    {
+        using var started = await Client(h.Doctor).PostAsJsonAsync(U("/v1/encounters"), new { appointmentId = await ArrivedAsync(patient, hour) });
+        return (await Json(started)).GetProperty("id").GetGuid();
+    }
+
+    Task<HttpResponseMessage> Confirm(Guid user, Guid encounter) => Client(user).PostAsync(U($"/v1/encounters/{encounter}/identity-confirmation"), null);
+
+    [Fact]
+    public async Task TheTreatingDoctorConfirmsIdentityWithThePatientOnceWithWhoAndWhenAndItIsAudited()
+    {
+        var id = await StartedAsync(h.Patient, 10);
+        using (var opened = await Client(h.Doctor).GetAsync(U($"/v1/encounters/{id}")))
+        {
+            var encounter = (await Json(opened)).GetProperty("encounter");
+            Assert.Equal(JsonValueKind.Null, encounter.GetProperty("identityConfirmedAt").ValueKind); // a new consultation: nobody has confirmed anything
+            Assert.Equal(JsonValueKind.Null, encounter.GetProperty("identityConfirmedBy").ValueKind);
+        }
+        var at = h.Clock.GetUtcNow();
+        using (var confirmed = await Confirm(h.Doctor, id))
+        {
+            Assert.Equal(HttpStatusCode.OK, confirmed.StatusCode);
+            var body = await Json(confirmed);
+            Assert.Equal((at, h.Doctor), (body.GetProperty("identityConfirmedAt").GetDateTimeOffset(), body.GetProperty("identityConfirmedBy").GetGuid()));
+        }
+        h.Clock.Advance(TimeSpan.FromMinutes(3));
+        using (var again = await Confirm(h.Doctor, id))
+            Assert.Equal(at, (await Json(again)).GetProperty("identityConfirmedAt").GetDateTimeOffset()); // the first confirmation stands
+        using (var opened = await Client(h.Doctor).GetAsync(U($"/v1/encounters/{id}")))
+            Assert.Equal(at, (await Json(opened)).GetProperty("encounter").GetProperty("identityConfirmedAt").GetDateTimeOffset()); // the banner reads it back
+
+        await using (var db = sql.Encounters(h.Tenant))
+        {
+            var row = await db.Encounters.SingleAsync(e => e.Id == id);
+            Assert.Equal((at, (Guid?)h.Doctor), (row.IdentityConfirmedAt!.Value, row.IdentityConfirmedBy));
+        }
+        await using var audit = sql.Audit(h.Tenant);
+        var rows = await audit.Events.Where(e => e.Action == "encounter.identity.confirm").OrderBy(e => e.Id).ToListAsync();
+        Assert.Equal(2, rows.Count);
+        Assert.All(rows, r => Assert.Equal((AuditOutcome.Allowed, (Guid?)h.Patient, (Guid?)h.Doctor, AuditPurpose.Treatment, (Guid?)id, "encounter"),
+            (r.Outcome, r.PatientId, r.ActorUserId, r.Purpose, r.ResourceId, r.ResourceType)));
+    }
+
+    [Fact]
+    public async Task OnlyTheDoctorLeadingTheConsultationCanConfirmIdentityAndNotOnceItHasEnded()
+    {
+        var id = await StartedAsync(h.Patient, 10);
+        using (var colleague = await Confirm(h.SecondDoctor, id)) // may open the chart (the clinic's default policy), but is not in the room
+            Assert.Equal((HttpStatusCode.Forbidden, "no_access"), (colleague.StatusCode, (await Json(colleague)).GetProperty("code").GetString()));
+        using (var nurse = await Confirm(h.Nurse, id))
+            Assert.Equal(HttpStatusCode.Forbidden, nurse.StatusCode);
+        using (var desk = await Confirm(h.Reception, id))
+            Assert.Equal(HttpStatusCode.Forbidden, desk.StatusCode); // no Patient 360 at all: the endpoint's policy
+        using (var unknown = await Confirm(h.Doctor, Guid.NewGuid()))
+            Assert.Equal(HttpStatusCode.NotFound, unknown.StatusCode);
+        await using (var db = sql.Encounters(h.Tenant))
+            Assert.Null((await db.Encounters.SingleAsync(e => e.Id == id)).IdentityConfirmedAt);
+
+        using (await Client(h.Doctor).PostAsync(U($"/v1/encounters/{id}/end"), null)) { }
+        using (var ended = await Confirm(h.Doctor, id))
+            Assert.Equal((HttpStatusCode.Conflict, "ended"), (ended.StatusCode, (await Json(ended)).GetProperty("code").GetString()));
+        await using (var db = sql.Encounters(h.Tenant))
+            Assert.Null((await db.Encounters.SingleAsync(e => e.Id == id)).IdentityConfirmedAt);
+
+        await using var audit = sql.Audit(h.Tenant);
+        Assert.Equal([AuditOutcome.Denied, AuditOutcome.Denied, AuditOutcome.Denied, AuditOutcome.NotFound],
+            (await audit.Events.Where(e => e.Action == "encounter.identity.confirm").OrderBy(e => e.Id).Select(e => e.Outcome).ToListAsync()).Take(4));
+    }
+
+    [Fact]
+    public async Task AnotherTenantNeitherSeesNorSetsTheConfirmationEvenWithTheFilterOff()
+    {
+        var id = await StartedAsync(h.Patient, 10);
+        using (await Confirm(h.Doctor, id)) { }
+        await using (var other = sql.Encounters(Guid.NewGuid()))
+        {
+            Assert.Empty(await other.Encounters.IgnoreQueryFilters().Where(e => e.Id == id).ToListAsync()); // layer 2: row-level security on its own
+            Assert.Equal(0, await other.Encounters.IgnoreQueryFilters().Where(e => e.Id == id)
+                .ExecuteUpdateAsync(x => x.SetProperty(e => e.IdentityConfirmedBy, Guid.NewGuid())));
+        }
+        await using var db = sql.Encounters(h.Tenant);
+        Assert.Equal((Guid?)h.Doctor, (await db.Encounters.SingleAsync(e => e.Id == id)).IdentityConfirmedBy);
+    }
 }

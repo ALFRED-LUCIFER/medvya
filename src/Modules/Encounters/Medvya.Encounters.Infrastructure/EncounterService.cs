@@ -20,7 +20,8 @@ namespace Medvya.Encounters.Infrastructure;
 public sealed class EncounterService(
     EncountersDbContext db, IConsultVisits visits, IClinicalAccess clinical, ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, TimeProvider clock) : IEncounters
 {
-    public const string StartAction = "encounter.start", ReadAction = "encounter.read", EndAction = "encounter.end", Resource = "encounter";
+    public const string StartAction = "encounter.start", ReadAction = "encounter.read", EndAction = "encounter.end",
+        ConfirmIdentityAction = "encounter.identity.confirm", Resource = "encounter";
     /// <summary>Starting and ending a consultation is a doctor's (Patient 360 at Full); reading the banner is any clinician's who treats.</summary>
     static readonly Access[] Leads = [Access.Full], Treats = [Access.Read, Access.Limited, Access.Full, Access.Sign];
 
@@ -82,6 +83,31 @@ public sealed class EncounterService(
         return ChartReads.BannerOf(await db.Allergies.AsNoTracking().Where(a => a.PatientId == encounter.PatientId).ToListAsync(cancellationToken));
     }
 
+    public async Task<EncounterView?> ConfirmIdentityAsync(Guid encounterId, CancellationToken cancellationToken = default)
+    {
+        if (await db.Encounters.AsNoTracking().SingleOrDefaultAsync(e => e.Id == encounterId, cancellationToken) is not { } encounter) return null;
+        await clinical.RequireAsync(encounter.PatientId, encounter.FacilityId, Capability.Patient360Chart, Leads, cancellationToken);
+        var me = user.UserId ?? throw new InvalidOperationException("No user.");
+        // Only the doctor in the room with the patient can say they confirmed it with them, not a colleague who may open the chart.
+        if (encounter.LeadClinicianId != me) throw new ClinicalAccessDeniedException(canRequest: false, requestPending: false);
+        if (encounter.Status == EncounterStatus.Ended) throw new EncounterEndedException();
+        var now = clock.GetUtcNow();
+
+        await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
+        // The first confirmation stands (a second tap, or two tabs at once, keeps who and when it was); a consultation ended meanwhile takes none.
+        if (await db.Encounters.Where(e => e.Id == encounterId && e.IdentityConfirmedAt == null && e.Status == EncounterStatus.Active)
+                .ExecuteUpdateAsync(s => s.SetProperty(e => e.IdentityConfirmedAt, now).SetProperty(e => e.IdentityConfirmedBy, me), cancellationToken) == 1)
+            (encounter.IdentityConfirmedAt, encounter.IdentityConfirmedBy) = (now, me);
+        else
+        {
+            encounter = await db.Encounters.AsNoTracking().SingleAsync(e => e.Id == encounterId, cancellationToken);
+            if (encounter.IdentityConfirmedAt is null) throw new EncounterEndedException();
+        }
+        await audit.WriteAsync(Event(ConfirmIdentityAction, encounter), tx.GetDbTransaction(), cancellationToken);
+        await tx.CommitAsync(cancellationToken);
+        return View(encounter, (await visits.FindAsync(encounter.AppointmentId, cancellationToken))?.Room);
+    }
+
     public async Task<EncounterView?> EndAsync(Guid encounterId, CancellationToken cancellationToken = default)
     {
         if (await db.Encounters.AsNoTracking().SingleOrDefaultAsync(e => e.Id == encounterId, cancellationToken) is not { } encounter) return null;
@@ -120,7 +146,7 @@ public sealed class EncounterService(
     Guid TenantId => tenant.TenantId ?? throw new InvalidOperationException("No tenant context.");
 
     static EncounterView View(Encounter e, string? room) =>
-        new(e.Id, e.AppointmentId, e.PatientId, e.FacilityId, e.LeadClinicianId, e.Status, e.AuthorityMode, e.StartedAt, e.EndedAt, room);
+        new(e.Id, e.AppointmentId, e.PatientId, e.FacilityId, e.LeadClinicianId, e.Status, e.AuthorityMode, e.StartedAt, e.EndedAt, room, e.IdentityConfirmedAt, e.IdentityConfirmedBy);
 }
 
 /// <summary>The visits with a consultation open (MDV-P1-100): the board shows them as with the doctor and the desk cannot close or undo them.</summary>

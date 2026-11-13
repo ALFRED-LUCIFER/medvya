@@ -10,6 +10,8 @@ import IdentityBanner from './IdentityBanner';
 type Props = {
   banner: EncounterBanner | null; loading: boolean; notFound: boolean; refusal: ClinicalRefusal | null; failed: boolean;
   ending: boolean; endFailed: boolean; onEnd: () => void;
+  /** MDV-P1-091: "Confirmed with the patient". Offered to the doctor leading this consultation, who signs; the server decides the same. */
+  canConfirmIdentity: boolean; confirming: boolean; confirmFailed: boolean; onConfirmIdentity: () => void;
   boardPath: string; canReconcile: boolean;
   /** One page or the guided steps (MDV-P2-041): the same note either way. */
   view: ConsultView; onView: (view: ConsultView) => void;
@@ -31,7 +33,7 @@ export default function ConsultPage(p: Props) {
   const ended = encounter.status === 'Ended';
   return (
     <div className="flex flex-col gap-4">
-      <IdentityBanner banner={p.banner} />
+      <IdentityBanner banner={p.banner} identity={{ canConfirm: p.canConfirmIdentity && !ended, confirming: p.confirming, confirmFailed: p.confirmFailed, onConfirm: p.onConfirmIdentity }} />
       <div className="flex flex-wrap items-center gap-3">
         {ended && <p role="status" className="font-bold">{t('consult.ended', { time: formatTime(new Date(encounter.endedAt!), p.banner.timeZone) })}</p>}
         {p.canReconcile && <Link to={`/consult/${encounter.id}/problems`} className={buttonVariants({ variant: 'outline' })}>{t('consult.codeProblems')}</Link>}

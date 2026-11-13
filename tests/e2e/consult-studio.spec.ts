@@ -1,6 +1,6 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
-import { mockNote } from './support/note';
+import { encounterOf, mockNote, type NoteMock } from './support/note';
 
 // MDV-P2-041: the consultation on one page (CONSULTATION STUDIO). CI has no API: the encounter, note, reconciliation and chart are mocked in the
 // shapes the server sends. The guided steps are consult-note.spec.ts; both views edit the same note through the same autosave.
@@ -15,9 +15,10 @@ const at = '2026-10-19T04:35:00Z';
 
 async function open(page: Page, seed: Parameters<typeof mockNote>[1] = {}, locale = 'en', banner = () => ({ state: 'Listed', allergies: [{ substance: 'Amoxicillin', reaction: 'Rash', status: 'Confirmed', source: 'ClinicianVerified' }] })) {
   await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
+  let mock: NoteMock | null = null; // the encounter route reads the mock's identity confirmation when it is asked, after the mock exists
   await page.route('**/v1/me/context', r => r.fulfill({ json: doctor }));
   await page.route('**/v1/encounters/e-1', r => r.fulfill({ json: {
-    encounter: { id: 'e-1', appointmentId: 'a1', patientId: 'p-a1', facilityId: 'f-1', leadClinicianId: 'u-rao', status: 'Active', authorityMode: 'Medvya', startedAt: at, endedAt: null, room: 'Room 3' },
+    encounter: encounterOf(mock),
     timeZone: 'Asia/Kolkata', treatmentConsent: true,
     patient: { id: 'p-a1', fullName: 'Meera Iyer (synthetic)', mrn: '000001', dateOfBirth: '1972-03-12', ageYears: 54, sexAtBirth: 'Female' },
     allergies: banner() } }));
@@ -26,9 +27,10 @@ async function open(page: Page, seed: Parameters<typeof mockNote>[1] = {}, local
     chart: { allergyState: 'Listed', allergies: [], lastVitals: [], trends: [], recentEncounters: [], openEncounterId: 'e-1',
       problems: [{ icd10Code: 'E11.9', description: 'Type 2 diabetes (synthetic)', verification: 'Verified', onsetOn: null, source: 'ClinicianVerified', status: 'Active' }],
       medicines: [{ name: 'Metformin', dose: '500 mg', state: 'Active', source: 'ClinicianVerified', stoppedAt: null }] } } }));
-  const mock = await mockNote(page, seed);
+  const made = await mockNote(page, seed);
+  mock = made;
   await page.goto('/consult/e-1');
-  return mock;
+  return made;
 }
 const note = (page: Page) => page.getByRole('region', { name: 'Consultation note' });
 const bar = (page: Page) => note(page).getByRole('navigation', { name: 'Note sections' });
@@ -50,7 +52,7 @@ test('opens on one page: no recording consent step, a section bar of seven numbe
   const panel = note(page).getByRole('complementary', { name: 'Consultation tools' });
   const sections = note(page).getByRole('heading', { name: '1 · Vitals' });
   expect((await panel.boundingBox())!.y).toBeLessThan((await sections.boundingBox())!.y + 200); // two columns: the panel is beside, not below
-  await expect(panel.getByRole('tab')).toHaveText(['Assist', 'Chart', 'Checklist 4/7']);
+  await expect(panel.getByRole('tab')).toHaveText(['Assist', 'Chart', 'Checklist 3/6']);
 });
 
 test('Sign note and End consultation are one bar that stays on screen however long the note is (MDV audit P1-04)', async ({ page }) => {
@@ -100,9 +102,9 @@ test('the chart tab summarises active problems and medicines; the checklist tab 
   await panel.getByRole('tab', { name: 'Chart' }).click();
   await expect(panel).toContainText('Type 2 diabetes (synthetic)');
   await expect(panel).toContainText('Metformin 500 mg');
-  await panel.getByRole('tab', { name: 'Checklist 7/7' }).click();
+  await panel.getByRole('tab', { name: 'Checklist 6/6' }).click();
   const items = panel.getByRole('region', { name: 'Review and sign' }).getByRole('listitem');
-  await expect(items).toHaveCount(7);
+  await expect(items).toHaveCount(6);
   await expect(items.filter({ hasText: 'Recording consent' })).toHaveCount(0); // MDV-AUDIT-1092: no row until recording exists
   await expect(items.filter({ hasText: 'To do' })).toHaveCount(0);
 });
@@ -235,3 +237,48 @@ for (const locale of ['en', 'ar']) {
     expect(await axe(page)).toEqual([]);
   });
 }
+
+// MDV-P1-091 (F-09): the checklist reports only what happened. A newly opened consultation has no identity item done, although the patient strip
+// shows name and date of birth; only the doctor's "Confirmed with the patient", stored by the server with who and when, makes it done. No AI line
+// while the clinic has no AI drafting. Done is said in words. Wording awaits the pilot doctor (question 5 of the validation plan).
+for (const locale of ['en', 'ar'])
+  test(`identity: not done when opened, done only after "Confirmed with the patient"; Sign follows; no AI line; axe clean (${locale})`, async ({ page }) => {
+    const ar = locale === 'ar';
+    const mock = await open(page, { version: 1, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' } }, locale);
+    mock.identityConfirmedAt = null; // a consultation nobody has confirmed yet
+    await page.reload();
+    const strip = page.getByRole('region', { name: ar ? 'هوية المريض' : 'Patient identity' });
+    await expect(strip).toContainText(ar ? 'الهوية: لم يتم التأكيد مع المريض بعد' : 'Identity: not yet confirmed with the patient');
+    await expect(strip).toContainText('Meera Iyer (synthetic)'); // the banner is on screen, and still nothing is done
+    const region = page.getByRole('region', { name: ar ? 'ملاحظة الاستشارة' : 'Consultation note' });
+    const sign = region.getByRole('button', { name: ar ? 'توقيع الملاحظة' : 'Sign note' });
+    await expect(sign).toBeDisabled();
+    const panel = region.getByRole('complementary', { name: ar ? 'أدوات الاستشارة' : 'Consultation tools' });
+    await panel.getByRole('tab', { name: ar ? /5\/6/ : 'Checklist 5/6' }).click();
+    const items = panel.getByRole('region', { name: ar ? 'المراجعة والتوقيع' : 'Review and sign' }).getByRole('listitem');
+    await expect(items).toHaveCount(6); // no AI line
+    const identity = items.first();
+    await expect(identity).toHaveText(ar ? 'تم التأكيد مع المريض (الاسم وتاريخ الميلاد)مطلوب' : 'Confirmed with the patient (name and date of birth)To do');
+    if (ar) await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+    expect(await axe(page)).toEqual([]);
+    expect(mock.identityConfirms).toBe(0);
+
+    await strip.getByRole('button', { name: ar ? 'تم التأكيد مع المريض' : 'Confirmed with the patient' }).click();
+    await expect(strip).toContainText(ar ? /تم تأكيد الهوية مع المريض في 10:07/ : 'Identity confirmed with the patient at 10:07'); // who and when are the server's
+    await expect(strip.getByRole('button', { name: ar ? 'تم التأكيد مع المريض' : 'Confirmed with the patient' })).toHaveCount(0);
+    await expect(identity).toHaveText(ar ? 'تم التأكيد مع المريض (الاسم وتاريخ الميلاد)تم' : 'Confirmed with the patient (name and date of birth)Done'); // done in words
+    await expect(sign).toBeEnabled();
+    expect(mock.identityConfirms).toBe(1);
+    expect(await axe(page)).toEqual([]);
+  });
+
+test('identity: a refused confirmation is said in words and the item stays to do', async ({ page }) => {
+  const mock = await open(page, { version: 1, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' } });
+  mock.identityConfirmedAt = null;
+  await page.route('**/v1/encounters/e-1/identity-confirmation', r => r.fulfill({ status: 403, contentType: 'application/problem+json', json: { code: 'no_access', requestPending: false } }));
+  await page.reload();
+  const strip = page.getByRole('region', { name: 'Patient identity' });
+  await strip.getByRole('button', { name: 'Confirmed with the patient' }).click();
+  await expect(strip.getByRole('alert')).toHaveText('Not recorded. Try again.');
+  await expect(note(page).getByRole('button', { name: 'Sign note' })).toBeDisabled();
+});

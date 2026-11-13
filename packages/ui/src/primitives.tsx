@@ -3,10 +3,12 @@ import {
   Send, Pipette, Inbox, Eye, Phone, MessageSquareCheck, CircleCheck,
   Sparkles, BadgeCheck, User, ArrowLeftRight, Upload, Lock,
   CircleAlert, TriangleAlert, Info, Pause, CircleMinus, Pill as PillIcon, CircleHelp,
-  Clock, Ban, SearchX, WifiOff, Hourglass, CalendarCheck, Tag, UserCheck, DoorOpen, CalendarClock, CalendarX, CircleX, Radio, RefreshCw, Footprints, Ticket, MessageSquareWarning, type LucideIcon,
+  Clock, Ban, SearchX, WifiOff, Hourglass, CalendarCheck, Tag as TagIcon, UserCheck, DoorOpen, CalendarClock, CalendarX, CircleX, Radio, RefreshCw, Footprints, Ticket, MessageSquareWarning, type LucideIcon,
 } from 'lucide-react';
 import { useI18n, type MessageKey } from '@medvya/i18n';
 import { Button } from '#components/ui/button';
+import { Chip } from '#components/ui/chip';
+import { Tag } from '#components/ui/tag';
 
 // Every clinical state is icon + words + colour, never colour alone (Foundations §01).
 // Values come from Handoff §1 and Foundations §04; see docs/02-design.
@@ -35,8 +37,8 @@ export const provenanceLooks = {
 } satisfies Record<string, Look>;
 
 export const alertLooks = {
-  critical:  { label: 'alert.critical', icon: CircleAlert, bg: 'var(--color-danger-bg)', fg: 'var(--color-danger-text)', border: '1px solid var(--color-danger-200)' },
-  attention: { label: 'alert.attention', icon: TriangleAlert, bg: 'var(--color-warning-bg)', fg: 'var(--color-warning-text)', border: '1px solid var(--color-warning-200)' },
+  critical:  { label: 'alert.critical', icon: CircleAlert, bg: 'var(--color-danger-bg)', fg: 'var(--color-danger-text)', border: '1px solid var(--color-danger-border)' },
+  attention: { label: 'alert.attention', icon: TriangleAlert, bg: 'var(--color-warning-bg)', fg: 'var(--color-warning-text)', border: '1px solid var(--color-warning-border)' },
   info:      { label: 'alert.info', icon: Info, bg: 'var(--color-surface)', fg: 'var(--color-neutral-text)', border: '1px solid var(--color-line)' },
 } satisfies Record<string, Look>;
 
@@ -64,7 +66,7 @@ export const scheduleLooks = {
 
 // Reception board (P-01): nonclinical tags on visit cards. The reason is only ever its category.
 export const frontDeskLooks = {
-  reason: { label: 'board.tag.reason', icon: Tag, bg: 'var(--color-neutral-bg)', fg: 'var(--color-neutral-text)' },
+  reason: { label: 'board.tag.reason', icon: TagIcon, bg: 'var(--color-neutral-bg)', fg: 'var(--color-neutral-text)' },
   incomplete: { label: 'board.tag.incomplete', icon: TriangleAlert, bg: 'var(--color-warning-bg)', fg: 'var(--color-warning-text)' },
   messageFailed: { label: 'board.tag.messageFailed', icon: MessageSquareWarning, bg: 'var(--color-danger-25)', fg: 'var(--color-danger-text)', border: '1px solid var(--color-danger-border)' }, // a message to the patient failed (MDV-P1-034)
   walkIn: { label: 'board.tag.walkIn', icon: Footprints, bg: 'var(--color-info-bg)', fg: 'var(--color-info-text)' }, // "Walk-in" (MDV-P1-025)
@@ -78,11 +80,11 @@ export const frontDeskLooks = {
 
 const paint = (look: Look): CSSProperties => ({ backgroundColor: look.bg, color: look.fg, border: look.border });
 
-function Pill({ look, text, tag = false, children }: { look: Look; text?: string; tag?: boolean; children?: ReactNode }) {
+function Pill({ look, text, children }: { look: Look; text?: string; children?: ReactNode }) {
   const { t } = useI18n();
   const Icon = look.icon;
   return (
-    <span style={paint(look)} className={`inline-flex items-center gap-1.5 px-2.5 text-[13px] font-bold leading-none whitespace-nowrap ${tag ? 'h-[26px] rounded-sm' : 'h-7 rounded-full'}`}>
+    <span style={paint(look)} className="inline-flex h-7 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 text-[13px] font-bold leading-none">
       {children ?? <Icon className="size-4" aria-hidden />}
       {text ?? t(look.label)}
     </span>
@@ -92,17 +94,24 @@ function Pill({ look, text, tag = false, children }: { look: Look; text?: string
 /** A reception-board tag: icon and words (`text` when they carry a value, e.g. the reason category). Wraps in narrow cards. */
 export function FrontDeskTag({ kind, text }: { kind: keyof typeof frontDeskLooks; text?: string }) {
   const { t } = useI18n();
-  const look = frontDeskLooks[kind], Icon = look.icon;
-  return (
-    <span style={paint(look)} className="inline-flex max-w-full items-start gap-1 rounded-sm px-2 py-1 text-xs font-bold leading-tight">
-      <Icon className="mt-px size-3.5 shrink-0" aria-hidden />{text ?? t(look.label)}
-    </span>
-  );
+  const look = frontDeskLooks[kind];
+  return <Tag tone="neutral" size="sm" label={text ?? t(look.label)} icon={look.icon} style={paint(look)}
+    className="items-start border-0 py-1 text-xs font-bold leading-tight [&>svg]:mt-px" />;
 }
 
-export const StatusChip = ({ state }: { state: keyof typeof statusLooks }) => <Pill look={statusLooks[state]} />;
+// Thin wrappers over Chip and Tag (MDV-P1-083). The look tables and these classes keep today's looks exactly until the features move to tones.
+export function StatusChip({ state }: { state: keyof typeof statusLooks }) {
+  const { t } = useI18n();
+  const look = statusLooks[state];
+  return <Chip tone="neutral" label={t(look.label)} icon={look.icon} style={paint(look)} className="h-7 min-h-0 border-0 text-[13px] font-bold leading-none" />;
+}
 
-export const ProvenanceTag = ({ source }: { source: keyof typeof provenanceLooks }) => <Pill look={provenanceLooks[source]} tag />;
+export function ProvenanceTag({ source }: { source: keyof typeof provenanceLooks }) {
+  const { t } = useI18n();
+  const look = provenanceLooks[source];
+  const kept = { icon: look.icon, style: paint(look), className: 'h-[26px] max-w-none border-0 px-2.5 py-0 text-[13px] font-bold leading-none whitespace-nowrap' };
+  return source === 'ai' ? <Tag tone="ai" {...kept} /> : <Tag tone="neutral" label={t(look.label)} {...kept} />;
+}
 
 export function ClinicalAlert({ severity, children }: { severity: keyof typeof alertLooks; children: ReactNode }) {
   const { t } = useI18n();

@@ -8,6 +8,7 @@ import {
 import PageComponentsGallery from './PageComponentsGallery';
 import FieldGallery from './FieldGallery';
 import StickyActionBarSection from './gallery/StickyActionBarSection';
+import ChipTagBannerSection from './gallery/ChipTagBannerSection';
 import PatientBannerSection from './gallery/PatientBannerSection';
 import ShellComponentsGallery from './ShellComponentsGallery';
 
@@ -147,6 +148,7 @@ export default function UiGallery({ switcher }: { switcher: ReactNode }) {
       <PageComponentsGallery />
       <FieldGallery />
       <StickyActionBarSection />
+      <ChipTagBannerSection />
       <PatientBannerSection />
       <ShellComponentsGallery />
     </main>

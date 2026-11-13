@@ -30,12 +30,7 @@ Feature: Staff sign-in through the BFF with Entra External ID: MFA (TOTP), passk
     Then the one-time code path is used
     And a clear message explains why
 
-  @todo
-  Scenario: SSO-enforced tenant hides password and OTP options
-    Given a tenant with the SSO-enforced flag set
-    When the sign-in screen is shown
-    Then password and OTP options are hidden
-    And "Hospital staff? Sign in with SSO" is shown
+  # SSO-enforced tenant sign-in moved to MDV-P7-004
 
   # chunk: Add account recovery and audit of failed sign-in events
   @todo

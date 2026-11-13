@@ -8,9 +8,9 @@
 **Day one:** Register patients, book, reschedule and cancel appointments, check patients in, run the waiting room and send automatic confirmations and reminders.  
 **Goal:** A clinic can run its entire appointment day in Medvya. This is the workflow to validate with real clinics before anything clinical is built on top.
 
-**Tickets:** 72 · **Estimate:** 161.5 dev-days vs **35 working days** in the window (OVER by 126.5 days: needs scope trade-off or overlap) · **Average confidence:** 77%
+**Tickets:** 73 · **Estimate:** 162.5 dev-days vs **35 working days** in the window (OVER by 127.5 days: needs scope trade-off or overlap) · **Average confidence:** 77%
 
-**Status:** To do 44 · Partly done 16 · Done 12
+**Status:** To do 45 · Partly done 16 · Done 12
 
 ## Epics
 
@@ -44,6 +44,7 @@
 | [MDV-P1-008](MDV-P1-008.md) | Done | Add staff with role, facility scope, permissions and invite; custom roles (F-10) | Story | MUST | P1-03 | F-10 | 2.5 | 5–5 | 23 Nov → 27 Nov 2026 | 78% Medium |
 | [MDV-P1-011](MDV-P1-011.md) | Done | Schedule templates: working hours, breaks, slot length per service, per-location calendars, time zones | Story | MUST | P1-04 | P-04 | 3 | 5–6 | 23 Nov → 04 Dec 2026 | 80% Medium |
 | [MDV-P1-013](MDV-P1-013.md) | Partly done | Patient registration — India full flow (identity, ABHA optional, Aadhaar last 4, Indian address, payer) | Story | MUST | P1-05 | P-02 | 4 | 5–6 | 23 Nov → 04 Dec 2026 | 88% High |
+| [MDV-P1-074](MDV-P1-074.md) | To do | Keep Azure logs flowing all day: PostgreSQL audit and connection logs must not exhaust the Log Analytics daily cap | Task | MUST | P1-12 | — | 1 | 5–5 | 23 Nov → 27 Nov 2026 | 70% Medium |
 | [MDV-P1-006](MDV-P1-006.md) | To do | Practice settings: notification preferences and data tab | Story | MUST | P1-02 | F-08 | 1.5 | 6–6 | 30 Nov → 04 Dec 2026 | 72% Medium |
 | [MDV-P1-009](MDV-P1-009.md) | Partly done | Staff offboarding removes access immediately and ends all sessions | Story | MUST | P1-11 | F-10 | 1 | 6–6 | 30 Nov → 04 Dec 2026 | 90% High |
 | [MDV-P1-012](MDV-P1-012.md) | To do | Leave and schedule exceptions with re-offer of affected appointments | Story | MUST | P1-04 | P-04 | 1.5 | 6–6 | 30 Nov → 04 Dec 2026 | 82% Medium |

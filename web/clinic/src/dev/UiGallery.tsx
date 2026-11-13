@@ -8,6 +8,7 @@ import {
 import PageComponentsGallery from './PageComponentsGallery';
 import FieldGallery from './FieldGallery';
 import PatientBannerSection from './gallery/PatientBannerSection';
+import ShellComponentsGallery from './ShellComponentsGallery';
 
 const keys = <T extends object>(o: T) => Object.keys(o) as (keyof T)[];
 
@@ -145,6 +146,7 @@ export default function UiGallery({ switcher }: { switcher: ReactNode }) {
       <PageComponentsGallery />
       <FieldGallery />
       <PatientBannerSection />
+      <ShellComponentsGallery />
     </main>
   );
 }

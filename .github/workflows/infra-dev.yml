@@ -43,7 +43,7 @@ jobs:
         run: |
           az deployment group what-if -g "$RG" -f infra/bicep/main.bicep --exclude-change-types NoChange Ignore \
             -p dbAdminObjectId="$DB_ADMIN_OBJECT_ID" dbAdminLogin="$DB_ADMIN_LOGIN" alertEmail="$ALERT_EMAIL" \
-               oidcClientId="$OIDC_CLIENT_ID" deployPrincipalId="$DEPLOY_PRINCIPAL_ID"
+               oidcClientId="$OIDC_CLIENT_ID" deployPrincipalId="$DEPLOY_PRINCIPAL_ID" ledgerDigestPolicyLocked=true # locked 13 Nov 2026
 
   deploy:
     needs: what-if
@@ -63,4 +63,4 @@ jobs:
         run: |
           az deployment group create -g "$RG" -n "infra-dev-$GITHUB_RUN_NUMBER" -f infra/bicep/main.bicep -o none \
             -p dbAdminObjectId="$DB_ADMIN_OBJECT_ID" dbAdminLogin="$DB_ADMIN_LOGIN" alertEmail="$ALERT_EMAIL" \
-               oidcClientId="$OIDC_CLIENT_ID" deployPrincipalId="$DEPLOY_PRINCIPAL_ID"
+               oidcClientId="$OIDC_CLIENT_ID" deployPrincipalId="$DEPLOY_PRINCIPAL_ID" ledgerDigestPolicyLocked=true # locked 13 Nov 2026

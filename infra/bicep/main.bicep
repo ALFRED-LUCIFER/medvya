@@ -47,6 +47,8 @@ param budgetStart string = '2026-11-01'
 param appServiceSku string = 'B1'
 @description('Days a ledger digest cannot be changed or deleted (time-based immutability on ledger-digests). Once the policy is locked it can only grow.')
 param ledgerDigestRetentionDays int = env == 'prod' ? 3650 : 7
+@description('True once the ledger-digests policy is locked: Azure refuses any write to a locked policy, even with the same values, so the template leaves it alone.')
+param ledgerDigestPolicyLocked bool = false
 @description('Image of the database deploy job (migrations and roles inside the VNet). Pinned; the job downloads db-migrate from Blob.')
 param dbJobImage string = 'mcr.microsoft.com/azure-cli:2.92.0'
 
@@ -153,7 +155,7 @@ resource digests 'Microsoft.Storage/storageAccounts/blobServices/containers@2023
   properties: { publicAccess: 'None', immutableStorageWithVersioning: { enabled: true } }
 }
 
-resource digestsRetention 'Microsoft.Storage/storageAccounts/blobServices/containers/immutabilityPolicies@2023-05-01' = {
+resource digestsRetention 'Microsoft.Storage/storageAccounts/blobServices/containers/immutabilityPolicies@2023-05-01' = if (!ledgerDigestPolicyLocked) {
   parent: digests
   name: 'default'
   properties: { immutabilityPeriodSinceCreationInDays: ledgerDigestRetentionDays, allowProtectedAppendWrites: false }

@@ -395,6 +395,12 @@ namespace Medvya.Encounters.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("FacilityId")
                         .HasColumnType("uuid");
 
+                    b.Property<DateTimeOffset?>("IdentityConfirmedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("IdentityConfirmedBy")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid>("LeadClinicianId")
                         .HasColumnType("uuid");
 
@@ -427,6 +433,8 @@ namespace Medvya.Encounters.Infrastructure.Persistence.Migrations
                     b.ToTable("Encounters", "encounters", t =>
                         {
                             t.HasCheckConstraint("CK_Encounters_EndedHasTime", "(\"Status\" = 'Ended') = (\"EndedAt\" IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_Encounters_IdentityConfirmedHasWho", "(\"IdentityConfirmedAt\" IS NULL) = (\"IdentityConfirmedBy\" IS NULL)");
                         });
                 });
 

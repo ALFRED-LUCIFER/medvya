@@ -1548,7 +1548,7 @@ erDiagram
 | `ClinicalDocuments` | 16 | Id | tenant-scoped |
 | `ConsultNotes` | 15 | Id | tenant-scoped |
 | `DoctorNoteTemplates` | 3 | Id | tenant-scoped |
-| `Encounters` | 12 | Id | tenant-scoped |
+| `Encounters` | 14 | Id | tenant-scoped |
 | `GeriatricAssessments` | 19 | Id | tenant-scoped |
 | `HistoryEntries` | 8 | Id | tenant-scoped |
 | `Immunisations` | 14 | Id | tenant-scoped |
@@ -1701,6 +1701,8 @@ erDiagram
 | `EndedAt` | timestamptz | yes |  |
 | `EndedBy` | guid | yes | id of `identity.Users` |
 | `FacilityId` | guid |  | id of `tenancy.Facilities` |
+| `IdentityConfirmedAt` | timestamptz | yes |  |
+| `IdentityConfirmedBy` | guid | yes |  |
 | `LeadClinicianId` | guid |  | id of `identity.Users` |
 | `MergedFromPatientId` | guid | yes | id of `patients.Patients` |
 | `PatientId` | guid |  | id of `patients.Patients` |

@@ -217,6 +217,7 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.SoloDoctor, new("GET", "/v1/patients/{patient}/growth")),
         (Role.Nurse, new("POST", "/v1/patients/{patient}/growth", """{"takenOn":"2026-10-19","weightKg":4.0}""")),
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/end")),
+        (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/identity-confirmation")), // MDV-P1-091
         (Role.SoloDoctor, new("GET", "/v1/encounters/{encounter}/medicines/reconciliation")),
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/medicines/reconciliation/decisions", """{"key":"synthetic","kind":"Keep"}""")),
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/medicines/reconciliation/confirm")),

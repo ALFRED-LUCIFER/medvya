@@ -5205,6 +5205,29 @@
         }
       }
     },
+    "/v1/encounters/{encounterId}/identity-confirmation": {
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "encounterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/v1/encounters/{encounterId}/medicines/reconciliation": {
       "get": {
         "tags": [

@@ -94,6 +94,9 @@ journey('J2', {
 
     // MDV audit P0-2: the doctor records allergies while the consultation is open; once it has ended the vitals and allergies are read only, so this comes before End.
     await note.getByRole('button', { name: 'Confirm: no known allergies' }).click();
+    // MDV-P1-091: the doctor confirms name and date of birth with the patient while they are in the room; the server stores who and when.
+    await page.getByRole('region', { name: 'Patient identity' }).getByRole('button', { name: 'Confirmed with the patient' }).click();
+    await expect(page.getByRole('region', { name: 'Patient identity' })).toContainText(/Identity confirmed with the patient at \d\d:\d\d/);
     await expect(note).toContainText('No known allergies, confirmed at this visit.');
 
     await page.getByRole('button', { name: 'End consultation' }).click(); // leaves no open consultation for a later run
@@ -436,6 +439,19 @@ journey('J2', {
     const sign = note.getByRole('button', { name: 'Sign note' });
     await expect(sign).toBeDisabled();
     await expect(sign).toHaveAccessibleDescription(/^\d items? still needs? your review before signing$/);
+    // MDV-P1-091: no identity item is done on opening; the doctor's "Confirmed with the patient" is stored on the server (who and when) and ticks it.
+    const tools = note.getByRole('complementary', { name: 'Consultation tools' });
+    const checklist = tools.getByRole('region', { name: 'Review and sign' }).getByRole('listitem');
+    await tools.getByRole('tab', { name: /^Checklist / }).click();
+    await expect(checklist.filter({ hasText: 'Confirmed with the patient' })).toContainText('To do');
+    await expect(checklist.filter({ hasText: 'AI suggestion' })).toHaveCount(0); // no AI drafting in this clinic
+    const strip = page.getByRole('region', { name: 'Patient identity' });
+    await strip.getByRole('button', { name: 'Confirmed with the patient' }).click();
+    await expect(strip).toContainText(/Identity confirmed with the patient at \d\d:\d\d/);
+    await page.reload(); // the server holds it
+    await expect(strip).toContainText(/Identity confirmed with the patient at \d\d:\d\d/);
+    await tools.getByRole('tab', { name: /^Checklist / }).click();
+    await expect(checklist.filter({ hasText: 'Confirmed with the patient' })).toContainText('Done');
 
     // a returning patient: each section also offers an Insert button for the last signed note's text
     // MDV-P1-089 (F-03, F-26): the last keystrokes survive a visit to Problems and a reload, both inside the autosave delay, and the note shows
@@ -457,8 +473,7 @@ journey('J2', {
     // Step 6's authorised metformin is on Meera's chart, so this visit's medicines need their reconciliation (MDV-1087); there is no consent step (MDV-AUDIT-1092).
     await expect(sign).toBeDisabled();
     await expect(sign).toHaveAccessibleDescription('1 item still needs your review before signing');
-    const tools = note.getByRole('complementary', { name: 'Consultation tools' });
-    await tools.getByRole('tab', { name: /^Checklist 6\/7$/ }).click();
+    await tools.getByRole('tab', { name: /^Checklist 5\/6$/ }).click();
     await expect(tools.getByRole('region', { name: 'Review and sign' }).getByRole('listitem').filter({ hasText: 'Medicines reconciled' })).toContainText('To do');
     await expect(tools.getByRole('region', { name: 'Review and sign' }).getByRole('listitem').filter({ hasText: 'Recording consent' })).toHaveCount(0);
     await expect(tools.getByRole('region', { name: 'Review and sign' }).getByRole('listitem').filter({ hasText: 'Allergies reconciled' })).toContainText('Done');

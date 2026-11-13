@@ -120,7 +120,7 @@ export function useNoteController(encounterId: string, canSign: boolean, timeZon
   // The draft is on the server by then, so the redirect back reloads it and Sign is offered again.
   const sections = useWatch({ control: form.control, name: 'sections' });
   const checklist = isDraft && canSign ? signChecklist({
-    identityShown: !!banner, allergyState: banner?.allergies.state ?? null,
+    identityConfirmed: !!banner?.encounter.identityConfirmedAt, allergyState: banner?.allergies.state ?? null,
     reconciliation: reconciliation.data ?? null, recordingConsent: consent, undecidedAi: held?.undecidedAi ?? [], sections,
     diagnosisRecorded: problems.data ? problems.data.rows.some(r => r.addedHere || r.status === 'Active') : null,
   }) : [];

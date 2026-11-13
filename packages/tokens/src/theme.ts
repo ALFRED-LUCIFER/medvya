@@ -1,4 +1,4 @@
-// Generated from tokens.json by generate.mjs. Do not edit. Plain values for React Native (px become numbers).
+// Generated from tokens.json by generate.mjs. Do not edit. Plain values for React Native (px and ms become numbers).
 export const theme = {
   "color": {
     "brand950": "#102a43",
@@ -57,14 +57,54 @@ export const theme = {
     "destructiveForeground": "#ffffff",
     "border": "#dfe7ed",
     "input": "#76899c",
-    "ring": "#2563eb"
+    "ring": "#2563eb",
+    "white": "#ffffff",
+    "danger800": "#8a1626",
+    "danger500": "#c83a4b",
+    "danger200": "#f3b9c0",
+    "danger25": "#fff7f8",
+    "warning800": "#7a4710",
+    "warning500": "#b7791f",
+    "warning200": "#efd5a6",
+    "success800": "#07774f",
+    "success100": "#e6f4ef",
+    "info700": "#1d4ed8",
+    "info300": "#93b4f5",
+    "ai300": "#a897e8",
+    "sage700": "#3e6a4d",
+    "sage50": "#eef4ef",
+    "ink200": "#cbd6e0",
+    "ink100": "#edf1f5",
+    "disabled": "#e6ecf1",
+    "dangerText": "#8a1626",
+    "dangerBg": "#fdecee",
+    "dangerBorder": "#c83a4b",
+    "warningText": "#7a4710",
+    "warningBg": "#fdf5e7",
+    "warningBorder": "#b7791f",
+    "successText": "#07774f",
+    "successBg": "#e6f4ef",
+    "successBorder": "#087f5b",
+    "infoText": "#1d4ed8",
+    "infoBg": "#eff4ff",
+    "infoBorder": "#2563eb",
+    "brandText": "#0f766e",
+    "brandBg": "#e7f6f4",
+    "brandBorder": "#0e9384",
+    "aiText": "#5b3fc4",
+    "aiBg": "#f2effc",
+    "aiBorder": "#7155d8",
+    "neutralText": "#334e68",
+    "neutralBg": "#f1f5f8",
+    "neutralBorder": "#76899c"
   },
   "radius": {
     "default": 10,
     "sm": 6,
     "md": 10,
     "lg": 12,
-    "xl": 16
+    "xl": 16,
+    "full": 9999
   },
   "font": {
     "sans": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, sans-serif",
@@ -73,7 +113,136 @@ export const theme = {
   "breakpoint": {
     "sm": 360,
     "md": 768,
+    "wide": 1024,
     "lg": 1280,
     "xl": 1600
+  },
+  "text": {
+    "display": {
+      "fontSize": 30,
+      "lineHeight": 36,
+      "fontWeight": "800"
+    },
+    "title": {
+      "fontSize": 20,
+      "lineHeight": 28,
+      "fontWeight": "700"
+    },
+    "heading": {
+      "fontSize": 18,
+      "lineHeight": 26,
+      "fontWeight": "700"
+    },
+    "subheading": {
+      "fontSize": 16,
+      "lineHeight": 24,
+      "fontWeight": "700"
+    },
+    "body": {
+      "fontSize": 14,
+      "lineHeight": 20,
+      "fontWeight": "500"
+    },
+    "bodyLarge": {
+      "fontSize": 16,
+      "lineHeight": 24,
+      "fontWeight": "500"
+    },
+    "label": {
+      "fontSize": 14,
+      "lineHeight": 20,
+      "fontWeight": "600"
+    },
+    "caption": {
+      "fontSize": 12,
+      "lineHeight": 16,
+      "fontWeight": "600"
+    },
+    "mono": {
+      "fontSize": 13,
+      "lineHeight": 20,
+      "fontWeight": "500"
+    }
+  },
+  "space": {
+    "2": 2,
+    "4": 4,
+    "6": 6,
+    "8": 8,
+    "12": 12,
+    "16": 16,
+    "24": 24,
+    "32": 32,
+    "48": 48,
+    "64": 64
+  },
+  "spacing": {
+    "topbar": 48,
+    "topbarPhone": 56,
+    "rail": 72,
+    "sidebar": 232,
+    "header": 44,
+    "gutter": 16,
+    "gutterMd": 24,
+    "gutterXl": 32,
+    "control": 44,
+    "controlCompact": 36,
+    "row": 48,
+    "rowCompact": 36
+  },
+  "container": {
+    "page": 1600,
+    "reading": 1152,
+    "measure": "72ch",
+    "form": 768,
+    "panel": 320,
+    "panelChart": 360
+  },
+  "shadow": {
+    "popover": "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
+    "dialog": "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)"
+  },
+  "ease": {
+    "out": "cubic-bezier(0.23, 1, 0.32, 1)"
+  },
+  "transitionDuration": {
+    "fast": 150
+  },
+  "tone": {
+    "danger": {
+      "text": "#8a1626",
+      "bg": "#fdecee",
+      "border": "#c83a4b"
+    },
+    "warning": {
+      "text": "#7a4710",
+      "bg": "#fdf5e7",
+      "border": "#b7791f"
+    },
+    "success": {
+      "text": "#07774f",
+      "bg": "#e6f4ef",
+      "border": "#087f5b"
+    },
+    "info": {
+      "text": "#1d4ed8",
+      "bg": "#eff4ff",
+      "border": "#2563eb"
+    },
+    "brand": {
+      "text": "#0f766e",
+      "bg": "#e7f6f4",
+      "border": "#0e9384"
+    },
+    "ai": {
+      "text": "#5b3fc4",
+      "bg": "#f2effc",
+      "border": "#7155d8"
+    },
+    "neutral": {
+      "text": "#334e68",
+      "bg": "#f1f5f8",
+      "border": "#76899c"
+    }
   }
 } as const;

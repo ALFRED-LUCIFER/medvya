@@ -64,21 +64,48 @@ public sealed class IntakeEndpointTests(PostgresFixture sql) : IClassFixture<Pos
         return visit.Id;
     }
 
+    /// <summary>
+    /// MDV-P0-028: with the switch off the nurse's own workflow (escalate, medicines, handoff) does not exist, but the doctor's consultation
+    /// entry (audit P0-2) still reads the intake and records vitals and allergies on the same routes. Mutation checks: gate the whole group
+    /// and the doctor's calls answer 404; ungate a nurse-only route and it answers.
+    /// </summary>
     [Fact]
-    public async Task WithTheSwitchOffTheIntakeRoutesDoNotExistAndTurningItOnNeedsNoRedeploy()
+    public async Task WithTheSwitchOffOnlyTheNurseWorkflowRoutesDoNotExistAndTurningItOnNeedsNoRedeploy()
     {
         await FlagAsync(true);
         var visit = await WithNurseAsync();
         await FlagAsync(false);
 
-        using (var read = await Client(h.Nurse).GetAsync(U($"/v1/intake/{visit}"))) Assert.Equal(HttpStatusCode.NotFound, read.StatusCode);
-        using (var write = await Client(h.Nurse).PutAsJsonAsync(U($"/v1/intake/{visit}"), new { vitals = new[] { new { kind = "Pulse", value = 70 } } }))
-            Assert.Equal(HttpStatusCode.NotFound, write.StatusCode);
-        using (var desk = await Client(h.Reception).GetAsync(U($"/v1/intake/{visit}")))
-            Assert.Equal(HttpStatusCode.Forbidden, desk.StatusCode); // the role check still comes first
+        using (var escalate = await Client(h.Nurse).PostAsJsonAsync(U($"/v1/intake/{visit}/escalate"), new { reason = "Synthetic" }))
+            Assert.Equal(HttpStatusCode.NotFound, escalate.StatusCode);
+        using (var medicine = await Client(h.Nurse).PostAsJsonAsync(U($"/v1/intake/{visit}/medicines"), new { name = "Synthetic" }))
+            Assert.Equal(HttpStatusCode.NotFound, medicine.StatusCode);
+        using (var handoff = await Client(h.Nurse).PostAsync(U($"/v1/intake/{visit}/handoff"), null)) Assert.Equal(HttpStatusCode.NotFound, handoff.StatusCode);
+        using (var deskHandoff = await Client(h.Reception).PostAsync(U($"/v1/intake/{visit}/handoff"), null))
+            Assert.Equal(HttpStatusCode.Forbidden, deskHandoff.StatusCode); // the role check still comes first
+
+        // A clinic with no nurse step: the doctor's consultation entry.
+        var consult = await h.BookAsync(11);
+        await h.FrontDesk(h.Reception).CheckInAsync(consult.Id, new CheckIn());
+        _ = await h.Get<IEncounters>(h.Doctor).StartAsync(new StartEncounter(consult.Id)) ?? throw new InvalidOperationException("No encounter.");
+        using (var desk = await Client(h.Reception).GetAsync(U($"/v1/intake/{consult.Id}"))) Assert.Equal(HttpStatusCode.Forbidden, desk.StatusCode);
+        using (var read = await Client(h.Doctor).GetAsync(U($"/v1/intake/{consult.Id}"))) Assert.Equal(HttpStatusCode.OK, read.StatusCode);
+        using (var none = await Client(h.Doctor).PostAsync(U($"/v1/intake/{consult.Id}/no-known-allergies"), null))
+            Assert.Equal((HttpStatusCode.OK, true), (none.StatusCode, (await Json(none)).GetProperty("noKnownAllergiesConfirmed").GetBoolean()));
+        using (var vitals = await Client(h.Doctor).PutAsJsonAsync(U($"/v1/intake/{consult.Id}"), new { vitals = new[] { new { kind = "Weight", value = 18.4 }, new { kind = "SystolicBp", value = 168.0 } } }))
+            Assert.Equal(HttpStatusCode.OK, vitals.StatusCode);
+        using (var keep = await Client(h.Doctor).PostAsync(U($"/v1/intake/{consult.Id}/vitals/SystolicBp/keep"), null)) Assert.Equal(HttpStatusCode.OK, keep.StatusCode);
+        string allergyId;
+        using (var allergy = await Client(h.Doctor).PostAsJsonAsync(U($"/v1/intake/{consult.Id}/allergies"), new { substance = "Amoxicillin (synthetic)", status = "Confirmed" }))
+        {
+            Assert.Equal(HttpStatusCode.OK, allergy.StatusCode);
+            allergyId = (await Json(allergy)).GetProperty("allergies")[0].GetProperty("id").GetString()!;
+        }
+        using (var status = await Client(h.Doctor).PutAsJsonAsync(U($"/v1/intake/{consult.Id}/allergies/{allergyId}/status"), new { status = "PatientReported" }))
+            Assert.Equal(HttpStatusCode.OK, status.StatusCode);
 
         await FlagAsync(true);
-        using (var on = await Client(h.Nurse).GetAsync(U($"/v1/intake/{visit}"))) Assert.Equal(HttpStatusCode.OK, on.StatusCode);
+        using (var on = await Client(h.Nurse).PostAsync(U($"/v1/intake/{visit}/handoff"), null)) Assert.NotEqual(HttpStatusCode.NotFound, on.StatusCode);
     }
 
     [Fact]

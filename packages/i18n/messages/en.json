@@ -3095,6 +3095,7 @@
   "pilotMetrics.checkInGap": "{gap} s over the {target} s target.",
   "pilotMetrics.checkInNoReturning": "No timed check-in of a returning patient yet (target {target} s).",
   "pilotMetrics.checkInCounts": "{returning} returning of {all} timed check-ins; all patients: {median}.",
+  "pilotMetrics.checkInUnmeasured": "Not measured and left out: {count} (no start time, or under 1 s).",
   "pilotMetrics.noShow": "No-show rate",
   "pilotMetrics.noShowCounts": "{noShows} no-shows of {total} booked visits with an outcome.",
   "pilotMetrics.doubleBookings": "Double bookings refused",

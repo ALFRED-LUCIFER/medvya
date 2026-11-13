@@ -5,8 +5,9 @@ namespace Medvya.Scheduling.Application;
 /// <summary>
 /// Desk check-in time over the window: the median for returning patients (exit gate 3: 60 s or less, else the gap is shown) and
 /// for every timed check-in. A returning patient had an earlier attended visit at the practice in Medvya. Null without samples.
+/// Unmeasured counts the check-ins of the window with no trustworthy time (MDV-P1-106): they are in neither median, never as zero.
 /// </summary>
-public sealed record CheckInMetric(double? ReturningMedianSeconds, int ReturningCount, double? MedianSeconds, int Count, int TargetSeconds);
+public sealed record CheckInMetric(double? ReturningMedianSeconds, int ReturningCount, double? MedianSeconds, int Count, int TargetSeconds, int Unmeasured);
 
 /// <summary>Booked visits (not walk-ins) that started in the window: no-shows against visits the patient came to. Rate in percent.</summary>
 public sealed record NoShowMetric(int NoShows, int Attended, double? Percent);
@@ -34,6 +35,18 @@ public static class PilotMetricRules
 {
     /// <summary>Exit gate 3: median check-in of a returning patient.</summary>
     public const int CheckInTargetSeconds = 60;
+
+    /// <summary>Under a second no desk found a patient and issued a token: a script, a double tap or an old zero row, not a measurement.</summary>
+    public const int MinCheckInMs = 1000;
+
+    /// <summary>Past half an hour the screen was left open: not a check-in time either.</summary>
+    public const int MaxCheckInMs = 30 * 60 * 1000;
+
+    /// <summary>
+    /// The desk's check-in time when it can be trusted, else null (not measured). The number comes from the client, so this is the
+    /// one rule both for what is stored and for what the median reads (rows stored before the lower bound existed included).
+    /// </summary>
+    public static int? TimedMs(long? elapsedMs) => elapsedMs is >= MinCheckInMs and <= MaxCheckInMs ? (int)elapsedMs : null;
 
     /// <summary>The median, or null for no values.</summary>
     public static double? Median(IEnumerable<double> values)

@@ -54,7 +54,7 @@ export function useAppointmentController(facilityId: string, access: { timeZone:
   const cancelRest = useMutation({ mutationFn: (v: CancelForm) => cancelFollowing(id(), v.reason, v.note), onSuccess: list => finish('cancelledFollowing', undefined, list.length)({ ...opened!.appointment, state: 'Cancelled' }), onSettled: refreshSchedule });
   const noShow = useMutation({ mutationFn: () => markNoShow(id()), onSuccess: finish('noShow'), onSettled: refreshSchedule });
   const arrive = useMutation({
-    mutationFn: () => checkIn(id(), 0), // 0: not timed here; the check-in time metric comes from the board (exit gate 3)
+    mutationFn: () => checkIn(id(), null), // not timed here; the check-in time metric comes from the board (exit gate 3)
     onSuccess: () => finish('checkedIn')({ ...opened!.appointment, state: 'CheckedIn' }),
     onSettled: refreshSchedule,
   });

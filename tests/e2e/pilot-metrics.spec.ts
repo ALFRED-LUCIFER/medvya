@@ -11,7 +11,7 @@ const owner = {
 };
 const metrics = {
   from: '2026-10-24T05:30:00Z', to: '2026-11-07T05:30:00Z',
-  checkIn: { returningMedianSeconds: 74, returningCount: 18, medianSeconds: 81, count: 25, targetSeconds: 60 },
+  checkIn: { returningMedianSeconds: 74, returningCount: 18, medianSeconds: 81, count: 25, targetSeconds: 60, unmeasured: 4 },
   noShows: { noShows: 6, attended: 54, percent: 10 },
   doubleBookingRefusals: 0,
   baselines: [{ metric: 'NoShowPercent', value: 18, method: 'Paper register, every visit', fromDate: '2026-10-05', toDate: '2026-10-18', recordedAt: '2026-10-19T05:30:00Z' }],
@@ -45,6 +45,7 @@ test('the owner sees the pilot numbers beside the baseline, with the check-in ga
   await expect(report).toContainText('74 s');
   await expect(report).toContainText('14 s over the 60 s target.'); // exit gate 3: the gap is reported, not only coloured
   await expect(report).toContainText('18 returning of 25 timed check-ins; all patients: 81 s.');
+  await expect(report).toContainText('Not measured and left out: 4 (no start time, or under 1 s).'); // MDV-P1-106: never counted as 0 s
   await expect(report).toContainText('10%');
   await expect(report).toContainText('Before Medvya: 18% (');
   await expect(report).toContainText('94.7%'); // 36 of 38 messages with an outcome
@@ -72,6 +73,22 @@ test('the report reads right to left in Arabic and stays axe clean', async ({ pa
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
   await expect(page.getByRole('region', { name: 'مؤشرات التجربة' })).toBeVisible();
   await expect(page.getByText('نسبة عدم الحضور', { exact: true })).toBeVisible();
+  await expect(page.getByText('لم تُقَس ولم تُحتسب: 4', { exact: false })).toBeVisible();
+  expect(await axe(page)).toEqual([]);
+});
+
+// MDV-P1-106 (finding F-29): check-ins the desk did not time are not a perfect score.
+test('with no timed check-in the metric says No data yet, never 0 s or target met', async ({ page }) => {
+  await setUp(page);
+  await page.route('**/v1/schedule/metrics**', r => r.fulfill({ json: { ...metrics, checkIn: { returningMedianSeconds: null, returningCount: 0, medianSeconds: null, count: 0, targetSeconds: 60, unmeasured: 3 } } }));
+  await page.goto('/settings?tab=metrics');
+  const tile = page.getByRole('region', { name: 'Pilot metrics' }).locator('dl > div').first();
+  await expect(tile.locator('dd').first()).toHaveText('No data yet');
+  await expect(tile).toContainText('No timed check-in of a returning patient yet (target 60 s).');
+  await expect(tile).toContainText('0 returning of 0 timed check-ins; all patients: No data yet.');
+  await expect(tile).toContainText('Not measured and left out: 3');
+  await expect(tile).not.toContainText(/(^|[^\d])0 s/); // no "0 s" value ("target 60 s" is fine)
+  await expect(tile).not.toContainText('met.');
   expect(await axe(page)).toEqual([]);
 });
 

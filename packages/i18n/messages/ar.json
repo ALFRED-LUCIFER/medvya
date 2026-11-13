@@ -3092,6 +3092,7 @@
   "pilotMetrics.checkInGap": "أكثر من هدف {target} ث بمقدار {gap} ث.",
   "pilotMetrics.checkInNoReturning": "لا يوجد تسجيل وصول موقوت لمريض عائد بعد (الهدف {target} ث).",
   "pilotMetrics.checkInCounts": "{returning} عائدون من {all} تسجيلات وصول موقوتة؛ جميع المرضى: {median}.",
+  "pilotMetrics.checkInUnmeasured": "لم تُقَس ولم تُحتسب: {count} (بلا وقت بدء، أو أقل من ثانية واحدة).",
   "pilotMetrics.noShow": "نسبة عدم الحضور",
   "pilotMetrics.noShowCounts": "{noShows} حالات عدم حضور من {total} زيارات محجوزة معروفة النتيجة.",
   "pilotMetrics.doubleBookings": "الحجوزات المزدوجة المرفوضة",

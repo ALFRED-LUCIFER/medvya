@@ -6,7 +6,7 @@ import PatientsMessage from '../../patients/components/PatientsMessage';
 import { PatientPicker, type PatientSearchView } from '../../schedule/components/BookingPanel';
 import { reasonCategories, visitTypes, type PatientMatch } from '../../schedule/domain/booking';
 import { termsPath } from '../../settings/domain/settings';
-import type { WalkInChoice, WalkInError, WalkInVisit } from '../domain/board';
+import { isBoardColumn, type BoardCard, type WalkInChoice, type WalkInError, type WalkInVisit } from '../domain/board';
 
 type Props = {
   patientSearch: PatientSearchView;
@@ -21,7 +21,7 @@ type Props = {
   onConfirm: () => void;
   onConfirmRepeat: () => void;
   onRegister: () => void;
-  result: (WalkInVisit & { token: string | null }) | null;
+  result: (WalkInVisit & Pick<BoardCard, 'token' | 'state'>) | null;
   error: WalkInError | 'forbidden' | null;
   boardPath: string;
   /** Quick registration, which comes back here with the new patient chosen. */
@@ -50,7 +50,10 @@ export default function WalkInPage(p: Props) {
           <h1 className="text-2xl font-extrabold">{t('walkIn.done.title', { name: p.result.patientName })}</h1>
           {/* The token the waiting room is called by: read out to the patient now, not looked up on the board later. */}
           {p.result.token && <p className="text-3xl font-extrabold">{t('walkIn.done.token')} <bdi dir="ltr" className="font-mono">{p.result.token}</bdi></p>}
-          <p>{p.result.unscheduled ? t('walkIn.done.queued', { doctor }) : t('walkIn.done.slot', { doctor, time: formatTime(new Date(p.result.start), p.timeZone ?? 'UTC') })}</p>
+          <p>
+            {p.result.unscheduled ? t('walkIn.done.queued', { doctor }) : t('walkIn.done.slot', { doctor, time: formatTime(new Date(p.result.start), p.timeZone ?? 'UTC') })}
+            {isBoardColumn(p.result.state) && <> {t('walkIn.done.column', { column: t(`board.column.${p.result.state}`) })}</>}
+          </p>
           <Link to={p.boardPath} className={buttonVariants()}>{t('walkIn.back')}</Link>
         </div>
       </PageContainer>

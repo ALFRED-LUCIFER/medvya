@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { emptyWalkIn, inToday, newPatientWalkIn, walkInError, type WalkInChoice, type WalkInVisit } from '../domain/board';
+import { emptyWalkIn, inToday, newPatientWalkIn, walkInError, type BoardCard, type WalkInChoice, type WalkInVisit } from '../domain/board';
 import { checkIn, heldWalkInStart, holdWalkInStart, monotonicNow, walkIn } from '../services/frontDeskApi';
 import { ApiError, fetchScheduleDay, findPatient } from '../../schedule/services/scheduleApi';
 import { usePatientSearch } from '../../patients/hooks/usePatientSearch';
@@ -29,10 +29,11 @@ export function useWalkInController(facilityId: string, initialPatientId: string
   const doctors = (day.data?.columns ?? []).filter(c => c.calendarKind === 'Doctor' && inToday(c)).map(c => ({ id: c.calendarId, name: c.name }));
 
   const done = useMutation({
-    mutationFn: async (allowRepeat: boolean): Promise<WalkInVisit & { token: string | null }> => {
+    mutationFn: async (allowRepeat: boolean): Promise<WalkInVisit & Pick<BoardCard, 'token' | 'state'>> => {
       const visit = await walkIn(facilityId, patientId, choice, allowRepeat);
       const card = await checkIn(visit.id, opened.current === null ? null : monotonicNow() - opened.current); // the board's own check-in: the same state machine
-      return { ...visit, token: card.token };
+      // The column the check-in really put the card in (Ready for doctor with nurse intake off): the server's, never guessed here.
+      return { ...visit, token: card.token, state: card.state };
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['front-desk'] }),
   });

@@ -1,4 +1,4 @@
-// Medvya's own oxlint rules (jsPlugins). One rule today: no height patch on a library control (MDV-P1-078).
+// Medvya's own oxlint rules (jsPlugins): no height patch on a library control (MDV-P1-078); compact tables only where allowed (MDV-P2-054).
 const CONTROLS = new Set(['Input', 'SelectTrigger', 'Textarea', 'Button']);
 const PATCH = /(?<![\w:-])(?:min-)?h-11(?![\w-])/;
 
@@ -30,6 +30,19 @@ export default {
             const cls = attr(node, 'className');
             if (cls && strings(cls.value).some(s => PATCH.test(s)))
               context.report({ node: cls, message: `${name} is 44 px by default in @medvya/ui (library default, MDV-P1-077): remove h-11 / min-h-11 here (DESIGN.md, Density).` });
+          },
+        };
+      },
+    },
+    // On everywhere; .oxlintrc.json turns it off for the four tables allowed to be compact, so a new compact table fails lint.
+    'compact-table': {
+      meta: { type: 'problem', docs: { description: 'Compact density (36 px rows) is allowed on four tables only: audit log, formulary, order sets, staff.' } },
+      create(context) {
+        return {
+          JSXOpeningElement(node) {
+            const density = node.name.type === 'JSXIdentifier' && node.name.name === 'Table' && attr(node, 'density');
+            if (density)
+              context.report({ node: density, message: 'Compact density is allowed only on the audit log, formulary, order sets and staff tables (AGENTS.md section 4, DESIGN.md Density, MDV-P2-054). Remove density here.' });
           },
         };
       },

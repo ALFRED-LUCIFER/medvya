@@ -11,6 +11,7 @@
   ],
   "rules": {
     "medvya-ui/no-height-patch": "error",
+    "medvya-ui/compact-table": "error",
     "react/rules-of-hooks": "error",
     "react/only-export-components": [
       "warn",
@@ -193,6 +194,18 @@
       ],
       "rules": {
         "react/jsx-no-literals": "off"
+      }
+    },
+    {
+      "files": [
+        "src/features/audit-log/components/AuditLogPanel.tsx",
+        "src/features/formulary/components/FormularyPanel.tsx",
+        "src/features/formulary/components/OrderSetsPanel.tsx",
+        "src/features/staff/components/StaffPanel.tsx",
+        "src/dev/UiGallery.tsx"
+      ],
+      "rules": {
+        "medvya-ui/compact-table": "off"
       }
     }
   ]

@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render } from '@testing-library/react';
 import axe from 'axe-core';
-import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow, TableState } from './components/ui/table';
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TablePagination, TableRow, TableState } from './components/ui/table';
 
 const sample = (extra?: { sort?: 'ascending' | 'descending' | 'none'; onSort?: () => void }) => (
   <Table label="People">
@@ -66,6 +66,68 @@ describe('Table', () => {
   it('has no axe violations', async () => {
     const { container } = render(sample({ sort: 'descending', onSort: () => {} }));
     expect((await axe.run(container)).violations).toEqual([]);
+  });
+});
+
+// MDV-P2-054: compact density, stacked rows and paging.
+const layout = (props: { density?: 'compact'; stacked?: boolean; status?: string }) => (
+  <Table label="Medicines" {...props}>
+    <TableHeader><TableRow><TableHead scope="col">Name</TableHead><TableHead scope="col" numeric>Strength</TableHead></TableRow></TableHeader>
+    <TableBody><TableRow><TableHead scope="row">Metformin</TableHead><TableCell numeric label="Strength">500</TableCell></TableRow></TableBody>
+  </Table>
+);
+
+describe('Table layout', () => {
+  afterEach(cleanup);
+  it('is comfortable by default: no compact rows, no stacked roles, no cell label', () => {
+    const { container } = render(layout({}));
+    expect(container.querySelector('[data-slot=table-container]')?.getAttribute('data-density')).toBe('comfortable');
+    expect(container.querySelector('tbody')?.className).not.toContain('h-row-compact');
+    expect(container.querySelector('[role=row], [role=cell]')).toBeNull();
+    expect(container.querySelector('td')?.textContent).toBe('500');
+  });
+
+  it('compact rows are 36 px with a mouse and 48 px on any coarse pointer', () => {
+    const { container } = render(layout({ density: 'compact' }));
+    const body = container.querySelector('tbody')!.className;
+    expect(body).toContain('[&>tr]:h-row-compact');
+    expect(body).toContain('any-pointer-coarse:[&>tr]:h-row');
+    expect(container.querySelector('[data-slot=table-container]')?.getAttribute('data-density')).toBe('compact');
+  });
+
+  it('stacked: roles survive display:block, the header is only for screen readers on a phone, each cell shows its column', () => {
+    const { container, getByRole } = render(layout({ density: 'compact', stacked: true }));
+    expect(getByRole('table').getAttribute('role')).toBe('table');
+    expect(container.querySelector('thead')?.className).toContain('max-md:sr-only');
+    expect(getByRole('rowheader', { name: 'Metformin' })).toBeTruthy();
+    expect(getByRole('cell').querySelector('[aria-hidden]')?.textContent).toBe('Strength');
+    // Compact applies from 768 px up only; a stacked phone row sizes to its content.
+    expect(container.querySelector('tbody')?.className).toContain('md:[&>tr]:h-row-compact');
+    expect(container.querySelector('tbody')?.className).not.toMatch(/(^|\s)\[&>tr\]:h-row-compact/);
+  });
+
+  it('announces the status politely, and is axe clean stacked', async () => {
+    const { container, getByRole } = render(layout({ stacked: true, status: 'Sorted by Name, ascending' }));
+    expect(getByRole('status').textContent).toBe('Sorted by Name, ascending');
+    expect((await axe.run(container)).violations).toEqual([]);
+  });
+});
+
+describe('TablePagination', () => {
+  afterEach(cleanup);
+  it('shows nothing for one page, and previous/next that stop at the ends', () => {
+    const onPage = vi.fn();
+    expect(render(<TablePagination page={0} pageCount={1} onPage={onPage} />).container.innerHTML).toBe('');
+    const { getByRole, getByText, rerender } = render(<TablePagination page={0} pageCount={3} onPage={onPage} />);
+    expect(getByRole('navigation', { name: 'Pages' })).toBeTruthy();
+    expect(getByText('Page 1 of 3')).toBeTruthy();
+    expect((getByRole('button', { name: 'Previous page' }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(getByRole('button', { name: 'Next page' }));
+    expect(onPage).toHaveBeenLastCalledWith(1);
+    rerender(<TablePagination page={2} pageCount={3} onPage={onPage} />);
+    expect((getByRole('button', { name: 'Next page' }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(getByRole('button', { name: 'Previous page' }));
+    expect(onPage).toHaveBeenLastCalledWith(1);
   });
 });
 

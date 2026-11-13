@@ -19,3 +19,25 @@ export function sortRows<T, K extends string>(rows: T[], current: SortState<K>, 
     return sign * (typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y), locale));
   });
 }
+
+/** Over this many rows a table is paged (DESIGN.md, Tables). */
+export const PAGE_SIZE = 50;
+
+/** One page of rows. `page` counts from 0 and is clamped, so a shorter list (a search, a removal) never leaves the view on an empty page. */
+export function pageRows<T>(rows: T[], page: number, size = PAGE_SIZE): { rows: T[]; page: number; pageCount: number } {
+  const pageCount = Math.max(1, Math.ceil(rows.length / size));
+  const current = Math.min(Math.max(page, 0), pageCount - 1);
+  return { rows: rows.slice(current * size, (current + 1) * size), page: current, pageCount };
+}
+
+/** What a table controller gives its view: the rows of the current page in order, the sort per column and its announcement, and paging. */
+export type TableView<T, K extends string> = {
+  rows: T[];
+  page: number;
+  pageCount: number;
+  onPage: (page: number) => void;
+  sortOf: (key: K) => SortDirection;
+  onSort: (key: K) => void;
+  /** "Sorted by Name, ascending" for `<Table status>`; empty when unsorted. */
+  status: string;
+};

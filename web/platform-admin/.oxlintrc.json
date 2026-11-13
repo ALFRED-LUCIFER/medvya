@@ -11,6 +11,7 @@
   ],
   "rules": {
     "medvya-ui/no-height-patch": "error",
+    "medvya-ui/compact-table": "error",
     "react/rules-of-hooks": "error",
     "react/only-export-components": [
       "warn",

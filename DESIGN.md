@@ -72,7 +72,7 @@ Two densities (ruling 2). Density is chosen by task. A write is never compact.
 | Typed clinical text | 16/24 | not allowed |
 
 - **Comfortable is the default and is mandatory** for every control that changes state, every row that picks a patient, medicine lines, sign and authorise, registration, nurse intake, the front-desk queue, and any device that reports a coarse pointer (`any-pointer: coarse`).
-- **Compact is an explicit per-table choice, allowed on four tables only:** the audit log, the formulary, order sets and the staff list. Not on the patient directory, not on the front-desk list. Built by MDV-P2-054 (#1213).
+- **Compact is an explicit per-table choice, allowed on four tables only:** the audit log, the formulary, order sets and the staff list. Not on the patient directory, not on the front-desk list. `<Table density="compact">`; lint (`medvya-ui/compact-table`) fails it anywhere else. On a coarse pointer a compact table's rows are 48 px. Built by MDV-P2-054 (#1213).
 - Tighter page chrome (headers, toolbars, empty cards) is accepted everywhere.
 - 44 px is the library default. A feature never patches a control height (defaults: MDV-P1-077, #1173; patches removed: MDV-P1-078, #1174).
 - WCAG 2.2 SC 2.5.8 sets a 24 by 24 px floor; 44 px is the project's stricter rule. Any row height under 44 px outside the four tables needs AGENTS.md section 4 amended in the same change.
@@ -131,6 +131,7 @@ A feature composes library components and does not style its own copy of a patte
 |---|---|---|
 | Input, Select, Textarea | 44 px by default in the library | MDV-P1-077 (#1173) |
 | Table | `label` is required; names the scrollable region | MDV-P1-077 (#1173) |
+| Table density, stacked rows, TablePagination, `useTableController` | Compact on the four tables; labelled blocks under 768 px; sort announced; paged over 50 rows | MDV-P2-054 (#1213) |
 | PatientBanner | One banner: `full`, `strip` (pinned, one row), `desk` (no clinical data). Never covers a focused element | MDV-P1-081 (#1177), clinical sign-off |
 | StickyActionBar | Layout footer for the commit action and its status; reserves its own space | MDV-P1-082 (#1178) |
 | SaveStatus | "Saving…", "Saved 10:42", "Not saved" in one fixed place | MDV-P1-082 (#1178) |
@@ -142,7 +143,7 @@ A feature composes library components and does not style its own copy of a patte
 | SplitLayout, Sheet | Main and side pane; the side becomes a drawer under 1024 | MDV-P1-086 (#1182) |
 | ConfirmDialog on End consultation | "Authorise now, discard, or end anyway" | MDV-P1-090 (#1186), clinical sign-off |
 
-Later: table controller with sort, paging and stacked rows on phones, and compact density (MDV-P2-054, #1213); Combobox; date and time pickers in the app language; Skeleton; dark and high-contrast themes.
+Later: Combobox; date and time pickers in the app language; Skeleton; dark and high-contrast themes.
 
 **States.** Every interactive component defines: default, hover (pointer only), focus-visible (2 px ring, 2 px offset, at full colour at once), pressed or selected, disabled (grey fill, not opacity), loading (label kept, `aria-busy`), invalid (danger border and message), read-only.
 

@@ -74,6 +74,15 @@ export function groupByColumn(cards: BoardCard[]): Record<BoardColumn, BoardCard
   return groups;
 }
 
+/**
+ * The one card whose "Start consultation" is the filled button for a doctor (one primary per view, DESIGN.md): the next patient in the
+ * queue order, ready for the doctor first, then checked in, then with the nurse; null when nobody waits.
+ * shortcut: the board does not know which calendar is the signed-in doctor's, so with two doctors it is the clinic's next patient; filter by
+ * the doctor's calendar when the session carries it.
+ */
+export const nextConsultId = (columns: Record<BoardColumn, BoardCard[]>) =>
+  (columns.ReadyForDoctor[0] ?? columns.CheckedIn[0] ?? columns.WithNurse[0])?.id ?? null;
+
 /** Visits the doctor's leave left without a slot (MDV-P1-012): they wait for the desk to move or cancel them, and leave the columns. */
 export const needsRebooking = (cards: BoardCard[]) => cards.filter(c => c.state === 'NeedsRebooking').sort((a, c) => Date.parse(a.start) - Date.parse(c.start));
 

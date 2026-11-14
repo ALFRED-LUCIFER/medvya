@@ -3,11 +3,11 @@ import { Link } from 'react-router';
 import type { UseFormReturn } from 'react-hook-form';
 import { CalendarCheck, CalendarClock, CircleCheck, ClipboardCheck, DoorOpen, Ellipsis, EyeOff, Printer, ReceiptText, Syringe, Undo2, UserCheck, type LucideIcon } from 'lucide-react';
 import { useI18n, type MessageKey } from '@medvya/i18n';
-import { Button, buttonVariants, Dialog, DialogContent, DialogDescription, DialogTitle, FrontDeskTag, PageContainer, PageHeader } from '@medvya/ui';
-import type { CancelForm } from '../../schedule/domain/changes';
+import { Button, buttonVariants, cn, Dialog, DialogContent, DialogDescription, DialogTitle, FrontDeskTag, PageContainer, PageHeader, SegmentedControl } from '@medvya/ui';
+import { isDeviceZone, type CancelForm } from '../../schedule/domain/changes';
 import CancelReasonFields from '../../schedule/components/CancelReasonFields';
 import type { workload } from '../domain/overview';
-import { ageYears, canReprint, endKinds, minutesSince, needsRebooking, nextState, tokenSlipPath, visibleColumns, type Board, type BoardCard, type BoardColumn, type EndKind, type LiveStatus, type MoveError, type Notice, type VisitSteps } from '../domain/board';
+import { ageYears, canReprint, endKinds, minutesSince, needsRebooking, nextConsultId, nextState, tokenSlipPath, visibleColumns, type Board, type BoardCard, type BoardColumn, type EndKind, type LiveStatus, type MoveError, type Notice, type VisitSteps } from '../domain/board';
 
 // Every column is words and an icon (never colour alone), following the Clinician App board (P-01).
 const columnIcons: Record<BoardColumn, LucideIcon> = {
@@ -71,56 +71,63 @@ type Props = {
   workload: ReturnType<typeof workload>;
   /** Payment for Billing cards: present when billing is on (flag billing.invoices, P4); until then a disabled placeholder. */
   paymentAction?: ReactNode;
-  /** "Start consultation" for a card (MDV-P2-001), for doctors; null for a card it does not apply to. */
-  consultAction?: (card: BoardCard) => ReactNode;
+  /** "Start consultation" for a card (MDV-P2-001), for doctors; null for a card it does not apply to. `primary` on the one next patient. */
+  consultAction?: (card: BoardCard, primary: boolean) => ReactNode;
   /** With the nurse-intake step on (MDV-P2-007) a With nurse card leaves the nurse by the nurse's handoff, not by this board's move: shown instead of "Intake done". */
   nurseStep?: (card: BoardCard) => ReactNode;
   /** On a Done card with the doctor's follow-up still to book: "Follow-up due" with Book (MDV-P1-102). */
   followUp?: (card: BoardCard) => ReactNode;
   /** The follow-up's dismiss dialog, one for the board. */
   followUpDialog?: ReactNode;
+  /** Under 768 px the board is one list: the status it shows (null: the first with visits). */
+  phoneColumn: BoardColumn | null;
+  onPhoneColumn: (column: BoardColumn) => void;
 };
 
 /** P-01 Reception board: today's visits by state, one tap per step, nonclinical information only. */
 export default function BoardPage(props: Props) {
-  const { t, formatDay } = useI18n();
+  const { t, formatShortDay } = useI18n();
   const { board } = props;
+  // The facility's zone is said only when this device is elsewhere; times are always the facility's.
+  const zone = board && !isDeviceZone(board.timeZone) ? t('schedule.facilityTime', { zone: board.timeZone }) : null;
   return (
-    // A minmax(0, 1fr) track keeps the board's width out of the page's minimum width, so only the board scrolls sideways.
-    <PageContainer width="fluid">
-      <PageHeader eyebrow={t('nav.frontDesk')} title={board ? t('board.title', { day: formatDay(board.date) }) : t('board.titleOnly')}
-        description={board && <span className="text-[13px]">{t('schedule.facilityTime', { zone: board.timeZone })}</span>}
+    <PageContainer width="fluid" className="gap-2">
+      {/* One 44 px row (MDV-P1-095): title and short date, the view switch, the live mark, then the actions. */}
+      <PageHeader title={board ? t('board.title', { day: formatShortDay(board.date) }) : t('board.titleOnly')} meta={zone}
         actions={<>
-          {/* Live or paused: announced when it changes, in words and an icon, never colour alone. Nothing animates. */}
-          {!props.forbidden && <p role="status" className="inline-flex min-h-9 items-center"><FrontDeskTag kind={props.live} /></p>}
-          <p className="inline-flex min-h-9 items-center gap-1.5 rounded-md bg-muted px-3 text-[12.5px] font-bold text-ink-700">
-            <EyeOff aria-hidden className="size-4" />{t('board.hidesClinical')}
-          </p>
+          {props.views}
           {props.overviewAction}
           {props.registerAction}
-        </>}>
-        {props.views}
-      </PageHeader>
-      {props.board && props.workload.length > 0 && <Workload rows={props.workload} />}
+        </>} />
       <StatusLine {...props} />
       <Body {...props} />
+      {!props.consultAction && <p className="inline-flex items-center gap-1.5 text-caption text-muted-foreground"><EyeOff aria-hidden className="size-4" />{t('board.hidesClinical')}</p>}
       <EndVisit {...props} />
       {props.followUpDialog}
     </PageContainer>
   );
 }
 
-/** What this desk last did, announced when it changes; Undo sits beside it for 30 seconds (the server refuses later). */
-function StatusLine({ board, notice, undoing, online, canMove, onUndo }: Props) {
+/**
+ * One line under the header: each doctor's workload, then what this desk last did (announced when it changes) with Undo beside it
+ * for 30 seconds (the server refuses later), today's left-without-being-seen count and the live mark.
+ */
+function StatusLine({ board, notice, undoing, online, canMove, onUndo, workload, live, forbidden }: Props) {
   const { t } = useI18n();
   const left = board?.leftWithoutBeingSeen ?? 0;
   return (
-    <div className="flex min-h-11 flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-      <p role="status" className="font-bold">
-        {notice && t(`board.notice.${notice.kind}`, { name: notice.name || t('board.unknownPatient'), column: t(`board.column.${notice.state}`) })}
-      </p>
-      {notice?.undo && canMove && <Button variant="outline" loading={undoing} disabled={!online} onClick={onUndo}><Undo2 aria-hidden />{t('board.undo')}</Button>}
-      {left > 0 && <p className="ms-auto text-muted-foreground">{t('board.leftToday', { count: left })}</p>}
+    // A line of text, so it costs 20 px; Undo makes it a control's height while it is offered.
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-body">
+      {board && workload.length > 0 && <Workload rows={workload} />}
+      <div className="ms-auto flex flex-wrap items-center gap-x-3 gap-y-1">
+        <p role="status" className="font-bold">
+          {notice && t(`board.notice.${notice.kind}`, { name: notice.name || t('board.unknownPatient'), column: t(`board.column.${notice.state}`) })}
+        </p>
+        {notice?.undo && canMove && <Button variant="outline" loading={undoing} disabled={!online} onClick={onUndo}><Undo2 aria-hidden />{t('board.undo')}</Button>}
+        {left > 0 && <p className="text-muted-foreground">{t('board.leftToday', { count: left })}</p>}
+        {/* Live or paused: announced when it changes, in words and an icon, never colour alone. Nothing animates. */}
+        {!forbidden && <p role="status" className="inline-flex items-center"><FrontDeskTag kind={live} /></p>}
+      </div>
     </div>
   );
 }
@@ -161,22 +168,19 @@ function EndVisit({ ending, endForm, endWorking, endFailed, online, onEndKind, o
   );
 }
 
-/** P-01 "Doctor workload": per doctor, the number waiting in words and a bar for the share of the longest queue. */
+/** P-01 "Doctor workload" on one line (MDV-P1-095): per doctor, the number waiting and how late they run, in words. */
 function Workload({ rows }: { rows: Props['workload'] }) {
   const { t } = useI18n();
   return (
-    <section aria-labelledby="board-workload" className="flex flex-col gap-2 rounded-xl border bg-card p-4">
-      <h2 id="board-workload" className="text-[15px] font-extrabold">{t('overview.workload')}</h2>
-      <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    <section aria-labelledby="board-workload" className="min-w-0">
+      <h2 id="board-workload" className="sr-only">{t('overview.workload')}</h2>
+      <ul className="flex flex-wrap gap-x-4 gap-y-1">
         {rows.map(r => (
-          <li key={r.calendarId} className="flex flex-col gap-1">
-            <span className="flex flex-wrap justify-between gap-2 text-[13.5px]">
-              <strong>{r.name}</strong>
-              <span className="text-muted-foreground">
-                {[t('overview.waitingCount', { count: r.waiting }), r.delayMinutes > 0 ? t('overview.late', { minutes: r.delayMinutes }) : t('overview.onTime')].join(' · ')}
-              </span>
+          <li key={r.calendarId}>
+            <strong>{r.name}</strong>{' '}
+            <span className="text-muted-foreground">
+              {[t('overview.waitingCount', { count: r.waiting }), r.delayMinutes > 0 ? t('overview.late', { minutes: r.delayMinutes }) : t('overview.onTime')].join(' · ')}
             </span>
-            <span aria-hidden className="h-2 overflow-hidden rounded bg-muted"><span className="block h-full rounded bg-action-600" style={{ width: `${Math.round(r.share * 100)}%` }} /></span>
           </li>
         ))}
       </ul>
@@ -202,14 +206,23 @@ function Body(props: Props) {
   if (failed) return <Message title={t('board.error.title')} body={t('board.error.body')} action={{ label: t('schedule.retry'), run: props.onRetry }} />;
   if (loading || !board) return <Message busy title={t('board.loading')} />;
   if (board.cards.length === 0) return <Message title={t('board.empty.title')} body={t('board.empty.body')} />;
+  const shown = visibleColumns(props.steps, props.columns);
+  const phone = props.phoneColumn && shown.includes(props.phoneColumn) ? props.phoneColumn : (shown.find(c => props.columns[c].length > 0) ?? shown[0]!);
+  const primary = props.consultAction ? nextConsultId(props.columns) : null;
   return (
-    // The board scrolls sideways on its own at tablet width and 200 % zoom; the page never does.
-    <section id="board-region" aria-label={t('board.region')} tabIndex={0} className="relative overflow-x-auto rounded-lg pb-2">
-      <div className="grid auto-cols-[minmax(156px,1fr)] grid-flow-col gap-3">
-        {visibleColumns(props.steps, props.columns).map(c => <Column key={c} state={c} {...props} board={board} />)}
-      </div>
-      <Rebooking cards={needsRebooking(board.cards)} timeZone={board.timeZone} />
-    </section>
+    <>
+      {/* Under 768 px the board is one list, chosen by status; the page never scrolls sideways. */}
+      <SegmentedControl label={t('board.statusTabs')} className="flex-wrap md:hidden" value={phone} onValueChange={props.onPhoneColumn}
+        options={shown.map(c => ({ value: c, icon: columnIcons[c], label: t('board.statusTab', { column: t(`board.column.${c}`), count: props.columns[c].length }) }))} />
+      {/* From 768 px the board scrolls on its own, both ways, so each column's header stays in view; scroll padding keeps focus clear of it. */}
+      <section id="board-region" aria-label={t('board.region')} tabIndex={0}
+        className="relative rounded-lg md:max-h-[max(20rem,calc(100dvh-12rem))] md:scroll-pt-12 md:overflow-auto">
+        <div className="flex flex-col gap-3 md:flex-row">
+          {shown.map(c => <Column key={c} state={c} hiddenOnPhone={c !== phone} primary={primary} {...props} board={board} />)}
+        </div>
+        <Rebooking cards={needsRebooking(board.cards)} timeZone={board.timeZone} />
+      </section>
+    </>
   );
 }
 
@@ -228,20 +241,24 @@ function Rebooking({ cards, timeZone }: { cards: BoardCard[]; timeZone: string }
   );
 }
 
-function Column(props: Props & { state: BoardColumn; board: Board }) {
+function Column(props: Props & { state: BoardColumn; board: Board; hiddenOnPhone: boolean; primary: string | null }) {
   const { t, tCount } = useI18n();
   const { state, columns } = props;
   const cards = columns[state], Icon = columnIcons[state];
   const id = `board-col-${state}`;
+  const empty = cards.length === 0;
   return (
-    <section aria-labelledby={id} className="flex min-h-[360px] flex-col gap-2 rounded-xl bg-muted p-2.5">
-      <h2 id={id} className="flex items-center justify-between gap-2 px-1 pb-1 text-[13px] font-extrabold">
+    // At least 208 px wide; from 768 px an empty column is a 48 px stub with its name and count, written top to bottom.
+    <section aria-labelledby={id} className={cn('flex flex-col gap-2 rounded-xl bg-muted px-2.5 pb-2.5 md:min-h-90', props.hiddenOnPhone && 'max-md:hidden',
+      empty ? 'md:w-12 md:flex-none md:items-center md:px-1' : 'md:flex-[1_0_13rem]')}>
+      {/* Pinned while the board scrolls: the name and count stay in view (MDV-P1-095). */}
+      <h2 id={id} className={cn('sticky top-0 z-10 flex items-center justify-between gap-2 bg-muted px-1 pt-2.5 pb-1 text-label', empty && 'md:[writing-mode:vertical-rl]')}>
         <span className="flex items-center gap-1.5"><Icon aria-hidden className="size-4" />{t(`board.column.${state}`)}</span>
-        <span className="font-mono text-xs font-semibold text-muted-foreground">
+        <span className="font-mono text-caption text-muted-foreground tabular-nums">
           <span aria-hidden>{cards.length}</span><span className="sr-only">{tCount('board.count', cards.length)}</span>
         </span>
       </h2>
-      {cards.length === 0 ? <p className="px-1 text-xs text-muted-foreground">{t('board.column.none')}</p> : (
+      {empty ? <p className="px-1 text-caption text-muted-foreground md:hidden">{t('board.column.none')}</p> : (
         <ul className="flex flex-col gap-2">
           {cards.map(card => <li key={card.id}><Card card={card} {...props} /></li>)}
         </ul>
@@ -250,7 +267,7 @@ function Column(props: Props & { state: BoardColumn; board: Board }) {
   );
 }
 
-function Card({ card, board, steps, now, failedVisitIds, canMove, canCancel, online, confirmingId, pendingId, failure, paymentAction, consultAction, nurseStep, followUp, onStartCheckIn, onConfirmCheckIn, onCancelCheckIn, onMove, onStartEnd }: Props & { card: BoardCard; board: Board }) {
+function Card({ card, primary, board, steps, now, workload, failedVisitIds, canMove, canCancel, online, confirmingId, pendingId, failure, paymentAction, consultAction, nurseStep, followUp, onStartCheckIn, onConfirmCheckIn, onCancelCheckIn, onMove, onStartEnd }: Props & { card: BoardCard; board: Board; primary: string | null }) {
   const { t, formatTime, formatCalendarDate } = useI18n();
   const state = card.state as BoardColumn;
   const next = nextState(state, steps);
@@ -261,14 +278,16 @@ function Card({ card, board, steps, now, failedVisitIds, canMove, canCancel, onl
   const age = ageYears(card.dateOfBirth, now);
   const dob = card.dateOfBirth ? formatCalendarDate(card.dateOfBirth) : t('board.dobUnknown');
   const ends = canMove ? endKinds(card.state, canCancel) : [];
+  // The doctor only when more than one works today, so two doctors' patients are told apart (MDV-P1-095).
+  const who = [age !== null && t('patients.age', { age }), age !== null && card.sex && t(`patients.sex.${card.sex}`), workload.length > 1 && card.calendarName].filter(Boolean);
 
   return (
-    <article aria-labelledby={nameId} className="flex flex-col gap-1.5 rounded-lg border bg-card px-3 py-2.5">
+    <article aria-labelledby={nameId} className="flex min-w-0 flex-col gap-1.5 rounded-lg border bg-card p-3">
       <div className="flex justify-between gap-1.5">
-        <h3 id={nameId} className="text-sm font-bold">{card.patientName || t('board.unknownPatient')}</h3>
-        <span className="font-mono text-xs text-muted-foreground">{formatTime(new Date(card.start), board.timeZone)}</span>
+        <h3 id={nameId} className="min-w-0 break-words text-label">{card.patientName || t('board.unknownPatient')}</h3>
+        <span className="shrink-0 font-mono text-caption text-muted-foreground tabular-nums">{formatTime(new Date(card.start), board.timeZone)}</span>
       </div>
-      {age !== null && <p className="text-xs text-muted-foreground">{t('patients.row.ageSex', { age: t('patients.age', { age }), sex: card.sex ? t(`patients.sex.${card.sex}`) : '' })}</p>}
+      {who.length > 0 && <p className="break-words text-caption text-muted-foreground">{who.join(' · ')}</p>}
       <div className="flex flex-wrap gap-1">
         {failedVisitIds.has(card.id) && <FrontDeskTag kind="messageFailed" />}
         {card.walkIn && <FrontDeskTag kind="walkIn" />}
@@ -290,7 +309,7 @@ function Card({ card, board, steps, now, failedVisitIds, canMove, canCancel, onl
         // A consultation is open: the doctor's End moves the card, so the desk has words here and no action (MDV-P1-100).
         <FrontDeskTag kind="room" text={t('board.withDoctor')} />
       ) : canMove && next && state !== 'Done' ? (
-        <Button variant="outline" className="mt-1 whitespace-normal" loading={busy} disabled={!online}
+        <Button variant="outline" className="mt-1 w-full" loading={busy} disabled={!online}
           onClick={() => (state === 'Booked' ? onStartCheckIn(card.id) : onMove(card.id, next))}>
           {t(state === 'CheckedIn' && next === 'ReadyForDoctor' ? 'board.action.toDoctor' : actionKeys[state])}
         </Button>
@@ -302,7 +321,7 @@ function Card({ card, board, steps, now, failedVisitIds, canMove, canCancel, onl
           <p id={`${nameId}-pay`} className="text-xs text-muted-foreground">{t('board.paymentLater')}</p>
         </>
       ))}
-      {consultAction?.(card)}
+      {consultAction?.(card, card.id === primary)}
       {state === 'Done' && card.followUp && followUp?.(card)}
       {/* MDV-P2-046: the same token again, for a lost slip; a void token is off the board and the server refuses it anyway. */}
       {canMove && canReprint(card) && (

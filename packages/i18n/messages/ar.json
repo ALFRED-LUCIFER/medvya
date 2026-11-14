@@ -1131,6 +1131,8 @@
   "board.titleOnly": "لوحة الاستقبال",
   "board.hidesClinical": "عرض الاستقبال يخفي الملاحظات السريرية",
   "board.region": "الزيارات حسب الحالة",
+  "board.statusTabs": "عرض الزيارات حسب الحالة",
+  "board.statusTab": "{column} · {count}",
   "board.loading": "جارٍ تحميل اللوحة…",
   "board.offline": "أنت غير متصل. تُحمَّل اللوحة عند إعادة الاتصال.",
   "board.forbidden.body": "اطلب من مسؤول العيادة صلاحية الوصول إلى مكتب الاستقبال في هذه المنشأة.",

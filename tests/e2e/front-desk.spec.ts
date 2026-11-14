@@ -93,7 +93,7 @@ const cardOf = (page: Page, name: string) => page.getByRole('article', { name })
 
 test('shows today\'s visits by status with nonclinical tags, in facility time', async ({ page }) => {
   await open(page);
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Reception board · Monday, 19 October 2026');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Reception board · Mon, 19 Oct');
   await expect(page.getByText('Receptionist view hides clinical notes')).toBeVisible();
   for (const [name, count] of [['Booked', 1], ['Checked in', 1], ['With nurse', 1], ['Ready for doctor', 0], ['In consult', 1], ['Billing', 1], ['Done', 0]] as const)
     await expect(column(page, name).getByRole('article')).toHaveCount(count);
@@ -297,9 +297,11 @@ test('Arabic is right-to-left with Booked on the reading-start side', async ({ p
   await expect(page.getByRole('group', { name: 'تأكيد الهوية' })).toBeVisible();
 });
 
-test('keyboard checks in; 44 px targets; tablet and 200% zoom scroll the board, never the page', async ({ page }) => {
-  await page.setViewportSize({ width: 683, height: 768 }); // a 1366 px screen at 200 %
+test('keyboard checks in; 44 px targets; at 200% zoom the board is one list by status, the tablet board scrolls on its own, never the page', async ({ page }) => {
+  await page.setViewportSize({ width: 683, height: 768 }); // a 1366 px screen at 200 %: under 768 px, one list (MDV-P1-095)
   const calls = await open(page);
+  const tabs = page.getByRole('group', { name: 'Show visits by status' });
+  await expect(tabs.getByRole('button', { name: 'Booked · 1' })).toHaveAttribute('aria-pressed', 'true'); // the first status with visits
   const checkIn = cardOf(page, 'Meera Iyer (synthetic)').getByRole('button', { name: 'Check in' });
   await checkIn.focus();
   await page.keyboard.press('Enter');
@@ -307,17 +309,130 @@ test('keyboard checks in; 44 px targets; tablet and 200% zoom scroll the board, 
   for (const b of await page.getByRole('group', { name: 'Confirm identity' }).getByRole('button').all())
     expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   await page.keyboard.press('Enter');
+  await tabs.getByRole('button', { name: 'Checked in · 2' }).click();
   await expect(column(page, 'Checked in').getByRole('article')).toHaveCount(2);
+  await expect(column(page, 'Booked')).toBeHidden(); // one status at a time
   expect(calls.checkIns).toHaveLength(1);
-  for (const b of await page.getByRole('region', { name: 'Visits by status' }).getByRole('button').all())
-    if (await b.isEnabled()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  for (const b of await page.getByRole('main').getByRole('button').all())
+    if (await b.isVisible() && await b.isEnabled()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   const board = page.getByRole('region', { name: 'Visits by status' });
-  expect(await board.evaluate(el => el.scrollWidth > el.clientWidth)).toBe(true); // the board scrolls sideways itself
+  expect(await board.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true); // a list: nothing sideways
 
+  await page.setViewportSize({ width: 768, height: 1024 }); // tablet portrait: the board, scrolling sideways on its own
+  await expect(tabs).toBeHidden();
+  expect(await board.evaluate(el => el.scrollWidth > el.clientWidth)).toBe(true);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.setViewportSize({ width: 1024, height: 768 }); // tablet landscape
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
+
+// MDV-P1-095: the board's chrome. Nine visits for two doctors; metrics at the widths a desk uses.
+const nine = () => [
+  card('b1', 'Meera Iyer (synthetic)', '11:00', 'Booked'), card('b2', 'Anand Krishnamurthy Venkataraghavan Subramaniam (synthetic)', '11:20', 'Booked'),
+  card('b3', 'Sara Thomas (synthetic)', '11:40', 'Booked', { calendarId: 'd-2', calendarName: 'Dr. S. Menon (synthetic)' }),
+  card('c1', 'Farhan Qureshi (synthetic)', '10:20', 'CheckedIn', { token: 'A-07', queuePlace: 1 }),
+  card('c2', 'Deepak Nair (synthetic)', '10:25', 'CheckedIn', { token: 'A-08', queuePlace: 2, calendarId: 'd-2', calendarName: 'Dr. S. Menon (synthetic)' }),
+  card('r1', 'Lakshmi Pillai (synthetic)', '10:10', 'ReadyForDoctor', { queuePlace: 1 }),
+  card('i1', 'Vikram Desai (synthetic)', '10:00', 'InConsult'), card('l1', 'Rahul Menon (synthetic)', '09:30', 'Billing'),
+  card('d1', 'Kavya Iyer (synthetic)', '09:00', 'Done'),
+];
+const firstCardTop = async (page: Page) => (await page.getByRole('article').first().boundingBox())!.y;
+
+test('one header row and a one-line workload: at 1024 x 768 the first card starts at or above 220 px; at 1440 and 768 too', async ({ page }) => {
+  for (const [w, h, most] of [[1024, 768, 220], [1440, 900, 220], [768, 1024, 280]] as const) {
+    await page.setViewportSize({ width: w, height: h });
+    await fakeHub(page, '/v1/hubs/board', /Meera|Iyer/); // live, as at the desk
+    await open(page, { only: [], extra: nine() });
+    await expect(cardOf(page, 'Meera Iyer (synthetic)')).toBeVisible();
+    await expect(page.getByText('Live updates')).toBeVisible();
+    expect(await firstCardTop(page), `first card at ${w} px`).toBeLessThanOrEqual(most);
+    const row = (await page.locator('[data-slot=page-header-row]').boundingBox())!;
+    if (w >= 1024) expect(row.height, `one header row at ${w} px`).toBeLessThanOrEqual(46); // at 768 the actions take a second row
+    await page.unrouteAll({ behavior: 'ignoreErrors' });
+  }
+});
+
+test('from 768 to 1440 px no text leaves its card and every action label is on one line', async ({ page }) => {
+  for (const locale of ['en', 'ar'])
+    for (const w of [768, 1024, 1440]) {
+      await page.setViewportSize({ width: w, height: 900 });
+      await open(page, { locale, only: [], extra: nine() });
+      await expect(page.getByRole('article')).toHaveCount(9);
+      const outside = await page.getByRole('region', { name: locale === 'en' ? 'Visits by status' : 'الزيارات حسب الحالة' }).evaluate(region => {
+        const out: string[] = [];
+        for (const card of region.querySelectorAll('article')) {
+          const c = card.getBoundingClientRect();
+          for (const el of card.querySelectorAll<HTMLElement>('h3, p, span, button, a')) {
+            const r = el.getBoundingClientRect();
+            if (r.width && (r.left < c.left - 0.5 || r.right > c.right + 0.5)) out.push(`${el.textContent?.slice(0, 30)} outside its card`);
+          }
+          for (const b of card.querySelectorAll<HTMLElement>('button')) if (b.getBoundingClientRect().height > 46) out.push(`${b.textContent} wraps`);
+        }
+        return out;
+      });
+      expect(outside, `${locale} at ${w} px`).toEqual([]);
+      await page.unrouteAll({ behavior: 'ignoreErrors' });
+    }
+});
+
+test('the card names the doctor when two doctors work today, and not with one', async ({ page }) => {
+  await open(page, { only: [], extra: nine() });
+  await expect(cardOf(page, 'Sara Thomas (synthetic)')).toContainText('Dr. S. Menon (synthetic)');
+  await expect(cardOf(page, 'Meera Iyer (synthetic)')).toContainText('54 y · Female · Dr. Arjun Rao (synthetic)');
+  await page.unrouteAll({ behavior: 'ignoreErrors' });
+  await open(page);
+  await expect(cardOf(page, 'Meera Iyer (synthetic)')).not.toContainText('Dr. Arjun Rao');
+});
+
+test('a long column keeps its name and count in view while it scrolls; an empty column is a narrow stub with its name', async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 768 });
+  const many = Array.from({ length: 12 }, (_, i) => card(`m${i}`, `Patient ${i} (synthetic)`, '11:00', 'Booked'));
+  await open(page, { only: [], extra: many });
+  const region = page.getByRole('region', { name: 'Visits by status' });
+  const header = column(page, 'Booked').getByRole('heading', { level: 2 });
+  await cardOf(page, 'Patient 11 (synthetic)').scrollIntoViewIfNeeded();
+  expect(await region.evaluate(el => el.scrollTop)).toBeGreaterThan(0);
+  const [h, r] = [(await header.boundingBox())!, (await region.boundingBox())!];
+  expect(Math.abs(h.y - r.y)).toBeLessThanOrEqual(1); // pinned at the top of the board
+  await expect(header).toHaveText(/Booked/);
+  await expect(header).toContainText('12');
+  const stub = column(page, 'Done');
+  expect((await stub.boundingBox())!.width).toBeLessThanOrEqual(48);
+  await expect(stub.getByRole('heading', { level: 2 })).toHaveText(/Done.*0/);
+});
+
+test('at 375 px the board is one list with status tabs and nothing scrolls sideways', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await open(page, { only: [], extra: nine() });
+  const tabs = page.getByRole('group', { name: 'Show visits by status' });
+  await expect(tabs.getByRole('button')).toHaveText(['Booked · 3', 'Checked in · 2', 'Ready for doctor · 1', 'In consult · 1', 'Billing · 1', 'Done · 1']);
+  await expect(page.getByRole('article')).toHaveCount(3);
+  await tabs.getByRole('button', { name: 'Ready for doctor · 1' }).click();
+  await expect(page.getByRole('article')).toHaveText([/Lakshmi Pillai/]);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
+
+test('a doctor sees at most one filled button in the first viewport: the next patient\'s Start consultation', async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await open(page, { as: hospitalDoctor, only: [], extra: nine() });
+  await expect(cardOf(page, 'Lakshmi Pillai (synthetic)')).toBeVisible();
+  const filled = await page.evaluate(() => [...document.querySelectorAll<HTMLElement>('main .bg-primary')].filter(el => {
+    const r = el.getBoundingClientRect();
+    return r.width > 0 && r.bottom > 0 && r.top < window.innerHeight && r.right > 0 && r.left < window.innerWidth;
+  }).map(el => el.getAttribute('aria-label') ?? el.textContent));
+  expect(filled).toEqual(['Start consultation with Lakshmi Pillai (synthetic)']);
+});
+
+for (const locale of ['en', 'ar'])
+  for (const [w, h] of [[1440, 900], [1024, 768], [375, 812]] as const)
+    test(`axe finds no violations on the board at ${w} px (${locale})`, async ({ page }) => {
+      await page.setViewportSize({ width: w, height: h });
+      await open(page, { locale, only: [], extra: nine() });
+      await expect(page.getByRole('article').first()).toBeVisible();
+      await page.addScriptTag({ path: axePath });
+      expect(await axeViolations(page)).toEqual([]);
+    });
 
 test('live: a change made at another desk appears without reloading, and a drop pauses then resyncs', async ({ page }) => {
   const hub = await fakeHub(page, '/v1/hubs/board', /Meera|Iyer/); // nothing about patients in the hub's URLs

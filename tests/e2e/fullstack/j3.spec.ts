@@ -173,7 +173,7 @@ journey('J3', {
     await signIn(page, joseph);
     await walkIn(page, patient, rao);
     await page.goto(board);
-    await page.getByRole('group', { name: 'Board views' }).getByRole('link', { name: 'By doctor' }).click();
+    await page.getByRole('group', { name: 'Board views' }).getByRole('button', { name: 'By doctor' }).click();
     await expect(page).toHaveURL(/\/front-desk\/overview$/);
     const waiting = page.getByRole('region', { name: /^Waiting room/ }).getByRole('row').filter({ hasText: patient.name });
     await expect(waiting).toContainText(/Dr\. Arjun Rao/);

@@ -6,6 +6,8 @@ import type { StartProblem } from '../domain/encounter';
 
 type Props = {
   patientName: string; inConsult: boolean; online: boolean;
+  /** Filled only on the one next patient of the view (one primary per view); outline otherwise. */
+  primary?: boolean;
   problem: StartProblem | null; starting: boolean; reason: AccessReason; asking: boolean; askFailed: boolean;
   onStart: () => void; onLeaveOpenAndStart: () => void; onReturn: () => void; onReason: (r: AccessReason) => void; onRequestAccess: () => void;
 };
@@ -17,7 +19,7 @@ export default function StartConsult(p: Props) {
   const problem = p.problem;
   return (
     <div className="flex flex-col gap-2">
-      <Button variant="default" className="whitespace-normal" loading={p.starting} disabled={!p.online}
+      <Button variant={p.primary === false ? 'outline' : 'default'} className="whitespace-normal" loading={p.starting} disabled={!p.online}
         aria-label={t(p.inConsult ? 'consult.openFor' : 'consult.startFor', { name: p.patientName })} onClick={p.onStart}>{label}</Button>
       {problem?.kind === 'open' && (
         <div role="alert" className="flex flex-col gap-2 rounded-md border p-2 text-sm">

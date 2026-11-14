@@ -1132,6 +1132,8 @@
   "board.titleOnly": "Reception board",
   "board.hidesClinical": "Receptionist view hides clinical notes",
   "board.region": "Visits by status",
+  "board.statusTabs": "Show visits by status",
+  "board.statusTab": "{column} · {count}",
   "board.loading": "Loading the board…",
   "board.offline": "You are offline. The board loads when you reconnect.",
   "board.forbidden.body": "Ask your practice admin for access to this facility's front desk.",

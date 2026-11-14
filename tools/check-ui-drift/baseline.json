@@ -3,5 +3,6 @@
   "rawHexApps": {
     "web/clinic/src/features/documents/components/DocumentsPage.tsx": 1,
     "web/platform-admin/src/features/approvals/components/DocumentViewer.tsx": 1
-  }
+  },
+  "rawHexNative": {}
 }

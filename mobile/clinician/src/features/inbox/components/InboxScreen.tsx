@@ -1,4 +1,4 @@
-import { useI18n, type MessageKey } from '@medvya/i18n';
+import { ltr, useI18n, type MessageKey } from '@medvya/i18n';
 import { AppHeader, Avatar, Banner, Button, Card, Chip, Icon, Loading, Screen, Section, StateMessage, Text } from '@medvya/ui-native';
 import { theme } from '@medvya/tokens';
 import { StyleSheet, View } from 'react-native';
@@ -37,10 +37,10 @@ export function InboxScreen(vm: Props) {
             <View style={styles.line}>
               <Avatar initials={m.initials} size={36} />
               <Text variant="label" style={styles.flex}>{m.patient}</Text>
-              <Chip label={t('mobile.inbox.replyBy', { time: m.replyBy })} tone="warning" icon="schedule" />
+              <Chip label={t('mobile.inbox.replyBy', { time: ltr(m.replyBy) })} tone="warning" icon="schedule" />
             </View>
             <Text>{m.text}</Text>
-            <Button label={t('mobile.inbox.reply')} variant="secondary" icon="reply" disabled hint={t('mobile.common.comingSoon')} />
+            <Button label={t('mobile.inbox.reply')} accessibilityLabel={t('mobile.inbox.replyTo', { patient: m.patient })} variant="secondary" icon="reply" disabled hint={t('mobile.common.comingSoon')} />
           </Card>
         ))}
       </Section>

@@ -20,6 +20,10 @@ describe('note rules', () => {
     expect(r).toEqual({ kept: { plan: 'p' }, dropped: ['fetalWellbeing'] });
   });
 
+  it('switching keeps the visit notes: every template has them (MDV-P2-067)', () => {
+    expect(switchTemplate({ notes: 'n', fetalWellbeing: 'f' }, tpl('b', 'plan'))).toEqual({ kept: { notes: 'n' }, dropped: ['fetalWellbeing'] });
+  });
+
   it('reapply keeps my edits and takes theirs where I changed nothing', () => {
     expect(reapply({ plan: 'a', objective: 'o' }, { plan: 'mine', objective: 'o', subjective: 'new' }, { plan: 'theirs', objective: 'o2' }))
       .toEqual({ plan: 'mine', objective: 'o2', subjective: 'new' });

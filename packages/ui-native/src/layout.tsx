@@ -6,6 +6,8 @@ import { Avatar } from './display';
 import { IconButton, type IconName } from './controls';
 import { Text } from './text';
 
+const { space, spacing, radius } = theme;
+
 /** A full screen: safe area at the top, scrolling content, optional pinned footer for the primary action (thumb reach) that rides above the keyboard. */
 export function Screen({ header, footer, children, scroll = true, padded = true, refresh }: { header?: ReactNode; footer?: ReactNode; children: ReactNode; scroll?: boolean; padded?: boolean; refresh?: { refreshing: boolean; onRefresh: () => void } }) {
   const body = padded ? styles.padded : undefined;
@@ -56,12 +58,12 @@ export function Section({ title, aside, children }: { title: string; aside?: str
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: theme.color.surface },
-  padded: { padding: 20, gap: 16 },
+  padded: { padding: spacing.gutter, gap: space[16] },
   grow: { flexGrow: 1 },
-  footer: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 20, gap: 8, backgroundColor: theme.color.surface },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingVertical: 12, backgroundColor: theme.color.card, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.color.line },
+  footer: { paddingHorizontal: spacing.gutter, paddingTop: space[12], paddingBottom: space[24], gap: space[8], backgroundColor: theme.color.surface },
+  header: { flexDirection: 'row', alignItems: 'center', gap: space[12], paddingHorizontal: spacing.gutter, paddingVertical: space[12], backgroundColor: theme.color.card, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.color.line },
   headerText: { flex: 1 },
-  card: { backgroundColor: theme.color.card, borderRadius: 16, borderWidth: 1, borderColor: theme.color.line, padding: 16, gap: 10 },
-  section: { gap: 10 },
+  card: { backgroundColor: theme.color.card, borderRadius: radius.lg, borderWidth: 1, borderColor: theme.color.line, padding: space[16], gap: space[12] },
+  section: { gap: space[12] },
   sectionHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
 });

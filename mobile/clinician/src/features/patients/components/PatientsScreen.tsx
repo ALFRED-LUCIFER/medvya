@@ -1,4 +1,4 @@
-import { useI18n, type MessageKey } from '@medvya/i18n';
+import { ltr, useI18n, type MessageKey } from '@medvya/i18n';
 import { AppHeader, Avatar, Card, ListRow, Loading, Screen, StateMessage, TextField, type IconName, type Tone } from '@medvya/ui-native';
 import { theme } from '@medvya/tokens';
 import { statuses } from '@medvya/tokens/status';
@@ -33,7 +33,7 @@ export function PatientsScreen(vm: Props) {
               <View key={p.id} style={i > 0 && styles.divider}>
                 <ListRow
                   title={p.name}
-                  subtitle={t('mobile.patients.line', { age: p.age, sex: t(`mobile.sex.${p.sex}`), last4: p.phoneLast4 })}
+                  subtitle={t('mobile.patients.line', { age: p.age, sex: t(`mobile.sex.${p.sex}`), last4: ltr(`••${p.phoneLast4}`) })}
                   leading={<Avatar initials={p.initials} />}
                   chips={p.flag ? [{ label: t(`mobile.patients.flag.${p.flag}`), tone: patientFlagLook[p.flag].tone, icon: patientFlagLook[p.flag].icon }] : []}
                   onPress={() => vm.onOpenPatient(p.id)}

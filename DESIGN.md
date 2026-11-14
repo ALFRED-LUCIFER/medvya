@@ -1,6 +1,6 @@
 # Medvya: design rules
 
-The rules for every screen in `web/` and every component in `packages/ui`. Who the product is for, the principles and the device strategy are in [PRODUCT.md](PRODUCT.md). The short enforced form is [AGENTS.md](AGENTS.md) section 4.
+The rules for every screen in `web/` and every component in `packages/ui`; the two Expo apps follow [Native apps](#native-apps). Who the product is for, the principles and the device strategy are in [PRODUCT.md](PRODUCT.md). The short enforced form is [AGENTS.md](AGENTS.md) section 4.
 
 Source: the 13 Nov 2026 product UX audit, [blueprint](docs/product-ux-audit/08-design-system-blueprint.md) sections 2 to 10 and 12 to 14, and the [arbitration rulings](docs/product-ux-audit/07-debate-and-arbitration.md). The picture of the target is the [workspace concept](docs/product-ux-audit/concepts/medvya-workspace-concept.html).
 
@@ -132,7 +132,7 @@ Two densities (ruling 2, amended 14 Nov 2026 by MDV-P2-062). Density is chosen b
 | caption | 12/16 | 600 | Hints, metadata, chips |
 | mono | 13/20 | 500 | MRN, token, codes |
 
-Bold marks headings and the one thing that identifies a row. Tabular numerals on every number, vital, time and amount. No other sizes: 11, 12.5, 13.5, 15, 17 and 22 px are removed, and no arbitrary font size is added (the rail label in [Layout](#layout-grid-and-widths) is the one named exception). Tokens: MDV-P1-079 (#1175). Applied: MDV-P2-057 (#1216).
+Bold marks headings and the one thing that identifies a row. Tabular numerals on every number, vital, time and amount. No other sizes: 11, 12.5, 13.5, 15, 17 and 22 px are removed, and no arbitrary font size is added (the rail label in [Layout](#layout-grid-and-widths) is the one named exception; the Expo apps' sizes are in [Native apps](#native-apps)). Tokens: MDV-P1-079 (#1175). Applied: MDV-P2-057 (#1216).
 
 **Radius:** 6 chips, 10 controls, 12 cards and panels, full for pills and avatars.
 
@@ -153,7 +153,7 @@ The palette does not change. A tone layer gives each meaning one colour pair on 
 | neutral | Everything else | |
 
 - Status is never colour alone: label always, icon where it helps.
-- One status map for every app: `packages/tokens/src/status.ts` gives each shared status its words, tone and glyph (Lucide on web, the same shape in Material on native). Web reads it through `statusIcons` in `@medvya/ui`; the Expo apps import it directly. Allergy has its own shield glyph, never the medicine or critical one (MDV-P5-057).
+- One status map for every app: `packages/tokens/src/status.ts` gives each shared status its words, tone and glyph (Lucide on web, the same shape in Material on native). Web reads it through `statusIcons` in `@medvya/ui`; the Expo apps import it directly. Allergy has its own shield glyph, never the medicine or critical one (MDV-P5-057); a prescription allergy or cross-sensitivity alert is `ClinicalAlert allergy`, the shield in its severity's colour and words.
 - **One primary (filled) button per view:** the single next action for the signed-in user.
 - No raw hex colours in components.
 - Text contrast at least 4.5:1; large text and control borders at least 3:1.
@@ -240,6 +240,43 @@ Built by MDV-P1-082 (#1178) and MDV-P1-092 (#1188).
 
 **Phone rule (ruling 5).** Below 768 px a doctor gets My day, the queue, a read-only chart, search, signing an addendum and seeing an escalation. Composing or authorising a prescription, reconciliation, orders, signing a new note, merge approval and settings show "Open this on a tablet or computer". Reception gets the queue list and quick registration. Tablet (768 and up) is a first-class device for the nurse and the doctor. Built by MDV-P1-098 (#1194) with clinical sign-off. The task-by-device table is in [PRODUCT.md](PRODUCT.md#device-strategy).
 
+This section is the web app below 768 px. The store apps are [Native apps](#native-apps).
+
+## Native apps
+
+The two Expo apps (`mobile/clinician`, teal; `mobile/patient`, indigo) and their component library `packages/ui-native` ([ADR-011](docs/adr/ADR-011-mobile-apps.md)). The design source is `docs/02-design/source/Medvya Mobile.dc.html` (6 Nov 2026). Everything above about tone, status words and colour applies unchanged; this section adds what differs on a phone.
+
+**One tokens file.** `packages/tokens/src/tokens.json` renders the web CSS and the native `theme` (`pnpm --filter @medvya/tokens generate`; the test fails when either is stale). Every colour, radius, space and type size in native code comes from `theme`. No raw hex in `mobile/*/src` or `packages/ui-native/src`: `pnpm check:ui-drift` counts it at a zero baseline (MDV-P5-032).
+
+**Components.** Screens compose `@medvya/ui-native` (Screen, AppHeader, Card, Section, Button, IconButton, TextField, Segmented, Chip, Banner, ListRow, StateMessage). Never web UI, React Native Paper or a local copy of a library pattern. The app's accent and sizes come from its `BrandProvider` (`clinicBrand` or `patientBrand`), never from the screen. The ADR-009 layers (`domain`, `services`, `hooks`, `components`) and `react/jsx-no-literals` are lint errors (`mobile/.oxlintrc.json`).
+
+**Sizes.** Values the web does not use live in the `native` token group, which is rendered into `theme` only:
+
+| | Clinic app | Patient app | Token |
+|---|---|---|---|
+| Minimum target | 44 px | 48 px | `coarse.spacingControl`; `native.targetPatient` (personas: 48 px) |
+| Primary action and text input | 52 px | 52 px | `native.action` (the design's full-width sign-in, unlock and pay buttons and inputs) |
+| Body, label | 15 px | 17 px | `native.body`; `native.bodyPatient` (personas: 17 px minimum) |
+| Heading, caption | body + 2, body − 2 | | |
+| Screen title, display | 24 px, 30 px | | 24 is the design's screen title; `text.display` |
+
+- Page gutter 16 px (`spacing.gutter`), spacing from the 2 to 64 scale. Radius from the web scale: 6 chips, 10 controls, 12 cards and banners, 16 the soft-square emblem, full for badges and round avatars.
+- Text keeps system font scaling (Dynamic Type, Android font size) up to 200 % (`maxFontSizeMultiplier={2}`). Icons scale with the font size too, capped at 1.5×, so a row keeps its shape; the tab bar keeps fixed icons, as iOS does (MDV-P5-063).
+
+**Rules decided in MDV-P5-055 to MDV-P5-063** (mobile simulator audit, `docs/product-ux-audit/13-mobile-simulator-audit.md`):
+
+1. **Screen readers get words, never glyphs.** Icons are hidden from the accessibility tree on both platforms. A row's spoken label includes its chips' words (allergy, critical), and each repeated action names its object ("Mark reviewed: <patient>, <test>") (MDV-P5-055).
+2. **Arabic is right to left.** Both apps set `supportsRTL` (expo-localization); chevrons and back arrows flip with `I18nManager.isRTL`; layout uses `start` and `end`, never `left` and `right` (MDV-P5-056).
+3. **One status map.** Status words, tone and glyph come from `packages/tokens/src/status.ts`, the same map as web; allergy has its own shield glyph and says Allergy (MDV-P5-057).
+4. **A disabled action says why.** Its reason shows as text under it (and is its accessibility hint), and it takes the grey `disabled` fill with `ink600` text from tokens, never opacity. A field that would lose what is typed is disabled with its action (MDV-P5-058).
+5. **Biometric words per platform.** iOS says Face ID or Touch ID, as the phone has; Android says "fingerprint or face unlock" and never Face ID. The offer after sign-in always has a Not now that leaves biometrics off (MDV-P5-059).
+6. **The footer stays above the keyboard.** The primary action sits in `Screen`'s pinned footer (thumb reach), which rides above the keyboard; never at the end of a scrolling form (MDV-P5-060).
+7. **Honest wording.** A choice the app cannot change yet says how to change it (ask the clinic), never "Change any time" (MDV-P5-061).
+8. **Development cast dates are relative to today,** so upcoming items are in the future and past items in the past on any day (MDV-P5-062).
+9. **Tab names match their screens;** no two tabs open screens of the same name (MDV-P5-063).
+
+A visual change in `packages/ui-native` needs a check on an iOS and an Android device or simulator, in English and Arabic, at default and 200 % font size.
+
 ## Owner page
 
 **Clinic today (ruling 7): a short actionable page. No number the system did not earn.** It shows only:
@@ -296,7 +333,7 @@ Also required: Arabic right-to-left with logical properties, and reduced motion 
 ## Guardrails
 
 - No `min-h-11` or `h-11` on library controls in features: oxlint `medvya-ui/no-height-patch` fails it (MDV-P1-078, #1174; re-run `node tools/codemods/remove-height-patches.mjs` on a branch). No raw hex colours and no raw `h1` in features (MDV-P1-076, #1172). No arbitrary font size (`medvya-ui/no-arbitrary-text-size`; the queue display and print pages are exempt) and no column rule at `sm:` (`medvya-ui/no-sm-columns`) in features: both lint errors since MDV-P2-057 (#1216).
-- Counts in CI that may only fall: `pnpm check:ui-drift` compares raw hex colours in the apps and the library with `tools/check-ui-drift/baseline.json` (the other patterns reached zero and are lint errors). A rise fails; a fall is committed with `--update` in the same pull request. When a count reaches zero, that ticket turns the matching lint rule to error and removes the count.
+- Counts in CI that may only fall: `pnpm check:ui-drift` compares raw hex colours in the web apps, the library, the Expo apps and `packages/ui-native` with `tools/check-ui-drift/baseline.json` (the other patterns reached zero and are lint errors). A rise fails; a fall is committed with `--update` in the same pull request. When a count reaches zero, that ticket turns the matching lint rule to error and removes the count.
 - One browser test, mutation-checked: the patient strip is visible after scrolling the consultation (MDV-P1-092, #1188).
 - The contrast test reads the tone tokens (MDV-P1-080, #1176).
 

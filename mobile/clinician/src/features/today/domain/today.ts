@@ -12,4 +12,7 @@ export type Today = {
 
 /** The queue in the order the desk works it: with the doctor, next, waiting, then booked by time. */
 const rank: Record<QueueStatus, number> = { withDoctor: 0, next: 1, waiting: 2, booked: 3 };
-export const orderQueue = (q: QueueEntry[]) => [...q].sort((a, b) => rank[a.status] - rank[b.status] || a.at.localeCompare(b.at));
+/** Today as the screen gets it: `savedAt` is set when this is the offline last copy (ADR-011 §3), null when live. */
+export type TodayCopy = { today: Today; savedAt: number | null };
+
+export const orderQueue =(q: QueueEntry[]) => [...q].sort((a, b) => rank[a.status] - rank[b.status] || a.at.localeCompare(b.at));

@@ -1852,3 +1852,43 @@ tests:
 notes:
 - Owner decision: who may print the record summary (proposed: doctor only) and whether a receptionist may print the investigation slip (proposed: yes, so the patient can take it to the lab).
 - Regression risk: medium.
+
+=== MDV-P2-067
+title: Consultation Notes: a Notes button in the bottom bar where the doctor types free notes about the visit, kept with the signed note
+type: Story
+epic: MDV-P2-E04
+prd: P2-04, P2-05
+screens: E-04, E-06
+priority: SHOULD
+roles: Doctor
+labels: notes, encounters, signing, clinical, ui, a11y
+estimate: 2
+weeks: 13
+depends: MDV-P2-009, MDV-P2-012, MDV-P2-041
+confidence: 75 | The note already stores sections keyed by id, autosaves and signs them; one reserved free-text section and one Sheet reuse all of it.
+sources: Owner request of 15 Nov 2026; DESIGN.md Screen layout standard and Sheet; AGENTS.md 1.2 and 1.6 (no audio leaves the country)
+desc:
+Owner request, 15 Nov 2026: in the patient consultation, a "Notes" button where the doctor records free notes about the visit, kept for the record.
+
+Persona and route: /consult/:id (one page and guided steps), /consult/:id/note/print and the signed note PDF · doctor.
+Today: the note holds only the template's sections; a thought that fits none of them has nowhere to go.
+Proposed UX behaviour: An outline "Notes" button in the consultation's bottom bar (Sign stays the one primary) opens a Sheet holding one text box, typed at 16 px. It is part of the same note: it autosaves with the draft and the save state says so; the button says in words when notes are written. Once the note is signed, the Sheet shows the text and cannot edit it; a change after signing is an addendum. The signed page, the print view and the PDF show the notes under a "Notes" heading. Previous-note snippets offer them like any other section.
+Server: one reserved, optional, free-text section id "notes" that every template accepts (same maximum length as a section). It is stored in the note's sections (classified SensitiveHealth), so it is in the signed version and its content hash. It is never required and never a checklist item. Any other id the template does not have is still refused (unknown_section).
+Components and tokens affected: StickyActionBar (ConsultFooter), Sheet, Field, Textarea. No new component.
+Front end and back end split: Both. No table change.
+Clinical sign-off: Not required: free text the doctor types, signed with the note.
+Effort and regression risk: S · Low: one more section in an existing, signed and hashed store.
+Deliberately NOT in this ticket: (1) Dictation into the Notes box (MDV-P3-020, in-region Azure Speech only; the browser's speech recognition sends audio out of the country and is never used). (2) Generating the structured note from these notes (MDV-P3-011 reads them). (3) No microphone, generate button or disabled placeholder for either.
+ac:
+- Given a draft note, when the doctor opens Notes from the bottom bar, types and closes it, then the text is saved with the note, the save state says Saved, focus returns to the Notes button and the button says notes are written
+- Given a note with notes, when it is signed, then the notes are in the signed version and its content hash, and a later save of the notes is refused (note_signed)
+- Given a signed note, when Notes is opened, then the text is shown and cannot be edited; the signed page, the print view and the PDF show it under Notes
+- Given a save with a section id the template does not have and that is not "notes", when it reaches the server, then it is refused with unknown_section
+- Given blank notes, when the doctor signs, then nothing asks for them: they are never required and never on the checklist
+- Given English, Hindi and Arabic, when the Sheet renders, then every string is translated, Arabic reads right to left and axe finds no violation
+tests:
+- Integration (Testcontainers PostgreSQL): save and reload notes; signing includes them in the hash; a signed note refuses a notes change; an unknown id is still refused (mutation-checked: remove the reserved id allowance and the save test fails).
+- Vitest: the Notes button and Sheet (draft edits the form, signed is read-only), template switch keeps notes, print shows them.
+notes:
+- Dictation (MDV-P3-020) will fill this Notes box; draft generation (MDV-P3-011) will read from it. Both keep the review-and-approve rule.
+- Regression risk: low.

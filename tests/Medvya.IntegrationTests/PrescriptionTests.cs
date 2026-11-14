@@ -166,7 +166,7 @@ public sealed class PrescriptionTests(PostgresFixture sql) : IClassFixture<Postg
     }
 
     [Fact]
-    public async Task ALineCanBeSwitchedOffAndAnEndedConsultationCanBeReadButNotChangedOrAuthorised()
+    public async Task ALineCanBeSwitchedOffAndAnEndedConsultationTakesNoNewMedicine()
     {
         var enc = await ConsultationAsync();
         var formulary = await FormularyIdAsync("Metformin");
@@ -179,9 +179,9 @@ public sealed class PrescriptionTests(PostgresFixture sql) : IClassFixture<Postg
         Assert.Equal([("included", "required")], (await Assert.ThrowsAsync<PrescriptionValidationException>(() => Rx(h.Doctor).IncludeAsync(first, new IncludeRxLine(null)))).Errors);
 
         await h.Get<IEncounters>(h.Doctor).EndAsync(enc.Id); // ending the consultation authorises nothing: the lines stay drafts
+        // MDV-P1-090: no new medicine once the patient has left; the doctor who led the visit may still finish the lines (RxFinishTests).
         Assert.Equal("encounter_ended", (await Assert.ThrowsAsync<PrescriptionConflictException>(() => Rx(h.Doctor).AddAsync(enc.Id, new AddRxLine(formulary, null, null, null)))).Code);
-        Assert.Equal("encounter_ended", (await Assert.ThrowsAsync<PrescriptionConflictException>(() => Rx(h.Doctor).UpdateAsync(cream, Metformin))).Code);
-        Assert.Equal("encounter_ended", (await Assert.ThrowsAsync<PrescriptionConflictException>(() => Rx(h.Doctor).IncludeAsync(cream, new IncludeRxLine(false)))).Code);
+        Assert.NotNull(await Rx(h.Doctor).UpdateAsync(cream, Metformin));
         Assert.Equal(2, (await Rx(h.Doctor).ListAsync(enc.Id))!.Count);
     }
 

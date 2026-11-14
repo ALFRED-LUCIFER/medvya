@@ -15,6 +15,9 @@ public interface IEncounterDirectory
 {
     Task<EncounterView?> FindAsync(Guid encounterId, CancellationToken cancellationToken = default);
 
+    /// <summary>The encounters among <paramref name="encounterIds"/> that exist in this tenant (MDV-P1-090: Today's prescriptions to authorise).</summary>
+    Task<IReadOnlyList<EncounterView>> FindManyAsync(IReadOnlyCollection<Guid> encounterIds, CancellationToken cancellationToken = default);
+
     /// <summary>The consultation's diagnoses and follow-up, for a printed paper.</summary>
     Task<EncounterPlan> PlanAsync(Guid encounterId, CancellationToken cancellationToken = default);
 }

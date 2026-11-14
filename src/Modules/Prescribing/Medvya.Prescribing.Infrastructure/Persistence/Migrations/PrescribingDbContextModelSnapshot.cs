@@ -355,6 +355,37 @@ namespace Medvya.Prescribing.Infrastructure.Persistence.Migrations
                     b.ToTable("PrescriptionCancellations", "prescribing");
                 });
 
+            modelBuilder.Entity("Medvya.Prescribing.Domain.PrescriptionDiscard", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("DiscardedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("DiscardedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("EncounterId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "EncounterId")
+                        .IsUnique();
+
+                    b.ToTable("PrescriptionDiscards", "prescribing");
+                });
+
             modelBuilder.Entity("Medvya.Prescribing.Domain.PrescriptionItem", b =>
                 {
                     b.Property<Guid>("Id")

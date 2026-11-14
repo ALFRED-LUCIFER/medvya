@@ -41,7 +41,7 @@ public sealed class PrescriptionService(
     public const string ReadAction = "rx.read", AddAction = "rx.add", UpdateAction = "rx.update", IncludeAction = "rx.include",
         CheckAction = "rx.check", OverrideAction = "rx.override", AuthorisationAction = "rx.authorisation", AuthoriseAction = "rx.authorise", CancelAction = "rx.cancel",
         PrintAction = "rx.print", PdfAction = "rx.pdf", LayoutApproveAction = "rx.layout.approve", ShareAction = "rx.share", ShareReadAction = "rx.share.read",
-        DispatchAction = "rx.dispatch", AdviceReadAction = "rx.advice.read", AdviceSetAction = "rx.advice.set", Resource = "prescription";
+        DispatchAction = "rx.dispatch", DiscardAction = "rx.discard", PendingAction = "rx.pending", AdviceReadAction = "rx.advice.read", AdviceSetAction = "rx.advice.set", Resource = "prescription";
     public const int MaxMedicine = 200, MaxStrength = 50, MaxReason = 200;
     static readonly Access[] Doctors = [Access.Sign];
 
@@ -56,7 +56,7 @@ public sealed class PrescriptionService(
     {
         ArgumentNullException.ThrowIfNull(command);
         if (await RequireAsync(encounterId, cancellationToken) is not { } encounter) return null;
-        Open(encounter);
+        await GuardAsync(encounter, false, cancellationToken);
         var errors = new List<(string, string)>();
         string medicine;
         string? strength, form;
@@ -91,7 +91,7 @@ public sealed class PrescriptionService(
         ArgumentNullException.ThrowIfNull(command);
         if (await db.PrescriptionItems.SingleOrDefaultAsync(i => i.Id == itemId, cancellationToken) is not { } item) return null;
         if (await RequireAsync(item.EncounterId, cancellationToken) is not { } encounter) return null;
-        Open(encounter);
+        await GuardAsync(encounter, true, cancellationToken);
         var sig = new SigParts(Blank(command.Dose), Blank(command.DoseUnit), Blank(command.Route), Blank(command.Frequency), Blank(command.Timing),
             command.DurationDays, command.Quantity, Blank(command.Instructions));
         if (Sig.Validate(sig) is { Count: > 0 } errors) throw new PrescriptionValidationException(errors);
@@ -109,7 +109,7 @@ public sealed class PrescriptionService(
         ArgumentNullException.ThrowIfNull(command);
         if (await db.PrescriptionItems.SingleOrDefaultAsync(i => i.Id == itemId, cancellationToken) is not { } item) return null;
         if (await RequireAsync(item.EncounterId, cancellationToken) is not { } encounter) return null;
-        Open(encounter);
+        await GuardAsync(encounter, true, cancellationToken);
         if (command.Included is not { } included) throw new PrescriptionValidationException([("included", "required")]);
         await SaveAsync(encounter, IncludeAction, itemId, $"included:{included}", () => (item.Included, item.UpdatedAt) = (included, clock.GetUtcNow()), cancellationToken);
         return await ViewsAsync(item.EncounterId, cancellationToken);
@@ -129,7 +129,7 @@ public sealed class PrescriptionService(
     {
         ArgumentNullException.ThrowIfNull(command);
         if (await RequireAsync(encounterId, cancellationToken) is not { } encounter) return null;
-        Open(encounter);
+        await GuardAsync(encounter, true, cancellationToken);
         var errors = new List<(string, string)>();
         var reason = Text(command.Reason, "reason", MaxReason, true, errors);
         // Only a severe alert of the check as it stands now: an old key (the dose changed, the line went) needs the new finding's reason.
@@ -151,13 +151,14 @@ public sealed class PrescriptionService(
         if (await RequireAsync(encounterId, cancellationToken) is not { } encounter) return null;
         var latest = await LatestAsync(encounterId, cancellationToken);
         await audit.WriteAsync(Event(AuthorisationAction, encounter, latest?.Id ?? encounterId, $"version:{latest?.VersionNo ?? 0}"), cancellationToken);
-        return await StateAsync(latest, cancellationToken);
+        return await StateAsync(encounter, latest, cancellationToken);
     }
 
     public async Task<RxAuthorisationState?> AuthoriseAsync(Guid encounterId, CancellationToken cancellationToken = default)
     {
         // The endpoint already needs Sign on Prescriptions and orders; this adds the care relationship, then the step-up, as signing the note does.
         if (await RequireAsync(encounterId, cancellationToken) is not { } encounter) return null;
+        await GuardAsync(encounter, true, cancellationToken);
         // A paper prescription carries the doctor's licence (ADR-016): a member with no licence on record cannot authorise one.
         if (await facilities.PrescriberAsync(Me, encounter.FacilityId, cancellationToken) is null) throw new PrescriptionConflictException("no_licence");
         var lines = await DraftAsync(encounter.Id, cancellationToken);
@@ -173,7 +174,7 @@ public sealed class PrescriptionService(
         var hash = AuthorisedPrescription.Hash(lines, advice);
         var latest = await LatestAsync(encounter.Id, cancellationToken);
         // A double click or retry: nothing new is written. A cancelled version authorised again is a new version.
-        if (latest?.ContentHash == hash && await CancellationAsync(latest.Id, cancellationToken) is null) return await StateAsync(latest, cancellationToken);
+        if (latest?.ContentHash == hash && await CancellationAsync(latest.Id, cancellationToken) is null) return await StateAsync(encounter, latest, cancellationToken);
         var row = new AuthorisedPrescription
         {
             Id = Guid.CreateVersion7(), TenantId = TenantId, FacilityId = encounter.FacilityId, EncounterId = encounter.Id, VersionNo = (latest?.VersionNo ?? 0) + 1,
@@ -192,9 +193,9 @@ public sealed class PrescriptionService(
         catch (DbUpdateException e) when (e.InnerException is Npgsql.PostgresException { SqlState: Npgsql.PostgresErrorCodes.UniqueViolation })
         {
             db.ChangeTracker.Clear();
-            return await StateAsync(await LatestAsync(encounter.Id, cancellationToken), cancellationToken);
+            return await StateAsync(encounter, await LatestAsync(encounter.Id, cancellationToken), cancellationToken);
         }
-        return new(View(row), false);
+        return await StateAsync(encounter, row, cancellationToken);
     }
 
     public async Task<RxAuthorisationState?> CancelAsync(Guid encounterId, CancelRx command, CancellationToken cancellationToken = default)
@@ -207,7 +208,7 @@ public sealed class PrescriptionService(
         if (await RequireAsync(encounterId, cancellationToken) is not { } encounter) return null;
         var now = RequireFreshReauth();
         var latest = await LatestAsync(encounter.Id, cancellationToken) ?? throw new PrescriptionConflictException("not_authorised");
-        if (await CancellationAsync(latest.Id, cancellationToken) is not null) return await StateAsync(latest, cancellationToken);
+        if (await CancellationAsync(latest.Id, cancellationToken) is not null) return await StateAsync(encounter, latest, cancellationToken);
         var row = new PrescriptionCancellation { Id = Guid.CreateVersion7(), TenantId = TenantId, PrescriptionId = latest.Id, Reason = reason!, CancelledBy = Me, CancelledAt = now };
         try
         {
@@ -220,7 +221,75 @@ public sealed class PrescriptionService(
         {
             db.ChangeTracker.Clear();
         }
-        return await StateAsync(latest, cancellationToken);
+        return await StateAsync(encounter, latest, cancellationToken);
+    }
+
+    public async Task<RxAuthorisationState?> DiscardAsync(Guid encounterId, DiscardRx command, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        var errors = new List<(string, string)>();
+        var reason = Text(command.Reason, "reason", PrescriptionDiscard.MaxReason, true, errors);
+        if (errors.Count > 0) throw new PrescriptionValidationException(errors);
+        if (await RequireAsync(encounterId, cancellationToken) is not { } encounter) return null;
+        var latest = await LatestAsync(encounter.Id, cancellationToken);
+        if (await DiscardOfAsync(encounter.Id, cancellationToken) is not null) return await StateAsync(encounter, latest, cancellationToken);
+        await GuardAsync(encounter, true, cancellationToken);
+        if (!await UnfinishedAsync(encounter.Id, latest, cancellationToken)) throw new PrescriptionConflictException("nothing_to_discard");
+        var row = new PrescriptionDiscard { Id = Guid.CreateVersion7(), TenantId = TenantId, EncounterId = encounter.Id, Reason = reason!, DiscardedBy = Me, DiscardedAt = clock.GetUtcNow() };
+        try
+        {
+            // The reason stays on the discard record (free text never goes into the audit log); the event says who, when and which record.
+            await SaveAsync(encounter, DiscardAction, row.Id, $"version:{latest?.VersionNo ?? 0}", () => db.PrescriptionDiscards.Add(row), cancellationToken);
+        }
+        // Discarded in another tab at the same moment: that discard stands.
+        catch (DbUpdateException e) when (e.InnerException is Npgsql.PostgresException { SqlState: Npgsql.PostgresErrorCodes.UniqueViolation })
+        {
+            db.ChangeTracker.Clear();
+        }
+        return await StateAsync(encounter, latest, cancellationToken);
+    }
+
+    public async Task<(IReadOnlyList<RxPending> Items, bool More)> PendingAsync(Guid facilityId, CancellationToken cancellationToken = default)
+    {
+        var me = Me;
+        // Consultations here with an included line, not discarded, and no authorisation since the last line change; the exact check follows per row.
+        // shortcut: a draft made only of reconciliation stops (no prescribe line) is not listed; add the stops here if pilot doctors leave such drafts.
+        var candidates = await db.PrescriptionItems.AsNoTracking()
+            .Where(i => i.FacilityId == facilityId && !db.PrescriptionDiscards.Any(d => d.EncounterId == i.EncounterId))
+            .GroupBy(i => i.EncounterId)
+            .Select(g => new { EncounterId = g.Key, Included = g.Sum(i => i.Included ? 1 : 0), Changed = g.Max(i => i.UpdatedAt) })
+            .Where(g => g.Included > 0 && !db.AuthorisedPrescriptions.Any(p => p.EncounterId == g.EncounterId && p.AuthorisedAt >= g.Changed))
+            .Select(g => g.EncounterId).ToListAsync(cancellationToken);
+        // Scoped to the doctor who led the consultation, once it ended (an open one is still being worked on).
+        var ended = (await encounters.FindManyAsync(candidates, cancellationToken))
+            .Where(e => e.LeadClinicianId == me && e.Status == EncounterStatus.Ended).OrderBy(e => e.EndedAt).ThenBy(e => e.Id).ToList();
+        var patientNames = await patients.SummariesAsync([.. ended.Take(IPrescriptions.MaxPending).Select(e => e.PatientId).Distinct()], cancellationToken);
+        List<RxPending> pending = [];
+        foreach (var encounter in ended.Take(IPrescriptions.MaxPending))
+        {
+            try
+            {
+                // A care relationship can end after the visit: a prescription the doctor may no longer open is not offered.
+                await clinical.RequireAsync(encounter.PatientId, encounter.FacilityId, Capability.PrescriptionsOrders, Doctors, cancellationToken);
+            }
+            catch (ClinicalAccessDeniedException)
+            {
+                continue;
+            }
+            var latest = await LatestAsync(encounter.Id, cancellationToken);
+            if (!await UnfinishedAsync(encounter.Id, latest, cancellationToken)) continue;
+            await audit.WriteAsync(Event(PendingAction, encounter, encounter.Id), cancellationToken);
+            pending.Add(new(encounter.Id, patientNames.GetValueOrDefault(encounter.PatientId)?.FullName, encounter.EndedAt!.Value,
+                (await DraftAsync(encounter.Id, cancellationToken)).Count(l => !l.Discontinue)));
+        }
+        return (pending, ended.Count > IPrescriptions.MaxPending);
+    }
+
+    /// <summary>A draft with lines that is not authorised, or changed since its latest authorisation. A cancelled, unchanged version was the doctor's choice.</summary>
+    async Task<bool> UnfinishedAsync(Guid encounterId, AuthorisedPrescription? latest, CancellationToken cancellationToken)
+    {
+        var lines = await DraftAsync(encounterId, cancellationToken);
+        return lines.Count > 0 && (latest is null || latest.ContentHash != AuthorisedPrescription.Hash(lines, await AdviceTextAsync(encounterId, cancellationToken)));
     }
 
     public async Task<RxPrintView?> PrintAsync(Guid encounterId, CancellationToken cancellationToken = default)
@@ -396,9 +465,15 @@ public sealed class PrescriptionService(
 
     // shortcut: "changed" compares the rendered instructions, so a wording fix (the translator's sign-off of Sig) marks older prescriptions changed
     // until re-authorised (it fails safe: no print, never wrong text); hash the structured sig instead once the wording is signed off.
-    async Task<RxAuthorisationState> StateAsync(AuthorisedPrescription? latest, CancellationToken cancellationToken) =>
-        latest is null ? new(null, false) : new(View(latest, await CancellationAsync(latest.Id, cancellationToken)),
-            latest.ContentHash != AuthorisedPrescription.Hash(await DraftAsync(latest.EncounterId, cancellationToken), await AdviceTextAsync(latest.EncounterId, cancellationToken)));
+    async Task<RxAuthorisationState> StateAsync(EncounterView encounter, AuthorisedPrescription? latest, CancellationToken cancellationToken)
+    {
+        var discard = await DiscardOfAsync(encounter.Id, cancellationToken);
+        var editable = discard is null && (encounter.Status == EncounterStatus.Active || encounter.LeadClinicianId == Me);
+        var discardView = discard is null ? null : new RxDiscardView(discard.Reason, discard.DiscardedBy, discard.DiscardedAt);
+        return latest is null ? new(null, false, discardView, editable) : new(View(latest, await CancellationAsync(latest.Id, cancellationToken)),
+            latest.ContentHash != AuthorisedPrescription.Hash(await DraftAsync(latest.EncounterId, cancellationToken), await AdviceTextAsync(latest.EncounterId, cancellationToken)),
+            discardView, editable);
+    }
 
     Task<string?> AdviceTextAsync(Guid encounterId, CancellationToken cancellationToken) =>
         db.RxAdvice.AsNoTracking().Where(a => a.EncounterId == encounterId).Select(a => a.Text).SingleOrDefaultAsync(cancellationToken);
@@ -417,7 +492,7 @@ public sealed class PrescriptionService(
         var text = Text(command.Text, "text", RxAdvice.MaxText, false, errors);
         if (errors.Count > 0) throw new PrescriptionValidationException(errors);
         if (await RequireAsync(encounterId, cancellationToken) is not { } encounter) return null;
-        Open(encounter);
+        await GuardAsync(encounter, false, cancellationToken);
         var row = await db.RxAdvice.SingleOrDefaultAsync(a => a.EncounterId == encounter.Id, cancellationToken);
         await SaveAsync(encounter, AdviceSetAction, encounter.Id, text is null ? "advice:none" : "advice:set", () =>
         {
@@ -443,7 +518,7 @@ public sealed class PrescriptionService(
     async Task<AuthorisedPrescription> PrintableAsync(EncounterView encounter, CancellationToken cancellationToken)
     {
         var latest = await LatestAsync(encounter.Id, cancellationToken) ?? throw new PrescriptionConflictException("not_authorised");
-        var state = await StateAsync(latest, cancellationToken);
+        var state = await StateAsync(encounter, latest, cancellationToken);
         if (state.Authorised!.Cancellation is not null) throw new PrescriptionConflictException("cancelled");
         if (state.Changed) throw new PrescriptionConflictException("changed");
         return latest;
@@ -555,10 +630,18 @@ public sealed class PrescriptionService(
         return encounter;
     }
 
-    static void Open(EncounterView encounter)
+    /// <summary>
+    /// The draft may change now (MDV-P1-090): never once discarded; while the consultation is open for any doctor with access; after it ended only for
+    /// <paramref name="afterEnd"/> work (finishing lines and authorising, not adding medicines or advice) and only by the doctor who led it.
+    /// </summary>
+    async Task GuardAsync(EncounterView encounter, bool afterEnd, CancellationToken cancellationToken)
     {
-        if (encounter.Status != EncounterStatus.Active) throw new PrescriptionConflictException("encounter_ended");
+        if (await DiscardOfAsync(encounter.Id, cancellationToken) is not null) throw new PrescriptionConflictException("discarded");
+        if (encounter.Status != EncounterStatus.Active && !(afterEnd && encounter.LeadClinicianId == Me)) throw new PrescriptionConflictException("encounter_ended");
     }
+
+    Task<PrescriptionDiscard?> DiscardOfAsync(Guid encounterId, CancellationToken cancellationToken) =>
+        db.PrescriptionDiscards.AsNoTracking().SingleOrDefaultAsync(d => d.EncounterId == encounterId, cancellationToken);
 
     async Task SaveAsync(EncounterView encounter, string action, Guid resourceId, string? detail, Action change, CancellationToken cancellationToken,
         Func<System.Data.Common.DbTransaction, Task>? alongside = null)

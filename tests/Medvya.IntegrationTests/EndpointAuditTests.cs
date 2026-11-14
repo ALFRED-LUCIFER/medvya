@@ -79,6 +79,7 @@ public sealed class EndpointAuditTests(PostgresFixture sql) : IClassFixture<Post
         "PUT /v1/note-templates/mine",
         "PUT /v1/settings/nurse-intake", // audited by the flag service (flag.enable / flag.disable), no patient data
         "POST /v1/chart/allergy-flags", // MDV-P2-002: one patient.chart.allergy-flag event per patient answered, written by the use case (PatientChartTests)
+        "GET /v1/prescriptions/pending", // MDV-P1-090: one rx.pending event per patient answered, written by the use case (RxFinishTests)
         "GET /v1/notes/pending", // MDV-P2-002: one note.pending event per patient answered, written by the use case (SignNoteTests)
         // Add doctor (MDV-P1-007): clinician details, licence and fees, no patient data; changes are audited inside the services (DoctorTests).
         "GET /v1/settings/doctors/",

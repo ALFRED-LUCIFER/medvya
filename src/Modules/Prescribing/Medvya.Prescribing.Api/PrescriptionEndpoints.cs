@@ -23,6 +23,7 @@ public static class PrescriptionEndpoints
 
     public sealed record VerifyRx(string? Token);
     public sealed record SharedRx(string? Token, string? Code);
+    public sealed record RxPendingList(bool More, IReadOnlyList<RxPending> Items);
 
     /// <summary>
     /// The draft prescription composer (MDV-P2-015). Signed in with "Prescriptions and orders" at Sign; the use case then checks clinical access
@@ -68,6 +69,16 @@ public static class PrescriptionEndpoints
         g.MapPost("/encounters/{encounterId:guid}/prescription/cancellation", async (Guid encounterId, [FromBody] CancelRx? body, [FromServices] IPrescriptions service, CancellationToken ct) =>
                 await service.CancelAsync(encounterId, body ?? new CancelRx(null), ct) is { } v ? Results.Ok(v) : Results.NotFound())
             .AuditedByUseCase("rx.cancel", "prescription", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
+        // MDV-P1-090: discard the unfinished draft with a reason; and Today's prescriptions to authorise (one rx.pending row per patient, written by the use case).
+        g.MapPost("/encounters/{encounterId:guid}/prescription/discard", async (Guid encounterId, [FromBody] DiscardRx? body, [FromServices] IPrescriptions service, CancellationToken ct) =>
+                await service.DiscardAsync(encounterId, body ?? new DiscardRx(null), ct) is { } v ? Results.Ok(v) : Results.NotFound())
+            .AuditedByUseCase("rx.discard", "prescription", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
+        g.MapGet("/prescriptions/pending", async ([FromServices] IPrescriptions service, [FromServices] ICurrentFacility current, CancellationToken ct) =>
+            {
+                if (current.FacilityId is not { } facilityId) return Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "No facility context");
+                var (items, more) = await service.PendingAsync(facilityId, ct);
+                return Results.Ok(new RxPendingList(more, items));
+            }).AddEndpointFilter(MapErrors);
         // MDV-P2-043: the advice for the patient, frozen with the prescription when it is authorised.
         g.MapGet("/encounters/{encounterId:guid}/prescription/advice", async (Guid encounterId, [FromServices] IPrescriptions service, CancellationToken ct) =>
                 await service.AdviceAsync(encounterId, ct) is { } v ? Results.Ok(v) : Results.NotFound())

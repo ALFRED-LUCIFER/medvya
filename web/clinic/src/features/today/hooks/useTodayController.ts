@@ -4,6 +4,8 @@ import { useBoardController } from '../../front-desk/hooks/useBoardController';
 import { minutesSince } from '../../front-desk/domain/board';
 import { escalatedVisits, MAX_FLAGS, nextPatient, patientIdsOf, todayVisits, type Scope } from '../domain/today';
 import { fetchAllergyFlags, fetchEscalations, fetchPendingNotes } from '../services/todayApi';
+import { fetchPendingPrescriptions } from '../../prescription/services/prescriptionApi';
+import { ApiError } from '../../schedule/services/scheduleApi';
 
 /**
  * D-01 Doctor Today (MDV-P2-002): the board's data (same audited endpoint, live updates and server clock), narrowed to the doctor's own
@@ -22,6 +24,9 @@ export function useTodayController(facilityId: string, online: boolean, userId: 
   // Unsigned notes stay here, from any day, until they are signed (the list is the server's; signing elsewhere drops them on the next read).
   // Not on window focus: every read audits each note; returning from a consultation remounts Today and reads it again.
   const pending = useQuery({ queryKey: ['today-pending-notes', facilityId], enabled: online, refetchOnWindowFocus: false, queryFn: fetchPendingNotes });
+  // MDV-P1-090: ended visits whose prescription waits to be authorised, beside the notes to sign; read and audited like them. A doctor the server
+  // does not let prescribe (403) has none, so the section is simply absent.
+  const rx = useQuery({ queryKey: ['today-pending-rx', facilityId], enabled: online, refetchOnWindowFocus: false, retry: false, queryFn: fetchPendingPrescriptions });
   // Under the board's key, so the hub push the nurse's escalation sends refetches it with the board (and the board's 30 s fallback when not live).
   const escalations = useQuery({
     queryKey: ['front-desk', facilityId, 'escalations'], enabled: online, retry: false, refetchInterval: board.live === 'live' ? false : 30_000,
@@ -32,6 +37,8 @@ export function useTodayController(facilityId: string, online: boolean, userId: 
   return {
     // A failed read is said out loud: "no escalation" must never be a load error in disguise.
     escalations: reasons, escalationsFailed: escalations.isError, escalated,
+    pendingRx: rx.data?.items ?? [], pendingRxMore: rx.data?.more ?? false,
+    pendingRxFailed: rx.isError && !(rx.error instanceof ApiError && rx.error.status === 403),
     pendingNotes: pending.data?.items ?? [], pendingMore: pending.data?.more ?? false, pendingFailed: pending.isError,
     allergyFlags: flags.data ?? {},
     day: board.board?.date ?? null, timeZone: board.board?.timeZone ?? null,

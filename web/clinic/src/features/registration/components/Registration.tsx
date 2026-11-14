@@ -3,7 +3,7 @@ import type { UseFormReturn } from 'react-hook-form';
 import type { Missing } from '../../patients/domain/directory';
 import { Check, Loader2, UserSearch } from 'lucide-react';
 import { useI18n, type Country } from '@medvya/i18n';
-import { Banner, Button, Card, cn, PageContainer, PageHeader, PageMessage, SegmentedControl } from '@medvya/ui';
+import { Banner, Button, Card, cn, PageContainer, PageHeader, PageMessage, SegmentedControl, StickyActionBar } from '@medvya/ui';
 import {
   identifierInputs, steps, type DuplicateCandidate, type FormField, type DuplicateDecision, type RegistrationForm, type RegistrationResult, type Step,
 } from '../domain/registration';
@@ -118,31 +118,30 @@ export default function Registration(p: Props) {
           <Button type="button" variant="outline" size="sm" onClick={p.onRegisterAnother}>{t('registration.draft.startAgain')}</Button>
         </p>
       )}
-      {/* As in the registration design (MDV-P2-062): steps as a vertical list from 1024 px, the side panel beside the form only from 1600 px. */}
-      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
-        <form noValidate onSubmit={e => { e.preventDefault(); if (atReview) p.onSubmit(); else p.onContinue(); }}
-          className={cn('flex min-w-0 flex-col gap-5', step && 'wide:grid wide:grid-cols-[13rem_minmax(0,1fr)] wide:items-start wide:[&>*:not(ol)]:col-start-2')}>
+      {/* The registration design's three parts (MDV-P2-062, MDV-P2-063): steps at the start from 1024 px, the form, and the preview and rules
+          at the end from 1600 px (under the form below it), so a wide screen is used; fields auto-fit inside the form. */}
+      <div className={cn('grid items-start gap-5', step ? 'wide:grid-cols-[13rem_minmax(0,1fr)] xl:grid-cols-[13rem_minmax(0,1fr)_300px] wide:[&>aside]:col-start-2 xl:[&>aside]:col-start-3' : 'xl:grid-cols-[minmax(0,1fr)_300px]')}>
+        {step && (
+          <ol aria-label={t('registration.steps.label')} className="grid grid-cols-2 gap-2 sm:grid-cols-3 wide:grid-cols-1 wide:gap-1">
+            {steps.map((s, i) => {
+              const current = s === step;
+              const done = i < steps.indexOf(step);
+              return (
+                <li key={s}>
+                  <button type="button" onClick={() => p.onGoTo(s)} disabled={i > p.reachedIndex} aria-current={current ? 'step' : undefined}
+                    className={cn('flex min-h-control w-full items-center gap-2 rounded-md border px-2 text-start text-body disabled:opacity-60 wide:border-transparent',
+                      current ? 'border-brand-700 bg-accent font-bold' : 'bg-card wide:bg-transparent')}>
+                    <span aria-hidden className={cn('flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-bold',
+                      current ? 'bg-brand-700 text-white' : done ? 'bg-success-700 text-white' : 'bg-muted')}>{done ? <Check className="size-4" /> : i + 1}</span>
+                    <span>{t(`registration.step.${s}`)}{done && <span className="sr-only">{t('registration.steps.done')}</span>}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
+        )}
+        <form id="registration-form" noValidate onSubmit={e => { e.preventDefault(); if (atReview) p.onSubmit(); else p.onContinue(); }} className="flex min-w-0 flex-col gap-5">
           <FormErrorSummary f={f} summary={p.errorSummary} country={p.country} values={p.values} quick={p.quick} />
-          {step && (
-            <ol aria-label={t('registration.steps.label')} className="grid grid-cols-2 gap-2 sm:grid-cols-3 wide:row-span-5 wide:grid-cols-1 wide:gap-1">
-              {steps.map((s, i) => {
-                const current = s === step;
-                const done = i < steps.indexOf(step);
-                return (
-                  <li key={s}>
-                    <button type="button" onClick={() => p.onGoTo(s)} disabled={i > p.reachedIndex} aria-current={current ? 'step' : undefined}
-                      className={cn('flex min-h-control w-full items-center gap-2 rounded-md border px-2 text-start text-body disabled:opacity-60 wide:border-transparent',
-                        current ? 'border-brand-700 bg-accent font-bold' : 'bg-card wide:bg-transparent')}>
-                      <span aria-hidden className={cn('flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-bold',
-                        current ? 'bg-brand-700 text-white' : done ? 'bg-success-700 text-white' : 'bg-muted')}>{done ? <Check className="size-4" /> : i + 1}</span>
-                      <span>{t(`registration.step.${s}`)}{done && <span className="sr-only">{t('registration.steps.done')}</span>}</span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ol>
-          )}
-
           <Card headingId="registration-step" title={t(step ? `registration.step.${step}.title` : 'registration.quick.section')}
             intro={step && t(`registration.step.${step}.intro.${p.country}`)}>
             {p.quick && <QuickFields f={f} country={p.country} ageInstead={p.ageInstead} minor={p.minor} />}
@@ -168,23 +167,25 @@ export default function Registration(p: Props) {
               entry={entry} recordPath={p.recordPath} />
           )}
 
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2 empty:hidden">
             {p.failure === 'error' && <p role="alert" className="text-sm font-semibold text-danger-700">{t('registration.saveFailed')}</p>}
             {p.consentsStale && <p role="alert" className="text-sm font-semibold text-danger-700">{t('registration.consents.stale')}</p>}
             {p.duplicateUnresolved && unresolved && <p role="alert" className="text-sm font-semibold text-danger-700">{t('registration.duplicates.serverRefused')}</p>}
-            <div className="flex flex-wrap gap-2">
-              {step && step !== 'identity' && <Button type="button" variant="outline" onClick={p.onBack}>{t('registration.back')}</Button>}
-              {atReview
-                ? <Button type="submit" disabled={!p.canSave} loading={p.saving}>
-                    {unresolved ? t('registration.save.resolveFirst') : p.saving ? t('registration.save.saving') : t('registration.save')}
-                  </Button>
-                : <Button type="submit">{t('registration.continue')}</Button>}
-            </div>
           </div>
         </form>
 
         <RegistrationSidePanel country={p.country} values={p.values} ageInstead={p.ageInstead} today={today} />
       </div>
+
+      {/* The commit actions in the layout footer (MDV-P2-063), as on the consultation: never below the fold, never over a field. */}
+      <StickyActionBar status={step && <span className="text-body text-muted-foreground">{t('registration.stepOf', { n: String(steps.indexOf(step) + 1), total: String(steps.length), name: t(`registration.step.${step}`) })}</span>}>
+        {step && step !== 'identity' && <Button type="button" variant="outline" onClick={p.onBack}>{t('registration.back')}</Button>}
+        {atReview
+          ? <Button type="submit" form="registration-form" disabled={!p.canSave} loading={p.saving}>
+              {unresolved ? t('registration.save.resolveFirst') : p.saving ? t('registration.save.saving') : t('registration.save')}
+            </Button>
+          : <Button type="submit" form="registration-form">{t('registration.continue')}</Button>}
+      </StickyActionBar>
     </PageContainer>
   );
 }

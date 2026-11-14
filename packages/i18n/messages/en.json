@@ -1366,6 +1366,7 @@
   "registration.duplicates.inlineLater": "Possible match · existing records that look like this patient: {n}. You decide about them on the Review step.",
   "registration.back": "Back",
   "registration.continue": "Continue",
+  "registration.stepOf": "Step {n} of {total} · {name}",
   "registration.choose": "Choose",
   "registration.preview.title": "Preview",
   "registration.preview.noName": "New patient",

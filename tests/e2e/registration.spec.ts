@@ -1,6 +1,7 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page, type Request } from '@playwright/test';
 import { t } from './support/desk';
+import { obscuredWhenTabbing } from './support/pinned';
 import { targetPx } from './support/targets';
 
 // MDV-P1-016 duplicate warning while typing and resolution before save, on the quick registration form (MDV-P1-015).
@@ -178,7 +179,7 @@ for (const locale of ['en', 'ar'])
       await expect(page.locator('#fullName')).toHaveAccessibleName(en ? 'Full name (required)' : /\(مطلوب\)$/);
       await expect(page.getByRole('group', { name: en ? 'Sex at birth (required)' : /\(مطلوب\)$/ })).toBeVisible();
 
-      await page.locator('form button[type=submit]').click();
+      await page.locator('button[type=submit][form=registration-form]').click(); // in the footer (MDV-P2-063)
       const summary = page.getByRole('group', { name: en ? 'There is a problem' : 'توجد مشكلة' });
       await expect(summary).toBeFocused();
       await expect(summary).toBeInViewport();
@@ -196,3 +197,84 @@ for (const locale of ['en', 'ar'])
           .map(v => `${v.id} (${v.nodes.length})`));
       expect(violations).toEqual([]);
     });
+
+// MDV-P2-063: the commit actions live in the layout footer, so Continue or Register patient is on screen on every step without scrolling,
+// the page uses a wide screen (steps, form, preview and rules), Tab never leaves a field under the footer, and Arabic mirrors it.
+const footer = (page: Page) => page.locator('[data-slot=sticky-action-bar]');
+async function full(page: Page, locale = 'en') {
+  await desk(page, { locale });
+  await page.goto('/patients/new');
+  await expect(page.getByRole('list', { name: t(locale, 'registration.steps.label') })).toBeVisible();
+}
+async function pick(page: Page, label: string, option: string) {
+  await page.getByRole('combobox', { name: label, exact: true }).click();
+  await page.getByRole('option', { name: option, exact: true }).click();
+}
+
+for (const [w, h] of [[1440, 900], [1024, 768]] as const)
+  test(`at ${w} x ${h} the footer's action is on screen on every step, with the step's position (MDV-P2-063)`, async ({ page }) => {
+    await page.setViewportSize({ width: w, height: h });
+    await full(page);
+    const go = async (n: number, name: string) => {
+      await expect(footer(page)).toContainText(`Step ${n} of 6 · ${name}`);
+      const action = footer(page).getByRole('button', { name: n === 6 ? 'Register patient' : 'Continue' });
+      await expect(action).toBeInViewport({ ratio: 1 });
+      if (n > 1) await expect(footer(page).getByRole('button', { name: 'Back' })).toBeInViewport({ ratio: 1 });
+      if (n < 6) { await action.focus(); await action.click(); }
+    };
+    await page.getByLabel('Full name').fill('Lakshmi Pillai');
+    await page.getByRole('textbox', { name: 'Date of birth (required)', exact: true }).fill('1984-05-09');
+    await page.getByRole('radio', { name: 'Female', exact: true }).check();
+    await go(1, 'Identity & IDs');
+    await expect(page.getByRole('heading', { name: 'Contact & address', level: 2 })).toBeFocused();
+    await page.getByLabel('Mobile').fill('+91 90000 00411');
+    await go(2, 'Contact & address');
+    await page.getByLabel('Emergency contact name').fill('Suresh Pillai');
+    await pick(page, 'Relationship (required)', 'Spouse');
+    await page.getByLabel('Emergency contact phone').fill('+91 90000 00412');
+    await go(3, 'Family & emergency');
+    await go(4, 'Payer');
+    await go(5, 'Consents');
+    await expect(page.getByRole('heading', { name: 'Review & duplicate check', level: 2 })).toBeVisible();
+    await go(6, 'Review');
+  });
+
+test('quick registration has Register patient in the same footer, with no step position (MDV-P2-063)', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await desk(page);
+  await expect(footer(page).getByRole('button', { name: 'Register patient' })).toBeInViewport({ ratio: 1 });
+  await expect(footer(page)).not.toContainText('Step');
+  await expect(page.locator('main form button[type=submit]')).toHaveCount(0); // the one commit action is the footer's
+});
+
+test('at 1920 the steps, the form and the preview and rules span the page; no empty column over 400 px (MDV-P2-063)', async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await full(page);
+  const box = async (sel: string) => (await page.locator(sel).first().boundingBox())!;
+  const container = await box('main [data-slot=page-container]'), steps = await box('main ol'), card = await box('#registration-form'), aside = await box('main aside');
+  expect(steps.x - container.x).toBeLessThan(400);
+  expect(container.x + container.width - (aside.x + aside.width)).toBeLessThan(400);
+  expect(aside.x).toBeGreaterThan(card.x + card.width - 1); // beside the form, at the end
+  expect(Math.abs(aside.y - card.y)).toBeLessThan(80);
+  expect(card.width).toBeGreaterThan(900);
+});
+
+for (const locale of ['en', 'ar'])
+  test(`Tab never leaves a field under the footer, the footer mirrors, axe is clean (${locale}, MDV-P2-063)`, async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 768 });
+    await full(page, locale);
+    expect(await obscuredWhenTabbing(page)).toEqual([]);
+    const [status, action] = [(await footer(page).locator('span').first().boundingBox())!, (await footer(page).getByRole('button').last().boundingBox())!];
+    expect(locale === 'ar' ? action.x < status.x : action.x > status.x).toBe(true);
+    await page.addScriptTag({ path: axePath });
+    const violations = await page.evaluate(async () =>
+      (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations
+        .map(v => `${v.id} (${v.nodes.length})`));
+    expect(violations).toEqual([]);
+  });
+
+test('at 400% zoom the footer scrolls with the page (MDV-P2-063)', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 200 });
+  await full(page);
+  expect(await footer(page).evaluate(el => getComputedStyle(el).position)).toBe('static');
+});

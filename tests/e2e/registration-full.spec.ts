@@ -203,7 +203,7 @@ for (const [country, locale] of [['IN', 'en'], ['IN', 'hi'], ['AE', 'ar'], ['AE'
       await page.locator('#dateOfBirth').fill('1979-08-14');
       await page.getByRole('radio').nth(1).check();
       if (country === 'AE') await page.locator('#emiratesId').fill('784-1988-1234567-1');
-      await page.locator('form button[type=submit]').click();
+      await page.locator('button[type=submit][form=registration-form]').click(); // in the footer (MDV-P2-063)
       await expect(page.locator('#mobile')).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.dir)).toBe(locale === 'ar' ? 'rtl' : 'ltr');
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);

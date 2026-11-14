@@ -1365,6 +1365,7 @@
   "registration.duplicates.inlineLater": "تطابق محتمل · سجلات موجودة تشبه هذا المريض: {n}. ستقرر بشأنها في خطوة المراجعة.",
   "registration.back": "رجوع",
   "registration.continue": "متابعة",
+  "registration.stepOf": "الخطوة {n} من {total} · {name}",
   "registration.choose": "اختر",
   "registration.preview.title": "معاينة",
   "registration.preview.noName": "مريض جديد",

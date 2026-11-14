@@ -1,8 +1,8 @@
 import { CircleCheck, TriangleAlert } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button } from '@medvya/ui';
+import { Button, StickyActionBar } from '@medvya/ui';
 import type { TermsStatus } from '../domain/settings';
-import { fieldError } from './fieldStyles';
+import { cardBar, fieldError } from './fieldStyles';
 import { Section } from './Section';
 
 type Props = { terms: TermsStatus | null; loading: boolean; loadFailed: boolean; accepting: boolean; notOwner: boolean; acceptFailed: boolean; onAccept: () => void };
@@ -30,9 +30,12 @@ export default function TermsPanel(p: Props) {
           {terms.required
             ? <p className="flex items-center gap-2 font-bold"><TriangleAlert aria-hidden className="size-5 text-warning-700" />{t('settings.terms.pending')}</p>
             : <p className="font-bold">{t('settings.terms.notRequired')}</p>}
-          <Button className="self-start" loading={p.accepting} onClick={p.onAccept}>{t('settings.terms.accept')}</Button>
-          {p.notOwner && <p role="alert" className={fieldError}>{t('settings.terms.notOwner')}</p>}
-          {p.acceptFailed && <p role="alert" className={fieldError}>{t('settings.terms.failed')}</p>}
+          <StickyActionBar className={cardBar} status={<>
+            {p.notOwner && <p role="alert" className={fieldError}>{t('settings.terms.notOwner')}</p>}
+            {p.acceptFailed && <p role="alert" className={fieldError}>{t('settings.terms.failed')}</p>}
+          </>}>
+            <Button loading={p.accepting} onClick={p.onAccept}>{t('settings.terms.accept')}</Button>
+          </StickyActionBar>
         </>
       )}
     </Section>

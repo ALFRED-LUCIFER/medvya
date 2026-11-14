@@ -2,8 +2,8 @@ import type { FormEventHandler } from 'react';
 import { Controller, type FieldError, type UseFormReturn } from 'react-hook-form';
 import { CircleCheck, TriangleAlert } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState } from '@medvya/ui';
-import { fieldError } from '../../settings/components/fieldStyles';
+import { Button, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState, StickyActionBar } from '@medvya/ui';
+import { cardBar, fieldError } from '../../settings/components/fieldStyles';
 import { Section } from '../../settings/components/Section';
 import type { TableView } from '../../table/domain/tableSort';
 import { classesFor, FORMULARY_LIMIT, formularyColumns, forms, isFormularySortable, type Country, type FormularyColumn, type FormularyItem, type FormularySortColumn, type MedicineForm, type ProblemCode } from '../domain/formulary';
@@ -106,11 +106,12 @@ export default function FormularyPanel(p: Props) {
           <Field id="med-sig" label={t('formulary.field.defaultSig')} error={problem(errors.defaultSig)} className="md:col-span-2">
             <Input autoComplete="off" {...p.form.register('defaultSig')} />
           </Field>
-          <div className="flex flex-col gap-2 md:col-span-2">
+          <StickyActionBar className={`${cardBar} md:col-span-2`} status={<>
             {p.formError && <p role="alert" className={fieldError}>{t(`formulary.error.${p.formError}`)}</p>}
             {p.saved && <p role="status" className="flex items-center gap-2 font-bold"><CircleCheck aria-hidden className="size-5" />{t('formulary.add.saved')}</p>}
-            <Button type="submit" className="self-start" loading={p.saving}>{t('formulary.add.submit')}</Button>
-          </div>
+          </>}>
+            <Button type="submit" loading={p.saving}>{t('formulary.add.submit')}</Button>
+          </StickyActionBar>
         </form>
       </Section>
     </div>

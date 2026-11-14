@@ -1,10 +1,11 @@
 import { useRef } from 'react';
 import { Camera, CircleAlert, CircleCheck, Hourglass, Pencil, ShieldAlert, Upload } from 'lucide-react';
 import { ltr, useI18n } from '@medvya/i18n';
-import { Button, Card, Input, Label, PageContainer, PageHeader, PageMessage, ProvenanceTag, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
+import { Button, Card, Input, Label, PageContainer, PageHeader, PageMessage, ProvenanceTag, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, StickyActionBar } from '@medvya/ui';
 import type { ClinicalRefusal } from '../../patient360/domain/chart';
 import { provenanceOf } from '../../patient360/domain/chart';
 import { canOpenDocument, documentSources, documentTypes, sizeLabel, type DocumentList, type DocumentRow, type DocumentSource, type DocumentType, type ScanStatus, type UploadFailure, type ViewLink } from '../domain/documents';
+import { cardBar } from '../../settings/components/fieldStyles';
 
 type Props = {
   patient: DocumentList['patient'] | null; documents: DocumentRow[]; canOpen: boolean; timeZone: string;
@@ -85,13 +86,6 @@ function UploadPanel(p: Props) {
           onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) p.onPhoto(f); }} />
         <Button variant="outline" loading={p.addingPhoto} disabled={busy} onClick={() => photo.current?.click()}><Camera aria-hidden className="size-4" />{t(p.pages === 0 ? 'documents.scan' : 'documents.addPage')}</Button>
       </div>
-      {p.pages > 0 && (
-        <div className="flex flex-wrap items-center gap-3 rounded-md border p-3">
-          <span role="status" className="font-bold">{t('documents.pages', { count: p.pages })}</span>
-          <Button loading={p.uploading} disabled={busy} onClick={p.onSavePages}>{t('documents.savePages', { count: p.pages })}</Button>
-          <Button variant="ghost" disabled={busy} onClick={p.onClearPages}>{t('documents.discardPages')}</Button>
-        </div>
-      )}
       {p.photoFailed && <p role="alert" className="font-bold text-danger-700">{t('documents.photoFailed')}</p>}
       {p.uploading && <p role="status">{t('documents.uploading')}</p>}
       {p.lastUpload === 'Clean' && <p role="status" className="inline-flex items-center gap-1.5 font-bold"><CircleCheck aria-hidden className="size-4" />{t('documents.uploaded.clean')}</p>}
@@ -103,6 +97,13 @@ function UploadPanel(p: Props) {
           {p.canRetry && <Button onClick={p.onRetry}>{t('documents.retry')}</Button>}
           <Button variant="ghost" onClick={p.onDismissFailure}>{t('documents.dismiss')}</Button>
         </div>
+      )}
+      {/* The scanned pages' Save and Discard, pinned at the card's foot (DESIGN.md Screen layout standard, MDV-P2-065). */}
+      {p.pages > 0 && (
+        <StickyActionBar className={cardBar} status={<span role="status" className="font-bold">{t('documents.pages', { count: p.pages })}</span>}>
+          <Button variant="ghost" disabled={busy} onClick={p.onClearPages}>{t('documents.discardPages')}</Button>
+          <Button loading={p.uploading} disabled={busy} onClick={p.onSavePages}>{t('documents.savePages', { count: p.pages })}</Button>
+        </StickyActionBar>
       )}
     </Card>
   );

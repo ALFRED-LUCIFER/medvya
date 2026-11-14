@@ -1,5 +1,7 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
+import { t } from './support/desk';
+import { commitVisible } from './support/oneScreen';
 
 // MDV-P1-064, J1 step 1 (Medvya approves the organisation): the console's approvals queue and detail against a mocked console API with synthetic
 // organisations. The server rules (roles, reason, state machine, DPA, audit in both logs, the review login's narrow rights) are tested on PostgreSQL
@@ -179,3 +181,21 @@ for (const locale of ['en', 'ar'] as const) {
     expect(await axe(page)).toEqual([]);
   });
 }
+
+// MDV-P2-065 AC1 and AC3: the decision is in the page's bottom bar, on screen without scrolling at 1440x900 and 1024x768; while a reason is
+// open the bar holds its Cancel and Confirm instead. English and Arabic pass axe.
+for (const locale of ['en', 'ar'])
+  for (const [width, height] of [[1440, 900], [1024, 768]] as const)
+    test(`${locale} at ${width}x${height} the decision buttons are in the bottom bar and in view`, async ({ page }) => {
+      await page.setViewportSize({ width, height });
+      await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
+      await mock(page, 'Reviewer');
+      await page.goto('/approvals/o-clinic');
+      const bar = page.locator('[data-slot=sticky-action-bar]');
+      const approve = bar.getByRole('button', { name: t(locale, 'platform.approvals.action.approve'), exact: true });
+      await commitVisible(page, approve);
+      await approve.click();
+      await expect(bar).toHaveCount(1);
+      await commitVisible(page, bar.getByRole('button', { name: t(locale, 'platform.approvals.confirm.approve.confirm') }));
+      expect(await axe(page)).toEqual([]);
+    });

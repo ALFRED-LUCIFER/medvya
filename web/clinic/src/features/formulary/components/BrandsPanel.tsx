@@ -2,8 +2,8 @@ import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { CircleCheck } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, Field, Textarea } from '@medvya/ui';
-import { fieldError } from '../../settings/components/fieldStyles';
+import { Button, Field, StickyActionBar, Textarea } from '@medvya/ui';
+import { cardBar, fieldError } from '../../settings/components/fieldStyles';
 import { Section } from '../../settings/components/Section';
 import { allergyClasses, type BrandProblem, type BrandRowsForm } from '../domain/formulary';
 
@@ -35,8 +35,9 @@ export default function BrandsPanel(p: Props) {
             </ul>
           </div>
         )}
-        {p.added !== null && <p role="status" className="flex items-center gap-2 font-bold"><CircleCheck aria-hidden className="size-5" />{t('formulary.brands.saved', { count: p.added })}</p>}
-        <Button type="submit" className="self-start" loading={p.saving}>{t('formulary.brands.submit')}</Button>
+        <StickyActionBar className={cardBar} status={p.added !== null && <p role="status" className="flex items-center gap-2 font-bold"><CircleCheck aria-hidden className="size-5" />{t('formulary.brands.saved', { count: p.added })}</p>}>
+          <Button type="submit" loading={p.saving}>{t('formulary.brands.submit')}</Button>
+        </StickyActionBar>
       </form>
     </Section>
   );

@@ -2,12 +2,13 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { ArrowLeft, ClipboardList, Eye, TriangleAlert } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, Card, cn, PageContainer, PageHeader, PageMessage, PatientBanner } from '@medvya/ui';
+import { Button, buttonVariants, Card, cn, PageContainer, PageHeader, PageMessage, PatientBanner, StickyActionBar } from '@medvya/ui';
 import { addressLines, missingParts, type ContactView, type PatientDetails, type RevealedIdentifiers } from '../domain/directory';
 import { consentPolicyVersion, genderIdentities, regionKey } from '../../registration/domain/registration';
 import type { MergeHistoryEntry, Refusal } from '../../merge/domain/merge';
 import { PatientPicker, type PatientSearchView } from '../../schedule/components/BookingPanel';
 import { consentRows, stateOf, type PatientConsents } from '../domain/consents';
+import { cardBar } from '../../settings/components/fieldStyles';
 
 type Props = {
   patient: PatientDetails | null;
@@ -207,10 +208,9 @@ export default function PatientRecord(props: Props) {
       {props.mergeRequest && (
         <Card title={t('merge.request.title')} intro={t('merge.request.body')}>
           <PatientPicker search={props.mergeRequest.search} chosen={props.mergeRequest.chosen} registerPath={null} invalid={false} />
-          <div className="flex flex-col items-start gap-1">
+          <StickyActionBar className={cardBar} status={props.mergeRequest.refusal && <p role="alert" className="text-sm font-semibold text-danger-700">{t(`merge.refused.${props.mergeRequest.refusal}`)}</p>}>
             <Button variant="outline" loading={props.mergeRequest.busy} disabled={!props.mergeRequest.chosen} onClick={props.mergeRequest.onRequest}>{t('merge.request.action')}</Button>
-            {props.mergeRequest.refusal && <p role="alert" className="text-sm font-semibold text-danger-700">{t(`merge.refused.${props.mergeRequest.refusal}`)}</p>}
-          </div>
+          </StickyActionBar>
         </Card>
       )}
 

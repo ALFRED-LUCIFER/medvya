@@ -2,11 +2,12 @@ import type { UseFormReturn } from 'react-hook-form';
 import { Link } from 'react-router';
 import { CircleAlert, CircleCheck, X } from 'lucide-react';
 import { useI18n, type MessageKey } from '@medvya/i18n';
-import { Button, buttonVariants, Card, cn } from '@medvya/ui';
+import { Button, buttonVariants, Card, cn, StickyActionBar } from '@medvya/ui';
 import { codeKey, needsAttention, type PatientMessage } from '../domain/messages';
 import { actions, localDate, type Action, type CancelForm, type ChangeError, type Rule, type VisitMove } from '../domain/changes';
 import type { Appointment } from '../domain/schedule';
 import { termsPath } from '../../settings/domain/settings';
+import { cardBar } from '../../settings/components/fieldStyles';
 import CancelReasonFields from './CancelReasonFields';
 import { StateLabel } from './StateLabel';
 
@@ -79,7 +80,6 @@ export default function AppointmentPanel(p: Props) {
       {p.done && (
         <div role="status" className="flex flex-col items-start gap-2">
           <p className="flex items-center gap-2 text-sm font-bold text-success-700"><CircleCheck aria-hidden className="size-5" />{t(`appointment.done.${p.done.kind}`, { time: time(a.start), count: p.done.count })}</p>
-          {p.done.kind === 'noShow' && p.onRebook && <Button variant="default" onClick={p.onRebook}>{t('appointment.rebook', { name: a.patientName })}</Button>}
         </div>
       )}
 
@@ -90,29 +90,10 @@ export default function AppointmentPanel(p: Props) {
         </div>
       )}
 
-      {!p.done && p.mode === 'view' && (
-        <ul className="flex flex-col gap-2">
-          {actions.map(k => {
-            const rule = p.rules[k];
-            const why = `appointment-why-${k}`;
-            return (
-              <li key={k} className="flex flex-col gap-1">
-                <Button variant={k === 'cancel' || k === 'noShow' ? 'outline' : 'default'} disabled={!rule.allowed || p.working} onClick={run[k]}
-                  aria-describedby={rule.allowed ? undefined : why}>
-                  {t(actionKeys[k])}
-                </Button>
-                {!rule.allowed && <p id={why} className="text-xs text-muted-foreground">{t(`appointment.why.${rule.why}`)}</p>}
-              </li>
-            );
-          })}
-        </ul>
-      )}
-
       {p.mode === 'pick' && (
         <div role="status" className="flex flex-col items-start gap-2">
           <h3 className="text-sm font-extrabold">{t('appointment.pick.title')}</h3>
           <p className="text-sm text-muted-foreground">{t('appointment.pick.body', { name: a.patientName })}</p>
-          <Button variant="outline" onClick={p.onBack}>{t('appointment.pick.back')}</Button>
         </div>
       )}
 
@@ -123,10 +104,6 @@ export default function AppointmentPanel(p: Props) {
             from: t('appointment.slot', { name: p.opened.calendarName, day: day(a.start), time: time(a.start) }),
             to: t('appointment.slot', { name: p.target.calendarName, day: day(p.target.start), time: time(p.target.start) }),
           })}</p>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="default" disabled={p.working} onClick={p.onConfirmMove}>{t('appointment.move.confirm')}</Button>
-            <Button variant="outline" disabled={p.working} onClick={p.onBack}>{t('appointment.back')}</Button>
-          </div>
         </div>
       )}
 
@@ -134,23 +111,56 @@ export default function AppointmentPanel(p: Props) {
 
       <History history={p.history} timeZone={p.timeZone} />
       <Messages messages={p.messages} preparing={p.messagesPreparing} timeZone={p.timeZone} />
+
+      {/* The step's actions, pinned at the panel's foot as in BookingPanel (DESIGN.md Screen layout standard, MDV-P2-065). Keyed per step, so a button
+          never becomes the next step's submit mid-click. */}
+      {p.done ? p.done.kind === 'noShow' && p.onRebook && (
+        <StickyActionBar key="rebook" className={cardBar}><Button variant="default" onClick={p.onRebook}>{t('appointment.rebook', { name: a.patientName })}</Button></StickyActionBar>
+      ) : p.mode === 'view' ? (
+        <StickyActionBar key="view" className={cardBar} status={actions.some(k => !p.rules[k].allowed) && (
+          <ul className="flex flex-col gap-0.5">
+            {actions.map(k => { const rule = p.rules[k]; return !rule.allowed && <li key={k} id={`appointment-why-${k}`} className="text-xs text-muted-foreground">{t(`appointment.why.${rule.why}`)}</li>; })}
+          </ul>
+        )}>
+          {/* The secondary actions first, the filled ones last. */}
+          {[...actions].sort((x, y) => Number(filled(x)) - Number(filled(y))).map(k => {
+            const rule = p.rules[k];
+            return (
+              <Button key={k} variant={filled(k) ? 'default' : 'outline'} disabled={!rule.allowed || p.working} onClick={run[k]}
+                aria-describedby={rule.allowed ? undefined : `appointment-why-${k}`}>
+                {t(actionKeys[k])}
+              </Button>
+            );
+          })}
+        </StickyActionBar>
+      ) : p.mode === 'pick' ? (
+        <StickyActionBar key="pick" className={cardBar}><Button variant="outline" onClick={p.onBack}>{t('appointment.pick.back')}</Button></StickyActionBar>
+      ) : p.mode === 'confirmMove' && p.target ? (
+        <StickyActionBar key="move" className={cardBar}>
+          <Button variant="outline" disabled={p.working} onClick={p.onBack}>{t('appointment.back')}</Button>
+          <Button variant="default" disabled={p.working} onClick={p.onConfirmMove}>{t('appointment.move.confirm')}</Button>
+        </StickyActionBar>
+      ) : p.mode === 'cancel' && (
+        <StickyActionBar key="cancel" className={cardBar}>
+          <Button type="button" variant="outline" disabled={p.working} onClick={p.onBack}>{t('appointment.back')}</Button>
+          {p.opened.appointment.seriesId && (
+            <Button type="button" variant="default" disabled={p.working} onClick={p.onConfirmCancelFollowing}>{t('appointment.cancel.following')}</Button>
+          )}
+          <Button type="submit" form="appointment-cancel" variant="default" disabled={p.working}>{t('appointment.cancel.confirm')}</Button>
+        </StickyActionBar>
+      )}
     </Card></aside>
   );
 }
 
+const filled = (k: Action) => k === 'checkIn' || k === 'reschedule';
+
 function CancelForm(p: Props) {
   const { t } = useI18n();
   return (
-    <form noValidate className="flex flex-col gap-3" onSubmit={e => { e.preventDefault(); p.onConfirmCancel(); }}>
+    <form id="appointment-cancel" noValidate className="flex flex-col gap-3" onSubmit={e => { e.preventDefault(); p.onConfirmCancel(); }}>
       <h3 className="text-sm font-extrabold">{t('appointment.cancel.title')}</h3>
       <CancelReasonFields form={p.form} onReason={p.onReason} />
-      <div className="flex flex-wrap gap-2">
-        <Button type="submit" variant="default" disabled={p.working}>{t('appointment.cancel.confirm')}</Button>
-        {p.opened.appointment.seriesId && (
-          <Button type="button" variant="default" disabled={p.working} onClick={p.onConfirmCancelFollowing}>{t('appointment.cancel.following')}</Button>
-        )}
-        <Button type="button" variant="outline" disabled={p.working} onClick={p.onBack}>{t('appointment.back')}</Button>
-      </div>
     </form>
   );
 }

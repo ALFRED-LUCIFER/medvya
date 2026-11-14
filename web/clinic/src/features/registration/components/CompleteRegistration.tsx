@@ -2,7 +2,7 @@ import type { UseFormReturn } from 'react-hook-form';
 import { Link } from 'react-router';
 import { ArrowLeft, CircleCheck, TriangleAlert } from 'lucide-react';
 import { useI18n, type Country } from '@medvya/i18n';
-import { Button, buttonVariants, Card, cn, PageContainer, PageHeader, PageMessage } from '@medvya/ui';
+import { Button, buttonVariants, Card, cn, PageContainer, PageHeader, PageMessage, StickyActionBar } from '@medvya/ui';
 import type { RegistrationStatus } from '../../patients/domain/directory';
 import type { FormField, RegistrationForm } from '../domain/registration';
 import { FormErrorSummary, TextField } from './FormFields';
@@ -52,7 +52,7 @@ export default function CompleteRegistration(p: Props) {
           {t(p.status === 'Complete' ? 'registration.complete.done.Complete' : 'registration.complete.done.Incomplete')}
         </Card>
       ) : (
-        <form noValidate onSubmit={e => { e.preventDefault(); p.onSubmit(); }} className="flex flex-col gap-5">
+        <form id="complete-registration" noValidate onSubmit={e => { e.preventDefault(); p.onSubmit(); }} className="flex flex-col gap-5">
           <FormErrorSummary f={f} summary={p.errorSummary} country={p.country} values={p.values} quick={false} />
           <Card title={t('registration.complete.phones')} intro={t('registration.complete.phones.note')}>
             <div className="grid gap-4 md:grid-cols-2">
@@ -71,17 +71,20 @@ export default function CompleteRegistration(p: Props) {
           <Card title={t('registration.complete.payer')}>
             <PayerStep f={f} country={p.country} values={p.values} />
           </Card>
-          <div className="flex flex-col items-start gap-2">
-            {p.failure === 'changed' && (
-              <div role="alert" className="flex flex-col items-start gap-2 text-sm font-semibold text-danger-700">
-                <p>{t('registration.complete.changed')}</p>
-                <Button type="button" variant="outline" onClick={p.onReload}>{t('registration.complete.changed.reload')}</Button>
-              </div>
-            )}
-            {p.failure === 'error' && <p role="alert" className="text-sm font-semibold text-danger-700">{t('registration.complete.failed')}</p>}
-            <Button type="submit" loading={p.saving}>{p.saving ? t('registration.save.saving') : t('registration.complete.save')}</Button>
-          </div>
         </form>
+      )}
+      {!p.status && (
+        <StickyActionBar status={<>
+          {p.failure === 'changed' && (
+            <div role="alert" className="flex flex-wrap items-center gap-2 text-sm font-semibold text-danger-700">
+              <p>{t('registration.complete.changed')}</p>
+              <Button type="button" variant="outline" onClick={p.onReload}>{t('registration.complete.changed.reload')}</Button>
+            </div>
+          )}
+          {p.failure === 'error' && <p role="alert" className="text-sm font-semibold text-danger-700">{t('registration.complete.failed')}</p>}
+        </>}>
+          <Button type="submit" form="complete-registration" loading={p.saving}>{p.saving ? t('registration.save.saving') : t('registration.complete.save')}</Button>
+        </StickyActionBar>
       )}
     </PageContainer>
   );

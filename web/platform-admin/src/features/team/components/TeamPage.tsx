@@ -130,12 +130,13 @@ export default function TeamPage({ vm }: Props) {
           problem={vm.actionRefused ? t('platform.team.refused') : vm.actionFailed ? t('platform.error.failed') : null}
           onCancel={vm.onCancelAction} />
       ) : vm.inviting ? (
-        <StickyActionBar status={vm.inviteFailed && <p role="alert" className="text-sm font-semibold text-danger-700">{t('platform.error.failed')}</p>}>
+        // Keyed: a reused button would turn into the submit mid-click and send the empty form (the click's default action runs after React re-renders).
+        <StickyActionBar key="invite" status={vm.inviteFailed && <p role="alert" className="text-sm font-semibold text-danger-700">{t('platform.error.failed')}</p>}>
           <Button type="button" variant="outline" onClick={vm.onCancelInvite}>{t('platform.action.cancel')}</Button>
           <Button type="submit" form="team-invite" loading={vm.inviteBusy}>{t('platform.team.sendInvite')}</Button>
         </StickyActionBar>
       ) : (
-        <StickyActionBar>
+        <StickyActionBar key="actions">
           <Button variant="outline" onClick={() => vm.onStartAction({ kind: 'review' })}><FileCheck aria-hidden />{t('platform.team.startReview')}</Button>
           <Button onClick={vm.onStartInvite}><UserPlus aria-hidden />{t('platform.team.invite')}</Button>
         </StickyActionBar>

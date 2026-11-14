@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { ArrowLeft, Check, GitMerge, Undo2, X } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, Card, cn, Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow, PageContainer, PageHeader } from '@medvya/ui';
+import { Button, buttonVariants, Card, cn, Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow, PageContainer, PageHeader, StickyActionBar } from '@medvya/ui';
 import { availableActions, type MergeAction, type MergeQueueRow, type Refusal, type MergeReview as Review, type MergeSide } from '../domain/merge';
 
 type LoadState = 'loading' | 'ready' | 'invalid' | 'forbidden' | 'notFound' | 'error';
@@ -97,15 +97,16 @@ export default function MergeReview(props: Props) {
           </Table>
           <p className="text-sm">{t('merge.approvals', { done: review.approvals, needed: review.approvalsRequired })}</p>
           {review.approvalsRequired > 1 && <p className="text-sm text-muted-foreground">{t('merge.secondApprover')}</p>}
-          {actions.length === 0 ? <p className="text-sm text-muted-foreground">{t(`merge.closed.${review.status}`)}</p> : (
-            <div className="flex flex-wrap gap-2">
-              {actions.map(a => {
-                const Icon = icons[a];
-                return <Button key={a} variant={a === 'approve' ? 'default' : 'outline'} disabled={props.busy} onClick={() => props.onDecide(a)}><Icon aria-hidden />{t(`merge.action.${a}`)}</Button>;
-              })}
-            </div>
-          )}
         </Card>
+      )}
+      {/* The decision, in the bottom bar (DESIGN.md Screen layout standard, MDV-P2-065); the filled Approve is last. */}
+      {review && (
+        <StickyActionBar status={actions.length === 0 && <p className="text-sm text-muted-foreground">{t(`merge.closed.${review.status}`)}</p>}>
+          {[...actions].sort((a, b) => Number(a === 'approve') - Number(b === 'approve')).map(a => {
+            const Icon = icons[a];
+            return <Button key={a} variant={a === 'approve' ? 'default' : 'outline'} disabled={props.busy} onClick={() => props.onDecide(a)}><Icon aria-hidden />{t(`merge.action.${a}`)}</Button>;
+          })}
+        </StickyActionBar>
       )}
     </PageContainer>
   );

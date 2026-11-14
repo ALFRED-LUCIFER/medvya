@@ -2,7 +2,7 @@ import { CircleCheck, CircleDashed, Info } from 'lucide-react';
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, Card, ErrorSummary, Field, FieldMarks, Input, Label, PageContainer, PageHeader } from '@medvya/ui';
+import { Button, buttonVariants, Card, ErrorSummary, Field, FieldMarks, Input, Label, PageContainer, PageHeader, StickyActionBar } from '@medvya/ui';
 import { uploadErrorKey, type DocumentKind, type FileProblem, type ItContactForm, type OrganisationRequest, type RequestError } from '../domain/organisationRequest';
 
 type Props = {
@@ -77,13 +77,6 @@ export default function OrganisationRequestPage(p: Props) {
         )}
       </PageHeader>
 
-      {r.state === 'Rejected' && (
-        <div className="flex flex-col gap-2">
-          <Button className="self-start" loading={p.startingNew} onClick={p.onStartNew}>{t('orgRequest.startNew')}</Button>
-          {p.startNewFailed && <p role="alert" className={error}>{t('orgRequest.error.failed')}</p>}
-        </div>
-      )}
-
       <fieldset className="flex flex-col gap-3" disabled={!p.editable}>
         <legend className="mb-1 text-lg font-bold">{t('orgRequest.docs.legend')}</legend>
         <p className="text-sm text-muted-foreground">{t('orgRequest.docs.hint')}</p>
@@ -121,7 +114,7 @@ export default function OrganisationRequestPage(p: Props) {
       </fieldset>
 
       {r.type === 'Hospital' && (
-        <form noValidate onSubmit={p.onContact} className="grid gap-4 md:grid-cols-2">
+        <form id="org-it-contact" noValidate onSubmit={p.onContact} className="grid gap-4 md:grid-cols-2">
           <fieldset className="contents" disabled={!p.editable}>
             <legend className="mb-1 text-lg font-bold md:col-span-2">{t('orgRequest.it.legend')}</legend>
             <ErrorSummary title={t('field.errorSummary')} focusKey={p.form.formState.submitCount} className="md:col-span-2" errors={contactErrors} />
@@ -134,24 +127,28 @@ export default function OrganisationRequestPage(p: Props) {
                 <Input type="email" dir="ltr" autoComplete="off" {...p.form.register('email')} />
               </Field>
             </FieldMarks>
-            <div className="flex flex-wrap items-center gap-3 md:col-span-2">
-              <Button type="submit" variant="outline" loading={p.savingContact}>{t('orgRequest.it.save')}</Button>
-              {p.contactSaved && <span role="status" className="flex items-center gap-1.5 text-sm font-semibold"><CircleCheck className="size-4" aria-hidden />{t('orgRequest.it.saved')}</span>}
-              {p.contactFailed && <span role="alert" className={error}>{t('orgRequest.error.failed')}</span>}
-            </div>
           </fieldset>
         </form>
       )}
 
-      {p.editable ? (
-        <div className="flex flex-col gap-2">
-          <Button className="self-start" loading={p.submitting} disabled={!p.ready} onClick={p.onSubmit}>
-            {t(r.state === 'NeedsChanges' ? 'orgRequest.resubmit' : 'orgRequest.submit')}
-          </Button>
-          {!p.ready && <p className="text-sm text-muted-foreground">{t('orgRequest.submit.missing')}</p>}
+      {/* Every action in the bottom bar (DESIGN.md Screen layout standard, MDV-P2-065): the IT contact's Save, then Submit, the filled one, last. */}
+      {(p.editable || r.state === 'Rejected') && (
+        <StickyActionBar status={<div className="flex flex-col gap-1">
+          {p.contactSaved && <span role="status" className="flex items-center gap-1.5 text-sm font-semibold"><CircleCheck className="size-4" aria-hidden />{t('orgRequest.it.saved')}</span>}
+          {p.contactFailed && <span role="alert" className={error}>{t('orgRequest.error.failed')}</span>}
+          {p.editable && !p.ready && <p className="text-sm text-muted-foreground">{t('orgRequest.submit.missing')}</p>}
           {p.submitFailed && <p role="alert" className={error}>{t('orgRequest.error.submit')}</p>}
-        </div>
-      ) : null}
+          {p.startNewFailed && <p role="alert" className={error}>{t('orgRequest.error.failed')}</p>}
+        </div>}>
+          {r.state === 'Rejected' && <Button loading={p.startingNew} onClick={p.onStartNew}>{t('orgRequest.startNew')}</Button>}
+          {p.editable && r.type === 'Hospital' && <Button type="submit" form="org-it-contact" variant="outline" loading={p.savingContact}>{t('orgRequest.it.save')}</Button>}
+          {p.editable && (
+            <Button loading={p.submitting} disabled={!p.ready} onClick={p.onSubmit}>
+              {t(r.state === 'NeedsChanges' ? 'orgRequest.resubmit' : 'orgRequest.submit')}
+            </Button>
+          )}
+        </StickyActionBar>
+      )}
     </PageContainer>
   );
 }

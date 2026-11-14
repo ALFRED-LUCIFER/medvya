@@ -1,9 +1,9 @@
 import type { UseFormReturn } from 'react-hook-form';
 import { Controller } from 'react-hook-form';
 import { ltr, useI18n } from '@medvya/i18n';
-import { Button, Card, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@medvya/ui';
+import { Button, Card, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow, StickyActionBar } from '@medvya/ui';
 import { CircleAlert, TrendingDown, TrendingUp } from 'lucide-react';
-import { describedBy } from '../../settings/components/fieldStyles';
+import { cardBar, describedBy } from '../../settings/components/fieldStyles';
 import {
   centileWord, growthBox, growthChart, growthColumns, indicators, latestOf, positions, type Growth, type GrowthAlert, type GrowthDraft, type GrowthIndicator, type GrowthProblem, type GrowthSeries,
 } from '../domain/growth';
@@ -42,8 +42,9 @@ export default function GrowthCard(p: Props) {
         </p>
       )}
       <Measurements view={v} />
-      {p.canRecord && <GrowthForm {...p} />}
       {p.problem && <p role="alert" className="font-bold text-danger-700">{t(`childHealth.growth.error.${p.problem}`)}</p>}
+      {/* Last in the card, so its bottom bar sits on the card's foot. */}
+      {p.canRecord && <GrowthForm {...p} />}
     </Card>
   );
 }
@@ -161,7 +162,7 @@ function GrowthForm(p: Props) {
         </div>
         {field('headCm', 'growth-head')}
       </div>
-      <div><Button type="submit" loading={p.recording} disabled={!p.online}>{t('childHealth.growth.form.submit')}</Button></div>
+      <StickyActionBar className={cardBar}><Button type="submit" loading={p.recording} disabled={!p.online}>{t('childHealth.growth.form.submit')}</Button></StickyActionBar>
     </form>
   );
 }

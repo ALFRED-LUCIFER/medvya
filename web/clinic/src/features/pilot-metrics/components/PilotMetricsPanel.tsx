@@ -1,9 +1,9 @@
 import type { FormEventHandler, ReactNode } from 'react';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 import { useI18n } from '@medvya/i18n';
-import { Button, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
+import { Button, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, StickyActionBar } from '@medvya/ui';
 import { Section } from '../../settings/components/Section';
-import { fieldError } from '../../settings/components/fieldStyles';
+import { cardBar, fieldError } from '../../settings/components/fieldStyles';
 import { pilotMetricIds, windowDays, type BaselineInput, type PilotMetricId, type PilotMetrics } from '../domain/pilotMetrics';
 
 type Props = {
@@ -97,11 +97,12 @@ export default function PilotMetricsPanel(p: Props) {
           <Field id="baseline-to" label={t('pilotMetrics.to')} error={errors.toDate ? t('pilotMetrics.error.toDate') : null}>
             <Input type="date" {...p.form.register('toDate')} />
           </Field>
-          <div className="flex flex-wrap items-center gap-3 md:col-span-2" aria-live="polite">
-            <Button type="submit" loading={p.saving}>{t('pilotMetrics.record')}</Button>
+          <StickyActionBar className={`${cardBar} md:col-span-2`} aria-live="polite" status={<>
             {p.saveFailed && <p role="alert" className={fieldError}>{t('pilotMetrics.saveFailed')}</p>}
             {p.saved && !p.saving && <p>{t('pilotMetrics.saved')}</p>}
-          </div>
+          </>}>
+            <Button type="submit" loading={p.saving}>{t('pilotMetrics.record')}</Button>
+          </StickyActionBar>
         </form>
       </Section>
     </div>

@@ -1,5 +1,6 @@
 import { useI18n } from '@medvya/i18n';
-import { Button, Card, ErrorSummary, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
+import { Button, Card, cn, ErrorSummary, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, StickyActionBar } from '@medvya/ui';
+import { cardBar } from '../../settings/components/fieldStyles';
 import { CalendarClock, CircleAlert, CircleCheck, CircleDashed, HeartPulse, TriangleAlert } from 'lucide-react';
 import type { FormEventHandler, ReactNode } from 'react';
 import type { FieldErrors, UseFormReturn } from 'react-hook-form';
@@ -221,17 +222,18 @@ function CloseFields({ p }: { p: Props }) {
         </Field>
         <SelectContent>{outcomes.map(o => <SelectItem key={o} value={o}>{t(`pregnancy.outcome.${o}`)}</SelectItem>)}</SelectContent>
       </Select>
-      <Actions p={p} />
+      <Actions p={p} className="basis-full" />
     </form>
   );
 }
 
-function Actions({ p }: { p: Props }) {
+/** The open form's actions, pinned at the card's foot (DESIGN.md Screen layout standard, MDV-P2-065); every form is the card's last child. */
+function Actions({ p, className }: { p: Props; className?: string }) {
   const { t } = useI18n();
   return (
-    <div className="flex flex-wrap gap-2">
-      <Button type="submit" disabled={p.saving}>{t('pregnancy.save')}</Button>
+    <StickyActionBar className={cn(cardBar, className)}>
       <Button type="button" variant="outline" onClick={p.onCancel}>{t('pregnancy.cancel')}</Button>
-    </div>
+      <Button type="submit" disabled={p.saving}>{t('pregnancy.save')}</Button>
+    </StickyActionBar>
   );
 }

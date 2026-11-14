@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { useWatch, type UseFormReturn } from 'react-hook-form';
 import { ArrowLeft, ArrowRight, Check, LifeBuoy } from 'lucide-react';
 import { useI18n, type Country } from '@medvya/i18n';
-import { Button, Card, FieldMarks, PageHeader } from '@medvya/ui';
+import { Button, Card, FieldMarks, PageHeader, StickyActionBar } from '@medvya/ui';
 import { preview, skippable, stepIds, type FinishResult, type Rules, type WizardForm } from '../domain/onboarding';
 import BookingPreview from './BookingPreview';
 import { StepErrorSummary } from './Fields';
@@ -101,20 +101,21 @@ export default function OnboardingWizard(p: Props) {
                 <StepErrorSummary form={form} step={step} country={country} currency={rules.currency} focusKey={p.errorFocusKey} />
                 {/* Most answers are required, so the optional ones are marked in words (DESIGN.md Forms). */}
                 <FieldMarks mark="optional">{body}</FieldMarks>
-                <div className="flex flex-wrap items-center gap-3 border-t pt-4">
-                  {index > 0 && <Button type="button" variant="outline" onClick={p.onBack}><ArrowLeft className="size-4 rtl:rotate-180" aria-hidden />{t('onboarding.back')}</Button>}
+                {/* The step's actions, pinned at the card's foot (DESIGN.md Screen layout standard, MDV-P2-065). */}
+                <StickyActionBar className="-mx-5 -mb-5 rounded-b-lg bg-card md:-mx-8 md:-mb-8" status={<>
                   <p aria-live="polite" className="text-sm text-muted-foreground">
                     {p.saveState === 'saving' ? t('onboarding.saving') : p.saveState === 'saved' ? t('onboarding.saved') : p.saveState === 'failed' ? t('onboarding.saveFailed') : ''}
                   </p>
-                  <span className="flex-1" />
+                  <div aria-live="assertive" className="text-sm font-semibold text-danger-700">
+                    {p.problem && <p>{t(`onboarding.problem.${p.problem}`)}</p>}
+                  </div>
+                </>}>
+                  {index > 0 && <Button type="button" variant="outline" onClick={p.onBack}><ArrowLeft className="size-4 rtl:rotate-180" aria-hidden />{t('onboarding.back')}</Button>}
                   {skippable(step) && <Button type="button" variant="ghost" onClick={p.onSkip} disabled={p.working}>{t('onboarding.skip')}</Button>}
                   <Button type="submit" loading={p.working}>
                     {p.last ? t('onboarding.finishSetup') : t('onboarding.continue')}<ArrowRight className="size-4 rtl:rotate-180" aria-hidden />
                   </Button>
-                </div>
-                <div aria-live="assertive" className="text-sm font-semibold text-danger-700">
-                  {p.problem && <p>{t(`onboarding.problem.${p.problem}`)}</p>}
-                </div>
+                </StickyActionBar>
               </form>
             )}
           </Card>

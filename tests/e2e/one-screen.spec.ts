@@ -32,6 +32,19 @@ for (const locale of ['en', 'ar']) {
   }
 }
 
+// DESIGN.md "Screen layout standard": a page's bottom bar sits on the screen's bottom edge even when the page is short, not halfway up
+// after the content. (Settings, booking and staff pin a bar at their card's foot; those are checked by commitVisible above.)
+for (const name of ['walk-in', 'medicines', 'problems', 'waitlist', 'nurse intake'])
+  for (const [width, height] of [[1440, 900], [1024, 768]] as const)
+    test(`the ${name} bottom bar sits on the bottom edge of a ${width}x${height} screen`, async ({ page }) => {
+      await page.setViewportSize({ width, height });
+      await taskScreens.find(s => s.name === name)!.open(page, 'en');
+      const bar = page.locator('[data-slot=sticky-action-bar]').last();
+      await expect(bar).toBeVisible();
+      const box = (await bar.boundingBox())!;
+      expect(Math.abs(box.y + box.height - height)).toBeLessThanOrEqual(1);
+    });
+
 for (const name of ['nurse intake', 'settings profile', 'waitlist']) {
   for (const size of [{ width: 1440, height: 900 }, { width: 1024, height: 768 }]) {
     test(`tabbing through ${name} at ${size.width}x${size.height} leaves no field under the bottom bar`, async ({ page }) => {

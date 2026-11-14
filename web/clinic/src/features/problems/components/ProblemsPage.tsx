@@ -38,7 +38,7 @@ export default function ProblemsPage(p: Props) {
   if (!p.view || p.notFound || p.failed) return <PageContainer width="form" role="alert"><PageHeader title={t(p.notFound ? 'consult.notFound' : 'problems.loadFailed')} actions={back} /></PageContainer>;
   const { view } = p;
   return (
-    <div className="flex flex-col gap-4">
+    <PageContainer>
       {p.banner && <PatientStrip banner={p.banner} headingLevel={1} />}
       <Card title={t('problems.title')} intro={p.codeSet && t('problems.codeSet', { system: p.codeSet.system, version: p.codeSet.version })}>
         <TableState state={view.rows.length === 0 ? 'empty' : 'ready'} messages={{ loading: t('problems.loading'), error: t('problems.loadFailed'), empty: t('problems.empty') }}>
@@ -68,7 +68,7 @@ export default function ProblemsPage(p: Props) {
         {!view.locked && <ProblemAddSubmit formId={addFormId} adding={p.adding} online={p.online} />}
         <Link to={p.consultPath} className={buttonVariants({ variant: 'outline' })}>{t('problems.backToConsult')}</Link>
       </StickyActionBar>
-    </div>
+    </PageContainer>
   );
 }
 

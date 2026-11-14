@@ -21,7 +21,7 @@ function NavRailItem({ icon: Icon, label, asChild, className, children, ...props
     <Comp
       data-slot="nav-rail-item"
       className={cn(
-        "flex min-h-14 w-full flex-col items-center justify-center gap-1 rounded-lg px-1 py-1.5 text-center text-nav-ink transition-colors duration-fast ease-out",
+        "flex min-h-14 w-full flex-col items-center justify-center gap-1 rounded-lg px-1 py-1.5 text-center text-nav-ink transition-[color,background-color,border-color] duration-fast ease-out",
         "hover:bg-nav-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white aria-[current=page]:bg-nav-hover aria-[current=page]:text-white",
         className
       )}

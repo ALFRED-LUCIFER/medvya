@@ -29,6 +29,8 @@ type Props = {
   globalSearch?: ReactNode;
   /** The notification centre (D-03), composed by the app for roles that may see notifications. */
   notifications?: ReactNode;
+  /** The offline strip (MDV-P2-056): under the top bar, in the flow, so it covers nothing. */
+  banner?: ReactNode;
   children: ReactNode;
 };
 
@@ -38,7 +40,7 @@ type Props = {
  * search, bell and the account menu (56 px on phones, account in More).
  */
 export default function AppShell({ displayName, role, facilityName, items, tabs, onLocaleChange, onSignOut, onMyDevices, onChangeFacility,
-  navCollapsed, onToggleNav, searchPath, globalSearch, notifications, children }: Props) {
+  navCollapsed, onToggleNav, searchPath, globalSearch, notifications, banner, children }: Props) {
   const { t } = useI18n();
   // From 1280 px: the sidebar, or the rail when folded. Below 1280 the rail is the only choice.
   const sidebarOnly = navCollapsed ? 'hidden' : 'hidden lg:flex';
@@ -111,6 +113,7 @@ export default function AppShell({ displayName, role, facilityName, items, tabs,
               onChangeFacility={onChangeFacility} onSignOut={onSignOut} />
           </div>
         </header>
+        {banner}
         <main id="main" tabIndex={-1} className="flex-1 p-4 pb-28 focus:outline-none md:p-6">{children}</main>
       </div>
 

@@ -101,7 +101,7 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
       data-slot="table-row"
       role={stacked ? "row" : undefined}
       className={cn(
-        "border-b transition-colors hover:bg-muted/50 has-aria-expanded:bg-muted/50 data-[state=selected]:bg-muted data-[state=selected]:[&>:first-child]:border-s-4 data-[state=selected]:[&>:first-child]:border-primary",
+        "border-b transition-[background-color] duration-fast ease-out hover:bg-muted/50 has-aria-expanded:bg-muted/50 data-[state=selected]:bg-muted data-[state=selected]:[&>:first-child]:border-s-4 data-[state=selected]:[&>:first-child]:border-primary",
         stacked && "max-md:block max-md:py-2",
         className
       )}

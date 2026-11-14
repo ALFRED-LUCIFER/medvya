@@ -1,16 +1,17 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { workload } from '../domain/overview';
-import { canUndo, groupByColumn, isBoardColumn, moveError, serverNow, undoWindowMs, type Board, type BoardCard, type BoardColumn, type EndKind, type LiveStatus, type MoveError, type Notice } from '../domain/board';
+import { canUndo, echoMs, groupByColumn, isBoardColumn, isOthersChange, moveError, serverNow, undoWindowMs, withUpdated, type Board, type BoardCard, type BoardChange, type BoardColumn, type EndKind, type LiveStatus, type MoveError, type Notice, type UpdatedMarks } from '../domain/board';
 import { cancelSchema, emptyCancel, type CancelForm } from '../../schedule/domain/changes';
 import { ApiError, cancelAppointment } from '../../schedule/services/scheduleApi';
 import { sessionQueryKey } from '../../session/hooks/useSessionController';
 import { watchBoard } from '../services/boardLive';
 import { checkIn, fetchBoard, fetchFailedVisits, markLeft, monotonicNow, moveVisit, undoMove } from '../services/frontDeskApi';
 
-type Snapshot = { board: Board; fetchedAt: number };
+/** marks: cards that say Updated; heard: the visits this fetch is the first to show changed elsewhere (announced once). */
+type Snapshot = { board: Board; fetchedAt: number; marks: UpdatedMarks; heard: string[] };
 type Move = { id: string; state: BoardColumn };
 type Ending = { card: BoardCard; kind: EndKind | null };
 
@@ -24,6 +25,8 @@ const tickMs = 30_000;
  * while not live it refreshes every 30 s, so a move is never lost or shown twice (the board is always replaced whole).
  * After a move the status line offers Undo for 30 seconds or until the next change here; a waiting card's menu ends the visit as
  * left without being seen or cancelled, with a reason (MDV-P1-100). The server decides each of them again.
+ * A card the live connection reports changed by someone else says Updated for 5 seconds (MDV-P2-056); a resync after a drop marks
+ * nothing, since those changes were not delivered live, and this desk's own changes coming back are not marked.
  */
 export function useBoardController(facilityId: string, online: boolean) {
   const queryClient = useQueryClient();
@@ -31,14 +34,27 @@ export function useBoardController(facilityId: string, online: boolean) {
   const [connection, setLive] = useState<LiveStatus>('connecting');
   // Offline: nothing to connect to; back online, a fresh connection joins and refetches whatever was missed.
   const live: LiveStatus = online ? connection : 'paused';
+  // Visits the live connection reported changed elsewhere since the last fetch, and this desk's own changes (id → until when their echo is ignored).
+  const heard = useRef(new Set<string>());
+  const mine = useRef(new Map<string, number>());
   useEffect(() => {
     if (!online) return undefined;
     const refresh = () => void queryClient.invalidateQueries({ queryKey: ['front-desk', facilityId] });
-    return watchBoard(facilityId, { onChange: refresh, onResync: refresh, onStatus: setLive });
+    const onChange = (change?: BoardChange) => {
+      if (typeof change?.appointmentId === 'string' && isOthersChange(mine.current, change.appointmentId, Date.now())) heard.current.add(change.appointmentId);
+      refresh();
+    };
+    return watchBoard(facilityId, { onChange, onResync: refresh, onStatus: setLive });
   }, [facilityId, online, queryClient]);
   const query = useQuery({
     queryKey: key,
-    queryFn: async (): Promise<Snapshot> => ({ board: await fetchBoard(facilityId), fetchedAt: Date.now() }),
+    queryFn: async (): Promise<Snapshot> => {
+      const changed = [...heard.current];
+      const board = await fetchBoard(facilityId);
+      changed.forEach(id => heard.current.delete(id)); // a failed fetch keeps them for the next one
+      const fetchedAt = Date.now();
+      return { board, fetchedAt, marks: withUpdated(queryClient.getQueryData<Snapshot>(key)?.marks ?? {}, changed, fetchedAt), heard: changed };
+    },
     refetchInterval: live === 'live' ? false : 30_000,
   });
 
@@ -51,6 +67,17 @@ export function useBoardController(facilityId: string, online: boolean) {
     const timer = setInterval(() => setTick(Date.now()), tickMs);
     return () => clearInterval(timer);
   }, []);
+  // The next Updated mark to end takes its tag away on time.
+  const marks = query.data?.marks;
+  useEffect(() => {
+    const next = Math.min(...Object.values(marks ?? {}).filter(until => until > Date.now()));
+    if (!Number.isFinite(next)) return undefined;
+    const timer = setTimeout(() => setTick(Date.now()), next - Date.now());
+    return () => clearTimeout(timer);
+  }, [marks, tick]);
+  // This desk's own change: its echo over the hub is not someone else's (in flight, then echoMs after it settles).
+  const own = (id: string) => void mine.current.set(id, Number.POSITIVE_INFINITY);
+  const settled = (id: string) => void mine.current.set(id, Date.now() + echoMs);
 
   const [confirming, setConfirming] = useState<{ id: string; startedAt: number } | null>(null);
   const [failure, setFailure] = useState<{ id: string; error: MoveError } | null>(null);
@@ -85,12 +112,18 @@ export function useBoardController(facilityId: string, online: boolean) {
 
   const arrive = useMutation({
     mutationFn: ({ id, elapsedMs }: { id: string; elapsedMs: number }) => checkIn(id, elapsedMs),
+    onMutate: ({ id }) => own(id),
+    onSettled: (_, __, { id }) => settled(id),
     onSuccess: card => { setConfirming(null); setNotice(null); replace(card); },
     onError: (e, { id }) => fail(id, e),
   });
   const move = useMutation({
     mutationFn: ({ id, state }: Move) => moveVisit(id, state),
-    onMutate: ({ id }) => query.data?.board.cards.find(c => c.id === id)?.state, // where it was, to know whether the move can be undone
+    onMutate: ({ id }) => {
+      own(id);
+      return query.data?.board.cards.find(c => c.id === id)?.state; // where it was, to know whether the move can be undone
+    },
+    onSettled: (_, __, { id }) => settled(id),
     onSuccess: (card, { state }, from) => {
       replace(card);
       setNotice({ kind: 'moved', id: card.id, name: card.patientName, state, undo: from !== undefined && isBoardColumn(from) && canUndo(from, state) });
@@ -99,6 +132,8 @@ export function useBoardController(facilityId: string, online: boolean) {
   });
   const undo = useMutation({
     mutationFn: (n: Notice) => undoMove(n.id, n.state),
+    onMutate: n => own(n.id),
+    onSettled: (_, __, n) => settled(n.id),
     onSuccess: (card, n) => {
       replace(card);
       setNotice({ ...n, kind: 'undone', state: card.state as BoardColumn, undo: false });
@@ -125,12 +160,17 @@ export function useBoardController(facilityId: string, online: boolean) {
   const now = snapshot ? serverNow(snapshot.board, snapshot.fetchedAt, tick) : tick;
   const forbidden = query.error instanceof ApiError && query.error.status === 403;
   const pendingId = arrive.isPending ? arrive.variables.id : move.isPending ? move.variables.id : null;
+  const updated = useMemo(() => new Set(Object.keys(marks ?? {}).filter(id => marks![id]! > tick)), [marks, tick]);
 
   return {
     board: snapshot?.board ?? null,
     columns,
     failedVisitIds,
     now,
+    /** Cards changed elsewhere in the last 5 seconds, as the live connection reported (MDV-P2-056). */
+    updated,
+    /** The cards this fetch is the first to show changed elsewhere, still marked: said once in the status line's live region. */
+    updatedCards: snapshot ? snapshot.board.cards.filter(c => updated.has(c.id) && snapshot.heard.includes(c.id) && isBoardColumn(c.state)) : [],
     /** Doctor workload panel (MDV-P1-030): per doctor, how many wait and how late they run. */
     workload: snapshot ? workload(snapshot.board.cards, now) : [],
     loading: query.isPending && online,

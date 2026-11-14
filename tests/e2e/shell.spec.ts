@@ -43,5 +43,5 @@ test('going offline before the sign-in screen has downloaded still shows the off
   lose();
   await failed;
   await expect(page.getByRole('heading', { name: 'Loading…' })).toBeHidden(); // the app has dealt with the failed download
-  await expect(page.getByRole('heading', { name: 'You are offline' })).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'You are offline.' })).toBeVisible(); // the offline strip (MDV-P2-056)
 });

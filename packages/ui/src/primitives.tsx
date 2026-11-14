@@ -3,7 +3,7 @@ import {
   Send, Pipette, Inbox, Eye, Phone, MessageSquareCheck, CircleCheck,
   Sparkles, BadgeCheck, User, ArrowLeftRight, Upload, Lock, Stethoscope, PenLine,
   CircleAlert, TriangleAlert, Info, Pause, CircleMinus, CircleHelp, ShieldAlert, Syringe, ClipboardCheck, ReceiptText,
-  Clock, Ban, SearchX, WifiOff, Hourglass, CalendarCheck, Tag as TagIcon, UserCheck, DoorOpen, CalendarClock, CalendarX, CircleX, Radio, RefreshCw, Footprints, Ticket, MessageSquareWarning, type LucideIcon,
+  Clock, Ban, SearchX, WifiOff, Hourglass, CalendarCheck, Tag as TagIcon, UserCheck, DoorOpen, CalendarClock, CalendarX, CircleX, Radio, RefreshCw, RefreshCcwDot, Footprints, Ticket, MessageSquareWarning, type LucideIcon,
 } from 'lucide-react';
 import { statuses, type Status, type WebGlyph } from '@medvya/tokens/status';
 import { useI18n, type MessageKey } from '@medvya/i18n';
@@ -86,6 +86,7 @@ export const frontDeskLooks = {
   waiting: { label: 'board.waiting', icon: Hourglass, bg: 'var(--color-white)', fg: 'var(--color-warning-text)' },
   room: { label: 'board.room', icon: DoorOpen, bg: 'var(--color-brand-bg)', fg: 'var(--color-brand-text)' },
   token: { label: 'board.token', icon: Ticket, bg: 'var(--color-info-bg)', fg: 'var(--color-info-text)' },
+  updated: { label: 'board.tag.updated', icon: RefreshCcwDot, bg: 'var(--color-brand-bg)', fg: 'var(--color-brand-text)' }, // changed elsewhere, for 5 s (MDV-P2-056)
   live: { label: 'board.live.live', icon: Radio, bg: 'var(--color-success-bg)', fg: okOnTint },
   connecting: { label: 'board.live.connecting', icon: RefreshCw, bg: 'var(--color-neutral-bg)', fg: 'var(--color-neutral-text)' },
   paused: { label: 'board.live.paused', icon: WifiOff, bg: 'var(--color-warning-bg)', fg: 'var(--color-warning-text)' },

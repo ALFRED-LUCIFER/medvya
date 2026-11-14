@@ -1,10 +1,11 @@
-import { lazy, Suspense, useEffect, useRef } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import type { Locale } from '@medvya/i18n';
 import { I18nProvider, useI18n } from '@medvya/i18n';
 import { SystemState } from '@medvya/ui';
 import { Navigate, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router';
-import OfflineBanner from '../features/connectivity/components/OfflineBanner';
+import OfflineStrip from '../features/connectivity/components/OfflineStrip';
 import { useConnectivityController } from '../features/connectivity/hooks/useConnectivityController';
+import { OfflineNoteContext } from '../features/connectivity/hooks/useOfflineNote';
 import LoadErrorBoundary from '../features/errors/components/LoadErrorBoundary';
 import NotFoundPage from '../features/errors/components/NotFoundPage';
 import DeniedPage from '../features/errors/components/DeniedPage';
@@ -81,7 +82,10 @@ export default function App({ locale, onLocaleChange }: Props) {
     path.current = location.pathname;
     if (document.activeElement === document.body) document.getElementById('main')?.focus();
   }, [location.pathname]);
-  const { online, retry, reload } = useConnectivityController();
+  const { online, reload } = useConnectivityController();
+  // Offline, one strip says so (MDV-P2-056): under the top bar where the shell is, at the top elsewhere; a screen may give its own words.
+  const [offlineNote, setOfflineNote] = useState<string | null>(null);
+  const strip = online ? null : <OfflineStrip note={offlineNote} />;
   const shell = useShellController();
   const termsPending = useTermsNotice(shell.items.some(i => i.id === 'settings'));
   const switcher = <LanguageSwitcher value={locale} onChange={onLocaleChange} />;
@@ -89,6 +93,8 @@ export default function App({ locale, onLocaleChange }: Props) {
     canSwitchFacility: (shell.session?.memberships.length ?? 0) > 1 };
   const toHome = () => navigate('/');
   const active = shell.session?.active;
+  // The routes below drawn without the shell: signed out, choosing a facility, and the public and gallery pages.
+  const inShell = !shell.loading && !shell.expired && !!active && !/^\/(?:__ui|invite|verify|rx|choose-facility)(?:\/|$)/.test(location.pathname);
   // Signed in at a facility, rules and formats follow the tenant's country (from the server, never the client).
   const country = active?.country ?? signedOutCountry;
   const first = shell.items[0];
@@ -142,7 +148,7 @@ export default function App({ locale, onLocaleChange }: Props) {
         {/* With one clinic there is no other to switch to: the picker (also reached right after the automatic choice) goes on to the screen asked for. */}
         <Route path="/choose-facility" element={shell.session.memberships.length > 1 ? picker : <Navigate to={from ?? '/'} replace />} />
         <Route element={
-          <AppShell displayName={account.displayName} onSignOut={account.onSignOut} onLocaleChange={onLocaleChange} onMyDevices={() => navigate(devicesPath)}
+          <AppShell banner={strip} displayName={account.displayName} onSignOut={account.onSignOut} onLocaleChange={onLocaleChange} onMyDevices={() => navigate(devicesPath)}
             onChangeFacility={account.canSwitchFacility ? () => navigate('/choose-facility') : undefined} navCollapsed={shell.navCollapsed} onToggleNav={shell.toggleNav}
             role={active.role} facilityName={active.facilityName} items={shell.items} tabs={shell.tabs} searchPath={searchPath}
             globalSearch={searchPath && clinical
@@ -239,24 +245,26 @@ export default function App({ locale, onLocaleChange }: Props) {
 
   return (
     <I18nProvider locale={locale} country={country}>
-      {!online && <OfflineBanner onRetry={retry} />}
-      {/* Offline, the banner already says why the screen is missing; back online, a reload fetches it. */}
-      <LoadErrorBoundary fallback={online && <main className="grid min-h-screen place-items-center p-4"><SystemState state="offline" onAction={reload} /></main>}>
-        <Suspense fallback={<ShellMessage standalone busy title={t('shell.loading')} />}>
-          <Routes>
-            <Route path="/__ui" element={<UiGallery switcher={switcher} />} />
-            {/* Public and token-based (F-06): the same page whether or not someone is signed in. */}
-            <Route path="/invite/:token" element={<InvitationRoute switcher={switcher} />} />
-            {/* The QR code on a printed prescription (MDV-P2-017): public, validity only. */}
-            <Route path="/verify/rx/:token" element={<RxVerifyRoute switcher={switcher} />} />
-            {/* The QR code on an investigation slip or referral letter (MDV-P2-018/019): public, what the paper is, never whose. */}
-            <Route path="/verify/paper/:token" element={<PaperVerifyRoute switcher={switcher} />} />
-            {/* A shared prescription link (MDV-P2-020): public, it opens with the code sent to the patient's mobile. */}
-            <Route path="/rx/:token" element={<SharedRxRoute switcher={switcher} />} />
-            {routes}
-          </Routes>
-        </Suspense>
-      </LoadErrorBoundary>
+      <OfflineNoteContext value={setOfflineNote}>
+        {!inShell && strip}
+        {/* Offline, the strip says why the screen is missing (the shell's went with it); back online, a reload fetches it. */}
+        <LoadErrorBoundary fallback={online ? <main className="grid min-h-screen place-items-center p-4"><SystemState state="offline" onAction={reload} /></main> : inShell && strip}>
+          <Suspense fallback={<ShellMessage standalone busy title={t('shell.loading')} />}>
+            <Routes>
+              <Route path="/__ui" element={<UiGallery switcher={switcher} />} />
+              {/* Public and token-based (F-06): the same page whether or not someone is signed in. */}
+              <Route path="/invite/:token" element={<InvitationRoute switcher={switcher} />} />
+              {/* The QR code on a printed prescription (MDV-P2-017): public, validity only. */}
+              <Route path="/verify/rx/:token" element={<RxVerifyRoute switcher={switcher} />} />
+              {/* The QR code on an investigation slip or referral letter (MDV-P2-018/019): public, what the paper is, never whose. */}
+              <Route path="/verify/paper/:token" element={<PaperVerifyRoute switcher={switcher} />} />
+              {/* A shared prescription link (MDV-P2-020): public, it opens with the code sent to the patient's mobile. */}
+              <Route path="/rx/:token" element={<SharedRxRoute switcher={switcher} />} />
+              {routes}
+            </Routes>
+          </Suspense>
+        </LoadErrorBoundary>
+      </OfflineNoteContext>
     </I18nProvider>
   );
 }

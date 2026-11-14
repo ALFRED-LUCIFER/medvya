@@ -9,6 +9,7 @@ import type { BoardCard, VisitSteps } from '../features/front-desk/domain/board'
 import BoardPage from '../features/front-desk/components/BoardPage';
 import FrontDeskViews from '../features/front-desk/components/FrontDeskViews';
 import { useBoardController } from '../features/front-desk/hooks/useBoardController';
+import { useOfflineNote } from '../features/connectivity/hooks/useOfflineNote';
 import { FollowUpDismissDialog, FollowUpDueLine } from '../features/front-desk/components/FollowUpDue';
 import { bookFollowUpPath } from '../features/front-desk/domain/followUpDue';
 import { useFollowUpDueController } from '../features/front-desk/hooks/useFollowUpDueController';
@@ -43,9 +44,12 @@ export function Consult({ card, online, primary = true }: { card: BoardCard; onl
 
 /** Composition only: the board controller for the active facility, fed to the presentational P-01 page. */
 export default function FrontDeskRoute({ facilityId, online, canMove, canCancel, registerPath, walkInPath, waitlistPath, billingPath, bookPath, canConsult: doctor, intakePath, steps }: Props) {
-  const { t } = useI18n();
+  const { t, formatTime } = useI18n();
   const navigate = useNavigate();
   const board = useBoardController(facilityId, online);
+  // Offline, the strip says when the board last updated, in facility time (MDV-P2-056).
+  const shown = board.board;
+  useOfflineNote(!online && shown ? t('offline.strip.board', { time: formatTime(new Date(shown.now), shown.timeZone) }) : null);
   const dismissal = useFollowUpDueController();
   // One filled button per view: the desk's is Walk-in (or Register); a doctor's is the next patient's Start consultation.
   const register = registerPath || walkInPath ? <>

@@ -31,8 +31,8 @@ for (const { w, h } of [{ w: 1920, h: 1080 }, { w: 1366, h: 768 }]) {
 
 // MDV-P2-059 AC1 and AC6: every page writes its one h1 in PageHeader's 44 px row, at the same height on every route, in English and Arabic.
 // Measured from the top of <main>, so the bound is the shell's: 82 px below a 48 px top bar is content by 130 px (DESIGN.md Layout).
-// shortcut: the board and the clinic overview wait for MDV-P1-095 and the desk record for MDV-P1-092, which own those files; add them here when they merge.
-const waiting = ['reception board', 'clinic overview', 'patient record'];
+// shortcut: the desk record's h1 is the patient banner under the record tabs (MDV-P1-092, MDV-P2-051), not a PageHeader row; add it here once the record has one.
+const waiting = ['patient record'];
 for (const locale of ['en', 'ar']) {
   test(`every ${locale} page puts its one title in the same 44 px header row`, async ({ page }) => {
     test.setTimeout(120_000);

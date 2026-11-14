@@ -2,7 +2,7 @@ import type { FormEventHandler, KeyboardEvent } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { CircleCheck, PencilLine, TriangleAlert } from 'lucide-react';
 import { ltr, useI18n } from '@medvya/i18n';
-import { Banner, Button, Input, Label, Textarea } from '@medvya/ui';
+import { Banner, Button, Card, Input, Label, Textarea } from '@medvya/ui';
 import { confirmAll, isVitalsField, problemKey, undecided, vitalKinds, vitalUnits, weightChange, type CorrectionForm, type IntakeForm, type IntakeProblem, type VitalKind, type VitalView } from '../domain/intake';
 
 /** The nurse's correction after the handoff, before the doctor starts (MDV-P2-048); absent where it does not apply. */
@@ -29,7 +29,7 @@ export default function VitalsForm(p: VitalsFormProps) {
   const { t } = useI18n();
   const { errors } = p.form.formState;
   return (
-    <form noValidate onSubmit={p.onSave} className="flex flex-col gap-4 rounded-xl border bg-card p-4">
+    <Card><form noValidate onSubmit={p.onSave} className="flex flex-col gap-4">
       {p.withComplaint && (
         <>
           <div className="flex flex-col gap-2">
@@ -49,7 +49,7 @@ export default function VitalsForm(p: VitalsFormProps) {
       </div>
       {p.problem?.kind === 'invalid' && p.badKind === null && isVitalsField(p.problem.field) && <p role="alert" className={fieldError}>{t(problemKey(p.problem))}</p>}
       {!p.readOnly && <Button type="submit" className="self-start" loading={p.saving} disabled={!p.online}>{t('intake.save')}</Button>}
-    </form>
+    </form></Card>
   );
 }
 

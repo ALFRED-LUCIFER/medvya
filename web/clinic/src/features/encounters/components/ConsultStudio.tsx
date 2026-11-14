@@ -1,7 +1,7 @@
 import { useEffect, useState, type MouseEvent, type ReactNode } from 'react';
 import { Circle, CircleCheck } from 'lucide-react';
 import { useI18n, type MessageKey } from '@medvya/i18n';
-import { Button, StickyActionBar } from '@medvya/ui';
+import { Button, buttonVariants, cn, StickyActionBar } from '@medvya/ui';
 import type { Patient360 } from '../../patient360/domain/chart';
 import ChartPanel, { ChartDrawerButton } from './ChartPanel';
 import { studioSections, templateOwnSections, type StudioSection } from '../domain/checklist';
@@ -144,7 +144,7 @@ function SectionBar({ sections, ticks, title, chart }: { sections: readonly Anch
           return (
           <li key={id} className="shrink-0">
             {/* Chromium leaves a half-hidden link half-hidden on focus; bring it fully into the scrolling row (WCAG 2.4.11). */}
-            <a href={`#${heading(id)}`} onClick={e => go(e, id)} onFocus={e => e.currentTarget.scrollIntoView({ block: 'nearest', inline: 'nearest' })} className="relative inline-flex min-h-11 items-center gap-1.5 rounded-full border bg-card px-3 text-sm font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+            <a href={`#${heading(id)}`} onClick={e => go(e, id)} onFocus={e => e.currentTarget.scrollIntoView({ block: 'nearest', inline: 'nearest' })} className={cn(buttonVariants({ variant: 'outline' }), 'relative gap-1.5 rounded-full px-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring')}>
               {tick !== null && (tick ? <CircleCheck aria-hidden className="size-4 text-success-700" /> : <Circle aria-hidden className="size-4 text-muted-foreground" />)}
               {t('studio.numbered', { n: i + 1, title: title(id) })}
               {tick !== null && <span className="sr-only">{t(tick ? 'signChecklist.state.done' : 'signChecklist.state.todo')}</span>}

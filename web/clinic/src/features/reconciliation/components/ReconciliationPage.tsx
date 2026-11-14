@@ -3,7 +3,7 @@ import type { UseFormReturn } from 'react-hook-form';
 import { Link } from 'react-router';
 import { CircleAlert, CircleCheck, CircleHelp } from 'lucide-react';
 import { ltr, useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, Input, Label, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState } from '@medvya/ui';
+import { Button, buttonVariants, Card, Input, Label, PageContainer, PageHeader, PageMessage, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState } from '@medvya/ui';
 import type { ClinicalRefusal } from '../../clinical-access/domain/clinicalAccess';
 import type { EncounterBanner } from '../../encounters/domain/encounter';
 import PatientStrip from '../../encounters/components/PatientStrip';
@@ -29,16 +29,20 @@ type Props = DecisionProps & {
 export default function ReconciliationPage(p: Props) {
   const { t, formatTime } = useI18n();
   if (p.loading) return <p role="status">{t('reconcile.loading')}</p>;
-  if (p.refusal) return <Message title={t('consult.refused.title')} body={t(p.refusal.canRequest ? 'consult.refused.ask' : 'consult.refused.role')} {...p} />;
-  if (!p.view || p.notFound || p.failed) return <Message title={t(p.notFound ? 'consult.notFound' : 'reconcile.loadFailed')} {...p} />;
+  const back = <Link to={p.boardPath} className={buttonVariants({ variant: 'outline' })}>{t('consult.backToBoard')}</Link>;
+  if (p.refusal) return (
+    <PageContainer width="form" role="alert">
+      <PageHeader title={t('consult.refused.title')} actions={back} />
+      <PageMessage kind="denied">{t(p.refusal.canRequest ? 'consult.refused.ask' : 'consult.refused.role')}</PageMessage>
+    </PageContainer>
+  );
+  if (!p.view || p.notFound || p.failed) return <PageContainer width="form" role="alert"><PageHeader title={t(p.notFound ? 'consult.notFound' : 'reconcile.loadFailed')} actions={back} /></PageContainer>;
   const { view } = p;
   const confirmed = view.confirmedAt !== null;
   return (
     <div className="flex flex-col gap-4">
       {p.banner && <PatientStrip banner={p.banner} headingLevel={1} />}
-      <section aria-labelledby="reconcile-title" className="flex flex-col gap-3 rounded-xl border bg-card p-4">
-        <h2 id="reconcile-title" className="text-lg font-extrabold">{t('reconcile.title')}</h2>
-        <p className="text-sm text-muted-foreground">{t('reconcile.intro')}</p>
+      <Card title={t('reconcile.title')} intro={t('reconcile.intro')}>
         <p role="status" className="font-bold">{t('reconcile.summary', { decided: view.decided, total: view.total, disagree: view.disagree })}</p>
         <TableState state={view.rows.length === 0 ? 'empty' : 'ready'} messages={{ loading: t('reconcile.loading'), error: t('reconcile.loadFailed'), empty: t('reconcile.empty') }}>
           <Table label={t('reconcile.tableLabel')} className="min-w-[900px]">
@@ -67,7 +71,7 @@ export default function ReconciliationPage(p: Props) {
         </div>
         {!confirmed && <p id="reconcile-confirm-note" className="text-sm text-muted-foreground">{t(canConfirm(view) ? 'reconcile.confirmReady' : 'reconcile.confirmBlocked')}</p>}
         {p.problem && <p role="alert" className="font-bold text-danger-700">{t(`reconcile.error.${p.problem}`)}</p>}
-      </section>
+      </Card>
     </div>
   );
 }
@@ -161,17 +165,6 @@ export function DecisionCell(p: DecisionProps & { row: MedicineRow; locked: bool
           </div>
         </form>
       )}
-    </div>
-  );
-}
-
-function Message({ title, body, boardPath }: { title: string; body?: string; boardPath: string }) {
-  const { t } = useI18n();
-  return (
-    <div role="alert" className="flex flex-col items-start gap-3 rounded-xl border bg-card p-6">
-      <h1 className="text-lg font-extrabold">{title}</h1>
-      {body && <p>{body}</p>}
-      <Link to={boardPath} className={buttonVariants({ variant: 'outline' })}>{t('consult.backToBoard')}</Link>
     </div>
   );
 }

@@ -7,7 +7,7 @@ import type { Profile } from '../domain/profile';
 
 type Props = {
   session: Session; phone: string; profile: Profile | null; family: Person[]; loading: boolean; error: string | null;
-  biometric: boolean; locale: Locale; version: string; onLock: () => void; onSignOut: () => void;
+  biometric: boolean; unlockMethod: string; locale: Locale; version: string; onLock: () => void; onSignOut: () => void;
 };
 
 // Changing choices, family access and downloads arrive with MDV-P5-037; here they are shown as they stand.
@@ -55,7 +55,7 @@ export function ProfileScreen(vm: Props) {
 
       <Section title={t('mobile.account.security')}>
         <Card style={styles.list}>
-          <View><ListRow title={t('mobile.profile.signIn')} subtitle={t(vm.biometric ? 'mobile.profile.signInBiometric' : 'mobile.profile.signInCode')} leading={<Icon name="lock-outline" />} /></View>
+          <View><ListRow title={t('mobile.profile.signIn')} subtitle={t(vm.biometric ? 'mobile.profile.signInBiometric' : 'mobile.profile.signInCode', { method: vm.unlockMethod })} leading={<Icon name="lock-outline" />} /></View>
           <View style={styles.divider}><ListRow title={t('mobile.account.lockNow')} leading={<Icon name="lock-clock" />} onPress={vm.onLock} /></View>
         </Card>
       </Section>

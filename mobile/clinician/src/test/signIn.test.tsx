@@ -5,18 +5,21 @@ import { useSignInController } from '../features/session/hooks/useSignInControll
 import { tabsFor } from '../features/session/domain/session';
 import { renderApp } from './render';
 
+let mockHardware = false;
 jest.mock('expo-local-authentication', () => ({
-  hasHardwareAsync: async () => false, isEnrolledAsync: async () => false, authenticateAsync: async () => ({ success: false }),
+  hasHardwareAsync: async () => mockHardware, isEnrolledAsync: async () => mockHardware, authenticateAsync: async () => ({ success: false }),
+  supportedAuthenticationTypesAsync: async () => [1], AuthenticationType: { FINGERPRINT: 1, FACIAL_RECOGNITION: 2 },
 }));
+afterEach(() => { mockHardware = false; });
 
 function Harness() {
-  const { session } = useSession();
+  const { session, biometric } = useSession();
   const vm = useSignInController();
-  return session ? <SignedIn tabs={tabsFor(session.staff.role).join(',')} where={session.facility.name} /> : <SignInScreen {...vm} />;
+  return session ? <SignedIn tabs={tabsFor(session.staff.role).join(',')} where={session.facility.name} biometric={biometric} /> : <SignInScreen {...vm} />;
 }
-function SignedIn({ tabs, where }: { tabs: string; where: string }) {
+function SignedIn({ tabs, where, biometric }: { tabs: string; where: string; biometric: boolean }) {
   const { Text } = jest.requireActual<typeof import('react-native')>('react-native');
-  return <Text testID="signed-in">{`${where}|${tabs}`}</Text>;
+  return <><Text testID="signed-in">{`${where}|${tabs}`}</Text><Text testID="biometric">{biometric ? 'on' : 'off'}</Text></>;
 }
 
 async function signIn(email: string, code: string) {
@@ -52,4 +55,13 @@ it('rejects a malformed email and code before calling anything', async () => {
   await fireEvent.changeText(screen.getByLabelText('Work email'), 'arjun');
   await fireEvent.press(screen.getByRole('button', { name: 'Continue' }));
   expect(await screen.findByText('Enter an email like name@clinic.com')).toBeOnTheScreen();
+});
+
+it('offers the unlock this phone has, with a Not now that leaves it off (MDV-P5-059)', async () => {
+  mockHardware = true;
+  await signIn('arjun.rao@example.com', '123456');
+  await fireEvent.press(await screen.findByRole('button', { name: /Adyar/ }));
+  expect(await screen.findByText('Use Touch ID?')).toBeOnTheScreen(); // jest-expo runs as iOS; the mock phone has a fingerprint reader
+  await fireEvent.press(screen.getByRole('button', { name: 'Not now' }));
+  expect(await screen.findByTestId('biometric')).toHaveTextContent('off');
 });

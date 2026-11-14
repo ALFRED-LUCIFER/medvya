@@ -10,7 +10,7 @@ function ChoiceRow({
   return (
     <label
       data-slot="choice-row"
-      className={cn("flex min-h-11 cursor-pointer items-center gap-2 text-sm has-disabled:cursor-not-allowed", className)}
+      className={cn("flex min-h-11 cursor-pointer items-center gap-2 has-disabled:cursor-not-allowed", className)}
     >
       <input className="size-4 shrink-0 accent-brand-700" {...props} />
       {children}

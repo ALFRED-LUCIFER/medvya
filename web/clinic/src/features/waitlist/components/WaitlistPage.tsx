@@ -2,7 +2,7 @@ import { Link } from 'react-router';
 import type { UseFormReturn } from 'react-hook-form';
 import { ArrowLeft, CalendarClock, CircleAlert, CircleCheck, Clock, Send } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, Card, cn, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, PageContainer, PageHeader, PageMessage } from '@medvya/ui';
+import { Button, ChoiceRow, buttonVariants, Card, cn, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, PageContainer, PageHeader, PageMessage } from '@medvya/ui';
 import { PatientPicker, type PatientSearchView } from '../../schedule/components/BookingPanel';
 import { reasonCategories, visitTypes, type PatientMatch } from '../../schedule/domain/booking';
 import { termsPath } from '../../settings/domain/settings';
@@ -147,9 +147,8 @@ export default function WaitlistPage(p: Props) {
           <legend className="mb-1.5 text-sm font-medium">{t('waitlist.days')}</legend>
           <div className="flex flex-wrap gap-2">
             {weekDays.map(d => (
-              <label key={d} className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-md border px-3 text-sm has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring">
-                <input type="checkbox" className="size-4" checked={days.includes(d)} onChange={() => toggleDay(d)} />{t(`waitlist.day.${d}`)}
-              </label>
+              <ChoiceRow key={d} className="inline-flex gap-2 rounded-md border px-3 text-sm has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring" type="checkbox" checked={days.includes(d)} onChange={() => toggleDay(d)}>{t(`waitlist.day.${d}`)}
+              </ChoiceRow>
             ))}
           </div>
           <p className="text-xs text-muted-foreground">{t('waitlist.daysHint')}</p>

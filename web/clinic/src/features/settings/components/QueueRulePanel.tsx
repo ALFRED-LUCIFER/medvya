@@ -1,7 +1,7 @@
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { useI18n } from '@medvya/i18n';
-import { Button } from '@medvya/ui';
+import { Button, ChoiceRow } from '@medvya/ui';
 import { queueOrders, type QueueRule } from '../domain/settings';
 import { fieldError } from './fieldStyles';
 import { Section } from './Section';
@@ -22,19 +22,17 @@ export default function QueueRulePanel(p: Props) {
         <fieldset className="flex flex-col gap-2">
           <legend className="sr-only">{t('settings.queue.title')}</legend>
           {queueOrders.map(order => (
-            <label key={order} className="flex min-h-11 items-start gap-3 rounded-lg border p-3">
-              <input type="radio" value={order} {...p.form.register('order')} className="mt-1 size-4 accent-brand-700" aria-describedby={`queue-${order}`} />
+            <ChoiceRow key={order} className="items-start gap-3 rounded-lg border p-3 [&>input]:mt-1" type="radio" value={order} {...p.form.register('order')} aria-describedby={`queue-${order}`}>
               <span className="flex flex-col">
                 <strong>{t(`settings.queue.${order}`)}</strong>
                 <span id={`queue-${order}`} className="text-sm text-muted-foreground">{t(`settings.queue.${order}.hint`)}</span>
               </span>
-            </label>
+            </ChoiceRow>
           ))}
         </fieldset>
-        <label className="flex min-h-11 items-center gap-3 font-bold">
-          <input type="checkbox" {...p.form.register('bookedFirst')} className="size-4 accent-brand-700" />
+        <ChoiceRow className="gap-3 font-bold" type="checkbox" {...p.form.register('bookedFirst')}>
           {t('settings.queue.bookedFirst')}
-        </label>
+        </ChoiceRow>
         <p className="text-sm text-muted-foreground">{t('settings.queue.escalation')}</p>
         <div className="flex flex-wrap items-center gap-3">
           <Button type="submit" loading={p.saving}>{t('settings.save')}</Button>

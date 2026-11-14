@@ -2,7 +2,7 @@ import type { UseFormReturn } from 'react-hook-form';
 import { Link } from 'react-router';
 import { ArrowLeft, CircleAlert, CircleCheck } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, Card, cn, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea, PageContainer, PageHeader } from '@medvya/ui';
+import { Button, ChoiceRow, buttonVariants, Card, cn, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea, PageContainer, PageHeader } from '@medvya/ui';
 import { adjustmentKinds, type AdjustmentForm, rebookActions, type AdjustmentError, type RebookAction, type SaveResult, type SavedAdjustment } from '../domain/adjustments';
 import { localDate } from '../domain/changes';
 import type { Appointment } from '../domain/schedule';
@@ -197,10 +197,9 @@ function Affected({ visits, chosen, zone, onChoose }: { visits: Appointment[]; c
             <fieldset className="flex flex-col gap-1">
               <legend className="font-bold">{t('adjustment.affected.visit', { name: v.patientName, day: formatDay(localDate(v.start, zone)), time: formatTime(new Date(v.start), zone) })}</legend>
               {rebookActions.map(a => (
-                <label key={a} className="flex min-h-11 items-center gap-2">
-                  <input type="radio" name={`action-${v.id}`} className="size-5" checked={chosen[v.id] === a} onChange={() => onChoose(v.id, a)} />
+                <ChoiceRow key={a} className="gap-2 [&>input]:size-5" type="radio" name={`action-${v.id}`} checked={chosen[v.id] === a} onChange={() => onChoose(v.id, a)}>
                   {t(`adjustment.action.${a}`)}
-                </label>
+                </ChoiceRow>
               ))}
             </fieldset>
           </li>

@@ -1,6 +1,6 @@
 import { ChevronDown, Lock, Plus } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, Field, Input, Table, TableBody, TableCell, TableHead, TableHeader, TablePagination, TableRow, TableState, Textarea } from '@medvya/ui';
+import { Button, ChoiceRow, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, Field, Input, Table, TableBody, TableCell, TableHead, TableHeader, TablePagination, TableRow, TableState, Textarea } from '@medvya/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
@@ -179,10 +179,9 @@ export default function StaffPanel(p: Props) {
               <fieldset className="flex flex-col gap-2" aria-describedby={p.offboardForm.formState.errors.rebooking ? 'staff-offboard-rebooking-error' : undefined}>
                 <legend className="mb-1 font-bold">{t('staff.offboardRebooking')}</legend>
                 {(['offer', 'call'] as const).map(choice => (
-                  <label key={choice} className="flex min-h-11 cursor-pointer items-start gap-3 rounded-lg border p-3 has-[:checked]:border-primary has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/50">
-                    <input type="radio" value={choice} className="mt-1 size-4" {...p.offboardForm.register('rebooking')} />
+                  <ChoiceRow key={choice} className="items-start gap-3 rounded-lg border p-3 has-[:checked]:border-primary has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/50 [&>input]:mt-1" type="radio" value={choice} {...p.offboardForm.register('rebooking')}>
                     <span className="flex flex-col"><span className="font-bold">{t(`staff.offboardRebooking.${choice}`)}</span><span className="text-sm text-muted-foreground">{t(`staff.offboardRebooking.${choice}.hint`)}</span></span>
-                  </label>
+                  </ChoiceRow>
                 ))}
                 {p.offboardForm.formState.errors.rebooking && <p id="staff-offboard-rebooking-error" role="alert" className={fieldError}>{t('staff.offboardRebooking.required')}</p>}
               </fieldset>
@@ -209,10 +208,9 @@ export default function StaffPanel(p: Props) {
               <fieldset className="flex flex-col gap-2" aria-describedby={p.locationsForm.formState.errors.facilityIds ? 'staff-locations-error' : undefined}>
                 <legend className="mb-1 font-bold">{t('staff.facility')}</legend>
                 {p.locations.map(l => (
-                  <label key={l.id} className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border p-3 has-[:checked]:border-primary has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/50">
-                    <input type="checkbox" className="size-4 accent-brand-700" checked={chosen.includes(l.id)} onChange={() => toggle(l.id)} />
+                  <ChoiceRow key={l.id} className="gap-3 rounded-lg border p-3 has-[:checked]:border-primary has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/50" type="checkbox" checked={chosen.includes(l.id)} onChange={() => toggle(l.id)}>
                     <span className="font-semibold">{l.name}</span>
-                  </label>
+                  </ChoiceRow>
                 ))}
                 {p.locationsForm.formState.errors.facilityIds && <p id="staff-locations-error" role="alert" className={fieldError}>{t('staff.locationsRequired')}</p>}
               </fieldset>
@@ -274,10 +272,9 @@ export default function StaffPanel(p: Props) {
               <fieldset className="flex flex-col gap-2">
                 <legend className="mb-2 font-bold">{t('staff.step.role')}</legend>
                 {choices.map(c => (
-                  <label key={c.name + c.description} className="flex min-h-11 cursor-pointer items-start gap-3 rounded-lg border p-3 has-[:checked]:border-primary has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/50">
-                    <input type="radio" name="staff-role" className="mt-1 size-4" checked={same(p.choice, c.choice)} onChange={() => p.onChoice(c.choice)} />
+                  <ChoiceRow key={c.name + c.description} className="items-start gap-3 rounded-lg border p-3 has-[:checked]:border-primary has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/50 [&>input]:mt-1" type="radio" name="staff-role" checked={same(p.choice, c.choice)} onChange={() => p.onChoice(c.choice)}>
                     <span className="flex flex-col"><span className="font-bold">{c.name}</span><span className="text-sm text-muted-foreground">{c.description}</span></span>
-                  </label>
+                  </ChoiceRow>
                 ))}
                 {p.choice?.kind === 'doctor' && <p role="status" className="rounded-lg border border-warning-700 p-3 font-semibold">{t('staff.doctorNotice')}</p>}
               </fieldset>
@@ -299,11 +296,10 @@ export default function StaffPanel(p: Props) {
                     {p.locations.filter(l => l.id !== p.form.watch('facilityId')).map(l => {
                       const also = p.form.watch('alsoFacilityIds');
                       return (
-                        <label key={l.id} className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border p-3 has-[:checked]:border-primary has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/50">
-                          <input type="checkbox" className="size-4 accent-brand-700" checked={also.includes(l.id)}
-                            onChange={() => p.form.setValue('alsoFacilityIds', also.includes(l.id) ? also.filter(x => x !== l.id) : [...also, l.id])} />
+                        <ChoiceRow key={l.id} className="gap-3 rounded-lg border p-3 has-[:checked]:border-primary has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/50" type="checkbox" checked={also.includes(l.id)}
+                            onChange={() => p.form.setValue('alsoFacilityIds', also.includes(l.id) ? also.filter(x => x !== l.id) : [...also, l.id])}>
                           <span className="font-semibold">{l.name}</span>
-                        </label>
+                        </ChoiceRow>
                       );
                     })}
                     <p className="text-sm text-muted-foreground">{t('staff.alsoAtHint')}</p>

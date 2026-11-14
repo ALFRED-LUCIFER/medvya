@@ -1,6 +1,6 @@
 import { useParams } from 'react-router';
 import ConsultPage, { EndConsultation } from '../features/encounters/components/ConsultPage';
-import ConsultStudio from '../features/encounters/components/ConsultStudio';
+import ConsultStudio, { ConsultFooter } from '../features/encounters/components/ConsultStudio';
 import Disclosure from '../features/encounters/components/Disclosure';
 import NoteEditor from '../features/encounters/components/NoteEditor';
 import NoteHistory from '../features/encounters/components/NoteHistory';
@@ -67,23 +67,23 @@ function Consult({ encounterId, boardPath, online, canOrder, canReconcile, canSi
   // a signed note stays readable and its addendum (NoteHistory) can still be written and signed. The server's rules are unchanged.
   const phoneGate = <OpenOnTablet patientName={consult.banner?.patient.fullName} />;
   const draftOnPhone = phone && !note.readOnly;
+  // Everything of the visit sits inside ConsultPage, so its pinned patient strip and footer stay for the whole page (MDV-P1-092).
   return (
-    <div className="flex flex-col gap-4">
-      <ConsultPage {...consult} boardPath={boardPath} canReconcile={canReconcile}
-        canConfirmIdentity={canSign && consult.banner?.encounter.leadClinicianId === userId}>
-        {draftOnPhone ? phoneGate
-          : consult.view === 'page' ? <ConsultStudio {...note} panel={consult.panel} onPanel={consult.onPanel} chart={consult.chart} plan={phone ? null : plan} entry={entry(false)}
-            finish={!ended && !phone && <EndConsultation ending={consult.ending} onEnd={consult.onEnd} />} /> : <>{entry(true)}<NoteEditor {...note} /></>}
-        <NoteHistory {...useAddendumController(encounterId, canSign)} timeZone={consult.banner?.timeZone} printPath={`/consult/${encounterId}/note/print`} />
-        <NoteTemplateChoice {...useNoteTemplatesController()} />
-      </ConsultPage>
+    <ConsultPage {...consult} boardPath={boardPath} canReconcile={canReconcile}
+      canConfirmIdentity={canSign && consult.banner?.encounter.leadClinicianId === userId}
+      footer={consult.view === 'page' && !draftOnPhone && <ConsultFooter {...note} finish={!ended && !phone && <EndConsultation ending={consult.ending} onEnd={consult.onEnd} />} />}>
+      {draftOnPhone ? phoneGate
+        : consult.view === 'page' ? <ConsultStudio {...note} panel={consult.panel} onPanel={consult.onPanel} chart={consult.chart} plan={phone ? null : plan} entry={entry(false)} />
+        : <>{entry(true)}<NoteEditor {...note} /></>}
+      <NoteHistory {...useAddendumController(encounterId, canSign)} timeZone={consult.banner?.timeZone} printPath={`/consult/${encounterId}/note/print`} />
+      <NoteTemplateChoice {...useNoteTemplatesController()} />
       {consult.banner && <UnfinishedDialog {...finish} patientName={consult.banner.patient.fullName} />}
       {phone ? canOrder && !draftOnPhone && phoneGate : <>
         {patient && canOrder && <Prescription encounterId={encounterId} ended={ended} patient={patient} />}
         {consult.banner && canOrder && <Orders encounterId={encounterId} ended={ended} />}
         {consult.banner && canOrder && <Referrals patientId={consult.banner.encounter.patientId} encounterId={encounterId} ended={ended} />}
       </>}
-    </div>
+    </ConsultPage>
   );
 }
 

@@ -46,16 +46,14 @@
   },
   "rawH1": {
     "web/clinic/src/features/encounters/components/ConsultPage.tsx": 1,
-    "web/clinic/src/features/encounters/components/IdentityBanner.tsx": 1,
-    "web/clinic/src/features/nurse-intake/components/IntakePage.tsx": 2,
+    "web/clinic/src/features/nurse-intake/components/IntakePage.tsx": 1,
     "web/clinic/src/features/patient360/components/Patient360Page.tsx": 2,
-    "web/clinic/src/features/patients/components/PatientRecord.tsx": 1,
     "web/clinic/src/features/problems/components/ProblemsPage.tsx": 1,
     "web/clinic/src/features/reconciliation/components/ReconciliationPage.tsx": 1
   },
   "inlineCard": {
     "web/clinic/src/features/encounters/components/ConsultPage.tsx": 1,
-    "web/clinic/src/features/encounters/components/ConsultStudio.tsx": 5,
+    "web/clinic/src/features/encounters/components/ConsultStudio.tsx": 4,
     "web/clinic/src/features/encounters/components/Disclosure.tsx": 1,
     "web/clinic/src/features/encounters/components/NoteEditor.tsx": 1,
     "web/clinic/src/features/encounters/components/NoteHistory.tsx": 1,
@@ -67,7 +65,7 @@
     "web/clinic/src/features/nurse-intake/components/MedicinesSection.tsx": 1,
     "web/clinic/src/features/nurse-intake/components/VitalsForm.tsx": 1,
     "web/clinic/src/features/patient360/components/Patient360Page.tsx": 5,
-    "web/clinic/src/features/patients/components/PatientRecord.tsx": 6,
+    "web/clinic/src/features/patients/components/PatientRecord.tsx": 5,
     "web/clinic/src/features/patients/components/PatientsMessage.tsx": 1,
     "web/clinic/src/features/problems/components/ProblemsPage.tsx": 2,
     "web/clinic/src/features/reconciliation/components/ReconciliationPage.tsx": 2

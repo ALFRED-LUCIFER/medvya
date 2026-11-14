@@ -1,7 +1,7 @@
 import { useEffect, type MouseEvent, type ReactNode } from 'react';
 import { Circle, CircleCheck } from 'lucide-react';
 import { useI18n, type MessageKey } from '@medvya/i18n';
-import { Button, Tabs, TabsContent, TabsList, TabsTrigger } from '@medvya/ui';
+import { Button, StickyActionBar, Tabs, TabsContent, TabsList, TabsTrigger } from '@medvya/ui';
 import type { Patient360 } from '../../patient360/domain/chart';
 import { studioSections, templateOwnSections, type StudioSection } from '../domain/checklist';
 import { planHeading, type StudioPanel } from '../domain/encounter';
@@ -20,8 +20,6 @@ type Props = NoteEditorProps & {
   plan?: ReactNode;
   /** Vitals, weight and allergies recorded by the doctor (MDV audit P0-2), composed in by the route. */
   entry?: ReactNode;
-  /** Finish visit, kept beside Sign in the one bar at the foot of the note (MDV audit P1-04); absent once the consultation has ended. */
-  finish?: ReactNode;
 };
 
 const heading = (id: StudioSection) => `studio-${id}`;
@@ -41,9 +39,9 @@ export default function ConsultStudio(p: Props) {
   // Arriving from "Plan change" (MDV-P2-037): focus the Plan once the note is there.
   const ready = !p.loading && !!p.template && !!p.ticks;
   useEffect(() => { if (ready && window.location.hash === `#${planHeading}`) document.getElementById(planHeading)?.focus(); }, [ready]);
-  // Finish visit stays reachable when the note cannot be shown: the doctor can always end the consultation.
-  if (p.loading) return <><p role="status">{t('noteEditor.loading')}</p>{p.finish}</>;
-  if (p.loadFailed || !p.template || !p.templateKey || !p.ticks) return <><p role="alert" className="font-bold text-danger-700">{t(p.forbidden ? 'noteEditor.forbidden' : 'noteEditor.loadFailed')}</p>{p.finish}</>;
+  // Finish visit stays reachable when the note cannot be shown: it is in the footer (ConsultFooter), not here.
+  if (p.loading) return <p role="status">{t('noteEditor.loading')}</p>;
+  if (p.loadFailed || !p.template || !p.templateKey || !p.ticks) return <p role="alert" className="font-bold text-danger-700">{t(p.forbidden ? 'noteEditor.forbidden' : 'noteEditor.loadFailed')}</p>;
   const { template, ticks } = p;
   const section = (s: (typeof template.sections)[number]) => <NoteSectionField key={s.id} section={s} register={p.register} readOnly={p.readOnly} answers={p.answers} onAnswers={p.onAnswers} source={s.id === 'chiefComplaint' ? p.complaintSource : null} />;
   const field = (id: string) => template.sections.filter(s => s.id === id).map(section);
@@ -54,10 +52,7 @@ export default function ConsultStudio(p: Props) {
   const numbered = (id: StudioSection) => t('studio.numbered', { n: shown.indexOf(id) + 1, title: title(id) });
   return (
     <section aria-labelledby="note-title" className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 id="note-title" className="text-lg font-extrabold">{t('noteEditor.title')}</h2>
-        {!p.readOnly && <SaveState phase={p.phase} savedAt={p.savedAt} reloading={p.reloading} onRetry={p.onRetry} onReapply={p.onReapply} />}
-      </div>
+      <h2 id="note-title" className="text-lg font-extrabold">{t('noteEditor.title')}</h2>
       <div className="flex flex-col gap-2">
         <RecordingConsentChoice value={p.consent} readOnly={p.readOnly} onChange={p.onConsent} />
         {!p.readOnly && recordingAvailable && p.consent && <p className="text-sm font-bold">{t(`studio.consent.${p.consent}`)}</p>}
@@ -83,19 +78,14 @@ export default function ConsultStudio(p: Props) {
           <Numbered id="exam" title={numbered}>{field('examination')}{field('objective')}</Numbered>
           <Numbered id="assessment" title={numbered}>{field('assessment')}</Numbered>
           <Numbered id="plan" title={numbered}>{field('plan')}{p.plan}</Numbered>
-          {/* One bar that stays at the foot of the screen while the note is long: Sign is the primary, Finish visit is beside it. */}
-          <Numbered id="sign" title={numbered} bar>
+          {/* Review and sign: what was signed, or who may sign. Sign itself is in the layout footer (ConsultFooter). */}
+          <Numbered id="sign" title={numbered}>
             <SignedBanner signed={p.readOnly} versionNo={p.signature?.versionNo ?? 1} />
             {p.signature && <SignedLine signature={p.signature} timeZone={p.timeZone} />}
-            {!p.readOnly && !p.canSign && <p className="text-sm text-muted-foreground">{t('noteSign.onlyDoctor')}</p>}
-            <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
-              {!p.readOnly && <SignNote canSign={p.canSign} remaining={p.remaining} patient={p.patient} doctorName={p.signAsName} signing={p.signing} confirming={p.confirming}
-                problem={p.signProblem} onRequest={p.onRequestSign} onCancel={p.onCancelSign} onConfirm={p.onConfirmSign} resume={p.signResume} />}
-              {p.finish}
-            </div>
+            {!p.readOnly && <p className="text-sm text-muted-foreground">{t(p.canSign ? 'studio.sign.inBar' : 'noteSign.onlyDoctor')}</p>}
           </Numbered>
         </div>
-        <aside aria-label={t('studio.panel.label')} className="flex flex-col gap-3 rounded-xl border bg-card p-3 lg:sticky lg:top-16">
+        <aside aria-label={t('studio.panel.label')} className="flex flex-col gap-3 rounded-xl border bg-card p-3 lg:sticky lg:top-[calc(var(--patient-strip-bottom,0px)+4rem)] [@media(max-height:480px)]:static">
           {/* The nurse's readings stay beside the note, each with the nurse's flag in an icon and words (MDV-1090). */}
           {!p.readOnly && p.assist && p.assist.vitals.length > 0 && (
             <section aria-labelledby="studio-vitals" className="flex flex-col gap-1 text-sm">
@@ -119,6 +109,22 @@ export default function ConsultStudio(p: Props) {
   );
 }
 
+/**
+ * The layout footer of the one page (MDV-P1-092): the save state, Sign (the primary) and Finish visit, pinned at the foot of the screen for
+ * the whole consultation and never over a field (StickyActionBar reserves its space). Finish visit stays when the note cannot be shown.
+ */
+export function ConsultFooter(p: NoteEditorProps & { finish?: ReactNode }) {
+  const note = !p.loading && !p.loadFailed && !p.readOnly;
+  if (!note && !p.finish) return null;
+  return (
+    <StickyActionBar status={note && <SaveState phase={p.phase} savedAt={p.savedAt} reloading={p.reloading} onRetry={p.onRetry} onReapply={p.onReapply} />}>
+      {note && <SignNote canSign={p.canSign} remaining={p.remaining} patient={p.patient} doctorName={p.signAsName} signing={p.signing} confirming={p.confirming}
+        problem={p.signProblem} onRequest={p.onRequestSign} onCancel={p.onCancelSign} onConfirm={p.onConfirmSign} resume={p.signResume} />}
+      {p.finish}
+    </StickyActionBar>
+  );
+}
+
 /** A nav landmark that stays at the top; each link moves focus to its section's heading. Finished is an icon and words, never colour alone. */
 function SectionBar({ sections, ticks, title }: { sections: readonly StudioSection[]; ticks: Record<StudioSection, boolean> | null; title: (id: StudioSection) => string }) {
   const { t } = useI18n();
@@ -127,11 +133,12 @@ function SectionBar({ sections, ticks, title }: { sections: readonly StudioSecti
     document.getElementById(heading(id))?.focus();
   };
   return (
-    <nav aria-label={t('studio.nav')} className="sticky top-0 z-10 -mx-1 bg-background px-1 py-1">
+    <nav aria-label={t('studio.nav')} data-pinned="top" className="sticky top-[var(--patient-strip-bottom,0px)] z-10 -mx-1 bg-background px-1 py-1 [@media(max-height:480px)]:static">
       <ol className="flex gap-1.5 overflow-x-auto pb-1 lg:flex-wrap lg:overflow-visible">
         {sections.map((id, i) => (
           <li key={id} className="shrink-0">
-            <a href={`#${heading(id)}`} onClick={e => go(e, id)} className="relative inline-flex min-h-11 items-center gap-1.5 rounded-full border bg-card px-3 text-sm font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+            {/* Chromium leaves a half-hidden link half-hidden on focus; bring it fully into the scrolling row (WCAG 2.4.11). */}
+            <a href={`#${heading(id)}`} onClick={e => go(e, id)} onFocus={e => e.currentTarget.scrollIntoView({ block: 'nearest', inline: 'nearest' })} className="relative inline-flex min-h-11 items-center gap-1.5 rounded-full border bg-card px-3 text-sm font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
               {ticks && (ticks[id] ? <CircleCheck aria-hidden className="size-4 text-success-700" /> : <Circle aria-hidden className="size-4 text-muted-foreground" />)}
               {t('studio.numbered', { n: i + 1, title: title(id) })}
               {ticks && <span className="sr-only">{t(ticks[id] ? 'signChecklist.state.done' : 'signChecklist.state.todo')}</span>}
@@ -143,9 +150,9 @@ function SectionBar({ sections, ticks, title }: { sections: readonly StudioSecti
   );
 }
 
-function Numbered({ id, title, bar, children }: { id: StudioSection; title: (id: StudioSection) => string; bar?: boolean; children: ReactNode }) {
+function Numbered({ id, title, children }: { id: StudioSection; title: (id: StudioSection) => string; children: ReactNode }) {
   return (
-    <div className={bar ? 'sticky bottom-0 z-10 flex flex-col gap-2 rounded-xl border bg-card p-3 shadow-lg' : 'flex flex-col gap-3 rounded-xl border bg-card p-4'}>
+    <div className="flex flex-col gap-3 rounded-xl border bg-card p-4">
       <h3 id={heading(id)} tabIndex={-1} className="scroll-mt-20 font-extrabold focus:outline-none focus-visible:outline-2 focus-visible:outline-ring">
         {title(id)}
       </h3>

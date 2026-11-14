@@ -1,10 +1,5 @@
 import * as React from "react"
-import { cn } from "#lib/utils"
-
-const scrollContainer = (el: HTMLElement): HTMLElement => {
-  for (let p = el.parentElement; p; p = p.parentElement) if (/(auto|scroll)/.test(getComputedStyle(p).overflowY)) return p
-  return document.documentElement
-}
+import { cn, scrollContainer } from "#lib/utils"
 
 /**
  * The commit footer (MDV-P1-082): put it last in the page flow. It is part of the layout, never an overlay: it reserves its own space

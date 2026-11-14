@@ -93,7 +93,7 @@ test('an ended consultation shows the draft and cannot change it; a role that ma
   await page.unrouteAll({ behavior: 'ignoreErrors' });
   await mockPrescription(page, { allowed: false });
   await page.reload();
-  await expect(page.getByRole('region', { name: 'Patient identity' })).toBeVisible();
+  await expect(page.locator('[data-slot=patient-banner]')).toBeVisible();
   await expect(page.getByRole('region', { name: 'Prescription' })).toHaveCount(0);
 });
 
@@ -237,7 +237,7 @@ test('Sign note with orders not placed lists them before the sign dialog; Sign a
   await consultToFinish(page, { lines: [line('rx-1', 'Metformin')], authorisation: { authorised: authorised(), changed: false } });
   await page.route('**/v1/encounters/e-1/orders', r => r.fulfill({ json: [{ id: 'o-1', kind: 'Lab', name: 'HbA1c', note: null, state: 'Draft', destination: null, orderedAt: null }] }));
   await page.goto('/consult/e-1');
-  await page.getByRole('region', { name: 'Consultation note' }).getByRole('button', { name: 'Sign note' }).click();
+  await page.getByRole('button', { name: 'Sign note' }).click();
   const dialog = page.getByRole('dialog', { name: 'Not finished for Meera Iyer (synthetic)' });
   await expect(dialog.getByRole('region', { name: 'Orders not placed' })).toContainText('HbA1c');
   await expect(dialog.getByRole('region', { name: 'Prescription not authorised' })).toHaveCount(0); // authorised and unchanged: finished

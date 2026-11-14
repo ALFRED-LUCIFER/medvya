@@ -3,7 +3,7 @@ import { ltr, useI18n } from '@medvya/i18n';
 import { Button, buttonVariants, Card, EmptyState, PageContainer, PageHeader, PageMessage, ProvenanceTag, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@medvya/ui';
 import type { ChartSource, ClinicalRefusal, Patient360 } from '../../patient360/domain/chart';
 import { pathOf, provenanceOf, sparkBox } from '../../patient360/domain/chart';
-import { PatientBanner, PrescribedLinks } from '../../patient360/components/Patient360Page';
+import { ChartBanner, PrescribedLinks } from '../../patient360/components/Patient360Page';
 import { chartLines, hasFilters, timelineKinds, timelineSources, trendChoices, type TimelineEntry, type TimelineFilters, type TimelineKind, type TrendChoice, type TrendSeries } from '../domain/timeline';
 
 type Props = {
@@ -31,7 +31,7 @@ export default function TimelinePage(p: Props) {
   return (
     <PageContainer>
       {header}
-      {p.patient && <PatientBanner data={p.patient} />}
+      {p.patient && <ChartBanner data={p.patient} />}
       <Filters {...p} />
       <div className="grid gap-4 lg:grid-cols-[3fr_2fr]">
         <Card aria-label={t('timeline.list')}>

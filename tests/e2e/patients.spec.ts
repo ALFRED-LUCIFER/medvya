@@ -83,6 +83,11 @@ test('the desk finds a patient from the header, sees the full name and opens the
   await expect(tabs).toHaveText(['Details', 'Documents']);
   await expect(tabs.first()).toHaveAttribute('aria-current', 'page');
   await expect(tabs.last()).toHaveAttribute('href', `/patients/${meeraId}/docs`);
+  // MDV-P1-092 AC6: the desk variant of the patient banner: identity only, no allergy, diagnosis, medicine or vitals.
+  const banner = page.locator('[data-slot=patient-banner][data-variant=desk]');
+  await expect(banner).toContainText('54 years · Female');
+  await expect(banner.locator('[data-slot=allergy], [data-slot=allergy-state]')).toHaveCount(0);
+  await expect(banner).not.toContainText(/allerg|consent|diagnos|medicine|BP|pulse/i);
   await expect(page.getByText('+919000000101')).toBeVisible();
   await expect(page.getByText('Clinical notes are never shown here.')).toBeVisible();
   // MDV-1088: visit dates and status only; the desk has no diagnosis, medicines or note to open.

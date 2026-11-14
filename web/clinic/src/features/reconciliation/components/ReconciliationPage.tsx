@@ -6,7 +6,7 @@ import { ltr, useI18n } from '@medvya/i18n';
 import { Button, buttonVariants, Input, Label, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState } from '@medvya/ui';
 import type { ClinicalRefusal } from '../../clinical-access/domain/clinicalAccess';
 import type { EncounterBanner } from '../../encounters/domain/encounter';
-import IdentityBanner from '../../encounters/components/IdentityBanner';
+import PatientStrip from '../../encounters/components/PatientStrip';
 import { canConfirm, disagreeing, type DecisionKind, type Draft, type MedicineRow, type MedicineSide, type Problem, type Reconciliation } from '../domain/reconciliation';
 
 /** What deciding one row needs: the shared draft form (reason, new dose, a taper's steps) and its handlers. The Plan (MDV-P2-043) reuses it. */
@@ -35,7 +35,7 @@ export default function ReconciliationPage(p: Props) {
   const confirmed = view.confirmedAt !== null;
   return (
     <div className="flex flex-col gap-4">
-      {p.banner && <IdentityBanner banner={p.banner} />}
+      {p.banner && <PatientStrip banner={p.banner} headingLevel={1} />}
       <section aria-labelledby="reconcile-title" className="flex flex-col gap-3 rounded-xl border bg-card p-4">
         <h2 id="reconcile-title" className="text-lg font-extrabold">{t('reconcile.title')}</h2>
         <p className="text-sm text-muted-foreground">{t('reconcile.intro')}</p>

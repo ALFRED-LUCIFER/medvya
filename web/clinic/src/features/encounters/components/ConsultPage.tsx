@@ -5,7 +5,7 @@ import { useI18n } from '@medvya/i18n';
 import { Button, buttonVariants } from '@medvya/ui';
 import type { ClinicalRefusal } from '../../clinical-access/domain/clinicalAccess';
 import { openPastDay, type ConsultView, type EncounterBanner } from '../domain/encounter';
-import IdentityBanner from './IdentityBanner';
+import PatientStrip from './PatientStrip';
 
 type Props = {
   banner: EncounterBanner | null; loading: boolean; notFound: boolean; refusal: ClinicalRefusal | null; failed: boolean;
@@ -17,10 +17,12 @@ type Props = {
   view: ConsultView; onView: (view: ConsultView) => void;
   /** The work of the visit (the note editor, MDV-P2-009), composed in by the route. */
   children?: ReactNode;
+  /** The layout footer (MDV-P1-092: StickyActionBar with Sign and Finish visit), last in the page so it stays pinned for the whole visit. */
+  footer?: ReactNode;
 };
 
 /**
- * The consultation (MDV-P2-001): the identity banner, then the work of the visit. Leaving keeps the consultation open (the doctor chose
+ * The consultation (MDV-P2-001): the patient strip pinned under the top bar (MDV-P1-092), then the work of the visit. Leaving keeps the consultation open (the doctor chose
  * to); ending it moves the visit on the board (to Billing, or Done when billing is off). Ending is a secondary action under the note, beside Sign
  * (MDV audit UX-03): the note is the work, the page's one primary is Sign. Notes and orders arrive here with MDV-P2-009 and MDV-P2-015.
  */
@@ -33,7 +35,7 @@ export default function ConsultPage(p: Props) {
   const ended = encounter.status === 'Ended';
   return (
     <div className="flex flex-col gap-4">
-      <IdentityBanner banner={p.banner} identity={{ canConfirm: p.canConfirmIdentity, confirming: p.confirming, confirmFailed: p.confirmFailed, onConfirm: p.onConfirmIdentity }} />
+      <PatientStrip banner={p.banner} headingLevel={1} identity={{ canConfirm: p.canConfirmIdentity, confirming: p.confirming, confirmFailed: p.confirmFailed, onConfirm: p.onConfirmIdentity }} />
       <div className="flex flex-wrap items-center gap-3">
         {ended && <p role="status" className="font-bold">{t('consult.ended', { time: formatTime(new Date(encounter.endedAt!), p.banner.timeZone) })}</p>}
         {p.canReconcile && <Link to={`/consult/${encounter.id}/problems`} className={buttonVariants({ variant: 'outline' })}>{t('consult.codeProblems')}</Link>}
@@ -59,6 +61,7 @@ export default function ConsultPage(p: Props) {
         </div>
       )}
       {p.endFailed && <p role="alert" className="font-bold text-danger-700">{t('consult.endFailed')}</p>}
+      {p.footer}
     </div>
   );
 }

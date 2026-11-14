@@ -11,7 +11,7 @@ test('the nurse works the intake from the queue to the handoff', async ({ page }
   await expect(page.getByRole('heading', { name: 'Nurse queue' })).toBeVisible();
   await page.getByRole('link', { name: 'Open intake for Meera Iyer (synthetic)' }).click();
   await expect(page).toHaveURL(/\/nurse\/a1$/);
-  await expect(page.getByRole('region', { name: 'Patient identity' }).getByRole('heading', { name: 'Meera Iyer (synthetic)' })).toBeVisible();
+  await expect(page.locator('[data-slot=patient-banner]').getByRole('heading', { name: 'Meera Iyer (synthetic)' })).toBeVisible();
 
   const handOff = page.getByRole('button', { name: 'Hand off · Ready for doctor' });
   await page.getByLabel('Chief complaint, in the patient\'s words').fill('Chest tightness on stairs');

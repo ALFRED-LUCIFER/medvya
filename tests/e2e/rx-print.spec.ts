@@ -165,7 +165,7 @@ test('a click before Authorise appears keeps the focus where the doctor put it',
   const held = new Promise<void>(r => { release = r; });
   await page.route('**/v1/encounters/e-1/prescription', async r => { await held; return r.fallback(); });
   await page.goto('/consult/e-1?resume=authorise');
-  await page.getByRole('region', { name: 'Patient identity' }).click();
+  await page.locator('[data-slot=patient-banner]').click();
   release();
   const authorise = page.getByRole('region', { name: 'Prescription' }).getByRole('button', { name: 'Authorise prescription' });
   await expect(authorise).toBeVisible();

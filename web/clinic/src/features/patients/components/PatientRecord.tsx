@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { ArrowLeft, ClipboardList, Eye, TriangleAlert } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, cn, PageContainer } from '@medvya/ui';
+import { Button, buttonVariants, cn, PageContainer, PatientBanner } from '@medvya/ui';
 import { addressLines, missingParts, type ContactView, type PatientDetails, type RevealedIdentifiers } from '../domain/directory';
 import { consentPolicyVersion, genderIdentities, regionKey } from '../../registration/domain/registration';
 import type { MergeHistoryEntry, Refusal } from '../../merge/domain/merge';
@@ -85,21 +85,17 @@ export default function PatientRecord(props: Props) {
     <PageContainer width="reading">
       {back}
       {live}
-      <header className="flex flex-col gap-1 rounded-xl border bg-card p-4">
-        <h1 className="text-2xl font-extrabold">
-          <bdi>{p.fullName}</bdi>
-          {p.arabicName && <span lang="ar" dir="rtl" className="ms-3 font-bold text-muted-foreground">{p.arabicName}</span>}
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          {t('patients.record.summary', { mrn: p.mrn, age: p.ageYears, sex: t(`patients.sex.${p.sexAtBirth}`) })}
-        </p>
+      {/* The desk variant (MDV-P1-092): identity only, whatever is passed; no allergy, diagnosis, medicine or vitals at the desk. */}
+      <PatientBanner variant="desk" headingLevel={1} patient={{ name: p.fullName, age: p.ageYears, sex: p.sexAtBirth, mrn: p.mrn, dob: dob }} />
+      <div className="flex flex-col gap-1">
+        {p.arabicName && <p lang="ar" dir="rtl" className="self-start font-bold text-muted-foreground">{p.arabicName}</p>}
         {p.status === 'Incomplete' && (
-          <p className="mt-1 inline-flex items-center gap-1.5 self-start rounded-sm border px-2 py-1 text-sm font-bold text-warning-700">
+          <p className="inline-flex items-center gap-1.5 self-start rounded-sm border px-2 py-1 text-sm font-bold text-warning-700">
             <TriangleAlert className="size-4" aria-hidden />{t('patients.status.Incomplete')}
           </p>
         )}
         <p className="text-xs text-muted-foreground">{t('patients.record.noClinical')}</p>
-      </header>
+      </div>
 
       {(props.actions.bookPath || props.actions.checkInPath || props.actions.editPath) && (
         <div className="flex flex-wrap gap-2">

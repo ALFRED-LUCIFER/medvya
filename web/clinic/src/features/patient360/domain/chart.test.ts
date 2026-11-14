@@ -1,10 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import { bannerAlerts, bannerAllergies, otherVitals, parseSection, resultRows, showsSection, sparkline, vitalTiles, type Patient360, type Trend, type Vital } from './chart';
+import { bannerAlerts, bannerAllergies, bannerAllergyState, otherVitals, parseSection, resultRows, showsSection, sparkline, vitalTiles, type Patient360, type Trend, type Vital } from './chart';
 
 const chart = (over: Partial<Patient360['chart']>): Patient360['chart'] => ({
   allergyState: 'NotRecorded', allergies: [], problems: [], medicines: [], lastVitals: [], trends: [], recentEncounters: [], openEncounterId: null, startableAppointmentId: null, lastLabs: [], bmi: null, history: [], bloodGroup: null, careTeam: [], ...over,
 });
 const allergy = (status: 'Confirmed' | 'PatientReported' | 'Unknown' | 'NotAnAllergy') => ({ substance: 'Penicillin', reaction: null, status, source: 'ClinicianVerified' as const });
+
+describe('bannerAllergyState (MDV-P1-092): the same three answers for PatientBanner', () => {
+  const words = (s: string) => `[${s}]`;
+  it('not recorded, and only cleared entries, read as not recorded', () => {
+    expect(bannerAllergyState(chart({}), words)).toEqual({ state: 'notRecorded' });
+    expect(bannerAllergyState(chart({ allergyState: 'Listed', allergies: [allergy('NotAnAllergy')] }), words)).toEqual({ state: 'notRecorded' });
+  });
+  it('no known allergies is said, never inferred', () => expect(bannerAllergyState(chart({ allergyState: 'NoKnownAllergies' }), words)).toEqual({ state: 'noneKnown' }));
+  it('listed allergies keep their status words', () =>
+    expect(bannerAllergyState(chart({ allergyState: 'Listed', allergies: [allergy('Confirmed'), allergy('PatientReported')] }), words)).toEqual({
+      state: 'recorded', allergies: [{ substance: 'Penicillin', reaction: '[Confirmed]' }, { substance: 'Penicillin', reaction: '[PatientReported]' }],
+    }));
+});
 
 describe('bannerAllergies: not recorded, none and listed are three different answers', () => {
   it('not recorded is null, never an empty list', () => expect(bannerAllergies(chart({}))).toBeNull());

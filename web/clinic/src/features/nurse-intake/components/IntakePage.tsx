@@ -2,13 +2,14 @@ import type { FormEventHandler } from 'react';
 import { Link } from 'react-router';
 import type { UseFormReturn } from 'react-hook-form';
 import { TriangleAlert } from 'lucide-react';
-import { ltr, useI18n, type MessageKey } from '@medvya/i18n';
-import { Button, buttonVariants, Label, Textarea, PageContainer } from '@medvya/ui';
+import { useI18n, type MessageKey } from '@medvya/i18n';
+import { Button, buttonVariants, Label, Textarea, PageContainer, PatientBanner } from '@medvya/ui';
+import { bannerAllergyState } from '../../patient360/domain/chart';
 import AllergiesSection from './AllergiesSection';
 import MedicinesSection from './MedicinesSection';
 import VitalsForm from './VitalsForm';
 import {
-  allergyBlockers, correctable, isVitalsField, problemKey, type CorrectionForm, type IntakeForm, type AllergyForm, type AllergyStatus, type IntakeProblem, type IntakeScreen, type MedicineForm, type VitalKind,
+  allergyBlockers, chartAllergies, correctable, isVitalsField, problemKey, type CorrectionForm, type IntakeForm, type AllergyForm, type AllergyStatus, type IntakeProblem, type IntakeScreen, type MedicineForm, type VitalKind,
 } from '../domain/intake';
 
 type Props = {
@@ -53,7 +54,7 @@ export default function IntakePage(p: Props) {
 
   return (
     <PageContainer width="reading">
-      <Identity patient={patient} />
+      <Identity patient={patient} intake={intake} />
       {readOnly && <p role="status" className="font-bold">{t(correctable(intake) ? 'intake.handedOff.correctable' : 'intake.handedOff')}</p>}
       <VitalsForm form={p.form} vitals={intake.vitals} timeZone={timeZone} readOnly={readOnly} online={p.online} problem={p.problem} badKind={p.badKind}
         saving={p.saving} keeping={p.keeping} onSave={p.onSave} onKeep={p.onKeep} onRemeasure={p.onRemeasure} withComplaint keepingAll={p.keepingAll} onKeepAll={p.onKeepAll}
@@ -93,18 +94,17 @@ export default function IntakePage(p: Props) {
   );
 }
 
-function Identity({ patient }: { patient: IntakeScreen['patient'] }) {
+/** The patient strip pinned under the top bar while the nurse scrolls (MDV-P1-092), with the allergy as recorded so far; then the identity check. */
+function Identity({ patient, intake }: { patient: IntakeScreen['patient']; intake: IntakeScreen['intake'] }) {
   const { t, formatCalendarDate } = useI18n();
   return (
-    <section aria-label={t('intake.identity.label')} className="flex flex-col gap-1 rounded-xl border-2 border-brand-700 bg-card p-4">
-      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-        <h1 className="text-xl font-extrabold">{patient.fullName}</h1>
-        <span>{t('consult.banner.ageSex', { age: patient.ageYears, sex: t(`patients.sex.${patient.sexAtBirth}`) })}</span>
-        <span>{t('consult.banner.mrn', { mrn: ltr(patient.mrn) })}</span>
-        <span>{t('consult.banner.dob', { date: formatCalendarDate(patient.dateOfBirth) })}</span>
-      </div>
+    <>
+      <PatientBanner variant="strip" pinned headingLevel={1} patient={{
+        name: patient.fullName, age: patient.ageYears, sex: patient.sexAtBirth, mrn: patient.mrn, dob: formatCalendarDate(patient.dateOfBirth),
+        allergy: bannerAllergyState(chartAllergies(intake), s => t(`patient360.allergyStatus.${s}`)),
+      }} />
       <p className="text-sm text-muted-foreground">{t('intake.identity.check')}</p>
-    </section>
+    </>
   );
 }
 

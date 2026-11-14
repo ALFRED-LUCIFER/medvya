@@ -8,7 +8,7 @@ import { mockReconciliation } from './support/reconciliation';
 test('the doctor decides every medicine and confirms', async ({ page }) => {
   const { calls } = await mockReconciliation(page);
   await page.goto('/consult/e-1/medicines');
-  await expect(page.getByRole('region', { name: 'Patient identity' }).getByRole('heading', { name: 'Meera Iyer (synthetic)' })).toBeVisible();
+  await expect(page.locator('[data-slot=patient-banner]').getByRole('heading', { name: 'Meera Iyer (synthetic)' })).toBeVisible();
   const confirm = page.getByRole('button', { name: 'Confirm changes' });
   await expect(page.getByRole('status').filter({ hasText: 'decided' })).toHaveText('0 of 3 decided · 3 sources disagree');
   await expect(confirm).toBeDisabled();

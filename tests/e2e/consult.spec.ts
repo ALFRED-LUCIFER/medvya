@@ -55,11 +55,11 @@ test('the doctor starts the consultation from the board and sees who it is for',
   await expect(page.getByRole('button', { name: 'Start consultation with Deepak Nair (synthetic)' })).toHaveCount(0); // not arrived yet
   await page.getByRole('button', { name: 'Start consultation with Meera Iyer (synthetic)' }).click();
   await expect(page).toHaveURL(/\/consult\/e-1$/);
-  const banner = page.getByRole('region', { name: 'Patient identity' });
+  const banner = page.locator('[data-slot=patient-banner]');
   await expect(banner.getByRole('heading', { name: 'Meera Iyer (synthetic)' })).toBeVisible();
   await expect(banner).toContainText('54 years · Female');
   await expect(banner).toContainText('000001'); // the MRN is isolated left-to-right for Arabic screens
-  await expect(banner).toContainText('Allergies: not recorded yet'); // unknown is never shown as "none"
+  await expect(banner).toContainText('Allergies not recorded'); // unknown is never shown as "none"
   await expect(banner).toContainText('Treatment consent: given');
   await expect(banner).toContainText('10:05 · Room 3'); // facility time, not New York
   expect(calls.starts).toEqual([{ appointmentId: 'a1', leaveOpen: false }]);
@@ -77,7 +77,7 @@ test('a consultation still open after its facility day is flagged; the same even
   await page.clock.setFixedTime(new Date('2026-10-19T18:00:00Z')); // 23:30 in Kolkata, 14:00 in New York
   await open(page);
   await page.goto('/consult/e-1');
-  await expect(page.getByRole('region', { name: 'Patient identity' })).toBeVisible();
+  await expect(page.locator('[data-slot=patient-banner]')).toBeVisible();
   await expect(page.getByText(/has been open since/)).toHaveCount(0);
   await page.clock.setFixedTime(new Date('2026-10-19T18:35:00Z')); // 00:05 on the 20th in Kolkata, still the 19th in New York
   await page.reload();
@@ -119,7 +119,7 @@ for (const locale of ['en', 'ar'])
   test(`axe finds no violations on the consultation (${locale}); 44 px targets`, async ({ page }) => {
     await open(page, { locale });
     await page.goto('/consult/e-1');
-    await expect(page.getByRole('region', { name: locale === 'ar' ? 'هوية المريض' : 'Patient identity' })).toBeVisible();
+    await expect(page.locator('[data-slot=patient-banner]')).toBeVisible();
     if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
     for (const b of await page.getByRole('main').getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
     await page.addScriptTag({ path: axePath });

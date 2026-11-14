@@ -6,7 +6,7 @@ import { ltr, useI18n } from '@medvya/i18n';
 import { Button, buttonVariants, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState } from '@medvya/ui';
 import type { ClinicalRefusal } from '../../clinical-access/domain/clinicalAccess';
 import type { EncounterBanner } from '../../encounters/domain/encounter';
-import IdentityBanner from '../../encounters/components/IdentityBanner';
+import PatientStrip from '../../encounters/components/PatientStrip';
 import { statuses, verificationKey, verifications, type AddDraft, type CodeSet, type DiagnosisCode, type EditDraft, type Problem, type ProblemList, type ProblemRow } from '../domain/problems';
 
 type Props = {
@@ -30,7 +30,7 @@ export default function ProblemsPage(p: Props) {
   const { view } = p;
   return (
     <div className="flex flex-col gap-4">
-      {p.banner && <IdentityBanner banner={p.banner} />}
+      {p.banner && <PatientStrip banner={p.banner} headingLevel={1} />}
       <section aria-labelledby="problems-title" className="flex flex-col gap-3 rounded-xl border bg-card p-4">
         <h2 id="problems-title" className="text-lg font-extrabold">{t('problems.title')}</h2>
         {p.codeSet && <p className="text-sm text-muted-foreground">{t('problems.codeSet', { system: p.codeSet.system, version: p.codeSet.version })}</p>}

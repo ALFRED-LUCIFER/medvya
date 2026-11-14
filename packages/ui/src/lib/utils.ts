@@ -9,3 +9,9 @@ const twMerge = extendTailwindMerge({
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
+
+/** The element that scrolls `el`: its nearest scrolling ancestor, else the page. Pinned chrome reserves its space there. */
+export const scrollContainer = (el: HTMLElement): HTMLElement => {
+  for (let p = el.parentElement; p; p = p.parentElement) if (/(auto|scroll)/.test(getComputedStyle(p).overflowY)) return p;
+  return document.documentElement;
+};

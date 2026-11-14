@@ -76,6 +76,20 @@ export function bannerAllergies(chart: Pick<Patient360['chart'], 'allergyState' 
   return shown.length > 0 ? shown : null;
 }
 
+/**
+ * The same three answers for the shared PatientBanner (MDV-P1-092): each allergy in words with its status as the old banners worded it
+ * (`status` gives the words, e.g. "Verified"); no field or rule changes.
+ */
+export function bannerAllergyState(chart: Pick<Patient360['chart'], 'allergyState' | 'allergies'>, status: (s: (typeof allergyStatusOf)[keyof typeof allergyStatusOf]) => string): BannerAllergyState {
+  const shown = bannerAllergies(chart);
+  if (shown === null) return { state: 'notRecorded' };
+  const [first, ...rest] = shown.map(a => ({ substance: a.name, reaction: status(allergyStatusOf[a.status]) }));
+  return first ? { state: 'recorded', allergies: [first, ...rest] } : { state: 'noneKnown' };
+}
+
+/** PatientBanner's allergy state (@medvya/ui), restated here as domain types do not import the UI. */
+type BannerAllergyState = { state: 'notRecorded' } | { state: 'noneKnown' } | { state: 'recorded'; allergies: readonly [{ substance: string; reaction?: string }, ...{ substance: string; reaction?: string }[]] };
+
 type Pt = { x: number; y: number };
 
 const W = 120, H = 32, PAD = 3;

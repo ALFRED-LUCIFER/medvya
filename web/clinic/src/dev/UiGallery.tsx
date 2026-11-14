@@ -2,7 +2,7 @@ import { type ReactNode, useState } from 'react';
 import { ChevronDown, CircleStop, PenLine, Sparkles } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
 import {
-  alertLooks, Button, ChoiceRow, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, ClinicalAlert, IdentityBanner, Input, Label, provenanceLooks, ProvenanceTag,
+  alertLooks, Button, ChoiceRow, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, ClinicalAlert, Input, Label, provenanceLooks, ProvenanceTag,
   RecordingPill, recordingLooks, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, StatusChip, statusLooks,
   Switch, SystemState, systemStates, Table, TableBody, TableCell, TableHead, TableHeader, TablePagination, TableRow, Textarea,
 } from '@medvya/ui';
@@ -113,12 +113,6 @@ export default function UiGallery({ switcher }: { switcher: ReactNode }) {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-2xl font-bold">Medvya UI primitives</h1>{switcher}
       </div>
-      <Section title="Patient identity banner">
-        <IdentityBanner patient={{ name: 'Meera Iyer', age: 54, sex: 'F', mrn: 'DQ-10-4482', dob: '12 Mar 1972',
-          allergies: [{ name: 'Penicillin', status: 'verified' }], consent: 'given', encounter: 'Encounter 04 Oct 2026 · OPD Room 3', synthetic: true }} />
-        <IdentityBanner patient={{ name: 'Deepak Nair', age: 47, sex: 'M', mrn: 'DQ-11-1093', dob: '14 Aug 1979', allergies: [], synthetic: true }} />
-        <IdentityBanner patient={{ name: 'Fatima Al Mansoori', age: 38, sex: 'F', mrn: 'DQ-AE-0458', dob: '03 Feb 1988', allergies: null, consent: 'notAsked', synthetic: true }} />
-      </Section>
       <Section title="Buttons">
         <Button><PenLine aria-hidden />Sign note</Button>
         <Button loading>Signing…</Button>

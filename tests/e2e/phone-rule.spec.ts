@@ -43,7 +43,7 @@ test('at 375 px a draft consultation shows the message with the patient\'s name 
   await expect(page.getByRole('region', { name: 'Prescription' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: /Orders/ })).toHaveCount(0);
   await expect(writeControls(page)).toHaveCount(0);
-  await expect(page.getByRole('region', { name: 'Patient identity' })).toContainText('Meera Iyer (synthetic)'); // who it is stays readable
+  await expect(page.locator('[data-slot=patient-banner]')).toContainText('Meera Iyer (synthetic)'); // who it is stays readable
   expect(await scrollsSideways(page)).toBe(false);
 });
 
@@ -113,7 +113,7 @@ test('at 375 px My day and the chart are readable with the allergy first and no 
   await page.route('**/v1/patients/p-1/visits', r => r.fulfill({ json: { visits: [], timeZone: 'Asia/Kolkata' } }));
   await page.goto('/patients/p-1');
   const banner = page.getByRole('region', { name: 'Patient Meera Iyer (synthetic)' });
-  await expect(banner).toContainText(/Allergy: ⁨Penicillin⁩/);
+  await expect(banner).toContainText('Allergy: Penicillin (Verified)');
   await expect(banner.getByText(/Allergy:/)).toBeInViewport(); // the allergy is on the first screen, before any scrolling
   await expect(page.locator('[data-phone-rule]')).toHaveCount(0);
   expect(await scrollsSideways(page)).toBe(false);

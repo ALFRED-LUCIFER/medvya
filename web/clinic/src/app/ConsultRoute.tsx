@@ -49,7 +49,7 @@ function Consult({ encounterId, boardPath, online, canOrder, canReconcile, canSi
   const consultation = useConsultController(encounterId);
   const noteController = useNoteController(encounterId, canSign, consultation.banner?.timeZone, consultation.banner);
   // MDV-P1-090: End consultation and Sign note ask first about an unfinished prescription or orders not placed.
-  const finish = useFinishController(encounterId, { end: consultation.onEnd, sign: noteController.onRequestSign });
+  const finish = useFinishController(encounterId, canOrder, { end: consultation.onEnd, sign: noteController.onRequestSign });
   const consult = { ...consultation, onEnd: finish.onRequestEnd };
   // One controller for both views (MDV-P2-041): switching keeps the form, the autosave and every typed word.
   const note = { ...noteController, onRequestSign: finish.onRequestSign, timeZone: consult.banner?.timeZone,

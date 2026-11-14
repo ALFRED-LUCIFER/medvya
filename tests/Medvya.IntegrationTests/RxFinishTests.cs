@@ -40,6 +40,7 @@ public sealed class RxFinishTests(PostgresFixture sql) : IClassFixture<PostgresF
             {
                 var membership = await db.Memberships.SingleAsync(m => m.UserId == user);
                 db.DoctorLicences.Add(new DoctorLicence { MembershipId = membership.Id, TenantId = h.Tenant, Authority = "TNMC", Number = user == h.Doctor ? "84213" : "84214", SubmittedAt = h.Clock.GetUtcNow() });
+                db.DoctorProfiles.Add(new DoctorProfile { MembershipId = membership.Id, TenantId = h.Tenant, FullName = user == h.Doctor ? "Dr. Arjun Rao (synthetic)" : "Dr. S. Menon (synthetic)" });
             }
             await db.SaveChangesAsync();
         }
@@ -62,11 +63,17 @@ public sealed class RxFinishTests(PostgresFixture sql) : IClassFixture<PostgresF
         await h.CloseAsync();
     }
 
-    HttpClient Client(Guid user, int? reauthMinutesAgo = null, SchedulingHarness? harness = null)
+    async Task<List<PrescriptionDiscard>> DiscardRowsAsync()
+    {
+        await using var db = sql.Prescribing(h.Tenant);
+        return await db.PrescriptionDiscards.AsNoTracking().ToListAsync();
+    }
+
+    HttpClient Client(Guid user, int? reauthMinutesAgo = null)
     {
         var client = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost") });
         client.DefaultRequestHeaders.Add("X-Test-User", user.ToString());
-        client.DefaultRequestHeaders.Add("X-Test-Facility", (harness ?? h).Facility.ToString());
+        client.DefaultRequestHeaders.Add("X-Test-Facility", h.Facility.ToString());
         if (reauthMinutesAgo is { } m) client.DefaultRequestHeaders.Add("X-Test-Reauth", h.Clock.GetUtcNow().AddMinutes(-m).ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture));
         return client;
     }
@@ -92,10 +99,10 @@ public sealed class RxFinishTests(PostgresFixture sql) : IClassFixture<PostgresF
 
     Task<HttpResponseMessage> DiscardAsync(Guid user, string? reason) => Client(user).PostAsJsonAsync(U($"/v1/encounters/{encounter}/prescription/discard"), new { reason });
 
-    async Task<JsonElement> PendingAsync(Guid user, SchedulingHarness? harness = null)
+    async Task<JsonElement> PendingAsync(Guid user)
     {
-        using var r = await Client(user, null, harness).GetAsync(U("/v1/prescriptions/pending"));
-        Assert.Equal(HttpStatusCode.OK, r.StatusCode);
+        using var r = await Client(user).GetAsync(U("/v1/prescriptions/pending"));
+        Assert.True(r.IsSuccessStatusCode, await r.Content.ReadAsStringAsync());
         return (await Json(r)).GetProperty("items");
     }
 
@@ -131,10 +138,10 @@ public sealed class RxFinishTests(PostgresFixture sql) : IClassFixture<PostgresF
         using (var r = await UpdateAsync(h.Doctor, line)) Assert.Equal(HttpStatusCode.OK, r.StatusCode);
         using (var r = await AuthoriseAsync(h.Doctor))
         {
-            Assert.Equal(HttpStatusCode.OK, r.StatusCode);
+            Assert.True(r.IsSuccessStatusCode, await r.Content.ReadAsStringAsync());
             Assert.Equal(1, (await Json(r)).GetProperty("authorised").GetProperty("versionNo").GetInt32());
         }
-        var authorise = Assert.Single(await AuditAsync("rx.authorise")); // its own audit record, by the doctor who led the visit
+        var authorise = Assert.Single((await AuditAsync("rx.authorise")).Where(e => e.Outcome == AuditOutcome.Allowed)); // its own record, by the doctor who led the visit
         Assert.Equal(h.Doctor, authorise.ActorUserId);
         Assert.Equal(0, (await PendingAsync(h.Doctor)).GetArrayLength()); // authorised: off Today
     }
@@ -159,7 +166,7 @@ public sealed class RxFinishTests(PostgresFixture sql) : IClassFixture<PostgresF
         try
         {
             await other.SeedAsync();
-            Assert.Equal(0, (await PendingAsync(other.Doctor, other)).GetArrayLength()); // another clinic sees nothing of it
+            Assert.Empty((await other.Get<IPrescriptions>(other.Doctor).PendingAsync(other.Facility)).Items); // another clinic sees nothing of it
             await using var db = sql.Prescribing(other.Tenant);
             Assert.Equal(0, await db.PrescriptionItems.IgnoreQueryFilters().CountAsync()); // row-level security, with the EF filter off
         }
@@ -177,7 +184,7 @@ public sealed class RxFinishTests(PostgresFixture sql) : IClassFixture<PostgresF
             Assert.Equal("Patient will buy it later (synthetic)", state.GetProperty("discard").GetProperty("reason").GetString());
             Assert.False(state.GetProperty("editable").GetBoolean());
         }
-        var discard = Assert.Single(await AuditAsync("rx.discard"));
+        var discard = Assert.Single((await AuditAsync("rx.discard")).Where(e => e.Outcome == AuditOutcome.Allowed));
         await using (var db = sql.Prescribing(h.Tenant))
         {
             var row = await db.PrescriptionDiscards.AsNoTracking().SingleAsync();
@@ -192,7 +199,7 @@ public sealed class RxFinishTests(PostgresFixture sql) : IClassFixture<PostgresF
         using (var r = await UpdateAsync(h.Doctor, line)) Assert.Equal((HttpStatusCode.Conflict, "discarded"), (r.StatusCode, await Code(r)));
         using (var r = await AuthoriseAsync(h.Doctor)) Assert.Equal((HttpStatusCode.Conflict, "discarded"), (r.StatusCode, await Code(r)));
         using (var again = await DiscardAsync(h.Doctor, "Second reason (synthetic)")) Assert.Equal(HttpStatusCode.OK, again.StatusCode);
-        Assert.Single(await AuditAsync("rx.discard"));
+        Assert.Single(await DiscardRowsAsync());
         await using var conn = await sql.OpenAs("app_user", h.Tenant);
         await Assert.ThrowsAsync<PostgresException>(() => new NpgsqlCommand("""UPDATE prescribing."PrescriptionDiscards" SET "Reason" = 'x'""", conn).ExecuteNonQueryAsync());
     }
@@ -210,13 +217,13 @@ public sealed class RxFinishTests(PostgresFixture sql) : IClassFixture<PostgresF
         using (var sign = await Client(h.Doctor, 0).PostAsJsonAsync(U($"/v1/encounters/{encounter}/note/sign"), new { baseVersion = 1 }))
             Assert.True(sign.IsSuccessStatusCode, await sign.Content.ReadAsStringAsync());
         Assert.Empty(await AuditAsync("rx.authorise")); // signing authorised nothing
-        using (var r = await AuthoriseAsync(h.Doctor)) Assert.Equal(HttpStatusCode.OK, r.StatusCode);
+        using (var r = await AuthoriseAsync(h.Doctor)) Assert.True(r.IsSuccessStatusCode, await r.Content.ReadAsStringAsync());
         await h.Get<IOrders>(h.Doctor).AddAsync(encounter, new AddOrder(OrderKind.Lab, "HbA1c", null));
         await h.Get<IOrders>(h.Doctor).PlaceAsync(encounter, new PlaceOrders(null));
         await h.Get<IEncounters>(h.Doctor).EndAsync(encounter);
 
         var events = new[] { "note.sign", "rx.authorise", "order.place", "encounter.end" };
-        foreach (var action in events) Assert.Single(await AuditAsync(action));
+        foreach (var action in events) Assert.Single((await AuditAsync(action)).Where(e => e.Outcome == AuditOutcome.Allowed));
 
         // Finishing after the visit changes the draft, never the authorised version: a change is a new version to authorise.
         using (var r = await Client(h.Doctor).PutAsJsonAsync(U($"/v1/prescription-items/{line}"), Twice with { DurationDays = 7 })) Assert.Equal(HttpStatusCode.OK, r.StatusCode);

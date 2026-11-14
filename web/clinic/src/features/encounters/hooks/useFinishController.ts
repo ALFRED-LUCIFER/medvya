@@ -13,14 +13,14 @@ export type FinishAct = 'end' | 'sign';
  * MDV-P1-090: End consultation and Sign note ask first when the prescription is an unfinished draft or orders are not placed. The same queries as
  * the prescription and orders panels (shared cache), so the question follows what the doctor just did. A role that cannot see them is asked nothing:
  * the server decides either way. Authorise now goes to the prescription (authorising stays its own act with its own step-up); Discard records a reason
- * on the server; End anyway (or Sign anyway) carries on with nothing changed.
+ * on the server; End anyway (or Sign anyway) carries on with nothing changed. Not asked at all for a role without Prescriptions and orders (`enabled`).
  */
-export function useFinishController(encounterId: string, acts: Record<FinishAct, () => void>) {
+export function useFinishController(encounterId: string, enabled: boolean, acts: Record<FinishAct, () => void>) {
   const queryClient = useQueryClient();
-  const lines = useQuery({ queryKey: ['prescription', encounterId], queryFn: () => fetchPrescription(encounterId), retry: false });
+  const lines = useQuery({ queryKey: ['prescription', encounterId], queryFn: () => fetchPrescription(encounterId), enabled, retry: false });
   const authKey = ['prescription-authorisation', encounterId];
   const state = useQuery({ queryKey: authKey, queryFn: () => fetchAuthorisation(encounterId), enabled: lines.isSuccess, retry: false });
-  const orders = useQuery({ queryKey: ['orders', encounterId], queryFn: () => fetchOrders(encounterId), retry: false });
+  const orders = useQuery({ queryKey: ['orders', encounterId], queryFn: () => fetchOrders(encounterId), enabled, retry: false });
   const medicines = unfinishedMedicines(lines.data ?? [], state.data ?? null);
   const unplaced = (orders.data ?? []).filter(o => o.state === 'Draft').map(o => o.name);
   const [asking, setAsking] = useState<FinishAct | null>(null);

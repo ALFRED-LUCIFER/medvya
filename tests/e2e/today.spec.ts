@@ -47,6 +47,7 @@ async function open(page: Page, locale = 'en') {
   // The nurse's urgent item for Meera's visit (MDV-P2-007); the server answers only for patients this doctor may treat.
   await page.route('**/v1/intake-escalations?*', r => r.fulfill({ json: [
     { id: 'x-1', appointmentId: 'a4', patientId: 'p-a4', reason: 'Fever with BP 168/96 (synthetic)', escalatedAt: ist('10:02') }] }));
+  await page.route('**/v1/prescriptions/pending', r => r.fulfill({ json: { more: false, items: [] } })); // MDV-P1-090
   // An unsigned note from an earlier day (MDV-P2-002): the server lists only this doctor's own.
   await page.route('**/v1/notes/pending', r => r.fulfill({ json: { more: false, items: [
     { encounterId: 'e-old', startedAt: '2026-10-16T06:30:00Z', drafted: true, noteSigned: false, openPastDay: true, patientName: 'Kavya Reddy (synthetic)' },
@@ -147,6 +148,24 @@ test('an unsigned note from an earlier day stays on Today and opens its consulta
   await expect(pending).not.toContainText('Deepak Nair');
   await pending.getByRole('link', { name: 'Open to finish' }).click();
   await expect(page).toHaveURL(/\/consult\/e-old$/);
+});
+
+// MDV-P1-090: an ended visit whose prescription was left a draft waits under Prescriptions to authorise; the row opens the consultation at the
+// Authorise button. Whose and which are the server's (RxFinishTests); a doctor the server does not let prescribe (403) simply has no section.
+test('a prescription left a draft when the visit ended waits on Today and opens at the Authorise button', async ({ page }) => {
+  await open(page);
+  await page.route('**/v1/prescriptions/pending', r => r.fulfill({ json: { more: false, items: [{ encounterId: 'e-rx', patientName: 'Kavya Reddy (synthetic)', endedAt: '2026-10-18T06:50:00Z', lines: 2 }] } }));
+  await page.reload();
+  const rx = page.getByRole('region', { name: '1 prescription to authorise' });
+  await expect(rx).toContainText('18 Oct 2026 · 2 medicines');
+  await rx.getByRole('link', { name: 'Open the prescription for Kavya Reddy (synthetic) to authorise' }).click();
+  await expect(page).toHaveURL(/\/consult\/e-rx#rx-authorise$/);
+
+  await page.route('**/v1/prescriptions/pending', r => r.fulfill({ status: 403, json: { title: 'Forbidden' } }));
+  await page.goto('/today');
+  await expect(page.getByRole('region', { name: '1 note to sign' })).toBeVisible();
+  await expect(page.getByRole('region', { name: /prescriptions? to authorise/ })).toHaveCount(0);
+  await expect(page.getByText('Your prescriptions to authorise could not be loaded.')).toHaveCount(0); // not theirs: absent, not an error
 });
 
 test('a signed consultation still open from an earlier day is flagged until it is ended (MDV audit UX-11)', async ({ page }) => {

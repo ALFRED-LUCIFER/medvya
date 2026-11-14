@@ -3,11 +3,17 @@ import { useApprovalsController } from '../features/approvals/hooks/useApprovals
 import type { PlatformRole } from '../features/session/domain/session';
 import AuditPage from '../features/audit/components/AuditPage';
 import { useAuditController } from '../features/audit/hooks/useAuditController';
+import PlansPage from '../features/plans/components/PlansPage';
+import { usePlansController } from '../features/plans/hooks/usePlansController';
 import TeamPage from '../features/team/components/TeamPage';
 import { useTeamController } from '../features/team/hooks/useTeamController';
 
 export function TeamRoute() {
   return <TeamPage vm={useTeamController()} />;
+}
+
+export function PlansRoute({ canEdit }: { canEdit: boolean }) {
+  return <PlansPage vm={usePlansController(canEdit)} />;
 }
 
 export function AuditRoute({ canExport }: { canExport: boolean }) {

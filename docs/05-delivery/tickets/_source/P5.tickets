@@ -341,7 +341,7 @@ ac:
 - Owners can switch it on/off per branch and hour; call recording follows the configured consent wording.
 
 === MDV-P5-016
-title: Medvya subscription: plans, trial, subscription invoices with GST/VAT, seat counts, dunning (N-11)
+title: Medvya subscription pricing decision recorded (ADR-019); building it is MDV-P5-042, MDV-P5-043 and MDV-P5-065 (N-11)
 type: Story
 epic: MDV-P5-E05
 prd: P5-07
@@ -349,19 +349,18 @@ screens: N-11
 priority: MUST
 roles: Practice owner, Medvya operations
 labels: saas, billing
-estimate: 4
+estimate: 0.5
 weeks: 25-27
 depends: MDV-P5-001, MDV-P4-001
-confidence: 60 | Pricing model is an open decision (due at P4 start; default per doctor per month, AI in higher plan).
-sources: PRD v2 P5-07, open decision "Pricing model"
+confidence: 90 | Prices approved by the owner on 6 Nov 2026; limits and defaults decided on 15 Nov 2026.
+sources: PRD v2 P5-07, open decision "Pricing model"; docs/adr/ADR-019-subscription-pricing.md
 desc:
-Plans and trial (from F-01 "start free trial"), seat counting (doctors/staff), subscription invoices to clinics with GST (India) / VAT (UAE) under Medvya's own numbering, payment collection, dunning (reminders, grace period, read-only mode — never blocking access to patient records needed for care).
+The pricing decision record, before any subscription code: ADR-019 (docs/adr/ADR-019-subscription-pricing.md) records the 6 Nov 2026 prices (Solo, Clinic per doctor, Hospital custom; INR and AED; monthly and yearly), the 14-day trial with no card, the limits (doctors, staff, locations, Medvya Assist visits; patients not counted), the defaults decided on 15 Nov 2026, and that plans are versioned data in the platform control plane. Superseded for the building work by MDV-P5-042 (versioned plans in the console), MDV-P5-043 (subscriptions, Medvya invoices with GST/VAT, seats, dunning, owner billing) and MDV-P5-065 (collecting payments).
 ac:
-- Pricing decision is recorded (ADR) before implementation.
-- Trial converts to paid with correct tax invoice; seat changes prorate.
-- Dunning never blocks clinicians from reading existing patient records (safety rule); it limits new features/admin.
-- Subscription data lives in the platform control plane with no PHI.
+- Given the subscription work, when it starts, then the pricing decision is recorded in an ADR first (ADR-019).
+- Given ADR-019, when it is read, then it names the prices per country in minor units, the trial, what counts toward a limit, who may change a plan and that dunning never locks patient records.
 notes:
+- Superseded by MDV-P5-042, MDV-P5-043 and MDV-P5-065: the original scope (plans, trial, Medvya invoices, payment collection, dunning) is built there.
 - Direction (ADR-016 (docs/adr/ADR-016-organisation-onboarding-and-approval.md, owner decision 10 Nov 2026)): the owner upgrades the plan themselves, self-service, when the clinic adds more doctors, staff or patients than the plan allows, and is responsible for that choice. Seats are doctors, staff and patients; no individual account exists, so a one-doctor clinic is a Clinic plan with one seat.
 
 === MDV-P5-017
@@ -912,12 +911,20 @@ depends: MDV-P5-016, MDV-P5-040
 confidence: 70 | Design exists (6 Nov 2026); build estimate not yet calibrated.
 sources: docs/02-design/source/Medvya Admin.dc.html (6 Nov 2026 revamp) (Plans); docs/02-design/source/Medvya Web.dc.html (6 Nov 2026 revamp) (pricing 06 Nov 2026)
 desc:
-Plans (Clinic with one doctor ₹1,999 per month; Clinic ₹3,499 per doctor per month; Hospital custom) with separate INR and AED prices, seats, trial days and the feature list. An edit creates a new plan version: new subscriptions use it now, existing ones at renewal with 30 days' notice. Removing a feature never deletes data. Entitlements are read by the feature gate.
+Versioned plans in the platform control plane (ADR-019): Solo (₹1,999 / AED 349 a month), Clinic (₹3,499 / AED 599 per doctor a month), Hospital (custom, from ₹2,50,000 / AED 40,000 a year), each with INR and AED prices in integer minor units, yearly prices, the Medvya Assist add-on price, limits (doctors, staff, locations, Assist visits per doctor a month; empty = unlimited), trial days and the feature keys included. Version 1 is seeded from the approved price list (src/Host.Api/PublicSite/pricing.json). Console page Plans: list with prices per country, edit (a new version; existing versions never change), history; a reason on every save, platform audit log; Owner and Finance edit, Operations, Support and Reviewer read only (server-side). Then: entitlements pushed to each country's clinic database and read by the feature gate, replacing the hard-coded starter plan (StarterPlan.cs), and the owner's self-service upgrade.
+Decided 15 Nov 2026 (all editable later as plan data): patients are not counted toward limits; staff beyond the included count show "Talk to us" (no seat price yet); Medvya Assist above the quota warns and never blocks; a feature not yet assigned to any plan is included in every plan; Assist is an add-on on Solo and included with its quota on Clinic and Hospital. No payment provider now (MDV-P5-065).
 ac:
-- Given a plan is edited, when it is saved, then a new version exists and current subscribers keep the old one until renewal.
+- Given a plan is edited, when it is saved, then a new version exists and the earlier version is unchanged (the database refuses to change it).
+- Given a save, when it has no reason, then it is refused; with one, the reason is in the platform audit log.
+- Given an Operations, Support or Reviewer member, when they save a plan, then the API returns 403; Owner and Finance can.
+- Given a price, when it is stored, then it is integer minor units with the country's ISO currency.
+- Given a plan is edited, when it is saved, then current subscribers keep the old version until renewal.
 - Given a price changes, when a subscriber exists, then they are notified 30 days before it applies.
 - Given a feature is removed from a plan, when data exists, then the data stays.
+- Given a plan version, when it is current, then the clinic's limits and feature gate in that country follow it (replaces StarterPlan.cs).
 notes:
+- Delivered in slices. Console part (plans, versions, Plans page, audit, roles): PR for this ticket. Pushing entitlements to the clinic databases and replacing StarterPlan.cs wait for the per-country write path built in MDV-P5-041. The subscriber-facing criteria (keep the old version until renewal, 30 days' notice) need subscriptions (MDV-P5-043). /pricing reading the console plans is MDV-P5-050.
+- Feature keys are plain strings until MDV-P5-041 adds the code feature list; then they are checked against it.
 - The "Solo" plan is a one-doctor Clinic plan, not an individual account (ADR-016 (docs/adr/ADR-016-organisation-onboarding-and-approval.md, owner decision 10 Nov 2026)); revisit plan names and seat types (doctors, staff, patients) when this is built. This ticket replaces the hard-coded starter plan (1 doctor and 2 staff, patients uncapped) enforced from MDV-P1-069, and adds the owner's self-service upgrade.
 - Seat counts are per organisation in total across its locations (ADR-016, MDV-P1-069); bigger chains need a bigger plan.
 
@@ -936,7 +943,7 @@ depends: MDV-P5-016, MDV-P5-040
 confidence: 60 | Design exists (6 Nov 2026); build estimate not yet calibrated.
 sources: docs/02-design/source/Medvya Admin.dc.html (6 Nov 2026 revamp) (Subscription billing); docs/02-design/source/Medvya Web.dc.html (6 Nov 2026 revamp) (owner Billing, Close this practice)
 desc:
-Owner screens: plan and seats, invoices from Medvya, update payment method, add seats, close the practice (full export first). Console: INR and AED reported separately, never summed. Dunning: retries day 3 and 7, reminder day 14, limited mode day 30 (online bookings pause), read-only day 60, suspended day 90; patients and clinical records are never locked for non-payment. Only the owner sees plan and billing.
+Owner screens: plan and seats, invoices from Medvya, update payment method, add seats, close the practice (full export first). Medvya's own GST/VAT invoices with their own numbering, and Finance marks an invoice paid in the console. Collecting the payment through a provider is out of scope here: MDV-P5-065. Console: INR and AED reported separately, never summed. Dunning: retries day 3 and 7, reminder day 14, limited mode day 30 (online bookings pause), read-only day 60, suspended day 90; patients and clinical records are never locked for non-payment. Only the owner sees plan and billing.
 ac:
 - Given a payment fails, when day 30 is reached, then online bookings pause and clinicians can still read and treat.
 - Given a non-owner, when opens billing, then the API returns 403.
@@ -1096,7 +1103,7 @@ roles: Public, Practice owner
 labels: public-site, billing
 estimate: 1.5
 weeks: 26-27
-depends: MDV-P5-042, MDV-P1-027
+depends: MDV-P5-042, MDV-P1-004
 confidence: 75 | Design exists (6 Nov 2026); build estimate not yet calibrated.
 sources: docs/02-design/source/Medvya Web.dc.html (6 Nov 2026 revamp) (Simple plans, 14-day free trial)
 desc:
@@ -1502,3 +1509,27 @@ tests:
 - ui-native or app unit tests for the changed behaviour; a simulator check recorded on the PR with synthetic data only.
 notes:
 - Regression risk: low.
+
+=== MDV-P5-065
+title: Collect Medvya subscription payments through the P4-007 (Razorpay) and P4-008 (UAE) adapters
+type: Story
+epic: MDV-P5-E09
+prd: P5-07
+screens: N-11
+priority: MUST
+roles: Practice owner, Medvya finance
+labels: platform, billing, payments
+estimate: 3
+weeks: 28-30
+depends: MDV-P5-043, MDV-P4-007, MDV-P4-008, MDV-P4-032
+confidence: 55 | Needs Medvya's own merchant accounts (MDV-P4-032) and the adapters' subscription and mandate support; not yet checked.
+sources: docs/adr/ADR-019-subscription-pricing.md; docs/02-design/source/Medvya Admin.dc.html (6 Nov 2026 revamp) (Subscription billing)
+desc:
+Medvya's subscription invoices (MDV-P5-043) are paid online: India by UPI AutoPay or card mandate through the Razorpay adapter (MDV-P4-007), the UAE by card, Apple Pay or bank transfer through the UAE adapter (MDV-P4-008), on Medvya's own merchant accounts (MDV-P4-032), never a clinic's. A confirmed payment marks the invoice paid; a failed one starts the dunning ladder of MDV-P5-043. Until this ticket, Finance marks invoices paid by hand.
+ac:
+- Given an owner with a due Medvya invoice in India, when they pay by UPI AutoPay or card, then the provider's confirmed payment marks the invoice paid once, even if the webhook arrives twice.
+- Given an owner in the UAE, when they pay by card, then the payment is collected on Medvya's UAE merchant account in AED and the invoice is marked paid.
+- Given a payment fails, when the provider reports it, then the dunning ladder starts and clinicians can still read and treat.
+- Given a payment, when it is logged, then no card or bank detail is stored by Medvya, only the provider's reference.
+notes:
+- Created 15 Nov 2026 from the subscription plan on epic MDV-P5-E09 (#774): MDV-P5-043 builds invoices and manual "mark paid" first; this ticket adds the provider.

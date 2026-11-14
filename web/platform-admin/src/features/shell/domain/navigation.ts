@@ -1,6 +1,6 @@
 import type { PlatformRole } from '../../session/domain/session';
 
-export type NavId = 'overview' | 'approvals' | 'team' | 'audit';
+export type NavId = 'overview' | 'approvals' | 'plans' | 'team' | 'audit';
 export type NavItem = { id: NavId; path: string; roles: readonly PlatformRole[] };
 
 const everyone: readonly PlatformRole[] = ['Owner', 'Operations', 'Support', 'Finance', 'Reviewer'];
@@ -12,6 +12,8 @@ const everyone: readonly PlatformRole[] = ['Owner', 'Operations', 'Support', 'Fi
 export const navItems: readonly NavItem[] = [
   { id: 'overview', path: '/', roles: everyone },
   { id: 'approvals', path: '/approvals', roles: everyone },
+  // Every role reads plans; owner and finance edit (PlatformPolicies.PlansEdit).
+  { id: 'plans', path: '/plans', roles: everyone },
   { id: 'team', path: '/team', roles: ['Owner'] },
   { id: 'audit', path: '/audit', roles: ['Owner', 'Operations'] },
 ];

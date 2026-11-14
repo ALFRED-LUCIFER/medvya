@@ -164,6 +164,24 @@ public sealed partial class FrontDeskService(
         return new(facilityId, facility.TimeZone, now, doctors, waiting);
     }
 
+    public async Task<ClinicToday> GetClinicTodayAsync(Guid facilityId, CancellationToken cancellationToken = default)
+    {
+        await context.RequireAsync(facilityId, SchedulingAccess.CanConfigure, cancellationToken);
+        var (facility, zone) = await context.FacilityAsync(facilityId, cancellationToken);
+        var now = context.Now;
+        var date = ScheduleRules.LocalDate(now, zone);
+        var (from, to) = (ScheduleRules.Instant(date, TimeOnly.MinValue, zone), ScheduleRules.Instant(date.AddDays(1), TimeOnly.MinValue, zone));
+        // The board's cards: its columns' states only (cancelled, no-show and left are off the board).
+        var states = VisitFlow.BoardStates.ToArray();
+        var visits = await db.Appointments.AsNoTracking().Where(a => a.FacilityId == facilityId && a.Start >= from && a.Start < to && states.Contains(a.State))
+            .Select(a => new { a.WalkIn, a.State, a.ChangedAt }).ToListAsync(cancellationToken);
+        var arrived = visits.Where(v => v.State != AppointmentState.Booked).ToList();
+        var waiting = visits.Where(v => VisitFlow.CanReassign(v.State)).Select(v => v.ChangedAt).ToList();
+        var doctors = (await context.CalendarsAsync(facilityId, cancellationToken)).Where(c => c.Kind == CalendarKind.Doctor).Select(c => new StaffName(c.Id, c.Name)).ToList();
+        return new(now, facility.TimeZone, visits.Count(v => !v.WalkIn), visits.Count(v => v.State == AppointmentState.Booked), arrived.Count(v => v.WalkIn), arrived.Count(v => !v.WalkIn),
+            waiting.Count, waiting.Count == 0 ? null : (int)(now - waiting.Min()).TotalMinutes, doctors);
+    }
+
     public async Task<BoardCard> ReassignAsync(Guid appointmentId, ReassignVisit command, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);

@@ -21,9 +21,9 @@ export function loadState(query: { isPending: boolean; error: Error | null }): L
  * Directory and search (MDV-P1-018). Searches run on submit, not per keystroke: each one is audited.
  * Results stay in memory only and are dropped a minute after nothing shows them; nothing goes to browser storage.
  */
-export function usePatientDirectoryController() {
+export function usePatientDirectoryController(initialFilter: DirectoryFilter = 'All') {
   const [text, setText] = useState('');
-  const [request, setRequest] = useState<SearchRequest>({ query: null, filter: 'All', page: 1 });
+  const [request, setRequest] = useState<SearchRequest>({ query: null, filter: initialFilter, page: 1 });
   const search = useQuery({
     queryKey: ['patients', 'search', request],
     // No abort signal: a cancelled request has still been audited, and the remount would send (and audit) it again.

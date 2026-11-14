@@ -39,6 +39,7 @@ const SignUpRoute = lazy(() => import('./SignUpRoute'));
 const SignInRoute = lazy(() => import('./SignInRoute'));
 const OnboardingRoute = lazy(() => import('./OnboardingRoute'));
 const OverviewRoute = lazy(() => import('./OverviewRoute'));
+const ClinicTodayRoute = lazy(() => import('./ClinicTodayRoute'));
 const SettingsRoute = lazy(() => import('./SettingsRoute'));
 const MyDevicesRoute = lazy(() => import('./MyDevicesRoute'));
 const devicesPath = '/account/devices';
@@ -164,6 +165,8 @@ export default function App({ locale, onLocaleChange }: Props) {
                 canConsult={active.capabilities.Patient360Chart === 'Full'} steps={{ nurse: active.flags.includes('clinical.nurse-intake'), billing: active.flags.includes('billing.invoices') }}
                 intakePath={nursePath && active.capabilities.VitalsAllergiesEntry === 'Full' ? (id: string) => `${nursePath}/${id}` : null} />
             : i.id === 'nurse' ? <NurseQueueRoute facilityId={active.facilityId} online={online} nursePath={i.path} />
+            : i.id === 'clinicToday' ? <ClinicTodayRoute facilityId={active.facilityId} userId={shell.session?.user.id ?? ''}
+                paths={{ myDay: pathOf('today'), directory: searchPath, waitingRoom: pathOf('frontDesk') && `${pathOf('frontDesk')}/overview` }} />
             : i.id === 'settings' ? <TabletOnly title={t('settings.title')}><SettingsRoute facilityId={active.facilityId} country={active.country ?? null} userId={shell.session?.user.id ?? ''} /></TabletOnly>
             // Patients opens the directory, its page (same rule, so searchPath is set); /patients stays the menu's address.
             : i.id === 'patients' && searchPath ? <Navigate to={searchPath} replace />

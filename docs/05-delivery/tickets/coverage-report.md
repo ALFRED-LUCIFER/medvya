@@ -65,7 +65,7 @@ Every requirement, screen, exit criterion, NFR, delivery-package item and depend
 | P5-07 | P5 | MUST | MDV-P5-001, MDV-P5-016, MDV-P5-028, MDV-P5-042, MDV-P5-043, MDV-P5-050, MDV-P5-052 |
 | P5-08 | P5 | MUST | MDV-P5-001, MDV-P5-017, MDV-P5-026, MDV-P5-040, MDV-P5-041, MDV-P5-044, MDV-P5-046, MDV-P5-048 |
 | P5-09 | P5 | MUST | MDV-P5-001, MDV-P5-018, MDV-P5-019, MDV-P5-045, MDV-P5-047, MDV-P5-049 |
-| P5-10 | P5 | MUST | MDV-P5-020, MDV-P5-021, MDV-P5-022, MDV-P5-023, MDV-P5-027, MDV-P5-030, MDV-P5-053, MDV-P5-054 |
+| P5-10 | P5 | MUST | MDV-P5-020, MDV-P5-021, MDV-P5-022, MDV-P5-023, MDV-P5-027, MDV-P5-030, MDV-P5-053, MDV-P5-054, MDV-P5-055, MDV-P5-056, MDV-P5-057, MDV-P5-058, MDV-P5-059, MDV-P5-060, MDV-P5-061, MDV-P5-062, MDV-P5-063 |
 | P5-11 | P5 | MUST | MDV-P5-024 |
 | P5-12 | P5 | MUST | MDV-P5-025 |
 | P6-01 | P6 | MUST | MDV-P6-001, MDV-P6-002, MDV-P6-003, MDV-P6-004, MDV-P6-005, MDV-P6-010 |
@@ -133,7 +133,7 @@ Every requirement, screen, exit criterion, NFR, delivery-package item and depend
 | A-09 Consent revoked · patient changed | P3 | DESIGNED | MDV-P3-004, MDV-P3-017 |
 | A-10 Speaker overlap / unconfirmed speaker | P3 | DESIGNED | MDV-P3-010 |
 | H-09 Consent templates & recording policy | P3 | DESIGNED | MDV-P3-002 |
-| X-01 Mobile: Today, capture, note, appointments, records, pairing | P3 | DESIGNED | MDV-P1-098, MDV-P3-005, MDV-P3-021, MDV-P5-053 |
+| X-01 Mobile: Today, capture, note, appointments, records, pairing | P3 | DESIGNED | MDV-P1-098, MDV-P3-005, MDV-P3-021, MDV-P5-053, MDV-P5-055, MDV-P5-056, MDV-P5-057, MDV-P5-058, MDV-P5-059, MDV-P5-060, MDV-P5-061, MDV-P5-062, MDV-P5-063 |
 | C-01 Clinical results inbox | P4 | DESIGNED | MDV-P4-015 |
 | C-02 Care plans & follow-ups | P4 | DESIGNED | MDV-P4-016 |
 | C-03 Patient contact log & reminders | P4 | DESIGNED | MDV-P4-017 |

@@ -114,6 +114,15 @@ Existing labels keep their colours: `phase:` blue `1D76DB`, `type:` purple `5319
 - MDV-P2-050 (#1208) Audit log: every action has a plain name; the default view is chart opens and changes
 - MDV-P1-109 (#1288) The server refuses to sign a consultation note until the doctor has confirmed identity with the patient
 - MDV-P5-053 (#1209) Fix the Expo bundling error, then run the same UX audit on the mobile apps in a simulator
+- MDV-P5-055 (#1299) Native rows and tabs give screen readers the flag's words, not icon glyphs; each Mark reviewed names its result
+- MDV-P5-056 (#1300) Arabic lays out right to left in both Expo apps
+- MDV-P5-057 (#1301) One status icon map shared by web and native; allergy has its own icon and says Allergy
+- MDV-P5-058 (#1302) Disabled mobile actions say why on screen; the message field is disabled when sending is
+- MDV-P5-059 (#1303) Biometric wording per platform, with a Not now on the offer
+- MDV-P5-060 (#1304) Mobile footer actions stay above the keyboard
+- MDV-P5-061 (#1305) Patient choices on Profile: honest wording until they can be changed in the app
+- MDV-P5-062 (#1306) Development cast dates relative to today in both mobile apps
+- MDV-P5-063 (#1307) Patient tab names match their screens; mobile icons scale with font size
 
 **People gate (not code)**
 

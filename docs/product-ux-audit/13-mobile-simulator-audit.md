@@ -154,7 +154,7 @@ Seen and fine: the error states on the number and code fields (icon plus words),
 
 ## 5 · Proposed tickets
 
-For the coordinator to create; none were created by this ticket.
+Created as tickets MDV-P5-055 to MDV-P5-063 (the table follows the same order).
 
 | Title | Finding | Acceptance criteria |
 |---|---|---|

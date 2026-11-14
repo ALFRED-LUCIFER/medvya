@@ -5,7 +5,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import { ApiError } from '../../schedule/services/scheduleApi';
 import { overrideSchema } from '../domain/checks';
 import { startReauth } from '../../encounters/services/noteApi';
-import { useStepUpReturn } from '../../encounters/hooks/useStepUpReturn';
+import type { StepUpReturn } from '../../encounters/domain/stepUp';
 import { authoriseProblem, type AuthoriseProblem } from '../domain/authorisation';
 import { withDefaults } from '../domain/addMedicine';
 import { freeTextSchema, invalidFields, problemOf, toDraft, type PrintLanguage, type RxLine, type RxProblem, type SaveState, type SigDraft, type SigField } from '../domain/prescription';
@@ -23,7 +23,7 @@ const autosaveMs = 700;
  * The safety checks (MDV-P2-016) run on the server again after every change; a severe alert takes a reason, one alert at a time.
  * Authorising (MDV-P2-017) is its own action: the server asks for the step-up (403 reauth_required) and runs the checks again before it agrees.
  */
-export function usePrescriptionController(encounterId: string) {
+export function usePrescriptionController(encounterId: string, resume: StepUpReturn) {
   const queryClient = useQueryClient();
   const key = ['prescription', encounterId];
   const list = useQuery({ queryKey: key, queryFn: () => fetchPrescription(encounterId), retry: false });
@@ -45,7 +45,6 @@ export function usePrescriptionController(encounterId: string) {
   const authKey = ['prescription-authorisation', encounterId];
   const authorisation = useQuery({ queryKey: authKey, queryFn: () => fetchAuthorisation(encounterId), enabled: list.isSuccess, retry: false });
   const [authProblem, setAuthProblem] = useState<AuthoriseProblem | null>(null);
-  const resume = useStepUpReturn('authorise');
   const doAuthorise = useMutation({
     mutationFn: () => authorise(encounterId),
     onSuccess: s => { queryClient.setQueryData(authKey, s); setAuthProblem(null); },

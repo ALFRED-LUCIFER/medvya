@@ -32,6 +32,8 @@ import { useLetterController, useReferralsController } from '../features/referra
 import SlipPage from '../features/orders/components/SlipPage';
 import { useOrdersController, useSlipController } from '../features/orders/hooks/useOrdersController';
 import { useNoteController } from '../features/encounters/hooks/useNoteController';
+import { useStepUpReturn } from '../features/encounters/hooks/useStepUpReturn';
+import type { StepUpReturn } from '../features/encounters/domain/stepUp';
 import AssessmentDiagnoses from '../features/problems/components/AssessmentDiagnoses';
 import { useProblemsController } from '../features/problems/hooks/useProblemsController';
 import ConsultEntry from '../features/nurse-intake/components/ConsultEntry';
@@ -51,6 +53,8 @@ export default function ConsultRoute({ boardPath, ...rest }: Props) {
 
 function Consult({ encounterId, boardPath, online, canOrder, canReconcile, canSign, userId }: Props & { encounterId: string }) {
   const consultation = useConsultController(encounterId);
+  // Held here, not in the prescription: it must see a click made before the prescription is on the page, and the address's `resume` word, which it reads once.
+  const authoriseResume = useStepUpReturn('authorise');
   const noteController = useNoteController(encounterId, canSign, consultation.banner?.timeZone, consultation.banner);
   // MDV-P1-090: End consultation and Sign note ask first about an unfinished prescription or orders not placed.
   const finish = useFinishController(encounterId, canOrder, { end: consultation.onEnd, sign: noteController.onRequestSign });
@@ -76,7 +80,7 @@ function Consult({ encounterId, boardPath, online, canOrder, canReconcile, canSi
       footer={consult.view === 'page' && !draftOnPhone && <ConsultFooter {...note} finish={!ended && !phone && <EndConsultation ending={consult.ending} onEnd={consult.onEnd} />} />}>
       {draftOnPhone ? phoneGate
         : consult.view === 'page' ? <ConsultStudio {...note} panel={consult.panel} onPanel={consult.onPanel} chart={consult.chart} plan={phone ? null : plan} entry={entry(false)}
-          prescription={!phone && patient && canOrder && <Prescription encounterId={encounterId} ended={ended} patient={patient} />}
+          prescription={!phone && patient && canOrder && <Prescription encounterId={encounterId} ended={ended} patient={patient} resume={authoriseResume} />}
           diagnoses={!phone && canReconcile && <Diagnoses encounterId={encounterId} online={online} />} />
         : <>{entry(true)}<NoteEditor {...note} /></>}
       <NoteHistory {...useAddendumController(encounterId, canSign)} timeZone={consult.banner?.timeZone} printPath={`/consult/${encounterId}/note/print`} />
@@ -84,7 +88,7 @@ function Consult({ encounterId, boardPath, online, canOrder, canReconcile, canSi
       {consult.banner && <UnfinishedDialog {...finish} patientName={consult.banner.patient.fullName} />}
       {phone ? canOrder && !draftOnPhone && phoneGate : <>
         {/* The one page holds the prescription after Assessment (MDV-P1-094); the guided steps keep it under the note. */}
-        {patient && canOrder && consult.view !== 'page' && <Prescription encounterId={encounterId} ended={ended} patient={patient} />}
+        {patient && canOrder && consult.view !== 'page' && <Prescription encounterId={encounterId} ended={ended} patient={patient} resume={authoriseResume} />}
         {consult.banner && canOrder && <Orders encounterId={encounterId} ended={ended} />}
         {consult.banner && canOrder && <Referrals patientId={consult.banner.encounter.patientId} encounterId={encounterId} ended={ended} />}
       </>}
@@ -140,8 +144,8 @@ function FollowUp({ encounterId, ended }: { encounterId: string; ended: boolean 
 }
 
 /** The draft prescription (MDV-P2-015) under the consultation, for a role with "Prescriptions and orders" at Sign; the server still decides for this clinician and patient. */
-function Prescription({ encounterId, ended, patient }: { encounterId: string; ended: boolean; patient: AddMedicinePatient }) {
-  const rx = usePrescriptionController(encounterId);
+function Prescription({ encounterId, ended, patient, resume }: { encounterId: string; ended: boolean; patient: AddMedicinePatient; resume: StepUpReturn }) {
+  const rx = usePrescriptionController(encounterId, resume);
   const add = useAddMedicineController(encounterId);
   return rx.hidden ? null : <PrescriptionPanel {...rx} ended={ended} printPath={`/consult/${encounterId}/rx/print`} addMedicine={<AddMedicinePanel {...add} patient={patient} />} />;
 }

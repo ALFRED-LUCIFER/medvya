@@ -50,8 +50,10 @@ export default function ConsultStudio(p: Props) {
   const ready = !p.loading && !!p.template && !!p.ticks;
   useEffect(() => { if (ready && window.location.hash === `#${planHeading}`) document.getElementById(planHeading)?.focus(); }, [ready]);
   // Finish visit stays reachable when the note cannot be shown: it is in the footer (ConsultFooter), not here.
-  // The prescription is its own record: it stays usable while the note loads or when the note cannot be shown.
-  if (p.loading) return <><p role="status">{t('noteEditor.loading')}</p>{p.prescription}</>;
+  // The prescription is its own record: it stays usable when the note cannot be shown. It is not shown until the note is, or has failed: it would mount
+  // here, then again in the page below (a different place in the tree), losing a step-up return's focus and anything typed. shortcut: a retry after a
+  // failed load remounts it too; hold it in one place if that is ever reported.
+  if (p.loading || (!p.loadFailed && !p.forbidden && (!p.template || !p.templateKey || !p.ticks))) return <p role="status">{t('noteEditor.loading')}</p>;
   if (p.loadFailed || !p.template || !p.templateKey || !p.ticks) return <><p role="alert" className="font-bold text-danger-700">{t(p.forbidden ? 'noteEditor.forbidden' : 'noteEditor.loadFailed')}</p>{p.prescription}</>;
   const { template, ticks } = p;
   const section = (s: (typeof template.sections)[number]) => <NoteSectionField key={s.id} section={s} register={p.register} readOnly={p.readOnly} answers={p.answers} onAnswers={p.onAnswers} source={s.id === 'chiefComplaint' ? p.complaintSource : null} />;

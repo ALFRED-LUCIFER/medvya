@@ -291,3 +291,16 @@ for (const [width, height] of [[1440, 900], [1280, 720], [1024, 768], [768, 1024
     await expect(page.getByRole('region', { name: 'Medicines to prescribe' })).toBeVisible();
     expect(await obscuredWhenTabbing(page)).toEqual([]);
   });
+
+// MDV-P2-047: a step-up return focuses Authorise even when the note loads after the prescription's section (the real server answers in that order;
+// the prescription must not mount, then mount again once the note is there, which dropped the focus and the returned-with word).
+test('back from the step-up with the note still loading, Authorise is focused once the page is there', async ({ page }) => {
+  await mockPrescription(page, { lines: [line('rx-1', 'Metformin', { dose: '1', doseUnit: 'Tablet', route: 'Oral', frequency: 'BD', durationDays: 5 })] });
+  await mockNote(page, {});
+  await page.route('**/v1/encounters/e-1/note', async r => { if (r.request().method() === 'GET') await new Promise(done => setTimeout(done, 1500)); await r.fallback(); });
+  await page.goto('/consult/e-1?resume=authorise');
+  await expect(page.getByRole('region', { name: 'Consultation note' })).toBeVisible();
+  const rx = page.getByRole('region', { name: 'Prescription' });
+  await expect(rx.getByRole('button', { name: 'Authorise prescription' })).toBeFocused();
+  await expect(rx.getByRole('status').filter({ hasText: 'Identity confirmed. Press Authorise prescription.' })).toBeVisible();
+});

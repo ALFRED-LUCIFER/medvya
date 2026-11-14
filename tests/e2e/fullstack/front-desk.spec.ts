@@ -21,8 +21,8 @@ test('front desk: register, book, check in, see the board, cancel', async ({ pag
   await test.step('sign in as the receptionist and land on the board', async () => {
     await signIn(page, joseph);
     await page.goto('/app/front-desk');
-    await expect(page.getByRole('heading', { level: 1, name: /Reception board/ })).toBeVisible();
-    await expect(page.getByText('Loading the board…')).toBeHidden();
+    await expect(page.getByRole('heading', { level: 1, name: /^Front desk/ })).toBeVisible();
+    await expect(page.getByText('Loading Front desk…')).toBeHidden();
     await expectNoAxeViolations(page);
   });
 

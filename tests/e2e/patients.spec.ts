@@ -53,6 +53,9 @@ test('the desk finds a patient from the header, sees the full name and opens the
   await page.getByRole('link', { name: 'Search patients' }).click();
   await expect(page).toHaveURL('/patients/directory');
   await expect(page.getByRole('heading', { name: 'Patients', level: 1 })).toBeVisible();
+  // MDV-P2-051: Patients is the menu's page too, and Register patient is a button on it, not a menu item.
+  await expect(page.getByRole('navigation').getByRole('link', { name: 'Patients' })).toHaveAttribute('href', '/patients');
+  await expect(page.getByRole('main').getByRole('link', { name: 'Register patient' })).toHaveAttribute('href', '/patients/new');
 
   const search = page.getByRole('searchbox', { name: 'Name, MRN, phone or ID' });
   await search.fill('meera');
@@ -75,6 +78,11 @@ test('the desk finds a patient from the header, sees the full name and opens the
   await page.getByRole('link', { name: /Meera Iyer \(synthetic\), 54 y/ }).click();
   await expect(page).toHaveURL(`/patients/directory/${meeraId}`);
   await expect(page.getByRole('heading', { name: 'Meera Iyer (synthetic)', level: 1 })).toBeVisible();
+  // AC3 (MDV-P2-051): the one Patient record, opened on Details; the desk's tabs hold nothing clinical (no Summary, no Timeline).
+  const tabs = page.getByRole('group', { name: 'Patient record' }).getByRole('link');
+  await expect(tabs).toHaveText(['Details', 'Documents']);
+  await expect(tabs.first()).toHaveAttribute('aria-current', 'page');
+  await expect(tabs.last()).toHaveAttribute('href', `/patients/${meeraId}/docs`);
   await expect(page.getByText('+919000000101')).toBeVisible();
   await expect(page.getByText('Clinical notes are never shown here.')).toBeVisible();
   // MDV-1088: visit dates and status only; the desk has no diagnosis, medicines or note to open.

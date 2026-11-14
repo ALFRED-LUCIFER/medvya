@@ -1087,7 +1087,7 @@ depends: MDV-P1-039
 confidence: 88 | Deliverables explicit.
 sources: PRD v2 P1 delivery package 2–3
 desc:
-30-minute reception training (register quick/full, duplicates, book/reschedule/cancel/no-show, walk-in, check-in, board, TV, reminders, what reception cannot see). One-page desk card per country (A4, en + local language). Support channel (WhatsApp/phone) with a named contact and hours; escalation path for security/privacy incidents.
+30-minute reception training, in the screen names of MDV-P2-051 (register quick/full from the Register patient button, duplicates, book/reschedule/cancel/no-show, walk-in, check-in, Front desk with its By status and By doctor views, Patients and the Patient record's Details, TV, reminders, what reception cannot see). One-page desk card per country (A4, en + local language). Support channel (WhatsApp/phone) with a named contact and hours; escalation path for security/privacy incidents.
 ac:
 - Training delivered to every receptionist at both clinics, attendance recorded.
 - During training at the pilot, a trained receptionist quick-registers and checks in a walk-in in under 60 seconds, timed and recorded (moved from MDV-P1-025).

@@ -57,7 +57,7 @@ export default function NurseQueuePage(p: Props) {
   return (
     <PageContainer width="fluid">
       {/* No eyebrow repeating the menu item; the count is secondary text that arrives without moving the row (MDV-P2-059). */}
-      <PageHeader title={t('intake.queue.title')} meta={!p.loading && !p.forbidden && !p.offline && !p.failed && tCount('board.count', total)} />
+      <PageHeader title={t('nav.nurse')} meta={!p.loading && !p.forbidden && !p.offline && !p.failed && tCount('board.count', total)} />
       {body}
     </PageContainer>
   );

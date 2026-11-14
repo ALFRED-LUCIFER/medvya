@@ -4,10 +4,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Medvya.Platform.Infrastructure;
 
-/// <summary>Platform audit entries for organisation actions (MDV-P1-064); see <see cref="IConsoleActions"/>.</summary>
+/// <summary>Platform audit entries for actions through a reviewed path (MDV-P1-064, MDV-P5-064); see <see cref="IConsoleActions"/>.</summary>
 sealed class ConsoleActions(PlatformDbContext db, IPlatformCaller caller, TimeProvider clock) : IConsoleActions
 {
-    public async Task RecordAsync(string action, string resourceType, Guid resourceId, Guid subjectTenantId, string? reason, CancellationToken cancellationToken = default)
+    public async Task RecordAsync(string action, string resourceType, Guid resourceId, Guid? subjectTenantId, string? reason, CancellationToken cancellationToken = default)
     {
         db.AuditEntries.Add(PlatformAudit.Entry(caller, clock.GetUtcNow(), action, resourceType, resourceId, reason, subjectTenantId: subjectTenantId));
         await db.SaveChangesAsync(cancellationToken);

@@ -8,9 +8,9 @@
 **Day one:** Switch from the old system without closing, with history migrated, insurance checked at the desk and a paid subscription.  
 **Goal:** Everything a clinic owner needs to say yes: their data moved, no downtime, regulator-ready, learnable in one shift, and no lock-in.
 
-**Tickets:** 63 · **Estimate:** 170.5 dev-days vs **45 working days** in the window (OVER by 125.5 days: needs scope trade-off or overlap) · **Average confidence:** 66%
+**Tickets:** 65 · **Estimate:** 176.5 dev-days vs **45 working days** in the window (OVER by 131.5 days: needs scope trade-off or overlap) · **Average confidence:** 66%
 
-**Status:** To do 63
+**Status:** To do 65
 
 ## Epics
 
@@ -61,6 +61,7 @@
 | [MDV-P5-043](MDV-P5-043.md) | To do | Subscription billing in the console and for owners: invoices, payment method, add seats, dunning ladder, close practice | Story | MUST | P5-07 | N-11 | 3.5 | 27–29 | 26 Apr → 14 May 2027 | 60% Low |
 | [MDV-P5-044](MDV-P5-044.md) | To do | Organisation approval console: onboarding request queue, document view, approve, ask for changes, reject, suspend | Story | MUST | P5-08 | N-12 | 2.5 | 27–29 | 26 Apr → 14 May 2027 | 75% Medium |
 | [MDV-P5-046](MDV-P5-046.md) | To do | Legal documents: versioned terms, privacy notice and DPA, re-acceptance gate that pauses booking only | Story | MUST | P5-08 | N-12 | 2 | 27–29 | 26 Apr → 14 May 2027 | 65% Medium |
+| [MDV-P5-064](MDV-P5-064.md) | To do | Medvya-wide medicine list: console Medicines page, Not verified class, register-ready model | Story | MUST | P5-08 | N-12 | 3 | 27–29 | 26 Apr → 14 May 2027 | 70% Medium |
 | [MDV-P5-009](MDV-P5-009.md) | To do | Pre-authorisation, claims, resubmission and remittance matching — India TPA/PMJAY/CGHS (P-14) | Story | MUST | P5-03 | P-14 | 4 | 28–29 | 03 May → 14 May 2027 | 65% Medium |
 | [MDV-P5-011](MDV-P5-011.md) | To do | Emirates ID card-reader check-in under 30 seconds and UAE PASS (N-06) | Story | MUST | P5-04 | N-06 | 3 | 28–29 | 03 May → 14 May 2027 | 55% Low |
 | [MDV-P5-012](MDV-P5-012.md) | To do | Health-exchange pull and push for the launch emirate (Malaffi / NABIDH / Riayati) (N-07) | Story | MUST | P5-04 | N-07 | 5 | 28–31 | 03 May → 28 May 2027 | 40% Low |
@@ -70,6 +71,7 @@
 | [MDV-P5-032](MDV-P5-032.md) | To do | Mobile foundation: `mobile/` Expo workspace, shared tokens and i18n, RTL, CI and EAS builds | Story | MUST | P8-06 | — | 4 | 28–29 | 03 May → 14 May 2027 | 70% Medium |
 | [MDV-P5-033](MDV-P5-033.md) | To do | Mobile backend: native token sign-in, device registry, push registry and remote revoke | Story | MUST | P8-06 | — | 3.5 | 28–30 | 03 May → 21 May 2027 | 70% Medium |
 | [MDV-P5-047](MDV-P5-047.md) | To do | Service requests: Help in the clinic app, support inbox with SLA, internal notes, diagnostics | Story | MUST | P5-09 | N-13 | 3.5 | 28–30 | 03 May → 21 May 2027 | 65% Medium |
+| [MDV-P5-066](MDV-P5-066.md) | To do | Import Common Drug Codes for India by release into the Medvya-wide medicine list | Story | MUST | P5-08 | N-12 | 3 | 28–30 | 03 May → 21 May 2027 | 40% Low |
 | [MDV-P5-010](MDV-P5-010.md) | To do | UAE claims via eClaimLink (Dubai) / Shafafiya (Abu Dhabi) for the launch emirate (P-14) | Story | MUST | P5-03 | P-14 | 4 | 29–31 | 10 May → 28 May 2027 | 45% Low |
 | [MDV-P5-013](MDV-P5-013.md) | To do | Regulator e-prescription and e-sick leave; letters and certificates from templates (N-09) | Story | MUST | P5-04 | N-09 | 3 | 29–30 | 10 May → 21 May 2027 | 50% Low |
 | [MDV-P5-015](MDV-P5-015.md) | To do | Voice appointment assistant v1 (inbound): book/move/cancel from the live calendar, identity check, no medical advice, staff handover (N-10) | Story | SHOULD | P5-06 | N-10 | 6 | 29–31 | 10 May → 28 May 2027 | 50% Low |

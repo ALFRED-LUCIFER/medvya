@@ -17,7 +17,7 @@ namespace Medvya.Prescribing.Infrastructure;
 public sealed class FormularyService(PrescribingDbContext db, IStaffAccess staff, ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, TimeProvider clock) : IFormulary
 {
     public const string AddAction = "formulary.add", BrandsAction = "formulary.brands.add", OrderSetAction = "orderset.create", Resource = "formulary";
-    public const int MaxBrands = 10, MaxBrand = 100, MaxItems = 50, MaxItem = 200, MaxLimit = 50, MaxBrandRows = 500;
+    public const int MaxBrand = MedicineInput.MaxBrand, MaxItems = 50, MaxItem = 200, MaxLimit = 50, MaxBrandRows = 500;
     /// <summary>What a brand row says for a medicine in no allergy class: stated, never the default of a missing answer.</summary>
     public const string NoAllergyClass = "none";
 
@@ -30,7 +30,9 @@ public sealed class FormularyService(PrescribingDbContext db, IStaffAccess staff
         var q = Escape(text);
         var (starts, word) = ($"{q}%", $"% {q}%"); // blank matches everything
         // MDV-P1-088 (and MDV-AUDIT-1093): a term matches the start of a word, never inside one, so look-alikes (gliclazide for "az") stay out.
-        // shortcut: a word starts at the name's start or after a space, so one after a hyphen or a slash is not found; a word index when a register is loaded.
+        // shortcut: a word starts at the name's start or after a space, so one after a hyphen or a slash is not found.
+        // shortcut: no index serves this under row-level security (ILIKE and pg_trgm are not leakproof, so PostgreSQL filters after the policy): a
+        // sequential scan, about 240 ms on 100,000 rows; a word table searched with the leakproof prefix operator ^@ before a register is loaded (MDV-P5-066).
         items = items.Where(i => EF.Functions.ILike(i.Generic, starts) || EF.Functions.ILike(i.Generic, word)
             || i.Brands.Any(b => EF.Functions.ILike(b, starts) || EF.Functions.ILike(b, word))
             || db.FormularyBrands.Any(b => b.FormularyItemId == i.Id && (EF.Functions.ILike(b.Name, starts) || EF.Functions.ILike(b.Name, word))));
@@ -49,35 +51,16 @@ public sealed class FormularyService(PrescribingDbContext db, IStaffAccess staff
         ArgumentNullException.ThrowIfNull(command);
         var country = await CountryAsync(cancellationToken);
         var rules = FormularyRules.For(country);
-        var errors = new List<(string, string)>();
-        var generic = Required(command.Generic, "generic", 200, errors);
-        var strength = Required(command.Strength, "strength", 50, errors);
-        var form = command.Form?.Trim();
-        if (string.IsNullOrEmpty(form)) errors.Add(("form", "required"));
-        else if (!FormularyRules.Forms.Contains(form)) errors.Add(("form", "unknown"));
-        var brands = (command.Brands ?? []).Select(b => b?.Trim() ?? "").Where(b => b.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
-        if (brands.Length > MaxBrands) errors.Add(("brands", "too_many"));
-        else if (brands.Any(b => b.Length > MaxBrand)) errors.Add(("brands", "too_long"));
-        // Blank is allowed and stays blank; a value must have the country's shape.
-        var code = Optional(command.NationalCode);
-        if (code is not null && !rules.IsNationalCode(code)) errors.Add(("nationalCode", "invalid"));
-        var atc = Optional(command.Atc)?.ToUpperInvariant();
-        if (atc is not null && !FormularyRules.IsAtc(atc)) errors.Add(("atc", "invalid"));
-        var sig = Optional(command.DefaultSig);
-        if (sig?.Length > 200) errors.Add(("defaultSig", "too_long"));
-        // The class is chosen on purpose: an ordinary medicine is "None", never the default of a missing answer.
-        if (command.RegClass is not { } regClass) errors.Add(("regClass", "required"));
-        else if (!rules.Classes().Contains(regClass)) errors.Add(("regClass", "not_in_country"));
-        if (errors.Count > 0) throw new FormularyValidationException(errors);
+        var m = MedicineInput.Validate(command, rules);
 
-        var (sameGeneric, sameStrength) = (Escape(generic!), Escape(strength!));
-        if (await db.FormularyItems.AnyAsync(i => i.Country == country && EF.Functions.ILike(i.Generic, sameGeneric) && EF.Functions.ILike(i.Strength, sameStrength) && i.Form == form, cancellationToken))
+        var (sameGeneric, sameStrength) = (Escape(m.Generic), Escape(m.Strength));
+        if (await db.FormularyItems.AnyAsync(i => i.Country == country && EF.Functions.ILike(i.Generic, sameGeneric) && EF.Functions.ILike(i.Strength, sameStrength) && i.Form == m.Form, cancellationToken))
             throw new FormularyConflictException("already_listed");
 
         var item = new FormularyItem
         {
-            Id = Guid.CreateVersion7(), TenantId = TenantId, Country = country, Generic = generic!, Strength = strength!, Form = form!, Brands = brands,
-            NationalCode = code, RegClass = command.RegClass!.Value, Atc = atc, DefaultSig = sig, Source = FormularySource.ClinicAdded, Active = true,
+            Id = Guid.CreateVersion7(), TenantId = TenantId, Country = country, Generic = m.Generic, Strength = m.Strength, Form = m.Form, Brands = m.Brands,
+            NationalCode = m.NationalCode, RegClass = m.RegClass, Atc = m.Atc, DefaultSig = m.DefaultSig, Source = FormularySource.ClinicAdded, Active = true,
             AddedBy = user.UserId, AddedAt = clock.GetUtcNow(),
         };
         await SaveAuditedAsync(() => db.FormularyItems.Add(item), AddAction, item.Id, $"class:{item.RegClass}", cancellationToken);
@@ -170,17 +153,9 @@ public sealed class FormularyService(PrescribingDbContext db, IStaffAccess staff
     static FormularyItemView View(FormularyItem i, FormularyRules rules, IEnumerable<string> clinicBrands) =>
         new(i.Id, i.Generic, i.Strength, i.Form, [.. i.Brands, .. clinicBrands], i.NationalCode, i.RegClass, rules.PrintRequirements(i.RegClass), i.Atc, i.DefaultSig, i.Source, i.Active);
 
-    static string? Required(string? value, string field, int max, List<(string, string)> errors)
-    {
-        var v = value?.Trim();
-        if (string.IsNullOrEmpty(v)) errors.Add((field, "required"));
-        else if (v.Length > max) errors.Add((field, "too_long"));
-        return v;
-    }
+    static string? Required(string? value, string field, int max, List<(string, string)> errors) => MedicineInput.Required(value, field, max, errors);
 
-    static string? Optional(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-
-    static string Escape(string q) => q.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("%", "\\%", StringComparison.Ordinal).Replace("_", "\\_", StringComparison.Ordinal);
+    static string Escape(string q) => MedicineInput.LikeLiteral(q);
 
     async Task<string> CountryAsync(CancellationToken cancellationToken) =>
         await staff.TenantCountryAsync(cancellationToken) ?? throw new InvalidOperationException("No tenant country.");

@@ -1502,3 +1502,56 @@ tests:
 - ui-native or app unit tests for the changed behaviour; a simulator check recorded on the PR with synthetic data only.
 notes:
 - Regression risk: low.
+
+=== MDV-P5-064
+title: Medvya-wide medicine list: console Medicines page, Not verified class, register-ready model
+type: Story
+epic: MDV-P5-E09
+prd: P5-08
+screens: N-12
+priority: MUST
+roles: Medvya operations, Founder, Doctor
+labels: platform, formulary, clinical-safety, security
+estimate: 3
+weeks: 27-29
+depends: MDV-P5-040, MDV-P2-014
+confidence: 70 | Owner decision 15 Nov 2026 (plan on issue #774, slices M1 and M2 without the import); no console design for this page yet, so it follows the approvals page.
+sources: docs/adr/ADR-015-formulary-data-source.md; docs/adr/ADR-014-platform-console.md; MDV-P2-014; MDV-P1-088
+desc:
+One medicine list per country that every clinic of that country sees: the formulary rows with no tenant (ADR-015). The Medvya team manages it in the platform console; clinics keep adding their own medicines and brands, and doctors keep free text. The console reaches only those rows, through a narrow reviewed database login (medvya_formulary: read, add and update of the shared rows of prescribing.FormularyItems; row-level security keeps every clinic's own rows out even if it sets a tenant), the same way the organisation review login was added (ADR-014 note). A new class "Not verified" marks a shared row whose Schedule or controlled class nobody has confirmed: it never prints as an ordinary medicine (the paper says the class is not verified) and the composer says so. A row can carry the register's code and release, so a later import (MDV-P5-066) is idempotent per release.
+ac:
+- Given an Owner or Operations member, when they search the list for India or the UAE, then they see each medicine's source, class, register code and whether it is active; Support, Finance and Reviewer read only and every write is refused with 403 (server-side).
+- Given a console member adds a Medvya-wide medicine, when it breaks the clinic add's rules (FormularyRules: form, class of the country, ATC, national code, lengths) or is already listed, then it is refused with the same codes.
+- Given a console write (add, correct, set class, deactivate), when it has no reason, then it is refused before anything changes; with a reason it is appended to the platform audit log.
+- Given a medicine whose class an advisor has reviewed, when Operations sets its class with a reason, then clinics see the new class and its print requirements.
+- Given a medicine is deactivated, when a doctor searches, then it is not offered and it is never deleted.
+- Given the console's formulary login, when it reads or writes, then it sees and changes only rows with no tenant, even with a tenant setting, and it has no right on any other table.
+- Given a medicine whose class is Not verified, when a doctor finds it or prints a prescription with it, then the composer shows "Class not verified" and the paper carries a line that the class is not verified.
+tests:
+- Integration on real PostgreSQL: roles, reason, audit entry, narrow login (mutation-checked), Not verified print requirement; vitest for the page's domain; browser check in English and Arabic with axe.
+notes:
+- Not here: the CDCI import (MDV-P5-066), reactivating a medicine, the console design (ask the designer), Schedule mapping from CDSCO (advisor).
+- Search speed: a trigram index cannot serve this search, because row-level security lets PostgreSQL use an index only for leakproof operators (ILIKE and pg_trgm are not; measured 15 Nov 2026 on 100,000 rows: about 240 ms, sequential). Index-backed search is an acceptance criterion of MDV-P5-066.
+
+=== MDV-P5-066
+title: Import Common Drug Codes for India by release into the Medvya-wide medicine list
+type: Story
+epic: MDV-P5-E09
+prd: P5-08
+screens: N-12
+priority: MUST
+roles: Medvya operations, Founder
+labels: platform, formulary, clinical-safety
+estimate: 3
+weeks: 28-30
+depends: MDV-P5-064
+confidence: 40 | The NRCeS flat-file package (31 Aug 2026 release) is not readable yet and its licence is not recorded; the column layout is unknown.
+sources: docs/adr/ADR-015-formulary-data-source.md; issue #774 (plan, slices M0 to M3)
+desc:
+Blocked on people: the licence (License.txt) must be read and recorded in an ADR that supersedes ADR-015 section 4 before anything is imported. Then the console uploads a release of the NRCeS Common Drug Codes for India (tab-separated flat files), shows a dry-run diff (added, changed, retired) and applies it into the Medvya-wide list built in MDV-P5-064: source Register, the register code and release on each row, class Not verified (CDCI has no Schedule H, H1 or X).
+ac:
+- Given the licence terms are recorded in an ADR, when the owner uploads a release, then the console shows the rows it would add, change and retire before anything is written.
+- Given a release is applied twice, when the second run ends, then nothing changed (idempotent per code and release).
+- Given a code missing from a newer release, when it is applied, then that medicine becomes inactive and is never deleted.
+- Given an imported row, when it is saved, then its class is Not verified, never None.
+- Given about 100,000 rows in the list, when a doctor searches, then the search uses an index under row-level security (a word table searched with the leakproof prefix operator, or another reviewed design) and answers within the clinic search budget.

@@ -3,7 +3,7 @@ import { checksFor, closest, draftOf, medicinesOf, quantityOf, unitOf, withDefau
 import type { RxChecks, SafetyAlert } from './checks';
 import { invalidFields, type Medicine, type SigDraft, type SigField } from './prescription';
 
-const med = (id: string, generic: string, strength: string, form = 'Tablet'): Medicine => ({ id, generic, strength, form, brands: [] });
+const med = (id: string, generic: string, strength: string, form = 'Tablet'): Medicine => ({ id, generic, strength, form, brands: [], regClass: 'None' });
 
 describe('add medicine quantity (MDV-P2-039)', () => {
   it('counts tablets from how often and how long', () => {
@@ -44,7 +44,7 @@ describe('add medicine sig', () => {
 });
 
 describe('did you mean (MDV-P1-088)', () => {
-  const row = (id: string, generic: string, strength: string, brands: string[] = []): Medicine => ({ id, generic, strength, form: 'Tablet', brands });
+  const row = (id: string, generic: string, strength: string, brands: string[] = []): Medicine => ({ id, generic, strength, form: 'Tablet', brands, regClass: 'None' });
   const rows = [
     row('1', 'Amlodipine', '5 mg'), row('2', 'Amoxicillin and clavulanate', '375 mg', ['Augmentin']), row('3', 'Amoxicillin and clavulanate', '625 mg', ['Augmentin']),
     row('4', 'Aspirin', '75 mg', ['Synthetic Augur']), row('5', 'Metformin', '500 mg'),

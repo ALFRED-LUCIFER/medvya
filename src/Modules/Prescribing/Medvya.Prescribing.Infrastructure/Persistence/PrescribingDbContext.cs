@@ -47,7 +47,11 @@ public sealed class PrescribingDbContext(DbContextOptions<PrescribingDbContext> 
             e.Property(x => x.Atc).HasMaxLength(7);
             e.Property(x => x.DefaultSig).HasMaxLength(200);
             e.Property(x => x.Source).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.RegisterCode).HasMaxLength(40);
+            e.Property(x => x.RegisterRelease).HasMaxLength(40);
             e.HasIndex(x => new { x.Country, x.Generic });
+            // MDV-P5-064: one row per register code and country, so a register release is applied by code (idempotent) and a retired code is found.
+            e.HasIndex(x => new { x.Country, x.RegisterCode }).IsUnique().HasFilter("\"RegisterCode\" IS NOT NULL");
             // The same medicine once per clinic (the service also compares ignoring case); the starter list has no tenant, so its rows never collide.
             e.HasIndex(x => new { x.TenantId, x.Country, x.Generic, x.Strength, x.Form }).IsUnique();
             e.HasQueryFilter(x => x.TenantId == null || x.TenantId == CurrentTenantId);

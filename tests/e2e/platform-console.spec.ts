@@ -105,10 +105,45 @@ test('the audit log reads in Arabic, right to left, with actions in words', asyn
   expect(await axe(page)).toEqual([]);
 });
 
-test('a reviewer sees approvals but no team or audit pages', async ({ page }) => {
+test('a reviewer sees approvals and medicines but no team or audit pages', async ({ page }) => {
   await page.route('**/v1/me', r => r.fulfill({ json: owner({ role: 'Reviewer', keyVerified: true, hasKey: true, canRegister: false }) }));
   await page.goto('/');
-  await expect(page.getByRole('navigation').getByRole('link')).toHaveText(['Overview', 'Approvals']);
+  await expect(page.getByRole('navigation').getByRole('link')).toHaveText(['Overview', 'Approvals', 'Medicines']);
+});
+
+// MDV-P5-064: the Medvya-wide medicine list. The server's rules (roles, reason, the narrow login, clinics' view) are tested on PostgreSQL in
+// SharedFormularyTests.cs; here the page says Not verified in words, offers changes to owner and operations only, and sends the class with its reason.
+const medicines = [
+  { id: 'med-1', country: 'IN', generic: 'Metformin', strength: '5 mg', form: 'Tablet', brands: ['Synthbrand'], nationalCode: null, regClass: 'NotVerified', atc: 'A10BA02', defaultSig: null, source: 'Medvya', registerCode: null, registerRelease: null, active: true },
+  { id: 'med-2', country: 'IN', generic: 'Tramadol', strength: '50 mg', form: 'Capsule', brands: [], nationalCode: null, regClass: 'ScheduleH1', atc: 'N02AX02', defaultSig: null, source: 'Starter', registerCode: null, registerRelease: null, active: true },
+];
+for (const locale of ['en', 'ar'] as const)
+  test(`${locale}: an owner sets the class of a medicine nobody verified, with a reason; axe is clean`, async ({ page }) => {
+    await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
+    await page.route('**/v1/me', r => r.fulfill({ json: owner({ keyVerified: true, hasKey: true, canRegister: false }) }));
+    await page.route('**/v1/medicines?*', r => r.fulfill({ json: medicines }));
+    let sent: Record<string, unknown> = {};
+    await page.route('**/v1/medicines/med-1/class', r => { sent = r.request().postDataJSON(); return r.fulfill({ json: { ...medicines[0], regClass: 'ScheduleH' } }); });
+    await page.goto('/medicines');
+    const table = page.getByRole('region', { name: t(locale, 'platform.medicines.table') });
+    await expect(table.getByRole('row').nth(1)).toContainText(t(locale, 'formulary.class.NotVerified')); // in words, never colour alone
+    expect(await axe(page)).toEqual([]);
+
+    await table.getByRole('button', { name: t(locale, 'platform.medicines.setClassFor', { name: 'Metformin 5 mg' }) }).click();
+    await page.getByRole('combobox', { name: t(locale, 'formulary.field.regClass') }).click();
+    await page.getByRole('option', { name: t(locale, 'formulary.class.ScheduleH'), exact: true }).click();
+    await page.getByLabel(t(locale, 'platform.reason.label')).fill('Advisor confirmed Schedule H (synthetic)');
+    expect(await axe(page)).toEqual([]);
+    await page.locator('[data-slot=sticky-action-bar]').getByRole('button', { name: t(locale, 'platform.medicines.setClass') }).click();
+    await expect.poll(() => sent).toEqual({ regClass: 'ScheduleH', reason: 'Advisor confirmed Schedule H (synthetic)' });
+  });
+
+test('support reads the medicine list but is offered no change', async ({ page }) => {
+  await page.route('**/v1/me', r => r.fulfill({ json: owner({ role: 'Support', keyVerified: true, hasKey: true, canRegister: false }) }));
+  await page.route('**/v1/medicines?*', r => r.fulfill({ json: medicines }));
+  await page.goto('/medicines');
+  await expect(page.getByRole('rowheader').first()).toContainText('Metformin 5 mg');
+  await expect(page.getByRole('button', { name: /Set class|Correct|Deactivate|Add medicine/ })).toHaveCount(0);
 });
 
 // MDV-P2-059 AC4: on a phone the sign-in is exactly as wide as the screen, in both directions, and every control is a 44 px target.
@@ -127,7 +162,7 @@ for (const locale of ['en', 'ar']) {
 }
 
 // MDV-P2-059 AC1 and AC6: every console page has one h1, in the shared 44 px header row, at the same height, with content from 130 px.
-const consolePages = ['/', '/approvals', '/team', '/audit'];
+const consolePages = ['/', '/approvals', '/medicines', '/team', '/audit'];
 for (const locale of ['en', 'ar']) {
   test(`every ${locale} console page puts its one title in the same 44 px row`, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
@@ -136,6 +171,7 @@ for (const locale of ['en', 'ar']) {
     await page.route('**/v1/team', r => r.fulfill({ json: team }));
     await page.route('**/v1/audit**', r => r.fulfill({ json: audit }));
     await page.route('**/v1/organisations/?filter=*', r => r.fulfill({ json: [] }));
+    await page.route('**/v1/medicines?*', r => r.fulfill({ json: medicines }));
     const tops = new Set<number>();
     for (const path of consolePages) {
       await page.goto(path);
@@ -155,6 +191,7 @@ for (const locale of ['en', 'ar']) {
 const stackedTables = [
   { path: '/team', label: { en: 'Medvya team access', ar: 'وصول فريق Medvya' }, first: 'Ops Admin (synthetic)', fields: { en: ['Role', 'Access ends'], ar: ['الدور', 'ينتهي الوصول'] } },
   { path: '/audit', label: { en: 'Platform audit log', ar: 'سجل تدقيق المنصة' }, first: '2026', fields: { en: ['What', 'Reason'], ar: ['ماذا', 'السبب'] } },
+  { path: '/medicines', label: { en: 'Medicine list', ar: 'قائمة الأدوية' }, first: 'Metformin', fields: { en: ['Class', 'Source'], ar: ['الفئة', 'المصدر'] } },
 ] as const;
 for (const locale of ['en', 'ar'] as const) {
   test(`at 375 px the ${locale} team and audit tables are stacked and labelled, and nothing scrolls sideways`, async ({ page }) => {
@@ -163,6 +200,7 @@ for (const locale of ['en', 'ar'] as const) {
     await page.route('**/v1/me', r => r.fulfill({ json: owner({ keyVerified: true, hasKey: true, canRegister: false }) }));
     await page.route('**/v1/team', r => r.fulfill({ json: team }));
     await page.route('**/v1/audit**', r => r.fulfill({ json: audit }));
+    await page.route('**/v1/medicines?*', r => r.fulfill({ json: medicines }));
     for (const t of stackedTables) {
       await page.goto(t.path);
       const region = page.getByRole('region', { name: t.label[locale] });
@@ -181,6 +219,7 @@ for (const locale of ['en', 'ar'] as const) {
 const barScreens = [
   { path: '/team', action: 'platform.team.invite', confirm: 'platform.team.sendInvite' },
   { path: '/audit', action: 'platform.audit.export', confirm: 'platform.audit.exportConfirm' },
+  { path: '/medicines', action: 'platform.medicines.add', confirm: 'platform.medicines.add' },
 ] as const;
 for (const locale of ['en', 'ar'])
   for (const [width, height] of [[1440, 900], [1024, 768]] as const)
@@ -191,6 +230,7 @@ for (const locale of ['en', 'ar'])
         await page.route('**/v1/me', r => r.fulfill({ json: owner({ keyVerified: true, hasKey: true, canRegister: false }) }));
         await page.route('**/v1/team', r => r.fulfill({ json: team }));
         await page.route('**/v1/audit**', r => r.fulfill({ json: audit }));
+        await page.route('**/v1/medicines?*', r => r.fulfill({ json: medicines }));
         const posts: string[] = [];
         page.on('request', r => { if (r.method() === 'POST') posts.push(r.url()); });
         await page.goto(s.path);

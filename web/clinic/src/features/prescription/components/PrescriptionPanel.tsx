@@ -148,6 +148,8 @@ export default function PrescriptionPanel(p: Props) {
                   <Button type="button" variant="outline" className="w-full justify-start" disabled={p.busy} onClick={() => p.onAddMedicine(m.id)}>
                     <Plus aria-hidden className="size-4" />{t('rx.add.medicine', { generic: m.generic, strength: m.strength, form: m.form })}
                   </Button>
+                  {/* MDV-P5-064: a class nobody confirmed is said in words before it is prescribed; the paper says it too. */}
+                  {m.regClass === 'NotVerified' && <p className="text-xs">{t('rx.classNotVerified')}</p>}
                 </li>
               ))}
             </ul>

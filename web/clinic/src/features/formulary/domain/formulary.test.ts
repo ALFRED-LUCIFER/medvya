@@ -5,8 +5,8 @@ const valid = { generic: ' Glimepiride ', strength: '2 mg', form: 'Tablet', bran
 
 describe('formulary rules', () => {
   it('offers only the classes of the country', () => {
-    expect(classesFor('IN')).toEqual(['None', 'ScheduleH', 'ScheduleH1', 'ScheduleX']);
-    expect(classesFor('AE')).toEqual(['None', 'Controlled']);
+    expect(classesFor('IN')).toEqual(['None', 'ScheduleH', 'ScheduleH1', 'ScheduleX', 'NotVerified']);
+    expect(classesFor('AE')).toEqual(['None', 'Controlled', 'NotVerified']);
     expect(classesFor(null)).toEqual(['None']);
   });
 

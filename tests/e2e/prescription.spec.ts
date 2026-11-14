@@ -1,4 +1,6 @@
 import { createRequire } from 'node:module';
+import { t } from './support/desk';
+import { expectStacked } from './support/stacked';
 import { expect, test, type Page } from '@playwright/test';
 import { authorised, clearChecks, line, mockPrescription, paracetamolForWeight, patientAlert, penicillinAlert, stopLine } from './support/prescription';
 import { mockNote } from './support/note';
@@ -304,4 +306,17 @@ test('back from the step-up with the note still loading, Authorise is focused on
   const rx = page.getByRole('region', { name: 'Prescription' });
   await expect(rx.getByRole('button', { name: 'Authorise prescription' })).toBeFocused();
   await expect(rx.getByRole('status').filter({ hasText: 'Identity confirmed. Press Authorise prescription.' })).toBeVisible();
+});
+
+// MDV-P2-054 AC5: at 375 px the medicine lines are stacked: the medicine first and bold, then every dose field under its own name, so no
+// dose field is out of view.
+test.describe('at 375 px', () => {
+  test.use({ viewport: { width: 375, height: 812 } });
+  for (const locale of ['en', 'ar'])
+    test(`the medicine lines are stacked with every dose field labelled and nothing scrolling sideways (${locale})`, async ({ page }) => {
+      await mockPrescription(page, { locale, lines: [line('rx-1', 'Metformin', { dose: '1', doseUnit: 'tablet', route: 'oral', frequency: 'BD' })] });
+      await page.goto('/consult/e-1');
+      const fields = ['dose', 'doseUnit', 'route', 'frequency', 'timing', 'durationDays', 'quantity', 'instructions'].map(f => t(locale, `rx.field.${f}`));
+      await expectStacked(page, page.getByRole('region', { name: t(locale, 'rx.listLabel') }), fields);
+    });
 });

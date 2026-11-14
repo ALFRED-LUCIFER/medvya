@@ -81,8 +81,6 @@ function Part({ title, children }: { title: string; children: ReactNode }) {
   return <section className="flex flex-col gap-1"><h4 className="font-bold">{title}</h4>{children}</section>;
 }
 
-const Empty = ({ text }: { text: string }) => <p className="text-muted-foreground">{text}</p>;
-
 /** The chart at a glance while writing: allergies, active medicines and problems, and the latest results. */
 function ChartView({ timeZone, ...state }: ChartState) {
   const { t, formatDate } = useI18n();
@@ -97,15 +95,15 @@ function ChartView({ timeZone, ...state }: ChartState) {
             <div><AllergyBlock allergy={bannerAllergyState(chart, s => t(`patient360.allergyStatus.${s}`))} /></div>
           </Part>
           <Part title={t('studio.chart.medicines')}>
-            {medicines.length === 0 ? <Empty text={t('studio.chart.noneActive')} />
+            {medicines.length === 0 ? <p className="text-muted-foreground">{t('studio.chart.noneActive')}</p>
               : <ul className="list-disc ps-5">{medicines.map((x, i) => <li key={i}>{x.name}{x.dose && <span className="ms-1">{ltr(x.dose)}</span>}</li>)}</ul>}
           </Part>
           <Part title={t('studio.chart.problems')}>
-            {problems.length === 0 ? <Empty text={t('studio.chart.noneActive')} />
+            {problems.length === 0 ? <p className="text-muted-foreground">{t('studio.chart.noneActive')}</p>
               : <ul className="list-disc ps-5">{problems.map((x, i) => <li key={i}>{x.description}{x.icd10Code && <span className="ms-1 text-muted-foreground">{ltr(x.icd10Code)}</span>}</li>)}</ul>}
           </Part>
           <Part title={t('studio.chart.results')}>
-            {results.length === 0 ? <Empty text={t('patient360.labs.empty')} />
+            {results.length === 0 ? <p className="text-muted-foreground">{t('patient360.labs.empty')}</p>
               : <ul className="flex flex-col divide-y">{results.map(({ lab: l }) => (
                   <li key={l.code} className="flex flex-wrap items-baseline justify-between gap-x-3 py-1">
                     <span>{t(`patient360.code.${l.code}`)}<time dateTime={l.takenAt} className="ms-1 text-muted-foreground">{formatDate(new Date(l.takenAt), timeZone)}</time></span>

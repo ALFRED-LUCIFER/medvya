@@ -137,7 +137,8 @@ function SectionBar({ sections, ticks, title, chart }: { sections: readonly Anch
   };
   return (
     <nav aria-label={t('studio.nav')} data-pinned="top" className="flex items-center gap-2 sticky top-[var(--patient-strip-bottom,0px)] z-10 -mx-1 bg-background px-1 py-1 [@media(max-height:480px)]:static">
-      <ol className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto pb-1 lg:flex-wrap lg:overflow-visible">
+      {/* One row that scrolls sideways at every width (MDV-P1-094): a wrapped second row would cover the panel's top and add pinned height. */}
+      <ol className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto pb-1">
         {sections.map((id, i) => {
           const tick = id === 'prescription' || !ticks ? null : ticks[id];
           return (
@@ -160,7 +161,7 @@ function SectionBar({ sections, ticks, title, chart }: { sections: readonly Anch
 /** One section of the page: a heading the section bar focuses, then its fields; no card around it (MDV-P1-094), so the note reads as one page. */
 function Numbered({ id, title, children }: { id: Anchor; title: (id: Anchor) => string; children: ReactNode }) {
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex min-w-0 flex-col gap-3">
       <h3 id={heading(id)} tabIndex={-1} className="scroll-mt-20 font-extrabold focus:outline-none focus-visible:outline-2 focus-visible:outline-ring">
         {title(id)}
       </h3>

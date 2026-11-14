@@ -52,7 +52,8 @@ export default function ChartPanel(p: ChartPanelProps) {
     </Sheet>
   );
   return (
-    <aside aria-label={t('studio.panel.label')} className="flex w-full max-w-panel-chart flex-col gap-3 rounded-xl border bg-card p-3 wide:sticky wide:top-[calc(var(--patient-strip-bottom,0px)+4rem)] [@media(max-height:480px)]:static">
+    // Capped to the space between the section bar (4rem) and the footer with its gap (5rem): it scrolls inside, never under pinned chrome.
+    <aside aria-label={t('studio.panel.label')} className="flex w-full max-w-panel-chart flex-col gap-3 rounded-xl border bg-card p-3 wide:sticky wide:top-[calc(var(--patient-strip-bottom,0px)+4rem)] wide:max-h-[calc(100dvh-var(--patient-strip-bottom,0px)-9rem)] wide:overflow-y-auto [@media(max-height:480px)]:static">
       {tabs}
     </aside>
   );

@@ -2,10 +2,10 @@ import type { UseFormRegisterReturn } from 'react-hook-form';
 import { useI18n } from '@medvya/i18n';
 import { Card } from '@medvya/ui';
 import type { ChecklistItem } from '../domain/checklist';
-import type { NoteSignature, NoteTemplate, RecordingConsent, SavePhase, SignPatient } from '../domain/note';
+import { isBlank, notesSection, type NoteSignature, type NoteTemplate, type RecordingConsent, type SavePhase, type SignPatient } from '../domain/note';
 import type { StepUpReturn } from '../domain/stepUp';
 import NoteAssist, { type Assist } from './NoteAssist';
-import { NoteSectionField, SaveState, SignedBanner, TemplatePicker, type SectionSource, type StructuredProps } from './NoteParts';
+import { NoteSectionField, SaveState, SectionField, SignedBanner, TemplatePicker, type SectionSource, type StructuredProps } from './NoteParts';
 import { SignChecklist, SignedLine, SignNote, type SignProblem } from './NoteSign';
 import RecordingConsentChoice from './RecordingConsentChoice';
 
@@ -52,6 +52,8 @@ export default function NoteEditor(p: NoteEditorProps) {
       {p.assist && <NoteAssist assist={p.assist} template={p.template} timeZone={p.timeZone} />}
       <div className="flex flex-col gap-4">
         {p.template.sections.map(s => <NoteSectionField key={s.id} section={s} register={p.register} readOnly={p.readOnly} answers={p.answers} onAnswers={p.onAnswers} source={s.id === 'chiefComplaint' ? p.complaintSource : null} />)}
+        {/* MDV-P2-067: the visit's free notes; the guided steps have no bottom bar, so they are the last field. */}
+        {(!p.readOnly || !isBlank(p.answers(notesSection.id))) && <SectionField section={notesSection} register={p.register} readOnly={p.readOnly} />}
       </div>
       {!p.readOnly && (
         <>

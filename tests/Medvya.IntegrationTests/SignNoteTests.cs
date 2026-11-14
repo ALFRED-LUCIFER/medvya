@@ -42,10 +42,17 @@ public sealed class SignNoteTests(PostgresFixture sql) : IClassFixture<PostgresF
                 PatientEndpointTests.SignInFromHeaders(s, h.Tenant);
                 s.AddSingleton<TimeProvider>(h.Clock);
             }));
-        var visit = await h.BookAsync(10, patient: h.Patient);
+        await StartAsync(10, h.Patient);
+    }
+
+    /// <summary>Starts the doctor's consultation for a new visit and, unless told not to, confirms identity with the patient (MDV-P1-091), which signing needs.</summary>
+    async Task StartAsync(int slot, Guid patient, bool confirmIdentity = true)
+    {
+        var visit = await h.BookAsync(slot, patient: patient);
         await h.FrontDesk(h.Reception).CheckInAsync(visit.Id, new CheckIn());
-        using var started = await Client(h.Doctor).PostAsJsonAsync(U("/v1/encounters"), new { appointmentId = visit.Id });
-        encounter = (await Json(started)).GetProperty("id").GetGuid();
+        using (var started = await Client(h.Doctor).PostAsJsonAsync(U("/v1/encounters"), new { appointmentId = visit.Id })) encounter = (await Json(started)).GetProperty("id").GetGuid();
+        if (confirmIdentity)
+            using (var confirmed = await Client(h.Doctor).PostAsync(U($"/v1/encounters/{encounter}/identity-confirmation"), null)) Assert.True(confirmed.IsSuccessStatusCode);
     }
 
     public async Task DisposeAsync()
@@ -74,14 +81,51 @@ public sealed class SignNoteTests(PostgresFixture sql) : IClassFixture<PostgresF
     {
         // The second patient has nothing on the chart: no allergy, no "no known allergies". One open consultation at a time.
         using (await Client(h.Doctor).PostAsync(U($"/v1/encounters/{encounter}/end"), null)) { }
-        var visit = await h.BookAsync(11, patient: h.SecondPatient);
-        await h.FrontDesk(h.Reception).CheckInAsync(visit.Id, new CheckIn());
-        using (var started = await Client(h.Doctor).PostAsJsonAsync(U("/v1/encounters"), new { appointmentId = visit.Id })) encounter = (await Json(started)).GetProperty("id").GetGuid();
+        await StartAsync(11, h.SecondPatient);
         var version = await SaveDraftAsync(new { chiefComplaint = "Thirst (synthetic)", assessment = "Review", plan = "Rest" });
         using var refused = await SignAsync(h.Doctor, version, 1);
         Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
         Assert.Equal("not_recorded", (await Json(refused)).GetProperty("errors").GetProperty("allergies")[0].GetString());
         Assert.Equal(0, await SignedRowsAsync());
+    }
+
+    // MDV-P1-109. SAFETY mutation check: drop the IdentityConfirmedAt gate in ConsultNoteService.SignAsync and this fails.
+    [Fact]
+    public async Task SigningNeedsIdentityConfirmedWithThePatient()
+    {
+        using (await Client(h.Doctor).PostAsync(U($"/v1/encounters/{encounter}/end"), null)) { }
+        await StartAsync(11, h.Patient, confirmIdentity: false);
+        var version = await SaveDraftAsync(Complete);
+        using (var refused = await SignAsync(h.Doctor, version))
+        {
+            Assert.Equal(HttpStatusCode.Conflict, refused.StatusCode);
+            Assert.Equal("identity_not_confirmed", (await Json(refused)).GetProperty("code").GetString());
+        }
+        Assert.Equal((NoteStatus.Draft, 0), ((await NoteAsync()).Status, await SignedRowsAsync()));
+        Assert.DoesNotContain(await OutboxAsync(), e => e.Type == "NoteSigned.v1");
+
+        await using (var audit = sql.Audit(h.Tenant))
+        {
+            var row = await audit.Events.SingleAsync(e => e.Action == "note.sign");
+            Assert.Equal((AuditOutcome.Rejected, (Guid?)encounter, "identity_not_confirmed", (Guid?)h.Doctor), (row.Outcome, row.ResourceId, row.Detail, row.ActorUserId));
+            var json = JsonSerializer.Serialize(row);
+            foreach (var phi in new[] { "Meera", "1972", "cough", "Synthetic viral cold" }) Assert.DoesNotContain(phi, json, StringComparison.OrdinalIgnoreCase);
+        }
+
+        using (var confirmed = await Client(h.Doctor).PostAsync(U($"/v1/encounters/{encounter}/identity-confirmation"), null)) Assert.True(confirmed.IsSuccessStatusCode);
+        using (var signed = await SignAsync(h.Doctor, version)) Assert.True(signed.IsSuccessStatusCode, await signed.Content.ReadAsStringAsync());
+        Assert.Equal((NoteStatus.Signed, 1), ((await NoteAsync()).Status, await SignedRowsAsync()));
+    }
+
+    // MDV-P1-109: an addendum amends a note already signed; the identity rule is the note's signature only, so an addendum never asks for it.
+    [Fact]
+    public async Task AnAddendumDoesNotNeedTheIdentityConfirmation()
+    {
+        using (var signed = await SignAsync(h.Doctor, await SaveDraftAsync(Complete))) Assert.True(signed.IsSuccessStatusCode, await signed.Content.ReadAsStringAsync());
+        await using (var db = sql.Encounters(h.Tenant)) // not possible through the API (set once, never cleared): only to show the addendum does not read it
+            await db.Encounters.Where(e => e.Id == encounter).ExecuteUpdateAsync(x => x.SetProperty(e => e.IdentityConfirmedAt, (DateTimeOffset?)null).SetProperty(e => e.IdentityConfirmedBy, (Guid?)null));
+        using var addendum = await AddendumAsync(h.Doctor, "Synthetic addition", "Clarify");
+        Assert.True(addendum.IsSuccessStatusCode, await addendum.Content.ReadAsStringAsync());
     }
 
     /// <summary>Saves the draft with the doctor's record of the recording consent (MDV-P2-044); "Declined" is the manual note path of today.</summary>

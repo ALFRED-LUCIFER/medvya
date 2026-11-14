@@ -621,6 +621,36 @@ const axeViolations = async (page: Page) => {
       .map(v => `${v.id} (${v.nodes.length})`));
 };
 
+// MDV-P1-109 AC5: a page that still shows identity as confirmed (stale, or a client that skipped the checklist) gets the server's refusal in words,
+// the banner offers "Confirmed with the patient" again, and once pressed the note signs. Axe clean with the refusal on screen, in both languages.
+for (const locale of ['en', 'ar'])
+  test(`sign: the server refusing because identity is not confirmed says so and offers the confirm action (${locale})`, async ({ page }) => {
+    const ar = locale === 'ar';
+    const mock = await open(page, { version: 1, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' }, recordingConsent: 'Declined' }, locale);
+    mock.reauthed = true;
+    const banner = page.getByRole('region', { name: ar ? 'هوية المريض' : 'Patient identity' });
+    const region = page.getByRole('region', { name: ar ? 'ملاحظة الاستشارة' : 'Consultation note' });
+    const confirm = banner.getByRole('button', { name: ar ? 'تم التأكيد مع المريض' : 'Confirmed with the patient' });
+    await expect(banner).toContainText(ar ? 'تم تأكيد الهوية مع المريض' : 'Identity confirmed with the patient');
+    await expect(confirm).toHaveCount(0);
+    mock.identityConfirmedAt = null; // the server holds no confirmation; this page does not know
+    await region.getByRole('button', { name: ar ? 'توقيع الملاحظة' : 'Sign note' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: ar ? 'التوقيع بصفتي Dr Asha Raman (synthetic)' : 'Sign as Dr Asha Raman (synthetic)' }).click();
+    await expect(region.getByRole('alert')).toHaveText(ar
+      ? 'لم تُوقَّع الملاحظة: لم يتم تأكيد الهوية مع المريض. تحقّق من اسمه وتاريخ ميلاده معه، ثم اضغط "تم التأكيد مع المريض" أعلى الصفحة، ثم وقّع.'
+      : 'The note was not signed: identity is not confirmed with the patient. Check their name and date of birth with them, press "Confirmed with the patient" at the top of the page, then sign.');
+    await expect(confirm).toBeVisible();
+    expect(mock.note.status).toBe('Draft');
+    expect(await axeViolations(page)).toEqual([]);
+
+    await confirm.click();
+    await expect(region.getByRole('alert')).toHaveCount(0); // confirmed: the refusal is not said any more
+    expect(mock.identityConfirms).toBe(1);
+    await region.getByRole('button', { name: ar ? 'توقيع الملاحظة' : 'Sign note' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: ar ? 'التوقيع بصفتي Dr Asha Raman (synthetic)' : 'Sign as Dr Asha Raman (synthetic)' }).click();
+    await expect.poll(() => mock.note.status).toBe('Signed');
+  });
+
 // MDV-P1-089 AC7: saving, saved and not saved are one polite status (the same element, so each change is read out), axe clean in both languages.
 for (const locale of ['en', 'ar'])
   test(`the save status is one polite status element, axe clean while saved and while not saved (${locale})`, async ({ page }) => {

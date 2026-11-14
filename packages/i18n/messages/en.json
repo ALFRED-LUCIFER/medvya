@@ -3948,6 +3948,7 @@
   "signChecklist.remaining.many": "{count} items still need your review before signing",
   "signChecklist.ready": "Everything reviewed. Ready to sign.",
   "noteSign.unreviewed": "The note was not signed: some checklist items still need your review.",
+  "noteSign.identity": "The note was not signed: identity is not confirmed with the patient. Check their name and date of birth with them, press \"Confirmed with the patient\" at the top of the page, then sign.",
   "noteSign.finding": "An abnormal finding has no note yet. Describe it before you sign.",
   "studio.view.label": "Consultation view",
   "studio.view.page": "One page",

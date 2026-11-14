@@ -43,6 +43,9 @@ public sealed class NotePrintRecordTests(PostgresFixture sql) : IClassFixture<Po
         using var started = await Client(h.Doctor).PostAsJsonAsync(U("/v1/encounters"), new { appointmentId = visit.Id });
         Assert.True(started.IsSuccessStatusCode, await started.Content.ReadAsStringAsync());
         (encounter, appointment) = ((await Json(started)).GetProperty("id").GetGuid(), visit.Id);
+        // Signing needs identity confirmed with the patient (MDV-P1-109).
+        using var confirmed = await Client(h.Doctor).PostAsync(U($"/v1/encounters/{encounter}/identity-confirmation"), null);
+        Assert.True(confirmed.IsSuccessStatusCode);
     }
 
     public async Task DisposeAsync()

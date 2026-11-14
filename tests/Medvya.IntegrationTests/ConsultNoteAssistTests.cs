@@ -65,7 +65,10 @@ public sealed class ConsultNoteAssistTests(PostgresFixture sql) : IClassFixture<
         await h.FrontDesk(h.Reception).CheckInAsync(visit.Id, new CheckIn());
         using var started = await Client(h.Doctor).PostAsJsonAsync(U("/v1/encounters"), new { appointmentId = visit.Id });
         Assert.True(started.IsSuccessStatusCode, await started.Content.ReadAsStringAsync());
-        return ((await Json(started)).GetProperty("id").GetGuid(), visit.Id);
+        var id = (await Json(started)).GetProperty("id").GetGuid();
+        // Signing needs identity confirmed with the patient (MDV-P1-109).
+        using (var confirmed = await Client(h.Doctor).PostAsync(U($"/v1/encounters/{id}/identity-confirmation"), null)) Assert.True(confirmed.IsSuccessStatusCode);
+        return (id, visit.Id);
     }
 
     async Task SignAsync(Guid id, string complaint)

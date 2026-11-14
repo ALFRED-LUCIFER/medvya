@@ -105,13 +105,13 @@ export function staleVersion(status: number | undefined, body: unknown): number 
 /** The templates a doctor can switch to: their choice, plus the one this note is already on. */
 export const switchChoices = (catalog: NoteCatalog, current: string) => catalog.templates.filter(t => catalog.mine.includes(t.key) || t.key === current);
 
-/** Why a sign call was refused, from the status and problem body: what the doctor sees or does next (MDV-P2-012). Unreviewed: a checklist gate the server holds (MDV-P2-044). */
-export type SignFailure = { kind: 'reauth' | 'stale' | 'signed' | 'denied' | 'unreviewed' | 'failed' } | { kind: 'blank'; sections: string[] };
+/** Why a sign call was refused, from the status and problem body: what the doctor sees or does next (MDV-P2-012). Unreviewed: a checklist gate the server holds (MDV-P2-044); identity: no stored confirmation with the patient (MDV-P1-109). */
+export type SignFailure = { kind: 'reauth' | 'stale' | 'signed' | 'denied' | 'unreviewed' | 'identity' | 'failed' } | { kind: 'blank'; sections: string[] };
 
 export function signFailure(status: number | undefined, body: unknown): SignFailure {
   const b = (typeof body === 'object' && body !== null ? body : {}) as { code?: unknown; errors?: Record<string, string[]> };
   if (status === 403) return { kind: b.code === 'reauth_required' ? 'reauth' : 'denied' };
-  if (status === 409) return { kind: b.code === 'stale_note' ? 'stale' : b.code === 'note_signed' ? 'signed' : 'failed' };
+  if (status === 409) return { kind: b.code === 'stale_note' ? 'stale' : b.code === 'note_signed' ? 'signed' : b.code === 'identity_not_confirmed' ? 'identity' : 'failed' };
   const blank = Object.keys(b.errors ?? {}).filter(k => k.startsWith('sections.')).map(k => k.slice('sections.'.length));
   if (status === 400 && blank.length > 0) return { kind: 'blank', sections: blank };
   return status === 400 && (b.errors?.recordingConsent || b.errors?.undecidedAi) ? { kind: 'unreviewed' } : { kind: 'failed' };

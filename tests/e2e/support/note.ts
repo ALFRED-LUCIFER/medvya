@@ -112,6 +112,7 @@ export async function mockNote(page: Page, seed: Partial<Note> = {}): Promise<No
     const next = mock.signNext;
     mock.signNext = null;
     if (!mock.reauthed) return problem(r, 403, { code: 'reauth_required' });
+    if (!mock.identityConfirmedAt) return problem(r, 409, { code: 'identity_not_confirmed' }); // the server's rule (MDV-P1-109, SignNoteTests)
     if (next === 'denied') return problem(r, 403, { code: 'no_care_relationship' });
     if (next === 'stale') return problem(r, 409, { code: 'stale_note', currentVersion: mock.note.version + 1 });
     if (next === 'blank') return problem(r, 400, { errors: { 'sections.plan': ['required'], 'sections.chiefComplaint': ['required'] } });

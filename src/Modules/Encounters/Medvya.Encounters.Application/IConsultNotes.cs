@@ -68,6 +68,12 @@ public sealed class NoteSignedException() : Exception("The note is signed.");
 /// <summary>Signing needs a re-authentication in the last 5 minutes (code reauth_required).</summary>
 public sealed class ReauthRequiredException() : Exception("Re-authentication is required to sign.");
 
+/// <summary>MDV-P1-109: the encounter has no stored "Confirmed with the patient" (code identity_not_confirmed). Nothing is signed.</summary>
+public sealed class IdentityNotConfirmedException(Guid encounterId) : Exception("Identity is not confirmed with the patient.")
+{
+    public Guid EncounterId { get; } = encounterId;
+}
+
 /// <summary>Field/code pairs only, never the entered text.</summary>
 public sealed class NoteValidationException(IReadOnlyList<(string Field, string Code)> errors)
     : Exception("Note input is invalid: " + string.Join(", ", errors.Select(e => $"{e.Field}:{e.Code}")))
@@ -116,6 +122,7 @@ public interface IConsultNotes
     /// <exception cref="ReauthRequiredException"/>
     /// <exception cref="NoteValidationException">A required section is blank (code <c>required</c> on <c>sections.&lt;id&gt;</c>) or an AI draft is undecided (<c>undecided</c> on <c>undecidedAi</c>).</exception>
     /// <exception cref="StaleNoteException"/>
+    /// <exception cref="IdentityNotConfirmedException">The doctor has not confirmed identity with the patient on this encounter (MDV-P1-091).</exception>
     Task<NoteView?> SignAsync(Guid encounterId, SignNote command, CancellationToken cancellationToken = default);
 
     /// <summary>

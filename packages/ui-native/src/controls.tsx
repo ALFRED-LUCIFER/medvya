@@ -1,13 +1,18 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { theme } from '@medvya/tokens';
 import type { ComponentProps } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, TextInput, useWindowDimensions, View, type TextInputProps } from 'react-native';
 import { useBrand } from './brand';
 import { Text } from './text';
 
 export type IconName = ComponentProps<typeof MaterialIcons>['name'];
-export function Icon({ name, size = 22, color = theme.color.ink600 }: { name: IconName; size?: number; color?: string }) {
-  return <MaterialIcons name={name} size={size} color={color} accessible={false} />;
+/** Icon size follows the system font size so icons grow with their text, capped lower than text (2×) so rows and targets keep their shape. */
+const ICON_SCALE_CAP = 1.5;
+/** `fixed` keeps the given size, for bars of fixed height such as the tab bar (iOS keeps tab icons fixed too). */
+export function Icon({ name, size = 22, color = theme.color.ink600, fixed }: { name: IconName; size?: number; color?: string; fixed?: boolean }) {
+  const { fontScale } = useWindowDimensions();
+  const scaled = fixed ? size : Math.round(size * Math.min(Math.max(fontScale, 1), ICON_SCALE_CAP));
+  return <MaterialIcons name={name} size={scaled} color={color} accessible={false} />;
 }
 
 type ButtonProps = { label: string; onPress?: () => void; variant?: 'primary' | 'secondary' | 'ghost' | 'inverse'; icon?: IconName; disabled?: boolean; busy?: boolean; hint?: string };

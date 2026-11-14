@@ -2559,7 +2559,6 @@
   "mobile.home.labLine": "طُلب اليوم · أحضر رمز QR من السجلات",
   "mobile.home.medicine": "تغيّرت جرعة {name}",
   "mobile.home.emergency": "في الطوارئ اتصل بـ {number}",
-  "mobile.visits.title": "الزيارات",
   "mobile.visits.book": "احجز زيارة",
   "mobile.visits.upcoming": "القادمة",
   "mobile.visits.past": "السابقة",

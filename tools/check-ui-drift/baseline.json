@@ -7,7 +7,7 @@
     "web/clinic/src/features/session/components/AuthFrame.tsx": 5,
     "web/clinic/src/features/session/components/FacilityPicker.tsx": 1,
     "web/clinic/src/features/shell/components/AppShell.tsx": 1,
-    "web/clinic/src/features/today/components/DoctorTodayPage.tsx": 8,
+    "web/clinic/src/features/today/components/DoctorTodayPage.tsx": 4,
     "web/platform-admin/src/features/shell/components/ConsoleShell.tsx": 2
   },
   "rawHexLibrary": {},

@@ -34,6 +34,8 @@ import ConsultEntry from '../features/nurse-intake/components/ConsultEntry';
 import { useIntakeController } from '../features/nurse-intake/hooks/useIntakeController';
 import { useNoteTemplatesController } from '../features/encounters/hooks/useNoteTemplatesController';
 import { useAddendumController, useNotePrintController } from '../features/encounters/hooks/useSignedNoteController';
+import OpenOnTablet from '../features/shell/components/OpenOnTablet';
+import { usePhone } from '../features/shell/hooks/usePhone';
 
 /** Composition only: one consultation (MDV-P2-001) by its id in the address, with its note (MDV-P2-009); the server checks clinical access on every call. */
 type Props = { boardPath: string; online: boolean; canOrder: boolean; canReconcile: boolean; canSign: boolean; userId: string };
@@ -45,6 +47,7 @@ export default function ConsultRoute({ boardPath, ...rest }: Props) {
 
 function Consult({ encounterId, boardPath, online, canOrder, canReconcile, canSign, userId }: Props & { encounterId: string }) {
   const consult = useConsultController(encounterId);
+  const phone = usePhone();
   // One controller for both views (MDV-P2-041): switching keeps the form, the autosave and every typed word.
   const note = { ...useNoteController(encounterId, canSign, consult.banner?.timeZone, consult.banner), timeZone: consult.banner?.timeZone,
     patient: consult.banner && { name: consult.banner.patient.fullName, mrn: consult.banner.patient.mrn, dateOfBirth: consult.banner.patient.dateOfBirth } };
@@ -52,20 +55,27 @@ function Consult({ encounterId, boardPath, online, canOrder, canReconcile, canSi
   const patient = consult.banner && { ...consult.banner.patient, allergies: consult.banner.allergies };
   const plan = patient && <Plan encounterId={encounterId} ended={ended} online={online} canOrder={canOrder} canReconcile={canReconcile} patient={patient} />;
   // Vitals, weight and allergies by the doctor (MDV audit P0-2): in the one page's Vitals section, above the note in the guided steps.
-  const entry = (titled: boolean) => consult.banner && !ended
+  const entry = (titled: boolean) => consult.banner && !ended && !phone
     && <Entry appointmentId={consult.banner.encounter.appointmentId} online={online} onChanged={consult.onChartChanged} titled={titled} />;
+  // The phone rule (MDV-P1-098): under 768 px the draft note (Review and sign with it), the plan, the prescription and orders are not written;
+  // a signed note stays readable and its addendum (NoteHistory) can still be written and signed. The server's rules are unchanged.
+  const phoneGate = <OpenOnTablet patientName={consult.banner?.patient.fullName} />;
+  const draftOnPhone = phone && !note.readOnly;
   return (
     <div className="flex flex-col gap-4">
       <ConsultPage {...consult} boardPath={boardPath} canReconcile={canReconcile}
         canConfirmIdentity={canSign && consult.banner?.encounter.leadClinicianId === userId}>
-        {consult.view === 'page' ? <ConsultStudio {...note} panel={consult.panel} onPanel={consult.onPanel} chart={consult.chart} plan={plan} entry={entry(false)}
-          finish={!ended && <EndConsultation ending={consult.ending} onEnd={consult.onEnd} />} /> : <>{entry(true)}<NoteEditor {...note} /></>}
+        {draftOnPhone ? phoneGate
+          : consult.view === 'page' ? <ConsultStudio {...note} panel={consult.panel} onPanel={consult.onPanel} chart={consult.chart} plan={phone ? null : plan} entry={entry(false)}
+            finish={!ended && !phone && <EndConsultation ending={consult.ending} onEnd={consult.onEnd} />} /> : <>{entry(true)}<NoteEditor {...note} /></>}
         <NoteHistory {...useAddendumController(encounterId, canSign)} timeZone={consult.banner?.timeZone} printPath={`/consult/${encounterId}/note/print`} />
         <NoteTemplateChoice {...useNoteTemplatesController()} />
       </ConsultPage>
-      {patient && canOrder && <Prescription encounterId={encounterId} ended={ended} patient={patient} />}
-      {consult.banner && canOrder && <Orders encounterId={encounterId} ended={ended} />}
-      {consult.banner && canOrder && <Referrals patientId={consult.banner.encounter.patientId} encounterId={encounterId} ended={ended} />}
+      {phone ? canOrder && !draftOnPhone && phoneGate : <>
+        {patient && canOrder && <Prescription encounterId={encounterId} ended={ended} patient={patient} />}
+        {consult.banner && canOrder && <Orders encounterId={encounterId} ended={ended} />}
+        {consult.banner && canOrder && <Referrals patientId={consult.banner.encounter.patientId} encounterId={encounterId} ended={ended} />}
+      </>}
     </div>
   );
 }

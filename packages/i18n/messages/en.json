@@ -59,6 +59,7 @@
   "state.notFound.title": "Page not found",
   "state.notFound.body": "The link may be old. Nothing has been changed.",
   "state.notFound.cta": "Go to my start page",
+  "phoneRule.message": "Open this on a tablet or computer.",
   "denied.title": "Screen not available",
   "denied.body": "Your role does not include this screen. Ask your practice admin if you expected access.",
   "state.offline.title": "You are offline",

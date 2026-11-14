@@ -23,6 +23,7 @@ import { useShellController } from '../features/shell/hooks/useShellController';
 import GlobalSearchRoute from './GlobalSearchRoute';
 import NotificationsRoute from './NotificationsRoute';
 import ScheduleRoute from './ScheduleRoute';
+import TabletOnly from './TabletOnly';
 
 // Not on the schedule's first render (MDV-P1-023, 2.5 s budget): the component gallery, the front desk and the nurse screens load when opened.
 const FrontDeskRoute = lazy(() => import('./FrontDeskRoute'));
@@ -163,11 +164,12 @@ export default function App({ locale, onLocaleChange }: Props) {
                 canConsult={active.capabilities.Patient360Chart === 'Full'} steps={{ nurse: active.flags.includes('clinical.nurse-intake'), billing: active.flags.includes('billing.invoices') }}
                 intakePath={nursePath && active.capabilities.VitalsAllergiesEntry === 'Full' ? (id: string) => `${nursePath}/${id}` : null} />
             : i.id === 'nurse' ? <NurseQueueRoute facilityId={active.facilityId} online={online} nursePath={i.path} />
-            : i.id === 'settings' ? <SettingsRoute facilityId={active.facilityId} country={active.country ?? null} userId={shell.session?.user.id ?? ''} />
+            : i.id === 'settings' ? <TabletOnly title={t('settings.title')}><SettingsRoute facilityId={active.facilityId} country={active.country ?? null} userId={shell.session?.user.id ?? ''} /></TabletOnly>
             // Patients opens the directory, its page (same rule, so searchPath is set); /patients stays the menu's address.
             : i.id === 'patients' && searchPath ? <Navigate to={searchPath} replace />
             : <ComingSoon title={t(`nav.${i.id}`)} phase={i.phase} />} />)}
-          {registerPath && <Route path={registerPath} element={registration} />}
+          {/* Quick registration works on a phone; the full form waits for a tablet or computer (MDV-P1-098). */}
+          {registerPath && <Route path={registerPath} element={<TabletOnly title={t('nav.register')} allowed={new URLSearchParams(location.search).get('mode') === 'quick'}>{registration}</TabletOnly>} />}
           {/* /today showed the board to nurses and coordinators before My day became the doctor's alone (MDV-P2-051): a bookmark still opens it. */}
           {!pathOf('today') && pathOf('frontDesk') && clinical && <Route path="/today" element={<Navigate to={pathOf('frontDesk')!} replace />} />}
           {leavePath && <Route path={leavePath} element={<AdjustmentsRoute facilityId={active.facilityId} canConfigure={active.capabilities.StaffRolesIntegrations === 'Config'} userId={shell.session?.user.id ?? ''} schedulePath={pathOf('schedule')!} boardPath={pathOf('frontDesk')} />} />}
@@ -222,10 +224,10 @@ export default function App({ locale, onLocaleChange }: Props) {
           <Route path="/admin/displays" element={<Navigate to="/settings?tab=displays" replace />} />
           {searchPath && <>
             <Route path={searchPath} element={<PatientDirectoryRoute registerPath={registerPath} mergePath={`${searchPath}/merge`} access={record} />} />
-            <Route path={`${searchPath}/merge/:requestId?`} element={<MergeReviewRoute can={{ request: active.capabilities.RegisterBookPatients === 'Full',
-              approve: active.capabilities.ClinicalNotes === 'Sign', undo: active.capabilities.StaffRolesIntegrations === 'Config' }} />} />
+            <Route path={`${searchPath}/merge/:requestId?`} element={<TabletOnly title={t('merge.title')}><MergeReviewRoute can={{ request: active.capabilities.RegisterBookPatients === 'Full',
+              approve: active.capabilities.ClinicalNotes === 'Sign', undo: active.capabilities.StaffRolesIntegrations === 'Config' }} /></TabletOnly>} />
             {active.capabilities.RegisterBookPatients === 'Full' &&
-              <Route path={`${searchPath}/:patientId/complete`} element={<CompleteRegistrationRoute country={country} />} />}
+              <Route path={`${searchPath}/:patientId/complete`} element={<TabletOnly title={t('registration.complete.title')}><CompleteRegistrationRoute country={country} /></TabletOnly>} />}
           </>}
           {/* My devices (MDV-P0-012): any signed-in member; the server only ever lists and ends the caller's own sessions. */}
           <Route path={devicesPath} element={<MyDevicesRoute timeZone={active.timeZone} />} />

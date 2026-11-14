@@ -1,9 +1,15 @@
-import type { FormEventHandler } from 'react';
+import type { FormEventHandler, KeyboardEvent } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
-import { CircleCheck, TriangleAlert } from 'lucide-react';
+import { CircleCheck, PencilLine, TriangleAlert } from 'lucide-react';
 import { ltr, useI18n } from '@medvya/i18n';
-import { Button, Input, Label, Textarea } from '@medvya/ui';
-import { isVitalsField, problemKey, undecided, vitalKinds, vitalUnits, weightChange, type IntakeForm, type IntakeProblem, type VitalKind, type VitalView } from '../domain/intake';
+import { Banner, Button, Input, Label, Textarea } from '@medvya/ui';
+import { confirmAll, isVitalsField, problemKey, undecided, vitalKinds, vitalUnits, weightChange, type CorrectionForm, type IntakeForm, type IntakeProblem, type VitalKind, type VitalView } from '../domain/intake';
+
+/** The nurse's correction after the handoff, before the doctor starts (MDV-P2-048); absent where it does not apply. */
+export type CorrectionProps = {
+  form: UseFormReturn<CorrectionForm>; correcting: VitalKind | null; saving: boolean;
+  onStart: (kind: VitalKind) => void; onCancel: () => void; onSave: () => void;
+};
 
 export type VitalsFormProps = {
   form: UseFormReturn<IntakeForm>; vitals: VitalView[]; timeZone: string; readOnly: boolean; online: boolean;
@@ -11,6 +17,9 @@ export type VitalsFormProps = {
   onSave: FormEventHandler<HTMLFormElement>; onKeep: (kind: VitalKind) => void; onRemeasure: (kind: VitalKind) => void;
   /** The nurse asks the chief complaint here; in the consultation it is in the note. */
   withComplaint: boolean;
+  /** One confirmation for every flagged reading (MDV-P2-048). */
+  keepingAll?: boolean; onKeepAll?: () => void;
+  correction?: CorrectionProps;
 };
 
 const fieldError = 'text-sm font-semibold text-danger-700';
@@ -30,11 +39,12 @@ export default function VitalsForm(p: VitalsFormProps) {
           <h2 className="text-lg font-extrabold">{t('intake.vitals')}</h2>
         </>
       )}
+      {!p.readOnly && p.onKeepAll && confirmAll(p.vitals) && <FlaggedList vitals={p.vitals} keeping={p.keepingAll ?? false} online={p.online} onKeepAll={p.onKeepAll} />}
       <div className="grid gap-4 sm:grid-cols-2">
         {vitalKinds.map(kind => (
           <VitalField key={kind} kind={kind} form={p.form} timeZone={p.timeZone} view={p.vitals.find(v => v.kind === kind)} readOnly={p.readOnly}
             invalid={errors[kind] !== undefined ? 'value' : p.badKind === kind && p.problem?.kind === 'invalid' ? p.problem.code : null}
-            keeping={p.keeping === kind} onKeep={p.onKeep} onRemeasure={p.onRemeasure} />
+            keeping={p.keeping === kind} onKeep={p.onKeep} onRemeasure={p.onRemeasure} correction={p.correction} online={p.online} />
         ))}
       </div>
       {p.problem?.kind === 'invalid' && p.badKind === null && isVitalsField(p.problem.field) && <p role="alert" className={fieldError}>{t(problemKey(p.problem))}</p>}
@@ -43,14 +53,44 @@ export default function VitalsForm(p: VitalsFormProps) {
   );
 }
 
+/**
+ * Several flagged readings in one list, each in words with its usual range, and one confirmation for all (MDV-P2-048). Each reading can still be
+ * re-measured on its own below. Wording awaits the pilot doctor and nurse (validation plan question 16).
+ */
+function FlaggedList({ vitals, keeping, online, onKeepAll }: { vitals: VitalView[]; keeping: boolean; online: boolean; onKeepAll: () => void }) {
+  const { t } = useI18n();
+  return (
+    <Banner tone="warning" icon={TriangleAlert} title={t('intake.flagged.title')}
+      action={<Button type="button" variant="outline" className="whitespace-normal" loading={keeping} disabled={!online} onClick={onKeepAll}>{t('intake.flagged.confirm')}</Button>}>
+      <ul className="flex flex-col gap-0.5">
+        {vitals.filter(undecided).map(v => (
+          <li key={v.kind}>
+            <span className="font-bold">{t(`intake.vital.${v.kind}`)}</span>{' '}<bdi dir="ltr" className="tabular-nums">{`${v.value} ${vitalUnits[v.kind]}`}</bdi>
+            {v.flag !== 'Changed' && <>{' · '}{t(`intake.flagged.${v.flag!}`)}{rangeText(v) && <>{' · '}<RangeText view={v} /></>}</>}
+            {v.flag === 'Changed' && <>{' · '}{t('intake.flagged.Changed')}</>}
+          </li>
+        ))}
+      </ul>
+    </Banner>
+  );
+}
+
+/** The usual range in words for a High or Low reading: "Usual: below 140 mmHg" or "Usual: 94 % or above"; nothing without a range. */
+const rangeText = (v: VitalView) => (v.flag === 'High' && v.usualHigh != null) || (v.flag === 'Low' && v.usualLow != null);
+function RangeText({ view }: { view: VitalView }) {
+  const { t } = useI18n();
+  const unit = ltr(vitalUnits[view.kind]);
+  return <>{view.flag === 'High' ? t('intake.range.below', { value: ltr(String(view.usualHigh)), unit }) : t('intake.range.atLeast', { value: ltr(String(view.usualLow)), unit })}</>;
+}
+
 type FieldProps = {
   kind: VitalKind; form: UseFormReturn<IntakeForm>; view: VitalView | undefined; timeZone: string; readOnly: boolean; invalid: string | null;
-  keeping: boolean; onKeep: (kind: VitalKind) => void; onRemeasure: (kind: VitalKind) => void;
+  keeping: boolean; onKeep: (kind: VitalKind) => void; onRemeasure: (kind: VitalKind) => void; correction: CorrectionProps | undefined; online: boolean;
 };
 
 /** One vital sign: a large input, the previous reading, and when the saved reading is flagged, the flag in words with its two ways forward. */
-function VitalField({ kind, form, view, timeZone, readOnly, invalid, keeping, onKeep, onRemeasure }: FieldProps) {
-  const { t, formatDate } = useI18n();
+function VitalField({ kind, form, view, timeZone, readOnly, invalid, keeping, onKeep, onRemeasure, correction, online }: FieldProps) {
+  const { t, formatDate, formatTime } = useI18n();
   const name = t(`intake.vital.${kind}`);
   const id = `intake-${kind}`;
   const hint = `${id}-hint`;
@@ -73,6 +113,7 @@ function VitalField({ kind, form, view, timeZone, readOnly, invalid, keeping, on
             <TriangleAlert aria-hidden className="size-4" />
             {view.flag === 'Changed' ? t('intake.flag.Changed', { delta: ltr(change ?? ''), unit: ltr(vitalUnits[kind]), date: view.previousAt ? formatDate(new Date(view.previousAt), timeZone) : '' }) : t(`intake.flag.${view.flag}`)}
           </p>
+          {rangeText(view) && <p className="text-sm"><RangeText view={view} /></p>}
           {view.flagKept
             ? <p className="inline-flex items-center gap-1.5 text-sm font-semibold"><CircleCheck aria-hidden className="size-4" />{t('intake.flag.kept')}</p>
             : undecided(view) && !readOnly && (
@@ -83,6 +124,48 @@ function VitalField({ kind, form, view, timeZone, readOnly, invalid, keeping, on
             )}
         </div>
       )}
+      {view?.correction && (
+        <div className="flex flex-col gap-0.5 rounded-md border border-info-border bg-info-bg p-2 text-sm text-info-text">
+          <p className="inline-flex items-center gap-1.5 font-bold"><PencilLine aria-hidden className="size-4" />
+            {t('intake.corrected', { value: ltr(`${view.correction.fromValue} ${vitalUnits[kind]}`), time: formatTime(new Date(view.correction.fromAt), timeZone) })}</p>
+          <p>{t('intake.corrected.reason', { reason: view.correction.reason })}</p>
+        </div>
+      )}
+      {view && correction && (correction.correcting === kind
+        ? <CorrectField kind={kind} name={name} correction={correction} online={online} />
+        : <Button type="button" variant="outline" className="self-start whitespace-normal" aria-label={t('intake.correct.for', { name })} onClick={() => correction.onStart(kind)}>
+            <PencilLine aria-hidden />{t('intake.correct')}
+          </Button>)}
+    </div>
+  );
+}
+
+/**
+ * The correction of one reading (MDV-P2-048): the right value and why. Inside the vitals form, so it is a group with its own buttons, and Enter in it
+ * saves the correction, never the vitals form.
+ */
+function CorrectField({ kind, name, correction, online }: { kind: VitalKind; name: string; correction: CorrectionProps; online: boolean }) {
+  const { t } = useI18n();
+  const { errors } = correction.form.formState;
+  const id = `intake-${kind}-correct`;
+  const onKey = (e: KeyboardEvent<HTMLDivElement>) => { if (e.key === 'Enter' && e.target instanceof HTMLInputElement) { e.preventDefault(); correction.onSave(); } };
+  return (
+    <div role="group" aria-label={t('intake.correct.for', { name })} onKeyDown={onKey} className="flex flex-col gap-2 rounded-md border p-2">
+      <Label htmlFor={id} className="font-bold">{t('intake.correct.value')}</Label>
+      <div className="flex items-center gap-2">
+        <Input id={id} inputMode="decimal" autoComplete="off" autoFocus className="max-w-[9rem] text-body-large" aria-invalid={!!errors.value}
+          aria-describedby={errors.value ? `${id}-error` : undefined} {...correction.form.register('value')} />
+        <span className="text-muted-foreground">{ltr(vitalUnits[kind])}</span>
+      </div>
+      {errors.value && <p id={`${id}-error`} className={fieldError}>{t('intake.error.value')}</p>}
+      <Label htmlFor={`${id}-reason`} className="font-bold">{t('intake.correct.reason')}</Label>
+      <Textarea id={`${id}-reason`} rows={2} maxLength={500} className="min-h-14 text-body-large" aria-invalid={!!errors.reason}
+        aria-describedby={errors.reason ? `${id}-reason-error` : undefined} {...correction.form.register('reason')} />
+      {errors.reason && <p id={`${id}-reason-error`} className={fieldError}>{t('intake.correct.reasonRequired')}</p>}
+      <div className="flex flex-wrap gap-2">
+        <Button type="button" loading={correction.saving} disabled={!online} onClick={correction.onSave}>{t('intake.correct.save')}</Button>
+        <Button type="button" variant="outline" onClick={correction.onCancel}>{t('intake.correct.cancel')}</Button>
+      </div>
     </div>
   );
 }

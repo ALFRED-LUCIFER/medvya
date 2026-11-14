@@ -1559,7 +1559,7 @@ erDiagram
 | `MedicationReconciliations` | 7 | Id | tenant-scoped |
 | `MedicationStatements` | 19 | Id | tenant-scoped |
 | `MilestoneResponses` | 11 | Id | tenant-scoped |
-| `Observations` | 16 | Id | tenant-scoped |
+| `Observations` | 17 | Id | tenant-scoped |
 | `OutboxEvents` | 7 | Id | tenant-scoped |
 | `PregnancyEpisodes` | 22 | Id | tenant-scoped |
 | `PregnancyRuledOuts` | 7 | Id | tenant-scoped |
@@ -1899,6 +1899,7 @@ erDiagram
 | `Id` | guid |  |  |
 | `AppointmentId` | guid | yes | id of `scheduling.Appointments` |
 | `Code` | character varying(30) |  |  |
+| `CorrectionReason` | character varying(500) |  |  |
 | `FacilityId` | guid | yes | id of `tenancy.Facilities` |
 | `Flag` | character varying(20) |  |  |
 | `FlagKept` | bool |  |  |

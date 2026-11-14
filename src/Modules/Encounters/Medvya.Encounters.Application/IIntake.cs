@@ -15,8 +15,19 @@ public sealed record RecordIntake(string? ChiefComplaint, IReadOnlyList<VitalRea
 
 public sealed record EscalateIntake(string? Reason);
 
-/// <summary>The current reading of one kind, with its flag (a code the UI says in words), the previous one and whether the nurse kept a flagged value.</summary>
-public sealed record IntakeVital(VitalKind Kind, decimal Value, VitalAlert? Flag, decimal? PreviousValue, DateTimeOffset? PreviousAt, bool FlagKept, DateTimeOffset RecordedAt);
+/// <summary>
+/// The current reading of one kind, with its flag (a code the UI says in words), the previous one and whether the nurse kept a flagged value.
+/// UsualLow/UsualHigh: for a High or Low flag, the patient's usual range (at or above UsualHigh is high), so the range is said in words (MDV-P2-048).
+/// Correction: this reading corrected the one before it after the handoff (MDV-P2-048).
+/// </summary>
+public sealed record IntakeVital(VitalKind Kind, decimal Value, VitalAlert? Flag, decimal? PreviousValue, DateTimeOffset? PreviousAt, bool FlagKept, DateTimeOffset RecordedAt,
+    decimal? UsualLow = null, decimal? UsualHigh = null, VitalCorrection? Correction = null);
+
+/// <summary>What a correction replaced: the earlier value with who recorded it and when, and the nurse's reason.</summary>
+public sealed record VitalCorrection(decimal FromValue, Guid? FromBy, DateTimeOffset FromAt, string Reason);
+
+/// <summary>A correction of one reading after the handoff, before the doctor starts: the right value and why (MDV-P2-048).</summary>
+public sealed record CorrectVital(decimal? Value, string? Reason);
 
 public sealed record IntakeAllergy(Guid Id, string Substance, string? Reaction, AllergyStatus? Status, ChartSource Source, DateTimeOffset? StatusSetAt);
 
@@ -69,6 +80,21 @@ public interface IIntake
 
     /// <summary>The nurse keeps a flagged reading on purpose, after looking at it again.</summary>
     Task<IntakeView?> KeepAsync(Guid appointmentId, VitalKind kind, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The nurse confirms once that every flagged reading still undecided was re-checked (MDV-P2-048): each is kept, as <see cref="KeepAsync"/> would,
+    /// with an audit event per reading. A reading re-measured since keeps its own new decision.
+    /// </summary>
+    /// <exception cref="IntakeValidationException">"kind: not_flagged" when nothing is left to confirm.</exception>
+    Task<IntakeView?> KeepAllAsync(Guid appointmentId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Corrects one reading after the handoff and before the doctor starts the consultation (MDV-P2-048). The earlier reading is kept; the new one
+    /// carries the reason, who and when. After the doctor starts, readings are fixed.
+    /// </summary>
+    /// <exception cref="IntakeValidationException">value or reason missing or invalid; "kind: no_reading".</exception>
+    /// <exception cref="IntakeConflictException">"consult_started" once the doctor has started; "not_handed_off" before the handoff (re-measure instead).</exception>
+    Task<IntakeView?> CorrectAsync(Guid appointmentId, VitalKind kind, CorrectVital command, CancellationToken cancellationToken = default);
 
     /// <exception cref="IntakeValidationException">"reason: required".</exception>
     Task<IntakeView?> EscalateAsync(Guid appointmentId, EscalateIntake command, CancellationToken cancellationToken = default);

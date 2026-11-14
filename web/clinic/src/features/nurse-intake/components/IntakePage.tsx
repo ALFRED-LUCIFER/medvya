@@ -8,7 +8,7 @@ import AllergiesSection from './AllergiesSection';
 import MedicinesSection from './MedicinesSection';
 import VitalsForm from './VitalsForm';
 import {
-  allergyBlockers, isVitalsField, problemKey, type IntakeForm, type AllergyForm, type AllergyStatus, type IntakeProblem, type IntakeScreen, type MedicineForm, type VitalKind,
+  allergyBlockers, correctable, isVitalsField, problemKey, type CorrectionForm, type IntakeForm, type AllergyForm, type AllergyStatus, type IntakeProblem, type IntakeScreen, type MedicineForm, type VitalKind,
 } from '../domain/intake';
 
 type Props = {
@@ -21,6 +21,9 @@ type Props = {
   problem: IntakeProblem | null; badKind: VitalKind | null;
   saving: boolean; keeping: VitalKind | null; escalating: boolean; sendingEscalation: boolean; handingOff: boolean; dirty: boolean; online: boolean;
   onSave: FormEventHandler<HTMLFormElement>; onKeep: (kind: VitalKind) => void; onRemeasure: (kind: VitalKind) => void;
+  keepingAll: boolean; onKeepAll: () => void;
+  correctionForm: UseFormReturn<CorrectionForm>; correcting: VitalKind | null; savingCorrection: boolean;
+  onStartCorrect: (kind: VitalKind) => void; onCancelCorrect: () => void; onCorrect: () => void;
   onToggleEscalate: () => void; onEscalate: FormEventHandler<HTMLFormElement>; onHandOff: () => void;
   queuePath: string;
 };
@@ -51,9 +54,10 @@ export default function IntakePage(p: Props) {
   return (
     <PageContainer width="reading">
       <Identity patient={patient} />
-      {readOnly && <p role="status" className="font-bold">{t('intake.handedOff')}</p>}
+      {readOnly && <p role="status" className="font-bold">{t(correctable(intake) ? 'intake.handedOff.correctable' : 'intake.handedOff')}</p>}
       <VitalsForm form={p.form} vitals={intake.vitals} timeZone={timeZone} readOnly={readOnly} online={p.online} problem={p.problem} badKind={p.badKind}
-        saving={p.saving} keeping={p.keeping} onSave={p.onSave} onKeep={p.onKeep} onRemeasure={p.onRemeasure} withComplaint />
+        saving={p.saving} keeping={p.keeping} onSave={p.onSave} onKeep={p.onKeep} onRemeasure={p.onRemeasure} withComplaint keepingAll={p.keepingAll} onKeepAll={p.onKeepAll}
+        correction={correctable(intake) ? { form: p.correctionForm, correcting: p.correcting, saving: p.savingCorrection, onStart: p.onStartCorrect, onCancel: p.onCancelCorrect, onSave: p.onCorrect } : undefined} />
 
       <AllergiesSection allergies={intake.allergies} noKnownConfirmed={intake.noKnownAllergiesConfirmed} form={p.allergyForm} readOnly={readOnly} online={p.online}
         settingId={p.settingAllergy} adding={p.addingAllergy} confirmingNone={p.confirmingNone} onStatus={p.onAllergyStatus} onAdd={p.onAddAllergy} onNone={p.onNoKnownAllergies}

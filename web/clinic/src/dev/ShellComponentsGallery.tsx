@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { ArrowLeft, Bell, CalendarDays, ClipboardList, LayoutDashboard, Settings, Stethoscope, UserPlus, Users } from 'lucide-react';
+import { ArrowLeft, Bell, CalendarDays, ClipboardList, LayoutDashboard, Settings, Stethoscope, Users } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
 import { AccountMenu, Button, NavRailItem, PageHeader, Tooltip } from '@medvya/ui';
 
 // MDV-P1-084 on /__ui. Labels reuse catalogue keys, including the longest navigation names in each language. Synthetic data only.
 const rail = [
-  { key: 'nav.frontDesk', icon: LayoutDashboard }, { key: 'nav.patients', icon: Users }, { key: 'nav.schedule', icon: CalendarDays },
-  { key: 'nav.nurse', icon: Stethoscope }, { key: 'nav.register', icon: UserPlus }, { key: 'nav.inbox', icon: ClipboardList },
+  { key: 'nav.frontDesk', icon: LayoutDashboard }, { key: 'nav.today', icon: CalendarDays }, { key: 'nav.patients', icon: Users },
+  { key: 'nav.schedule', icon: CalendarDays }, { key: 'nav.nurse', icon: Stethoscope }, { key: 'nav.inbox', icon: ClipboardList },
   { key: 'nav.settings', icon: Settings },
 ] as const;
 

@@ -24,9 +24,9 @@ public enum LookupAccess { Open, CanRequest, RequestPending, NoAccess }
 
 /// <summary>
 /// A ⌘K result (MDV-P1-101): the desk's search row, which this role may already search (the lookup needs the same capability), so two people with
-/// one name can be told apart, plus whether the chart may be opened. Never a whole phone or MRN, an identifier or anything clinical.
+/// one name can be told apart, plus whether the chart may be opened. Never a date of birth (decision 15), a whole phone or MRN, an identifier or anything clinical.
 /// </summary>
-public sealed record LookupRow(Guid Id, string Initials, string FullName, int AgeYears, bool AgeEstimated, SexAtBirth SexAtBirth, DateOnly? DateOfBirth, string MrnTail, string MobileTail,
+public sealed record LookupRow(Guid Id, string Initials, string FullName, int AgeYears, bool AgeEstimated, SexAtBirth SexAtBirth, string MrnTail, string MobileTail,
     DateOnly? LastVisitOn, DuplicateMark? Duplicate, LookupAccess Access);
 
 /// <summary>National and insurance numbers are masked to their last four characters (data-classification.md: masked in UI).</summary>
@@ -311,7 +311,7 @@ public static class PatientEndpoints
             var found = await registry.SearchAsync(new(country, request.Query, DirectoryFilter.All, 1), ct);
             List<LookupRow> rows = [];
             foreach (var r in found.Items.Take(LookupRows))
-                rows.Add(new(r.Id, r.Initials, r.FullName, r.AgeYears, r.AgeEstimated, r.SexAtBirth, r.DateOfBirth, r.MrnTail, r.MobileTail, r.LastVisitOn, r.Duplicate, await AccessOf(clinical, r.Id, facilityId, ct)));
+                rows.Add(new(r.Id, r.Initials, r.FullName, r.AgeYears, r.AgeEstimated, r.SexAtBirth, r.MrnTail, r.MobileTail, r.LastVisitOn, r.Duplicate, await AccessOf(clinical, r.Id, facilityId, ct)));
             return Results.Ok(new { items = rows, total = found.Total });
         }
         catch (PatientValidationException e)

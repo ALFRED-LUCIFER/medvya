@@ -4,14 +4,15 @@ import { Bell, Menu, PanelLeftClose, PanelLeftOpen, Search } from 'lucide-react'
 import { useI18n, type Locale } from '@medvya/i18n';
 import { AccountMenu, Button, buttonVariants, cn, NavRailItem } from '@medvya/ui';
 import type { Role } from '../../session/domain/session';
-import type { NavGroup, NavItem } from '../domain/navigation';
+import type { NavItem } from '../domain/navigation';
 import { navIcons, railColour } from './navIcons';
 
 type Props = {
   displayName: string;
   role: Role;
   facilityName: string;
-  groups: { group: NavGroup; items: NavItem[] }[];
+  /** The role's menu, in its order (blueprint section 3). */
+  items: NavItem[];
   tabs: NavItem[];
   onLocaleChange: (locale: Locale) => void;
   onSignOut: () => void;
@@ -36,7 +37,7 @@ type Props = {
  * from 768 px (never icon-only, ruling 8); the 232 px sidebar from 1280 px unless the user folds it. A 48 px top bar holds clinic,
  * search, bell and the account menu (56 px on phones, account in More).
  */
-export default function AppShell({ displayName, role, facilityName, groups, tabs, onLocaleChange, onSignOut, onMyDevices, onChangeFacility,
+export default function AppShell({ displayName, role, facilityName, items, tabs, onLocaleChange, onSignOut, onMyDevices, onChangeFacility,
   navCollapsed, onToggleNav, searchPath, globalSearch, notifications, children }: Props) {
   const { t } = useI18n();
   // From 1280 px: the sidebar, or the rail when folded. Below 1280 the rail is the only choice.
@@ -59,37 +60,30 @@ export default function AppShell({ displayName, role, facilityName, groups, tabs
         </div>
 
         <ul className={cn('flex flex-col gap-1', railOnly)}>
-          {groups.flatMap(g => g.items).map(item => (
+          {items.map(item => (
             <li key={item.id}>
               <NavRailItem asChild icon={navIcons[item.id]} label={t(`nav.${item.id}`)}><NavLink to={item.path} end /></NavRailItem>
             </li>
           ))}
         </ul>
 
-        <div className={cn(sidebarOnly, 'flex-col gap-1')}>
-          {groups.map(g => (
-            <div key={g.group} className="flex flex-col gap-1">
-              <h2 className="px-2.5 pt-3 pb-1 text-caption tracking-[.09em] text-nav-muted uppercase">{t(`nav.group.${g.group}`)}</h2>
-              <ul className="flex flex-col gap-1">
-                {g.items.map(item => {
-                  const Icon = navIcons[item.id];
-                  return (
-                    <li key={item.id}>
-                      <NavLink to={item.path} end
-                        className={({ isActive }) => cn(
-                          'relative flex min-h-control items-center gap-2.5 rounded-lg px-2.5 text-label hover:bg-nav-hover',
-                          isActive && `bg-nav-hover text-white before:absolute before:inset-y-2 before:start-0 before:w-[3px] before:rounded-full ${railColour[item.group]}`,
-                        )}>
-                        <Icon className="size-5 shrink-0" aria-hidden />
-                        <span className="truncate">{t(`nav.${item.id}`)}</span>
-                      </NavLink>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          ))}
-        </div>
+        <ul className={cn(sidebarOnly, 'flex-col gap-1')}>
+          {items.map(item => {
+            const Icon = navIcons[item.id];
+            return (
+              <li key={item.id}>
+                <NavLink to={item.path} end
+                  className={({ isActive }) => cn(
+                    'relative flex min-h-control items-center gap-2.5 rounded-lg px-2.5 text-label hover:bg-nav-hover',
+                    isActive && `bg-nav-hover text-white before:absolute before:inset-y-2 before:start-0 before:w-[3px] before:rounded-full ${railColour[item.group]}`,
+                  )}>
+                  <Icon className="size-5 shrink-0" aria-hidden />
+                  <span className="truncate">{t(`nav.${item.id}`)}</span>
+                </NavLink>
+              </li>
+            );
+          })}
+        </ul>
 
         {/* The fold toggle exists only where there is a choice (1280 px and up). The icons follow the reading direction. */}
         <div className="mt-auto hidden border-t border-nav-line pt-3 lg:block">
@@ -120,7 +114,7 @@ export default function AppShell({ displayName, role, facilityName, groups, tabs
         <main id="main" tabIndex={-1} className="flex-1 p-4 pb-28 focus:outline-none md:p-6">{children}</main>
       </div>
 
-      {/* Mobile bottom tabs (360–767 px): Today · Patients · Inbox · Messages · More, filtered to what this role may see. */}
+      {/* Mobile bottom tabs (360–767 px): the first four items of the role's menu, then More. */}
       <nav aria-label={t('shell.mainNav')} className="fixed inset-x-0 bottom-0 z-10 grid h-[72px] auto-cols-fr grid-flow-col border-t bg-card md:hidden print:hidden">
         {[...tabs.map(i => ({ key: i.id, to: i.path, Icon: navIcons[i.id], label: t(`nav.${i.id}`) })), { key: 'more', to: '/more', Icon: Menu, label: t('nav.more') }]
           .map(({ key, to, Icon, label }) => (

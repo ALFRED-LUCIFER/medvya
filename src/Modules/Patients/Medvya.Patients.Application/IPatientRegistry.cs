@@ -98,14 +98,13 @@ public sealed record PatientSearch(string CountryCode, string? Query, DirectoryF
 }
 
 /// <summary>
-/// A result row for staff who register and book patients (MDV-P1-018, MDV-AUDIT-1100, MDV-P1-101): the full name, age, sex, date of birth, the MRN tail,
+/// A result row for staff who register and book patients (MDV-P1-018, MDV-AUDIT-1100, MDV-P1-101): the full name, age, sex, the MRN tail,
 /// the phone tail, the day of the last visit and the duplicate mark, enough to tell two people apart without opening either record (each opening is
-/// audited). The rest of the demographics need the record opened.
+/// audited). No date of birth: a search list is read at a shared desk (validation-plan decision 15); the rest of the demographics need the record opened.
 /// </summary>
-/// <param name="DateOfBirth">Null when the date was estimated from a stated age: a guessed date must not confirm an identity.</param>
 /// <param name="LastVisitOn">The calendar day the patient last attended, a date and nothing else (never a reason, diagnosis or note); null when never.</param>
 public sealed record PatientSearchRow(Guid Id, string Initials, string FullName, int AgeYears, bool AgeEstimated, SexAtBirth SexAtBirth, string MrnTail, string MobileTail, RegistrationStatus Status,
-    DateOnly? DateOfBirth = null, DateOnly? LastVisitOn = null, DuplicateMark? Duplicate = null);
+    DateOnly? LastVisitOn = null, DuplicateMark? Duplicate = null);
 
 /// <summary>A record in an open merge request (MDV-P1-101): the one that would be merged away is the possible duplicate; the older one that would survive is the main record.</summary>
 public enum DuplicateMark { MainRecord, PossibleDuplicate }

@@ -1,4 +1,4 @@
-import { useNavigate, useParams, useSearchParams } from 'react-router';
+import { Outlet, useNavigate, useParams, useSearchParams } from 'react-router';
 import type { Country } from '@medvya/i18n';
 import CompleteRegistration from '../features/registration/components/CompleteRegistration';
 import Registration from '../features/registration/components/Registration';
@@ -8,6 +8,8 @@ import PatientDirectory from '../features/patients/components/PatientDirectory';
 import DeskVisits from '../features/visits/components/DeskVisits';
 import { useDeskVisitsController } from '../features/visits/hooks/useVisitsController';
 import PatientRecord from '../features/patients/components/PatientRecord';
+import RecordTabs from '../features/patients/components/RecordTabs';
+import { recordTabs, type RecordAccess } from '../features/patients/domain/recordTabs';
 import MergeReview from '../features/merge/components/MergeReview';
 import { useMergeController, useMergeHistory, useMergeRequest } from '../features/merge/hooks/useMergeController';
 import { usePatientDirectoryController } from '../features/patients/hooks/usePatientDirectoryController';
@@ -22,8 +24,15 @@ import { useFollowUpDueController } from '../features/front-desk/hooks/useFollow
 // Composition only: controller → component for the patient directory routes (MDV-P1-018).
 const recordPath = (id: string) => `${patientDirectory.path}/${id}`;
 
-export function PatientDirectoryRoute({ registerPath, mergePath }: { registerPath: string | null; mergePath: string | null }) {
-  return <PatientDirectory {...usePatientDirectoryController()} registerPath={registerPath} mergePath={mergePath} recordPath={recordPath} />;
+/** A row opens the Patient record on the first tab this role may open: Summary for clinicians, Details for the desk (MDV-P2-051). */
+export function PatientDirectoryRoute({ registerPath, mergePath, access }: { registerPath: string | null; mergePath: string | null; access: RecordAccess }) {
+  return <PatientDirectory {...usePatientDirectoryController()} registerPath={registerPath} mergePath={mergePath} recordPath={id => recordTabs(id, access)[0]?.path ?? recordPath(id)} />;
+}
+
+/** The one Patient record (MDV-P2-051): its tabs above whichever tab is open; each tab's route and the server decide access as before. */
+export function RecordLayout({ access }: { access: RecordAccess }) {
+  const { patientId = '' } = useParams();
+  return <div className="flex flex-col gap-4"><RecordTabs tabs={recordTabs(patientId, access)} /><Outlet /></div>;
 }
 
 const mergePath = `${patientDirectory.path}/merge`;
@@ -37,7 +46,7 @@ export function MergeReviewRoute({ can }: { can: { request: boolean; approve: bo
 const completePath = (id: string) => `${recordPath(id)}/complete`;
 
 // Revealing numbers and completing a registration both need Register / book patients at Full (the server checks the same).
-function Record({ patientId, canReveal, canDocs, facilityId, timeZone, bookPath, checkInPath }: { patientId: string; canReveal: boolean; canDocs: boolean; facilityId: string; timeZone?: string; bookPath: string | null; checkInPath: string | null }) {
+function Record({ patientId, canReveal, facilityId, timeZone, bookPath, checkInPath }: { patientId: string; canReveal: boolean; facilityId: string; timeZone?: string; bookPath: string | null; checkInPath: string | null }) {
   const navigate = useNavigate();
   const mergeRequest = useMergeRequest(patientId, id => void navigate(`${mergePath}/${id}`));
   const record = usePatientRecordController(patientId);
@@ -53,7 +62,7 @@ function Record({ patientId, canReveal, canDocs, facilityId, timeZone, bookPath,
   </>;
   return <PatientRecord {...record} merges={useMergeHistory(patientId)} consents={usePatientConsentsController(patientId)} backPath={patientDirectory.path} canReveal={canReveal}
     completePath={canReveal ? completePath(patientId) : null}
-    actions={{ bookPath: canReveal && bookPath ? `${bookPath}?patient=${patientId}` : null, checkInPath: checkInPath ? `${checkInPath}?patient=${patientId}` : null, editPath: canReveal ? completePath(patientId) : null }} documentsPath={canDocs ? `/patients/${patientId}/docs` : null} visits={<DeskVisits {...desk} followUp={followUp} timeZone={timeZone} />} mergeRequest={canReveal ? mergeRequest : null} />;
+    actions={{ bookPath: canReveal && bookPath ? `${bookPath}?patient=${patientId}` : null, checkInPath: checkInPath ? `${checkInPath}?patient=${patientId}` : null, editPath: canReveal ? completePath(patientId) : null }} visits={<DeskVisits {...desk} followUp={followUp} timeZone={timeZone} />} mergeRequest={canReveal ? mergeRequest : null} />;
 }
 
 type RegistrationLinks = { country: Country; scope: string; actorName: string; timeZone?: string; bookPath: string | null; checkInPath: string | null };
@@ -71,9 +80,9 @@ export function RegistrationRoute(links: RegistrationLinks) {
     slot={slot?.toString() ?? null} />;
 }
 
-export function PatientRecordRoute({ canReveal, canDocs, facilityId, timeZone, bookPath, checkInPath }: { canReveal: boolean; canDocs: boolean; facilityId: string; timeZone?: string; bookPath: string | null; checkInPath: string | null }) {
+export function PatientRecordRoute({ canReveal, facilityId, timeZone, bookPath, checkInPath }: { canReveal: boolean; facilityId: string; timeZone?: string; bookPath: string | null; checkInPath: string | null }) {
   const { patientId = '' } = useParams();
-  return <Record key={patientId} patientId={patientId} canReveal={canReveal} canDocs={canDocs} facilityId={facilityId} timeZone={timeZone} bookPath={bookPath} checkInPath={checkInPath} />;
+  return <Record key={patientId} patientId={patientId} canReveal={canReveal} facilityId={facilityId} timeZone={timeZone} bookPath={bookPath} checkInPath={checkInPath} />;
 }
 
 function Completion({ patientId, country }: { patientId: string; country: Country }) {

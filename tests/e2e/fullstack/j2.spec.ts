@@ -102,8 +102,8 @@ journey('J2', {
 
     await page.getByRole('button', { name: 'End consultation' }).click(); // leaves no open consultation for a later run
     await expect(page.getByRole('status').filter({ hasText: 'Consultation ended' })).toHaveText(/^Consultation ended at \d\d:\d\d\.$/);
-    // MDV-P2-002: the unsigned note waits on Today (from any day) until it is signed, and opens its consultation again.
-    await page.getByRole('link', { name: 'Today' }).first().click();
+    // MDV-P2-002: the unsigned note waits on My day (from any day) until it is signed, and opens its consultation again.
+    await page.getByRole('link', { name: 'My day' }).first().click();
     const pending = page.getByRole('region', { name: /notes? to sign$/ });
     const row = pending.getByRole('listitem').filter({ hasText: meera }).filter({ hasText: 'Draft, not signed' }).last(); // newest of this run; earlier runs leave theirs
     await row.getByRole('link', { name: 'Open to finish' }).click();

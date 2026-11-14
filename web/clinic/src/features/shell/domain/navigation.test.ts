@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { toSession, type Access, type Capability, type Role } from '../../session/domain/session';
-import { allows, homeItem, mobileTabs, navItems, patientDirectory, refusedAddress, visibleNav } from './navigation';
+import { allows, clinicalRecord, mobileTabs, navItems, patientDirectory, refusedAddress, registerPatient, visibleNav } from './navigation';
 
 // Copy of RoleMatrix.cs rows (what /v1/me/context sends as `capabilities` for each role).
 const roles: Role[] = ['SoloDoctor', 'HospitalDoctor', 'Receptionist', 'Nurse', 'CareCoordinator', 'Patient', 'PracticeAdmin', 'HospitalIt'];
@@ -16,30 +16,36 @@ const capabilities = (role: Role) =>
   Object.fromEntries(rows.map(([cap, c]) => [cap, codes[c.split(' ')[roles.indexOf(role)]!]!])) as Record<Capability, Access>;
 const allFlags = navItems.flatMap(i => (i.flag ? [i.flag] : []));
 const ids = (role: Role, flags: string[] = []) => visibleNav({ role, capabilities: capabilities(role), flags }).map(i => i.id);
-const groups = (role: Role, flags: string[] = []) => new Set(visibleNav({ role, capabilities: capabilities(role), flags }).map(i => i.group));
 
 describe('role-based navigation', () => {
-  it('lands a nurse on the nurse queue when intake is on, and everyone else on their first screen (UX-08)', () => {
-    const home = (role: Role, flags: string[] = []) => {
-      const active = { role, capabilities: capabilities(role), flags };
-      return homeItem(visibleNav(active), active)?.id;
-    };
+  it('lands a nurse on the nurse queue when intake is on, a doctor on My day, and everyone else on Front desk (UX-08)', () => {
+    const home = (role: Role, flags: string[] = []) => visibleNav({ role, capabilities: capabilities(role), flags })[0]?.id;
     expect(home('Nurse', ['clinical.nurse-intake'])).toBe('nurse');
-    expect(home('Nurse')).toBe('today');
+    expect(home('Nurse')).toBe('frontDesk');
+    expect(home('CareCoordinator')).toBe('frontDesk');
     expect(home('SoloDoctor', ['clinical.nurse-intake'])).toBe('today');
     expect(home('HospitalDoctor', ['clinical.nurse-intake'])).toBe('today');
     expect(home('Receptionist', ['clinical.nurse-intake'])).toBe('frontDesk');
   });
 
-  it('shows a receptionist only Practice items, never Clinical, even with every flag on', () => {
-    expect(ids('Receptionist')).toEqual(['frontDesk', 'schedule', 'register']);
-    expect(groups('Receptionist', allFlags)).toEqual(new Set(['practice']));
+  // Blueprint section 3 (MDV-P2-051): each role's menu, in its order. Register patient is a button, never a menu item.
+  it('orders each role\'s menu as the blueprint\'s role table', () => {
+    expect(ids('SoloDoctor')).toEqual(['today', 'patients', 'schedule', 'frontDesk', 'settings']);
+    expect(ids('HospitalDoctor')).toEqual(['today', 'patients', 'schedule', 'frontDesk']); // owner-only Settings
+    expect(ids('Receptionist')).toEqual(['frontDesk', 'schedule', 'patients']);
+    expect(ids('Nurse', ['clinical.nurse-intake'])).toEqual(['nurse', 'patients', 'frontDesk', 'schedule']);
+    expect(ids('PracticeAdmin')).toEqual(['frontDesk', 'schedule', 'patients', 'settings']);
+    // Every other item follows the named ones, Settings last.
+    expect(ids('SoloDoctor', allFlags).slice(0, 4)).toEqual(['today', 'patients', 'schedule', 'frontDesk']);
+    expect(ids('SoloDoctor', allFlags).at(-1)).toBe('settings');
+    expect(new Set(ids('SoloDoctor', allFlags))).toEqual(new Set(navItems.map(i => i.id)));
+    expect(ids('HospitalDoctor', allFlags)).not.toContain('billing'); // hospital doctors have no invoices access
+    for (const r of roles) expect(ids(r, allFlags).map(id => navItems.find(i => i.id === id)!.path)).not.toContain(registerPatient.path);
   });
 
-  it('shows a doctor Clinical and Practice items allowed by the matrix', () => {
-    expect(ids('SoloDoctor')).toEqual(['today', 'patients', 'frontDesk', 'schedule', 'register', 'settings']);
-    expect(ids('SoloDoctor', allFlags)).toEqual(navItems.map(i => i.id));
-    expect(ids('HospitalDoctor', allFlags)).not.toContain('billing'); // hospital doctors have no invoices access
+  it('never shows a receptionist a clinical screen: Patients is the directory, not the chart', () => {
+    expect(ids('Receptionist', allFlags)).toEqual(['frontDesk', 'schedule', 'patients', 'billing']);
+    expect(allows({ role: 'Receptionist', capabilities: capabilities('Receptionist'), flags: [] }, clinicalRecord)).toBe(false);
   });
 
   it('hides items whose tenant flag is off', () => {
@@ -48,15 +54,17 @@ describe('role-based navigation', () => {
     for (const i of navItems) if (i.phase > 1) expect(i.flag, i.id).toBeTruthy();
   });
 
-  it('shows Today (the day board until MDV-P2-002) to clinicians, who all see the board, and never to reception (#912)', () => {
-    const clinicians = roles.filter(r => ids(r).includes('today'));
-    expect(clinicians).toEqual(['SoloDoctor', 'HospitalDoctor', 'Nurse', 'CareCoordinator']);
-    for (const r of clinicians) expect(ids(r)).toContain('frontDesk');
+  it('shows My day only to doctors, never the board: a role that only gets the board no longer sees it (MDV-P2-051)', () => {
+    expect(roles.filter(r => ids(r, allFlags).includes('today'))).toEqual(['SoloDoctor', 'HospitalDoctor']);
+    // AC2: a nurse with intake off gets Front desk once, not also as "Today" (which used to open the same board).
+    expect(ids('Nurse')).toEqual(['frontDesk', 'schedule', 'patients']);
   });
 
   it('needs write access to register, and never treats break-glass or patient access as everyday navigation', () => {
-    expect(ids('Nurse')).not.toContain('register'); // Read only
-    expect(ids('HospitalIt', allFlags)).not.toContain('patients'); // BreakGlass
+    const may = (role: Role) => allows({ role, capabilities: capabilities(role), flags: [] }, registerPatient);
+    expect(roles.filter(may)).toEqual(['SoloDoctor', 'HospitalDoctor', 'Receptionist', 'PracticeAdmin']); // a nurse reads only
+    expect(ids('HospitalIt', allFlags)).not.toContain('patients'); // no directory access
+    expect(allows({ role: 'HospitalIt', capabilities: capabilities('HospitalIt'), flags: [] }, clinicalRecord)).toBe(false); // BreakGlass
     expect(ids('Patient', allFlags)).toEqual([]); // Own / Released belong to the portal
   });
 
@@ -76,28 +84,30 @@ describe('role-based navigation', () => {
     expect(visibleNav(s.active)).toEqual([]);
   });
 
-  it('opens the patient directory to the roles the API lets search (Register / book patients: Read or Full)', () => {
+  it('opens the patient directory, and the Patients menu item, to the roles the API lets search (Register / book patients: Read or Full)', () => {
     const may = (role: Role) => allows({ role, capabilities: capabilities(role), flags: [] }, patientDirectory);
     expect(roles.filter(may)).toEqual(['SoloDoctor', 'HospitalDoctor', 'Receptionist', 'Nurse', 'CareCoordinator', 'PracticeAdmin']);
+    expect(roles.filter(r => ids(r).includes('patients'))).toEqual(roles.filter(may));
     expect(allows(null, patientDirectory)).toBe(false);
   });
 
-  it('puts at most four tabs in the mobile bar, in the design order', () => {
+  it('puts the first four items of the role\'s menu in the mobile bar', () => {
     expect(mobileTabs(visibleNav({ role: 'SoloDoctor', capabilities: capabilities('SoloDoctor'), flags: allFlags })).map(i => i.id))
-      .toEqual(['today', 'patients', 'inbox', 'messages']);
+      .toEqual(['today', 'patients', 'schedule', 'frontDesk']);
     expect(mobileTabs(visibleNav({ role: 'Receptionist', capabilities: capabilities('Receptionist'), flags: [] })).map(i => i.id))
-      .toEqual(['frontDesk', 'schedule', 'register']);
+      .toEqual(['frontDesk', 'schedule', 'patients']);
   });
 
   it('says "your role does not include this screen" only for a screen the app has but the role may not open (MDV-P1-096)', () => {
     const refused = (role: Role, path: string, flags: string[] = []) => refusedAddress(path, { role, capabilities: capabilities(role), flags });
-    // Receptionist: Today, Settings, a consultation and a chart are refused.
-    for (const path of ['/today', '/settings', '/consult/e-1', '/consult/e-1/medicines', '/patients/p-1', '/patients'])
+    // Receptionist: My day, Settings, a consultation and a patient's Summary or Timeline are refused (Patients is theirs: MDV-P2-051).
+    for (const path of ['/today', '/settings', '/consult/e-1', '/consult/e-1/medicines', '/patients/p-1', '/patients/p-1/timeline'])
       expect(refused('Receptionist', path), path).toBe(true);
     // Nurse: Settings and a consultation (its note needs the full chart); practice admin: the chart.
     expect(refused('Nurse', '/settings')).toBe(true);
     expect(refused('Nurse', '/consult/e-1')).toBe(true);
     expect(refused('PracticeAdmin', '/patients/p-1')).toBe(true);
+    expect(refused('SoloDoctor', '/patients/p-1/nothing')).toBe(false);
     // Not refused: unknown addresses, a switched-off screen, and a mistyped address under a screen the role has.
     expect(refused('Receptionist', '/no-such-page')).toBe(false);
     expect(refused('Receptionist', '/todayx')).toBe(false);

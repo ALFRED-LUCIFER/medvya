@@ -93,7 +93,7 @@ const cardOf = (page: Page, name: string) => page.getByRole('article', { name })
 
 test('shows today\'s visits by status with nonclinical tags, in facility time', async ({ page }) => {
   await open(page);
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Reception board · Monday, 19 October 2026');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Front desk · Monday, 19 October 2026');
   await expect(page.getByText('Receptionist view hides clinical notes')).toBeVisible();
   for (const [name, count] of [['Booked', 1], ['Checked in', 1], ['With nurse', 1], ['Ready for doctor', 0], ['In consult', 1], ['Billing', 1], ['Done', 0]] as const)
     await expect(column(page, name).getByRole('article')).toHaveCount(count);
@@ -153,7 +153,7 @@ test('moves follow the board and a conflict says the visit moved on', async ({ p
   await page.unrouteAll({ behavior: 'ignoreErrors' });
   await open(page, { moveCode: 'invalid_transition' });
   await cardOf(page, 'Lakshmi Pillai (synthetic)').getByRole('button', { name: 'Intake done' }).click();
-  await expect(cardOf(page, 'Lakshmi Pillai (synthetic)').getByRole('alert')).toHaveText('This visit has already moved on. The board is up to date.');
+  await expect(cardOf(page, 'Lakshmi Pillai (synthetic)').getByRole('alert')).toHaveText('This visit has already moved on. Front desk is up to date.');
 });
 
 // MDV-P1-100 (finding F-05): a wrong Call in is undone from the status line; the server decides the window.
@@ -273,16 +273,16 @@ test('empty, no access, failure and offline each say so', async ({ page, context
 
   await page.unrouteAll({ behavior: 'ignoreErrors' });
   await open(page, { status: 500 });
-  await expect(page.getByRole('alert')).toContainText('The board could not be loaded', { timeout: 15_000 });
+  await expect(page.getByRole('alert')).toContainText('Front desk could not be loaded', { timeout: 15_000 });
   await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible();
 
   await page.unrouteAll({ behavior: 'ignoreErrors' });
   await page.route('**/v1/me/context', r => r.fulfill({ json: reception }));
   await page.route('**/v1/front-desk/board?*', () => {}); // never answers
   await page.goto('/front-desk');
-  await expect(page.getByRole('status').filter({ hasText: 'Loading the board' })).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'Loading Front desk' })).toBeVisible();
   await context.setOffline(true);
-  await expect(page.getByRole('alert').filter({ hasText: 'The board loads when you reconnect.' })).toBeVisible();
+  await expect(page.getByRole('alert').filter({ hasText: 'Front desk loads when you reconnect.' })).toBeVisible();
   await context.setOffline(false);
   await page.unrouteAll({ behavior: 'ignoreErrors' });
 });

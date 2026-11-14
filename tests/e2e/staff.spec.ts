@@ -161,7 +161,7 @@ test('offboarding a doctor asks what happens to their patients and names the one
   await page.getByLabel(/Offer new slots/).check();
   expect(await axe(page)).toEqual([]);
   await page.getByRole('button', { name: 'Offboard and sign out everywhere' }).click();
-  await expect(page.getByText('Patients already checked in for them: 2. Reassign them to another doctor on the board.')).toBeVisible();
+  await expect(page.getByText('Patients already checked in for them: 2. Reassign them to another doctor on Front desk.')).toBeVisible();
   expect(JSON.parse(body)).toEqual({ reason: 'Left the practice', rebooking: undefined, offerRebooking: true });
 });
 

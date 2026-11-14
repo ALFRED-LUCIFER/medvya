@@ -6,7 +6,7 @@ Source: PRD v2 §02, Foundations §05 sitemap, UI/UX prompt §2.
 |---|---|---|---|
 | Receptionist | Calendar → register / dedup → check-in → queue → invoice → call next patient | P1 (R1 Front Desk) | Front-desk shell; **never sees clinical notes** |
 | Practice owner / admin | Settings, staff, schedules, services, reports, day-end close, subscription | P1 | Admin shell, single facility |
-| Owner doctor (a doctor who works alone registers a one-doctor clinic and is its owner; there is no individual account, ADR-016) | Today → chart → consultation → signed note and Rx → follow-up → billing | P2 (R2 Consult) | Doctor shell, own practice |
+| Owner doctor (a doctor who works alone registers a one-doctor clinic and is its owner; there is no individual account, ADR-016) | My day → Patient record → consultation → signed note and Rx → follow-up → billing | P2 (R2 Consult) | Doctor shell, own practice |
 | Clinic doctor | Same loop inside a shared clinic with a shared waiting room | P2 | Doctor shell |
 | Nurse | Rooming list → identity check → vitals and allergies → handoff → delegated tasks | P2 | Nurse console |
 | Care coordinator | Results inbox, overdue tasks, contact outcomes, escalations | P4 (R4 Clinic Ops) | Care shell |

@@ -62,11 +62,12 @@ public sealed class GlobalSearchEndpointTests(PostgresFixture sql) : IClassFixtu
         Assert.Equal(HttpStatusCode.OK, status);
         var row = Assert.Single(JsonDocument.Parse(json).RootElement.GetProperty("items").EnumerateArray());
         // The whole shape, so a field added later fails here until someone decides it is safe to show before the chart is opened.
-        // MDV-P1-101 decided the desk's row (name, sex, date of birth, phone tail, last visit, duplicate mark): this role may already search it.
-        Assert.Equal(["access", "ageEstimated", "ageYears", "dateOfBirth", "duplicate", "fullName", "id", "initials", "lastVisitOn", "mobileTail", "mrnTail", "sexAtBirth"],
+        // MDV-P1-101 decided the desk's row (name, age, sex, MRN and phone tails, last visit, duplicate mark): this role may already search it.
+        // Never the date of birth (validation-plan decision 15).
+        Assert.Equal(["access", "ageEstimated", "ageYears", "duplicate", "fullName", "id", "initials", "lastVisitOn", "mobileTail", "mrnTail", "sexAtBirth"],
             row.EnumerateObject().Select(p => p.Name).Order(StringComparer.Ordinal));
         Assert.Equal(("MI", "Open"), (row.GetProperty("initials").GetString(), row.GetProperty("access").GetString()));
-        foreach (var leak in new[] { "+91", "9000000101", "000001" }) Assert.DoesNotContain(leak, json, StringComparison.OrdinalIgnoreCase);
+        foreach (var leak in new[] { "+91", "9000000101", "000001", "dateOfBirth", "1972-03-12" }) Assert.DoesNotContain(leak, json, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

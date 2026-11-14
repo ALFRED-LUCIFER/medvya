@@ -8,7 +8,7 @@ import { mockNurse } from './support/nurse';
 test('the nurse works the intake from the queue to the handoff', async ({ page }) => {
   const { calls } = await mockNurse(page);
   await page.goto('/nurse');
-  await expect(page.getByRole('heading', { name: 'Nurse intake queue' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Nurse queue' })).toBeVisible();
   await page.getByRole('link', { name: 'Open intake for Meera Iyer (synthetic)' }).click();
   await expect(page).toHaveURL(/\/nurse\/a1$/);
   await expect(page.getByRole('region', { name: 'Patient identity' }).getByRole('heading', { name: 'Meera Iyer (synthetic)' })).toBeVisible();

@@ -13,7 +13,7 @@ const row = (over: object) => ({
   id: 'e', occurredAt: '2026-11-04T05:30:00Z', actorUserId: 'u-rao', actorName: 'Dr. Arjun Rao (synthetic)', role: 'SoloDoctor', location: 'Velachery', action: 'patient.read', resourceType: 'patient',
   patientId: 'p-1', patientMrn: '000001', patientName: null, purpose: 'treatment', outcome: 'Allowed', detail: null, ...over,
 });
-const logPage = (items: object[], next: string | null = null) => ({ items, next, actions: ['patient.read', 'patient.update'] });
+const logPage = (items: object[], next: string | null = null) => ({ items, next, actions: ['patient.read', 'patient.update', 'patient.chart.allergy-flag', 'rx.check', 'something.new'] });
 const staff = [{ membershipId: 'a', userId: 'u-rao', name: 'Dr. Arjun Rao (synthetic)', email: null, role: 'SoloDoctor', customRoleId: null, customRoleName: null, facilityId: facility, facilityName: 'Adyar', status: 'Active', mfa: 'enrolled', invitationId: null, invitationState: null, invitationExpiresAt: null }];
 
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
@@ -61,21 +61,30 @@ test('the access log shows who did what, writes the outcome out, pages, and expo
   expect(urls.some(u => u.includes('after=c1'))).toBe(true);
 
   await page.getByRole('button', { name: 'Export CSV' }).click();
-  expect(JSON.parse((await exported).postData() ?? '{}')).toMatchObject({ patientId: null, patientRecords: true });
+  // MDV-P2-050 AC4: the export holds every row whatever the view.
+  expect(JSON.parse((await exported).postData() ?? '{}')).toMatchObject({ patientId: null, action: null, patientRecords: false });
 });
 
-// MDV audit UX-13: the log opens on patient-record events, so settings page views do not push them down; "Any action" shows everything.
-test('the access log starts on patient records and widens to any action on request', async ({ page }) => {
-  await setUp(page);
-  const urls: string[] = [];
-  await page.route('**/v1/audit/access-log**', r => { urls.push(new URL(r.request().url()).search); return r.fulfill({ json: logPage([row({})]) }); });
-  await page.goto('/settings?tab=audit');
-  await expect(page.getByRole('combobox', { name: 'Action' })).toHaveText('Patient records');
-  await expect.poll(() => urls.at(-1)).toContain('patientRecords=true');
-  await page.getByRole('combobox', { name: 'Action' }).click();
-  await page.getByRole('option', { name: 'Any action' }).click();
-  await expect.poll(() => urls.at(-1)).not.toContain('patientRecords');
-});
+// MDV-P2-050: the log opens on charts opened or changed (routine list reads left out on the server); All activity shows the rest. Every
+// option and row is a plain name: no dotted code, not even for a code the screen does not know yet.
+for (const locale of ['en', 'ar'])
+  test(`the access log opens on charts opened or changed, names every action, and widens to all activity (${locale})`, async ({ page }) => {
+    await setUp(page, locale);
+    const urls: string[] = [];
+    await page.route('**/v1/audit/access-log**', r => { urls.push(new URL(r.request().url()).search); return r.fulfill({ json: logPage([row({}), row({ id: 'e9', action: 'something.new' })]) }); });
+    await page.goto('/settings?tab=audit');
+    await expect.poll(() => urls.at(-1)).toContain('chart=true');
+    await expect(page.getByRole('cell', { name: /[a-z]+\.[a-z]/ })).toHaveCount(0);
+    expect(await axe(page)).toEqual([]);
+    await page.getByRole('combobox', { name: locale === 'en' ? 'Action' : 'الإجراء', exact: true }).click();
+    await expect(page.getByRole('option', { name: /[a-z_]+\.[a-z_-]+/ })).toHaveCount(0); // the filter's options too
+    if (locale === 'ar') return;
+    await expect(page.getByRole('option', { name: 'Opened or changed a chart' })).toBeVisible();
+    await expect(page.getByRole('option', { name: 'Allergy flag shown in a list' })).toBeVisible();
+    await page.getByRole('option', { name: 'All activity' }).click();
+    await expect.poll(() => urls.at(-1)).not.toContain('chart=true');
+    await expect(page.getByRole('row', { name: /Other recorded activity/ })).toBeVisible();
+  });
 
 test('choosing a patient asks the per-patient route', async ({ page }) => {
   await setUp(page);

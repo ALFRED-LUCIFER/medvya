@@ -18,7 +18,7 @@ import SessionExpiredPage from '../features/session/components/SessionExpiredPag
 import AppShell from '../features/shell/components/AppShell';
 import MorePage from '../features/shell/components/MorePage';
 import ShellMessage, { ComingSoon } from '../features/shell/components/ShellMessage';
-import { allows, homeItem, patientDirectory, refusedAddress } from '../features/shell/domain/navigation';
+import { allows, clinicalRecord, patientDirectory, refusedAddress, registerPatient } from '../features/shell/domain/navigation';
 import { useShellController } from '../features/shell/hooks/useShellController';
 import GlobalSearchRoute from './GlobalSearchRoute';
 import NotificationsRoute from './NotificationsRoute';
@@ -44,6 +44,7 @@ const devicesPath = '/account/devices';
 // Patient screens load on first use, keeping them out of the first-paint bundle.
 const PatientDirectoryRoute = lazy(() => import('./PatientRoutes').then(m => ({ default: m.PatientDirectoryRoute })));
 const PatientRecordRoute = lazy(() => import('./PatientRoutes').then(m => ({ default: m.PatientRecordRoute })));
+const RecordLayout = lazy(() => import('./PatientRoutes').then(m => ({ default: m.RecordLayout })));
 const MergeReviewRoute = lazy(() => import('./PatientRoutes').then(m => ({ default: m.MergeReviewRoute })));
 const RegistrationRoute = lazy(() => import('./PatientRoutes').then(m => ({ default: m.RegistrationRoute })));
 // Walk-in (MDV-P1-025) brings the patient picker and booking lists: loaded when opened, never at first paint.
@@ -89,7 +90,7 @@ export default function App({ locale, onLocaleChange }: Props) {
   const active = shell.session?.active;
   // Signed in at a facility, rules and formats follow the tenant's country (from the server, never the client).
   const country = active?.country ?? signedOutCountry;
-  const first = homeItem(shell.items, active ?? null);
+  const first = shell.items[0];
   // After choosing, continue to the page that sent the user to the picker (F-05a: back to the previous route after re-sign-in).
   const from = (location.state as { from?: string } | null)?.from;
   const picker = (
@@ -99,7 +100,7 @@ export default function App({ locale, onLocaleChange }: Props) {
   const searchPath = allows(active ?? null, patientDirectory) ? patientDirectory.path : null;
   // The front desk's part of documents: register / book and check-in both at Full, as the server's rule (DocumentRules.CanUploadAtDesk).
   const deskDocuments = active?.capabilities.RegisterBookPatients === 'Full' && active.capabilities.CheckInQueue === 'Full';
-  const registerPath = shell.items.find(i => i.id === 'register')?.path ?? null;
+  const registerPath = allows(active ?? null, registerPatient) ? registerPatient.path : null;
   const pathOf = (id: string) => shell.items.find(i => i.id === id)?.path ?? null;
   const nursePath = pathOf('nurse');
   // Walk-in (MDV-P1-025) books and checks in: Register / book patients and Check-in & queue, both at Full.
@@ -109,6 +110,9 @@ export default function App({ locale, onLocaleChange }: Props) {
   const waitlistPath = pathOf('frontDesk') && active?.capabilities.RegisterBookPatients === 'Full' ? `${pathOf('frontDesk')}/waitlist` : null;
   // Leave and schedule exceptions (MDV-P1-012) change who can be booked: Register / book patients at Full.
   const leavePath = pathOf('schedule') && active?.capabilities.RegisterBookPatients === 'Full' ? `${pathOf('schedule')}/leave` : null;
+  // The Patient record's tabs (MDV-P2-051): exactly the patient screens this role already has routes for below.
+  const clinical = allows(active ?? null, clinicalRecord);
+  const record = { clinical, details: !!searchPath, documents: clinical || deskDocuments };
   const registration = <RegistrationRoute country={country} scope={active?.facilityId ?? ''} actorName={shell.displayName ?? ''} timeZone={active?.timeZone} bookPath={pathOf('schedule')} checkInPath={walkInPath} />;
 
   // F-05a: an ended session replaces every screen; signing in again comes back to this route.
@@ -139,8 +143,8 @@ export default function App({ locale, onLocaleChange }: Props) {
         <Route element={
           <AppShell displayName={account.displayName} onSignOut={account.onSignOut} onLocaleChange={onLocaleChange} onMyDevices={() => navigate(devicesPath)}
             onChangeFacility={account.canSwitchFacility ? () => navigate('/choose-facility') : undefined} navCollapsed={shell.navCollapsed} onToggleNav={shell.toggleNav}
-            role={active.role} facilityName={active.facilityName} groups={shell.groups} tabs={shell.tabs} searchPath={searchPath}
-            globalSearch={searchPath && ['Read', 'Limited', 'Full', 'Sign'].includes(active.capabilities.Patient360Chart ?? 'None')
+            role={active.role} facilityName={active.facilityName} items={shell.items} tabs={shell.tabs} searchPath={searchPath}
+            globalSearch={searchPath && clinical
               ? <GlobalSearchRoute startVisitPath={walkInPath} bookPath={pathOf('schedule')} registerPath={registerPath} /> : undefined}
             notifications={allows(active, patientDirectory) || allows(active, { capability: 'StaffRolesIntegrations', access: ['Config'] } as const) ? <NotificationsRoute facilityId={active.facilityId} online={online} /> : undefined}>
             <OrganisationNotice state={active.organisationState} requestPath={active.capabilities.StaffRolesIntegrations === 'Config' ? organisationPath : undefined} />
@@ -151,20 +155,21 @@ export default function App({ locale, onLocaleChange }: Props) {
           {shell.items.map(i => <Route key={i.id} path={i.path} element={i.id === 'schedule'
             ? <ScheduleRoute facilityId={active.facilityId} userId={shell.session?.user.id ?? ''} userName={shell.session?.user.displayName ?? ''} canBook={active.capabilities.RegisterBookPatients === 'Full'}
                 canCheckIn={active.capabilities.CheckInQueue === 'Full'} registerPath={registerPath} leavePath={leavePath} />
-            : i.id === 'register' ? registration
-            // Doctors (Patient 360 at Full) land on their own Today (MDV-P2-002); reception and nurses keep the board there.
-            : i.id === 'today' && active.capabilities.Patient360Chart === 'Full' && pathOf('frontDesk')
-            ? <TodayRoute facilityId={active.facilityId} online={online} userId={shell.session?.user.id ?? ''} />
-            : i.id === 'frontDesk' || (i.id === 'today' && pathOf('frontDesk'))
+            // My day (MDV-P2-002, named in MDV-P2-051): the doctor's own day, never the board.
+            : i.id === 'today' ? <TodayRoute facilityId={active.facilityId} online={online} userId={shell.session?.user.id ?? ''} />
+            : i.id === 'frontDesk'
             ? <FrontDeskRoute facilityId={active.facilityId} online={online} canMove={active.capabilities.CheckInQueue === 'Full'} canCancel={active.capabilities.RegisterBookPatients === 'Full'}
                 registerPath={registerPath} walkInPath={walkInPath} waitlistPath={waitlistPath} bookPath={active.capabilities.RegisterBookPatients === 'Full' ? pathOf('schedule') : null} billingPath={shell.items.find(b => b.id === 'billing')?.path ?? null}
                 canConsult={active.capabilities.Patient360Chart === 'Full'} steps={{ nurse: active.flags.includes('clinical.nurse-intake'), billing: active.flags.includes('billing.invoices') }}
                 intakePath={nursePath && active.capabilities.VitalsAllergiesEntry === 'Full' ? (id: string) => `${nursePath}/${id}` : null} />
             : i.id === 'nurse' ? <NurseQueueRoute facilityId={active.facilityId} online={online} nursePath={i.path} />
             : i.id === 'settings' ? <SettingsRoute facilityId={active.facilityId} country={active.country ?? null} userId={shell.session?.user.id ?? ''} />
-            // Until the patient chart exists (phase 2) the Patients menu opens the patient directory instead of a placeholder.
+            // Patients opens the directory, its page (same rule, so searchPath is set); /patients stays the menu's address.
             : i.id === 'patients' && searchPath ? <Navigate to={searchPath} replace />
             : <ComingSoon title={t(`nav.${i.id}`)} phase={i.phase} />} />)}
+          {registerPath && <Route path={registerPath} element={registration} />}
+          {/* /today showed the board to nurses and coordinators before My day became the doctor's alone (MDV-P2-051): a bookmark still opens it. */}
+          {!pathOf('today') && pathOf('frontDesk') && clinical && <Route path="/today" element={<Navigate to={pathOf('frontDesk')!} replace />} />}
           {leavePath && <Route path={leavePath} element={<AdjustmentsRoute facilityId={active.facilityId} canConfigure={active.capabilities.StaffRolesIntegrations === 'Config'} userId={shell.session?.user.id ?? ''} schedulePath={pathOf('schedule')!} boardPath={pathOf('frontDesk')} />} />}
           {walkInPath && registerPath &&
             <Route path={walkInPath} element={<WalkInRoute facilityId={active.facilityId} boardPath={pathOf('frontDesk')!} registerPath={`${registerPath}?mode=quick`} />} />}
@@ -201,28 +206,30 @@ export default function App({ locale, onLocaleChange }: Props) {
           </>}
           {/* Without Register patient (a nurse), /patients/new is not a patient id: say the role cannot register instead of "patient not found". */}
           {!registerPath && <Route path="/patients/new" element={<ShellMessage title={t('nav.register')} body={t('registration.forbidden.body')} />} />}
-          {/* Patient 360 (MDV-P2-004, E-01): same roles; /patients/new and /patients/directory are more specific and win. */}
-          {['Read', 'Limited', 'Full', 'Sign'].includes(active.capabilities.Patient360Chart ?? 'None') &&
-            <>
+          {/* The Patient record (MDV-P2-051): one frame with the tabs this role may open; /patients/new and /patients/directory are more specific and win. */}
+          <Route element={<RecordLayout access={record} />}>
+            {/* Summary and Timeline: Patient 360 (MDV-P2-004, E-01) and the timeline (MDV-P2-005), for the clinical record's roles. */}
+            {clinical && <>
               <Route path="/patients/:patientId" element={<Patient360Route backPath={searchPath ?? '/'} canEditHistory={active.capabilities.VitalsAllergiesEntry === 'Full'} canManagePregnancy={active.capabilities.ClinicalNotes === 'Sign'} canOrder={active.capabilities.PrescriptionsOrders === 'Sign'} online={online} userId={shell.session?.user.id ?? ''} />} />
               <Route path="/patients/:patientId/timeline" element={<TimelineRoute printRx={active.capabilities.PrescriptionsOrders === 'Sign'} />} />
             </>}
-          {/* Documents (MDV-P2-006): clinicians, and the front desk (upload and list only; the server refuses it any file). */}
-          {(['Read', 'Limited', 'Full', 'Sign'].includes(active.capabilities.Patient360Chart ?? 'None') || deskDocuments) &&
-            <Route path="/patients/:patientId/docs" element={<DocumentsRoute clinician={['Read', 'Limited', 'Full', 'Sign'].includes(active.capabilities.Patient360Chart ?? 'None')} deskRecordPath={searchPath} />} />}
+            {/* Documents (MDV-P2-006): clinicians, and the front desk (upload and list only; the server refuses it any file). */}
+            {record.documents && <Route path="/patients/:patientId/docs" element={<DocumentsRoute />} />}
+            {/* Details: the registration record (MDV-P1-018), for the directory's roles. */}
+            {searchPath && <Route path={`${searchPath}/:patientId`} element={<PatientRecordRoute canReveal={active.capabilities.RegisterBookPatients === 'Full'} facilityId={active.facilityId} timeZone={active.timeZone} bookPath={pathOf('schedule')} checkInPath={walkInPath} />} />}
+          </Route>
           {/* Queue displays live in Settings (MDV-P1-052); the old address still works for links already shared. */}
           <Route path="/admin/displays" element={<Navigate to="/settings?tab=displays" replace />} />
           {searchPath && <>
-            <Route path={searchPath} element={<PatientDirectoryRoute registerPath={registerPath} mergePath={`${searchPath}/merge`} />} />
+            <Route path={searchPath} element={<PatientDirectoryRoute registerPath={registerPath} mergePath={`${searchPath}/merge`} access={record} />} />
             <Route path={`${searchPath}/merge/:requestId?`} element={<MergeReviewRoute can={{ request: active.capabilities.RegisterBookPatients === 'Full',
               approve: active.capabilities.ClinicalNotes === 'Sign', undo: active.capabilities.StaffRolesIntegrations === 'Config' }} />} />
-            <Route path={`${searchPath}/:patientId`} element={<PatientRecordRoute canReveal={active.capabilities.RegisterBookPatients === 'Full'} canDocs={deskDocuments} facilityId={active.facilityId} timeZone={active.timeZone} bookPath={pathOf('schedule')} checkInPath={walkInPath} />} />
             {active.capabilities.RegisterBookPatients === 'Full' &&
               <Route path={`${searchPath}/:patientId/complete`} element={<CompleteRegistrationRoute country={country} />} />}
           </>}
           {/* My devices (MDV-P0-012): any signed-in member; the server only ever lists and ends the caller's own sessions. */}
           <Route path={devicesPath} element={<MyDevicesRoute timeZone={active.timeZone} />} />
-          <Route path="/more" element={<MorePage {...account} devicesPath={devicesPath} role={active.role} facilityName={active.facilityName} groups={shell.groups} />} />
+          <Route path="/more" element={<MorePage {...account} devicesPath={devicesPath} role={active.role} facilityName={active.facilityName} items={shell.items} />} />
           {/* A screen the app has but this role may not open says so; anything else is "Page not found" (MDV-P1-096). */}
           <Route path="*" element={refusedAddress(location.pathname, active) ? <DeniedPage onHome={toHome} /> : <NotFoundPage onHome={toHome} />} />
         </Route>

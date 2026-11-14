@@ -29,7 +29,7 @@ for (const locale of ['en', 'ar'] as const) {
         await expect(m.locator('p').last()).not.toBeEmpty(); // the sentence; an optional title line sits above it
         expect(await m.getByRole('button').count()).toBeLessThanOrEqual(1);
       }
-      if (locale === 'ar') await expect(messages.first().locator('p')).not.toHaveText('Loading the board…');
+      if (locale === 'ar') await expect(messages.first().locator('p')).not.toHaveText('Loading Front desk…');
 
       // AC2: Tab moves between segments, Enter selects, the selected one is pressed, each is at least 44 px tall.
       const segments = page.locator('[data-slot=segmented-control] button');

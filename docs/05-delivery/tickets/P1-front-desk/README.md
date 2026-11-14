@@ -8,9 +8,9 @@
 **Day one:** Register patients, book, reschedule and cancel appointments, check patients in, run the waiting room and send automatic confirmations and reminders.  
 **Goal:** A clinic can run its entire appointment day in Medvya. This is the workflow to validate with real clinics before anything clinical is built on top.
 
-**Tickets:** 107 · **Estimate:** 224.5 dev-days vs **35 working days** in the window (OVER by 189.5 days: needs scope trade-off or overlap) · **Average confidence:** 77%
+**Tickets:** 108 · **Estimate:** 225.5 dev-days vs **35 working days** in the window (OVER by 190.5 days: needs scope trade-off or overlap) · **Average confidence:** 77%
 
-**Status:** To do 79 · Partly done 16 · Done 12
+**Status:** To do 80 · Partly done 16 · Done 12
 
 ## Epics
 
@@ -64,8 +64,9 @@
 | [MDV-P1-086](MDV-P1-086.md) | To do | Page components in the library: Card and Section, PageMessage and EmptyState, SegmentedControl, SplitLayout and Sheet | Story | SHOULD | P0-07 | — | 2.5 | 5–6 | 23 Nov → 04 Dec 2026 | 80% Medium |
 | [MDV-P1-090](MDV-P1-090.md) | To do | Ending or signing with an unfinished prescription or order asks first; unfinished ones show on the doctor's day | Story | MUST | P2-05, P2-06, P2-01 | E-05, D-01 | 3 | 5–5 | 23 Nov → 27 Nov 2026 | 68% Medium |
 | [MDV-P1-100](MDV-P1-100.md) | To do | Front desk: undo the last move, Left without being seen, cancel a checked-in visit; the desk cannot close a visit under the doctor | Story | MUST | P1-08 | P-01, P-05 | 4 | 5–6 | 23 Nov → 04 Dec 2026 | 65% Medium |
-| [MDV-P1-101](MDV-P1-101.md) | To do | Patient picker rows show date of birth and last visit, and mark possible duplicates | Story | MUST | P1-05, P2-01 | P-04, D-02, P-03 | 2 | 5–5 | 23 Nov → 27 Nov 2026 | 75% Medium |
+| [MDV-P1-101](MDV-P1-101.md) | To do | Patient picker rows show last visit and mark possible duplicates (no date of birth) | Story | MUST | P1-05, P2-01 | P-04, D-02, P-03 | 2 | 5–5 | 23 Nov → 27 Nov 2026 | 75% Medium |
 | [MDV-P1-104](MDV-P1-104.md) | To do | The nurse's chief complaint prefills the doctor's note, marked from nurse intake | Story | SHOULD | P2-03, P2-04 | N-01, E-04 | 1 | 5–5 | 23 Nov → 27 Nov 2026 | 72% Medium |
+| [MDV-P1-109](MDV-P1-109.md) | To do | The server refuses to sign a consultation note until the doctor has confirmed identity with the patient | Story | MUST | P2-05 | E-06 | 1 | 5–5 | 23 Nov → 27 Nov 2026 | 85% High |
 | [MDV-P1-006](MDV-P1-006.md) | To do | Practice settings: notification preferences and data tab | Story | MUST | P1-02 | F-08 | 1.5 | 6–6 | 30 Nov → 04 Dec 2026 | 72% Medium |
 | [MDV-P1-009](MDV-P1-009.md) | Partly done | Staff offboarding removes access immediately and ends all sessions | Story | MUST | P1-11 | F-10 | 1 | 6–6 | 30 Nov → 04 Dec 2026 | 90% High |
 | [MDV-P1-012](MDV-P1-012.md) | To do | Leave and schedule exceptions with re-offer of affected appointments | Story | MUST | P1-04 | P-04 | 1.5 | 6–6 | 30 Nov → 04 Dec 2026 | 82% Medium |

@@ -10,6 +10,5 @@ export default function TimelineRoute({ printRx }: { printRx: boolean }) {
 }
 
 function Timeline({ patientId, printRx }: { patientId: string; printRx: boolean }) {
-  return <TimelinePage {...useTimelineController(patientId)} patient={usePatient360Controller(patientId).data} backPath={`/patients/${patientId}`}
-    consultPath={id => `/consult/${id}`} printRx={printRx} />;
+  return <TimelinePage {...useTimelineController(patientId)} patient={usePatient360Controller(patientId).data} consultPath={id => `/consult/${id}`} printRx={printRx} />;
 }

@@ -4,8 +4,8 @@ import { Tag } from '@medvya/ui';
 import type { PatientSummary } from '../domain/directory';
 
 /**
- * A result row's content on two lines (MDV-AUDIT-1100, MDV-P1-101): the full name with age and sex, then the date of birth, the last four of the MRN
- * and the phone, and the last visit, so two people with the same name still differ. A record in an open merge request says so in words.
+ * A result row's content on two lines (MDV-AUDIT-1100, MDV-P1-101): the full name with age and sex, then the last four of the MRN and the phone,
+ * and the last visit, so two people with the same name still differ. No date of birth: a list is read at a shared desk (decision 15). A record in an open merge request says so in words.
  * In a picker the wrapping button gives the accessible name and this part is visual; `spoken` makes it the name itself (the header search's options).
  */
 export default function PatientSummaryLine({ row, spoken = false }: { row: Omit<PatientSummary, 'status'> & Partial<Pick<PatientSummary, 'status'>>; spoken?: boolean }) {
@@ -21,7 +21,6 @@ export default function PatientSummaryLine({ row, spoken = false }: { row: Omit<
         <span className="flex min-w-0 flex-col">
           <span><span className="break-words font-bold">{row.fullName}</span>{' '}<span className="text-sm">{t('patients.row.ageSex', { age, sex })}</span></span>{' '}
           <span className="font-mono text-xs text-muted-foreground">
-            {row.dateOfBirth && <>{t('patients.row.born', { date: formatCalendarDate(row.dateOfBirth) })}{' · '}</>}
             <bdi dir="ltr">{t('patients.mrnTail', { mrn: row.mrnTail })}</bdi>{' · '}<bdi dir="ltr">{t('patients.mobileTail', { phone: row.mobileTail })}</bdi>{' · '}
             {row.lastVisitOn ? t('patients.row.lastVisit', { date: formatCalendarDate(row.lastVisitOn) }) : t('patients.row.noVisit')}
           </span>

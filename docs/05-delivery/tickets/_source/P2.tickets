@@ -584,7 +584,7 @@ depends: MDV-P2-017
 confidence: 88 | Deliverable explicit.
 sources: PRD v2 P2 delivery package 1
 desc:
-Training: Today, Patient 360, nurse intake and handoff, note writing, coding, reconciliation, signing and addenda, Rx authorisation and printing, orders, referrals, what never happens automatically. Quick reference card for doctors and nurses.
+Training, in the screen names of MDV-P2-051: My day, the Patient record (Summary, Details, Timeline, Documents), the Nurse queue, nurse intake and handoff, note writing, coding, reconciliation, signing and addenda, Rx authorisation and printing, orders, referrals, what never happens automatically. Quick reference card for doctors and nurses.
 ac:
 - All pilot doctors and nurses trained; attendance recorded.
 - Quick reference cards available at each workstation.

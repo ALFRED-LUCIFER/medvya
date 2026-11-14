@@ -88,7 +88,7 @@ export default function BoardPage(props: Props) {
   return (
     // A minmax(0, 1fr) track keeps the board's width out of the page's minimum width, so only the board scrolls sideways.
     <PageContainer width="fluid">
-      <PageHeader eyebrow={t('nav.frontDesk')} title={board ? t('board.title', { day: formatDay(board.date) }) : t('board.titleOnly')}
+      <PageHeader title={board ? t('board.title', { day: formatDay(board.date) }) : t('board.titleOnly')}
         description={board && <span className="text-[13px]">{t('schedule.facilityTime', { zone: board.timeZone })}</span>}
         actions={<>
           {/* Live or paused: announced when it changes, in words and an icon, never colour alone. Nothing animates. */}

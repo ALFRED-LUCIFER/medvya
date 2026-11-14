@@ -220,6 +220,14 @@ async function consultToFinish(page: Page, opts: Parameters<typeof mockPrescript
   const rx = await mockPrescription(page, opts);
   await mockNote(page, { version: 1, recordingConsent: 'Declined', sections: { chiefComplaint: 'Review of sugars', assessment: 'Type 2 diabetes', plan: 'Continue metformin' } });
   await page.route('**/v1/me/context', r => r.fulfill({ json: { ...doctor, active: { ...doctor.active, capabilities: { ...doctor.active.capabilities, ClinicalNotes: 'Sign' } } } }));
+  // Identity confirmed and allergies recorded, so the sign checklist is complete and Sign note is enabled (as in J2.12).
+  await page.route('**/v1/encounters/e-1', r => r.fulfill({ json: {
+    encounter: { id: 'e-1', appointmentId: 'a1', patientId: 'p-1', facilityId: 'f-1', leadClinicianId: 'u-rao', status: 'Active', authorityMode: 'Medvya', startedAt: '2026-10-19T04:35:00Z', endedAt: null, room: 'Room 3',
+      identityConfirmedAt: '2026-10-19T04:36:00Z', identityConfirmedBy: 'u-rao' },
+    timeZone: 'Asia/Kolkata', treatmentConsent: true,
+    patient: { id: 'p-1', fullName: 'Meera Iyer (synthetic)', mrn: '000001', dateOfBirth: '1972-03-12', ageYears: 54, sexAtBirth: 'Female' },
+    allergies: { state: 'Listed', allergies: [{ substance: 'Penicillin', reaction: 'Rash', status: 'PatientReported', source: 'PatientReported' }] },
+  } }));
   const ends: number[] = [];
   await page.route('**/v1/encounters/e-1/end', r => { ends.push(1); return r.fulfill({ status: 500, json: {} }); }); // the move itself is consult.spec's
   return { ...rx, ends };

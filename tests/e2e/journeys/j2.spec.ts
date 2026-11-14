@@ -156,6 +156,8 @@ journey('J2', {
     await page.route('**/v1/front-desk/board?*', r => r.fulfill({ json: { facilityId: 'f-1', timeZone: 'Asia/Kolkata', date: '2026-10-19', now: at, cards: [] } }));
     await page.route('**/v1/notes/pending', r => r.fulfill({ json: { more: false, items: [] } }));
     await page.route('**/v1/intake-escalations?*', r => r.fulfill({ json: [] }));
+    // The doctor's own session (Today needs the desk capabilities), with Prescriptions and orders to open the prescription.
+    await page.route('**/v1/me/context', r => r.fulfill({ json: { ...doctor, active: { ...doctor.active, capabilities: { ...doctor.active.capabilities, PrescriptionsOrders: 'Sign' } } } }));
     await page.route('**/v1/prescriptions/pending', r => r.fulfill({ json: { more: false, items: status === 'Ended' ? [{ encounterId: 'e-1', patientName: 'Meera Iyer', endedAt: at, lines: 1 }] : [] } }));
     await page.goto('/today');
     await page.getByRole('region', { name: '1 prescription to authorise' }).getByRole('link', { name: 'Open the prescription for Meera Iyer to authorise' }).click();

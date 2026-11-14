@@ -38,7 +38,7 @@ public static class SignedNotePdfDocument
             ("", false),
             .. Record(original.Row.AtSigning, zone),
         ];
-        foreach (var section in template.Sections)
+        foreach (var section in template.Sections.Append(NoteTemplates.Notes))
             if (original.Row.Sections.TryGetValue(section.Id, out var text))
                 body.AddRange([(Text($"noteTemplates.section.{section.Id}"), true), .. Lines(section, text), ("", false)]);
         foreach (var a in versions.Skip(1))

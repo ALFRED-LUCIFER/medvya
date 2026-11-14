@@ -71,9 +71,15 @@ export const isBlank = (s: string | undefined) => !s?.trim();
 /** Required sections still empty: marked on screen, never a block (a doctor may sign what they judge complete, MDV-P2-012). */
 export const missingRequired = (template: NoteTemplate, sections: NoteSections) => template.sections.filter(s => s.required && isBlank(sections[s.id])).map(s => s.id);
 
-/** Switching keeps text in sections both templates have and names the sections whose text the new template has no place for. */
+/**
+ * MDV-P2-067: the doctor's free notes about the visit, a section every template accepts and never requires (NoteTemplates.Notes on the
+ * server). Not in any template's sections, so it is never a checklist item or a tick.
+ */
+export const notesSection: NoteSection = { id: 'notes', required: false };
+
+/** Switching keeps text in sections both templates have (and the notes) and names the sections whose text the new template has no place for. */
 export function switchTemplate(sections: NoteSections, to: NoteTemplate) {
-  const byId = new Map(to.sections.map(s => [s.id, s]));
+  const byId = new Map([...to.sections, notesSection].map(s => [s.id, s]));
   const kept: NoteSections = {};
   const dropped: string[] = [];
   for (const [id, v] of Object.entries(sections).filter(([, v]) => !isBlank(v))) {

@@ -41,6 +41,12 @@ public static class NoteTemplates
 
     public const string ReviewOfSystems = "reviewOfSystems", Examination = "examination";
 
+    /// <summary>
+    /// MDV-P2-067: the doctor's free notes about the visit, a section every template accepts and never requires. It is kept out of each template's
+    /// <see cref="NoteTemplate.Sections"/> so no released fingerprint changes. Dictation (MDV-P3-020) will fill it; draft generation (MDV-P3-011) reads it.
+    /// </summary>
+    public static readonly NoteSection Notes = new("notes", false);
+
     // Version 2 (MDV-P2-042): the review of systems after the history, the template's own sections, the examination by system before Objective.
     // The symptom and system lists are the design's (Medvya Web.dc.html, studioVals ros and exam per patient).
     static NoteSection[] Structured(string[] symptoms, string[] systems, params NoteSection[] extra) =>

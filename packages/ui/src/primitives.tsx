@@ -126,9 +126,10 @@ export function ProvenanceTag({ source }: { source: keyof typeof provenanceLooks
   return source === 'ai' ? <Tag tone="ai" {...kept} /> : <Tag tone="neutral" label={t(look.label)} {...kept} />;
 }
 
-export function ClinicalAlert({ severity, children }: { severity: keyof typeof alertLooks; children: ReactNode }) {
+/** `allergy`: the alert is about an allergy, so it draws the status map's allergy glyph; the severity keeps its colour and words. */
+export function ClinicalAlert({ severity, allergy, children }: { severity: keyof typeof alertLooks; allergy?: boolean; children: ReactNode }) {
   const { t } = useI18n();
-  const look = alertLooks[severity], Icon = look.icon;
+  const look = alertLooks[severity], Icon = allergy ? statusIcons.allergy : look.icon;
   return (
     <div role={severity === 'critical' ? 'alert' : 'status'} style={paint(look)} className="flex items-start gap-2 rounded-md p-3">
       <Icon className="mt-0.5 size-5 shrink-0" aria-hidden />

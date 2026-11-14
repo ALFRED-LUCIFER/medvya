@@ -127,6 +127,7 @@ export default function UiGallery({ switcher }: { switcher: ReactNode }) {
       <Section title="Recording and consent">{keys(recordingLooks).map(s => <RecordingPill key={s} state={s} elapsedSeconds={252} />)}</Section>
       <Section title="Alerts">
         {keys(alertLooks).map(s => <div key={s} className="min-w-80"><ClinicalAlert severity={s}>Synthetic example text</ClinicalAlert></div>)}
+        <div className="min-w-80"><ClinicalAlert severity="critical" allergy>Synthetic example text</ClinicalAlert></div>
       </Section>
       <Section title="System states (F-05)">
         {keys(systemStates).map(s => <SystemState key={s} state={s} facility="Iyer Family Clinic · Adyar" onAction={() => {}} />)}

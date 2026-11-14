@@ -175,7 +175,7 @@ function PatientLink(p: Props & { card: BoardCard; stretch?: boolean }) {
 // An allergy state is an icon and words, never colour alone; "not recorded" is never worded as "none". Tones as AllergyBlock's: recorded danger,
 // not recorded warning, none known neutral (MDV-P1-081, MDV-P2-060).
 const flagLooks = {
-  Listed: { Icon: statusIcons.allergy, key: 'today.allergy.listed', tone: 'danger' },
+  Listed: { Icon: statusIcons.allergy, key: 'today.allergy.listed', tone: statuses.allergy.tone },
   NoKnownAllergies: { Icon: CircleCheck, key: 'banner.noAllergies', tone: 'neutral' },
   NotRecorded: { Icon: CircleHelp, key: 'banner.allergiesNotRecorded', tone: 'warning' },
 } as const satisfies Record<AllergyState, { Icon: LucideIcon; key: string; tone: 'danger' | 'neutral' | 'warning' }>;

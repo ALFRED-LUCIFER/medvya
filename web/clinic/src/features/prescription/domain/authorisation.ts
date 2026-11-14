@@ -6,8 +6,15 @@ export type RxAuthorisation = {
   versionNo: number; number: string; authorisedBy: string; authorisedAt: string; contentHash: string; lines: number;
   cancellation: { reason: string; cancelledBy: string; cancelledAt: string } | null;
 };
-/** `authorised` null: never authorised. `changed`: the draft differs from what was authorised, so it does not print until authorised again. */
-export type RxAuthorisationState = { authorised: RxAuthorisation | null; changed: boolean };
+/**
+ * `authorised` null: never authorised. `changed`: the draft differs from what was authorised, so it does not print until authorised again.
+ * `discard`: the doctor discarded the draft (MDV-P1-090). `editable`: the server lets this user still change and authorise it (an open visit, or
+ * the doctor who led an ended one, and not discarded).
+ */
+export type RxAuthorisationState = {
+  authorised: RxAuthorisation | null; changed: boolean;
+  discard?: { reason: string; discardedBy: string; discardedAt: string } | null; editable?: boolean;
+};
 
 /** The notes a regulatory class needs on paper (FormularyRules.PrintRequirements). */
 export type PrintRequirement = 'warning_schedule_h' | 'warning_schedule_h1' | 'warning_schedule_x' | 'warning_controlled' | 'pharmacist_keeps_copy' | 'duplicate_prescription';
@@ -40,6 +47,18 @@ export function authoriseProblem(status: number | undefined, code: string | unde
   const reason = code?.includes(':') ? code.split(':')[1] : code;
   return reason && known.includes(reason) ? (reason as AuthoriseProblem) : 'failed';
 }
+
+/**
+ * MDV-P1-090: the medicines of a draft that is not authorised (or changed since) and not discarded: what End consultation and Sign note ask about.
+ * A cancelled, unchanged version was the doctor's choice, not unfinished work. Empty: nothing is unfinished.
+ */
+export function unfinishedMedicines(lines: { kind: string; included: boolean; medicine: string }[], state: RxAuthorisationState | null): string[] {
+  if (!state || state.discard || (state.authorised && !state.changed)) return [];
+  return lines.filter(l => l.kind !== 'Prescribe' || l.included).map(l => l.medicine);
+}
+
+/** The id of the prescription's Authorise button: where End consultation's "Authorise now" and Today's row take the doctor (MDV-P1-090). */
+export const authoriseTarget = 'rx-authorise';
 
 /** Authorised, unchanged and not cancelled: the prescription that prints and can be cancelled. */
 export const isCurrent = (s: RxAuthorisationState | null) => !!s?.authorised && !s.changed && !s.authorised.cancellation;

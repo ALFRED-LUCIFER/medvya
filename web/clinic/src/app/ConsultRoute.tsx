@@ -6,6 +6,8 @@ import NoteEditor from '../features/encounters/components/NoteEditor';
 import NoteHistory from '../features/encounters/components/NoteHistory';
 import NotePrintPage from '../features/encounters/components/NotePrintPage';
 import NoteTemplateChoice from '../features/encounters/components/NoteTemplateChoice';
+import UnfinishedDialog from '../features/encounters/components/UnfinishedDialog';
+import { useFinishController } from '../features/encounters/hooks/useFinishController';
 import { useConsultController } from '../features/encounters/hooks/useConsultController';
 import FollowUpChoice from '../features/encounters/components/FollowUpChoice';
 import { useFollowUpController } from '../features/encounters/hooks/useFollowUpController';
@@ -46,10 +48,14 @@ export default function ConsultRoute({ boardPath, ...rest }: Props) {
 }
 
 function Consult({ encounterId, boardPath, online, canOrder, canReconcile, canSign, userId }: Props & { encounterId: string }) {
-  const consult = useConsultController(encounterId);
+  const consultation = useConsultController(encounterId);
+  const noteController = useNoteController(encounterId, canSign, consultation.banner?.timeZone, consultation.banner);
+  // MDV-P1-090: End consultation and Sign note ask first about an unfinished prescription or orders not placed.
+  const finish = useFinishController(encounterId, canOrder, { end: consultation.onEnd, sign: noteController.onRequestSign });
+  const consult = { ...consultation, onEnd: finish.onRequestEnd };
   const phone = usePhone();
   // One controller for both views (MDV-P2-041): switching keeps the form, the autosave and every typed word.
-  const note = { ...useNoteController(encounterId, canSign, consult.banner?.timeZone, consult.banner), timeZone: consult.banner?.timeZone,
+  const note = { ...noteController, onRequestSign: finish.onRequestSign, timeZone: consult.banner?.timeZone,
     patient: consult.banner && { name: consult.banner.patient.fullName, mrn: consult.banner.patient.mrn, dateOfBirth: consult.banner.patient.dateOfBirth } };
   const ended = consult.banner?.encounter.status === 'Ended';
   const patient = consult.banner && { ...consult.banner.patient, allergies: consult.banner.allergies };
@@ -71,6 +77,7 @@ function Consult({ encounterId, boardPath, online, canOrder, canReconcile, canSi
         : <>{entry(true)}<NoteEditor {...note} /></>}
       <NoteHistory {...useAddendumController(encounterId, canSign)} timeZone={consult.banner?.timeZone} printPath={`/consult/${encounterId}/note/print`} />
       <NoteTemplateChoice {...useNoteTemplatesController()} />
+      {consult.banner && <UnfinishedDialog {...finish} patientName={consult.banner.patient.fullName} />}
       {phone ? canOrder && !draftOnPhone && phoneGate : <>
         {patient && canOrder && <Prescription encounterId={encounterId} ended={ended} patient={patient} />}
         {consult.banner && canOrder && <Orders encounterId={encounterId} ended={ended} />}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allergySchema, chartAllergies, formOf, medicineSchema, intakeFormSchema, intakeProblem, invalidKind, toRecord, undecided, weightChange, type VitalView } from './intake';
+import { allergySchema, chartAllergies, confirmAll, correctable, correctionSchema, formOf, medicineSchema, intakeFormSchema, intakeProblem, invalidKind, toRecord, undecided, weightChange, type VitalView } from './intake';
 
 const blank = { chiefComplaint: '', SystolicBp: '', DiastolicBp: '', Pulse: '', Temperature: '', OxygenSaturation: '', Weight: '', Height: '', RespiratoryRate: '' };
 const view = (o: Partial<VitalView>): VitalView => ({ kind: 'Weight', value: 72.4, flag: null, previousValue: null, previousAt: null, flagKept: false, recordedAt: '2026-10-19T04:30:00Z', ...o });
@@ -72,4 +72,22 @@ describe('chartAllergies (MDV-P1-092): the strip on intake', () => {
   it('a listed allergy with no status yet reads as unknown', () =>
     expect(chartAllergies({ allergies: [a(null), a('Confirmed')], noKnownAllergiesConfirmed: false })).toMatchObject({
       allergyState: 'Listed', allergies: [{ status: 'Unknown' }, { status: 'Confirmed' }] }));
+});
+
+describe('one confirmation and corrections (MDV-P2-048)', () => {
+  it('lists flagged readings together from two undecided ones; a kept or unflagged one does not count', () => {
+    const high = view({ kind: 'SystolicBp', value: 168, flag: 'High' });
+    expect(confirmAll([high])).toBe(false);
+    expect(confirmAll([high, view({ kind: 'Pulse', value: 104, flag: 'High' })])).toBe(true);
+    expect(confirmAll([high, view({ kind: 'Pulse', value: 104, flag: 'High', flagKept: true }), view({ kind: 'Temperature', value: 36.8 })])).toBe(false);
+  });
+  it('offers a correction only after the handoff while the visit waits for the doctor', () => {
+    expect([correctable({ state: 'ReadyForDoctor', handedOff: true }), correctable({ state: 'WithNurse', handedOff: false }),
+      correctable({ state: 'InConsult', handedOff: true }), correctable({ state: 'ReadyForDoctor', handedOff: false })]).toEqual([true, false, false, false]);
+  });
+  it('needs a value and a reason', () => {
+    expect(correctionSchema.safeParse({ value: '72.5', reason: 'typed 7.25' }).success).toBe(true);
+    expect(correctionSchema.safeParse({ value: '', reason: 'typed 7.25' }).success).toBe(false);
+    expect(correctionSchema.safeParse({ value: '72.5', reason: '  ' }).success).toBe(false);
+  });
 });

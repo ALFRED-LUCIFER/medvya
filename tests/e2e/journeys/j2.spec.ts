@@ -128,6 +128,47 @@ journey('J2', {
     await expect(note.getByRole('navigation', { name: 'Note sections' })).not.toContainText('To do');
     await expect(note.getByRole('radio')).toHaveCount(0);
   },
+  // E-04 → D-01 (MDV-P1-090): End consultation asks first about the unfinished prescription (Escape cancels and nothing ends); End anyway; My day lists
+  // it under Prescriptions to authorise, whose row opens the consultation at the Authorise button. The server rules are proven in RxFinishTests.
+  13: async ({ page }) => {
+    await mockChart(page);
+    await mockNote(page, { version: 1, recordingConsent: 'Declined', sections: { chiefComplaint: 'Review of sugars', assessment: 'Type 2 diabetes', plan: 'Continue metformin' } });
+    await mockPrescription(page, { lines: [line('rx-1', 'Metformin', { dose: '1', doseUnit: 'tablet', route: 'oral', frequency: 'BD' })], checks: clearChecks() });
+    let status = 'Active', ends = 0;
+    const encounter = () => ({ id: 'e-1', appointmentId: 'a1', patientId: 'p-a1', facilityId: 'f-1', leadClinicianId: 'u-rao', status, authorityMode: 'Medvya', startedAt: at,
+      endedAt: status === 'Ended' ? at : null, room: 'Room 3' });
+    await page.route('**/v1/encounters/e-1', r => r.fulfill({ json: { timeZone: 'Asia/Kolkata', treatmentConsent: true, patient: meera, allergies: { state: 'Listed', allergies: [penicillin] }, encounter: encounter() } }));
+    await page.route('**/v1/encounters/e-1/end', r => { ends++; status = 'Ended'; return r.fulfill({ json: encounter() }); });
+    await page.goto('/consult/e-1');
+    const end = page.getByRole('button', { name: 'End consultation' });
+    await end.click();
+    const dialog = page.getByRole('dialog', { name: 'Not finished for Meera Iyer' });
+    await expect(dialog.getByRole('region', { name: 'Prescription not authorised' })).toContainText('Metformin');
+    await expect(dialog).toBeFocused(); // focus moves into the dialog: its name and the list are read first, Tab reaches Authorise now
+    await page.keyboard.press('Escape');
+    await expect(dialog).toHaveCount(0);
+    expect(ends).toBe(0); // nothing ends until a choice is made
+    await end.click();
+    await dialog.getByRole('button', { name: 'End anyway' }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'Consultation ended' })).toBeVisible();
+    expect(ends).toBe(1);
+
+    await page.route('**/v1/front-desk/board?*', r => r.fulfill({ json: { facilityId: 'f-1', timeZone: 'Asia/Kolkata', date: '2026-10-19', now: at, cards: [] } }));
+    await page.route('**/v1/notes/pending', r => r.fulfill({ json: { more: false, items: [] } }));
+    await page.route('**/v1/intake-escalations?*', r => r.fulfill({ json: [] }));
+    // The doctor's own session (Today needs the desk capabilities), with Prescriptions and orders to open the prescription.
+    await page.route('**/v1/me/context', r => r.fulfill({ json: { ...doctor, active: { ...doctor.active, capabilities: { ...doctor.active.capabilities, PrescriptionsOrders: 'Sign' } } } }));
+    await page.route('**/v1/prescriptions/pending', r => r.fulfill({ json: { more: false, items: status === 'Ended' ? [{ encounterId: 'e-1', patientName: 'Meera Iyer', endedAt: at, lines: 1 }] : [] } }));
+    await page.goto('/today');
+    await page.getByRole('region', { name: '1 prescription to authorise' }).getByRole('link', { name: 'Open the prescription for Meera Iyer to authorise' }).click();
+    await expect(page).toHaveURL(/\/consult\/e-1#rx-authorise$/);
+    const rx = page.getByRole('region', { name: 'Prescription' });
+    await expect(rx).toContainText('As the doctor who saw the patient, you can still finish and authorise this draft');
+    const authorise = rx.getByRole('button', { name: 'Authorise prescription' });
+    await expect(authorise).toBeFocused();
+    await authorise.click();
+    await expect(rx).toContainText('Authorised · version 1');
+  },
   // E-05: the prescription and the orders are approved separately, each by its own action and neither by signing the note (MDV-P2-017, MDV-P2-018).
   // Authorising asks for the step-up first; the gates themselves are proven on PostgreSQL in RxAuthorisationTests.
   6: async ({ page }) => {

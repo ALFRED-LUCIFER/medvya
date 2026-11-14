@@ -8,6 +8,10 @@ export const saveIntake = (appointmentId: string, body: { chiefComplaint: string
   send<IntakeView>(`/v1/intake/${appointmentId}`, { method: 'PUT', headers: { ...csrf, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 
 export const keepVital = (appointmentId: string, kind: VitalKind) => post<IntakeView>(`/v1/intake/${appointmentId}/vitals/${kind}/keep`, {});
+// MDV-P2-048: one confirmation for every flagged reading; a correction with its reason (in the body) after the handoff.
+export const keepAllVitals = (appointmentId: string) => post<IntakeView>(`/v1/intake/${appointmentId}/vitals/keep-all`, {});
+export const correctVital = (appointmentId: string, kind: VitalKind, value: number, reason: string) =>
+  post<IntakeView>(`/v1/intake/${appointmentId}/vitals/${kind}/correct`, { value, reason });
 export const escalateIntake = (appointmentId: string, reason: string) => post<IntakeView>(`/v1/intake/${appointmentId}/escalate`, { reason });
 export const handOffIntake = (appointmentId: string) => post<IntakeView>(`/v1/intake/${appointmentId}/handoff`, {});
 

@@ -9,7 +9,7 @@ import { authoriseProblem, type AuthoriseProblem } from '../domain/authorisation
 import { withDefaults } from '../domain/addMedicine';
 import { freeTextSchema, invalidFields, problemOf, toDraft, type PrintLanguage, type RxLine, type RxProblem, type SaveState, type SigDraft, type SigField } from '../domain/prescription';
 import {
-  addFreeText, addFromFormulary, authorise, cancelPrescription, fetchAuthorisation, fetchChecks, fetchPrescription, includeLine, overrideAlert, saveSig, searchMedicines,
+  addFreeText, addFromFormulary, authorise, cancelPrescription, discardDraft, fetchAuthorisation, fetchChecks, fetchPrescription, includeLine, overrideAlert, saveSig, searchMedicines,
 } from '../services/prescriptionApi';
 import { useDidYouMean } from './useAddMedicineController';
 
@@ -57,6 +57,13 @@ export function usePrescriptionController(encounterId: string) {
     mutationFn: (reason: string) => cancelPrescription(encounterId, reason),
     onSuccess: s => { queryClient.setQueryData(authKey, s); setCancelling(false); setCancelProblem(null); cancelForm.reset({ reason: '' }); },
     onError: e => setCancelProblem(authoriseProblem(e instanceof ApiError ? e.status : undefined, e instanceof ApiError ? e.code : undefined) === 'reauth' ? 'reauth' : 'failed'),
+  });
+  // MDV-P1-090: after the visit ended, the doctor who led it can discard the draft from here too, with a reason (no step-up: nothing is authorised).
+  const discardForm = useForm<{ reason: string }>({ resolver: zodResolver(overrideSchema), defaultValues: { reason: '' } });
+  const [discarding, setDiscarding] = useState(false);
+  const doDiscard = useMutation({
+    mutationFn: (reason: string) => discardDraft(encounterId, reason),
+    onSuccess: s => { queryClient.setQueryData(authKey, s); setDiscarding(false); discardForm.reset({ reason: '' }); },
   });
   const recheck = () => {
     void queryClient.invalidateQueries({ queryKey: checksKey });
@@ -115,6 +122,9 @@ export function usePrescriptionController(encounterId: string) {
     cancelling, cancelForm, cancelPending: doCancel.isPending, cancelProblem,
     onCancelling: (open: boolean) => { setCancelling(open); setCancelProblem(null); cancelForm.reset({ reason: '' }); },
     onCancel: cancelForm.handleSubmit(v => doCancel.mutate(v.reason)),
+    discarding, discardForm, discardPending: doDiscard.isPending, discardFailed: doDiscard.isError,
+    onDiscarding: (open: boolean) => { setDiscarding(open); discardForm.reset({ reason: '' }); doDiscard.reset(); },
+    onDiscard: discardForm.handleSubmit(v => doDiscard.mutate(v.reason)),
     /** The step-up leaves for the provider and comes back here; the draft is already saved on the server, nothing is put in browser storage. */
     onConfirmIdentity: async () => {
       try { await startReauth(); } catch { setAuthProblem('failed'); }

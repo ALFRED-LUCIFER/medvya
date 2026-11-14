@@ -121,13 +121,11 @@ public sealed class PrescriptionCheckTests(PostgresFixture sql) : IClassFixture<
         await Rx(h.Doctor).UpdateAsync(paracetamol, new UpdateRxLine("4", "tablet", "oral", "QID", null, 3, 48, null));
         var again = (await Rx(h.Doctor).CheckAsync(enc.Id))!;
         Assert.Equal((2, 0), (again.Unresolved, again.Overrides.Count));
-        Assert.Equal("encounter_ended", await EndedAsync(enc.Id, again.Alerts.First(a => a.Severity == RxSeverity.Severe).Key));
-    }
-
-    async Task<string> EndedAsync(Guid encounterId, string key)
-    {
-        await h.Get<IEncounters>(h.Doctor).EndAsync(encounterId);
-        return (await Assert.ThrowsAsync<PrescriptionConflictException>(() => Rx(h.Doctor).OverrideAsync(encounterId, new OverrideRxAlert(key, "Synthetic")))).Code;
+        // MDV-P1-090: once the visit ended, only the doctor who led it may still give the reason (finishing the draft to authorise it); a colleague is refused.
+        var key = again.Alerts.First(a => a.Severity == RxSeverity.Severe).Key;
+        await h.Get<IEncounters>(h.Doctor).EndAsync(enc.Id);
+        Assert.Equal("encounter_ended", (await Assert.ThrowsAsync<PrescriptionConflictException>(() => Rx(h.SecondDoctor).OverrideAsync(enc.Id, new OverrideRxAlert(key, "Synthetic")))).Code);
+        Assert.Contains((await Rx(h.Doctor).OverrideAsync(enc.Id, new OverrideRxAlert(key, "Synthetic (after the visit)")))!.Overrides, o => o.Key == key);
     }
 
     /// <summary>SAFETY (mutation check: read no allergy rows as "no known allergies", and this fails).</summary>

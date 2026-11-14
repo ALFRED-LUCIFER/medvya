@@ -344,4 +344,56 @@ public sealed class IntakeTests(PostgresFixture sql) : IClassFixture<PostgresFix
         await db.Database.ExecuteSqlAsync($"SELECT set_config('medvya.tenant_id', {Guid.NewGuid().ToString()}, true)");
         Assert.Equal((0, 0, 0), (await db.Intakes.IgnoreQueryFilters().CountAsync(), await db.Observations.IgnoreQueryFilters().CountAsync(), await db.IntakeEscalations.IgnoreQueryFilters().CountAsync()));
     }
+    // MDV-P2-048 (needs clinical sign-off before merge): one confirmation for all flagged readings, and a correction until the doctor starts.
+    [Fact]
+    public async Task OneConfirmationKeepsEveryFlaggedReadingAndEachIsRecordedAsConfirmed()
+    {
+        var visit = await WithNurseAsync();
+        await Intake(h.Nurse).ConfirmNoKnownAllergiesAsync(visit); // the allergy gate is its own tests; here the patient has none
+        var saved = await Intake(h.Nurse).RecordAsync(visit, Vitals(sys: 168, dia: 96, pulse: 104, temp: 39.2m));
+        Assert.Equal(4, saved!.Vitals.Count(v => v.Flag is not null && !v.FlagKept));
+        // The usual range travels with a High or Low flag, so it is said in words beside it (adult, the ranges of #956 unchanged).
+        Assert.Equal((90m, 140m), saved.Vitals.Where(v => v.Kind == VitalKind.SystolicBp).Select(v => (v.UsualLow, v.UsualHigh)).Single());
+
+        // Re-measuring one changes only that reading: it is normal now and the other three stay flagged and undecided.
+        var remeasured = await Intake(h.Nurse).RecordAsync(visit, Vitals(pulse: 88));
+        Assert.Equal([VitalKind.SystolicBp, VitalKind.DiastolicBp, VitalKind.Temperature], remeasured!.Vitals.Where(v => v.Flag is not null && !v.FlagKept).Select(v => v.Kind));
+        Assert.Equal(168m, remeasured.Vitals.Single(v => v.Kind == VitalKind.SystolicBp).Value);
+
+        var kept = await Intake(h.Nurse).KeepAllAsync(visit);
+        Assert.All(kept!.Vitals.Where(v => v.Flag is not null), v => Assert.True(v.FlagKept));
+        Assert.DoesNotContain("vitals_undecided", kept.Blockers);
+        await Assert.ThrowsAsync<IntakeValidationException>(() => Intake(h.Nurse).KeepAllAsync(visit)); // nothing left to confirm
+        await using var audit = sql.Audit(h.Tenant);
+        Assert.Equal(3, await audit.Events.CountAsync(e => e.Action == "intake.keep" && e.ResourceId == visit)); // one per reading confirmed
+    }
+
+    // SAFETY mutation check: removing the "consult_started" refusal in CorrectAsync lets the correction through after the doctor started and fails this.
+    [Fact]
+    public async Task ACorrectionAfterHandoffKeepsTheEarlierValueAndIsRefusedOnceTheDoctorStarts()
+    {
+        var visit = await WithNurseAsync();
+        await Intake(h.Nurse).ConfirmNoKnownAllergiesAsync(visit); // the allergy gate is its own tests; here the patient has none
+        await Intake(h.Nurse).RecordAsync(visit, Vitals(pulse: 72, weight: 7.2m));
+        var before = await Assert.ThrowsAsync<IntakeConflictException>(() => Intake(h.Nurse).CorrectAsync(visit, VitalKind.Weight, new CorrectVital(72m, "Synthetic: typed 7.2")));
+        Assert.Equal("not_handed_off", before.Code); // with the nurse a re-measure is the way
+        await Intake(h.Nurse).HandOffAsync(visit);
+        var wrongAt = h.Clock.GetUtcNow();
+        h.Clock.Advance(TimeSpan.FromMinutes(3));
+
+        var noReason = await Assert.ThrowsAsync<IntakeValidationException>(() => Intake(h.Nurse).CorrectAsync(visit, VitalKind.Weight, new CorrectVital(72m, "  ")));
+        Assert.Contains(("reason", "required"), noReason.Errors);
+        var corrected = await Intake(h.Nurse).CorrectAsync(visit, VitalKind.Weight, new CorrectVital(72m, "Synthetic: typed 7.2"));
+        var weight = corrected!.Vitals.Single(v => v.Kind == VitalKind.Weight);
+        Assert.Equal((72m, h.Clock.GetUtcNow()), (weight.Value, weight.RecordedAt));
+        Assert.Equal(new VitalCorrection(7.2m, h.Nurse, wrongAt, "Synthetic: typed 7.2"), weight.Correction); // the earlier row is kept: its value, who and when
+        Assert.Null(corrected.Vitals.Single(v => v.Kind == VitalKind.Pulse).Correction);
+
+        await h.Get<IEncounters>(h.Doctor).StartAsync(new StartEncounter(visit));
+        var after = await Assert.ThrowsAsync<IntakeConflictException>(() => Intake(h.Nurse).CorrectAsync(visit, VitalKind.Pulse, new CorrectVital(76, "Synthetic: miscounted")));
+        Assert.Equal("consult_started", after.Code);
+        Assert.Equal(72m, (await Intake(h.Nurse).GetAsync(visit))!.Vitals.Single(v => v.Kind == VitalKind.Pulse).Value);
+        await using var audit = sql.Audit(h.Tenant);
+        Assert.Equal(1, await audit.Events.CountAsync(e => e.Action == "intake.correct" && e.ResourceId == visit && e.PatientId == h.Patient));
+    }
 }

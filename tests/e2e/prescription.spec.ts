@@ -1,6 +1,8 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
-import { clearChecks, line, mockPrescription, paracetamolForWeight, patientAlert, penicillinAlert, stopLine } from './support/prescription';
+import { authorised, clearChecks, line, mockPrescription, paracetamolForWeight, patientAlert, penicillinAlert, stopLine } from './support/prescription';
+import { mockNote } from './support/note';
+import { doctor } from './support/orders';
 
 // MDV-P2-015 (E-05, E-11): the doctor adds a formulary medicine and builds its dose, which autosaves and shows the instruction in the chosen
 // print language; a free-text medicine is flagged; a reconciliation stop is a discontinue line. CI has no API: endpoints are mocked in the
@@ -210,4 +212,70 @@ for (const locale of ['en', 'ar'])
     const violations = await page.evaluate(async () =>
       (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations.map(v => `${v.id} (${v.nodes.length})`));
     expect(violations).toEqual([]);
+  });
+
+// MDV-P1-090: End consultation and Sign note ask first about an unfinished prescription or orders not placed. The server rules (the doctor who led the
+// visit finishes it after it ended, the discard reason, Today's list) are proven in RxFinishTests.
+async function consultToFinish(page: Page, opts: Parameters<typeof mockPrescription>[1] = {}) {
+  const rx = await mockPrescription(page, opts);
+  await mockNote(page, { version: 1, recordingConsent: 'Declined', sections: { chiefComplaint: 'Review of sugars', assessment: 'Type 2 diabetes', plan: 'Continue metformin' } });
+  await page.route('**/v1/me/context', r => r.fulfill({ json: { ...doctor, active: { ...doctor.active, capabilities: { ...doctor.active.capabilities, ClinicalNotes: 'Sign' } } } }));
+  // Identity confirmed and allergies recorded, so the sign checklist is complete and Sign note is enabled (as in J2.12).
+  await page.route('**/v1/encounters/e-1', r => r.fulfill({ json: {
+    encounter: { id: 'e-1', appointmentId: 'a1', patientId: 'p-1', facilityId: 'f-1', leadClinicianId: 'u-rao', status: 'Active', authorityMode: 'Medvya', startedAt: '2026-10-19T04:35:00Z', endedAt: null, room: 'Room 3',
+      identityConfirmedAt: '2026-10-19T04:36:00Z', identityConfirmedBy: 'u-rao' },
+    timeZone: 'Asia/Kolkata', treatmentConsent: true,
+    patient: { id: 'p-1', fullName: 'Meera Iyer (synthetic)', mrn: '000001', dateOfBirth: '1972-03-12', ageYears: 54, sexAtBirth: 'Female' },
+    allergies: { state: 'Listed', allergies: [{ substance: 'Penicillin', reaction: 'Rash', status: 'PatientReported', source: 'PatientReported' }] },
+  } }));
+  const ends: number[] = [];
+  await page.route('**/v1/encounters/e-1/end', r => { ends.push(1); return r.fulfill({ status: 500, json: {} }); }); // the move itself is consult.spec's
+  return { ...rx, ends };
+}
+
+test('Sign note with orders not placed lists them before the sign dialog; Sign anyway goes on to it', async ({ page }) => {
+  await consultToFinish(page, { lines: [line('rx-1', 'Metformin')], authorisation: { authorised: authorised(), changed: false } });
+  await page.route('**/v1/encounters/e-1/orders', r => r.fulfill({ json: [{ id: 'o-1', kind: 'Lab', name: 'HbA1c', note: null, state: 'Draft', destination: null, orderedAt: null }] }));
+  await page.goto('/consult/e-1');
+  await page.getByRole('region', { name: 'Consultation note' }).getByRole('button', { name: 'Sign note' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Not finished for Meera Iyer (synthetic)' });
+  await expect(dialog.getByRole('region', { name: 'Orders not placed' })).toContainText('HbA1c');
+  await expect(dialog.getByRole('region', { name: 'Prescription not authorised' })).toHaveCount(0); // authorised and unchanged: finished
+  await expect(dialog.getByRole('button', { name: 'Discard the draft' })).toHaveCount(0);
+  await dialog.getByRole('button', { name: 'Sign anyway' }).click();
+  await expect(page.getByRole('dialog').getByRole('button', { name: /^Sign as / })).toBeVisible(); // then the sign dialog, its own act
+});
+
+test('discarding the draft at End consultation needs a reason, is sent, and then ends', async ({ page }) => {
+  const { calls, ends } = await consultToFinish(page, { lines: [line('rx-1', 'Metformin')] });
+  await page.goto('/consult/e-1');
+  await page.getByRole('button', { name: 'End consultation' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Not finished for Meera Iyer (synthetic)' });
+  await dialog.getByRole('button', { name: 'Discard the draft' }).click();
+  await dialog.getByRole('button', { name: 'Discard and continue' }).click();
+  await expect(dialog.getByText('Give a reason of up to 200 characters.')).toBeVisible();
+  expect(calls.discarded).toEqual([]);
+  await dialog.getByLabel('Reason for discarding').fill('Patient will buy it later (synthetic)');
+  await dialog.getByRole('button', { name: 'Discard and continue' }).click();
+  await expect(dialog).toHaveCount(0);
+  expect(calls.discarded).toEqual([{ reason: 'Patient will buy it later (synthetic)' }]);
+  expect(ends).toHaveLength(1);
+  await expect(page.getByRole('region', { name: 'Prescription' })).toContainText('Draft discarded: Patient will buy it later (synthetic)');
+});
+
+for (const locale of ['en', 'ar'])
+  test(`the unfinished-work dialog takes focus, Escape cancels it, and axe finds no violations (${locale})`, async ({ page }) => {
+    const { ends } = await consultToFinish(page, { locale, lines: [line('rx-1', 'Metformin')] });
+    await page.goto('/consult/e-1');
+    if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+    await page.getByRole('button', { name: locale === 'ar' ? 'إنهاء الاستشارة' : 'End consultation' }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeFocused();
+    await page.addScriptTag({ path: axePath });
+    const violations = await page.evaluate(async () =>
+      (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations.map(v => `${v.id} (${v.nodes.length})`));
+    expect(violations).toEqual([]);
+    await page.keyboard.press('Escape');
+    await expect(dialog).toHaveCount(0);
+    expect(ends).toEqual([]);
   });

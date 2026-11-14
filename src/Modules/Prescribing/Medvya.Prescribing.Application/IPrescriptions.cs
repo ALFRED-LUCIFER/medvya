@@ -72,8 +72,20 @@ public sealed record RxCancellationView(string Reason, Guid CancelledBy, DateTim
 /// <summary>Cancel the authorised prescription without replacing it, with the doctor's reason.</summary>
 public sealed record CancelRx(string? Reason);
 
-/// <summary>Null <see cref="Authorised"/>: never authorised. <see cref="Changed"/>: the draft differs from what was authorised (printing waits for a new authorisation).</summary>
-public sealed record RxAuthorisationState(RxAuthorisationView? Authorised, bool Changed);
+/// <summary>
+/// Null <see cref="Authorised"/>: never authorised. <see cref="Changed"/>: the draft differs from what was authorised (printing waits for a new authorisation).
+/// <see cref="Discard"/>: the doctor discarded the draft (MDV-P1-090). <see cref="Editable"/>: the caller may still change and authorise the draft: the
+/// consultation is open, or it ended and the caller is the doctor who led it, and the draft was not discarded.
+/// </summary>
+public sealed record RxAuthorisationState(RxAuthorisationView? Authorised, bool Changed, RxDiscardView? Discard = null, bool Editable = false);
+
+public sealed record RxDiscardView(string Reason, Guid DiscardedBy, DateTimeOffset DiscardedAt);
+
+/// <summary>Discard the unfinished draft prescription, with the doctor's reason.</summary>
+public sealed record DiscardRx(string? Reason);
+
+/// <summary>An ended consultation of the signed-in doctor's whose draft prescription waits to be authorised (MDV-P1-090): Today's "Prescriptions to authorise".</summary>
+public sealed record RxPending(Guid EncounterId, string? PatientName, DateTimeOffset EndedAt, int Lines);
 
 /// <summary>One printed line: generic name, strength and form, the instruction in every print language, the print requirements (codes) of its class.</summary>
 public sealed record RxPrintLine(bool Discontinue, string Medicine, string? Strength, string? Form, IReadOnlyDictionary<string, string> Sig, IReadOnlyList<string> PrintRequirements, string? Reason);
@@ -156,6 +168,22 @@ public interface IPrescriptions
     /// <exception cref="PrescriptionConflictException">not_authorised.</exception>
     /// <exception cref="PrescriptionValidationException">reason: required, too_long.</exception>
     Task<RxAuthorisationState?> CancelAsync(Guid encounterId, CancelRx command, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Discards the unfinished draft (MDV-P1-090) with a reason: the same access as changing it (after the visit ended, only the doctor who led it).
+    /// The draft is then closed for good. Discarding again returns the state unchanged. Audited as rx.discard; the reason is kept on the discard record.
+    /// </summary>
+    /// <exception cref="PrescriptionConflictException">nothing_to_discard (empty, or authorised and unchanged), encounter_ended.</exception>
+    /// <exception cref="PrescriptionValidationException">reason: required, too_long.</exception>
+    Task<RxAuthorisationState?> DiscardAsync(Guid encounterId, DiscardRx command, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The signed-in doctor's ended consultations at <paramref name="facilityId"/> whose draft is not authorised (or changed since) and not discarded, oldest
+    /// first, at most <see cref="MaxPending"/> (More: there are more). Only those the doctor may still open; one rx.pending audit row per patient answered.
+    /// </summary>
+    Task<(IReadOnlyList<RxPending> Items, bool More)> PendingAsync(Guid facilityId, CancellationToken cancellationToken = default);
+
+    public const int MaxPending = 50;
 
     /// <summary>The consultation's advice for the patient (MDV-P2-043); audited as rx.advice.read.</summary>
     Task<RxAdviceView?> AdviceAsync(Guid encounterId, CancellationToken cancellationToken = default);

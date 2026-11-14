@@ -329,6 +329,22 @@ public sealed class PrescriptionCancellation
     [Classification(DataClass.Internal)] public DateTimeOffset CancelledAt { get; init; }
 }
 
+/// <summary>
+/// The doctor's discard of a consultation's unfinished draft prescription (MDV-P1-090), with the reason: a hash-chained append-only row, at most one per
+/// consultation. A discarded draft is closed for good: it is never changed, authorised or listed as waiting again. Nothing clinical is deleted.
+/// </summary>
+public sealed class PrescriptionDiscard
+{
+    public const int MaxReason = 200;
+
+    [Classification(DataClass.Internal)] public Guid Id { get; init; }
+    [Classification(DataClass.Internal)] public Guid TenantId { get; init; }
+    [Classification(DataClass.Internal)] public Guid EncounterId { get; init; }
+    [Classification(DataClass.SensitiveHealth)] public required string Reason { get; init; }
+    [Classification(DataClass.Internal)] public Guid DiscardedBy { get; init; }
+    [Classification(DataClass.Internal)] public DateTimeOffset DiscardedAt { get; init; }
+}
+
 /// <summary>PRESCRIPTION PDF (MDV-P2-017): every PDF of an authorised prescription the server rendered, byte for byte with its SHA-256, append-only.
 /// shortcut: the bytes are kept in PostgreSQL (a text-only PDF is a few kilobytes); move them to Blob when the PDF carries images (logo, signature).</summary>
 public sealed class PrescriptionPdf

@@ -23,7 +23,7 @@ namespace Medvya.Encounters.Infrastructure;
 public sealed class IntakeService(
     EncountersDbContext db, IConsultVisits visits, IPatientDirectory patients, IClinicalAccess clinical, ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, TimeProvider clock) : IIntake
 {
-    public const string ReadAction = "intake.read", RecordAction = "intake.record", KeepAction = "intake.keep", EscalateAction = "intake.escalate",
+    public const string ReadAction = "intake.read", RecordAction = "intake.record", KeepAction = "intake.keep", CorrectAction = "intake.correct", EscalateAction = "intake.escalate",
         HandOffAction = "intake.handoff", AllergyAddAction = "intake.allergy.add", AllergyStatusAction = "intake.allergy.status",
         NoKnownAllergiesAction = "intake.allergy.none", MedicineAddAction = "intake.medicine.add", EscalationsAction = "intake.escalations.read", Resource = "intake";
     public const int MaxText = 500, MaxName = 100, MaxDetail = 50;
@@ -106,6 +106,66 @@ public sealed class IntakeService(
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
         await db.Observations.Where(o => o.Id == latest.Id).ExecuteUpdateAsync(s => s.SetProperty(o => o.FlagKept, true), cancellationToken);
         await audit.WriteAsync(Event(KeepAction, visit), tx.GetDbTransaction(), cancellationToken);
+        await tx.CommitAsync(cancellationToken);
+        return await ViewAsync(visit, cancellationToken);
+    }
+
+    public async Task<IntakeView?> KeepAllAsync(Guid appointmentId, CancellationToken cancellationToken = default)
+    {
+        if (await visits.FindAsync(appointmentId, cancellationToken) is not { } visit) return null;
+        await RequireAsync(visit, cancellationToken);
+        if (!Open(visit)) throw new IntakeConflictException("visit_closed");
+        var undecided = (await CurrentAsync(appointmentId, cancellationToken)).Values.Where(o => o.Flag is not null && !o.FlagKept).Select(o => o.Id).ToList();
+        if (undecided.Count == 0) throw new IntakeValidationException([("kind", "not_flagged")]);
+
+        await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
+        // Only the rows the nurse saw as current: a reading re-measured in the meantime is a new row and keeps its own decision.
+        await db.Observations.Where(o => undecided.Contains(o.Id)).ExecuteUpdateAsync(s => s.SetProperty(o => o.FlagKept, true), cancellationToken);
+        // One event per reading, so the record shows each was confirmed, not only that a button was pressed.
+        foreach (var _ in undecided) await audit.WriteAsync(Event(KeepAction, visit), tx.GetDbTransaction(), cancellationToken);
+        await tx.CommitAsync(cancellationToken);
+        return await ViewAsync(visit, cancellationToken);
+    }
+
+    public async Task<IntakeView?> CorrectAsync(Guid appointmentId, VitalKind kind, CorrectVital command, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        if (await visits.FindAsync(appointmentId, cancellationToken) is not { } visit) return null;
+        await RequireAsync(visit, cancellationToken);
+        // SAFETY: a reading the doctor may have started from is never changed under them; after the start a new reading is taken in the consultation.
+        if (await db.Encounters.AnyAsync(e => e.AppointmentId == appointmentId, cancellationToken)) throw new IntakeConflictException("consult_started");
+        if (visit.State != AppointmentState.ReadyForDoctor || !await db.Intakes.AnyAsync(i => i.AppointmentId == appointmentId && i.HandedOffAt != null, cancellationToken))
+            throw new IntakeConflictException("not_handed_off");
+        var reason = command.Reason?.Trim();
+        var errors = new List<(string, string)>();
+        if (!Enum.IsDefined(kind)) errors.Add(("kind", "invalid"));
+        else if (command.Value is not { } value) errors.Add(("value", "required"));
+        else if (!VitalRules.IsPossible(kind, value)) errors.Add(("value", "implausible"));
+        else if (decimal.Round(value, 1) != value) errors.Add(("value", "too_precise"));
+        if (string.IsNullOrEmpty(reason)) errors.Add(("reason", "required"));
+        else if (reason.Length > MaxText) errors.Add(("reason", "too_long"));
+        if (errors.Count > 0) throw new IntakeValidationException(errors);
+        var current = await CurrentAsync(appointmentId, cancellationToken);
+        if (!current.TryGetValue(kind, out var wrong)) throw new IntakeValidationException([("kind", "no_reading")]);
+        var corrected = command.Value!.Value;
+        if (wrong.ValueTenths == VitalRules.ToTenths(corrected)) throw new IntakeValidationException([("value", "unchanged")]);
+        decimal? Level(VitalKind k) => k == kind ? corrected : current.GetValueOrDefault(k)?.ValueTenths / 10m;
+        if (Level(VitalKind.SystolicBp) is { } sys && Level(VitalKind.DiastolicBp) is { } dia && sys <= dia) throw new IntakeValidationException([("vitals", "systolic_not_above_diastolic")]);
+
+        var (now, me) = (clock.GetUtcNow(), user.UserId ?? throw new InvalidOperationException("No user."));
+        var born = (await patients.SummariesAsync([visit.PatientId], cancellationToken)).GetValueOrDefault(visit.PatientId)?.DateOfBirth
+            ?? throw new InvalidOperationException("The visit's patient is not in the directory.");
+        await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
+        // The wrong reading stays as it was (value, who, when); the correction is a new current row that says why.
+        db.Observations.Add(new Observation
+        {
+            Id = Guid.CreateVersion7(), TenantId = TenantId, FacilityId = visit.FacilityId, PatientId = visit.PatientId, AppointmentId = appointmentId, Code = wrong.Code,
+            ValueHundredths = VitalRules.ToTenths(corrected) * 10, PreviousTenths = wrong.PreviousTenths, PreviousAt = wrong.PreviousAt,
+            Flag = VitalRules.Flag(kind, corrected, wrong.PreviousTenths is { } p ? VitalRules.FromTenths(p) : null, VitalRules.AgeInMonths(born, DateOnly.FromDateTime(now.UtcDateTime))),
+            Source = ChartSource.ClinicianVerified, RecordedBy = me, VerifiedBy = me, TakenAt = now, CorrectionReason = reason,
+        });
+        await db.SaveChangesAsync(cancellationToken);
+        await audit.WriteAsync(Event(CorrectAction, visit), tx.GetDbTransaction(), cancellationToken);
         await tx.CommitAsync(cancellationToken);
         return await ViewAsync(visit, cancellationToken);
     }
@@ -317,8 +377,19 @@ public sealed class IntakeService(
     async Task<IntakeView> ViewAsync(ConsultVisit visit, CancellationToken cancellationToken)
     {
         var row = await db.Intakes.AsNoTracking().SingleOrDefaultAsync(i => i.AppointmentId == visit.Id, cancellationToken);
-        var vitals = (await CurrentAsync(visit.Id, cancellationToken)).OrderBy(p => p.Key).Select(p => p.Value)
-            .Select(o => new IntakeVital(VitalRules.Kind(o.Code)!.Value, VitalRules.FromTenths(o.ValueTenths), o.Flag, o.PreviousTenths is { } p ? VitalRules.FromTenths(p) : null, o.PreviousAt, o.FlagKept, o.TakenAt)).ToList();
+        var readings = await db.Observations.AsNoTracking().Where(o => o.AppointmentId == visit.Id).ToListAsync(cancellationToken);
+        var born = readings.Exists(o => o.Flag is VitalAlert.High or VitalAlert.Low)
+            ? (await patients.SummariesAsync([visit.PatientId], cancellationToken)).GetValueOrDefault(visit.PatientId)?.DateOfBirth : null;
+        var vitals = readings.GroupBy(o => VitalRules.Kind(o.Code)!.Value).OrderBy(g => g.Key).Select(g =>
+        {
+            var history = g.OrderByDescending(o => o.TakenAt).ThenByDescending(o => o.Id).ToList();
+            var o = history[0];
+            // The range the flag was judged against, at the patient's age on the day of the reading (the ranges themselves are #956's).
+            (decimal Low, decimal High)? usual = o.Flag is VitalAlert.High or VitalAlert.Low && born is { } b ? VitalRules.Usual(g.Key, VitalRules.AgeInMonths(b, DateOnly.FromDateTime(o.TakenAt.UtcDateTime))) : null;
+            var correction = o.CorrectionReason is { } why && history.Count > 1 ? new VitalCorrection(VitalRules.FromTenths(history[1].ValueTenths), history[1].RecordedBy, history[1].TakenAt, why) : null;
+            return new IntakeVital(g.Key, VitalRules.FromTenths(o.ValueTenths), o.Flag, o.PreviousTenths is { } p ? VitalRules.FromTenths(p) : null, o.PreviousAt, o.FlagKept, o.TakenAt,
+                usual?.Low, usual?.High, correction);
+        }).ToList();
         var allergies = await db.Allergies.AsNoTracking().Where(a => a.PatientId == visit.PatientId && a.Kind == AllergyKind.Substance).OrderBy(a => a.RecordedAt).ThenBy(a => a.Id)
             .Select(a => new IntakeAllergy(a.Id, a.Substance!, a.Reaction, a.StatusSetAt == null ? null : a.Status, a.Source, a.StatusSetAt)).ToListAsync(cancellationToken);
         var medicines = await db.MedicationStatements.AsNoTracking().Where(m => m.PatientId == visit.PatientId && m.AppointmentId == visit.Id).OrderBy(m => m.RecordedAt).ThenBy(m => m.Id)

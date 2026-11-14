@@ -12,6 +12,10 @@ export const vitalUnits: Record<VitalKind, string> = { SystolicBp: 'mmHg', Diast
 
 export type VitalView = {
   kind: VitalKind; value: number; flag: VitalAlert | null; previousValue: number | null; previousAt: string | null; flagKept: boolean; recordedAt: string;
+  /** With a High or Low flag: the usual range the server judged it against (at or above usualHigh is high), said in words beside the flag (MDV-P2-048). */
+  usualLow?: number | null; usualHigh?: number | null;
+  /** This reading corrected the one before it after the handoff (MDV-P2-048): the earlier value, who recorded it, when, and why it was corrected. */
+  correction?: { fromValue: number; fromBy: string | null; fromAt: string; reason: string } | null;
 };
 
 /** How sure the clinic is of an allergy (MDV-P2-008); null is "not set yet" and blocks the handoff. */
@@ -89,6 +93,16 @@ export function toRecord(form: IntakeForm) {
 /** A reading that still needs the nurse's decision: flagged, and not kept on purpose. */
 export const undecided = (v: VitalView) => v.flag !== null && !v.flagKept;
 
+/** Several readings need a decision: one list and one confirmation cover them all (MDV-P2-048); a single one keeps its own Keep. */
+export const confirmAll = (vitals: readonly VitalView[]) => vitals.filter(undecided).length >= 2;
+
+/** After the handoff and before the doctor starts, the nurse may correct a reading with a reason (MDV-P2-048); the server is the authority. */
+export const correctable = (intake: Pick<IntakeView, 'state' | 'handedOff'>) => intake.state === 'ReadyForDoctor' && intake.handedOff;
+
+export const correctionSchema = z.object({ value: reading.refine(v => v !== '', 'number'), reason: z.string().trim().min(1).max(500) });
+export type CorrectionForm = z.infer<typeof correctionSchema>;
+export const emptyCorrection: CorrectionForm = { value: '', reason: '' };
+
 /** The kilograms moved since the last weight, signed ("+2.2"), when the flag is a weight change. */
 export function weightChange(v: VitalView): string | null {
   if (v.flag !== 'Changed' || v.previousValue === null) return null;
@@ -117,7 +131,7 @@ export function invalidKind(field: string, sent: readonly { kind: VitalKind }[])
 
 /** Fields of the vitals form; other refused fields belong to the allergy and medicine forms. */
 export const isVitalsField = (field: string) => field.startsWith('vitals') || field === 'chiefComplaint';
-const knownCodes = ['has_allergies', 'implausible', 'too_precise', 'systolic_not_above_diastolic', 'not_with_nurse', 'visit_closed', 'handoff_blocked', 'not_flagged'] as const;
+const knownCodes = ['has_allergies', 'implausible', 'too_precise', 'systolic_not_above_diastolic', 'not_with_nurse', 'visit_closed', 'handoff_blocked', 'not_flagged', 'consult_started', 'not_handed_off', 'unchanged'] as const;
 
 export function problemKey(p: IntakeProblem): MessageKey {
   if (p.kind === 'invalid' || p.kind === 'conflict') return (knownCodes as readonly string[]).includes(p.code) ? `intake.error.${p.code as (typeof knownCodes)[number]}` : 'intake.error.failed';

@@ -4,10 +4,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { ApiError } from '../../schedule/services/scheduleApi';
 import {
-  allergySchema, emptyAllergy, emptyMedicine, escalateSchema, formOf, intakeFormSchema, intakeProblem, invalidKind, medicineSchema, toRecord,
-  type AllergyForm, type AllergyStatus, type IntakeForm, type IntakeProblem, type IntakeScreen, type IntakeView, type MedicineForm, type VitalKind,
+  allergySchema, correctionSchema, emptyAllergy, emptyCorrection, emptyMedicine, escalateSchema, formOf, intakeFormSchema, intakeProblem, invalidKind, medicineSchema, toRecord,
+  type AllergyForm, type AllergyStatus, type CorrectionForm, type IntakeForm, type IntakeProblem, type IntakeScreen, type IntakeView, type MedicineForm, type VitalKind,
 } from '../domain/intake';
-import { addAllergy, addMedicine, confirmNoKnownAllergies, escalateIntake, fetchIntake, handOffIntake, keepVital, saveIntake, setAllergyStatus } from '../services/intakeApi';
+import { addAllergy, addMedicine, confirmNoKnownAllergies, correctVital, escalateIntake, fetchIntake, handOffIntake, keepAllVitals, keepVital, saveIntake, setAllergyStatus } from '../services/intakeApi';
 
 /**
  * One nurse intake (N-01, MDV-P2-007): the form for the readings and chief complaint, the nurse's decisions on flagged readings, the
@@ -22,6 +22,8 @@ export function useIntakeController(appointmentId: string, onHandedOff: () => vo
   const allergyForm = useForm<AllergyForm>({ resolver: zodResolver(allergySchema), defaultValues: emptyAllergy });
   const medicineForm = useForm<MedicineForm>({ resolver: zodResolver(medicineSchema), defaultValues: emptyMedicine });
   const escalation = useForm({ resolver: zodResolver(escalateSchema), defaultValues: { reason: '' } });
+  const correctionForm = useForm<CorrectionForm>({ resolver: zodResolver(correctionSchema), defaultValues: emptyCorrection });
+  const [correcting, setCorrecting] = useState<VitalKind | null>(null);
   const [escalating, setEscalating] = useState(false);
   const [problem, setProblem] = useState<IntakeProblem | null>(null);
   const [badKind, setBadKind] = useState<VitalKind | null>(null);
@@ -58,6 +60,12 @@ export function useIntakeController(appointmentId: string, onHandedOff: () => vo
     },
   });
   const keep = useMutation({ mutationFn: (kind: VitalKind) => keepVital(appointmentId, kind), onSuccess: take, onError: fail });
+  const keepAll = useMutation({ mutationFn: () => keepAllVitals(appointmentId), onSuccess: take, onError: fail });
+  const correct = useMutation({
+    mutationFn: (v: CorrectionForm & { kind: VitalKind }) => correctVital(appointmentId, v.kind, Number(v.value.trim().replace(',', '.')), v.reason.trim()),
+    onSuccess: intake => { take(intake); setCorrecting(null); correctionForm.reset(emptyCorrection); },
+    onError: fail,
+  });
   const escalate = useMutation({
     mutationFn: (reason: string) => escalateIntake(appointmentId, reason),
     onSuccess: intake => { take(intake); setEscalating(false); escalation.reset(); },
@@ -90,6 +98,14 @@ export function useIntakeController(appointmentId: string, onHandedOff: () => vo
     handingOff: handOff.isPending,
     onSave: form.handleSubmit(v => save.mutate(v)),
     onKeep: (kind: VitalKind) => keep.mutate(kind),
+    keepingAll: keepAll.isPending,
+    onKeepAll: () => keepAll.mutate(),
+    correctionForm,
+    correcting,
+    savingCorrection: correct.isPending,
+    onStartCorrect: (kind: VitalKind) => { correctionForm.reset(emptyCorrection); setProblem(null); setCorrecting(kind); },
+    onCancelCorrect: () => setCorrecting(null),
+    onCorrect: correctionForm.handleSubmit(v => { if (correcting) correct.mutate({ ...v, kind: correcting }); }),
     onRemeasure: (kind: VitalKind) => form.setFocus(kind, { shouldSelect: true }),
     /** Typed since the last save: the handoff goes on the saved readings, so it waits for the save. */
     dirty: form.formState.isDirty,

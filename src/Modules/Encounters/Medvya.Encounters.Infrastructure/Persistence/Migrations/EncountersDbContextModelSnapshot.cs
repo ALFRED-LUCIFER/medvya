@@ -947,6 +947,10 @@ namespace Medvya.Encounters.Infrastructure.Persistence.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
 
+                    b.Property<string>("CorrectionReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<Guid?>("FacilityId")
                         .HasColumnType("uuid");
 

@@ -47,5 +47,8 @@ export const patientIdsOf = (visits: BoardCard[]): string[] => [...new Set(visit
  */
 export type PendingNote = { encounterId: string; startedAt: string; drafted: boolean; noteSigned: boolean; openPastDay: boolean; patientName: string | null };
 
+/** An ended visit of the signed-in doctor's whose draft prescription waits to be authorised (MDV-P1-090); the server decides whose and which. */
+export type PendingRx = { encounterId: string; patientName: string | null; endedAt: string; lines: number };
+
 /** A nurse's urgent call to the treating doctor about a visit (MDV-P2-007), shown on that visit until the consultation starts. */
 export type Escalation = { id: string; appointmentId: string; reason: string; escalatedAt: string };

@@ -251,6 +251,7 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.SoloDoctor, new("GET", "/v1/encounters/{encounter}/prescription/authorisation")),
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/prescription/authorisation")),
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/prescription/cancellation", """{"reason":"Synthetic"}""")),
+        (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/prescription/discard", """{"reason":"Synthetic"}""")),
         (Role.SoloDoctor, new("GET", "/v1/encounters/{encounter}/prescription/print")),
         (Role.SoloDoctor, new("GET", "/v1/encounters/{encounter}/prescription/advice")),
         (Role.SoloDoctor, new("PUT", "/v1/encounters/{encounter}/prescription/advice", """{"text":"Synthetic"}""")),
@@ -274,6 +275,7 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/orders/from-set", """{"orderSetId":"{order}"}""")),
         (Role.Nurse, new("POST", "/v1/intake/{appointment}/escalate", """{"reason":"Synthetic"}""")),
         (Role.Nurse, new("POST", "/v1/intake/{appointment}/handoff")),
+        (Role.Nurse, new("POST", "/v1/intake/{appointment}/vitals/keep-all")), // MDV-P2-048
         (Role.Nurse, new("POST", "/v1/intake/{appointment}/allergies", """{"substance":"Synthetic","status":"Confirmed"}""")),
         (Role.Nurse, new("POST", "/v1/intake/{appointment}/no-known-allergies")),
         (Role.Nurse, new("POST", "/v1/intake/{appointment}/medicines", """{"name":"Synthetic"}""")),
@@ -321,7 +323,8 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         ["/v1/operations/organisations/{tenantId:guid}/reject"] = "as above",
         ["/v1/operations/organisations/{tenantId:guid}/suspend"] = "as above",
         ["/v1/settings/doctors/{id:guid}/signature"] = "PUT takes an image body; the DELETE on the same route is in the matrix",
-        ["/v1/intake/{appointmentId:guid}/vitals/{kind}/keep"] = "same visit lookup and clinical access as the other intake routes, which are in the matrix; the reading is a route value (IntakeTests, IntakeEndpointTests)",
+        ["/v1/intake/{appointmentId:guid}/vitals/{kind}/correct"] = "same visit lookup and clinical access as the other intake routes, which are in the matrix; the reading is a route value (IntakeTests MDV-P2-048)",
+        ["/v1/intake/{appointmentId:guid}/vitals/{kind}/keep"] ="same visit lookup and clinical access as the other intake routes, which are in the matrix; the reading is a route value (IntakeTests, IntakeEndpointTests)",
         ["/v1/encounters/{encounterId:guid}/problems/{problemId:guid}"] = "two ids: only a problem of the encounter's own patient is found, another patient's is not (ProblemListTests, with row-level security); the encounter route is in the matrix",
         ["/v1/intake/{appointmentId:guid}/allergies/{allergyId:guid}/status"] = "two ids: only an allergy of the visit's own patient is found, another patient's or clinic's is not (AllergyIntakeTests, with row-level security)",
         ["/v1/waitlist/{id:guid}"] = "waitlist: another practice's id is 404 and another location's is 403, in WaitlistEndpointTests and WaitlistTests (RLS)",
@@ -489,6 +492,7 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.Nurse, new("GET", "/v1/encounters/{encounter}/prescription/authorisation")), // Prescriptions & orders: X
         (Role.Receptionist, new("POST", "/v1/encounters/{encounter}/prescription/authorisation")),
         (Role.Nurse, new("POST", "/v1/encounters/{encounter}/prescription/cancellation", """{"reason":"Synthetic"}""")), // Prescriptions & orders: X
+        (Role.Nurse, new("POST", "/v1/encounters/{encounter}/prescription/discard", """{"reason":"Synthetic"}""")), // Prescriptions & orders: X
         (Role.PracticeAdmin, new("GET", "/v1/encounters/{encounter}/prescription/print")),
         (Role.Nurse, new("POST", "/v1/prescription-layout/approval")),
         (Role.SoloDoctor, new("GET", "/v1/encounters/{encounter}/prescription/shares")),

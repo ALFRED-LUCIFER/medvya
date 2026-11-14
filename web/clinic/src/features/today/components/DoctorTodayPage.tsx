@@ -1,12 +1,13 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
-import { Activity, CalendarCheck, FilePen, Siren, CircleAlert, CircleCheck, CircleHelp, ClipboardCheck, DoorOpen, ReceiptText, Syringe, UserCheck, type LucideIcon } from 'lucide-react';
+import { Activity, CalendarCheck, FilePen, Pill, Siren, CircleAlert, CircleCheck, CircleHelp, ClipboardCheck, DoorOpen, ReceiptText, Syringe, UserCheck, type LucideIcon } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
 import { Button, buttonVariants, Card, cn, FrontDeskTag, PageContainer, PageHeader, PageMessage } from '@medvya/ui';
 import type { BoardCard, BoardColumn, LiveStatus } from '../../front-desk/domain/board';
 import { canConsult } from '../../encounters/domain/encounter';
 import type { AllergyState } from '../../patient360/domain/chart';
-import { ageOn, type PendingNote, type Scope } from '../domain/today';
+import { authoriseTarget } from '../../prescription/domain/authorisation';
+import { ageOn, type PendingNote, type PendingRx, type Scope } from '../domain/today';
 
 // A status is always an icon and words, never colour alone.
 const stateIcons: Record<string, LucideIcon> = {
@@ -31,6 +32,8 @@ type Props = {
   /** The server capped the list: there are more unsigned notes than shown. */
   pendingMore: boolean;
   consultPath: (encounterId: string) => string;
+  /** Ended visits whose prescription waits to be authorised (MDV-P1-090), oldest first; each opens the consultation at the prescription. */
+  pendingRx: PendingRx[]; pendingRxMore: boolean; pendingRxFailed: boolean;
   /** "Start consultation" for a visit (MDV-P2-001): the same control as the board, which also asks for access when there is no care relationship. */
   consultAction: (card: BoardCard) => ReactNode;
 };
@@ -51,6 +54,7 @@ export default function DoctorTodayPage(p: Props) {
       {p.escalationsFailed && <p role="alert" className="text-sm font-semibold text-danger-700">{t('today.escalation.error')}</p>}
       <Body {...p} />
       <PendingNotes {...p} />
+      <PendingPrescriptions {...p} />
     </PageContainer>
   );
 }
@@ -214,6 +218,31 @@ function PendingNotes(p: Props) {
         </section>
       )}
     </>
+  );
+}
+
+/** Prescriptions to authorise (MDV-P1-090): a draft left when the visit ended stays here until it is authorised or discarded. */
+function PendingPrescriptions(p: Props) {
+  const { t, tCount, formatDate } = useI18n();
+  if (p.pendingRxFailed) return <p role="alert" className="text-sm text-muted-foreground">{t('today.rx.error')}</p>;
+  if (p.pendingRx.length === 0) return null;
+  return (
+    <section aria-labelledby="today-rx" className="flex flex-col gap-2">
+      <h2 id="today-rx" className="text-subheading">{p.pendingRxMore ? t('today.rx.more', { count: p.pendingRx.length }) : tCount('today.rx', p.pendingRx.length)}</h2>
+      <ul className="flex flex-col gap-2">
+        {p.pendingRx.map(r => (
+          <li key={r.encounterId} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border px-3 py-2.5">
+            <span className="flex flex-wrap items-center gap-2 text-sm">
+              <Pill aria-hidden className="size-4 shrink-0" />
+              <span className="font-bold">{r.patientName || t('board.unknownPatient')}</span>
+              <span className="text-muted-foreground">{formatDate(new Date(r.endedAt), p.timeZone ?? undefined)}{' · '}{tCount('today.rx.lines', r.lines)}</span>
+            </span>
+            <Link to={`${p.consultPath(r.encounterId)}#${authoriseTarget}`} className={buttonVariants({ variant: 'outline' })}
+              aria-label={t('today.rx.openFor', { name: r.patientName || t('board.unknownPatient') })}>{t('today.rx.open')}</Link>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 

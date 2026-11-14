@@ -44,11 +44,11 @@ export default function MedicinesSection(p: Props) {
               <Input id="medicine-frequency" autoComplete="off" maxLength={50} {...p.form.register('frequency')} />
             </div>
           </div>
-          <div className="flex min-h-11 items-center gap-3">
+          <div className="flex min-h-control items-center gap-3">
             <Controller control={p.form.control} name="needsClarification" render={({ field }) => (
               <Switch id="medicine-clarify" checked={field.value} onCheckedChange={field.onChange} />
             )} />
-            <Label htmlFor="medicine-clarify" className="min-h-11 flex-1">{t('intake.medicine.needsClarification')}</Label>
+            <Label htmlFor="medicine-clarify" className="min-h-control flex-1">{t('intake.medicine.needsClarification')}</Label>
           </div>
           <Button type="submit" className="self-start" loading={p.adding} disabled={!p.online}>{t('intake.medicine.add')}</Button>
         </form>

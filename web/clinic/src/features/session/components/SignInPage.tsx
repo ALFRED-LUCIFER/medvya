@@ -34,7 +34,7 @@ export default function SignInPage({ languageSwitcher, form, failure, onSubmit, 
           <div className="flex flex-col gap-1">
             <p className="font-semibold">{t('session.failedMfa')}</p>
             <p>{t('session.failedMfa.how')}</p>
-            <a href={securityInfoUrl} target="_blank" rel="noreferrer" className="min-h-11 content-center font-semibold underline">{t('session.failedMfa.link')}</a>
+            <a href={securityInfoUrl} target="_blank" rel="noreferrer" className="min-h-control content-center font-semibold underline">{t('session.failedMfa.link')}</a>
             <p>{t('session.failedMfa.admin')}</p>
           </div>
         </div>

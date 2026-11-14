@@ -12,8 +12,8 @@ import { FieldError, SelectField, TextField, type FormProps } from './Fields';
 const grid = 'grid gap-4 md:grid-cols-2';
 // A choice drawn as a card or chip: the native input stays (keyboard, screen reader), the label carries the look and the focus ring.
 // No fill of its own: the steps sit on the wizard's Card, and a choice is a control, not a card in a card (MDV-P2-059).
-const card = 'flex min-h-11 cursor-pointer gap-3 rounded-xl border p-4 text-sm has-[:checked]:border-2 has-[:checked]:border-brand-700 has-[:checked]:bg-brand-50 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-ring';
-const chip = 'inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border px-4 text-sm font-semibold has-[:checked]:border-brand-700 has-[:checked]:bg-brand-50 has-[:checked]:text-brand-800 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-ring';
+const card = 'flex min-h-control cursor-pointer gap-3 rounded-xl border p-4 text-sm has-[:checked]:border-2 has-[:checked]:border-brand-700 has-[:checked]:bg-brand-50 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-ring';
+const chip = 'inline-flex min-h-control cursor-pointer items-center gap-2 rounded-full border px-4 text-sm font-semibold has-[:checked]:border-brand-700 has-[:checked]:bg-brand-50 has-[:checked]:text-brand-800 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-ring';
 
 type StepProps = FormProps & { country: Country; rules: Rules };
 
@@ -95,7 +95,7 @@ export function PracticeStep({ form, country, rules }: StepProps) {
         </div>
       )}
       <details className="rounded-xl border p-4" open={Boolean(errors.taxId || errors.registrationNumber || errors.qualifications || errors.languages)}>
-        <summary className="flex min-h-11 cursor-pointer items-center text-sm font-bold">{t('onboarding.more.legend')}</summary>
+        <summary className="flex min-h-control cursor-pointer items-center text-sm font-bold">{t('onboarding.more.legend')}</summary>
         <div className={`${grid} pt-3`}>
           {mode === 'Solo' && <TextField form={form} name="qualifications" label={t('onboarding.field.qualifications')} />}
           {mode === 'Solo' && <TextField form={form} name="languages" label={t('onboarding.field.languages')} hint={t('onboarding.hint.languages')} />}
@@ -190,11 +190,11 @@ export function TeamStep({ form, onInvite, onRemove }: TeamProps) {
         <ul aria-label={t('onboarding.team.list')} className="flex flex-col divide-y rounded-xl border">
           {team.map((m, i) => (
             <li key={m.email} className="flex flex-col gap-1 px-4 py-2">
-              <div className="flex min-h-11 items-center gap-3">
+              <div className="flex min-h-control items-center gap-3">
                 <UserRound className="size-5 shrink-0 text-muted-foreground" aria-hidden />
                 <span dir="ltr" className="min-w-0 flex-1 truncate text-sm font-semibold">{m.email}</span>
                 <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-semibold">{t(`onboarding.role.${m.role}`)}</span>
-                <Button type="button" variant="ghost" size="icon" className="size-11" aria-label={t('onboarding.team.remove', { email: m.email })} onClick={() => onRemove(i)}>
+                <Button type="button" variant="ghost" size="icon" className="size-control" aria-label={t('onboarding.team.remove', { email: m.email })} onClick={() => onRemove(i)}>
                   <Trash2 className="size-4" aria-hidden />
                 </Button>
               </div>

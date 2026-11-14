@@ -22,7 +22,7 @@ export default function WeekView({ name, calendarId, days, timeZone, updating, o
           <li key={d.date} className="flex flex-col gap-2 border-t p-3 first:border-t-0 md:min-h-80 md:border-t-0 md:border-s md:first:border-s-0">
             <h2 className="text-sm font-extrabold">
               {/* The visible short day is the whole accessible name (WCAG 2.5.3, label in name). */}
-              <button type="button" className="min-h-11 text-start underline underline-offset-4 hover:text-action-600" onClick={() => onOpenDay(d.date)}>
+              <button type="button" className="min-h-control text-start underline underline-offset-4 hover:text-action-600" onClick={() => onOpenDay(d.date)}>
                 {formatShortDay(d.date)}
               </button>
             </h2>

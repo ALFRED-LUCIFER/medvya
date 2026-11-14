@@ -1,6 +1,7 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
 import { mockSignInStart } from './support/signIn';
+import { targetPx } from './support/targets';
 
 // MDV-P1-059 against a mocked API: the Medvya-owned screens of the 6 Nov sign-in flow. The provider's pages (code, passkey, MFA) are not ours.
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
@@ -161,7 +162,7 @@ for (const locale of ['en', 'hi', 'ar'])
       expect(await axe(page)).toEqual([]);
     });
 
-test('keyboard: the sign-in start is reachable in order and every target is at least 44 px', async ({ page }) => {
+test('keyboard: the sign-in start is reachable in order and every target is at least the control size', async ({ page }) => {
   await signedOut(page);
   await page.goto('/');
   await page.getByLabel('Work email').focus();
@@ -170,5 +171,5 @@ test('keyboard: the sign-in start is reachable in order and every target is at l
     await expect(page.getByRole(name === 'Create a practice' ? 'link' : 'button', { name })).toBeFocused();
   }
   for (const target of await page.getByRole('main').locator('button, a, input').all())
-    expect((await target.boundingBox())!.height, await target.textContent() ?? '').toBeGreaterThanOrEqual(44);
+    expect((await target.boundingBox())!.height, await target.textContent() ?? '').toBeGreaterThanOrEqual(await targetPx(page));
 });

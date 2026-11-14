@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
+import { targetPx } from './support/targets';
 
 // MDV-P2-038: chronic care targets, care gaps due today and care-plan goals in the chart's right column (E-01, design `targets`, `gaps`,
 // `goals`). CI has no API: the session, chart and chronic care are mocked in the shapes the server sends. The gap rules (due, not due, done),
@@ -133,14 +134,14 @@ test('the doctor records a check, changes a target and keeps goals; a nurse only
 
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 for (const locale of ['en', 'ar'] as const)
-  test(`axe finds no violations with the forms open (${locale}); 44 px targets`, async ({ page }) => {
+  test(`axe finds no violations with the forms open (${locale}); control-size targets`, async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await open(page, { locale });
     const aside = page.getByRole('complementary');
     await aside.getByRole('button').nth(0).click(); // change the first target
     await aside.getByRole('button', { name: locale === 'ar' ? 'إضافة هدف' : 'Add goal' }).click();
     if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
-    for (const b of await aside.getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    for (const b of await aside.getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
     await page.addScriptTag({ path: axePath });
     const violations = await page.evaluate(async () =>
       (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations.map(v => `${v.id} (${v.nodes.length})`));

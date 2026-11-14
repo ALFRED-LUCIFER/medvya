@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
+import { targetPx } from './support/targets';
 
 // MDV-P1-019: the consent section on a record and the owner's terms acceptance. CI has no API: the endpoints are mocked with the
 // synthetic cast; the server side (gate, owner-only acceptance, append-only receipts) is covered by TermsAcceptanceTests on SQL Server.
@@ -47,7 +48,7 @@ for (const locale of ['en', 'ar'])
     expect(await page.evaluate(() => document.documentElement.dir)).toBe(locale === 'ar' ? 'rtl' : 'ltr');
     const buttons = section.getByRole('button');
     await expect(buttons).toHaveCount(6);
-    for (const b of await buttons.all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    for (const b of await buttons.all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
     expect(await axe(page)).toEqual([]);
 
     // Withdraw the SMS reminders: one new decision under the draft wording; the row now reads Off and offers to turn it on again.

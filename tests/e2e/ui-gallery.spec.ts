@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 import { expect, test } from '@playwright/test';
+import { controlPx } from './support/targets';
 
 // MDV-P1-079: the /__ui token specimen measures each type token in English and Arabic; axe finds nothing.
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
@@ -13,7 +14,7 @@ for (const locale of ['en', 'ar'] as const) {
     await expect(page.getByRole('heading', { name: 'Type tokens' })).toBeVisible();
     await expect(measured(page, 'text-body-large')).toHaveText('16px / 24px · 500');
     await expect(measured(page, 'text-display')).toHaveText('30px / 36px · 800');
-    await expect(measured(page, 'w-control')).toHaveText('44px');
+    await expect(measured(page, 'w-control')).toHaveText(`${await controlPx(page)}px`); // 36 px with a mouse (MDV-P2-062)
     await expect(measured(page, 'max-w-page')).toHaveText('1600px');
     expect(await page.locator('html').getAttribute('dir')).toBe(locale === 'ar' ? 'rtl' : 'ltr');
     expect(await page.evaluate(() => getComputedStyle(document.body).fontFamily)).toContain('Noto Sans Arabic');
@@ -28,7 +29,7 @@ for (const locale of ['en', 'ar'] as const) {
 test.describe('library control defaults', () => {
   test.use({ viewport: { width: 1024, height: 768 }, hasTouch: true });
   for (const locale of ['en', 'ar']) {
-    test(`library controls are 44 px by default and axe-clean on /__ui (${locale})`, async ({ page }) => {
+    test(`library controls take the control size by default and axe-clean on /__ui (${locale})`, async ({ page }) => {
       await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
       await page.goto('/__ui');
       if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
@@ -36,11 +37,11 @@ test.describe('library control defaults', () => {
       await expect(controls).toHaveCount(7); // input, select, textarea, switch, three choice rows
       for (const c of await controls.all()) {
         const box = (await c.boundingBox())!;
-        expect(box.height, await c.evaluate(e => e.outerHTML.slice(0, 80))).toBeGreaterThanOrEqual(43.5);
+        expect(box.height, await c.evaluate(e => e.outerHTML.slice(0, 80))).toBeGreaterThanOrEqual((await controlPx(page)) - 0.5);
       }
-      // The switch: a 44 by 44 target, while the visible track stays 32 by about 18 px.
+      // The switch: a control-size square target (44 px here), while the visible track stays 32 by about 18 px.
       const sw = (await page.getByRole('switch').boundingBox())!;
-      expect(sw.width).toBeGreaterThanOrEqual(43.5);
+      expect(sw.width).toBeGreaterThanOrEqual((await controlPx(page)) - 0.5);
       const track = (await page.locator('[data-slot=switch-track]').boundingBox())!;
       expect([Math.round(track.width), Math.round(track.height)]).toEqual([32, 18]);
       // The table's scroll region has a name.
@@ -50,7 +51,22 @@ test.describe('library control defaults', () => {
         (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string }[] }> } }).axe.run()).violations.map(v => v.id))).toEqual([]);
       // Options are 44 px on a coarse pointer.
       await page.locator('#d-select').click();
-      for (const o of await page.getByRole('option').all()) expect((await o.boundingBox())!.height).toBeGreaterThanOrEqual(43.5);
+      for (const o of await page.getByRole('option').all()) expect((await o.boundingBox())!.height).toBeGreaterThanOrEqual((await controlPx(page)) - 0.5);
     });
   }
+});
+
+// MDV-P2-062 AC1: with a mouse at 1440 x 900 the same controls are 36 px, not 44 (the concept's --ctl), and never under 24 px.
+test('with a mouse the library controls are 36 px on /__ui', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/__ui');
+  expect(await page.evaluate(() => matchMedia('(any-pointer: coarse)').matches)).toBe(false);
+  for (const id of ['#d-input', '#d-select']) expect(Math.round((await page.locator(id).boundingBox())!.height), id).toBe(36);
+  const sw = (await page.getByRole('switch').boundingBox())!;
+  expect([Math.round(sw.width), Math.round(sw.height)]).toEqual([36, 36]);
+  for (const c of await page.locator('[data-slot=choice-row]').all()) expect(Math.round((await c.boundingBox())!.height)).toBeGreaterThanOrEqual(36);
+  // AC7: axe's WCAG 2.2 target-size rule (off by default) finds nothing at the mouse size.
+  await page.addScriptTag({ path: axePath });
+  expect(await page.evaluate(async () => (await (window as unknown as { axe: { run: (c: unknown, o: unknown) => Promise<{ violations: { id: string }[] }> } }).axe
+    .run(document, { rules: { 'target-size': { enabled: true } } })).violations.map(v => v.id))).toEqual([]);
 });

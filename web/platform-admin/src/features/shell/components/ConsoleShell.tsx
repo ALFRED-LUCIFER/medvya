@@ -42,7 +42,7 @@ export default function ConsoleShell({ displayName, role, items, languageSwitche
             return (
               <li key={item.id}>
                 <NavLink to={item.path} end className={({ isActive }) => cn(
-                  'flex min-h-11 items-center gap-2.5 rounded-lg px-2.5 text-sm font-semibold whitespace-nowrap hover:bg-nav-hover',
+                  'flex min-h-control items-center gap-2.5 rounded-lg px-2.5 text-sm font-semibold whitespace-nowrap hover:bg-nav-hover',
                   isActive && 'bg-nav-hover text-white',
                 )}>
                   <Icon className="size-5 shrink-0" aria-hidden />

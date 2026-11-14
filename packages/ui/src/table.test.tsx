@@ -32,13 +32,12 @@ describe('Table', () => {
     expect(container.querySelector('th[scope="row"]')?.textContent).toBe('Asha');
   });
 
-  it('uses logical alignment, a sticky header option and 44 px cells', () => {
+  it('uses logical alignment, a sticky header option and control-height header cells', () => {
     const { container } = render(sample());
     expect(container.querySelector('thead')?.className).toContain('sticky');
     expect(container.querySelectorAll('th')[1]?.className).toContain('text-end');
     expect(container.querySelector('td')?.className).toContain('text-end');
-    expect(container.querySelector('td')?.className).toContain('min-h-11');
-    expect(container.querySelector('th')?.className).toContain('h-11');
+    expect(container.querySelector('th')?.className).toContain('h-control');
     expect(container.innerHTML).not.toMatch(/text-left|text-right|\bpl-|\bpr-|\bml-|\bmr-/);
   });
 
@@ -83,7 +82,7 @@ describe('Table layout', () => {
     const { container } = render(layout({}));
     expect(container.querySelector('[data-slot=table-container]')?.getAttribute('data-density')).toBe('comfortable');
     expect(container.querySelector('tbody')?.className).not.toContain('h-row-compact');
-    expect(container.querySelector('tbody')?.className).toContain('[&>tr]:h-row'); // 48 px rows, text-only ones too (DESIGN.md)
+    expect(container.querySelector('tbody')?.className).toContain('[&>tr]:h-row'); // row-token rows (40 px with a mouse, 48 on touch), text-only ones too (DESIGN.md)
     expect(container.querySelector('[role=row], [role=cell]')).toBeNull();
     expect(container.querySelector('td')?.textContent).toBe('500');
   });

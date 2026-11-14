@@ -16,7 +16,7 @@ import ShellComponentsGallery from './ShellComponentsGallery';
 const keys = <T extends object>(o: T) => Object.keys(o) as (keyof T)[];
 
 // MDV-P2-054: compact density (36 px rows with a mouse, 48 px on a coarse pointer), stacked rows under 768 px, sort and paging;
-// row actions: one visible (32 px in a compact row with a mouse, 44 px on a coarse pointer), the rest in a menu of 44 px items.
+// row actions: one visible (32 px in a compact row with a mouse, 44 px on a coarse pointer), the rest in a menu of control-size items (36 px with a mouse, 44 px on touch).
 const medicines = [['Amlodipine', '5 mg', 'Tablet'], ['Metformin', '500 mg', 'Tablet'], ['Salbutamol', '100 mcg', 'Inhaler']];
 function CompactTableSection() {
   const [descending, setDescending] = useState(false);
@@ -179,7 +179,7 @@ export default function UiGallery({ switcher }: { switcher: ReactNode }) {
       <section className="flex flex-col gap-3">
         <h2 className="text-lg font-bold">Radius, elevation and motion</h2>
         {['rounded-sm', 'rounded-md', 'rounded-lg', 'rounded-full', 'shadow-popover', 'shadow-dialog'].map(c =>
-          <Measured key={c} name={c} className={`${c} size-11 shrink-0 border bg-card`} read={s => (c.startsWith('shadow') ? 'elevation' : s.borderRadius)} />)}
+          <Measured key={c} name={c} className={`${c} size-control shrink-0 border bg-card`} read={s => (c.startsWith('shadow') ? 'elevation' : s.borderRadius)} />)}
         <Measured name="duration-fast ease-out" className="transition-colors duration-fast ease-out" read={s => `${s.transitionDuration} ${s.transitionTimingFunction}`}>Motion</Measured>
       </section>
       <PageComponentsGallery />

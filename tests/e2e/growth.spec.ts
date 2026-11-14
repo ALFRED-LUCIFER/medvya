@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
+import { targetPx } from './support/targets';
 
 // MDV-P2-035: a child's growth on Patient 360 (E-01). CI has no API: the session, the chart and the card are mocked in the shapes the server
 // sends. The z-scores against WHO's tables, the flags, the over-5 rule, the role checks and tenant isolation are covered by GrowthTests.
@@ -101,7 +102,7 @@ test('without vitals entry the card is read-only', async ({ page }) => {
 
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 for (const [locale, title] of [['en', 'Growth'], ['ar', 'النمو الجسدي']] as const)
-  test(`axe finds no violations (${locale}); 44 px targets`, async ({ page }) => {
+  test(`axe finds no violations (${locale}); control-size targets`, async ({ page }) => {
     await open(page, { locale });
     const region = page.getByRole('region', { name: title, exact: true });
     await expect(region).toBeVisible();
@@ -109,7 +110,7 @@ for (const [locale, title] of [['en', 'Growth'], ['ar', 'النمو الجسدي
       await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
       await expect(region.getByRole('img')).toHaveAttribute('aria-label', /المئين 2/);
     }
-    for (const b of await region.getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    for (const b of await region.getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
     await page.addScriptTag({ path: axePath });
     const violations = await page.evaluate(async () =>
       (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations.map(v => `${v.id} (${v.nodes.length})`));

@@ -63,7 +63,7 @@ export default function NoteAssist({ assist: a, template, timeZone, showVitals =
             const date = formatDate(new Date(n.signedAt), timeZone);
             return (
               <details key={n.id} className="rounded-md border p-2">
-                <summary className="min-h-11 cursor-pointer py-2 text-sm font-bold">
+                <summary className="min-h-control cursor-pointer py-2 text-sm font-bold">
                   {n.signedByName ? t('noteAssist.previous.header', { date, name: n.signedByName }) : t('noteAssist.previous.headerNoName', { date })}
                 </summary>
                 <ul className="flex flex-col gap-2">

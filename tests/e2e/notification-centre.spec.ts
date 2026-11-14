@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
+import { targetPx } from './support/targets';
 
 // MDV-P1-034: the notification centre (D-03) and the board's failed-message mark. CI has no API, so the endpoints are mocked in the
 // shapes the server sends (IStaffNotifications). No journey row covers this, so it is a spec of its own.
@@ -100,13 +101,13 @@ test('a role without the desk gets the inert bell and no notification calls', as
 
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 for (const locale of ['en', 'ar'])
-  test(`axe finds no violations with the overlay open (${locale}); 44 px targets`, async ({ page }) => {
+  test(`axe finds no violations with the overlay open (${locale}); control-size targets`, async ({ page }) => {
     await open(page, { locale });
     if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
     await page.getByRole('button', { name: /^(Notifications|الإشعارات)، ?|^Notifications, / }).click();
     const panel = page.getByRole('dialog');
-    for (const b of await panel.getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
-    for (const l of await panel.getByRole('link').all()) expect((await l.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    for (const b of await panel.getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
+    for (const l of await panel.getByRole('link').all()) expect((await l.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
     await page.addScriptTag({ path: axePath });
     const violations = await page.evaluate(async () =>
       (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations

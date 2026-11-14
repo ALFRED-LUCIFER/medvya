@@ -1,6 +1,7 @@
 import { createRequire } from 'node:module';
 import { expect, test } from '@playwright/test';
 import { mockReconciliation } from './support/reconciliation';
+import { targetPx } from './support/targets';
 
 // MDV-P2-011 (E-07): the doctor reconciles the medicines of a consultation. Conflicts are written in words, Confirm stays disabled until every
 // row is decided, Stop and Change ask why, and confirming shows the table read-only. The server rules are proven on PostgreSQL
@@ -52,7 +53,7 @@ test('the doctor decides every medicine and confirms', async ({ page }) => {
 
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 for (const locale of ['en', 'ar'] as const) {
-  test(`axe finds no violations on the reconciliation (${locale}); targets are 44 px`, async ({ page }) => {
+  test(`axe finds no violations on the reconciliation (${locale}); control-size targets`, async ({ page }) => {
     await mockReconciliation(page, locale);
     await page.goto('/consult/e-1/medicines');
     await page.getByRole('table').waitFor();
@@ -66,7 +67,7 @@ for (const locale of ['en', 'ar'] as const) {
       (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations
         .map(v => `${v.id} x${v.nodes.length}`));
     expect(violations).toEqual([]);
-    const small = await page.getByRole('button').evaluateAll(els => els.filter(e => e.getBoundingClientRect().height < 44 && (e as HTMLElement).offsetParent).map(e => e.textContent));
+    const small = await page.getByRole('button').evaluateAll((els, min) => els.filter(e => e.getBoundingClientRect().height < min && (e as HTMLElement).offsetParent).map(e => e.textContent), await targetPx(page));
     expect(small).toEqual([]);
   });
 }

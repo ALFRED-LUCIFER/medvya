@@ -26,7 +26,7 @@ export default function GlobalSearch(p: Props) {
   return (
     <Dialog open={p.open} onOpenChange={p.onOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="max-sm:size-11 max-sm:px-0" aria-keyshortcuts="Control+K Meta+K">
+        <Button variant="outline" className="max-sm:size-control max-sm:px-0" aria-keyshortcuts="Control+K Meta+K">
           <Search aria-hidden /><span className="max-sm:sr-only">{t('patients.search.open')}</span>
           {/* Key names read left to right in every language; without it Arabic reorders "⌘K / Ctrl K". */}
           <kbd dir="ltr" className="hidden rounded border px-1.5 text-xs font-semibold text-muted-foreground lg:inline" aria-hidden>{t('globalSearch.shortcut')}</kbd>

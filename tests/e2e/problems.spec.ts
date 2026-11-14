@@ -1,6 +1,7 @@
 import { createRequire } from 'node:module';
 import { expect, test } from '@playwright/test';
 import { mockProblems } from './support/problems';
+import { targetPx } from './support/targets';
 
 // MDV-P2-010 (E-07): the doctor codes diagnoses with ICD-10 by code or words, with a verification state; a provisional one is shown apart in
 // words, an icon and a dashed outline (never colour alone), and a problem can be resolved. The server rules are proven on PostgreSQL
@@ -64,7 +65,7 @@ test('an ended consultation shows the list read-only', async ({ page }) => {
 
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 for (const locale of ['en', 'ar'] as const) {
-  test(`axe finds no violations on the problem list (${locale}); targets are 44 px`, async ({ page }) => {
+  test(`axe finds no violations on the problem list (${locale}); control-size targets`, async ({ page }) => {
     await mockProblems(page, locale);
     await page.goto('/consult/e-1/problems');
     await page.getByRole('table').waitFor();
@@ -78,7 +79,7 @@ for (const locale of ['en', 'ar'] as const) {
       (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations
         .map(v => `${v.id} x${v.nodes.length}`));
     expect(violations).toEqual([]);
-    const small = await page.getByRole('button').evaluateAll(els => els.filter(e => e.getBoundingClientRect().height < 44 && (e as HTMLElement).offsetParent).map(e => e.textContent));
+    const small = await page.getByRole('button').evaluateAll((els, min) => els.filter(e => e.getBoundingClientRect().height < min && (e as HTMLElement).offsetParent).map(e => e.textContent), await targetPx(page));
     expect(small).toEqual([]);
   });
 }

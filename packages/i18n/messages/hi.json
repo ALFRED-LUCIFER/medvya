@@ -1355,6 +1355,7 @@
   "registration.duplicates.inlineLater": "संभावित मिलान · इस मरीज़ जैसे दिखने वाले मौजूदा रिकॉर्ड: {n}। समीक्षा चरण में इन पर निर्णय लें।",
   "registration.back": "वापस",
   "registration.continue": "जारी रखें",
+  "registration.stepOf": "चरण {n}/{total} · {name}",
   "registration.choose": "चुनें",
   "registration.preview.title": "पूर्वावलोकन",
   "registration.preview.noName": "नया मरीज़",

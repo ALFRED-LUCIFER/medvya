@@ -2,6 +2,7 @@ import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
 import { completeWizard, mockOnboarding } from './support/onboarding';
 import { mockSignInStart } from './support/signIn';
+import { targetPx } from './support/targets';
 
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 async function axe(page: Page) {
@@ -197,7 +198,7 @@ test('the wizard works from the keyboard at 768 px', async ({ page }) => {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   for (const target of await page.locator('main button, main input[type=radio], main input[type=checkbox]').all()) {
     const box = (await target.evaluate(e => (e.closest('label') ?? e).getBoundingClientRect().height));
-    expect(box).toBeGreaterThanOrEqual(44);
+    expect(box).toBeGreaterThanOrEqual(await targetPx(page));
   }
 });
 

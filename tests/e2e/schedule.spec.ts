@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
+import { targetPx } from './support/targets';
 
 // MDV-P1-011 / MDV-P1-021 / MDV-P1-023: the P-04 day, week and list views and booking from an empty slot. CI has no API, so /v1/me/context and the
 // scheduling endpoints are mocked with the synthetic cast in the shapes the server sends (IScheduleService.cs,
@@ -622,15 +623,15 @@ test('Arabic is right-to-left with the time axis on the reading-start side', asy
   await expect(page.getByRole('complementary', { name: 'حجز موعد' })).toContainText('محجوز لك حتى 08:02');
 });
 
-test('keyboard books without a mouse; 44 px targets; 200% zoom never scrolls the page sideways', async ({ page }) => {
+test('keyboard books without a mouse; control-size targets; 200% zoom never scrolls the page sideways', async ({ page }) => {
   await page.setViewportSize({ width: 683, height: 768 }); // a 1366 px screen at 200 %
   await open(page);
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await page.getByRole('button', { name: 'Previous day' }).focus();
   await page.keyboard.press('Tab');
   await expect(page.getByRole('button', { name: 'Today' })).toBeFocused();
-  for (const name of ['Previous day', 'Today', 'Next day']) expect((await page.getByRole('button', { name }).boundingBox())!.height).toBeGreaterThanOrEqual(44);
-  expect((await bookButton(page, '10:00').boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  for (const name of ['Previous day', 'Today', 'Next day']) expect((await page.getByRole('button', { name }).boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
+  expect((await bookButton(page, '10:00').boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
   await bookButton(page, '10:00').focus();
   await page.keyboard.press('Enter');
   const panel = page.getByRole('complementary', { name: 'Book appointment' });
@@ -647,7 +648,7 @@ test('keyboard books without a mouse; 44 px targets; 200% zoom never scrolls the
   await reason.fill('x'.repeat(501));
   await panel.getByRole('button', { name: 'Confirm booking' }).click();
   await expect(reason).toHaveAccessibleDescription(/Keep the reason under 500 characters\./);
-  for (const b of await panel.getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  for (const b of await panel.getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
@@ -772,7 +773,7 @@ test('on a phone the list is the default, with a pinned Book that opens the next
   const tabs = page.locator('nav.fixed');
   const [b, n] = [(await book.boundingBox())!, (await tabs.boundingBox())!];
   expect(b.y + b.height).toBeLessThanOrEqual(n.y); // pinned above the bottom tabs
-  expect(b.height).toBeGreaterThanOrEqual(44);
+  expect(b.height).toBeGreaterThanOrEqual(await targetPx(page));
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
   await expect(book).toBeInViewport(); // still there at the end of the list
   await book.click();
@@ -818,13 +819,13 @@ for (const locale of ['en', 'ar'] as const)
       }
     });
 
-test('views and the filter are reachable by keyboard with 44 px targets', async ({ page }) => {
+test('views and the filter are reachable by keyboard with control-size targets', async ({ page }) => {
   await open(page);
   await page.getByRole('button', { name: 'Next day' }).focus();
   for (const name of ['Day', 'Week', 'List']) {
     await page.keyboard.press('Tab');
     await expect(page.getByRole('button', { name, exact: true })).toBeFocused();
-    expect((await page.getByRole('button', { name, exact: true }).boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    expect((await page.getByRole('button', { name, exact: true }).boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
   }
   await page.keyboard.press('Enter'); // List
   await expect(page.getByRole('button', { name: 'List', exact: true })).toHaveAttribute('aria-pressed', 'true');
@@ -836,7 +837,7 @@ test('views and the filter are reachable by keyboard with 44 px targets', async 
   for (const state of await states.all()) await expect(state).toHaveAttribute('data-slot', 'chip');
   await page.keyboard.press('Tab');
   await expect(page.getByRole('combobox', { name: 'Doctor or resource' })).toBeFocused();
-  expect((await page.getByRole('combobox', { name: 'Doctor or resource' }).boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  expect((await page.getByRole('combobox', { name: 'Doctor or resource' }).boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
 });
 
 test('the list prints as an agenda: the schedule without navigation or controls', async ({ page }) => {
@@ -1044,7 +1045,7 @@ for (const [locale, book, hold, move] of [
   });
 
 for (const locale of ['en', 'ar'] as const)
-  test(`the appointment panel is keyboard-operable with 44 px targets and axe-clean (${locale})`, async ({ page }) => {
+  test(`the appointment panel is keyboard-operable with control-size targets and axe-clean (${locale})`, async ({ page }) => {
     await page.clock.setFixedTime(new Date(ist('2026-10-19', '08:30')));
     await open(page, { locale });
     await page.route('**/v1/appointments/*/notifications?*', r => r.fulfill({ json: { messages: [], preparing: true } }));
@@ -1054,7 +1055,7 @@ for (const locale of ['en', 'ar'] as const)
     const panel = page.getByRole('complementary', { name: locale === 'ar' ? 'الموعد' : 'Appointment' });
     await expect(panel).toBeVisible();
     await expect(panel.getByRole('status').filter({ hasText: locale === 'ar' ? /يجري تجهيز الرسائل/ : /Messages are being prepared/ })).toBeVisible(); // #912
-    for (const b of await panel.getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    for (const b of await panel.getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
     await panel.getByRole('button', { name: locale === 'ar' ? 'إلغاء الموعد' : 'Cancel appointment' }).focus();
     await page.keyboard.press('Enter');
     await expect(panel.getByRole('combobox')).toBeVisible();
@@ -1160,7 +1161,7 @@ test('cancel this and following sends one reason for the rest of the series', as
 });
 
 for (const locale of ['en', 'ar'] as const)
-  test(`the series review and "this and following" are axe-clean with 44 px time fields (${locale})`, async ({ page }) => {
+  test(`the series review and "this and following" are axe-clean with control-size time fields (${locale})`, async ({ page }) => {
     await page.clock.setFixedTime(new Date(ist('2026-10-19', '08:30')));
     const calls = await open(page, { locale });
     await column(page, 'Dr. Arjun Rao (synthetic)').getByRole('button').nth(1).click(); // the visit is first, then the 10:00 slot
@@ -1177,7 +1178,7 @@ for (const locale of ['en', 'ar'] as const)
     await expect(panel.getByRole('checkbox')).toHaveCount(3);
     expect(calls.series[0]!.body).toMatchObject({ count: 3, monthly: true });
     for (const b of [...(await panel.getByRole('button').all()), ...(await panel.getByRole('checkbox').all())]) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(20);
-    for (const input of await panel.locator('input[type=time]').all()) expect((await input.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    for (const input of await panel.locator('input[type=time]').all()) expect((await input.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
     expect(calls.series.length).toBe(1);
     const axe = async () => {
       await page.addScriptTag({ path: axePath });

@@ -91,11 +91,12 @@ export async function signIn(page: Page, as: Persona, locale: string) {
   for (const [url, json] of Object.entries(fixtures)) await page.route(url, r => r.fulfill({ json }));
 }
 
-/** Controls under 44 px, covered, or poking out of the viewport outside a scroll container of its own; `within` limits it to a drawer. */
+/** Targets under the pointer's floor (30 px with a mouse, 44 px on touch: support/targets.ts), covered, or poking out of the viewport outside a scroll container of its own; `within` limits it to a drawer. */
 export async function problems(page: Page, within = 'body') {
   return page.evaluate(within => {
     const out: string[] = [];
     const vw = document.documentElement.clientWidth;
+    const min = matchMedia('(any-pointer: coarse)').matches ? 43.5 : 29.5; // MDV-P2-062: the targets.ts floor
     if (document.documentElement.scrollWidth > vw) out.push(`page scrolls sideways (${document.documentElement.scrollWidth} > ${vw})`);
     const controls = 'button, a[href], input:not([type=hidden]), select, textarea, [role=combobox], [role=tab], [role=checkbox], [role=switch], [role=radio]';
     for (const el of document.querySelector(within)!.querySelectorAll<HTMLElement>(controls)) {
@@ -105,7 +106,7 @@ export async function problems(page: Page, within = 'body') {
       if (r.width <= 1 || r.height <= 1 || getComputedStyle(el).visibility === 'hidden') continue; // sr-only / hidden
       const inSentence = el.tagName === 'A' && !!el.closest('p'); // links inside a sentence are exempt (WCAG 2.5.8)
       const name = `${el.tagName.toLowerCase()} "${(el.getAttribute('aria-label') ?? el.textContent ?? '').trim().slice(0, 30)}"`;
-      if (!inSentence && (r.height < 43.5 || r.width < 43.5)) out.push(`${name} is ${Math.round(r.width)}x${Math.round(r.height)}`);
+      if (!inSentence && (r.height < min || r.width < min)) out.push(`${name} is ${Math.round(r.width)}x${Math.round(r.height)}`);
       let scroller: HTMLElement | null = el.parentElement;
       while (scroller && !(scroller.scrollWidth > scroller.clientWidth && /auto|scroll/.test(getComputedStyle(scroller).overflowX))) scroller = scroller.parentElement;
       if (!scroller && (r.left < -0.5 || r.right > vw + 0.5)) out.push(`${name} is outside the viewport`);

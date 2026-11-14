@@ -42,7 +42,7 @@ export default function CustomRolesPanel(p: Props) {
               <span className="font-bold">{r.name}</span>
               <span className="text-sm text-muted-foreground">{[t(`role.${r.baseRole}`), ...r.capabilities.map(c => t(`capability.${c}`))].join(' · ')}</span>
             </span>
-            <Button type="button" variant="outline" className="min-w-11" aria-label={t('staff.roles.editNamed', { name: r.name })} onClick={() => p.onOpen(r)}>{t('settings.edit')}</Button>
+            <Button type="button" variant="outline" className="min-w-control" aria-label={t('staff.roles.editNamed', { name: r.name })} onClick={() => p.onOpen(r)}>{t('settings.edit')}</Button>
           </li>
         ))}
       </ul>
@@ -65,7 +65,7 @@ export default function CustomRolesPanel(p: Props) {
             <p className="text-sm text-muted-foreground">{t('staff.roles.extrasHint')}</p>
             {addable.length === 0 && <p>{t('staff.roles.extrasNone')}</p>}
             {addable.map(r => (
-              <div key={r.capability} className="flex min-h-11 items-center justify-between gap-3 rounded-lg border p-3">
+              <div key={r.capability} className="flex min-h-control items-center justify-between gap-3 rounded-lg border p-3">
                 <label htmlFor={`extra-${r.capability}`} className="flex flex-col font-semibold">
                   {t(`capability.${r.capability}`)}
                   <span className="text-sm font-normal text-muted-foreground">{t(`access.${r.extra!}`)}</span>

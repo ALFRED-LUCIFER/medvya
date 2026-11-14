@@ -141,7 +141,7 @@ export default function SafetyChecks(p: SafetyProps) {
         </div>
       )}
       <details className="rounded-md border p-3 text-sm">
-        <summary className="flex min-h-11 cursor-pointer items-center font-bold">{t('rx.check.info.title')}</summary>
+        <summary className="flex min-h-control cursor-pointer items-center font-bold">{t('rx.check.info.title')}</summary>
         <p>{t('rx.check.info.source', { source: words(t, 'rx.check.source', c.ruleSet) })}</p>
         {/* The version is a Latin code: isolated so right-to-left text does not reorder it. */}
         <p>{t('rx.check.info.version')} <bdi dir="ltr">{c.ruleSetVersion}</bdi></p>

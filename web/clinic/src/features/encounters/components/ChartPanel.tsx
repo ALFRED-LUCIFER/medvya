@@ -20,7 +20,6 @@ export type ChartPanelProps = {
   | { variant: 'drawer'; open: boolean; onOpenChange: (open: boolean) => void }
 );
 
-const tab = 'min-h-11 flex-1 font-bold text-foreground underline-offset-8 data-[state=active]:underline';
 
 /**
  * The consultation chart panel (MDV-P1-094, blueprint section 8): Assist, Chart, Past visits and Checklist beside the note, or in a drawer
@@ -31,11 +30,11 @@ export default function ChartPanel(p: ChartPanelProps) {
   const done = p.checklist.filter(c => c.state !== 'todo').length;
   const tabs = (
     <Tabs value={p.panel} onValueChange={v => p.onPanel(v as StudioPanel)}>
-      <TabsList variant="line" className="h-auto w-full border-b">
-        {p.assist && <TabsTrigger value="assist" className={tab}>{t('studio.panel.assist')}</TabsTrigger>}
-        <TabsTrigger value="chart" className={tab}>{t('studio.panel.chart')}</TabsTrigger>
-        <TabsTrigger value="past" className={tab}>{t('studio.panel.past')}</TabsTrigger>
-        {p.checklist.length > 0 && <TabsTrigger value="check" className={tab}>{t('studio.panel.check', { done, total: p.checklist.length })}</TabsTrigger>}
+      <TabsList>
+        {p.assist && <TabsTrigger value="assist">{t('studio.panel.assist')}</TabsTrigger>}
+        <TabsTrigger value="chart">{t('studio.panel.chart')}</TabsTrigger>
+        <TabsTrigger value="past">{t('studio.panel.past')}</TabsTrigger>
+        {p.checklist.length > 0 && <TabsTrigger value="check">{t('studio.panel.check', { done, total: p.checklist.length })}</TabsTrigger>}
       </TabsList>
       {p.assist && <TabsContent value="assist">{p.assist}</TabsContent>}
       <TabsContent value="chart"><ChartView {...p.chart} timeZone={p.timeZone} /></TabsContent>

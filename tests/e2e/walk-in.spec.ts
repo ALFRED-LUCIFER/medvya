@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page, type Request } from '@playwright/test';
+import { targetPx } from './support/targets';
 
 // MDV-P1-025 walk-in: quick registration (or search) → walk-in → checked in, card tagged Walk-in. CI has no API: the session,
 // patients, schedule and appointment endpoints are mocked with the synthetic cast in the server's shapes; no double booking,
@@ -197,7 +198,7 @@ for (const locale of ['en', 'hi', 'ar'])
       expect(await page.evaluate(() => document.documentElement.dir)).toBe(locale === 'ar' ? 'rtl' : 'ltr');
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       for (const b of await page.locator('main button, main a, main input').all())
-        if (await b.isVisible()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+        if (await b.isVisible()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
       await page.addScriptTag({ path: axePath });
       const violations = await page.evaluate(async () =>
         (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations

@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
+import { targetPx } from './support/targets';
 
 // MDV-P1-010: the quarterly access review in Settings -> Staff, owner reminders in the notification centre, and an expired licence on the
 // Doctors tab. CI has no API: the endpoints are mocked in the shapes the server sends; the server side (completion, audit, expiry gate,
@@ -79,11 +80,11 @@ test('an expired licence shows as Expired with Renew licence', async ({ page }) 
 
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 for (const locale of ['en', 'ar'])
-  test(`axe finds no violations on the access review (${locale}); 44 px targets`, async ({ page }) => {
+  test(`axe finds no violations on the access review (${locale}); control-size targets`, async ({ page }) => {
     await open(page, { locale });
     await expect(page.getByRole('region', { name: /2026-Q4/ })).toBeVisible();
     if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
-    for (const b of await page.getByRole('region', { name: /2026-Q4/ }).getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    for (const b of await page.getByRole('region', { name: /2026-Q4/ }).getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
     await page.addScriptTag({ path: axePath });
     const violations = await page.evaluate(async () =>
       (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations

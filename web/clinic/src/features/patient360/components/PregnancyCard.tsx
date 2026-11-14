@@ -36,7 +36,7 @@ export default function PregnancyCard(p: Props) {
       {p.folded ? (
         // Kept open while a form is in use, so a save or a refusal is never hidden.
         <details open={p.form !== null || undefined}>
-          <summary className="flex min-h-11 cursor-pointer items-center">{title}</summary>
+          <summary className="flex min-h-control cursor-pointer items-center">{title}</summary>
           <div className="mt-4 flex flex-col gap-4">{body}</div>
         </details>
       ) : <>

@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
+import { targetPx } from './support/targets';
 
 // MDV-P1-006: Settings -> Notifications and Data. CI has no API: the endpoints are mocked in the shapes the server sends
 // (INotifications.cs); the server side (cancelling queued messages, quiet hours, 403) is covered by NotificationsTests and
@@ -84,13 +85,13 @@ test('the Data tab shows country and residency read-only, retention, the export 
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 for (const locale of ['en', 'ar'])
   for (const tab of ['notifications', 'data'])
-    test(`axe finds no violations on Settings -> ${tab} (${locale}); 44 px targets`, async ({ page }) => {
+    test(`axe finds no violations on Settings -> ${tab} (${locale}); control-size targets`, async ({ page }) => {
       await open(page, tab, locale);
       await expect(page.getByRole('main').getByRole('heading', { level: 2 }).first()).toBeVisible();
       if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
       // A switch is tapped through its label row (the same pattern as the hours toggles), so measure that row.
       for (const c of await page.getByRole('main').locator('button:not([role=switch]):visible, a:visible, input:not([aria-hidden=true]):visible, label:has([role=switch])').all())
-        expect((await c.boundingBox())!.height, await c.evaluate(e => e.outerHTML.slice(0, 80))).toBeGreaterThanOrEqual(44);
+        expect((await c.boundingBox())!.height, await c.evaluate(e => e.outerHTML.slice(0, 80))).toBeGreaterThanOrEqual(await targetPx(page));
       await page.addScriptTag({ path: axePath });
       const violations = await page.evaluate(async () =>
         (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations

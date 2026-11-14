@@ -38,10 +38,18 @@ describe('design tokens', () => {
 
   it('names the layout, density, breakpoint and motion values as Tailwind theme variables and native numbers', () => {
     const css = read('tokens.css');
-    for (const v of ['--breakpoint-wide: 1024px', '--container-page: 1600px', '--spacing-control: 44px', '--spacing-row-compact: 36px',
+    for (const v of ['--breakpoint-wide: 1024px', '--container-page: 1600px', '--spacing-control: 36px', '--spacing-row-compact: 36px',
       '--ease-out: cubic-bezier(0.23, 1, 0.32, 1)', '--transition-duration-fast: 150ms']) expect(css).toContain(`${v};`);
     expect(theme.transitionDuration.fast).toBe(150);
-    expect(theme.spacing.control).toBe(44);
+    expect(theme.spacing.control).toBe(36);
+  });
+
+  it('density follows the pointer: 36 px controls and 40 px rows with a mouse, 44 and 48 under any-pointer: coarse (MDV-P2-062)', () => {
+    const coarse = read('tokens.css').split('@media (any-pointer: coarse)')[1]!;
+    for (const v of ['--spacing-control: 44px', '--spacing-control-sm: 44px', '--spacing-row: 48px']) expect(coarse).toContain(`${v};`);
+    expect([theme.spacing.control, theme.spacing.controlSm, theme.spacing.row]).toEqual([36, 30, 40]);
+    expect(theme.coarse).toEqual({ spacingControl: 44, spacingControlSm: 44, spacingRow: 48 });
+    expect(() => render({ ...source, coarse: { 'spacing-nope': '44px' } })).toThrow(/spacing-nope/);
   });
 
   it('keeps the public site parser working: one @theme block with no closing brace inside', () => {

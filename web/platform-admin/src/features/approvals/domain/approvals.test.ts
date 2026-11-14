@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import en from '../../../../../../packages/i18n/messages/en.json';
-import { actionsFor, approveBlockedByDpa, canDecide, decisionOf, documentKinds, errorKeyOf, sizeLabel, taxCheck, waitDays } from './approvals';
+import { actionsFor, approveBlockedByDpa, canDecide, decisionOf, documentKinds, errorKeyOf, sizeLabel, taxCheck, uncheckedDocuments, waitDays } from './approvals';
 
 describe('who decides', () => {
   it('lets owner, operations and reviewer decide and support and finance only read', () => {
@@ -31,7 +31,17 @@ describe('the DPA rule', () => {
   it('words the server refusals', () => {
     expect(errorKeyOf({ 'document.Dpa': ['required'] })).toBe('dpa');
     expect(errorKeyOf({ state: ['transition'] })).toBe('state');
+    expect(errorKeyOf({ documents: ['unchecked'] })).toBe('unchecked');
     expect(errorKeyOf({ reason: ['required'] })).toBeNull();
+  });
+});
+
+describe('the reviewer’s ticks', () => {
+  const docs = { documents: [{ id: 'a' }, { id: 'b' }] as never };
+  it('holds approve back until every document is ticked as checked', () => {
+    expect(uncheckedDocuments(docs, [])).toBe(true);
+    expect(uncheckedDocuments(docs, ['a'])).toBe(true);
+    expect(uncheckedDocuments(docs, ['b', 'a'])).toBe(false);
   });
 });
 

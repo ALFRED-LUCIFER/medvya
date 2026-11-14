@@ -1,8 +1,7 @@
 import { Link } from 'react-router';
 import { ArrowLeft, CircleAlert, CircleCheck, UserPlus } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, cn, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, PageContainer, PageHeader } from '@medvya/ui';
-import PatientsMessage from '../../patients/components/PatientsMessage';
+import { Button, buttonVariants, Card, cn, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, PageContainer, PageHeader, PageMessage } from '@medvya/ui';
 import { PatientPicker, type PatientSearchView } from '../../schedule/components/BookingPanel';
 import { reasonCategories, visitTypes, type PatientMatch } from '../../schedule/domain/booking';
 import { termsPath } from '../../settings/domain/settings';
@@ -34,20 +33,20 @@ const nextAvailable = 'next';
 /** P-01 "Walk-in" (MDV-P1-025): patient, doctor (or next available), then one tap: the next free slot today and checked in. */
 export default function WalkInPage(p: Props) {
   const { t, formatTime } = useI18n();
-  if (p.error === 'forbidden') return <PatientsMessage pageHeading title={t('err.403')} body={t('walkIn.forbidden')} />;
   const back = (
-    <Link to={p.boardPath} className={cn(buttonVariants({ variant: 'ghost' }), 'self-start px-2')}>
+    <Link to={p.boardPath} className={cn(buttonVariants({ variant: 'ghost' }), 'px-2')}>
       <ArrowLeft className="rtl:rotate-180" aria-hidden />{t('walkIn.back')}
     </Link>
   );
+  if (p.error === 'forbidden')
+    return <PageContainer width="form"><PageHeader back={back} title={t('walkIn.title')} /><PageMessage kind="denied" title={t('err.403')}>{t('walkIn.forbidden')}</PageMessage></PageContainer>;
   if (p.result) {
     const doctor = p.doctors.find(d => d.id === p.result!.calendarId)?.name ?? '';
     return (
-      <PageContainer width="form">
-        {back}
-        <div role="status" className="flex flex-col items-start gap-3 rounded-xl border bg-card p-6">
-          <CircleCheck className="size-8 text-success-700" aria-hidden />
-          <h1 className="text-2xl font-extrabold">{t('walkIn.done.title', { name: p.result.patientName })}</h1>
+      // The whole result is the live region, so "… is checked in" is announced with its token, as before the title moved into PageHeader.
+      <PageContainer width="form" role="status">
+        <PageHeader back={back} title={<span className="inline-flex items-center gap-2"><CircleCheck className="size-6 shrink-0 text-success-700" aria-hidden />{t('walkIn.done.title', { name: p.result.patientName })}</span>} />
+        <Card className="items-start">
           {/* The token the waiting room is called by: read out to the patient now, not looked up on the board later. */}
           {p.result.token && <p className="text-3xl font-extrabold">{t('walkIn.done.token')} <bdi dir="ltr" className="font-mono">{p.result.token}</bdi></p>}
           <p>
@@ -55,15 +54,14 @@ export default function WalkInPage(p: Props) {
             {isBoardColumn(p.result.state) && <> {t('walkIn.done.column', { column: t(`board.column.${p.result.state}`) })}</>}
           </p>
           <Link to={p.boardPath} className={buttonVariants()}>{t('walkIn.back')}</Link>
-        </div>
+        </Card>
       </PageContainer>
     );
   }
 
   return (
     <PageContainer width="form" className="gap-5">
-      {back}
-      <PageHeader title={t('walkIn.title')} description={t('walkIn.intro')} />
+      <PageHeader back={back} title={t('walkIn.title')} description={t('walkIn.intro')} />
       <form noValidate onSubmit={e => { e.preventDefault(); p.onConfirm(); }} className="flex flex-col gap-5 rounded-xl border bg-card p-4">
         <PatientPicker search={p.patientSearch} chosen={p.patientId} registerPath={null} invalid={false} />
         <div className="flex flex-col gap-1">

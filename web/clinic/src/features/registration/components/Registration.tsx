@@ -113,7 +113,8 @@ export default function Registration(p: Props) {
     <PageContainer width="reading" className="gap-5">
       <PageHeader title={t('registration.title')} description={t(p.quick ? 'registration.quick.intro' : `registration.full.intro.${p.country}`)}
         actions={
-          <nav aria-label={t('registration.mode.label')} className="flex gap-1 rounded-lg bg-muted p-1">
+          // No track padding: the two 44 px links keep the header one 44 px row (MDV-P2-059).
+          <nav aria-label={t('registration.mode.label')} className="flex gap-1 rounded-lg bg-muted">
             <Link to={p.quickPath} aria-current={p.quick ? 'page' : undefined} className={modeLink(true)}>{t('registration.mode.quick')}</Link>
             <Link to={p.fullPath} aria-current={p.quick ? undefined : 'page'} className={modeLink(false)}>{t('registration.mode.full')}</Link>
           </nav>} />

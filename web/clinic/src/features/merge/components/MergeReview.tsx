@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { ArrowLeft, Check, GitMerge, Undo2, X } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, cn, Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow, PageContainer, PageHeader } from '@medvya/ui';
+import { Button, buttonVariants, Card, cn, Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow, PageContainer, PageHeader } from '@medvya/ui';
 import { availableActions, type MergeAction, type MergeQueueRow, type Refusal, type MergeReview as Review, type MergeSide } from '../domain/merge';
 
 type LoadState = 'loading' | 'ready' | 'invalid' | 'forbidden' | 'notFound' | 'error';
@@ -50,15 +50,14 @@ export default function MergeReview(props: Props) {
 
   return (
     <PageContainer width="reading">
-      <Link to={props.backPath} className={cn(buttonVariants({ variant: 'ghost' }), 'self-start px-2')}>
-        <ArrowLeft className="rtl:rotate-180" aria-hidden />{t('patients.record.back')}
-      </Link>
-      <PageHeader title={t('merge.title')} />
+      <PageHeader title={t('merge.title')} back={
+        <Link to={props.backPath} className={cn(buttonVariants({ variant: 'ghost' }), 'px-2')}>
+          <ArrowLeft className="rtl:rotate-180" aria-hidden />{t('patients.record.back')}
+        </Link>} />
       <p role="status" className={cn('text-sm', props.refusal || loadError ? 'font-semibold text-danger-700' : 'text-muted-foreground')}>{status}</p>
       {loadError && <Button variant="outline" className="self-start" onClick={props.onRetry}>{t('patients.retry')}</Button>}
 
-      <section aria-labelledby="merge-queue" className="rounded-xl border bg-card p-4">
-        <h2 id="merge-queue" className="mb-2 text-base font-extrabold">{t('merge.queue')}</h2>
+      <Card title={t('merge.queue')}>
         {props.queueState === 'ready' && queue.length === 0 ? <p className="text-muted-foreground">{t('merge.queue.empty')}</p> : (
           <ul className="flex flex-col gap-1">
             {queue.map(r => (
@@ -72,11 +71,10 @@ export default function MergeReview(props: Props) {
             ))}
           </ul>
         )}
-      </section>
+      </Card>
 
       {review && (
-        <section aria-labelledby="merge-compare" className="flex flex-col gap-3 rounded-xl border bg-card p-4">
-          <h2 id="merge-compare" className="text-base font-extrabold">{t('merge.compare')} <span className="text-sm font-bold text-muted-foreground">{t(`merge.status.${review.status}`)}</span></h2>
+        <Card title={<>{t('merge.compare')} <span className="text-sm font-bold text-muted-foreground">{t(`merge.status.${review.status}`)}</span></>}>
           <p className="text-sm text-muted-foreground">{t('merge.explain')}</p>
           <Table label={t('merge.compare')} className="table-fixed" containerClassName="overflow-visible rounded-none border-0">
             <TableCaption className="sr-only">{t('merge.compare')}</TableCaption>
@@ -107,7 +105,7 @@ export default function MergeReview(props: Props) {
               })}
             </div>
           )}
-        </section>
+        </Card>
       )}
     </PageContainer>
   );

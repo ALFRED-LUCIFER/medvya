@@ -106,7 +106,7 @@ journey('J3', {
       await signIn(doctor, rao);
       await doctor.goto('/app/today');
       await doctor.getByRole('button', { name: 'My patients' }).click();
-      const visit = doctor.getByRole('region', { name: "Today's visits" }).getByRole('article', { name: new RegExp(patient.name) });
+      const visit = doctor.getByRole('region', { name: "Today's visits" }).getByRole('listitem').filter({ hasText: patient.name });
       await expect(visit).toBeVisible();
       await expect(doctor.getByRole('status').filter({ hasText: /^Live updates$/ })).toBeVisible(); // joined the hub before the push
       await nurse.getByRole('button', { name: 'Escalate to doctor' }).click();

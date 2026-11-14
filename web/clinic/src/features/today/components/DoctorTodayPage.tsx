@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { Activity, CalendarCheck, FilePen, Siren, CircleAlert, CircleCheck, CircleHelp, ClipboardCheck, DoorOpen, ReceiptText, Syringe, UserCheck, type LucideIcon } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, FrontDeskTag, PageContainer, PageHeader } from '@medvya/ui';
+import { Button, buttonVariants, Card, FrontDeskTag, PageContainer, PageHeader, PageMessage } from '@medvya/ui';
 import type { BoardCard, BoardColumn, LiveStatus } from '../../front-desk/domain/board';
 import { canConsult } from '../../encounters/domain/encounter';
 import type { AllergyState } from '../../patient360/domain/chart';
@@ -40,7 +40,8 @@ export default function DoctorTodayPage(p: Props) {
   const { t, formatDay } = useI18n();
   return (
     <PageContainer width="fluid">
-      <PageHeader eyebrow={t('nav.today')} title={p.day ? t('today.title', { day: formatDay(p.day) }) : t('nav.today')}
+      {/* The title is fixed and the day is secondary text that arrives without moving the row (MDV-P2-059 AC2); no eyebrow repeating the menu item. */}
+      <PageHeader title={t('nav.today')} meta={p.day && formatDay(p.day)}
         actions={<>
           {!p.forbidden && <p role="status" className="inline-flex min-h-9 items-center"><FrontDeskTag kind={p.live} /></p>}
           <div role="group" aria-label={t('today.scope')} className="flex gap-1">
@@ -59,23 +60,13 @@ function ScopeButton({ scope, active, onScope }: { scope: Scope; active: boolean
   return <Button variant={active ? 'selected' : 'outline'} aria-pressed={active} onClick={() => onScope(scope)}>{t(`today.scope.${scope}`)}</Button>;
 }
 
-function Message({ title, body, action, busy = false }: { title: string; body?: string; action?: { label: string; run: () => void }; busy?: boolean }) {
-  return (
-    <div role={busy ? 'status' : 'alert'} className="flex max-w-[560px] flex-col items-start gap-2 rounded-xl border bg-card p-6">
-      <h2 className="text-lg font-extrabold">{title}</h2>
-      {body && <p className="text-muted-foreground">{body}</p>}
-      {action && <Button variant="default" className="mt-2" onClick={action.run}>{action.label}</Button>}
-    </div>
-  );
-}
-
 function Body(p: Props) {
   const { t } = useI18n();
-  if (p.forbidden) return <Message title={t('err.403')} body={t('board.forbidden.body')} />;
-  if (p.offline) return <Message title={t('state.offline.title')} body={t('board.offline')} />;
-  if (p.failed) return <Message title={t('board.error.title')} body={t('board.error.body')} action={{ label: t('schedule.retry'), run: p.onRetry }} />;
-  if (p.loading || !p.day) return <Message busy title={t('board.loading')} />;
-  if (p.visits.length === 0) return <Message title={t('today.empty.title')} body={t(p.scope === 'mine' ? 'today.empty.mine' : 'today.empty.clinic')} />;
+  if (p.forbidden) return <PageMessage kind="denied" title={t('err.403')}>{t('board.forbidden.body')}</PageMessage>;
+  if (p.offline) return <PageMessage kind="error" title={t('state.offline.title')}>{t('board.offline')}</PageMessage>;
+  if (p.failed) return <PageMessage kind="error" title={t('board.error.title')} action={<Button onClick={p.onRetry}>{t('schedule.retry')}</Button>}>{t('board.error.body')}</PageMessage>;
+  if (p.loading || !p.day) return <PageMessage kind="busy">{t('board.loading')}</PageMessage>;
+  if (p.visits.length === 0) return <PageMessage kind="empty" title={t('today.empty.title')}>{t(p.scope === 'mine' ? 'today.empty.mine' : 'today.empty.clinic')}</PageMessage>;
   return (
     <>
       {p.escalated.length > 0 && <Escalated {...p} />}
@@ -159,11 +150,10 @@ function Chips(p: Props & { card: BoardCard }) {
 function Visit(p: Props & { card: BoardCard }) {
   const { t, formatTime } = useI18n();
   const c = p.card, age = ageOn(c.dateOfBirth, p.day ?? '');
-  const nameId = `today-visit-${c.id}`;
   return (
-    <article aria-labelledby={nameId} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-card px-3 py-2.5">
+    <Card size="item" className="flex-row flex-wrap items-center justify-between gap-3">
       <div className="flex min-w-0 flex-col gap-1.5">
-        <h3 id={nameId} className="text-sm font-bold">
+        <h3 className="text-sm font-bold">
           <span className="font-mono text-xs font-semibold text-muted-foreground">{formatTime(new Date(c.start), p.timeZone ?? undefined)}</span>{' '}
           <Token card={c} /><PatientLink {...p} card={c} />{age !== null && <span className="font-normal text-muted-foreground">{' · '}{t('today.age', { years: age })}</span>}
         </h3>
@@ -171,7 +161,7 @@ function Visit(p: Props & { card: BoardCard }) {
         <Chips {...p} card={c} />
       </div>
       {canConsult(c.state) && <div className="[&_button]:min-w-40">{p.consultAction(c)}</div>}
-    </article>
+    </Card>
   );
 }
 
@@ -226,7 +216,7 @@ function PendingRow({ note: n, timeZone, consultPath }: Props & { note: PendingN
   const { t, formatDate } = useI18n();
   const state = n.noteSigned ? 'today.open.signed' : n.drafted ? 'today.pending.draft' : 'today.pending.empty';
   return (
-    <li className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-card px-3 py-2.5">
+    <li><Card size="item" className="flex-row flex-wrap items-center justify-between gap-3">
       <span className="flex flex-wrap items-center gap-2 text-sm">
         {n.openPastDay ? <CircleAlert aria-hidden className="size-4 shrink-0" /> : <FilePen aria-hidden className="size-4 shrink-0" />}
         <span className="font-bold">{n.patientName || t('board.unknownPatient')}</span>
@@ -234,6 +224,6 @@ function PendingRow({ note: n, timeZone, consultPath }: Props & { note: PendingN
         {n.openPastDay && <span className="font-bold">{t('today.open.pastDay')}</span>}
       </span>
       <Link to={consultPath(n.encounterId)} className={buttonVariants({ variant: 'outline' })}>{t(n.noteSigned ? 'today.open.action' : 'today.pending.open')}</Link>
-    </li>
+    </Card></li>
   );
 }

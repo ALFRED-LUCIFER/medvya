@@ -80,33 +80,34 @@ export default function SchedulePage(props: Props) {
     {props.sheet && <DaySheetView sheet={props.sheet} printedBy={props.printedBy} />}
     {/* While a day sheet prints, the screen content stays off the paper. */}
     <PageContainer className={cn('max-md:pb-16', props.sheet && 'print:hidden')}>
-      <PageHeader title={t('nav.schedule')} meta={shown} description={props.timeZone && t('schedule.facilityTime', { zone: props.timeZone })} actions={
-        // Printing (the list view is the paper agenda) keeps the heading and the schedule, not the controls.
-        <div className="flex flex-wrap items-center gap-2 print:hidden">
-          <Button variant="outline" size="icon" aria-label={t(isWeek ? 'schedule.prevWeek' : 'schedule.prevDay')} disabled={!date} onClick={props.onPrevious}>
-            <ChevronLeft className="rtl:rotate-180" aria-hidden />
-          </Button>
-          <Button variant="outline" onClick={props.onToday}>{t('schedule.today')}</Button>
-          <Button variant="outline" size="icon" aria-label={t(isWeek ? 'schedule.nextWeek' : 'schedule.nextDay')} disabled={!date} onClick={props.onNext}>
-            <ChevronRight className="rtl:rotate-180" aria-hidden />
-          </Button>
-          <div role="group" aria-label={t('schedule.views')} className="flex gap-1">
-            {scheduleViews.map(v => (
-              <Button key={v} variant={view === v ? 'selected' : 'outline'} aria-pressed={view === v} onClick={() => props.onView(v)}>{t(`schedule.view.${v}`)}</Button>
-            ))}
-          </div>
-          {props.calendars.length > 1 && (
-            <Select value={props.filter ?? all} onValueChange={v => props.onFilter(v === all ? null : v)}>
-              <SelectTrigger aria-label={t('schedule.filter')} className="w-56"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {!isWeek && <SelectItem value={all}>{t('schedule.filter.all')}</SelectItem>}
-                {props.calendars.map(c => <SelectItem key={c.id} value={c.id}>{c.name || t('schedule.doctor')}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          )}
-          <Button variant="outline" disabled={!date || props.printing} onClick={props.onPrintSheet}><Printer aria-hidden />{t('schedule.sheet.print')}</Button>
-          {props.leavePath && <Link to={props.leavePath} className={buttonVariants({ variant: 'outline' })}><CalendarOff aria-hidden />{t('schedule.leave')}</Link>}
-        </div>} />
+      <PageHeader title={t('nav.schedule')} meta={shown} description={props.timeZone && t('schedule.facilityTime', { zone: props.timeZone })} />
+      {/* The day's controls are a toolbar under the header, not its actions: nine of them do not fit beside the title, and the title row stays
+          one 44 px row (MDV-P2-059). Printing (the list view is the paper agenda) keeps the heading and the schedule, not the controls. */}
+      <div className="flex flex-wrap items-center gap-2 print:hidden">
+        <Button variant="outline" size="icon" aria-label={t(isWeek ? 'schedule.prevWeek' : 'schedule.prevDay')} disabled={!date} onClick={props.onPrevious}>
+          <ChevronLeft className="rtl:rotate-180" aria-hidden />
+        </Button>
+        <Button variant="outline" onClick={props.onToday}>{t('schedule.today')}</Button>
+        <Button variant="outline" size="icon" aria-label={t(isWeek ? 'schedule.nextWeek' : 'schedule.nextDay')} disabled={!date} onClick={props.onNext}>
+          <ChevronRight className="rtl:rotate-180" aria-hidden />
+        </Button>
+        <div role="group" aria-label={t('schedule.views')} className="flex gap-1">
+          {scheduleViews.map(v => (
+            <Button key={v} variant={view === v ? 'selected' : 'outline'} aria-pressed={view === v} onClick={() => props.onView(v)}>{t(`schedule.view.${v}`)}</Button>
+          ))}
+        </div>
+        {props.calendars.length > 1 && (
+          <Select value={props.filter ?? all} onValueChange={v => props.onFilter(v === all ? null : v)}>
+            <SelectTrigger aria-label={t('schedule.filter')} className="w-56"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {!isWeek && <SelectItem value={all}>{t('schedule.filter.all')}</SelectItem>}
+              {props.calendars.map(c => <SelectItem key={c.id} value={c.id}>{c.name || t('schedule.doctor')}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        )}
+        <Button variant="outline" disabled={!date || props.printing} onClick={props.onPrintSheet}><Printer aria-hidden />{t('schedule.sheet.print')}</Button>
+        {props.leavePath && <Link to={props.leavePath} className={buttonVariants({ variant: 'outline' })}><CalendarOff aria-hidden />{t('schedule.leave')}</Link>}
+      </div>
       {props.printFailed && <p role="alert" className="text-sm font-bold text-destructive print:hidden">{t('schedule.sheet.failed')}</p>}
       <Legend />
       {/* The schedule takes the full width when no booking panel sits beside it (the week view). */}

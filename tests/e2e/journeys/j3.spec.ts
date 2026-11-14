@@ -54,7 +54,7 @@ journey('J3', {
     await page.getByRole('button', { name: 'Confirm: no known allergies' }).click();
     await page.getByRole('button', { name: 'Hand off · Ready for doctor' }).click();
     await expect(page).toHaveURL(/\/nurse$/);
-    await expect(page.getByRole('heading', { name: 'No one is with the nurse' })).toBeVisible();
+    await expect(page.getByText('No one is with the nurse')).toBeVisible(); // the empty queue's PageMessage title
     expect(calls.handoffs).toBe(1);
   },
   // MDV-P1-072: a desk at the organisation's second location finds a patient registered at the first one, and it opens as the same chart and MRN.

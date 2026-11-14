@@ -16,19 +16,24 @@ export const visit = {
   calendarId: 'u-rao', calendarName: 'Dr. Arjun Rao (synthetic)', visitType: 'FollowUp', reasonCategory: 'ChronicReview', start: at, end: at, state: 'WithNurse', since: at,
 };
 
-type Vital = { kind: string; value: number; flag: 'High' | 'Low' | 'Changed' | null; previousValue: number | null; previousAt: string | null; flagKept: boolean; recordedAt: string };
+type Vital = { kind: string; value: number; flag: 'High' | 'Low' | 'Changed' | null; previousValue: number | null; previousAt: string | null; flagKept: boolean; recordedAt: string;
+  usualLow?: number | null; usualHigh?: number | null; correction?: { fromValue: number; fromBy: string | null; fromAt: string; reason: string } | null };
+// Adult usual ranges the server sends with a High flag (VitalRules, #956); at or above `high` is flagged.
+const highs: Record<string, [number, number]> = { SystolicBp: [90, 140], DiastolicBp: [60, 90], Pulse: [50, 101], Temperature: [36, 38] };
 type Allergy = { id: string; substance: string; reaction: string | null; status: string | null; source: string; statusSetAt: string | null };
 type Medicine = { id: string; name: string; dose: string | null; frequency: string | null; needsClarification: boolean; source: string; recordedAt: string };
 export type Intake = { vitals: Vital[]; allergies: Allergy[]; medicines: Medicine[]; noKnown: boolean; escalated: boolean; state: string };
 
 /**
  * Mocks the nurse's API. `calls` records what the screen sent; `intake` is the server's current state. `unreviewed`: the patient has an allergy
- * nobody has set a status for. `checkedIn`: the visit is still Checked in, for the nurse to take to intake (#956).
+ * nobody has set a status for. `checkedIn`: the visit is still Checked in, for the nurse to take to intake (#956). `handedOff`: the intake was handed
+ * off with these readings and the doctor has not started (MDV-P2-048); `started`: the doctor starts before the correction arrives.
  */
-export async function mockNurse(page: Page, locale = 'en', { unreviewed = false, checkedIn = false }: { unreviewed?: boolean; checkedIn?: boolean } = {}) {
-  const calls = { moves: [] as unknown[], saves: [] as unknown[], keeps: [] as string[], escalations: [] as unknown[], handoffs: 0, none: 0, allergies: [] as unknown[], statuses: [] as unknown[], medicines: [] as unknown[] };
+export async function mockNurse(page: Page, locale = 'en', { unreviewed = false, checkedIn = false, handedOff = null as Vital[] | null, started = false }:
+  { unreviewed?: boolean; checkedIn?: boolean; handedOff?: Vital[] | null; started?: boolean } = {}) {
+  const calls = { moves: [] as unknown[], saves: [] as unknown[], keeps: [] as string[], keepAlls: 0, corrections: [] as unknown[], escalations: [] as unknown[], handoffs: 0, none: 0, allergies: [] as unknown[], statuses: [] as unknown[], medicines: [] as unknown[] };
   const intake: Intake = {
-    vitals: [], medicines: [], noKnown: false, escalated: false, state: checkedIn ? 'CheckedIn' : 'WithNurse',
+    vitals: handedOff ?? [], medicines: [], noKnown: !!handedOff, escalated: false, state: handedOff ? 'ReadyForDoctor' : checkedIn ? 'CheckedIn' : 'WithNurse',
     allergies: unreviewed ? [{ id: 'al-1', substance: 'Penicillin (synthetic)', reaction: null, status: null, source: 'PatientReported', statusSetAt: null }] : [],
   };
   const view = () => ({
@@ -54,10 +59,12 @@ export async function mockNurse(page: Page, locale = 'en', { unreviewed = false,
       calls.saves.push(body);
       const bad = body.vitals.findIndex(v => v.kind === 'OxygenSaturation' && v.value > 100);
       if (bad >= 0) return r.fulfill({ status: 400, contentType: 'application/json', json: { errors: { [`vitals[${bad}].value`]: ['implausible'] } } });
-      intake.vitals = body.vitals.map(v => ({
+      // A value saved again unchanged keeps the nurse's decision, as on the server; a changed one is a re-measure.
+      intake.vitals = body.vitals.map(v => intake.vitals.find(o => o.kind === v.kind && o.value === v.value) ?? {
         kind: v.kind, value: v.value, previousValue: v.kind === 'Weight' ? 70 : null, previousAt: v.kind === 'Weight' ? '2026-10-02T04:30:00Z' : null, flagKept: false, recordedAt: at,
-        flag: v.kind === 'SystolicBp' && v.value >= 140 ? 'High' : v.kind === 'Weight' && v.value - 70 >= 2 ? 'Changed' : null,
-      }));
+        flag: highs[v.kind] && v.value >= highs[v.kind]![1] ? 'High' : v.kind === 'Weight' && v.value - 70 >= 2 ? 'Changed' : null,
+        usualLow: highs[v.kind] && v.value >= highs[v.kind]![1] ? highs[v.kind]![0] : null, usualHigh: highs[v.kind] && v.value >= highs[v.kind]![1] ? highs[v.kind]![1] : null,
+      });
       return r.fulfill({ json: view() });
     }
     return r.fulfill({ json: { intake: view(), timeZone: 'Asia/Kolkata',
@@ -67,6 +74,21 @@ export async function mockNurse(page: Page, locale = 'en', { unreviewed = false,
     const kind = r.request().url().split('/').at(-2)!;
     calls.keeps.push(kind);
     intake.vitals = intake.vitals.map(v => (v.kind === kind ? { ...v, flagKept: true } : v));
+    return r.fulfill({ json: view() });
+  });
+  // MDV-P2-048: one confirmation for all flagged readings, and a correction after the handoff (refused once the doctor started).
+  await page.route('**/v1/intake/a1/vitals/keep-all', r => {
+    calls.keepAlls++;
+    intake.vitals = intake.vitals.map(v => (v.flag ? { ...v, flagKept: true } : v));
+    return r.fulfill({ json: view() });
+  });
+  await page.route('**/v1/intake/a1/vitals/*/correct', r => {
+    const kind = r.request().url().split('/').at(-2)!;
+    const body = r.request().postDataJSON() as { value: number; reason: string };
+    calls.corrections.push({ kind, ...body });
+    if (started) return r.fulfill({ status: 409, contentType: 'application/json', json: { code: 'consult_started' } });
+    intake.vitals = intake.vitals.map(v => (v.kind === kind
+      ? { ...v, value: body.value, flag: null, recordedAt: '2026-10-19T04:45:00Z', correction: { fromValue: v.value, fromBy: 'u-nurse', fromAt: v.recordedAt, reason: body.reason } } : v));
     return r.fulfill({ json: view() });
   });
   await page.route('**/v1/intake/a1/allergies', r => {

@@ -133,6 +133,64 @@ test('the nurse adds an allergy with its reaction and a medicine the patient cou
   expect(calls.medicines).toEqual([{ name: 'a white tablet for sugar', dose: '', frequency: '', needsClarification: true }]);
 });
 
+// MDV-P2-048 (J3 step 5; needs clinical sign-off): a high blood pressure, a fast pulse and a fever are listed once, in words with their usual ranges,
+// and one confirmation keeps them all; re-measuring one changes only that one. After the handoff and before the doctor starts, the weight is corrected
+// with a reason and shows the earlier value. The server's window, history and audit are proven in IntakeTests.
+test('several flagged readings are confirmed once, each in words with its range; one is re-measured on its own', async ({ page }) => {
+  const { calls } = await mockNurse(page);
+  await page.goto('/nurse/a1');
+  await page.getByLabel('BP systolic').fill('168');
+  await page.getByLabel('BP diastolic').fill('96');
+  await page.getByLabel('Pulse').fill('104');
+  await page.getByLabel('Temperature').fill('39.2');
+  await page.getByRole('button', { name: 'Save vitals' }).click();
+  const list = page.getByRole('status').filter({ hasText: 'Readings outside the usual range' });
+  await expect(list.getByRole('listitem')).toHaveText([/BP systolic.*168 mmHg.* · High · Usual: below .*140.*mmHg/, /BP diastolic.*96 mmHg.* · High · Usual: below .*90/,
+    /Pulse.*104 bpm.* · High · Usual: below .*101/, /Temperature.*39\.2 °C.* · High · Usual: below .*38/]);
+  // Beside each field too: High and the range in words, never colour alone (AC5).
+  await expect(page.locator('p').filter({ hasText: /Usual: below .*140.*mmHg/ })).toBeVisible();
+
+  await page.getByRole('textbox', { name: 'Pulse', exact: true }).fill('88'); // re-measured: only the pulse changes
+  await page.getByRole('button', { name: 'Save vitals' }).click();
+  await expect(list.getByRole('listitem')).toHaveCount(3);
+  await expect(list).not.toContainText('Pulse');
+  await list.getByRole('button', { name: 'I re-checked these readings' }).click();
+  await expect(page.getByText('Kept as measured after a re-check')).toHaveCount(3);
+  await expect(list).toHaveCount(0);
+  expect(calls.keeps).toEqual([]);
+  expect(calls.keepAlls).toBe(1);
+});
+
+test('after the handoff the nurse corrects a mistyped weight with a reason', async ({ page }) => {
+  const weight = { kind: 'Weight', value: 7.2, flag: null, previousValue: null, previousAt: null, flagKept: false, recordedAt: '2026-10-19T04:30:00Z' };
+  const { calls } = await mockNurse(page, 'en', { handedOff: [weight] });
+  await page.goto('/nurse/a1');
+  await expect(page.getByText('Until the doctor starts, you can correct a reading with a reason.', { exact: false })).toBeVisible();
+  await page.getByRole('button', { name: 'Correct Weight' }).click();
+  const group = page.getByRole('group', { name: 'Correct Weight' });
+  await group.getByLabel('Corrected value').fill('72');
+  await group.getByRole('button', { name: 'Save correction' }).click();
+  await expect(group.getByText('Give the reason for the correction.')).toBeVisible(); // never without a reason
+  expect(calls.corrections).toEqual([]);
+  await group.getByLabel('Reason for the correction').fill('Typed 7.2 for 72 (synthetic)');
+  await group.getByRole('button', { name: 'Save correction' }).click();
+  await expect(page.getByText(/Corrected · earlier value .*7\.2 kg.*, recorded at 10:00/)).toBeVisible();
+  await expect(page.getByText('Reason: Typed 7.2 for 72 (synthetic)')).toBeVisible();
+  expect(calls.corrections).toEqual([{ kind: 'Weight', value: 72, reason: 'Typed 7.2 for 72 (synthetic)' }]);
+});
+
+test('a correction sent after the doctor started is refused in words', async ({ page }) => {
+  const pulse = { kind: 'Pulse', value: 72, flag: null, previousValue: null, previousAt: null, flagKept: false, recordedAt: '2026-10-19T04:30:00Z' };
+  await mockNurse(page, 'en', { handedOff: [pulse], started: true });
+  await page.goto('/nurse/a1');
+  await page.getByRole('button', { name: 'Correct Pulse' }).click();
+  const group = page.getByRole('group', { name: 'Correct Pulse' });
+  await group.getByLabel('Corrected value').fill('76');
+  await group.getByLabel('Reason for the correction').fill('Miscounted (synthetic)');
+  await group.getByRole('button', { name: 'Save correction' }).click();
+  await expect(page.getByRole('alert').filter({ hasText: 'The doctor has started the consultation, so the readings can no longer be corrected here.' })).toBeVisible();
+});
+
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 for (const locale of ['en', 'ar'])
   test(`axe finds no violations on the intake (${locale}); tablet targets are 44 px`, async ({ page }) => {
@@ -166,5 +224,39 @@ for (const locale of ['en', 'ar'])
     const violations = await page.evaluate(async () =>
       (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations
         .map(v => `${v.id} (${v.nodes.length})`));
+    expect(violations).toEqual([]);
+  });
+
+// MDV-P2-048 at 1024 touch: the flagged list and the correction form, in English and Arabic.
+for (const locale of ['en', 'ar'])
+  test(`axe finds no violations on the flagged list (${locale}); targets are 44 px`, async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 768 });
+    await mockNurse(page, locale);
+    await page.goto('/nurse/a1');
+    await page.getByRole('textbox').nth(1).fill('168'); // BP systolic
+    await page.getByRole('textbox').nth(3).fill('104'); // pulse
+    await page.getByRole('button').filter({ hasText: /^(Save vitals|احفظ العلامات الحيوية)$/ }).click();
+    await expect(page.getByRole('status').filter({ has: page.getByRole('list') })).toBeVisible();
+    if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+    for (const target of await page.getByRole('main').getByRole('button').all()) expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await page.addScriptTag({ path: axePath });
+    const violations = await page.evaluate(async () =>
+      (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations.map(v => `${v.id} (${v.nodes.length})`));
+    expect(violations).toEqual([]);
+  });
+
+for (const locale of ['en', 'ar'])
+  test(`axe finds no violations on the correction form after the handoff (${locale}); targets are 44 px`, async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 768 });
+    await mockNurse(page, locale, { handedOff: [{ kind: 'Weight', value: 7.2, flag: null, previousValue: null, previousAt: null, flagKept: false, recordedAt: '2026-10-19T04:30:00Z' }] });
+    await page.goto('/nurse/a1');
+    await page.getByRole('main').getByRole('button', { name: /^(Correct Weight|تصحيح الوزن)$/ }).click();
+    await expect(page.getByRole('group')).toBeVisible();
+    if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+    for (const target of await page.getByRole('main').getByRole('button').all()) expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    for (const target of await page.getByRole('group').getByRole('textbox').all()) expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await page.addScriptTag({ path: axePath });
+    const violations = await page.evaluate(async () =>
+      (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations.map(v => `${v.id} (${v.nodes.length})`));
     expect(violations).toEqual([]);
   });

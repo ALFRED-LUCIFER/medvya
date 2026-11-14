@@ -120,6 +120,7 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
             e.Property(x => x.Code).HasConversion<string>().HasMaxLength(30);
             e.Property(x => x.Source).HasConversion<string>().HasMaxLength(20);
             e.Property(x => x.Flag).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.CorrectionReason).HasMaxLength(500);
             e.HasIndex(x => new { x.TenantId, x.PatientId, x.Code, x.TakenAt });
             e.HasIndex(x => new { x.TenantId, x.AppointmentId, x.Code }); // the visit's readings
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);

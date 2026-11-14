@@ -132,6 +132,11 @@ public sealed class Observation
     [Classification(DataClass.Internal)] public DateTimeOffset? PreviousAt { get; init; }
     /// <summary>A flagged reading is only final once the nurse kept it on purpose.</summary>
     [Classification(DataClass.Internal)] public bool FlagKept { get; set; }
+    /// <summary>
+    /// Set when the nurse corrected the visit's reading after the handoff and before the doctor started (MDV-P2-048): this row replaces the one
+    /// before it, which is kept with its own who and when. May name a health detail, so it is health data.
+    /// </summary>
+    [Classification(DataClass.SensitiveHealth)] public string? CorrectionReason { get; init; }
     [Classification(DataClass.Internal)] public Guid? RecordedBy { get; init; }
     [Classification(DataClass.Internal)] public Guid? VerifiedBy { get; init; }
     /// <summary>Nurse readings have one decimal place; the stored value is hundredths. Not a column.</summary>

@@ -39,6 +39,15 @@ public static class IntakeEndpoints
                 !Enum.TryParse<VitalKind>(kind, out var parsed) || !Enum.IsDefined(parsed) ? Results.ValidationProblem(new Dictionary<string, string[]> { ["kind"] = ["invalid"] })
                 : await service.KeepAsync(appointmentId, parsed, ct) is { } view ? Results.Ok(view) : Results.NotFound())
             .AuditedByUseCase("intake.keep", "intake", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
+        // MDV-P2-048: one confirmation for every flagged reading still undecided (an intake.keep event each), and a correction with a reason after
+        // the handoff until the doctor starts (409 consult_started after).
+        intake.MapPost("/{appointmentId:guid}/vitals/keep-all", async (Guid appointmentId, [FromServices] IIntake service, CancellationToken ct) =>
+                await service.KeepAllAsync(appointmentId, ct) is { } view ? Results.Ok(view) : Results.NotFound())
+            .AuditedByUseCase("intake.keep", "intake", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
+        intake.MapPost("/{appointmentId:guid}/vitals/{kind}/correct", async (Guid appointmentId, string kind, [FromBody] CorrectVital? body, [FromServices] IIntake service, CancellationToken ct) =>
+                !Enum.TryParse<VitalKind>(kind, out var parsed) || !Enum.IsDefined(parsed) ? Results.ValidationProblem(new Dictionary<string, string[]> { ["kind"] = ["invalid"] })
+                : await service.CorrectAsync(appointmentId, parsed, body ?? new CorrectVital(null, null), ct) is { } view ? Results.Ok(view) : Results.NotFound())
+            .AuditedByUseCase("intake.correct", "intake", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
         intake.MapPost("/{appointmentId:guid}/escalate", async (Guid appointmentId, [FromBody] EscalateIntake? body, [FromServices] IIntake service, CancellationToken ct) =>
                 await service.EscalateAsync(appointmentId, body ?? new EscalateIntake(null), ct) is { } view ? Results.Ok(view) : Results.NotFound())
             .AuditedByUseCase("intake.escalate", "intake", AuditPurpose.Treatment).AddEndpointFilter(MapErrors).RequireFeature(IntakeFlag.Key);

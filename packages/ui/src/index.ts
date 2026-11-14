@@ -32,3 +32,4 @@ export { Tooltip, type TooltipProps } from '#components/ui/tooltip';
 // Radix's focus scope (the one Dialog uses), for a panel that is modal only at some widths (the schedule's tablet drawer).
 import { FocusScope as FocusScopePrimitive } from 'radix-ui/internal';
 export const FocusScope = FocusScopePrimitive.FocusScope;
+export { Popover, PopoverAnchor, PopoverContent } from '#components/ui/popover';

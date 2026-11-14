@@ -2,14 +2,16 @@ import { Link } from 'react-router';
 import { Search } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
 import {
-  Button, buttonVariants, Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Button, buttonVariants, Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger, Input, Popover, PopoverAnchor, PopoverContent,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@medvya/ui';
 import { accessReasons, type AccessReason } from '../../clinical-access/domain/clinicalAccess';
 import PatientSummaryLine from '../../patients/components/PatientSummaryLine';
-import type { LookupRow } from '../domain/lookup';
+import { inlineInputId, inlinePanelId, type LookupRow } from '../domain/lookup';
 
 type Props = {
   open: boolean; onOpenChange: (open: boolean) => void;
+  panel: boolean; onPanel: (open: boolean) => void;
   text: string; onText: (t: string) => void;
   rows: LookupRow[]; active: number; onActive: (i: number) => void; current: LookupRow | null; total: number;
   status: 'idle' | 'searching' | 'found' | 'none' | 'failed';
@@ -20,37 +22,72 @@ type Props = {
   startVisitPath: string | null; bookPath: string | null; registerPath: string | null;
 };
 
-/** D-02 global search overlay: opened with ⌘K / Ctrl+K or the header button. Each row is the desk's search row (MDV-P1-101); numbers stay masked until a chart is opened. */
+/**
+ * D-02 patient search. From 768 px it is a box in the top bar and the matches drop down under it as you type (owner request, 15 Nov 2026);
+ * on a phone the search button opens the same search as a dialog. ⌘K / Ctrl+K reaches either. Each row is the desk's search row (MDV-P1-101);
+ * numbers stay masked until a chart is opened. Escape, a click outside or leaving the box closes the results and forgets the search.
+ */
 export default function GlobalSearch(p: Props) {
   const { t } = useI18n();
+  const shown = p.panel && p.status !== 'idle';
   return (
-    <Dialog open={p.open} onOpenChange={p.onOpenChange}>
-      <DialogTrigger asChild>
-        <Button variant="outline" className="max-sm:size-control max-sm:px-0" aria-keyshortcuts="Control+K Meta+K">
-          <Search aria-hidden /><span className="max-sm:sr-only">{t('patients.search.open')}</span>
-          {/* Key names read left to right in every language; without it Arabic reorders "⌘K / Ctrl K". */}
-          <kbd dir="ltr" className="hidden rounded border px-1.5 text-xs font-semibold text-muted-foreground lg:inline" aria-hidden>{t('globalSearch.shortcut')}</kbd>
-        </Button>
-      </DialogTrigger>
-      <DialogContent closeLabel={t('globalSearch.close')} aria-describedby="gs-description">
-        <DialogTitle>{t('patients.search.open')}</DialogTitle>
-        <DialogDescription id="gs-description">{t('globalSearch.description')}</DialogDescription>
-        <Input role="combobox" aria-expanded={p.rows.length > 0} aria-controls="gs-list" aria-autocomplete="list" autoComplete="off" autoFocus
-          aria-activedescendant={p.active >= 0 ? `gs-row-${p.active}` : undefined} aria-label={t('globalSearch.input')} placeholder={t('globalSearch.input')} value={p.text} onChange={e => p.onText(e.target.value)} onKeyDown={p.onKeyDown} />
-        <p role="status" className="text-sm text-muted-foreground">
-          {p.status === 'found' ? t('globalSearch.status.found', { count: p.total }) : t(`globalSearch.status.${p.status}`)}
-        </p>
-        {p.rows.length > 0 && (
-          <ul id="gs-list" role="listbox" aria-label={t('globalSearch.list')} className="flex flex-col gap-1">
-            {p.rows.map((r, i) => <Row key={r.id} row={r} index={i} selected={i === p.active} onActive={p.onActive} />)}
-          </ul>
-        )}
-        {p.status === 'none' && p.registerPath && (
-          <Link to={p.registerPath} onClick={p.onClose} className={buttonVariants({ variant: 'outline', className: 'w-fit' })}>{t('globalSearch.register')}</Link>
-        )}
-        {p.current && <Actions {...p} row={p.current} />}
-      </DialogContent>
-    </Dialog>
+    <>
+      <Popover open={shown} onOpenChange={o => { if (!o) p.onPanel(false); }}>
+        <PopoverAnchor asChild>
+          <div className="relative hidden w-80 shrink-0 md:block lg:w-96">
+            <Search aria-hidden className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input id={inlineInputId} type="search" role="combobox" aria-expanded={shown && p.rows.length > 0} aria-controls="gs-list" aria-autocomplete="list" autoComplete="off"
+              aria-activedescendant={shown && p.active >= 0 ? `gs-row-${p.active}` : undefined} aria-label={t('patients.search.open')} aria-keyshortcuts="Control+K Meta+K"
+              aria-describedby="gs-inline-status" placeholder={t('patients.search.open')} className="ps-9" value={p.panel ? p.text : ''}
+              // Typing opens the results too: after a chart opens, focus can still be in the box without a new focus event.
+              onFocus={() => p.onPanel(true)} onChange={e => { p.onPanel(true); p.onText(e.target.value); }} onKeyDown={p.onKeyDown} />
+            {/* Announced while typing even before the results open; the visible status sits in the results. */}
+            <p id="gs-inline-status" role="status" className="sr-only">{p.panel ? statusText(t, p) : ''}</p>
+          </div>
+        </PopoverAnchor>
+        <PopoverContent id={inlinePanelId} aria-label={t('globalSearch.list')} className="flex w-(--radix-popover-trigger-width) min-w-96 flex-col gap-2"
+          onOpenAutoFocus={e => e.preventDefault()} onCloseAutoFocus={e => e.preventDefault()}
+          // The box is outside the panel: typing in it or clicking it again keeps the results open.
+          onInteractOutside={e => { if (e.target instanceof Element && e.target.closest(`#${inlineInputId}`)) e.preventDefault(); }}>
+          <Results {...p} />
+        </PopoverContent>
+      </Popover>
+      <Dialog open={p.open} onOpenChange={p.onOpenChange}>
+        <DialogTrigger asChild>
+          <Button variant="outline" className="size-control px-0 md:hidden" aria-label={t('patients.search.open')}><Search aria-hidden /></Button>
+        </DialogTrigger>
+        <DialogContent closeLabel={t('globalSearch.close')} aria-describedby="gs-description">
+          <DialogTitle>{t('patients.search.open')}</DialogTitle>
+          <DialogDescription id="gs-description">{t('globalSearch.description')}</DialogDescription>
+          <Input role="combobox" aria-expanded={p.rows.length > 0} aria-controls="gs-list" aria-autocomplete="list" autoComplete="off" autoFocus
+            aria-activedescendant={p.active >= 0 ? `gs-row-${p.active}` : undefined} aria-label={t('globalSearch.input')} placeholder={t('globalSearch.input')} value={p.text} onChange={e => p.onText(e.target.value)} onKeyDown={p.onKeyDown} />
+          <p role="status" className="text-sm text-muted-foreground">{statusText(t, p)}</p>
+          <Results {...p} />
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+const statusText = (t: ReturnType<typeof useI18n>['t'], p: Pick<Props, 'status' | 'total'>) =>
+  p.status === 'found' ? t('globalSearch.status.found', { count: p.total }) : t(`globalSearch.status.${p.status}`);
+
+/** The matches, Register when none match, and the chosen patient's actions: the same in the dropdown and in the dialog. */
+function Results(p: Props) {
+  const { t } = useI18n();
+  return (
+    <>
+      {p.panel && <p className="text-sm text-muted-foreground">{statusText(t, p)}</p>}
+      {p.rows.length > 0 && (
+        <ul id="gs-list" role="listbox" aria-label={t('globalSearch.list')} className="flex flex-col gap-1">
+          {p.rows.map((r, i) => <Row key={r.id} row={r} index={i} selected={i === p.active} onActive={p.onActive} />)}
+        </ul>
+      )}
+      {p.status === 'none' && p.registerPath && (
+        <Link to={p.registerPath} onClick={p.onClose} className={buttonVariants({ variant: 'outline', className: 'w-fit' })}>{t('globalSearch.register')}</Link>
+      )}
+      {p.current && <Actions {...p} row={p.current} />}
+    </>
   );
 }
 

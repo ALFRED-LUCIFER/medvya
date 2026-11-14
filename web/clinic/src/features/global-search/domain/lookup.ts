@@ -19,3 +19,7 @@ export function moveActive(index: number, key: 'ArrowDown' | 'ArrowUp', count: n
   if (count === 0) return -1;
   return key === 'ArrowDown' ? (index + 1) % count : (index - 1 + count) % count;
 }
+
+/** The inline search box in the top bar and its results panel (MDV-P2-003): the component renders them, the service focuses them. */
+export const inlineInputId = 'gs-inline';
+export const inlinePanelId = 'gs-inline-panel';

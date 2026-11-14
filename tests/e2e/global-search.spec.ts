@@ -30,19 +30,25 @@ async function open(page: Page, { locale = 'en', items = [row('p-1', 'MI', 'Open
   await page.route('**/v1/patients/p-2/access-requests', r => { calls.requests.push(r.request().postDataJSON()); return r.fulfill({ json: { id: 'r-1', status: 'Pending' } }); });
   await page.route('**/v1/patients/p-1', r => r.fulfill({ status: 404, json: {} }));
   await page.goto('/front-desk');
-  await expect(page.locator('[aria-keyshortcuts]')).toBeVisible(); // the shortcut is live once the shell has rendered
+  await expect(page.locator('[aria-keyshortcuts]').first()).toBeAttached(); // the shortcut is live once the shell has rendered
   return calls;
 }
 
-test('Ctrl+K opens the search from any screen; arrows, Enter and Esc work; results hold the desk row with masked numbers', async ({ page }) => {
+const box = (page: Page) => page.locator('#gs-inline');
+const results = (page: Page) => page.locator('#gs-inline-panel');
+
+// Owner request (15 Nov 2026): from 768 px the search is a box in the top bar and the matches drop down under it as you type.
+test('the top bar search is inline: Ctrl+K focuses it, matches drop down, arrows, Enter and Esc work; masked numbers', async ({ page }) => {
   const calls = await open(page);
+  await expect(page.getByRole('button', { name: 'Search patients' })).toBeHidden(); // the phone's search button
   await page.keyboard.press('Control+k');
-  const search = page.getByRole('dialog', { name: 'Search patients' });
-  await expect(search).toBeVisible();
-  const input = search.getByRole('combobox', { name: 'Name, MRN or phone' });
-  await expect(input).toBeFocused();
+  const input = box(page);
+  await expect(page.getByRole('combobox', { name: 'Search patients' })).toBeFocused(); // named for screen readers
+  await expect(results(page)).toHaveCount(0); // nothing drops down before typing
   await input.fill('me');
-  await expect(search.getByRole('status').first()).toHaveText('Patients found: 2');
+  const search = results(page);
+  await expect(search).toContainText('Patients found: 2');
+  await expect(input).toBeFocused(); // typing stays in the box
   const rows = search.getByRole('option');
   await expect(rows).toHaveCount(2);
   await expect(rows.first()).toContainText('Meera Iyer (synthetic)');
@@ -52,8 +58,11 @@ test('Ctrl+K opens the search from any screen; arrows, Enter and Esc work; resul
   await expect(rows.first()).toContainText('54 y');
   await expect(rows.first()).toContainText('MRN ··0001');
   expect(await search.innerText()).not.toMatch(/\+91|000001/); // never a whole phone number or MRN
+  // The list sits under the box.
+  expect((await search.boundingBox())!.y).toBeGreaterThanOrEqual((await input.boundingBox())!.y + (await input.boundingBox())!.height - 1);
   await input.press('ArrowDown');
   await expect(rows.first()).toHaveAttribute('aria-selected', 'true');
+  await expect(input).toHaveAttribute('aria-activedescendant', 'gs-row-0');
   await input.press('ArrowDown');
   await expect(rows.nth(1)).toHaveAttribute('aria-selected', 'true');
   await input.press('ArrowUp');
@@ -62,55 +71,75 @@ test('Ctrl+K opens the search from any screen; arrows, Enter and Esc work; resul
   expect(calls.lookups[0]!.url).not.toContain('?');
   await input.press('Enter');
   await expect(page).toHaveURL(/\/patients\/p-1$/); // Patient 360, where the server checks the care relationship
-  await expect(search).toHaveCount(0);
+  await expect(results(page)).toHaveCount(0);
+  await expect(box(page)).toHaveValue(''); // the search is forgotten
 
   await page.keyboard.press('Control+k');
-  await expect(page.getByRole('dialog', { name: 'Search patients' })).toBeVisible();
+  await box(page).fill('me');
+  await expect(results(page)).toBeVisible();
   await page.keyboard.press('Escape');
-  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(results(page)).toHaveCount(0);
+  await expect(box(page)).toHaveValue('');
+  await box(page).fill('me');
+  await expect(results(page)).toBeVisible();
+  await page.mouse.click(5, 700); // a click outside closes it too
+  await expect(results(page)).toHaveCount(0);
 });
 
 test('a patient outside the care relationship shows Request access, not the chart', async ({ page }) => {
   const calls = await open(page);
-  await page.getByRole('button', { name: 'Search patients' }).click();
-  const search = page.getByRole('dialog', { name: 'Search patients' });
-  await search.getByRole('combobox').fill('la');
+  await box(page).fill('la');
+  const search = results(page);
   await search.getByRole('option').nth(1).click();
   await expect(search.getByRole('button', { name: 'Open record' })).toHaveCount(0);
   const ask = search.getByRole('alert').filter({ hasText: 'Ask an owner for access' });
   await ask.getByRole('combobox', { name: 'Why you need access' }).click();
-  await page.getByRole('option', { name: 'Covering for a colleague' }).click();
+  await page.getByRole('option', { name: 'Covering for a colleague' }).click(); // the Select opens inside the dropdown and leaves it open
   await ask.getByRole('button', { name: 'Request access' }).click();
   await expect(search.getByText('Access requested. An owner of the clinic will decide.')).toBeVisible();
   await expect(search.getByRole('option').nth(1)).toContainText('Access requested');
   expect(calls.requests).toEqual([{ reason: 'CoveringColleague' }]);
 });
 
-test('an Open row also offers Start visit and Book, and no match offers registering', async ({ page }) => {
+test('an Open row also offers Start visit and Book, reached with Tab from the box', async ({ page }) => {
   await open(page);
-  await page.getByRole('button', { name: 'Search patients' }).click();
-  const search = page.getByRole('dialog', { name: 'Search patients' });
-  await search.getByRole('combobox').fill('me');
-  await search.getByRole('option').first().click();
+  await box(page).fill('me');
+  const search = results(page);
+  await expect(search.getByRole('option')).toHaveCount(2);
+  await box(page).press('ArrowDown');
   await expect(search.getByRole('link', { name: 'Start visit' })).toHaveAttribute('href', '/front-desk/walk-in?patient=p-1');
   await expect(search.getByRole('link', { name: 'Book' })).toHaveAttribute('href', '/schedule?patient=p-1'); // the patient comes along
+  await box(page).press('Tab');
+  await expect(search.getByRole('button', { name: 'Open record' })).toBeFocused(); // the keyboard reaches the actions
 });
 
 test('no match says so and offers to register a patient', async ({ page }) => {
   await open(page, { items: [] });
+  await box(page).fill('zz');
+  await expect(results(page).getByText('No patients match.')).toBeVisible();
+  await expect(results(page).getByRole('link', { name: 'Register a new patient' })).toBeVisible();
+});
+
+test('on a phone the search button opens the search as a dialog, and Ctrl+K does too', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await open(page);
+  await expect(box(page)).toBeHidden();
+  await page.getByRole('button', { name: 'Search patients' }).click();
+  const search = page.getByRole('dialog', { name: 'Search patients' });
+  await search.getByRole('combobox', { name: 'Name, MRN or phone' }).fill('me');
+  await expect(search.getByRole('option')).toHaveCount(2);
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   await page.keyboard.press('Control+k');
-  await page.getByRole('combobox', { name: 'Name, MRN or phone' }).fill('zz');
-  await expect(page.getByRole('dialog').getByText('No patients match.')).toBeVisible();
-  await expect(page.getByRole('dialog').getByRole('link', { name: 'Register a new patient' })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'Search patients' })).toBeVisible();
 });
 
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 for (const locale of ['en', 'ar'])
   test(`axe finds no violations in the open search (${locale}); control-size targets, 48 px rows`, async ({ page }) => {
     await open(page, { locale, items: [row('p-1', 'MI', 'Open', { duplicate: 'MainRecord' }), row('p-2', 'MI', 'CanRequest', { mrnTail: '0002', lastVisitOn: null, duplicate: 'PossibleDuplicate' })] });
-    await page.keyboard.press('Control+k');
-    const search = page.getByRole('dialog');
-    await search.getByRole('combobox').fill('me');
+    await box(page).fill('me');
+    const search = results(page);
     await expect(search.getByRole('option')).toHaveCount(2);
     await search.getByRole('option').first().click();
     if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');

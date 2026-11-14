@@ -42,7 +42,7 @@ export const RULES = {
   // A card is Card or Section from the library (MDV-P2-059).
   inlineCard: { in: inApps, count: matches(/\bborder bg-card\b/g) },
   localMessage: localComponent('Message'),
-  localField: localComponent('Field'),
+  // A local Field reached zero in MDV-P2-058; oxlint's medvya-ui/no-local-field rule now fails it (tools/oxlint-plugin).
   localCard: localComponent('Card'),
   localEmpty: localComponent('Empty'),
 };
@@ -87,7 +87,7 @@ function selfTest() {
   const at = files => measure(files);
   const base = at([[page, sample]]);
   const totals = Object.fromEntries(Object.entries(base).map(([k, v]) => [k, total(v)]));
-  assert(JSON.stringify(totals) === JSON.stringify({ arbitraryFontSize: 1, rawHexLibrary: 0, rawHexApps: 2, smGridCols: 2, rawH1: 1, inlineCard: 1, localMessage: 1, localField: 0, localCard: 0, localEmpty: 1 }), `a rule's pattern changed: ${JSON.stringify(totals)}`);
+  assert(JSON.stringify(totals) === JSON.stringify({ arbitraryFontSize: 1, rawHexLibrary: 0, rawHexApps: 2, smGridCols: 2, rawH1: 1, inlineCard: 1, localMessage: 1, localCard: 0, localEmpty: 1 }), `a rule's pattern changed: ${JSON.stringify(totals)}`);
 
   // Scope: tests and other folders are not counted; the library counts hex only; the queue display may size its own text.
   assert(total(at([['web/clinic/src/app/App.tsx', sample]]).rawH1) === 0, 'clinic app/ is outside the scope');

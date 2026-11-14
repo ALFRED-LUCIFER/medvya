@@ -112,7 +112,9 @@ test('the doctor records a check, changes a target and keeps goals; a nurse only
   await expect(goals).toContainText(/35.? % · set by Dr. Arjun Rao/);
   await goals.getByRole('button', { name: 'Add goal' }).click();
   await goals.getByRole('button', { name: 'Save goal' }).click();
-  await expect(goals.getByRole('alert').first()).toContainText('Required.');
+  // MDV-P2-058: the library Field ties the error to the field, which the failed save focuses (the error is read with it).
+  await expect(goals.getByLabel('Goal', { exact: true })).toBeFocused();
+  await expect(goals.getByLabel('Goal', { exact: true })).toHaveAccessibleDescription(/Required\./);
   await goals.getByLabel('Goal', { exact: true }).fill('Walk 150 min a week (synthetic)');
   await goals.getByLabel('Progress (0–100 %)').fill('40');
   await goals.getByRole('button', { name: 'Save goal' }).click();

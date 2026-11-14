@@ -102,10 +102,6 @@
     "web/clinic/src/features/reconciliation/components/ReconciliationPage.tsx": 1,
     "web/clinic/src/features/today/components/DoctorTodayPage.tsx": 1
   },
-  "localField": {
-    "web/clinic/src/features/patients/components/PatientRecord.tsx": 1,
-    "web/clinic/src/features/settings/components/Field.tsx": 1
-  },
   "localCard": {
     "web/clinic/src/features/front-desk/components/BoardPage.tsx": 1,
     "web/clinic/src/features/patient360/components/Patient360Page.tsx": 1

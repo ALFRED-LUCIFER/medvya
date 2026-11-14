@@ -1,10 +1,9 @@
 import type { FormEventHandler, ReactNode } from 'react';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 import { useI18n } from '@medvya/i18n';
-import { Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
-import { Field } from '../../settings/components/Field';
+import { Button, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
 import { Section } from '../../settings/components/Section';
-import { describedBy, fieldError } from '../../settings/components/fieldStyles';
+import { fieldError } from '../../settings/components/fieldStyles';
 import { pilotMetricIds, windowDays, type BaselineInput, type PilotMetricId, type PilotMetrics } from '../domain/pilotMetrics';
 
 type Props = {
@@ -77,26 +76,26 @@ export default function PilotMetricsPanel(p: Props) {
 
       <Section title={t('pilotMetrics.recordTitle')} intro={t('pilotMetrics.recordIntro')}>
         <form noValidate onSubmit={p.onSubmit} className="grid gap-4 sm:grid-cols-2">
-          <Field id="baseline-metric" label={t('pilotMetrics.metric')}>
-            <Controller control={p.form.control} name="metric" render={({ field }) => (
-              <Select value={field.value} onValueChange={field.onChange}>
-                <SelectTrigger id="baseline-metric" className="w-full"><SelectValue /></SelectTrigger>
-                <SelectContent>{pilotMetricIds.map(id => <SelectItem key={id} value={id}>{t(`pilotMetrics.metric.${id}`)}</SelectItem>)}</SelectContent>
-              </Select>
-            )} />
-          </Field>
+          <Controller control={p.form.control} name="metric" render={({ field }) => (
+            <Select value={field.value} onValueChange={field.onChange}>
+              <Field id="baseline-metric" label={t('pilotMetrics.metric')}>
+                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+              </Field>
+              <SelectContent>{pilotMetricIds.map(id => <SelectItem key={id} value={id}>{t(`pilotMetrics.metric.${id}`)}</SelectItem>)}</SelectContent>
+            </Select>
+          )} />
           <Field id="baseline-value" label={t('pilotMetrics.value')} error={errors.value ? t('pilotMetrics.error.value') : null}>
-            <Input id="baseline-value" inputMode="decimal" autoComplete="off" {...describedBy('baseline-value', !!errors.value)} {...p.form.register('value')} />
+            <Input inputMode="decimal" autoComplete="off" {...p.form.register('value')} />
           </Field>
           <Field id="baseline-method" label={t('pilotMetrics.method')} hint={t('pilotMetrics.methodHint')} className="sm:col-span-2"
             error={errors.method ? t('pilotMetrics.error.method') : null}>
-            <Input id="baseline-method" autoComplete="off" maxLength={200} {...describedBy('baseline-method', !!errors.method, true)} {...p.form.register('method')} />
+            <Input autoComplete="off" maxLength={200} {...p.form.register('method')} />
           </Field>
           <Field id="baseline-from" label={t('pilotMetrics.from')} error={errors.fromDate ? t('pilotMetrics.error.date') : null}>
-            <Input id="baseline-from" type="date" {...describedBy('baseline-from', !!errors.fromDate)} {...p.form.register('fromDate')} />
+            <Input type="date" {...p.form.register('fromDate')} />
           </Field>
           <Field id="baseline-to" label={t('pilotMetrics.to')} error={errors.toDate ? t('pilotMetrics.error.toDate') : null}>
-            <Input id="baseline-to" type="date" {...describedBy('baseline-to', !!errors.toDate)} {...p.form.register('toDate')} />
+            <Input type="date" {...p.form.register('toDate')} />
           </Field>
           <div className="flex flex-wrap items-center gap-3 sm:col-span-2" aria-live="polite">
             <Button type="submit" loading={p.saving}>{t('pilotMetrics.record')}</Button>

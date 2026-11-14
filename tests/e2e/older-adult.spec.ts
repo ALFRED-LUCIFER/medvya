@@ -89,7 +89,9 @@ test('a new assessment refuses a score outside its scale, then saves as a new re
   const form = page.getByRole('form', { name: 'New geriatric assessment' });
   await form.getByLabel('Clinical Frailty Scale (1–9)').fill('10');
   await form.getByRole('button', { name: 'Save assessment' }).click();
-  await expect(form.getByRole('alert').first()).toContainText('Outside the scale.');
+  // MDV-P2-058: the library Field ties the error to the field, which the failed save focuses (the error is read with it).
+  await expect(form.getByLabel('Clinical Frailty Scale (1–9)')).toBeFocused();
+  await expect(form.getByLabel('Clinical Frailty Scale (1–9)')).toHaveAccessibleDescription(/Outside the scale\./);
   expect(calls.filter(c => c.method === 'POST')).toEqual([]);
   await form.getByLabel('Clinical Frailty Scale (1–9)').fill('5');
   await form.getByLabel('Timed Up and Go (seconds)').fill('13,5');

@@ -2,9 +2,8 @@ import type { FormEventHandler } from 'react';
 import type { FieldError, UseFormReturn } from 'react-hook-form';
 import { CircleCheck } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, Input, Table, TableBody, TableCell, TableHead, TableHeader, TablePagination, TableRow, TableState, Textarea } from '@medvya/ui';
-import { describedBy, fieldError } from '../../settings/components/fieldStyles';
-import { Field } from '../../settings/components/Field';
+import { Button, Field, Input, Table, TableBody, TableCell, TableHead, TableHeader, TablePagination, TableRow, TableState, Textarea } from '@medvya/ui';
+import { fieldError } from '../../settings/components/fieldStyles';
 import { Section } from '../../settings/components/Section';
 import type { TableView } from '../../table/domain/tableSort';
 import type { OrderSet, OrderSetForm, ProblemCode } from '../domain/formulary';
@@ -53,10 +52,10 @@ export default function OrderSetsPanel(p: Props) {
       <Section title={t('orderSets.add.title')}>
         <form noValidate onSubmit={p.onSubmit} className="flex flex-col gap-4">
           <Field id="set-name" label={t('orderSets.field.name')} error={problem(errors.name)}>
-            <Input id="set-name" autoComplete="off" {...describedBy('set-name', !!errors.name)} {...p.form.register('name')} />
+            <Input autoComplete="off" {...p.form.register('name')} />
           </Field>
           <Field id="set-items" label={t('orderSets.field.items')} error={problem(errors.items)}>
-            <Textarea id="set-items" rows={5} {...describedBy('set-items', !!errors.items)} {...p.form.register('items')} />
+            <Textarea rows={5} {...p.form.register('items')} />
           </Field>
           {p.formError && <p role="alert" className={fieldError}>{t(`formulary.error.${p.formError}`)}</p>}
           {p.saved && <p role="status" className="flex items-center gap-2 font-bold"><CircleCheck aria-hidden className="size-5" />{t('orderSets.add.saved')}</p>}

@@ -3,12 +3,9 @@ import { Link } from 'react-router';
 import { Controller, type FieldError, type UseFormReturn } from 'react-hook-form';
 import { CircleCheck, Send } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import {
-  Button, buttonVariants, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState, Textarea,
-} from '@medvya/ui';
+import { Button, buttonVariants, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState, Textarea } from '@medvya/ui';
 import type { DocumentRow } from '../../documents/domain/documents';
-import { describedBy, fieldError } from '../../settings/components/fieldStyles';
-import { Field } from '../../settings/components/Field';
+import { fieldError } from '../../settings/components/fieldStyles';
 import { Section } from '../../settings/components/Section';
 import {
   canSend, channels, evidenceOf, nextStates, referralColumns, sectionNames, urgencies,
@@ -85,38 +82,38 @@ export default function ReferralsPanel(p: Props) {
           </ol>
           {canSend(p.selected) && (
             <div className="flex flex-wrap items-end gap-3">
-              <Field id="ref-channel" label={t('referrals.field.channel')} hint={t('referrals.field.channel.hint')} className="min-w-64">
-                <Select value={p.channel} onValueChange={v => p.onChannel(v as Channel)}>
-                  <SelectTrigger id="ref-channel" className="w-full" {...describedBy('ref-channel', false, true)}><SelectValue /></SelectTrigger>
-                  <SelectContent>{channels.map(c => <SelectItem key={c} value={c}>{t(`referrals.channel.${c}`)}</SelectItem>)}</SelectContent>
-                </Select>
-              </Field>
+              <Select value={p.channel} onValueChange={v => p.onChannel(v as Channel)}>
+                <Field id="ref-channel" label={t('referrals.field.channel')} hint={t('referrals.field.channel.hint')} className="min-w-64">
+                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                </Field>
+                <SelectContent>{channels.map(c => <SelectItem key={c} value={c}>{t(`referrals.channel.${c}`)}</SelectItem>)}</SelectContent>
+              </Select>
               <Button type="button" disabled={p.busy} onClick={p.onSend}><Send aria-hidden className="size-4" />{t('referrals.send')}</Button>
               <Link to={`/consult/${p.encounterId}/referrals/${p.selected.id}/letter`} className={buttonVariants({ variant: 'outline' })}>{t('referrals.letterLink')}</Link>
             </div>
           )}
           {nextStates(p.selected.state).length > 0 && p.selected.state !== 'Draft' && (
             <form noValidate onSubmit={p.onAdvance} className="grid gap-4 sm:grid-cols-2">
-              <Field id="ref-state" label={t('referrals.field.state')}>
-                <Controller control={p.advanceForm.control} name="state" render={({ field }) => (
-                  <Select value={nextStates(p.selected!.state).includes(field.value) ? field.value : nextStates(p.selected!.state)[0]} onValueChange={field.onChange}>
-                    <SelectTrigger id="ref-state" className="w-full"><SelectValue /></SelectTrigger>
-                    <SelectContent>{nextStates(p.selected!.state).map(s => <SelectItem key={s} value={s}>{t(`referrals.state.${s}`)}</SelectItem>)}</SelectContent>
+              <Controller control={p.advanceForm.control} name="state" render={({ field }) => (
+                <Select value={nextStates(p.selected!.state).includes(field.value) ? field.value : nextStates(p.selected!.state)[0]} onValueChange={field.onChange}>
+                  <Field id="ref-state" label={t('referrals.field.state')}>
+                    <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                  </Field>
+                  <SelectContent>{nextStates(p.selected!.state).map(s => <SelectItem key={s} value={s}>{t(`referrals.state.${s}`)}</SelectItem>)}</SelectContent>
+                </Select>
+              )} />
+              {moving === 'ReportReceived' && (
+                <Controller control={p.advanceForm.control} name="documentId" render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <Field id="ref-evidence" label={t('referrals.field.evidence')} hint={t('referrals.field.evidence.hint')}>
+                      <SelectTrigger className="w-full"><SelectValue placeholder={t('referrals.choose')} /></SelectTrigger>
+                    </Field>
+                    <SelectContent>{p.documents.map(d => <SelectItem key={d.id} value={d.id}>{`${t(`documents.type.${d.type}`)}, ${d.documentDate}`}</SelectItem>)}</SelectContent>
                   </Select>
                 )} />
-              </Field>
-              {moving === 'ReportReceived' && (
-                <Field id="ref-evidence" label={t('referrals.field.evidence')} hint={t('referrals.field.evidence.hint')}>
-                  <Controller control={p.advanceForm.control} name="documentId" render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger id="ref-evidence" className="w-full" {...describedBy('ref-evidence', false, true)}><SelectValue placeholder={t('referrals.choose')} /></SelectTrigger>
-                      <SelectContent>{p.documents.map(d => <SelectItem key={d.id} value={d.id}>{`${t(`documents.type.${d.type}`)}, ${d.documentDate}`}</SelectItem>)}</SelectContent>
-                    </Select>
-                  )} />
-                </Field>
               )}
               <Field id="ref-note" label={t('referrals.field.note')} className="sm:col-span-2">
-                <Input id="ref-note" autoComplete="off" maxLength={200} {...p.advanceForm.register('note')} />
+                <Input autoComplete="off" maxLength={200} {...p.advanceForm.register('note')} />
               </Field>
               <Button type="submit" variant="outline" className="self-start" disabled={p.busy}>{t('referrals.update')}</Button>
             </form>
@@ -130,18 +127,18 @@ export default function ReferralsPanel(p: Props) {
           <Section title={t('referrals.add.title')}>
             <form noValidate onSubmit={p.onCreate} className="grid gap-4 sm:grid-cols-2">
               <Field id="ref-provider" label={t('referrals.field.provider')} error={problem(p.createForm.formState.errors.provider)}>
-                <Input id="ref-provider" autoComplete="off" {...describedBy('ref-provider', !!p.createForm.formState.errors.provider)} {...p.createForm.register('provider')} />
+                <Input autoComplete="off" {...p.createForm.register('provider')} />
               </Field>
-              <Field id="ref-urgency" label={t('referrals.field.urgency')}>
-                <Controller control={p.createForm.control} name="urgency" render={({ field }) => (
-                  <Select value={field.value ?? 'Routine'} onValueChange={field.onChange}>
-                    <SelectTrigger id="ref-urgency" className="w-full"><SelectValue /></SelectTrigger>
-                    <SelectContent>{urgencies.map(u => <SelectItem key={u} value={u}>{t(`referrals.urgency.${u}`)}</SelectItem>)}</SelectContent>
-                  </Select>
-                )} />
-              </Field>
+              <Controller control={p.createForm.control} name="urgency" render={({ field }) => (
+                <Select value={field.value ?? 'Routine'} onValueChange={field.onChange}>
+                  <Field id="ref-urgency" label={t('referrals.field.urgency')}>
+                    <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                  </Field>
+                  <SelectContent>{urgencies.map(u => <SelectItem key={u} value={u}>{t(`referrals.urgency.${u}`)}</SelectItem>)}</SelectContent>
+                </Select>
+              )} />
               <Field id="ref-reason" label={t('referrals.field.reason')} error={problem(p.createForm.formState.errors.reason)} className="sm:col-span-2">
-                <Textarea id="ref-reason" rows={3} maxLength={500} {...describedBy('ref-reason', !!p.createForm.formState.errors.reason)} {...p.createForm.register('reason')} />
+                <Textarea rows={3} maxLength={500} {...p.createForm.register('reason')} />
               </Field>
               <fieldset className="flex flex-col gap-2 sm:col-span-2">
                 <legend className="mb-1 font-bold">{t('referrals.field.sections')}</legend>
@@ -160,18 +157,18 @@ export default function ReferralsPanel(p: Props) {
           <Section title={t('referrals.in.title')} intro={t('referrals.in.intro')}>
             <form noValidate onSubmit={p.onFileIn} className="grid gap-4 sm:grid-cols-2">
               <Field id="refin-provider" label={t('referrals.in.provider')} error={problem(p.fileForm.formState.errors.provider)}>
-                <Input id="refin-provider" autoComplete="off" {...describedBy('refin-provider', !!p.fileForm.formState.errors.provider)} {...p.fileForm.register('provider')} />
+                <Input autoComplete="off" {...p.fileForm.register('provider')} />
               </Field>
-              <Field id="refin-document" label={t('referrals.in.document')} hint={t('referrals.in.document.hint')} error={problem(p.fileForm.formState.errors.documentId)}>
-                <Controller control={p.fileForm.control} name="documentId" render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger id="refin-document" className="w-full" {...describedBy('refin-document', !!p.fileForm.formState.errors.documentId, true)}><SelectValue placeholder={t('referrals.choose')} /></SelectTrigger>
-                    <SelectContent>{p.documents.map(d => <SelectItem key={d.id} value={d.id}>{`${t(`documents.type.${d.type}`)}, ${d.documentDate}`}</SelectItem>)}</SelectContent>
-                  </Select>
-                )} />
-              </Field>
+              <Controller control={p.fileForm.control} name="documentId" render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <Field id="refin-document" label={t('referrals.in.document')} hint={t('referrals.in.document.hint')} error={problem(p.fileForm.formState.errors.documentId)}>
+                    <SelectTrigger className="w-full"><SelectValue placeholder={t('referrals.choose')} /></SelectTrigger>
+                  </Field>
+                  <SelectContent>{p.documents.map(d => <SelectItem key={d.id} value={d.id}>{`${t(`documents.type.${d.type}`)}, ${d.documentDate}`}</SelectItem>)}</SelectContent>
+                </Select>
+              )} />
               <Field id="refin-reason" label={t('referrals.in.reason')} className="sm:col-span-2">
-                <Input id="refin-reason" autoComplete="off" maxLength={500} {...p.fileForm.register('reason')} />
+                <Input autoComplete="off" maxLength={500} {...p.fileForm.register('reason')} />
               </Field>
               <Button type="submit" variant="outline" className="self-start" disabled={p.busy}>{t('referrals.in.submit')}</Button>
             </form>

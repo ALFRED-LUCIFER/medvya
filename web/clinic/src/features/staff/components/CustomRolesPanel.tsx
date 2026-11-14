@@ -1,10 +1,9 @@
 import { Lock } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Switch } from '@medvya/ui';
+import { Button, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Switch } from '@medvya/ui';
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
-import { describedBy, fieldError } from '../../settings/components/fieldStyles';
-import { Field } from '../../settings/components/Field';
+import { fieldError } from '../../settings/components/fieldStyles';
 import { Section } from '../../settings/components/Section';
 import type { Capability } from '../../session/domain/session';
 import { addableRows, assignableRoles, type CustomRole, type RoleCatalogue, type RoleForm } from '../domain/staff';
@@ -52,14 +51,14 @@ export default function CustomRolesPanel(p: Props) {
         <form noValidate onSubmit={p.onSubmit} className="flex flex-col gap-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <Field id="role-name" label={t('staff.roles.name')} error={errors.name && t('settings.error.required')}>
-              <Input id="role-name" autoComplete="off" maxLength={60} {...describedBy('role-name', !!errors.name)} {...p.form.register('name')} />
+              <Input autoComplete="off" maxLength={60} {...p.form.register('name')} />
             </Field>
-            <Field id="role-base" label={t('staff.roles.base')} hint={t('staff.roles.baseHint', { count: lockedCount })}>
-              <Select value={base} onValueChange={v => p.onBase(v as RoleForm['baseRole'])}>
-                <SelectTrigger id="role-base" className="w-full"><SelectValue /></SelectTrigger>
-                <SelectContent>{assignableRoles.map(r => <SelectItem key={r} value={r}>{t(`role.${r}`)}</SelectItem>)}</SelectContent>
-              </Select>
-            </Field>
+            <Select value={base} onValueChange={v => p.onBase(v as RoleForm['baseRole'])}>
+              <Field id="role-base" label={t('staff.roles.base')} hint={t('staff.roles.baseHint', { count: lockedCount })}>
+                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+              </Field>
+              <SelectContent>{assignableRoles.map(r => <SelectItem key={r} value={r}>{t(`role.${r}`)}</SelectItem>)}</SelectContent>
+            </Select>
           </div>
           <fieldset className="flex flex-col gap-2">
             <legend className="mb-1 font-bold">{t('staff.roles.extras')}</legend>

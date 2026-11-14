@@ -1,9 +1,8 @@
 import type { UseFormReturn } from 'react-hook-form';
 import { CircleAlert, CircleCheck, CircleHelp, Package, Pill, Plus } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, ClinicalAlert, Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger, Input } from '@medvya/ui';
-import { describedBy, fieldError } from '../../settings/components/fieldStyles';
-import { Field } from '../../settings/components/Field';
+import { Button, ClinicalAlert, Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger, Field, Input } from '@medvya/ui';
+import { fieldError } from '../../settings/components/fieldStyles';
 import { allergyStatusOf, bannerAllergies } from '../../patient360/domain/chart';
 import type { AllergyState, Allergy } from '../../patient360/domain/chart';
 import type { SexAtBirth } from '../../patients/domain/directory';
@@ -89,7 +88,7 @@ function Body(p: Props & { language: PrintLanguage }) {
   return (
     <div className="flex flex-col gap-4">
       <Field id="addmed-search" label={t('rx.addMed.search')} hint={t('rx.addMed.searchHint')}>
-        <Input id="addmed-search" type="search" autoComplete="off" {...describedBy('addmed-search', false, true)} {...p.search.register('medicine')} />
+        <Input type="search" autoComplete="off" {...p.search.register('medicine')} />
       </Field>
       {p.searching && <p role="status" className="text-sm text-muted-foreground">{t('rx.addMed.searching')}</p>}
       {p.noResults && <p role="status" className="text-sm">{t('rx.addMed.noResults')}</p>}
@@ -119,8 +118,7 @@ function Body(p: Props & { language: PrintLanguage }) {
         <Picks id="addmed-when" label={t('rx.addMed.when')} options={keys(whenTaken)} chosen={p.choice.when} onPick={when => p.onChoice({ when })} wordOf={k => t(`rx.addMed.when.${k}`)} />
         <Picks id="addmed-long" label={t('rx.addMed.long')} options={keys(howLong)} chosen={p.choice.long} onPick={long => p.onChoice({ long })} wordOf={k => t(`rx.addMed.long.${k}`)} />
         <Field id="addmed-instructions" label={t('rx.addMed.instructions')} hint={t('rx.addMed.instructionsHint')} error={p.instructionsInvalid ? t('rx.addMed.instructionsTooLong') : null}>
-          <Input id="addmed-instructions" autoComplete="off" value={p.choice.instructions}
-            {...describedBy('addmed-instructions', p.instructionsInvalid, true)} onChange={e => p.onChoice({ instructions: e.target.value })} />
+          <Input autoComplete="off" value={p.choice.instructions} onChange={e => p.onChoice({ instructions: e.target.value })} />
         </Field>
 
         {p.blocked && <ClinicalAlert severity="critical">{t('rx.addMed.blocked')}</ClinicalAlert>}

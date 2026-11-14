@@ -1,4 +1,5 @@
-// Medvya's own oxlint rules (jsPlugins): no height patch on a library control (MDV-P1-078); compact tables only where allowed (MDV-P2-054).
+// Medvya's own oxlint rules (jsPlugins): no height patch on a library control (MDV-P1-078); compact tables only where allowed (MDV-P2-054);
+// no local Field in a feature (MDV-P2-058).
 const CONTROLS = new Set(['Input', 'SelectTrigger', 'Textarea', 'Button']);
 const PATCH = /(?<![\w:-])(?:min-)?h-11(?![\w-])/;
 
@@ -35,6 +36,16 @@ export default {
       },
     },
     // On everywhere; .oxlintrc.json turns it off for the four tables allowed to be compact, so a new compact table fails lint.
+    'no-local-field': {
+      meta: { type: 'problem', docs: { description: 'A feature uses Field from @medvya/ui and never declares its own.' } },
+      create(context) {
+        const report = node => context.report({ node, message: 'Use Field (and ErrorSummary) from @medvya/ui; a feature never builds its own Field (DESIGN.md Forms, MDV-P2-058).' });
+        return {
+          FunctionDeclaration(node) { if (node.id?.name === 'Field') report(node.id); },
+          VariableDeclarator(node) { if (node.id.type === 'Identifier' && node.id.name === 'Field') report(node.id); },
+        };
+      },
+    },
     'compact-table': {
       meta: { type: 'problem', docs: { description: 'Compact density (36 px rows) is allowed on four tables only: audit log, formulary, order sets, staff.' } },
       create(context) {

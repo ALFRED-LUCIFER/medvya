@@ -3,9 +3,8 @@ import { Link } from 'react-router';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 import { Check, CircleCheck, Minus, Pencil } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Switch, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState } from '@medvya/ui';
-import { describedBy, fieldError } from '../../settings/components/fieldStyles';
-import { Field } from '../../settings/components/Field';
+import { Button, buttonVariants, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Switch, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState } from '@medvya/ui';
+import { fieldError } from '../../settings/components/fieldStyles';
 import { Section } from '../../settings/components/Section';
 import { canSwitch, hasDrafts, hasPlaced, isIncluded, orderColumns, orderKinds, type Order, type OrderForm, type OrderProblem, type OrderSetChoice } from '../domain/orders';
 
@@ -67,38 +66,38 @@ export default function OrdersPanel(p: Props) {
         <>
           <form noValidate onSubmit={p.onAdd} className="grid gap-4 sm:grid-cols-2">
             <h3 className="font-bold sm:col-span-2">{t('orders.add.title')}</h3>
-            <Field id="order-kind" label={t('orders.field.kind')}>
-              <Controller control={p.form.control} name="kind" render={({ field }) => (
-                <Select value={field.value ?? 'Lab'} onValueChange={field.onChange}>
-                  <SelectTrigger id="order-kind" className="w-full"><SelectValue /></SelectTrigger>
-                  <SelectContent>{orderKinds.map(k => <SelectItem key={k} value={k}>{t(`orders.kind.${k}`)}</SelectItem>)}</SelectContent>
-                </Select>
-              )} />
-            </Field>
+            <Controller control={p.form.control} name="kind" render={({ field }) => (
+              <Select value={field.value ?? 'Lab'} onValueChange={field.onChange}>
+                <Field id="order-kind" label={t('orders.field.kind')}>
+                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                </Field>
+                <SelectContent>{orderKinds.map(k => <SelectItem key={k} value={k}>{t(`orders.kind.${k}`)}</SelectItem>)}</SelectContent>
+              </Select>
+            )} />
             <Field id="order-name" label={t('orders.field.name')} error={nameError}>
-              <Input id="order-name" autoComplete="off" {...describedBy('order-name', !!errors.name)} {...p.form.register('name')} />
+              <Input autoComplete="off" {...p.form.register('name')} />
             </Field>
             <Field id="order-note" label={t('orders.field.note')} className="sm:col-span-2">
-              <Input id="order-note" autoComplete="off" {...p.form.register('note')} />
+              <Input autoComplete="off" {...p.form.register('note')} />
             </Field>
             <Button type="submit" variant="outline" className="self-start" disabled={p.busy}>{t('orders.add')}</Button>
           </form>
 
           {p.sets.length > 0 && (
             <div className="flex flex-wrap items-end gap-3">
-              <Field id="order-set" label={t('orders.set.field')} className="min-w-64">
-                <Select value={p.setId} onValueChange={p.onSetId}>
-                  <SelectTrigger id="order-set" className="w-full"><SelectValue placeholder={t('orders.set.choose')} /></SelectTrigger>
-                  <SelectContent>{p.sets.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
-                </Select>
-              </Field>
+              <Select value={p.setId} onValueChange={p.onSetId}>
+                <Field id="order-set" label={t('orders.set.field')} className="min-w-64">
+                  <SelectTrigger className="w-full"><SelectValue placeholder={t('orders.set.choose')} /></SelectTrigger>
+                </Field>
+                <SelectContent>{p.sets.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+              </Select>
               <Button type="button" variant="outline" disabled={p.busy || !p.setId} onClick={p.onAddSet}>{t('orders.set.add')}</Button>
             </div>
           )}
 
           <div className="flex flex-wrap items-end gap-3 border-t pt-4">
             <Field id="order-destination" label={t('orders.destination')} className="min-w-64">
-              <Input id="order-destination" maxLength={100} autoComplete="off" value={p.destination} onChange={e => p.onDestination(e.target.value)} />
+              <Input maxLength={100} autoComplete="off" value={p.destination} onChange={e => p.onDestination(e.target.value)} />
             </Field>
             <Button type="button" disabled={p.busy || !hasDrafts(p.orders)} onClick={p.onPlace}>{t('orders.place')}</Button>
           </div>

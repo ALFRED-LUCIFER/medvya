@@ -2,10 +2,9 @@ import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { Link } from 'react-router';
 import { ltr, useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, Input, Textarea } from '@medvya/ui';
+import { Button, buttonVariants, Field, Input, Textarea } from '@medvya/ui';
 import { CircleAlert, CircleCheck, Lightbulb } from 'lucide-react';
-import { Field } from '../../settings/components/Field';
-import { describedBy, fieldError } from '../../settings/components/fieldStyles';
+import { fieldError } from '../../settings/components/fieldStyles';
 import { Section } from '../../settings/components/Section';
 import { planHeading } from '../../encounters/domain/encounter';
 import { geriatricFields, geriLines, type GeriError, type GeriatricAssessment, type GeriatricForm, type MedicineReview } from '../domain/olderAdult';
@@ -68,13 +67,12 @@ function AssessmentForm(p: Props) {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {geriatricFields.map(f => (
           <Field key={f} id={`geri-${f}`} label={t(`olderAdult.field.${f}`)} error={message(errors[f]?.message)}>
-            <Input id={`geri-${f}`} inputMode={f === 'timedUpAndGoSeconds' ? 'decimal' : 'numeric'} dir="ltr" autoComplete="off"
-              {...describedBy(`geri-${f}`, !!errors[f])} {...p.form.register(f)} />
+            <Input inputMode={f === 'timedUpAndGoSeconds' ? 'decimal' : 'numeric'} dir="ltr" autoComplete="off" {...p.form.register(f)} />
           </Field>
         ))}
       </div>
       <Field id="geri-nutritionNote" label={t('olderAdult.field.nutritionNote')} error={message(errors.nutritionNote?.message)}>
-        <Textarea id="geri-nutritionNote" rows={2} {...describedBy('geri-nutritionNote', !!errors.nutritionNote)} {...p.form.register('nutritionNote')} />
+        <Textarea rows={2} {...p.form.register('nutritionNote')} />
       </Field>
       <p className="text-sm text-muted-foreground">{t('olderAdult.newRow')}</p>
       <div aria-live="polite">

@@ -30,6 +30,8 @@
         "medvya-ui/no-local-field": "error",
         "medvya-ui/no-local-surface": "error",
         "medvya-ui/no-inline-card": "error",
+        "medvya-ui/no-arbitrary-text-size": "error",
+        "medvya-ui/no-sm-columns": "error",
         "react/forbid-elements": [
           "error",
           {

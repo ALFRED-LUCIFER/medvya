@@ -144,7 +144,7 @@ function GrowthForm(p: Props) {
   return (
     <form noValidate onSubmit={e => { e.preventDefault(); p.onRecord(); }} className="flex flex-col gap-3 border-t pt-3" aria-labelledby="growth-form-title">
       <h3 id="growth-form-title" className="font-extrabold">{t('childHealth.growth.form.title')}</h3>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 md:grid-cols-2">
         <div className="flex flex-col gap-1">
           <Label htmlFor="growth-on">{t('childHealth.growth.form.takenOn')}</Label>
           <Input id="growth-on" type="date" {...describedBy('growth-on', !!errors.takenOn, false)} {...p.form.register('takenOn')} />

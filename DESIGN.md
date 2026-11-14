@@ -26,8 +26,8 @@ How to read it:
 | Page gutter | 16 / 24 / 32 px at phone / tablet / 1600 and up |
 | Page header | One 44 px row: title 20/28, secondary text, actions at the end; 12 px gap below |
 | Fluid page maximum | 1,600 px |
-| Reading maximum | 1,152 px; body text lines about 72 characters |
-| Form maximum | 768 px |
+| Reading maximum | 1,152 px; paragraphs, descriptions and hints stop at about 72 characters everywhere (`p` in the base styles) |
+| Form maximum | 768 px for a one-decision form (walk-in, leave). Settings forms use the fluid page and auto-fit their fields, as registration does |
 | Side panel | 320 px; 360 px for the consultation chart panel |
 
 Breakpoints: 360, 768, **1024**, 1280, 1600. 1024 is the named tier for two-pane layouts. The 360 px `sm:` step is not used for column changes: no `sm:grid-cols-*`. Tokens: MDV-P1-079 (#1175). Applied to screens: MDV-P2-057 (#1216).
@@ -102,7 +102,7 @@ Two densities (ruling 2, amended 14 Nov 2026 by MDV-P2-062). Density is chosen b
 | title | 20/28 | 700 | Page title in the 44 px header |
 | heading | 18/26 | 700 | Section and card titles; patient name in the strip |
 | subheading | 16/24 | 700 | Sub-sections; patient name in rows |
-| body | 14/20 | 500 | Default, tables, controls. *Awaiting the founder's yes* |
+| body | 14/20 | 500 | Default, tables, controls. Set on `body` by MDV-P2-057 (#1216); the founder's yes is still to be confirmed |
 | body-large | 16/24 | 500 | Typed clinical text, patient-facing pages |
 | label | 14/20 | 600 | Field labels, table headers, buttons |
 | caption | 12/16 | 600 | Hints, metadata, chips |
@@ -193,7 +193,7 @@ footer 56, part of the layout: Saved 10:42 · N to finish · Preview prescriptio
 
 **Tables.** Always the library Table, with a label. Numbers right-aligned with tabular numerals. The identifying cell is bold; nothing else. Sort on the columns people sort by (name, time, wait). Paging over 50 rows. Under 768 px a table becomes stacked rows; it never scrolls sideways with hidden columns that carry dose or identity. Row actions: one visible, the rest in a menu. In a compact table the visible one only opens a form and is 32 px with a mouse (44 px on a coarse pointer), so the row stays 36 px; an action that acts at once or ends access (Offboard, Revoke, Remove) is a 44 px menu item and asks to confirm where it cannot be undone.
 
-**Forms.** One column under 768 px, two at most above. Label above the field. One convention per form: "required" in words when most fields are optional, "optional" in words when most are required. Units inside or beside the field. Errors say what is wrong and what to do, beside the field and in a summary that takes focus after a failed submit. Clinical notes autosave with a visible SaveStatus; settings and registration use an explicit Save. Information entered once is not asked again in the same process: the nurse's complaint prefills the doctor's note (MDV-P1-104, #1200).
+**Forms.** One column on a phone; above that, fields auto-fit at a 200 px minimum across the available width, up to the 1,600 px page maximum (registration, MDV-P2-063; settings, MDV-P2-057). Label above the field. One convention per form: "required" in words when most fields are optional, "optional" in words when most are required. Units inside or beside the field. Errors say what is wrong and what to do, beside the field and in a summary that takes focus after a failed submit. Clinical notes autosave with a visible SaveStatus; settings and registration use an explicit Save. Information entered once is not asked again in the same process: the nurse's complaint prefills the doctor's note (MDV-P1-104, #1200).
 
 ## Pinned chrome
 
@@ -271,8 +271,8 @@ Also required: Arabic right-to-left with logical properties, and reduced motion 
 
 ## Guardrails
 
-- No `min-h-11` or `h-11` on library controls in features: oxlint `medvya-ui/no-height-patch` fails it (MDV-P1-078, #1174; re-run `node tools/codemods/remove-height-patches.mjs` on a branch). No arbitrary font sizes or raw hex colours; no `sm:grid-cols-*`; no raw `h1` in features (MDV-P1-076, #1172).
-- Counts in CI that may only fall: `pnpm check:ui-drift` compares the patterns above, the `border bg-card` string and local `Message`, `Field`, `Card` and `Empty` components with `tools/check-ui-drift/baseline.json`. A rise fails; a fall is committed with `--update` in the same pull request. When a count reaches zero, that ticket turns the matching lint rule to error and removes the count.
+- No `min-h-11` or `h-11` on library controls in features: oxlint `medvya-ui/no-height-patch` fails it (MDV-P1-078, #1174; re-run `node tools/codemods/remove-height-patches.mjs` on a branch). No raw hex colours and no raw `h1` in features (MDV-P1-076, #1172). No arbitrary font size (`medvya-ui/no-arbitrary-text-size`; the queue display and print pages are exempt) and no column rule at `sm:` (`medvya-ui/no-sm-columns`) in features: both lint errors since MDV-P2-057 (#1216).
+- Counts in CI that may only fall: `pnpm check:ui-drift` compares raw hex colours in the apps and the library with `tools/check-ui-drift/baseline.json` (the other patterns reached zero and are lint errors). A rise fails; a fall is committed with `--update` in the same pull request. When a count reaches zero, that ticket turns the matching lint rule to error and removes the count.
 - One browser test, mutation-checked: the patient strip is visible after scrolling the consultation (MDV-P1-092, #1188).
 - The contrast test reads the tone tokens (MDV-P1-080, #1176).
 

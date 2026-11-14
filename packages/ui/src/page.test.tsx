@@ -6,11 +6,11 @@ import { PageContainer, PageHeader } from './index';
 afterEach(cleanup);
 
 describe('PageContainer', () => {
-  it('is fluid by default and has no width cap', () => {
+  it('is fluid by default, up to the 1,600 px page maximum', () => {
     render(<PageContainer data-testid="c">x</PageContainer>);
-    expect(screen.getByTestId('c').className).toContain('max-w-none');
+    expect(screen.getByTestId('c').className).toContain('max-w-page');
   });
-  it.each([['form', 'max-w-3xl'], ['reading', 'max-w-6xl']] as const)('caps the %s width', (width, cls) => {
+  it.each([['form', 'max-w-form'], ['reading', 'max-w-reading']] as const)('caps the %s width', (width, cls) => {
     render(<PageContainer width={width} data-testid="c">x</PageContainer>);
     expect(screen.getByTestId('c').className).toContain(cls);
   });

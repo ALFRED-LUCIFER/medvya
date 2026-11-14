@@ -64,8 +64,8 @@ export default function OrdersPanel(p: Props) {
 
       {!p.ended && (
         <>
-          <form noValidate onSubmit={p.onAdd} className="grid gap-4 sm:grid-cols-2">
-            <h3 className="font-bold sm:col-span-2">{t('orders.add.title')}</h3>
+          <form noValidate onSubmit={p.onAdd} className="grid gap-4 md:grid-cols-2">
+            <h3 className="font-bold md:col-span-2">{t('orders.add.title')}</h3>
             <Controller control={p.form.control} name="kind" render={({ field }) => (
               <Select value={field.value ?? 'Lab'} onValueChange={field.onChange}>
                 <Field id="order-kind" label={t('orders.field.kind')}>
@@ -77,7 +77,7 @@ export default function OrdersPanel(p: Props) {
             <Field id="order-name" label={t('orders.field.name')} error={nameError}>
               <Input autoComplete="off" {...p.form.register('name')} />
             </Field>
-            <Field id="order-note" label={t('orders.field.note')} className="sm:col-span-2">
+            <Field id="order-note" label={t('orders.field.note')} className="md:col-span-2">
               <Input autoComplete="off" {...p.form.register('note')} />
             </Field>
             <Button type="submit" variant="outline" className="self-start" disabled={p.busy}>{t('orders.add')}</Button>

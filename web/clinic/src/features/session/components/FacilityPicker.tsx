@@ -39,7 +39,7 @@ export default function FacilityPicker({ displayName, memberships, lastMembershi
                   <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-brand-50 text-brand-700"><Store className="size-5" aria-hidden /></span>
                   <span className="flex min-w-0 flex-1 flex-col">
                     <span>{t('session.picker.facility', { tenant: m.tenantName, facility: m.facilityName })}</span>
-                    <span className="text-[13px] font-normal text-muted-foreground">{t(`role.${m.role}`)}</span>
+                    <span className="text-body text-muted-foreground">{t(`role.${m.role}`)}</span>
                   </span>
                   {m.id === lastMembershipId && <span className="rounded-full bg-success-50 px-2.5 py-0.5 text-xs font-bold text-success-700">{t('signin.loc.lastUsed')}</span>}
                   <ChevronRight className="size-5 text-muted-foreground rtl:rotate-180" aria-hidden />

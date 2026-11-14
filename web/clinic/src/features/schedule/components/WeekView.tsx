@@ -28,7 +28,7 @@ export default function WeekView({ name, calendarId, days, timeZone, updating, o
             </h2>
             {d.working ? (
               <>
-                <p className="text-sm"><span className="text-2xl font-bold tabular-nums">{d.booked}</span> {t('schedule.week.bookedOf', { capacity: d.capacity })}</p>
+                <p className="text-sm"><span className="text-title tabular-nums">{d.booked}</span> {t('schedule.week.bookedOf', { capacity: d.capacity })}</p>
                 <div aria-hidden className="h-1.5 overflow-hidden rounded-full bg-muted">
                   <div className="h-full bg-action-600" style={{ width: `${d.capacity ? Math.min(100, (100 * d.booked) / d.capacity) : 0}%` }} />
                 </div>

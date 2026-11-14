@@ -17,7 +17,7 @@ export default function SettingsPage({ tab, onTab, panels }: Props) {
   const wide = useWide();
   return (
     // One screen (MDV-P2-064): the page stays still and the open tab's panel scrolls inside itself.
-    <PageContainer width="reading" fit>
+    <PageContainer width="fluid" fit>
       <PageHeader title={<span className="flex items-center gap-2"><Settings aria-hidden className="size-6" />{t('settings.title')}</span>} />
       {/* Groups first, then the group's own tabs (MDV audit UX-04): one row each, so nothing wraps and every subject has its own tab. */}
       <Tabs value={groupOf(tab)} onValueChange={g => onTab(settingsGroups[g as keyof typeof settingsGroups][0])} className="min-h-0 flex-1">

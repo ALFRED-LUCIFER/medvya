@@ -90,7 +90,7 @@ function EditRow(p: Props & { row: ProblemRow }) {
       <TableCell colSpan={6}>
         <form noValidate onSubmit={p.onSaveEdit} aria-label={t('problems.editFor', { name: row.description })} className="flex flex-col gap-3">
           <p className="font-bold">{row.code ? `${row.code} · ${row.description}` : row.description}</p>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-3">
             <Controller control={p.editForm.control} name="verification" render={({ field }) => (
               <Select value={field.value} onValueChange={field.onChange}>
                 <Field id={`edit-verification-${row.id}`} label={t('problems.col.verification')}>

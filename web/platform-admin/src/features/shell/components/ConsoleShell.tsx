@@ -32,7 +32,7 @@ export default function ConsoleShell({ displayName, role, items, languageSwitche
         <div className="flex items-center gap-2.5 px-2 pb-4">
           <span aria-hidden className="grid size-9 shrink-0 place-items-center rounded-[10px] bg-brand-700 font-extrabold text-white">{t('platform.brand.initial')}</span>
           <div className="min-w-0">
-            <p className="text-[17px] font-extrabold text-white">{t('platform.brand.name')}</p>
+            <p className="text-heading font-extrabold text-white">{t('platform.brand.name')}</p>
             <p className="text-xs text-nav-muted">{t('platform.brand.staffOnly')}</p>
           </div>
         </div>
@@ -55,7 +55,7 @@ export default function ConsoleShell({ displayName, role, items, languageSwitche
         <div className="mt-auto flex items-center gap-2.5 border-t border-nav-line px-2 pt-3 max-md:hidden">
           <span aria-hidden className="grid size-8 shrink-0 place-items-center rounded-full bg-nav-line text-xs font-bold text-white">{initials(displayName)}</span>
           <div className="min-w-0">
-            <p className="truncate text-[13px] font-semibold text-white">{displayName}</p>
+            <p className="truncate text-label text-white">{displayName}</p>
             <p className="truncate text-xs text-nav-muted">{t(`platform.role.${role}`)}</p>
           </div>
         </div>

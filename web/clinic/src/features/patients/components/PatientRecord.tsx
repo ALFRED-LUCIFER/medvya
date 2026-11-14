@@ -226,7 +226,7 @@ export default function PatientRecord(props: Props) {
 }
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
-  return <Card title={title}><dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">{children}</dl></Card>;
+  return <Card title={title}><dl className="grid gap-x-6 gap-y-3 md:grid-cols-2">{children}</dl></Card>;
 }
 
 function Detail({ label, children }: { label: string; children: ReactNode }) {

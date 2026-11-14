@@ -312,10 +312,10 @@ function Rebooking({ cards, timeZone }: { cards: BoardCard[]; timeZone: string }
   if (cards.length === 0) return null;
   return (
     <section aria-labelledby="board-rebooking" className="mt-3 flex flex-col gap-2 rounded-xl border border-dashed bg-card p-3">
-      <h2 id="board-rebooking" className="flex items-center gap-1.5 text-[13px] font-extrabold"><CalendarClock aria-hidden className="size-4" />{t('board.rebooking.title')}</h2>
+      <h2 id="board-rebooking" className="flex items-center gap-1.5 text-label font-bold"><CalendarClock aria-hidden className="size-4" />{t('board.rebooking.title')}</h2>
       <p className="text-sm text-muted-foreground">{t('board.rebooking.body')}</p>
       <ul className="flex flex-col gap-1">
-        {cards.map(c => <li key={c.id} className="text-[13.5px]"><strong>{c.patientName}</strong>{' · '}{c.calendarName}{' · '}{t('board.rebooking.was', { time: formatTime(new Date(c.start), timeZone) })}</li>)}
+        {cards.map(c => <li key={c.id} className="text-body"><strong>{c.patientName}</strong>{' · '}{c.calendarName}{' · '}{t('board.rebooking.was', { time: formatTime(new Date(c.start), timeZone) })}</li>)}
       </ul>
     </section>
   );

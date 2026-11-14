@@ -39,7 +39,7 @@ export default function ProblemAddForm(p: ProblemAddFormProps) {
               </ul>)}
         </div>
       )}
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-3">
         <Field id="problem-description" label={t('problems.add.description')} hint={t(p.picked ? 'problems.add.descriptionFromCode' : 'problems.add.descriptionHint')} error={errors.description ? t('problems.add.descriptionRequired') : null}>
           <Input autoComplete="off" maxLength={200} placeholder={p.picked?.title} {...p.addForm.register('description')} />
         </Field>

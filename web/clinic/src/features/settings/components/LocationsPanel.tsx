@@ -4,7 +4,7 @@ import { timeZones } from '../domain/settings';
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import type { AddLocationForm, CalendarTemplate, LocationChoice, ResourceForm } from '../domain/settings';
-import { fieldError } from './fieldStyles';
+import { fieldError, fieldGrid } from './fieldStyles';
 import { LocationSelect } from './LocationSelect';
 import { Section } from './Section';
 
@@ -60,9 +60,9 @@ export default function LocationsPanel(p: Props) {
             </li>
           ))}
         </ul>
-        <form noValidate onSubmit={p.onSubmit} className="grid gap-4 sm:grid-cols-2" aria-label={editing ? t('settings.locations.editNamed', { name: editing.name }) : t('settings.locations.add')}>
-          <h3 className="font-bold sm:col-span-2">{editing ? t('settings.locations.editNamed', { name: editing.name }) : t('settings.locations.add')}</h3>
-          <ErrorSummary title={t('field.errorSummary')} focusKey={p.errorFocusKey} className="sm:col-span-2"
+        <form noValidate onSubmit={p.onSubmit} className={fieldGrid} aria-label={editing ? t('settings.locations.editNamed', { name: editing.name }) : t('settings.locations.add')}>
+          <h3 className="font-bold col-span-full">{editing ? t('settings.locations.editNamed', { name: editing.name }) : t('settings.locations.add')}</h3>
+          <ErrorSummary title={t('field.errorSummary')} focusKey={p.errorFocusKey} className="col-span-full"
             errors={fields.flatMap(f => (f.message ? [{ id: f.id, label: f.label, message: f.message }] : []))} />
           <Field id="location-name" label={t('settings.locations.name')} required error={error('location-name')}>
             <Input autoComplete="off" {...p.form.register('name')} />
@@ -73,7 +73,7 @@ export default function LocationsPanel(p: Props) {
             </Field>
             <SelectContent>{zones.map(z => <SelectItem key={z} value={z}>{z}</SelectItem>)}</SelectContent>
           </Select>
-          <Field id="location-address" label={t('settings.locations.address')} error={error('location-address')} className="sm:col-span-2">
+          <Field id="location-address" label={t('settings.locations.address')} error={error('location-address')} className="md:col-span-2">
             <Textarea rows={2} {...p.form.register('address')} />
           </Field>
           {!editing && (
@@ -84,10 +84,10 @@ export default function LocationsPanel(p: Props) {
               <Field id="location-certificate" label={t('settings.locations.certificate')} required hint={t('settings.locations.certificateHint')} error={error('location-certificate')}>
                 <Input type="file" accept="application/pdf,image/png,image/jpeg" className="h-auto py-2" onChange={e => p.onCertificate(e.currentTarget.files?.[0])} />
               </Field>
-              {p.certificateName && <p role="status" className="sm:col-span-2">{t('settings.locations.certificateChosen', { name: p.certificateName })}</p>}
+              {p.certificateName && <p role="status" className="col-span-full">{t('settings.locations.certificateChosen', { name: p.certificateName })}</p>}
             </>
           )}
-          <div className="flex flex-wrap items-center gap-3 sm:col-span-2" aria-live="polite">
+          <div className="flex flex-wrap items-center gap-3 col-span-full" aria-live="polite">
             <Button type="submit" loading={p.saving}>{editing ? t('settings.save') : t('settings.locations.addButton')}</Button>
             {editing && <Button type="button" variant="outline" onClick={() => p.onEdit(null)}>{t('settings.cancel')}</Button>}
             {p.saveProblem && <span role="alert" className={fieldError}>{t(p.saveProblem)}</span>}

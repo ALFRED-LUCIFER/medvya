@@ -76,7 +76,7 @@ function Open({ p, open }: { p: Props; open: OpenPregnancy }) {
   const ga = t('pregnancy.ga', { weeks: g.weeks, days: g.days });
   return (
     <>
-      <dl className="grid gap-3 sm:grid-cols-3">
+      <dl className="grid gap-3 md:grid-cols-3">
         <Stat label={t('pregnancy.gestation')} value={ga} note={t(`pregnancy.trimester.${g.trimester}`)} />
         <Stat label={t('pregnancy.dueDate')} value={day(open.dueDate)}
           note={[open.lmp && t('pregnancy.lmp', { date: day(open.lmp) }), open.previousDueDate && t('pregnancy.previousDueDate', { date: day(open.previousDueDate) })].filter(Boolean).join(' · ')} />
@@ -90,7 +90,7 @@ function Open({ p, open }: { p: Props; open: OpenPregnancy }) {
       </div>
       <div className="flex flex-col gap-2">
         <h3 className="font-bold">{t('pregnancy.contacts')}</h3>
-        <ol className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+        <ol className="grid grid-cols-2 gap-2 md:grid-cols-5">
           {open.contacts.map(c => {
             const Icon = stateIcon[c.state];
             return (

@@ -1606,7 +1606,7 @@ Deliberately NOT in this ticket: (1) Everything in the never list. (2) A motion 
 * Given a button, when it is focused by keyboard, then the ring is at full colour on the first frame, and no library component uses transition-all
 * Given the change, when it is reviewed, then no page transition, sliding card, staggered list, animated counter or toast was added
 * Given English and Arabic, when axe runs with skeletons and the strip showing, then there is no violation"
-MDV-P2-057,To do,Task,"Apply the type and width tokens: stray font sizes removed, body weight 500, page maximum 1,600 px, reading width, no sm:grid-cols",MDV-P1-E12,High,phase-P2 design-system ui refactor rtl epic-ux-programme track-design wave-d3,3,2027-01-18,2027-01-22,R2 · Consult,P0-07,,"MDV-P1-079, MDV-P1-078",70,Medium,"Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Track D (design rules and UI component setup), wave D3. This is audit backlog UX-29 of the Nov 2026 product UX audit (an audit id, not an MDV key).
+MDV-P2-057,To do,Task,"Apply the type and width tokens: stray font sizes removed, body weight 500, full-width content, reading width for paragraphs, no sm:grid-cols",MDV-P1-E12,High,phase-P2 design-system ui refactor rtl epic-ux-programme track-design wave-d3,3,2027-01-18,2027-01-22,R2 · Consult,P0-07,,"MDV-P1-079, MDV-P1-078",70,Medium,"Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Track D (design rules and UI component setup), wave D3. This is audit backlog UX-29 of the Nov 2026 product UX audit (an audit id, not an MDV key).
 
 Persona and route: Every screen, lightly · all roles · 375 to 1920.
 Findings and reviewers: F-21 · reviewers B-11, B-18, C-05, C-11, C-16. Part 2 of 2 of audit backlog UX-29 (part 1 defined the tokens).
@@ -1620,7 +1620,7 @@ Clinical sign-off: Not required. Typed clinical text stays 16 px.
 Effort and regression risk: M · Medium: every screen changes slightly; checked by capture comparison in English and Arabic.
 Deliberately NOT in this ticket: (1) A new typeface or palette. (2) Layout redesign of any screen.","* Given the 20 most-used screens at 1440, when rendered font sizes are measured, then only the nine token sizes appear (the queue display and print excepted)
 * Given a list row, when it renders, then the identifying cell is bold and body text is weight 500
-* Given 1920 px, when Today, the patient record and Settings render, then no paragraph is wider than about 72 characters and the page content is at most 1,600 px wide
+* Given 1920 px, when Today, the patient record and Settings render, then no paragraph is wider than about 72 characters and the content fills the width between the sidebar and the gutter (owner ruling of 14 Nov 2026, DESIGN.md Screen layout standard)
 * Given Register patient at 375 px, when the stepper renders, then no step label is clipped
 * Given a feature file, when text-[13.5px] or sm:grid-cols-2 is added, then lint fails
 * Given captures before and after in English and Arabic, when compared, then no text is truncated or overlapping, and axe finds no violation"
@@ -1744,6 +1744,19 @@ Deliberately NOT in this ticket: (1) Removing fields or sections. (2) Mobile app
 * Given the front desk board, the patient record history and the audit log with long data, when they scroll, then only their panel scrolls and the top bar, strip and bottom bar stay in place
 * Given DESIGN.md, when read, then the top bar, content and bottom bar rule is written with the 1.25 limit
 * Given every field, when it is reached with Tab, then it is not under the bottom bar
+* Given English and Arabic, when axe runs, then there is no violation"
+MDV-P2-065,To do,Story,"Apply the screen layout standard everywhere: full-width content and every action in the sticky bottom bar, the platform console included",MDV-P1-E12,High,phase-P2 design-system ui layout epic-ux-programme track-design wave-d3,3,2027-01-18,2027-01-22,R2 · Consult,P0-07,,"MDV-P1-082, MDV-P2-064",70,Medium,"Programme: MDV-P1-E12. Owner ruling of 14 Nov 2026: every screen in every app has the same frame: small sidebar, top bar, full-width content, sticky bottom bar holding every action button.
+
+Persona and route: Every screen with an action in web/clinic and web/platform-admin.
+Rationale: MDV-P2-063 and MDV-P2-064 put the bottom bar on registration and the clinic task screens. The platform console has none (no StickyActionBar in web/platform-admin), and about 15 clinic pages still hold their content to the reading or form width (PageContainer width reading or form), leaving the right of a wide screen empty.
+Proposed UX behaviour: Every remaining screen with an action moves its buttons (OK, Save, Add, Create, Confirm, Cancel) into StickyActionBar, in both apps; dialogs and drawers pin their own footer. Pages drop the reading and form width caps; fields sit side by side in an auto-fit grid; only paragraphs keep the reading width. Print pages (note print, token slip) keep their print widths. No field, rule, wording or validation changes.
+Components and tokens affected: StickyActionBar, PageContainer widths.
+Front end and back end split: Front end only.
+Clinical sign-off: Not required.
+Effort and regression risk: M · Medium: many screens, layout only.
+Deliberately NOT in this ticket: (1) Print layouts. (2) The mobile apps.","* Given every screen with an action in both apps at 1440 by 900 and 1024 by 768, when it renders, then its action buttons are in the bottom bar and visible without scrolling
+* Given 1920 px, when any form page renders, then its fields span the content width and only paragraphs are held to about 72 characters
+* Given the platform console, when a review or settings screen renders, then it has the sidebar, top bar, full-width content and bottom bar frame
 * Given English and Arabic, when axe runs, then there is no violation"
 MDV-P3-001,To do,Spike,Spike: Azure AI Speech and Azure OpenAI in-region capability check and ADR for speech/LLM providers,MDV-P3-E06,Highest,phase-P3 ai spike adr,2,2027-01-18,2027-01-22,R3 · Scribe,"P3-07, P3-03",,MDV-P0-003,70,Medium,"In the launch region confirm: batch transcription with diarisation and language identification for en-IN, hi-IN, ta-IN (and ar-AE for UAE), Azure OpenAI chat model with JSON-schema output, data residency/processing terms. Run 10 synthetic recordings through the pipeline and measure WER, diarisation error and latency. Record ADR-007 (speech/LLM providers, models, versions, regions, fallback).","* ADR-007 accepted with model names/versions, regions, quotas and fallback provider abstraction.
 * Measured latency supports the ≤ 60 s p50 draft target or the gap is quantified with a plan.

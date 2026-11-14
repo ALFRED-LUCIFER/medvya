@@ -1452,7 +1452,7 @@ notes:
 - Regression risk: low.
 
 === MDV-P2-057
-title: Apply the type and width tokens: stray font sizes removed, body weight 500, page maximum 1,600 px, reading width, no sm:grid-cols
+title: Apply the type and width tokens: stray font sizes removed, body weight 500, full-width content, reading width for paragraphs, no sm:grid-cols
 type: Task
 epic: MDV-P1-E12
 prd: P0-07
@@ -1481,7 +1481,7 @@ Deliberately NOT in this ticket: (1) A new typeface or palette. (2) Layout redes
 ac:
 - Given the 20 most-used screens at 1440, when rendered font sizes are measured, then only the nine token sizes appear (the queue display and print excepted)
 - Given a list row, when it renders, then the identifying cell is bold and body text is weight 500
-- Given 1920 px, when Today, the patient record and Settings render, then no paragraph is wider than about 72 characters and the page content is at most 1,600 px wide
+- Given 1920 px, when Today, the patient record and Settings render, then no paragraph is wider than about 72 characters and the content fills the width between the sidebar and the gutter (owner ruling of 14 Nov 2026, DESIGN.md Screen layout standard)
 - Given Register patient at 375 px, when the stepper renders, then no step label is clipped
 - Given a feature file, when text-[13.5px] or sm:grid-cols-2 is added, then lint fails
 - Given captures before and after in English and Arabic, when compared, then no text is truncated or overlapping, and axe finds no violation
@@ -1765,5 +1765,40 @@ ac:
 - Given English and Arabic, when axe runs, then there is no violation
 tests:
 - tests/e2e: a shared fitsOneScreen(page) helper and one check per listed screen at 1440 by 900 and 1024 by 768, en and ar.
+notes:
+- Regression risk: medium.
+
+=== MDV-P2-065
+title: Apply the screen layout standard everywhere: full-width content and every action in the sticky bottom bar, the platform console included
+type: Story
+epic: MDV-P1-E12
+prd: P0-07
+screens:
+priority: SHOULD
+roles: All staff roles, Platform staff
+labels: design-system, ui, layout, epic: ux programme, track: design, wave: D3
+estimate: 3
+weeks: 13
+depends: MDV-P1-082, MDV-P2-064
+confidence: 70 | The rule and the components exist; the work is wiring screen by screen, mostly in the platform console, which has no bottom bar yet.
+sources: DESIGN.md Screen layout standard (owner ruling, 14 Nov 2026); AGENTS.md section 4
+desc:
+Programme: MDV-P1-E12. Owner ruling of 14 Nov 2026: every screen in every app has the same frame: small sidebar, top bar, full-width content, sticky bottom bar holding every action button.
+
+Persona and route: Every screen with an action in web/clinic and web/platform-admin.
+Rationale: MDV-P2-063 and MDV-P2-064 put the bottom bar on registration and the clinic task screens. The platform console has none (no StickyActionBar in web/platform-admin), and about 15 clinic pages still hold their content to the reading or form width (PageContainer width reading or form), leaving the right of a wide screen empty.
+Proposed UX behaviour: Every remaining screen with an action moves its buttons (OK, Save, Add, Create, Confirm, Cancel) into StickyActionBar, in both apps; dialogs and drawers pin their own footer. Pages drop the reading and form width caps; fields sit side by side in an auto-fit grid; only paragraphs keep the reading width. Print pages (note print, token slip) keep their print widths. No field, rule, wording or validation changes.
+Components and tokens affected: StickyActionBar, PageContainer widths.
+Front end and back end split: Front end only.
+Clinical sign-off: Not required.
+Effort and regression risk: M · Medium: many screens, layout only.
+Deliberately NOT in this ticket: (1) Print layouts. (2) The mobile apps.
+ac:
+- Given every screen with an action in both apps at 1440 by 900 and 1024 by 768, when it renders, then its action buttons are in the bottom bar and visible without scrolling
+- Given 1920 px, when any form page renders, then its fields span the content width and only paragraphs are held to about 72 characters
+- Given the platform console, when a review or settings screen renders, then it has the sidebar, top bar, full-width content and bottom bar frame
+- Given English and Arabic, when axe runs, then there is no violation
+tests:
+- tests/e2e: commitVisible and fitsOneScreen checks per screen in both apps; platform-console.spec.ts.
 notes:
 - Regression risk: medium.

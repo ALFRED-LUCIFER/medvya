@@ -61,6 +61,27 @@ export const visibleColumns = (steps: VisitSteps, columns: Record<BoardColumn, B
 
 export const isBoardColumn = (state: AppointmentState): state is BoardColumn => (boardColumns as readonly string[]).includes(state);
 
+/** The desk's three views (MDV-P2-052): By status (the board, the default), By doctor and List. Each receptionist's last choice opens next time. */
+export const frontDeskViews = ['board', 'doctors', 'list'] as const;
+export type FrontDeskView = (typeof frontDeskViews)[number];
+export const isFrontDeskView = (value: unknown): value is FrontDeskView => (frontDeskViews as readonly unknown[]).includes(value);
+
+/** The list's groups, who needs the desk first (MDV-P2-052): waiting, with the nurse, in consult, billing, then booked, then done. */
+const listOrder = ['CheckedIn', 'ReadyForDoctor', 'WithNurse', 'InConsult', 'Billing', 'Booked', 'Done'] as const satisfies readonly BoardColumn[];
+export type ListRow = BoardCard & { doctor: string };
+
+/**
+ * The list view: its status filters (the board's visible columns, in list order) and the groups to show, only `filter`'s when one is
+ * pressed, otherwise every group with visits. Each group keeps groupByColumn's order, the clinic's queue rule, so it matches the queue display.
+ */
+export function listGroups(steps: VisitSteps, columns: Record<BoardColumn, BoardCard[]>, filter: BoardColumn | null) {
+  const shown = visibleColumns(steps, columns);
+  const statuses = listOrder.filter(c => shown.includes(c));
+  const groups = statuses.filter(c => (filter ? c === filter : columns[c].length > 0))
+    .map(state => ({ state, rows: columns[state].map((card): ListRow => ({ ...card, doctor: card.calendarName })) }));
+  return { statuses, groups };
+}
+
 /**
  * The server's queue order (MDV-P1-103), shared by the doctor's day, the board and the queue display; a card without a place goes after.
  * Places count per doctor, so a column of several doctors lists each doctor's next patient first, then each one's second, and so on.

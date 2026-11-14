@@ -45,7 +45,7 @@ export default function ReferralsPanel(p: Props) {
     <div className="flex flex-col gap-4">
       <Section id={referralsHeading} title={t('referrals.title')} intro={t('referrals.intro')}>
         <TableState state={tableState} messages={{ loading: t('referrals.loading'), error: t('referrals.loadFailed'), empty: t('referrals.empty') }}>
-          <Table label={t('referrals.tableLabel')} className="min-w-[640px]">
+          <Table label={t('referrals.tableLabel')} stacked className="md:min-w-[640px]">
             <TableHeader>
               <TableRow>{referralColumns.map(c => <TableHead key={c} scope="col">{c === 'actions' ? <span className="sr-only">{t('referrals.col.actions')}</span> : t(`referrals.col.${c}`)}</TableHead>)}</TableRow>
             </TableHeader>
@@ -55,9 +55,9 @@ export default function ReferralsPanel(p: Props) {
                 return (
                   <TableRow key={r.id}>
                     <TableHead scope="row">{r.provider}<span className="block text-sm font-normal text-muted-foreground">{t(`referrals.direction.${r.direction}`)}</span></TableHead>
-                    <TableCell>{t(`referrals.urgency.${r.urgency}`)}</TableCell>
-                    <TableCell><span className="inline-flex items-center gap-1.5 font-bold"><Icon aria-hidden className="size-4 shrink-0" />{t(`referrals.state.${r.state}`)}</span></TableCell>
-                    <TableCell>{r.channel ? `${t(`referrals.channel.${r.channel}`)}${r.sentAt ? `, ${formatDate(new Date(r.sentAt))}` : ''}` : ''}</TableCell>
+                    <TableCell label={t('referrals.col.urgency')}>{t(`referrals.urgency.${r.urgency}`)}</TableCell>
+                    <TableCell label={t('referrals.col.state')}><span className="inline-flex items-center gap-1.5 font-bold"><Icon aria-hidden className="size-4 shrink-0" />{t(`referrals.state.${r.state}`)}</span></TableCell>
+                    <TableCell label={r.channel ? t('referrals.col.channel') : undefined}>{r.channel ? `${t(`referrals.channel.${r.channel}`)}${r.sentAt ? `, ${formatDate(new Date(r.sentAt))}` : ''}` : ''}</TableCell>
                     <TableCell>
                       {r.open && !p.ended && <Button type="button" variant="outline" aria-label={t('referrals.manageNamed', { name: r.provider })} onClick={() => p.onSelect(r.id)}>{t('referrals.manage')}</Button>}
                     </TableCell>

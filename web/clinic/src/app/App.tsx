@@ -159,7 +159,7 @@ export default function App({ locale, onLocaleChange }: Props) {
             // My day (MDV-P2-002, named in MDV-P2-051): the doctor's own day, never the board.
             : i.id === 'today' ? <TodayRoute facilityId={active.facilityId} online={online} userId={shell.session?.user.id ?? ''} />
             : i.id === 'frontDesk'
-            ? <FrontDeskRoute facilityId={active.facilityId} online={online} canMove={active.capabilities.CheckInQueue === 'Full'} canCancel={active.capabilities.RegisterBookPatients === 'Full'}
+            ? <FrontDeskRoute facilityId={active.facilityId} online={online} userId={shell.session?.user.id ?? ''} canMove={active.capabilities.CheckInQueue === 'Full'} canCancel={active.capabilities.RegisterBookPatients === 'Full'}
                 registerPath={registerPath} walkInPath={walkInPath} waitlistPath={waitlistPath} bookPath={active.capabilities.RegisterBookPatients === 'Full' ? pathOf('schedule') : null} billingPath={shell.items.find(b => b.id === 'billing')?.path ?? null}
                 canConsult={active.capabilities.Patient360Chart === 'Full'} steps={{ nurse: active.flags.includes('clinical.nurse-intake'), billing: active.flags.includes('billing.invoices') }}
                 intakePath={nursePath && active.capabilities.VitalsAllergiesEntry === 'Full' ? (id: string) => `${nursePath}/${id}` : null} />

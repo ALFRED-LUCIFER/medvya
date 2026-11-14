@@ -6,8 +6,9 @@ import { useI18n, type MessageKey } from '@medvya/i18n';
 import { Button, buttonVariants, cn, Dialog, DialogContent, DialogDescription, DialogTitle, FrontDeskTag, PageContainer, PageHeader, SegmentedControl } from '@medvya/ui';
 import { isDeviceZone, type CancelForm } from '../../schedule/domain/changes';
 import CancelReasonFields from '../../schedule/components/CancelReasonFields';
+import QueueTable from './QueueTable';
 import type { workload } from '../domain/overview';
-import { aheadWords, ageYears, canReprint, endKinds, minutesSince, needsRebooking, nextConsultId, nextState, tokenSlipPath, visibleColumns, type Board, type BoardCard, type BoardColumn, type EndKind, type LiveStatus, type MoveError, type Notice, type VisitSteps } from '../domain/board';
+import { aheadWords, ageYears, canReprint, endKinds, listGroups, minutesSince, needsRebooking, nextConsultId, nextState, tokenSlipPath, visibleColumns, type Board, type BoardCard, type BoardColumn, type EndKind, type ListRow, type LiveStatus, type MoveError, type Notice, type VisitSteps } from '../domain/board';
 
 // Every column is words and an icon (never colour alone), following the Clinician App board (P-01).
 const columnIcons: Record<BoardColumn, LucideIcon> = {
@@ -82,6 +83,11 @@ type Props = {
   /** Under 768 px the board is one list: the status it shows (null: the first with visits). */
   phoneColumn: BoardColumn | null;
   onPhoneColumn: (column: BoardColumn) => void;
+  /** The List view (MDV-P2-052) instead of the columns. */
+  list?: boolean;
+  /** The status the list shows alone (its pressed count); null: every status with visits. */
+  listFilter: BoardColumn | null;
+  onListFilter: (column: BoardColumn) => void;
 };
 
 /** P-01 Reception board: today's visits by state, one tap per step, nonclinical information only. */
@@ -207,6 +213,7 @@ function Body(props: Props) {
   if (failed) return <Message title={t('board.error.title')} body={t('board.error.body')} action={{ label: t('schedule.retry'), run: props.onRetry }} />;
   if (loading || !board) return <Message busy title={t('board.loading')} />;
   if (board.cards.length === 0) return <Message title={t('board.empty.title')} body={t('board.empty.body')} />;
+  if (props.list) return <List {...props} board={board} />;
   const shown = visibleColumns(props.steps, props.columns);
   const phone = props.phoneColumn && shown.includes(props.phoneColumn) ? props.phoneColumn : (shown.find(c => props.columns[c].length > 0) ?? shown[0]!);
   const primary = props.consultAction ? nextConsultId(props.columns) : null;
@@ -223,6 +230,71 @@ function Body(props: Props) {
         </div>
         <Rebooking cards={needsRebooking(board.cards)} timeZone={board.timeZone} />
       </section>
+    </>
+  );
+}
+
+/**
+ * P-01 as one list (MDV-P2-052): about nine patients where the board shows one and a half cards. Status counts filter it to one group;
+ * groups run from who needs the desk first to booked, with done folded away. Rows are comfortable (48 px), never compact.
+ */
+function List(props: Props & { board: Board }) {
+  const { t, tCount } = useI18n();
+  const { board, columns, listFilter, onListFilter, failedVisitIds, confirmingId, failure, canMove, consultAction } = props;
+  const { statuses, groups } = listGroups(props.steps, columns, listFilter);
+  const primary = consultAction ? nextConsultId(columns) : null;
+  const confirming = (r: ListRow) => canMove && confirmingId === r.id;
+  const heading = (state: BoardColumn) => {
+    const Icon = columnIcons[state], count = columns[state].length;
+    return (
+      <h2 className="flex items-center gap-1.5 text-label">
+        <Icon aria-hidden className="size-4" />{t(`board.column.${state}`)}
+        <span className="font-mono text-caption text-muted-foreground tabular-nums"><span aria-hidden>{count}</span><span className="sr-only">{tCount('board.count', count)}</span></span>
+      </h2>
+    );
+  };
+  const rowsOf = (state: BoardColumn, rows: ListRow[]) => rows.length === 0 ? <p className="text-caption text-muted-foreground">{t('board.column.none')}</p> : (
+    <QueueTable label={t(`board.column.${state}`)} rows={rows} timeZone={board.timeZone} now={props.now}
+      flags={r => <>
+        {failedVisitIds.has(r.id) && <FrontDeskTag kind="messageFailed" />}
+        {r.walkIn && <FrontDeskTag kind="walkIn" />}
+        {r.registrationIncomplete && <FrontDeskTag kind="incomplete" />}
+      </>}
+      // While the identity check is open it is the row's action, across the full width under it.
+      action={r => !confirming(r) && <div className="flex flex-wrap justify-end gap-2"><NextAction {...props} card={r} />{consultAction?.(r, r.id === primary)}</div>}
+      detail={r => {
+        const error = failure?.id === r.id ? failure.error : null;
+        return (confirming(r) || error) && <>
+          {confirming(r) && <ConfirmCheckIn {...props} card={r} />}
+          {error && <p role="alert" className="text-xs font-bold text-danger-700">{t(`board.error.${error}`)}</p>}
+        </>;
+      }} />
+  );
+  return (
+    <>
+      <div role="group" aria-label={t('board.list.filters')} className="flex flex-wrap gap-2">
+        {statuses.map(c => {
+          const Icon = columnIcons[c];
+          return (
+            <Button key={c} variant={listFilter === c ? 'selected' : 'outline'} aria-pressed={listFilter === c} onClick={() => onListFilter(c)}>
+              <Icon aria-hidden />{t('board.statusTab', { column: t(`board.column.${c}`), count: columns[c].length })}
+            </Button>
+          );
+        })}
+      </div>
+      {groups.map(({ state, rows }) => state === 'Done' ? (
+        // Folded unless Done is the pressed count; the key opens it afresh when the filter changes.
+        <details key={`${state}-${listFilter}`} open={listFilter === 'Done'} className="flex flex-col gap-2">
+          <summary className="flex min-h-11 cursor-pointer items-center">{heading(state)}</summary>
+          {rowsOf(state, rows)}
+        </details>
+      ) : (
+        <section key={state} className="flex flex-col gap-2">
+          {heading(state)}
+          {rowsOf(state, rows)}
+        </section>
+      ))}
+      <Rebooking cards={needsRebooking(board.cards)} timeZone={board.timeZone} />
     </>
   );
 }
@@ -268,16 +340,14 @@ function Column(props: Props & { state: BoardColumn; board: Board; hiddenOnPhone
   );
 }
 
-function Card({ card, primary, board, steps, now, workload, failedVisitIds, canMove, canCancel, online, confirmingId, pendingId, failure, paymentAction, consultAction, nurseStep, followUp, onStartCheckIn, onConfirmCheckIn, onCancelCheckIn, onMove, onStartEnd }: Props & { card: BoardCard; board: Board; primary: string | null }) {
-  const i18n = useI18n(), { t, formatTime, formatCalendarDate } = i18n;
+function Card(props: Props & { card: BoardCard; board: Board; primary: string | null }) {
+  const { card, primary, board, now, workload, failedVisitIds, canMove, canCancel, online, confirmingId, failure, paymentAction, consultAction, followUp, onStartEnd } = props;
+  const i18n = useI18n(), { t, formatTime } = i18n;
   const state = card.state as BoardColumn;
-  const next = nextState(state, steps);
-  const busy = pendingId === card.id;
   const nameId = `board-card-${card.id}`;
   const error = failure?.id === card.id ? failure.error : null;
   const confirming = confirmingId === card.id;
   const age = ageYears(card.dateOfBirth, now);
-  const dob = card.dateOfBirth ? formatCalendarDate(card.dateOfBirth) : t('board.dobUnknown');
   const ends = canMove ? endKinds(card.state, canCancel) : [];
   // The doctor only when more than one works today, so two doctors' patients are told apart (MDV-P1-095).
   const who = [age !== null && t('patients.age', { age }), age !== null && card.sex && t(`patients.sex.${card.sex}`), workload.length > 1 && card.calendarName].filter(Boolean);
@@ -299,23 +369,7 @@ function Card({ card, primary, board, steps, now, workload, failedVisitIds, canM
       {(state === 'CheckedIn' || state === 'ReadyForDoctor') && <FrontDeskTag kind="waiting" text={t('board.waiting', { minutes: minutesSince(card.since, now) })} />}
       {card.room && state === 'InConsult' && <FrontDeskTag kind="room" text={t('board.room', { room: card.room })} />}
 
-      {canMove && confirming ? (
-        <div role="group" aria-label={t('board.confirm.title')} className="mt-1 flex flex-col gap-2 rounded-md border border-action-600 p-2">
-          <p className="text-xs font-bold">{t('board.confirm.title')}</p>
-          <p className="text-sm">{t('board.confirm.identity', { name: card.patientName || t('board.unknownPatient'), dob })}</p>
-          {card.registrationIncomplete && <p className="text-xs text-warning-700">{t('board.confirm.incomplete')}</p>}
-          <Button autoFocus className="whitespace-normal" loading={busy} disabled={!online} onClick={onConfirmCheckIn}>{t('board.confirm.arrived')}</Button>
-          <Button variant="outline" onClick={onCancelCheckIn}>{t('booking.cancel')}</Button>
-        </div>
-      ) : nurseStep && state === 'WithNurse' ? nurseStep(card) : card.withDoctor && state === 'InConsult' ? (
-        // A consultation is open: the doctor's End moves the card, so the desk has words here and no action (MDV-P1-100).
-        <FrontDeskTag kind="room" text={t('board.withDoctor')} />
-      ) : canMove && next && state !== 'Done' ? (
-        <Button variant="outline" className="mt-1 w-full" loading={busy} disabled={!online}
-          onClick={() => (state === 'Booked' ? onStartCheckIn(card.id) : onMove(card.id, next))}>
-          {t(state === 'CheckedIn' && next === 'ReadyForDoctor' ? 'board.action.toDoctor' : actionKeys[state])}
-        </Button>
-      ) : null}
+      {canMove && confirming ? <ConfirmCheckIn {...props} card={card} /> : <NextAction {...props} card={card} className="mt-1 w-full" />}
       {/* shortcut: with billing.invoices off (all of P1) payment is a disabled placeholder; P4 builds payments behind that flag. */}
       {canMove && state === 'Billing' && (paymentAction ?? (
         <>
@@ -339,5 +393,37 @@ function Card({ card, primary, board, steps, now, workload, failedVisitIds, canM
       )}
       {error && <p role="alert" className="text-xs font-bold text-danger-700">{t(`board.error.${error}`)}</p>}
     </article>
+  );
+}
+
+/** Check-in's identity check, on the card and in the list: name and date of birth before "Confirm arrival" (MDV-P1-028). */
+function ConfirmCheckIn({ card, online, pendingId, onConfirmCheckIn, onCancelCheckIn }: Props & { card: BoardCard }) {
+  const { t, formatCalendarDate } = useI18n();
+  const dob = card.dateOfBirth ? formatCalendarDate(card.dateOfBirth) : t('board.dobUnknown');
+  return (
+    <div role="group" aria-label={t('board.confirm.title')} className="mt-1 flex flex-col gap-2 rounded-md border border-action-600 p-2">
+      <p className="text-xs font-bold">{t('board.confirm.title')}</p>
+      <p className="text-sm">{t('board.confirm.identity', { name: card.patientName || t('board.unknownPatient'), dob })}</p>
+      {card.registrationIncomplete && <p className="text-xs text-warning-700">{t('board.confirm.incomplete')}</p>}
+      <Button autoFocus className="whitespace-normal" loading={pendingId === card.id} disabled={!online} onClick={onConfirmCheckIn}>{t('board.confirm.arrived')}</Button>
+      <Button variant="outline" onClick={onCancelCheckIn}>{t('booking.cancel')}</Button>
+    </div>
+  );
+}
+
+/** The one action that moves a visit on, the same on the card and in the list; null when the desk has none. */
+function NextAction({ card, steps, canMove, online, pendingId, nurseStep, onStartCheckIn, onMove, className }: Props & { card: BoardCard; className?: string }) {
+  const { t } = useI18n();
+  const state = card.state as BoardColumn;
+  const next = nextState(state, steps);
+  if (nurseStep && state === 'WithNurse') return nurseStep(card);
+  // A consultation is open: the doctor's End moves the card, so the desk has words here and no action (MDV-P1-100).
+  if (card.withDoctor && state === 'InConsult') return <FrontDeskTag kind="room" text={t('board.withDoctor')} />;
+  if (!canMove || !next || state === 'Done') return null;
+  return (
+    <Button variant="outline" className={className} loading={pendingId === card.id} disabled={!online}
+      onClick={() => (state === 'Booked' ? onStartCheckIn(card.id) : onMove(card.id, next))}>
+      {t(state === 'CheckedIn' && next === 'ReadyForDoctor' ? 'board.action.toDoctor' : actionKeys[state])}
+    </Button>
   );
 }

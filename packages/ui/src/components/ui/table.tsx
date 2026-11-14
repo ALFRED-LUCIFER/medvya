@@ -11,6 +11,8 @@ type SortDirection = "ascending" | "descending" | "none"
 // readers on a phone, and shows while a sort button in it has keyboard focus.
 const TableLayout = React.createContext({ compact: false, stacked: false })
 
+// Comfortable rows are at least 48 px, text-only ones too (DESIGN.md, Density); a stacked phone row is a block and keeps its own height.
+const comfortableRows = (stacked: boolean) => (stacked ? "md:[&>tr]:h-row" : "[&>tr]:h-row")
 // Compact rows are 36 px with a mouse and 48 px on any coarse pointer (DESIGN.md, Density). Stacked phone rows keep their own height.
 // A row's button is 32 px with a mouse, so with the row's rule the row stays 36 px, and 44 px on a coarse pointer; its cell has no padding.
 const compactRows =
@@ -75,7 +77,7 @@ function TableBody({ className, ...props }: React.ComponentProps<"tbody">) {
     <tbody
       data-slot="table-body"
       role={stacked ? "rowgroup" : undefined}
-      className={cn("[&_tr:last-child]:border-0", compact && (stacked ? compactWideRows : compactRows), stacked && "max-md:block", className)}
+      className={cn("[&_tr:last-child]:border-0", compact ? (stacked ? compactWideRows : compactRows) : comfortableRows(stacked), stacked && "max-md:block", className)}
       {...props}
     />
   )

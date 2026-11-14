@@ -82,6 +82,8 @@
   "session.failedMfa.admin": "If you already have one and this keeps happening, ask your clinic admin to turn on multi-factor sign-in for your account.",
   "shell.skip": "Skip to main content",
   "shell.mainNav": "Main navigation",
+  "shell.collapseNav": "Collapse menu",
+  "shell.expandNav": "Expand menu",
   "shell.notifications": "Notifications",
   "shell.loading": "Loading…",
   "shell.comingInPhase": "This screen arrives in phase {phase}. There is nothing to do here yet.",

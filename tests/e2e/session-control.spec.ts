@@ -40,9 +40,10 @@ test('two memberships: choose a facility, then switch without signing in again',
   expect(server.posts).toEqual([{ body: { membershipId: 'm-adyar' }, csrf: '1' }]);
   await expect(page.getByRole('navigation').first()).toContainText('Practice settings');
 
-  await page.getByRole('link', { name: 'Change facility' }).click();
+  await page.getByRole('button', { name: /^Signed in as / }).click();
+  await page.getByRole('menuitem', { name: 'Change facility' }).click();
   await page.getByRole('button', { name: /Besant Nagar/ }).click();
-  await expect(page.getByRole('navigation').first()).toContainText('Doctor');
+  await expect(page.getByRole('banner')).toContainText('Besant Nagar');
   await expect(page.getByRole('navigation').first()).not.toContainText('Practice settings');
 });
 

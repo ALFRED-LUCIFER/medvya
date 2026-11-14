@@ -18,18 +18,18 @@ export function Icon({ name, size = 22, color = theme.color.ink600, fixed }: { n
 
 type ButtonProps = { label: string; accessibilityLabel?: string; onPress?: () => void; variant?: 'primary' | 'secondary' | 'ghost' | 'inverse'; icon?: IconName; disabled?: boolean; busy?: boolean; hint?: string };
 
-/** One button for both apps. Disabled buttons stay readable and say why through `hint` (read by screen readers). */
+/** One button for both apps. Disabled buttons take a grey fill from tokens (as on the web, not opacity) and show `hint` as the reason under them. */
 export function Button({ label, accessibilityLabel, onPress, variant = 'primary', icon, disabled, busy, hint }: ButtonProps) {
   const { solid, target } = useBrand();
-  const fg = { primary: theme.color.card, secondary: theme.color.ink900, ghost: solid, inverse: solid }[variant];
+  const off = disabled || busy;
+  const fg = disabled ? theme.color.ink600 : { primary: theme.color.card, secondary: theme.color.ink900, ghost: solid, inverse: solid }[variant];
   const look = {
     primary: { backgroundColor: solid },
     secondary: { backgroundColor: theme.color.card, borderWidth: 1, borderColor: theme.color.input },
     ghost: { backgroundColor: 'transparent' },
     inverse: { backgroundColor: theme.color.card },
   }[variant];
-  const off = disabled || busy;
-  return (
+  const button = (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
@@ -37,11 +37,20 @@ export function Button({ label, accessibilityLabel, onPress, variant = 'primary'
       accessibilityState={{ disabled: !!off, busy: !!busy }}
       disabled={off}
       onPress={onPress}
-      style={({ pressed }) => [styles.button, { minHeight: Math.max(target, 52) }, look, off && styles.off, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.button, { minHeight: Math.max(target, 52) }, look, disabled && styles.off, pressed && styles.pressed]}
     >
       {busy ? <ActivityIndicator color={fg} /> : icon ? <Icon name={icon} size={20} color={fg} /> : null}
       <Text variant="label" tone={fg}>{label}</Text>
     </Pressable>
+  );
+  if (!disabled || !hint) return button;
+  // The reason is already the button's accessibility hint, so the caption is hidden from screen readers to avoid reading it twice.
+  // An inverse button sits on a solid colour, so its reason is white like the text around it.
+  return (
+    <View style={styles.withReason}>
+      {button}
+      <Text variant="caption" tone={variant === 'inverse' ? theme.color.card : undefined} style={styles.reason} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">{hint}</Text>
+    </View>
   );
 }
 
@@ -50,7 +59,7 @@ export function IconButton({ icon, label, onPress, badge, disabled }: { icon: Ic
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: !!disabled }} disabled={disabled} onPress={onPress} hitSlop={4}
       style={({ pressed }) => [styles.iconButton, { minWidth: target, minHeight: target }, disabled && styles.off, pressed && styles.pressed]}>
-      <Icon name={icon} color={theme.color.ink900} />
+      <Icon name={icon} color={disabled ? theme.color.ink600 : theme.color.ink900} />
       {badge ? <View style={styles.badge}><Text variant="overline" tone={theme.color.card}>{String(badge)}</Text></View> : null}
     </Pressable>
   );
@@ -67,9 +76,10 @@ export function TextField({ label, error, hint, style, ...input }: FieldProps) {
       <TextInput
         accessibilityLabel={label}
         accessibilityHint={error ?? hint}
+        accessibilityState={{ disabled: input.editable === false }}
         placeholderTextColor={theme.color.ink600}
         selectionColor={solid}
-        style={[styles.input, { minHeight: Math.max(target, 52), fontSize: body + 1 }, error ? { borderColor: theme.color.danger700 } : null, style]}
+        style={[styles.input, { minHeight: Math.max(target, 52), fontSize: body + 1 }, error ? { borderColor: theme.color.danger700 } : null, input.editable === false && styles.inputOff, style]}
         {...input}
       />
       {error
@@ -99,12 +109,15 @@ export function Segmented<K extends string>({ options, value, onChange }: { opti
 
 const styles = StyleSheet.create({
   button: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, paddingHorizontal: 20 },
-  off: { opacity: 0.45 },
+  off: { backgroundColor: theme.color.disabled, borderColor: theme.color.disabled },
+  withReason: { gap: 4 },
+  reason: { textAlign: 'center' },
   pressed: { opacity: 0.8 },
   iconButton: { alignItems: 'center', justifyContent: 'center', borderRadius: 12, borderWidth: 1, borderColor: theme.color.input, backgroundColor: theme.color.card },
   badge: { position: 'absolute', top: -4, end: -4, minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 5, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.color.danger700 },
   field: { gap: 6 },
   input: { borderWidth: 1, borderColor: theme.color.input, borderRadius: 12, paddingHorizontal: 14, color: theme.color.ink900, backgroundColor: theme.color.card },
+  inputOff: { backgroundColor: theme.color.disabled },
   errorRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   segmented: { flexDirection: 'row', padding: 4, gap: 4, borderRadius: 14, backgroundColor: theme.color.muted },
   segment: { flex: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 10 },

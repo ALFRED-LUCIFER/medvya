@@ -3,7 +3,7 @@ import { flushSync } from 'react-dom';
 import { Link } from 'react-router';
 import { CalendarOff, ChevronLeft, ChevronRight, Info, Ellipsis, Plus, Printer } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, cn, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, EmptyState, FocusScope, PageContainer, PageHeader, PageMessage, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
+import { Button, buttonVariants, cn, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, EmptyState, FocusScope, PageContainer, PageHeader, PageMessage, SegmentedControl, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
 import type { DayLayout, ScheduleColumn } from '../domain/schedule';
 import { scheduleViews, type AgendaEntry, type ScheduleView, type WeekDay } from '../domain/views';
 import AgendaView from './AgendaView';
@@ -97,11 +97,7 @@ export default function SchedulePage(props: Props) {
         <Button variant="outline" size="icon" aria-label={t(isWeek ? 'schedule.nextWeek' : 'schedule.nextDay')} disabled={!date} onClick={props.onNext}>
           <ChevronRight className="rtl:rotate-180" aria-hidden />
         </Button>
-        <div role="group" aria-label={t('schedule.views')} className="flex gap-1">
-          {scheduleViews.map(v => (
-            <Button key={v} variant={view === v ? 'selected' : 'outline'} aria-pressed={view === v} onClick={() => props.onView(v)}>{t(`schedule.view.${v}`)}</Button>
-          ))}
-        </div>
+        <SegmentedControl label={t('schedule.views')} value={view} onValueChange={props.onView} options={scheduleViews.map(v => ({ value: v, label: t(`schedule.view.${v}`) }))} />
         {props.calendars.length > 1 && (
           <Select value={props.filter ?? all} onValueChange={v => props.onFilter(v === all ? null : v)}>
             <SelectTrigger aria-label={t('schedule.filter')} className="w-56"><SelectValue /></SelectTrigger>

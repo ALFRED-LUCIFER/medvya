@@ -1,18 +1,15 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
-import { Activity, CalendarCheck, FilePen, Pill, Siren, CircleAlert, CircleCheck, CircleHelp, ClipboardCheck, DoorOpen, ReceiptText, Syringe, UserCheck, type LucideIcon } from 'lucide-react';
+import { Activity, FilePen, Pill, Siren, CircleAlert, CircleCheck, CircleHelp, type LucideIcon } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, Card, Chip, cn, FrontDeskTag, PageContainer, PageHeader, PageMessage, SegmentedControl } from '@medvya/ui';
+import { Button, buttonVariants, Card, Chip, cn, FrontDeskTag, PageContainer, PageHeader, PageMessage, SegmentedControl, statusIcons, statuses, type Status } from '@medvya/ui';
 import { aheadWords, type BoardCard, type BoardColumn, type LiveStatus } from '../../front-desk/domain/board';
 import { canConsult } from '../../encounters/domain/encounter';
 import type { AllergyState } from '../../patient360/domain/chart';
 import { authoriseTarget } from '../../prescription/domain/authorisation';
 import { ageOn, type PendingNote, type PendingRx, type Scope } from '../domain/today';
 
-// A status is always an icon and words, never colour alone.
-const stateIcons: Record<string, LucideIcon> = {
-  Booked: CalendarCheck, CheckedIn: UserCheck, WithNurse: Syringe, ReadyForDoctor: ClipboardCheck, InConsult: DoorOpen, Billing: ReceiptText, Done: CircleCheck,
-};
+// A status is always an icon and words, never colour alone; icons come from the shared status map (MDV-P5-057).
 
 type Props = {
   day: string | null; timeZone: string | null; visits: BoardCard[]; next: BoardCard | null; scope: Scope; onScope: (s: Scope) => void;
@@ -122,7 +119,7 @@ function Hero(p: Props & { card: BoardCard }) {
 
 function Chips(p: Props & { card: BoardCard }) {
   const i18n = useI18n(), { t } = i18n;
-  const c = p.card, Icon = stateIcons[c.state] ?? CalendarCheck;
+  const c = p.card, Icon = statusIcons[c.state in statuses ? c.state as Status : 'Booked'];
   return (
     <div className="flex flex-wrap gap-1.5">
       <Chip tone="neutral" icon={Icon} label={[t(`board.column.${c.state as BoardColumn}`), c.state === 'CheckedIn' ? t('board.waiting', { minutes: p.waitMinutes(c.since) }) : '',
@@ -169,7 +166,7 @@ function PatientLink(p: Props & { card: BoardCard; stretch?: boolean }) {
 // An allergy state is an icon and words, never colour alone; "not recorded" is never worded as "none". Tones as AllergyBlock's: recorded danger,
 // not recorded warning, none known neutral (MDV-P1-081, MDV-P2-060).
 const flagLooks = {
-  Listed: { Icon: CircleAlert, key: 'today.allergy.listed', tone: 'danger' },
+  Listed: { Icon: statusIcons.allergy, key: 'today.allergy.listed', tone: 'danger' },
   NoKnownAllergies: { Icon: CircleCheck, key: 'banner.noAllergies', tone: 'neutral' },
   NotRecorded: { Icon: CircleHelp, key: 'banner.allergiesNotRecorded', tone: 'warning' },
 } as const satisfies Record<AllergyState, { Icon: LucideIcon; key: string; tone: 'danger' | 'neutral' | 'warning' }>;

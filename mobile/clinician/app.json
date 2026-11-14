@@ -18,6 +18,7 @@
       [
         "expo-localization",
         {
+          "supportsRTL": true,
           "supportedLocales": [
             "en",
             "hi",

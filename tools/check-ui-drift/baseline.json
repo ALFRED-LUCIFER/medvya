@@ -16,7 +16,6 @@
     "web/platform-admin/src/features/approvals/components/DocumentViewer.tsx": 1
   },
   "smGridCols": {
-    "web/clinic/src/features/audit-log/components/AuditLogPanel.tsx": 1,
     "web/clinic/src/features/child-health/components/ChildHealthCard.tsx": 1,
     "web/clinic/src/features/child-health/components/GrowthCard.tsx": 1,
     "web/clinic/src/features/encounters/components/NoteParts.tsx": 1,

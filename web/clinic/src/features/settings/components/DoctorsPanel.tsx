@@ -2,7 +2,7 @@ import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { BadgeCheck, CalendarX, Info } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, Field, Input } from '@medvya/ui';
+import { Button, Field, Input, Tag } from '@medvya/ui';
 import type { Authority, Doctor, DoctorForm, DoctorStep, FieldProblem, LicenceForm } from '../domain/doctors';
 import type { Location } from '../domain/settings';
 import { licenceFields } from '../domain/doctors';
@@ -47,7 +47,8 @@ function LicenceBadge({ doctor: d }: { doctor: Doctor }) {
   const Icon = d.expired ? CalendarX : BadgeCheck;
   const date = formatDate(new Date(d.attestedAt));
   const label = d.expired ? t('doctors.licence.expired') : d.attestedByName ? t('doctors.licence.attestedBy', { name: d.attestedByName, date }) : t('doctors.licence.attestedByOwner', { date });
-  return <span className="inline-flex items-center gap-1.5 font-bold"><Icon className="size-4 shrink-0" aria-hidden />{label}</span>;
+  // Neutral, not success: an owner's attestation, not a check by Medvya (MDV-P2-060).
+  return <Tag tone={d.expired ? 'danger' : 'neutral'} icon={Icon} label={label} />;
 }
 
 /** Doctors (F-09, MDV-P1-007): the doctors of the practice with their licence state, and the Add doctor wizard. */

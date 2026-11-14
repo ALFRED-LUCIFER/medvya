@@ -70,7 +70,7 @@ test('a new walk-in is quick-registered and checked in within a minute, then wai
   await expect(page.getByText('Choose a patient first.')).toBeVisible();
   const opened = Date.now(); // Walk-in is open: the check-in clock is running (MDV-P1-106)
   await register.click(); // click 2
-  await expect(page.getByRole('link', { name: 'Quick (busy desk)' })).toHaveAttribute('aria-current', 'page');
+  await expect(page.getByRole('button', { name: 'Quick (busy desk)' })).toHaveAttribute('aria-pressed', 'true');
   await page.getByLabel('Full name').fill('Arjun Nair (synthetic)');
   await page.getByLabel('Mobile').fill('+91 90000 00777');
   await page.getByRole('textbox', { name: 'Date of birth (required)', exact: true }).fill('1990-01-01');

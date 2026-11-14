@@ -5,7 +5,7 @@ import { useI18n, type MessageKey } from '@medvya/i18n';
 import { Button, Card, EmptyState, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState } from '@medvya/ui';
 import ReasonPanel from '../../shell/components/ReasonPanel';
 import type { ReasonForm } from '../../team/domain/team';
-import { isDestructive, isDocumentKind, sizeLabel, taxCheck, type Action, type Detail, type DocumentView, type EmailPreview } from '../domain/approvals';
+import { documentColumns, historyColumns, isDestructive, isDocumentKind, sizeLabel, taxCheck, type Action, type Detail, type DocumentView, type EmailPreview } from '../domain/approvals';
 import DocumentViewer from './DocumentViewer';
 
 export type DetailVm = {
@@ -57,12 +57,12 @@ export default function ApprovalDetail({ vm, operator }: { vm: DetailVm; operato
       <section aria-labelledby="approvals-docs" className="flex flex-col gap-2">
         <h3 id="approvals-docs" className="text-base font-bold">{t('platform.approvals.docs.title')}</h3>
         <p className="text-sm text-muted-foreground">{t('platform.approvals.docs.manual')}</p>
-        <Table label={t('platform.approvals.docs.tableLabel')}>
+        {/* Stacked under 768 px with the document first, so nothing scrolls sideways on a phone (MDV-P2-054). */}
+        <Table label={t('platform.approvals.docs.tableLabel')} stacked>
           <TableHeader>
             <TableRow>
-              <TableHead>{t('platform.approvals.docs.document')}</TableHead>
-              <TableHead>{t('platform.approvals.docs.checks')}</TableHead>
-              <TableHead><span className="sr-only">{t('platform.approvals.docs.open')}</span></TableHead>
+              {documentColumns.map(c => <TableHead key={c} scope="col">{t(c)}</TableHead>)}
+              <TableHead scope="col"><span className="sr-only">{t('platform.approvals.docs.open')}</span></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -70,8 +70,8 @@ export default function ApprovalDetail({ vm, operator }: { vm: DetailVm; operato
               const name = isDocumentKind(doc.kind) ? t(`platform.approvals.doc.${doc.kind}` as MessageKey) : doc.kind;
               return (
                 <TableRow key={doc.id}>
-                  <TableCell className="font-semibold">{name}</TableCell>
-                  <TableCell>{t('platform.approvals.check.format', { type: doc.contentType === 'application/pdf' ? 'PDF' : doc.contentType.replace('image/', '').toUpperCase(), size: sizeLabel(doc.sizeBytes) })}</TableCell>
+                  <TableHead scope="row" className="font-semibold">{name}</TableHead>
+                  <TableCell label={t('platform.approvals.docs.checks')}>{t('platform.approvals.check.format', { type: doc.contentType === 'application/pdf' ? 'PDF' : doc.contentType.replace('image/', '').toUpperCase(), size: sizeLabel(doc.sizeBytes) })}</TableCell>
                   <TableCell>
                     <Button variant="outline" aria-label={t('platform.approvals.docs.openNamed', { name })} loading={vm.opening === doc.id} onClick={() => vm.onOpen(doc)}>
                       <Eye aria-hidden />{t('platform.approvals.docs.open')}
@@ -125,22 +125,17 @@ export default function ApprovalDetail({ vm, operator }: { vm: DetailVm; operato
       <section aria-labelledby="approvals-history" className="flex flex-col gap-2">
         <h3 id="approvals-history" className="text-base font-bold">{t('platform.approvals.history.title')}</h3>
         {d.history.length === 0 ? <p className="text-sm text-muted-foreground">{t('platform.approvals.history.empty')}</p> : (
-          <Table label={t('platform.approvals.history.tableLabel')}>
+          <Table label={t('platform.approvals.history.tableLabel')} stacked>
             <TableHeader>
-              <TableRow>
-                <TableHead>{t('platform.audit.when')}</TableHead>
-                <TableHead>{t('platform.approvals.history.decision')}</TableHead>
-                <TableHead>{t('platform.audit.who')}</TableHead>
-                <TableHead>{t('platform.audit.reason')}</TableHead>
-              </TableRow>
+              <TableRow>{historyColumns.map(c => <TableHead key={c} scope="col">{t(c)}</TableHead>)}</TableRow>
             </TableHeader>
             <TableBody>
               {d.history.map(h => (
                 <TableRow key={`${h.at}-${h.state}`}>
-                  <TableCell className="whitespace-nowrap">{when(h.at)}</TableCell>
-                  <TableCell>{t(`platform.approvals.state.${h.state}` as MessageKey)}</TableCell>
-                  <TableCell>{h.actor ?? t('platform.approvals.history.applicant')}</TableCell>
-                  <TableCell>{h.reason ?? t('platform.audit.noReason')}</TableCell>
+                  <TableHead scope="row"><time dateTime={h.at}>{when(h.at)}</time></TableHead>
+                  <TableCell label={t('platform.approvals.history.decision')}>{t(`platform.approvals.state.${h.state}` as MessageKey)}</TableCell>
+                  <TableCell label={t('platform.audit.who')}>{h.actor ?? t('platform.approvals.history.applicant')}</TableCell>
+                  <TableCell label={t('platform.audit.reason')}>{h.reason ?? t('platform.audit.noReason')}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

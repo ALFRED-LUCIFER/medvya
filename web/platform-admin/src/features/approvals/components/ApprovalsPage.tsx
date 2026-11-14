@@ -1,6 +1,6 @@
 import { useI18n, type MessageKey } from '@medvya/i18n';
 import { Button, PageContainer, PageHeader, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState, Tabs, TabsContent, TabsList, TabsTrigger, cn } from '@medvya/ui';
-import { filters, waitDays, type Filter, type QueueItem } from '../domain/approvals';
+import { filters, queueColumns, waitDays, type Filter, type QueueItem } from '../domain/approvals';
 import ApprovalDetail, { type DetailVm } from './ApprovalDetail';
 
 export type QueueVm = {
@@ -24,24 +24,21 @@ export default function ApprovalsPage({ vm, operator }: { vm: { queue: QueueVm; 
             </TabsList>
             <TabsContent value={q.filter}>
               <TableState state={q.state} messages={{ loading: t('platform.state.loading'), error: t(q.forbidden ? 'platform.state.forbidden' : 'platform.state.error'), empty: t('platform.approvals.empty') }}>
-                <Table label={t('platform.approvals.queueTable')}>
+                {/* Stacked under 768 px with the organisation first, so nothing scrolls sideways on a phone (MDV-P2-054). */}
+                <Table label={t('platform.approvals.queueTable')} stacked>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>{t('platform.approvals.col.organisation')}</TableHead>
-                      <TableHead>{t('platform.approvals.col.state')}</TableHead>
-                      <TableHead>{t('platform.approvals.col.wait')}</TableHead>
-                    </TableRow>
+                    <TableRow>{queueColumns.map(c => <TableHead key={c} scope="col">{t(c)}</TableHead>)}</TableRow>
                   </TableHeader>
                   <TableBody>
                     {q.items.map(i => (
                       <TableRow key={i.tenantId} className={cn(q.selectedId === i.tenantId && 'bg-accent')}>
-                        <TableCell>
+                        <TableHead scope="row" className="font-normal whitespace-normal">
                           <Button variant="link" className="h-auto justify-start px-0 text-start font-semibold whitespace-normal" aria-current={q.selectedId === i.tenantId ? 'true' : undefined}
                             onClick={() => q.onSelect(i.tenantId)}>{i.name}</Button>
                           <p className="text-sm text-muted-foreground">{t(`platform.approvals.type.${i.type}` as MessageKey)}{' · '}{i.country}</p>
-                        </TableCell>
-                        <TableCell>{t(`platform.approvals.state.${i.state}` as MessageKey)}</TableCell>
-                        <TableCell>{t('platform.approvals.days', { n: waitDays(i.submittedAt, q.asOf) })}</TableCell>
+                        </TableHead>
+                        <TableCell label={t('platform.approvals.col.state')}>{t(`platform.approvals.state.${i.state}` as MessageKey)}</TableCell>
+                        <TableCell label={t('platform.approvals.col.wait')}>{t('platform.approvals.days', { n: waitDays(i.submittedAt, q.asOf) })}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

@@ -33,3 +33,15 @@ it('draws ui-native control borders at 3:1 and placeholders at 4.5:1 (WCAG 1.4.1
     expect(contrast(input.props.placeholderTextColor as string, bg)).toBeGreaterThanOrEqual(4.5);
   }
 });
+
+it('greys a disabled button with token colours at 4.5:1, not opacity, and shows its reason as text (MDV-P5-058)', async () => {
+  const variants = ['primary', 'secondary', 'ghost', 'inverse'] as const;
+  await renderApp(<>{variants.map(v => <Button key={v} label={v} variant={v} disabled hint={`Why ${v}`} />)}</>);
+  for (const v of variants) {
+    const box = StyleSheet.flatten(screen.getByRole('button', { name: v }).props.style);
+    expect(box.opacity).toBeUndefined();
+    const label = StyleSheet.flatten(screen.getByText(v).props.style).color as string;
+    expect(contrast(label, box.backgroundColor as string)).toBeGreaterThanOrEqual(4.5);
+    expect(screen.getByText(`Why ${v}`, { includeHiddenElements: true })).toBeOnTheScreen(); // hidden from screen readers only: they hear it as the hint
+  }
+});

@@ -490,7 +490,7 @@ test('registering a new patient from the booking panel comes back to the held sl
   await expect(panel).toContainText('Held for you until');
   await panel.getByRole('link', { name: 'Register a new patient' }).click();
 
-  await page.getByRole('link', { name: 'Quick (busy desk)' }).click(); // switching mode keeps the slot
+  await page.getByRole('button', { name: 'Quick (busy desk)' }).click(); // switching mode keeps the slot
   await expect(page).toHaveURL(/calendar=d-1.*mode=quick/);
   // The address changes before the screen does: fill only once the quick form is what is shown, or the typed name goes into the form being replaced.
   await expect(page.getByText('Quick (busy desk): the minimum safe fields')).toBeVisible();
@@ -828,6 +828,12 @@ test('views and the filter are reachable by keyboard with 44 px targets', async 
   }
   await page.keyboard.press('Enter'); // List
   await expect(page.getByRole('button', { name: 'List', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  // MDV-P2-060: the library SegmentedControl, its selected state exposed; every state label is the library Chip.
+  await expect(page.getByRole('group', { name: 'Schedule view' }).locator('[aria-pressed="true"]')).toHaveText('List');
+  await expect(page.locator('[data-slot="segmented-control"]')).toHaveCount(1);
+  const states = page.getByRole('main').getByRole('button').getByText(/^(Booked|Checked in|No-show|Cancelled)$/);
+  expect(await states.count()).toBeGreaterThan(0);
+  for (const state of await states.all()) await expect(state).toHaveAttribute('data-slot', 'chip');
   await page.keyboard.press('Tab');
   await expect(page.getByRole('combobox', { name: 'Doctor or resource' })).toBeFocused();
   expect((await page.getByRole('combobox', { name: 'Doctor or resource' }).boundingBox())!.height).toBeGreaterThanOrEqual(44);

@@ -1,10 +1,9 @@
 import { useEffect, useRef } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import type { Missing } from '../../patients/domain/directory';
-import { Link } from 'react-router';
 import { Check, Loader2, UserSearch } from 'lucide-react';
 import { useI18n, type Country } from '@medvya/i18n';
-import { Banner, Button, Card, cn, PageContainer, PageHeader, PageMessage } from '@medvya/ui';
+import { Banner, Button, Card, cn, PageContainer, PageHeader, PageMessage, SegmentedControl } from '@medvya/ui';
 import {
   identifierInputs, steps, type DuplicateCandidate, type FormField, type DuplicateDecision, type RegistrationForm, type RegistrationResult, type Step,
 } from '../domain/registration';
@@ -60,9 +59,8 @@ type Props = {
   /** The slot the booking panel sent the desk from (an address query of opaque ids and a time), to go back to it. */
   slot: string | null;
   checkInPath: string | null;
-  /** Links to the two modes ("Quick (busy desk)" / "Full registration"); the mode is in the URL, never patient data. */
-  quickPath: string;
-  fullPath: string;
+  /** Switches between the two modes ("Quick (busy desk)" / "Full registration"); the route keeps the mode in the URL, never patient data. */
+  onMode: (mode: 'quick' | 'full') => void;
 };
 
 /**
@@ -105,18 +103,14 @@ export default function Registration(p: Props) {
     fullName: p.values.fullName, mobile: p.values.mobile, identifier: firstId,
     date: p.ageInstead ? t('registration.duplicates.age', { age: p.values.ageYears }) : p.values.dateOfBirth && formatCalendarDate(p.values.dateOfBirth),
   };
-  const modeLink = (quick: boolean) => cn('flex min-h-11 items-center rounded-md px-3 text-sm font-bold',
-    p.quick === quick ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground');
-
   return (
     <PageContainer width="reading" className="gap-5">
       <PageHeader title={t('registration.title')} description={t(p.quick ? 'registration.quick.intro' : `registration.full.intro.${p.country}`)}
-        actions={
-          // No track padding: the two 44 px links keep the header one 44 px row (MDV-P2-059).
-          <nav aria-label={t('registration.mode.label')} className="flex gap-1 rounded-lg bg-muted">
-            <Link to={p.quickPath} aria-current={p.quick ? 'page' : undefined} className={modeLink(true)}>{t('registration.mode.quick')}</Link>
-            <Link to={p.fullPath} aria-current={p.quick ? undefined : 'page'} className={modeLink(false)}>{t('registration.mode.full')}</Link>
-          </nav>} />
+>
+        {/* The one view switch (MDV-P2-060), under the title: its 48 px track would make the 44 px title row taller (MDV-P2-059). */}
+        <SegmentedControl label={t('registration.mode.label')} value={p.quick ? 'quick' : 'full'} onValueChange={p.onMode}
+          options={[{ value: 'quick', label: t('registration.mode.quick') }, { value: 'full', label: t('registration.mode.full') }]} />
+      </PageHeader>
 
       {p.restored && !p.result && (
         <p role="status" className="flex flex-wrap items-center gap-3 rounded-md border bg-muted px-3 py-2 text-sm">

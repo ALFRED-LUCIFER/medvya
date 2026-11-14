@@ -1,5 +1,5 @@
 import { locales, ltr, useI18n, type Locale, type MessageKey } from '@medvya/i18n';
-import { AppHeader, Avatar, Button, Card, Chip, Icon, ListRow, Loading, Screen, Section, StateMessage, Text } from '@medvya/ui-native';
+import { AppHeader, Avatar, Button, Card, Icon, ListRow, Loading, Screen, Section, StateMessage, Text } from '@medvya/ui-native';
 import { theme } from '@medvya/tokens';
 import { StyleSheet, View } from 'react-native';
 import type { Person, Session } from '../../session/domain/session';
@@ -7,10 +7,11 @@ import type { Profile } from '../domain/profile';
 
 type Props = {
   session: Session; phone: string; profile: Profile | null; family: Person[]; loading: boolean; error: string | null;
-  biometric: boolean; locale: Locale; version: string; onLock: () => void; onSignOut: () => void;
+  biometric: boolean; unlockMethod: string; locale: Locale; version: string; onLock: () => void; onSignOut: () => void;
 };
 
 // Changing choices, family access and downloads arrive with MDV-P5-037; here they are shown as they stand.
+// Until then the choices note says to ask the clinic; "Change any time" only returns beside a real control (MDV-P5-061).
 export function ProfileScreen(vm: Props) {
   const { t, formatDate } = useI18n();
   const divider = (i: number) => (i > 0 ? styles.divider : undefined);
@@ -46,7 +47,7 @@ export function ProfileScreen(vm: Props) {
             {vm.profile.choices.map((c, i) => (
               <View key={c.key} style={divider(i)}>
                 <ListRow title={t(`mobile.profile.choice.${c.key}`)} subtitle={c.detail || undefined}
-                  trailing={<Chip label={t(c.on ? 'mobile.profile.on' : 'mobile.profile.off')} tone={c.on ? 'success' : 'neutral'} icon={c.on ? 'check' : 'remove'} />} />
+                  chips={[{ label: t(c.on ? 'mobile.profile.on' : 'mobile.profile.off'), tone: c.on ? 'success' : 'neutral', icon: c.on ? 'check' : 'remove' }]} />
               </View>
             ))}
           </Card>
@@ -55,7 +56,7 @@ export function ProfileScreen(vm: Props) {
 
       <Section title={t('mobile.account.security')}>
         <Card style={styles.list}>
-          <View><ListRow title={t('mobile.profile.signIn')} subtitle={t(vm.biometric ? 'mobile.profile.signInBiometric' : 'mobile.profile.signInCode')} leading={<Icon name="lock-outline" />} /></View>
+          <View><ListRow title={t('mobile.profile.signIn')} subtitle={t(vm.biometric ? 'mobile.profile.signInBiometric' : 'mobile.profile.signInCode', { method: vm.unlockMethod })} leading={<Icon name="lock-outline" />} /></View>
           <View style={styles.divider}><ListRow title={t('mobile.account.lockNow')} leading={<Icon name="lock-clock" />} onPress={vm.onLock} /></View>
         </Card>
       </Section>

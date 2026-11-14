@@ -68,6 +68,7 @@ Two densities (ruling 2). Density is chosen by task. A write is never compact.
 |---|---|---|
 | Control height | 44 px | 36 px |
 | Table row | 48 px | 36 px |
+| Cell side padding | 12 px | 8 px |
 | Body text | 14/20 | 14/20, never smaller |
 | Typed clinical text | 16/24 | not allowed |
 
@@ -116,6 +117,7 @@ The palette does not change. A tone layer gives each meaning one colour pair on 
 | neutral | Everything else | |
 
 - Status is never colour alone: label always, icon where it helps.
+- One status map for every app: `packages/tokens/src/status.ts` gives each shared status its words, tone and glyph (Lucide on web, the same shape in Material on native). Web reads it through `statusIcons` in `@medvya/ui`; the Expo apps import it directly. Allergy has its own shield glyph, never the medicine or critical one (MDV-P5-057).
 - **One primary (filled) button per view:** the single next action for the signed-in user.
 - No raw hex colours in components.
 - Text contrast at least 4.5:1; large text and control borders at least 3:1.

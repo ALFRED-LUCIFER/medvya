@@ -2,9 +2,10 @@ import type { CSSProperties, ReactNode } from 'react';
 import {
   Send, Pipette, Inbox, Eye, Phone, MessageSquareCheck, CircleCheck,
   Sparkles, BadgeCheck, User, ArrowLeftRight, Upload, Lock, Stethoscope, PenLine,
-  CircleAlert, TriangleAlert, Info, Pause, CircleMinus, CircleHelp,
+  CircleAlert, TriangleAlert, Info, Pause, CircleMinus, CircleHelp, ShieldAlert, Syringe, ClipboardCheck, ReceiptText,
   Clock, Ban, SearchX, WifiOff, Hourglass, CalendarCheck, Tag as TagIcon, UserCheck, DoorOpen, CalendarClock, CalendarX, CircleX, Radio, RefreshCw, Footprints, Ticket, MessageSquareWarning, type LucideIcon,
 } from 'lucide-react';
+import { statuses, type Status, type WebGlyph } from '@medvya/tokens/status';
 import { useI18n, type MessageKey } from '@medvya/i18n';
 import { Button } from '#components/ui/button';
 import { Chip } from '#components/ui/chip';
@@ -17,6 +18,15 @@ import { Tag } from '#components/ui/tag';
 const okOnTint = 'var(--color-success-text)';
 export type Look = { label: MessageKey; icon: LucideIcon; bg: string; fg: string; border?: string };
 
+// The shared status map (packages/tokens/status, MDV-P5-057) names each glyph; this resolves it to the Lucide component.
+const glyphs = {
+  CalendarCheck, UserCheck, Syringe, ClipboardCheck, DoorOpen, ReceiptText, CircleCheck, ShieldAlert, CircleAlert, TriangleAlert, BadgeCheck, Sparkles, Lock,
+} satisfies Record<WebGlyph, LucideIcon>;
+export { statuses, type Status };
+/** The web icon of each shared status: the same glyph the native apps draw. */
+export const statusIcons = Object.fromEntries(Object.entries(statuses).map(([s, look]) => [s, glyphs[look.web]])) as Record<Status, LucideIcon>;
+const shared = (s: Status) => ({ label: statuses[s].label, icon: statusIcons[s] });
+
 export const statusLooks = {
   ordered:   { label: 'status.ordered', icon: Send, bg: 'var(--color-info-bg)', fg: 'var(--color-info-text)' },
   collected: { label: 'status.collected', icon: Pipette, bg: 'var(--color-info-bg)', fg: 'var(--color-info-text)' },
@@ -28,20 +38,20 @@ export const statusLooks = {
 } satisfies Record<string, Look>;
 
 export const provenanceLooks = {
-  ai:       { label: 'ai.badge', icon: Sparkles, bg: 'var(--color-ai-bg)', fg: 'var(--color-ai-text)', border: '1px dashed var(--color-ai-300)' },
-  verified: { label: 'provenance.verified', icon: BadgeCheck, bg: 'var(--color-success-bg)', fg: okOnTint },
+  ai:       { ...shared('ai'), bg: 'var(--color-ai-bg)', fg: 'var(--color-ai-text)', border: '1px dashed var(--color-ai-300)' },
+  verified: { ...shared('verified'), bg: 'var(--color-success-bg)', fg: okOnTint },
   patient:  { label: 'provenance.patient', icon: User, bg: 'var(--color-neutral-bg)', fg: 'var(--color-neutral-text)' },
   his:      { label: 'provenance.his', icon: ArrowLeftRight, bg: 'var(--color-info-bg)', fg: 'var(--color-info-text)' },
   imported: { label: 'provenance.imported', icon: Upload, bg: 'var(--color-ink-100)', fg: 'var(--color-neutral-text)' },
-  signed:   { label: 'provenance.signed', icon: Lock, bg: 'var(--color-brand-950)', fg: 'var(--color-white)' },
+  signed:   { ...shared('signed'), bg: 'var(--color-brand-950)', fg: 'var(--color-white)' },
   // MDV-P1-104: the doctor's chief complaint taken from nurse intake, and the same once the doctor changed it.
   nurse:       { label: 'provenance.nurse', icon: Stethoscope, bg: 'var(--color-brand-bg)', fg: 'var(--color-brand-text)' },
   nurseEdited: { label: 'provenance.nurseEdited', icon: PenLine, bg: 'var(--color-brand-bg)', fg: 'var(--color-brand-text)' },
 } satisfies Record<string, Look>;
 
 export const alertLooks = {
-  critical:  { label: 'alert.critical', icon: CircleAlert, bg: 'var(--color-danger-bg)', fg: 'var(--color-danger-text)', border: '1px solid var(--color-danger-border)' },
-  attention: { label: 'alert.attention', icon: TriangleAlert, bg: 'var(--color-warning-bg)', fg: 'var(--color-warning-text)', border: '1px solid var(--color-warning-border)' },
+  critical:  { ...shared('critical'), bg: 'var(--color-danger-bg)', fg: 'var(--color-danger-text)', border: '1px solid var(--color-danger-border)' },
+  attention: { ...shared('attention'), bg: 'var(--color-warning-bg)', fg: 'var(--color-warning-text)', border: '1px solid var(--color-warning-border)' },
   info:      { label: 'alert.info', icon: Info, bg: 'var(--color-surface)', fg: 'var(--color-neutral-text)', border: '1px solid var(--color-line)' },
 } satisfies Record<string, Look>;
 
@@ -58,10 +68,10 @@ export const scheduleLooks = {
   // Rendered as a hatch of the muted and line tokens; bg is the darker stop, so the contrast test checks the worst case.
   unavailable: { label: 'schedule.state.unavailable', icon: Ban, bg: 'var(--color-line)', fg: 'var(--color-ink-600)' },
   held: { label: 'schedule.state.held', icon: Hourglass, bg: 'var(--color-warning-bg)', fg: 'var(--color-warning-text)' },
-  booked: { label: 'schedule.state.Booked', icon: CalendarCheck, bg: 'var(--color-white)', fg: 'var(--color-info-text)', border: '1px solid var(--color-info-border)' },
-  checkedIn: { label: 'schedule.state.CheckedIn', icon: UserCheck, bg: 'var(--color-info-bg)', fg: 'var(--color-info-text)', border: '1px solid var(--color-info-300)' },
-  inRoom: { label: 'schedule.state.InConsult', icon: DoorOpen, bg: 'var(--color-brand-bg)', fg: 'var(--color-brand-text)', border: '1px solid var(--color-brand-border)' },
-  completed: { label: 'schedule.state.Done', icon: CircleCheck, bg: 'var(--color-neutral-bg)', fg: 'var(--color-ink-600)', border: '1px solid var(--color-ink-200)' },
+  booked: { ...shared('Booked'), bg: 'var(--color-white)', fg: 'var(--color-info-text)', border: '1px solid var(--color-info-border)' },
+  checkedIn: { ...shared('CheckedIn'), bg: 'var(--color-info-bg)', fg: 'var(--color-info-text)', border: '1px solid var(--color-info-300)' },
+  inRoom: { ...shared('InConsult'), bg: 'var(--color-brand-bg)', fg: 'var(--color-brand-text)', border: '1px solid var(--color-brand-border)' },
+  completed: { ...shared('Done'), bg: 'var(--color-neutral-bg)', fg: 'var(--color-ink-600)', border: '1px solid var(--color-ink-200)' },
   noShow: { label: 'schedule.state.NoShow', icon: CalendarX, bg: 'var(--color-danger-25)', fg: 'var(--color-danger-text)', border: '1px dashed var(--color-danger-border)' },
   cancelled: { label: 'schedule.state.Cancelled', icon: CircleX, bg: 'var(--color-surface)', fg: 'var(--color-ink-600)', border: '1px dashed var(--color-ink-400)' },
   needsRebooking: { label: 'schedule.state.NeedsRebooking', icon: CalendarClock, bg: 'var(--color-warning-bg)', fg: 'var(--color-warning-text)', border: '1px dashed var(--color-warning-border)' },

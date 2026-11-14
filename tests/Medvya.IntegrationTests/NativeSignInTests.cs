@@ -252,7 +252,7 @@ public sealed class NativeSignInTests(PostgresFixture sql) : IClassFixture<Postg
     [Fact]
     public async Task ThePhoneRegistersReplacesAndRemovesItsPushToken()
     {
-        var (user, _) = await Doctor();
+        var (user, _) = await Staff();
         var tokens = await SignIn(user);
 
         Assert.Equal(HttpStatusCode.NoContent, (await RegisterPush(tokens.Access, PushA)).StatusCode);
@@ -270,7 +270,7 @@ public sealed class NativeSignInTests(PostgresFixture sql) : IClassFixture<Postg
     [Fact]
     public async Task OffboardingRemovesThePushTokenWithTheSessionAndOnlyInItsOwnPractice()
     {
-        var (user, membership) = await Doctor();
+        var (user, membership) = await Staff();
         var first = await SignIn(user);
         await Api(first.Access, HttpMethod.Post, "/v1/me/facility", new { membershipId = membership });
         var tokens = await Read(await Refresh(first.Refresh));
@@ -292,7 +292,7 @@ public sealed class NativeSignInTests(PostgresFixture sql) : IClassFixture<Postg
     [Fact]
     public async Task SigningOutOrRevokingInMyDevicesRemovesThePushToken()
     {
-        var (user, membership) = await Doctor();
+        var (user, membership) = await Staff();
         var first = await SignIn(user);
         await Api(first.Access, HttpMethod.Post, "/v1/me/facility", new { membershipId = membership });
         var tokens = await Read(await Refresh(first.Refresh));
@@ -316,7 +316,7 @@ public sealed class NativeSignInTests(PostgresFixture sql) : IClassFixture<Postg
     [Fact]
     public async Task APhonesTokenFollowsTheLatestSessionAndABrowserHasNone()
     {
-        var (user, _) = await Doctor();
+        var (user, _) = await Staff();
         var first = await SignIn(user);
         await RegisterPush(first.Access, PushA);
         var second = await SignIn(user); // a new sign-in on the same phone (switch user): the same device token, a new session

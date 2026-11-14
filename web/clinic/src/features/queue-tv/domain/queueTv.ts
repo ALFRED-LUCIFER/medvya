@@ -1,11 +1,11 @@
 import { z } from 'zod';
 
 // GET /v1/queue/tv (src/Modules/Scheduling/Medvya.Scheduling.Application/IQueueService.cs). Tokens, rooms, doctor display names
-// and waits only: never a patient's name, initials, MRN or reason.
+// waits and counts only: never a patient's name, initials, MRN or reason.
 export type QueueTv = {
   now: { token: string; room: string | null; doctor: string }[];
-  /** doctor: whose queue the token waits in; a reassigned token keeps its letter (MDV-P1-103). */
-  next: { token: string; waitMinutes: number; doctor: string }[];
+  /** doctor: whose queue the token waits in; a reassigned token keeps its letter. ahead: how many wait before it in that queue (MDV-P1-103). */
+  next: { token: string; waitMinutes: number; doctor: string; ahead: number }[];
 };
 
 /** A display token from the link's fragment: base64url of 16 tenant bytes and 32 random bytes (64 characters). */

@@ -101,9 +101,11 @@ public sealed class QueueTvTests(PostgresFixture sql) : IClassFixture<PostgresFi
         Assert.Equal(["token", "room", "doctor"], now.EnumerateObject().Select(p => p.Name));
         Assert.Equal(("A-01", "Room 3", "Dr. Arjun Rao (synthetic)"), (now.GetProperty("token").GetString(), now.GetProperty("room").GetString(), now.GetProperty("doctor").GetString()));
         var next = json.GetProperty("next").EnumerateArray().ToList();
-        Assert.All(next, n => Assert.Equal(["token", "waitMinutes", "doctor"], n.EnumerateObject().Select(p => p.Name))); // the doctor per token: MDV-P1-103
-        // Dr. Rao is busy with A-01 and sees patients every 20 minutes: A-02 in about 20, A-03 in about 40.
-        Assert.Equal([("A-02", 20), ("A-03", 40)], next.Select(n => (n.GetProperty("token").GetString(), n.GetProperty("waitMinutes").GetInt32())));
+        // The doctor per token and the count ahead in that doctor's queue, a number only (MDV-P1-103).
+        Assert.All(next, n => Assert.Equal(["token", "waitMinutes", "doctor", "ahead"], n.EnumerateObject().Select(p => p.Name)));
+        // Dr. Rao is busy with A-01 and sees patients every 20 minutes: A-02 is next, in about 20; A-03 has one ahead, in about 40.
+        Assert.Equal([("A-02", 20, 0), ("A-03", 40, 1)],
+            next.Select(n => (n.GetProperty("token").GetString(), n.GetProperty("waitMinutes").GetInt32(), n.GetProperty("ahead").GetInt32())));
         foreach (var leak in new[] { "Meera", "Iyer", "Deepak", "000001", "chest", "1972", h.Patient.ToString(), first.Id.ToString() })
             Assert.DoesNotContain(leak, body, StringComparison.OrdinalIgnoreCase);
     }

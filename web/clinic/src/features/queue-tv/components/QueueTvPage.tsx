@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Bell, BellOff, MonitorX, Radio, WifiOff } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
 import { PageHeader } from '@medvya/ui';
-import type { LiveStatus } from '../../front-desk/domain/board';
+import { aheadWords, type LiveStatus } from '../../front-desk/domain/board';
 import type { QueueTv, Unpaired } from '../domain/queueTv';
 
 type Props = {
@@ -21,11 +21,12 @@ type Props = {
 const Token = ({ value, className }: { value: string; className: string }) => <bdi dir="ltr" className={`font-mono font-semibold ${className}`}>{value}</bdi>;
 
 /**
- * P-05 waiting-room TV (Clinical Screens): "Now calling" with token, room and doctor, and "Next" with token and wait. Token
+ * P-05 waiting-room TV (Clinical Screens): "Now calling" with token, room and doctor, and "Next" with token, doctor, the count ahead in
+ * that doctor's queue (MDV-P1-103) and the wait. Token
  * numbers only, never names. Large type for 3 metres (tokens at least 48 px), light on deep navy, nothing animates.
  */
 export default function QueueTvPage(props: Props) {
-  const { t } = useI18n();
+  const i18n = useI18n(), { t } = i18n;
   const { tv } = props;
   return (
     <main className="flex min-h-dvh flex-col gap-6 bg-tv-bg p-6 text-white lg:p-10">
@@ -60,7 +61,7 @@ export default function QueueTvPage(props: Props) {
                   {tv.next.map(n => (
                     <li key={n.token} className="flex items-center justify-between gap-6 rounded-xl bg-brand-950 px-6 py-3">
                       <Token value={n.token} className="text-[48px] leading-tight" />
-                      <span className="text-[30px] text-tv-muted">{[n.doctor, t('queueTv.wait', { minutes: n.waitMinutes })].filter(Boolean).join(' · ')}</span>
+                      <span className="text-[30px] text-tv-muted">{[n.doctor, aheadWords(i18n, n.ahead), t('queueTv.wait', { minutes: n.waitMinutes })].filter(Boolean).join(' · ')}</span>
                     </li>
                   ))}
                 </ul>

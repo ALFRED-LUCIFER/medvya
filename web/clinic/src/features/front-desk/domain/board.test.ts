@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { canReprint, canUndo, endKinds, inToday, groupByColumn, needsRebooking, minutesSince, ageYears, moveError, nextConsultId, nextState, serverNow, visibleColumns, walkInError, type BoardCard } from './board';
+import { loadCatalog, makeI18n } from '@medvya/i18n';
+import { aheadWords, canReprint, canUndo, endKinds, inToday, groupByColumn, needsRebooking, minutesSince, ageYears, moveError, nextConsultId, nextState, serverNow, visibleColumns, walkInError, type BoardCard } from './board';
 
 describe('walk-in (MDV-P1-025)', () => {
   it('tells "no free slot" (choose a doctor to queue with) and "busy" from other failures', () => {
@@ -130,5 +131,13 @@ describe('walk-in doctors (UX-10)', () => {
     expect(inToday({ hours: [{ ...h('09:00', '13:00'), room: null }], unavailable: [{ ...h('00:00', '23:59'), reason: 'Leave', label: null }] })).toBe(false);
     // Away for the morning session only: still in for the afternoon.
     expect(inToday({ hours: [{ ...h('09:00', '13:00'), room: null }, { ...h('16:00', '19:00'), room: null }], unavailable: [{ ...h('09:00', '13:00'), reason: 'Leave', label: null }] })).toBe(true);
+  });
+});
+
+describe('how many are ahead (MDV-P1-103, decision 10)', () => {
+  it('says "Next in line" for the first in the doctor\'s queue and counts the others in words, Arabic dual included', async () => {
+    await loadCatalog('ar');
+    expect([0, 1, 2].map(n => aheadWords(makeI18n('en', 'IN'), n))).toEqual(['Next in line', '1 ahead', '2 ahead']);
+    expect([0, 1, 2, 3].map(n => aheadWords(makeI18n('ar', 'AE'), n))).toEqual(['التالي في الدور', 'قبله مريض واحد', 'قبله مريضان', 'قبله 3 مرضى']);
   });
 });

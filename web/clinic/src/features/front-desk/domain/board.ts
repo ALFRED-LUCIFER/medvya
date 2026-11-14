@@ -1,3 +1,4 @@
+import type { I18n } from '@medvya/i18n';
 import type { ReasonCategory } from '../../schedule/domain/booking';
 import type { AppointmentState, ScheduleColumn, VisitType } from '../../schedule/domain/schedule';
 import type { FollowUpDue } from './followUpDue';
@@ -26,7 +27,10 @@ export type BoardCard = {
   withDoctor?: boolean;
   /** On a Done card: the doctor's follow-up still to book, date and doctor only (MDV-P1-102). */
   followUp?: FollowUpDue | null;
-  /** 1, 2, … in the clinic's queue order while the patient waits (MDV-P1-103): escalations first, then the clinic's rule; null otherwise. */
+  /**
+   * 1, 2, … in the queue of the visit's doctor while the patient waits (MDV-P1-103, decision 10: each doctor has their own sequence):
+   * escalations first, then the clinic's rule; null otherwise. The place minus one is how many wait ahead.
+   */
   queuePlace?: number | null;
 };
 /** leftWithoutBeingSeen: today's patients who left before being seen; they are off the board and never in Done. */
@@ -57,7 +61,10 @@ export const visibleColumns = (steps: VisitSteps, columns: Record<BoardColumn, B
 
 export const isBoardColumn = (state: AppointmentState): state is BoardColumn => (boardColumns as readonly string[]).includes(state);
 
-/** The server's queue order (MDV-P1-103), shared by the doctor's day, the board and the queue display; a card without a place goes after. */
+/**
+ * The server's queue order (MDV-P1-103), shared by the doctor's day, the board and the queue display; a card without a place goes after.
+ * Places count per doctor, so a column of several doctors lists each doctor's next patient first, then each one's second, and so on.
+ */
 export const byQueuePlace = (a: BoardCard, b: BoardCard) =>
   (a.queuePlace ?? Number.MAX_SAFE_INTEGER) - (b.queuePlace ?? Number.MAX_SAFE_INTEGER) || Date.parse(a.since) - Date.parse(b.since);
 const waitingColumns: readonly BoardColumn[] = ['CheckedIn', 'WithNurse', 'ReadyForDoctor'];
@@ -125,7 +132,11 @@ export const endKinds = (state: AppointmentState, canCancel: boolean): EndKind[]
   state === 'CheckedIn' || state === 'ReadyForDoctor' ? (canCancel ? ['left', 'cancel'] : ['left']) : state === 'WithNurse' ? ['left'] : [];
 
 // MDV-P2-046: GET /v1/appointments/{id}/token-slip (IFrontDeskService.TokenSlipAsync). Nothing about the patient, by design.
-export type TokenSlip = { clinicName: string; token: string; doctorName: string; issuedAt: string; timeZone: string };
+// ahead: patients before this one in the doctor's queue when printed (MDV-P1-103); null once the patient is no longer waiting.
+export type TokenSlip = { clinicName: string; token: string; doctorName: string; issuedAt: string; timeZone: string; ahead: number | null };
+
+/** How many wait before a patient in their doctor's queue (decision 10, MDV-P1-103), in words: "Next in line" or "2 ahead". */
+export const aheadWords = ({ t, tCount }: Pick<I18n, 't' | 'tCount'>, ahead: number) => (ahead === 0 ? t('queue.next') : tCount('queue.ahead', ahead));
 /** Reprint is offered on a waiting card with a token; the server refuses a void one (cancelled, left) whatever the client shows. */
 export const canReprint = (card: Pick<BoardCard, 'state' | 'token'>) => card.token !== null && waitingColumns.includes(card.state as BoardColumn);
 /** The slip's print view, opened from Walk-in's result and from a waiting card. Only the opaque visit id is in the address. */

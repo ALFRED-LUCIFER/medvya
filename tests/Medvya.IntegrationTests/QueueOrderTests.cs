@@ -5,6 +5,7 @@ using Medvya.Scheduling.Domain;
 using Medvya.Tenancy.Application;
 using Medvya.Tenancy.Domain;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace Medvya.IntegrationTests;
 
@@ -35,7 +36,9 @@ public sealed class QueueOrderTests(PostgresFixture sql) : IClassFixture<Postgre
     /// The audit's morning (08:00 now): Early booked 10:20 and comes at 09:50; a walk-in comes at 09:58 and is given a later slot;
     /// OnTime booked 10:00 and comes at 10:05. Tokens A-01, A-02, A-03 in that order.
     /// </summary>
-    async Task<(Guid Early, Guid WalkIn, Guid OnTime)> MorningAsync()
+    Task<(Guid Early, Guid WalkIn, Guid OnTime)> MorningAsync() => MorningAsync(h);
+
+    static async Task<(Guid Early, Guid WalkIn, Guid OnTime)> MorningAsync(SchedulingHarness h)
     {
         var onTime = await h.BookAsync(10, 0, h.Patient);
         var early = await h.BookAsync(10, 20, h.SecondPatient);
@@ -130,5 +133,65 @@ public sealed class QueueOrderTests(PostgresFixture sql) : IClassFixture<Postgre
         Assert.Equal(board.Cards.Single(c => c.Id == walkIn).CalendarName, tv.Next.Single(n => n.Token == "A-02").Doctor);
         Assert.All(tv.Next.Where(n => n.Token != "A-02"), n => Assert.Equal(board.Cards.Single(c => c.Id != walkIn && c.Token == n.Token).CalendarName, n.Doctor));
         Assert.NotEqual(tv.Next.Single(n => n.Token == "A-01").Doctor, tv.Next.Single(n => n.Token == "A-02").Doctor);
+    }
+
+    /// <summary>
+    /// Decision 10 of the validation plan: each doctor has their own sequence and the patient is told how many are ahead. Dr. Menon's two
+    /// walk-ins come after Dr. Rao's three patients, yet are 1 and 2 in Dr. Menon's queue; the board's place, the display's count ahead and
+    /// the token slip agree. Reassigned, Dr. Rao's 09:58 walk-in takes her place in Dr. Menon's queue by her arrival.
+    /// SAFETY, tenant isolation: another organisation's morning is put on this clinic's facility and Dr. Rao's calendar ids (a doctor who works
+    /// for both), so only the tenant filter and row-level security keep its patients out of the count. Mutation checks: grouping
+    /// QueueRules.Places by one key for the whole clinic fails; dropping the Scheduling tenant query filter and disabling row-level security on
+    /// Appointments and QueueTokens together fails (either alone does not: the two layers, ADR-012).
+    /// </summary>
+    [Fact]
+    public async Task EachDoctorHasTheirOwnSequenceAndAnotherOrganisationsPatientsNeverCount()
+    {
+        await h.Schedule(h.Admin).SaveTemplateAsync(h.DoctorTemplate() with { CalendarId = h.SecondDoctor });
+        await other.DoctorTemplateAsync();
+        var (early, walkIn, onTime) = await MorningAsync();
+        await MorningAsync(other); // put on our ids after our bookings, so it meets only the queue
+        await using (var admin = new NpgsqlConnection(sql.AdminConnectionString))
+        {
+            await admin.OpenAsync();
+            await using var move = new NpgsqlCommand("""
+                UPDATE scheduling."Appointments" SET "FacilityId" = @facility, "CalendarId" = @doctor WHERE "TenantId" = @tenant;
+                UPDATE scheduling."QueueTokens" SET "FacilityId" = @facility, "CalendarId" = @doctor WHERE "TenantId" = @tenant;
+                """, admin);
+            move.Parameters.AddWithValue("facility", h.Facility);
+            move.Parameters.AddWithValue("doctor", h.Doctor);
+            move.Parameters.AddWithValue("tenant", other.Tenant);
+            Assert.Equal(6, await move.ExecuteNonQueryAsync());
+        }
+        async Task<Guid> MenonWalkInAsync(Guid patient)
+        {
+            h.Clock.Advance(TimeSpan.FromMinutes(1));
+            var visit = await h.Booking(h.Reception).WalkInAsync(new WalkIn
+            {
+                FacilityId = h.Facility, CalendarId = h.SecondDoctor, PatientId = patient, ReasonCategory = ReasonCategory.General, AllowRepeat = true,
+            });
+            await h.FrontDesk(h.Reception).CheckInAsync(visit.Id, new CheckIn());
+            return visit.Id;
+        }
+        var (menon1, menon2) = (await MenonWalkInAsync(h.SecondPatient), await MenonWalkInAsync(h.Patient));
+
+        async Task AssertPlaces(params (Guid Visit, int Place)[] expected)
+        {
+            var board = (await h.FrontDesk(h.Reception).GetBoardAsync(h.Facility)).Cards;
+            var tv = (await h.Get<IQueueService>(h.Reception).TvAsync()).Next.ToDictionary(n => n.Token, n => n.Ahead);
+            foreach (var (visit, place) in expected)
+            {
+                var card = board.Single(c => c.Id == visit);
+                Assert.Equal((visit, place), (visit, card.QueuePlace));
+                Assert.Equal((visit, place - 1), (visit, tv[card.Token!])); // the display: how many ahead
+                Assert.Equal((visit, (int?)(place - 1)), (visit, (await h.FrontDesk(h.Reception).TokenSlipAsync(visit)).Ahead)); // the slip
+            }
+            Assert.Equal(expected.Length, board.Count(c => c.QueuePlace is not null));
+        }
+
+        await AssertPlaces((early, 1), (walkIn, 2), (onTime, 3), (menon1, 1), (menon2, 2));
+
+        await h.FrontDesk(h.Reception).ReassignAsync(walkIn, new ReassignVisit { CalendarId = h.SecondDoctor, Reason = ReassignReason.BalanceWorkload });
+        await AssertPlaces((early, 1), (onTime, 2), (walkIn, 1), (menon1, 2), (menon2, 3)); // 09:58 is before both of Dr. Menon's walk-ins
     }
 }

@@ -29,7 +29,7 @@ const card = (id: string, name: string, time: string, state: string, extra: Part
 });
 const cards = () => [
   card('a1', 'Meera Iyer (synthetic)', '11:00', 'Booked', { reasonCategory: 'ChronicReview', registrationIncomplete: true }),
-  card('a2', 'Farhan Qureshi (synthetic)', '10:20', 'CheckedIn', { since: ist('10:20'), token: 'A-07' }),
+  card('a2', 'Farhan Qureshi (synthetic)', '10:20', 'CheckedIn', { since: ist('10:20'), token: 'A-07', queuePlace: 2 }), // second in Dr. Rao's queue
   card('a3', 'Lakshmi Pillai (synthetic)', '10:40', 'WithNurse', { reasonCategory: 'PostDischarge' }),
   card('a4', 'Vikram Desai (synthetic)', '10:00', 'InConsult', { visitType: 'NewConsultation' }),
   card('a5', 'Rahul Menon (synthetic)', '09:30', 'Billing'),
@@ -105,7 +105,7 @@ test('shows today\'s visits by status with nonclinical tags, in facility time', 
   await expect(meera).not.toContainText('Long-term condition review'); // compact card: no reason or doctor line
   await expect(meera).toContainText('Registration incomplete');
   await expect(cardOf(page, 'Farhan Qureshi (synthetic)')).toContainText('Waiting 12 min');
-  await expect(cardOf(page, 'Farhan Qureshi (synthetic)')).toContainText('Token A-07'); // what the queue TV shows instead of the name
+  await expect(cardOf(page, 'Farhan Qureshi (synthetic)')).toContainText('Token A-07 · 1 ahead'); // what the queue TV shows instead of the name; ahead: MDV-P1-103
   // Each column's action, as designed. Nurse intake is off here, so a checked-in patient goes straight to the doctor (MDV audit UX-05).
   // A waiting card also has its menu (MDV-P1-100).
   await expect(cardOf(page, 'Farhan Qureshi (synthetic)').getByRole('button')).toHaveText(['Ready for doctor', 'More']);
@@ -472,6 +472,7 @@ for (const locale of ['en', 'ar'])
   test(`axe finds no violations on the status line, the card menu and its reason form (${locale})`, async ({ page }) => {
     await open(page, { locale });
     const farhan = cardOf(page, 'Farhan Qureshi (synthetic)');
+    await expect(farhan).toContainText(locale === 'ar' ? 'قبله مريض واحد' : '1 ahead'); // in words, in the doctor's queue (MDV-P1-103)
     await farhan.getByRole('button').first().click(); // a move, so the status line offers Undo
     await expect(page.getByRole('status').filter({ hasText: 'Farhan' })).toBeVisible();
     await page.addScriptTag({ path: axePath });
@@ -535,9 +536,9 @@ for (const locale of ['en', 'ar'])
     await expect(deepak.getByRole('group')).toHaveCount(0);
   });
 
-// MDV-P2-046: the token slip. Reprint sits on a waiting card with a token; the slip names the clinic, token, doctor, date and time and
-// nothing about the patient. The server's field list and the void-token refusal are proven in FrontDeskEndpointTests.
-const slip = { clinicName: 'Iyer Family Clinic · Adyar', token: 'A-07', doctorName: 'Dr. Arjun Rao (synthetic)', issuedAt: ist('10:20'), timeZone: 'Asia/Kolkata' };
+// MDV-P2-046: the token slip. Reprint sits on a waiting card with a token; the slip names the clinic, token, doctor, how many are ahead
+// in that doctor's queue (MDV-P1-103), date and time, and nothing about the patient. The server's field list and the void-token refusal are proven in FrontDeskEndpointTests.
+const slip = { clinicName: 'Iyer Family Clinic · Adyar', token: 'A-07', doctorName: 'Dr. Arjun Rao (synthetic)', issuedAt: ist('10:20'), timeZone: 'Asia/Kolkata', ahead: 2 };
 for (const locale of ['en', 'ar'])
   test(`Reprint opens the same token's slip: clinic, token, doctor and time, no patient details, axe clean (${locale})`, async ({ page }) => {
     const reads: string[] = [];
@@ -554,6 +555,7 @@ for (const locale of ['en', 'ar'])
     await expect(paper).toContainText('A-07');
     await expect(paper).toContainText('Iyer Family Clinic · Adyar');
     await expect(paper).toContainText('Dr. Arjun Rao (synthetic)');
+    await expect(paper).toContainText(locale === 'ar' ? 'قبله مريضان' : '2 ahead'); // the Arabic dual, in words
     await expect(paper).toContainText('10:20'); // issued, in facility time although the device is in New York
     // The test fails if a patient detail is added: no name, MRN, phone or reason.
     for (const leak of ['Farhan', 'Qureshi', 'APT-A2', '+91', 'General', '1972']) await expect(paper).not.toContainText(leak);

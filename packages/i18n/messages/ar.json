@@ -2664,8 +2664,6 @@
   "consult.banner.ageSex": "{age} سنة · {sex}",
   "consult.banner.mrn": "رقم الملف {mrn}",
   "consult.banner.dob": "تاريخ الميلاد {date}",
-  "consult.banner.allergiesNotRecorded": "الحساسية: لم تُسجَّل بعد",
-  "consult.banner.allergies": "الحساسية: {list}",
   "consult.banner.consentGiven": "موافقة العلاج: مُعطاة",
   "consult.banner.consentNotRecorded": "موافقة العلاج: غير مسجّلة",
   "consult.banner.when": "بدأت {date}، {time} · {room}",

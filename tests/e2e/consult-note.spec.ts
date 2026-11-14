@@ -187,6 +187,7 @@ test('sign: confirms what signing means, saves first, then shows the signed note
   await page.getByRole('button', { name: 'Sign note' }).click();
   const dialog = page.getByRole('dialog', { name: 'Sign note for Meera Iyer (synthetic)?' });
   await expect(dialog).toContainText(/000001.* · 12 Mar 1972/); // who it is for, so a signature cannot land on the wrong chart
+  await expect(dialog.locator('[data-slot=allergy-state]')).toHaveText('No known allergies'); // the library AllergyBlock (MDV-P2-060 AC4)
   await expect(dialog).not.toContainText('encounter'); // UX-07: no internal visit id in the dialog
   await expect(dialog).toContainText('I have reviewed every section');
   await expect(dialog).toContainText('permanent and read-only');
@@ -620,6 +621,17 @@ const axeViolations = async (page: Page) => {
     (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations
       .map(v => `${v.id} (${v.nodes.length})`));
 };
+
+// MDV-P2-060 AC4, AC6: the sign dialog repeats the allergy as the library AllergyBlock; axe clean with it open, in both languages.
+for (const locale of ['en', 'ar'])
+  test(`sign: the dialog shows the allergy as AllergyBlock, axe clean (${locale})`, async ({ page }) => {
+    const ar = locale === 'ar';
+    await open(page, { version: 1, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' }, recordingConsent: 'Declined' }, locale);
+    await page.getByRole('button', { name: ar ? 'توقيع الملاحظة' : 'Sign note' }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.locator('[data-slot=allergy-state]')).toHaveText(ar ? 'لا توجد حساسية معروفة' : 'No known allergies');
+    expect(await axeViolations(page)).toEqual([]);
+  });
 
 // MDV-P1-109 AC5: a page that still shows identity as confirmed (stale, or a client that skipped the checklist) gets the server's refusal in words,
 // the banner offers "Confirmed with the patient" again, and once pressed the note signs. Axe clean with the refusal on screen, in both languages.

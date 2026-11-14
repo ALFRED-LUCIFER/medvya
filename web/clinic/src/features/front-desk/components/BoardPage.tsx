@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import type { UseFormReturn } from 'react-hook-form';
 import { CalendarClock, Ellipsis, EyeOff, Printer, Undo2 } from 'lucide-react';
 import { useI18n, type MessageKey } from '@medvya/i18n';
-import { Button, buttonVariants, cn, Card, Dialog, DialogContent, DialogDescription, DialogTitle, EmptyState, FrontDeskTag, PageContainer, PageHeader, PageMessage, SegmentedControl, Skeleton, SkeletonGroup, statusIcons } from '@medvya/ui';
+import { Button, buttonVariants, cn, Card, Dialog, DialogContent, DialogDescription, DialogTitle, EmptyState, FilterChip, FrontDeskTag, PageContainer, PageHeader, PageMessage, SegmentedControl, Skeleton, SkeletonGroup, statusIcons } from '@medvya/ui';
 import { isDeviceZone, type CancelForm } from '../../schedule/domain/changes';
 import CancelReasonFields from '../../schedule/components/CancelReasonFields';
 import QueueTable from './QueueTable';
@@ -286,14 +286,8 @@ function List(props: Props & { board: Board }) {
   return (
     <>
       <div role="group" aria-label={t('board.list.filters')} className="flex flex-wrap gap-2">
-        {statuses.map(c => {
-          const Icon = statusIcons[c];
-          return (
-            <Button key={c} variant={listFilter === c ? 'selected' : 'outline'} aria-pressed={listFilter === c} onClick={() => onListFilter(c)}>
-              <Icon aria-hidden />{t('board.statusTab', { column: t(`board.column.${c}`), count: columns[c].length })}
-            </Button>
-          );
-        })}
+        {statuses.map(c => <FilterChip key={c} on={listFilter === c} icon={statusIcons[c]} onClick={() => onListFilter(c)}
+          label={t('board.statusTab', { column: t(`board.column.${c}`), count: columns[c].length })} />)}
       </div>
       {groups.map(({ state, rows }) => state === 'Done' ? (
         // Folded unless Done is the pressed count; the key opens it afresh when the filter changes.

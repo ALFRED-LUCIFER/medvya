@@ -146,11 +146,14 @@ test('"no known allergies" and "not recorded" read differently', async ({ page }
   const banner = page.getByRole('region', { name: 'Patient Meera Iyer (synthetic)' });
   await expect(banner).toContainText('No known allergies');
   await expect(banner).not.toContainText('not recorded');
+  await expect(page.getByRole('region', { name: 'Allergies', exact: true }).locator('[data-slot=allergy-state]')).toHaveText('No known allergies');
   await page.unroute('**/v1/patients/p-1/chart');
   await page.route('**/v1/patients/p-1/chart', r => r.fulfill({ json: chart({ allergyState: 'NotRecorded', allergies: [] }) }));
   await page.reload();
   await expect(banner).toContainText('Allergies not recorded');
   await expect(banner).not.toContainText('No known allergies');
+  // MDV-P2-060 AC4: the Allergies card says it with the library AllergyBlock too.
+  await expect(page.getByRole('region', { name: 'Allergies', exact: true }).locator('[data-slot=allergy-state]')).toHaveText('Allergies not recorded');
 });
 
 test('an open consultation is one tap away', async ({ page }) => {
@@ -191,6 +194,7 @@ test('MDV-P2-033: the section buttons filter the page, work from the keyboard, a
   await buttons.getByRole('button', { name: 'History' }).focus();
   await page.keyboard.press('Enter');
   await expect(buttons.getByRole('button', { name: 'History' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(buttons.getByRole('button', { name: 'History' }).locator('[data-slot=chip] svg.lucide-check')).toHaveCount(1); // MDV-P2-060
   await expect(page.getByRole('region', { name: 'History' })).toBeVisible();
   for (const hidden of ['Problems', 'Last vitals', 'Results and trends', 'Timeline', 'Chronic care'])
     await expect(page.getByRole('region', { name: hidden, exact: true })).toHaveCount(0);

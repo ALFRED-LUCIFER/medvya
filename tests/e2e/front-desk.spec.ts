@@ -107,6 +107,9 @@ test('shows today\'s visits by status with nonclinical tags, in facility time', 
   await expect(meera).toContainText('Registration incomplete');
   await expect(cardOf(page, 'Farhan Qureshi (synthetic)')).toContainText('Waiting 12 min');
   await expect(cardOf(page, 'Farhan Qureshi (synthetic)')).toContainText('Token A-07 · 1 ahead'); // what the queue TV shows instead of the name; ahead: MDV-P1-103
+  // MDV-P2-060: board tags are the library Tag, a tone beside icon and words.
+  await expect(meera.getByText('Registration incomplete', { exact: true })).toHaveAttribute('data-tone', 'warning');
+  await expect(cardOf(page, 'Farhan Qureshi (synthetic)').getByText('Waiting 12 min', { exact: true })).toHaveAttribute('data-slot', 'tag');
   // Each column's action, as designed. Nurse intake is off here, so a checked-in patient goes straight to the doctor (MDV audit UX-05).
   // A waiting card also has its menu (MDV-P1-100).
   await expect(cardOf(page, 'Farhan Qureshi (synthetic)').getByRole('button')).toHaveText(['Ready for doctor', 'More']);
@@ -796,6 +799,7 @@ test('a status count shows only its group, says it is pressed, and pressing agai
   await expect(booked).toHaveAttribute('aria-pressed', 'false');
   await booked.click();
   await expect(booked).toHaveAttribute('aria-pressed', 'true');
+  await expect(booked.locator('[data-slot=chip] svg.lucide-check')).toHaveCount(1); // a filter chip with a tick when on (MDV-P2-060)
   await expect(group(page, 'Booked')).toBeVisible();
   await expect(group(page, 'Checked in')).toBeHidden();
   await filters(page).getByRole('button', { name: 'Done · 1' }).click(); // done opens when it is the one shown

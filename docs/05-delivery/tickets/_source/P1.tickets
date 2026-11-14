@@ -2706,7 +2706,7 @@ Clinical sign-off: Required before merge: question 7 (section order; prescriptio
 Effort and regression risk: L · High: 13 test files and 79 references; J2 alone has about 60 locators. One change per region, J1 to J6 green on each.
 Deliberately NOT in this ticket: (1) An inline free-text medicine box: the existing Add medicine dialog stays until the free-text allergy rule is closed and a clinician has seen a replacement (ruling 3). (2) The queue rail (its own ticket, after the queue rule). (3) Writing on a phone (phone rule ticket). (4) Any change to section content, required fields, vitals ranges or safety-check text. (5) Merging sign and authorise.
 ac:
-- Given an open consultation with nurse vitals at 1440 by 900 and 1024 by 768, when the page loads, then the first text box starts at or above 200 px
+- Given an open consultation with nurse vitals at 1440 by 900 and 1024 by 768, when the page loads, then the first text box follows directly after the vitals and allergy entry, with no other block in between, and every vitals reading keeps its value, who took it, the source and the time (founder decision, 15 Nov 2026, replacing the 200 px measure)
 - Given the Assessment section, when the doctor adds a coded diagnosis, then the route does not change and the typed note text is still on screen
 - Given 768 by 1024, when the doctor opens the chart from the strip, then the drawer shows allergies, medicines, problems and results in one action and closes back to the same scroll position
 - Given an empty note at 1440 by 900, when the page height is measured, then it is under two viewports

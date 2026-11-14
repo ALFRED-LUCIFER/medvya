@@ -32,8 +32,8 @@ public sealed record NoteView(
 /// </summary>
 public sealed record NoteRecord(IReadOnlyList<VerifiedVital> Vitals, AllergyBanner Allergies, IReadOnlyList<ProblemView> Diagnoses, IReadOnlyList<SignedMedicine> Medicines);
 
-/// <summary>A medicine authorised in the visit before signing, by reference to its prescription version.</summary>
-public sealed record SignedMedicine(string Name, string? Dose, Guid PrescriptionId);
+/// <summary>A medicine authorised in the visit before signing, by reference to its prescription version and that version's printed <see cref="Number"/>.</summary>
+public sealed record SignedMedicine(string Name, string? Dose, Guid PrescriptionId, string Number);
 
 /// <summary>
 /// MDV-P1-104: the chief complaint came from nurse intake (and the doctor may have changed it since). <see cref="ByName"/> and <see cref="At"/>

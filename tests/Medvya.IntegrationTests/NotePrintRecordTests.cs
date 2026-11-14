@@ -2,9 +2,12 @@ using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Medvya.BuildingBlocks.Domain;
 using Medvya.BuildingBlocks.Infrastructure;
 using Medvya.Encounters.Domain;
 using Medvya.Scheduling.Application;
+using Medvya.Tenancy.Domain;
+using Medvya.Tenancy.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -19,7 +22,7 @@ namespace Medvya.IntegrationTests;
 /// the allergy state in words, the diagnoses coded in the visit, the prescription lines authorised before signing), never a later value; a note
 /// signed before the record was kept says so instead of reading today's chart. Synthetic data only.
 /// </summary>
-public sealed class NotePrintRecordTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IAsyncLifetime
+public sealed class NotePrintRecordTests(PostgresFixture sql, AzuriteFixture blobs) : IClassFixture<PostgresFixture>, IClassFixture<AzuriteFixture>, IAsyncLifetime
 {
     static readonly DateTimeOffset T0 = new(2026, 10, 19, 4, 35, 0, TimeSpan.Zero);
     readonly SchedulingHarness h = new(sql);
@@ -33,6 +36,7 @@ public sealed class NotePrintRecordTests(PostgresFixture sql) : IClassFixture<Po
         await h.DoctorTemplateAsync();
         factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b
             .UseSetting("ConnectionStrings:Medvya", sql.ConnectionString)
+            .UseSetting("Storage:ConnectionString", blobs.ConnectionString) // the doctor's signature image
             .ConfigureTestServices(s =>
             {
                 PatientEndpointTests.SignInFromHeaders(s, h.Tenant);
@@ -83,16 +87,20 @@ public sealed class NotePrintRecordTests(PostgresFixture sql) : IClassFixture<Po
         return (await Json(r)).GetProperty("atSigning");
     }
 
-    async Task<string> PdfTextAsync()
+    async Task<string> PdfTextAsync() => string.Join(' ', (await PdfPagesAsync()).Select(p => p.Text));
+
+    async Task<IReadOnlyList<PdfPages.Page>> PdfPagesAsync()
     {
         using var r = await Client(h.Doctor).PostAsync(U($"/v1/encounters/{encounter}/note/pdf"), null);
         Assert.True(r.IsSuccessStatusCode, await r.Content.ReadAsStringAsync());
-        return string.Join(' ', PdfPages.Read(await r.Content.ReadAsByteArrayAsync(), PlainPdf.A4.Margin).Select(p => p.Text));
+        return PdfPages.Read(await r.Content.ReadAsByteArrayAsync(), PlainPdf.A4.Margin);
     }
 
-    Observation Pulse(int value, DateTimeOffset at) => new()
+    Observation Pulse(int value, DateTimeOffset at) => Reading(ObservationCode.Pulse, value, at);
+
+    Observation Reading(ObservationCode code, int value, DateTimeOffset at) => new()
     {
-        Id = Guid.CreateVersion7(), TenantId = h.Tenant, PatientId = h.Patient, FacilityId = h.Facility, AppointmentId = appointment, Code = ObservationCode.Pulse,
+        Id = Guid.CreateVersion7(), TenantId = h.Tenant, PatientId = h.Patient, FacilityId = h.Facility, AppointmentId = appointment, Code = code,
         ValueHundredths = value * 100, TakenAt = at, Source = ChartSource.ClinicianVerified, RecordedBy = h.SecondDoctor, VerifiedBy = h.SecondDoctor, // the harness names doctors, not the nurse
     };
 
@@ -113,6 +121,7 @@ public sealed class NotePrintRecordTests(PostgresFixture sql) : IClassFixture<Po
     [Fact]
     public async Task ThePrintShowsVitalsAllergyAndDiagnosisAsAtSigningWithTheirSourcesNeverALaterValue()
     {
+        var rx = Guid.NewGuid();
         await using (var db = sql.Encounters(h.Tenant))
         {
             db.Observations.Add(Pulse(72, T0));
@@ -121,7 +130,7 @@ public sealed class NotePrintRecordTests(PostgresFixture sql) : IClassFixture<Po
             db.MedicationStatements.Add(new MedicationStatement
             {
                 Id = Guid.CreateVersion7(), TenantId = h.Tenant, PatientId = h.Patient, Name = "Paracetamol (synthetic)", Dose = "500 mg", State = MedicationState.Active,
-                Source = ChartSource.ClinicianVerified, RecordedAt = h.Clock.GetUtcNow(), EncounterId = encounter, PrescriptionId = Guid.NewGuid(),
+                Source = ChartSource.ClinicianVerified, RecordedAt = h.Clock.GetUtcNow(), EncounterId = encounter, PrescriptionId = rx,
             });
             // A replaced or cancelled prescription version's line is stopped, never printed as prescribed.
             db.MedicationStatements.Add(new MedicationStatement
@@ -151,10 +160,13 @@ public sealed class NotePrintRecordTests(PostgresFixture sql) : IClassFixture<Po
         Assert.Equal("Penicillin (synthetic)", Assert.Single(record.GetProperty("allergies").GetProperty("allergies").EnumerateArray()).GetProperty("substance").GetString());
         var diagnosis = Assert.Single(record.GetProperty("diagnoses").EnumerateArray());
         Assert.Equal(("J06.9", "Verified", "ClinicianVerified"), (diagnosis.GetProperty("icd10Code").GetString(), diagnosis.GetProperty("verification").GetString(), diagnosis.GetProperty("source").GetString()));
-        Assert.Equal("Paracetamol (synthetic)", Assert.Single(record.GetProperty("medicines").EnumerateArray()).GetProperty("name").GetString());
+        var medicine = Assert.Single(record.GetProperty("medicines").EnumerateArray());
+        Assert.Equal(("Paracetamol (synthetic)", RxNumber.Of(rx)), (medicine.GetProperty("name").GetString(), medicine.GetProperty("number").GetString()));
+        Assert.Equal("Active", diagnosis.GetProperty("status").GetString());
 
         var pdf = await PdfTextAsync();
-        foreach (var expected in new[] { "Recorded at signing", "Pulse 72 /min", "nurse intake, verified", "Penicillin (synthetic) (Rash) · Verified · Clinician verified", "J06.9", "Paracetamol (synthetic) 500 mg · prescribed at this visit" })
+        foreach (var expected in new[] { "Recorded at signing", "Pulse 72 /min", "nurse intake, verified", "Penicillin (synthetic) (Rash) · Verified · Clinician verified", "J06.9 · Active · Verified",
+            $"Paracetamol (synthetic) 500 mg · prescribed at this visit · Rx {RxNumber.Of(rx)}", "Weight: not recorded at this visit." }) // Q9: status, Rx number, weight
             Assert.Contains(expected, pdf, StringComparison.Ordinal);
         foreach (var later in new[] { "Pulse 88", "Sulfonamide", "I10", "Ibuprofen" })
             Assert.DoesNotContain(later, pdf, StringComparison.Ordinal);
@@ -188,7 +200,7 @@ public sealed class NotePrintRecordTests(PostgresFixture sql) : IClassFixture<Po
         Assert.Empty(record.GetProperty("vitals").EnumerateArray());
 
         var pdf = await PdfTextAsync();
-        foreach (var expected in new[] { "No known allergies", "No verified vitals for this visit.", "No problems recorded." })
+        foreach (var expected in new[] { "No known allergies", "No verified vitals for this visit.", "Weight: not recorded at this visit.", "No problems recorded." })
             Assert.Contains(expected, pdf, StringComparison.Ordinal);
         Assert.DoesNotContain("Penicillin", pdf, StringComparison.Ordinal);
     }
@@ -220,5 +232,32 @@ public sealed class NotePrintRecordTests(PostgresFixture sql) : IClassFixture<Po
         Assert.Contains("This note was signed before vitals, allergies and diagnoses were kept with the signature", pdf, StringComparison.Ordinal);
         foreach (var live in new[] { "Pulse 72", "No known allergies", "Allergies not recorded" })
             Assert.DoesNotContain(live, pdf, StringComparison.Ordinal);
+    }
+
+    // Q9 (founder, 14 Nov): the signer's uploaded signature image sits once, under version 1's signed-by line; none uploaded, no image.
+    [Fact]
+    public async Task ThePdfCarriesTheSignersSignatureImageOnlyWhenUploaded()
+    {
+        await using (var db = sql.Encounters(h.Tenant))
+        {
+            db.Observations.Add(Reading(ObservationCode.Weight, 70, T0));
+            await db.SaveChangesAsync();
+        }
+        await SignAsync();
+        var unsigned = Assert.Single(await PdfPagesAsync());
+        Assert.Equal(0, unsigned.Images);
+        Assert.Contains("Weight 70 kg", unsigned.Text, StringComparison.Ordinal); // a weight taken is printed, so "not recorded" is not
+        Assert.DoesNotContain("Weight: not recorded", unsigned.Text, StringComparison.Ordinal);
+
+        var key = $"{h.Tenant}/signature/{Guid.NewGuid()}";
+        await new BlobLogoStore(blobs.ConnectionString).PutAsync(key, TestImages.Make(8, 2, SkiaSharp.SKEncodedImageFormat.Png), "image/png");
+        await using (var db = sql.Context(h.Tenant))
+        {
+            var membership = await db.Memberships.SingleAsync(m => m.UserId == h.Doctor && m.FacilityId == h.Facility);
+            db.DoctorProfiles.Add(new DoctorProfile { MembershipId = membership.Id, TenantId = h.Tenant, FullName = "Dr. Arjun Rao (synthetic)", Qualifications = "MBBS", SignatureKey = key });
+            await db.SaveChangesAsync();
+        }
+        var page = Assert.Single(await PdfPagesAsync());
+        Assert.Equal(1, page.Images);
     }
 }

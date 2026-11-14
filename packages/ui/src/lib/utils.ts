@@ -15,3 +15,9 @@ export const scrollContainer = (el: HTMLElement): HTMLElement => {
   for (let p = el.parentElement; p; p = p.parentElement) if (/(auto|scroll)/.test(getComputedStyle(p).overflowY)) return p;
   return document.documentElement;
 };
+
+/** In a fixed layer (a sheet, dialog or popover): scrolling the page never moves it, so a focus scroll must leave the page alone (MDV-P1-094 AC3). */
+export const inFixedLayer = (el: HTMLElement): boolean => {
+  for (let p: HTMLElement | null = el; p; p = p.parentElement) if (getComputedStyle(p).position === "fixed") return true;
+  return false;
+};

@@ -40,12 +40,12 @@ public static class PlainPdf
     }
 
     /// <summary>
-    /// Header, body and footer on every page; <paramref name="logo"/> above the header on every page; <paramref name="signature"/> right after the body,
-    /// then <paramref name="qr"/>, the QR code's rows ('1' dark). Images are PNG or JPEG, scaled to fit their height.
+    /// Header, body and footer on every page; <paramref name="logo"/> above the header on every page; <paramref name="signature"/> right after the body
+    /// (or after the body line numbered <paramref name="signatureAfter"/>), then <paramref name="qr"/>, the QR code's rows ('1' dark). Images are PNG or JPEG, scaled to fit their height.
     /// </summary>
     /// <exception cref="PdfUnsupportedTextException"/>
     public static byte[] Write(IReadOnlyList<string> header, IReadOnlyList<(string Text, bool Bold)> body, Func<int, int, string> footer, Paper? paper = null,
-        IReadOnlyList<string>? qr = null, byte[]? logo = null, byte[]? signature = null)
+        IReadOnlyList<string>? qr = null, byte[]? logo = null, byte[]? signature = null, int? signatureAfter = null)
     {
         var p = paper ?? A4;
         var document = Document.Create(d => d.Page(page =>
@@ -61,10 +61,14 @@ public static class PlainPdf
             });
             page.Content().Column(c =>
             {
-                foreach (var (text, bold) in body)
-                    if (text.Length == 0) c.Item().Height(FontSize);
-                    else Line(c, text, bold);
-                if (signature is not null) c.Item().Height(SignatureHeight).AlignLeft().Image(signature).FitHeight();
+                var signAt = signatureAfter ?? body.Count - 1;
+                for (var i = 0; i < body.Count; i++)
+                {
+                    if (body[i].Text.Length == 0) c.Item().Height(FontSize);
+                    else Line(c, body[i].Text, body[i].Bold);
+                    if (i == signAt && signature is not null) c.Item().Height(SignatureHeight).AlignLeft().Image(signature).FitHeight();
+                }
+                if (body.Count == 0 && signature is not null) c.Item().Height(SignatureHeight).AlignLeft().Image(signature).FitHeight();
                 if (qr is { Count: > 0 }) c.Item().PaddingTop(FontSize).Width(qr.Count * Module).Height(qr.Count * Module).Svg(Svg(qr));
             });
             page.Footer().Dynamic(new Footer(footer));

@@ -216,8 +216,10 @@ public sealed class ConsultNoteService(
             ?? throw new InvalidOperationException("The encounter's patient was not found.");
         var signers = await SignersAsync(encounter.FacilityId, [.. versions.Select(v => v.SignedBy).Distinct()], cancellationToken);
         var facility = await facilities.FindAsync(encounter.FacilityId, cancellationToken) ?? throw new InvalidOperationException("The encounter's facility was not found.");
+        var images = await facilities.PrintImagesAsync(versions[0].SignedBy, encounter.FacilityId, cancellationToken);
         var content = SignedNotePdfDocument.Render(patient, facility.Name, TimeZoneInfo.FindSystemTimeZoneById(facility.TimeZone),
-            NoteTemplates.Find(note.TemplateKey, note.TemplateVersion)!, [.. versions.Select(v => new SignedNotePdfDocument.Version(v, signers[v.SignedBy].Name, signers[v.SignedBy].Licence))]);
+            NoteTemplates.Find(note.TemplateKey, note.TemplateVersion)!, [.. versions.Select(v => new SignedNotePdfDocument.Version(v, signers[v.SignedBy].Name, signers[v.SignedBy].Licence))],
+            images.Signature);
         var pdf = new SignedNotePdf
         {
             Id = Guid.CreateVersion7(), TenantId = TenantId, NoteId = note.Id, VersionNo = versions[^1].VersionNo, Content = content,
@@ -405,7 +407,7 @@ public sealed class ConsultNoteService(
         new(r.Allergies.Count > 0 ? AllergyState.Listed : r.AllergiesRecorded ? AllergyState.NoKnownAllergies : AllergyState.NotRecorded,
             [.. r.Allergies.Select(a => new AllergyView(a.Substance, a.Reaction, a.Status, a.Source))]),
         [.. r.Diagnoses.Select(d => new ProblemView(d.Icd10Code, d.Description, d.Verification, d.OnsetOn, d.Source, d.Status))],
-        [.. r.Medicines.Select(m => new SignedMedicine(m.Name, m.Dose, m.PrescriptionId))]);
+        [.. r.Medicines.Select(m => new SignedMedicine(m.Name, m.Dose, m.PrescriptionId, RxNumber.Of(m.PrescriptionId)))]);
 
     /// <summary>Version 1 is the signature; every later version is an addendum, numbered with the version it follows.</summary>
     static NoteView View(ConsultNote n, IReadOnlyList<SignedNoteVersion>? versions = null, IReadOnlyDictionary<Guid, (string Name, string? Licence)>? signers = null)

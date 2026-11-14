@@ -32,7 +32,7 @@ public interface IFacilityDirectory
     /// <summary>The same for several users in one go; users without a profile at this facility are left out.</summary>
     Task<IReadOnlyDictionary<Guid, PrescriberInfo>> PrescribersAsync(Guid facilityId, IReadOnlyCollection<Guid> userIds, CancellationToken cancellationToken = default);
 
-    /// <summary>The images a printed prescription carries: the practice logo and this doctor's signature at this facility.</summary>
+    /// <summary>The images a printed prescription (and a signed note's PDF) carries: the practice logo and this doctor's signature at this facility.</summary>
     Task<PrintImages> PrintImagesAsync(Guid userId, Guid facilityId, CancellationToken cancellationToken = default);
 
     /// <summary>Holidays of the facility between two facility-local dates (inclusive), name by date. Bookings on these dates are refused (MDV-P1-005).</summary>

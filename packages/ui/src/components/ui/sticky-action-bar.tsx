@@ -1,5 +1,5 @@
 import * as React from "react"
-import { cn, scrollContainer } from "#lib/utils"
+import { cn, inFixedLayer, scrollContainer } from "#lib/utils"
 
 /**
  * The commit footer (MDV-P1-082): put it last in the page flow. It is part of the layout, never an overlay: it reserves its own space
@@ -18,7 +18,7 @@ function StickyActionBar({ status, className, children, ...props }: React.Compon
     // Chromium skips the focus scroll when the element is inside the viewport, even if it is under the bar; scroll it clear (honours the padding).
     const onFocus = (e: FocusEvent) => {
       const target = e.target as HTMLElement
-      if (el.contains(target) || !(target instanceof HTMLElement)) return
+      if (el.contains(target) || !(target instanceof HTMLElement) || inFixedLayer(target)) return
       const t = target.getBoundingClientRect(), b = el.getBoundingClientRect()
       if (t.bottom > b.top && t.top < b.bottom) target.scrollIntoView({ block: "nearest" })
     }

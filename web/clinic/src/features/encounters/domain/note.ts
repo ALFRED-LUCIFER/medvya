@@ -46,7 +46,7 @@ export type NoteView = {
 /** What the visit record held when the note was signed (MDV-P2-049): never today's chart. A medicine is a line of a prescription authorised before signing. */
 export type NoteRecord = {
   vitals: VerifiedVital[]; allergies: { state: AllergyState; allergies: Allergy[] }; diagnoses: Problem[];
-  medicines: { name: string; dose: string | null; prescriptionId: string }[];
+  medicines: { name: string; dose: string | null; prescriptionId: string; number: string }[];
 };
 /** What an autosave sends besides the version: the template, the whole note (a section left out is cleared) and the recording consent. */
 export type NoteDraft = { templateKey: string; sections: NoteSections; recordingConsent: RecordingConsent | null };

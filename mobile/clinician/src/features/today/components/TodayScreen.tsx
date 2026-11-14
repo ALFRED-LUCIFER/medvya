@@ -1,4 +1,4 @@
-import { useI18n, type MessageKey } from '@medvya/i18n';
+import { ltr, useI18n, type MessageKey } from '@medvya/i18n';
 import { AppHeader, Avatar, Button, Card, Chip, ListRow, Loading, Screen, Section, Stat, StateMessage, Text, type IconName, type Tone } from '@medvya/ui-native';
 import { theme } from '@medvya/tokens';
 import { statuses, type Status } from '@medvya/tokens/status';
@@ -61,7 +61,7 @@ export function TodayScreen(vm: Props) {
               <ListRow
                 title={q.name}
                 subtitle={t('mobile.today.queueLine', { age: q.age, sex: t(`mobile.sex.${q.sex}`), note: q.note })}
-                leading={<Text variant="caption" style={styles.token}>{q.token}</Text>}
+                leading={<Text variant="caption" style={styles.token}>{ltr(q.token)}</Text>}
                 chips={[
                   { label: t(queueLook(q.status).label), tone: queueLook(q.status).tone, icon: queueLook(q.status).native },
                   ...(q.viaApp ? [{ label: t('mobile.today.viaApp'), tone: 'brand' as const, icon: 'smartphone' as const }] : []),
@@ -84,5 +84,5 @@ const styles = StyleSheet.create({
   list: { paddingVertical: 4, gap: 0 },
   rowWrap: { paddingVertical: 2 },
   divider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.color.line },
-  token: { width: 44, fontVariant: ['tabular-nums'], fontWeight: '700', color: theme.color.brand700, writingDirection: 'ltr' },
+  token: { width: 44, fontVariant: ['tabular-nums'], fontWeight: '700', color: theme.color.brand700 },
 });

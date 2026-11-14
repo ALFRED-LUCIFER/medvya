@@ -2462,7 +2462,7 @@
   "mobile.today.viaApp": "عبر التطبيق",
   "mobile.patients.search": "البحث عن مريض",
   "mobile.patients.searchHint": "الاسم، أو آخر 4 أرقام من الهاتف أو رقم الملف",
-  "mobile.patients.line": "{age} {sex} · ••{last4}",
+  "mobile.patients.line": "{age} {sex} · {last4}",
   "mobile.patients.none": "لم يُعثر على مريض",
   "mobile.patients.noneHint": "تحقّق من الإملاء أو جرّب آخر 4 أرقام من الهاتف.",
   "mobile.patients.flag.allergy": "حساسية",

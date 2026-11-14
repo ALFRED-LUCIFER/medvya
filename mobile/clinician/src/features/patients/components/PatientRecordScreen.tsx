@@ -28,7 +28,7 @@ export function PatientRecordScreen(vm: Props) {
         <Avatar initials={r.initials} size={56} />
         <View style={styles.flex}>
           <Text variant="title">{t('mobile.record.nameLine', { name: r.name, age: r.age, sex: t(`mobile.sex.${r.sex}`) })}</Text>
-          <Text variant="caption">{t('mobile.record.idLine', { mrn: ltr(`••${r.mrnLast4}`), dob: formatDate(new Date(`${r.dateOfBirth}T12:00:00Z`), 'UTC') })}</Text>
+          <Text variant="caption">{t('mobile.record.idLine', { mrn: ltr(`••${r.mrnLast4}`), dob: ltr(formatDate(new Date(`${r.dateOfBirth}T12:00:00Z`), 'UTC')) })}</Text>
         </View>
       </View>
 

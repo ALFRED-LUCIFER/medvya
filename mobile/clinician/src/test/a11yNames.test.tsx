@@ -1,3 +1,4 @@
+import { ltr } from '@medvya/i18n';
 import { Icon } from '@medvya/ui-native';
 import { render, screen } from '@testing-library/react-native';
 import { cast } from '../dev/cast';
@@ -11,7 +12,7 @@ const noop = () => {};
 
 it('puts the allergy and critical flags in the patient row names', async () => {
   await renderApp(<PatientsScreen session={session} query="" onQuery={noop} patients={cast.patients} loading={false} error={null} onOpenAccount={noop} onOpenPatient={noop} />);
-  expect(screen.getByRole('button', { name: 'Meera Iyer, 54 F · ••4471, Allergy' })).toBeOnTheScreen();
+  expect(screen.getByRole('button', { name: `Meera Iyer, 54 F · ${ltr('••4471')}, Allergy` })).toBeOnTheScreen();
   expect(screen.getByRole('button', { name: /^Rahul Menon, .*, Critical$/ })).toBeOnTheScreen();
 });
 

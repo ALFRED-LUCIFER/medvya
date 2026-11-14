@@ -2585,7 +2585,7 @@
   "mobile.profile.proxyUntil": "يمكنه حجز الزيارات وقراءة الملخصات نيابةً عنك · حتى {date}",
   "mobile.profile.notLinked": "غير مرتبط",
   "mobile.profile.choices": "اختياراتك",
-  "mobile.profile.choicesNote": "غيّرها في أي وقت. الرفض لا يغيّر رعايتك أبدًا.",
+  "mobile.profile.choicesNote": "لتغيير أي خيار، اطلب ذلك من عيادتك. الرفض لا يغيّر رعايتك أبدًا.",
   "mobile.profile.choice.reminders": "تذكيرات المواعيد",
   "mobile.profile.choice.sharing": "مشاركة السجلات مع مستشفيات أخرى",
   "mobile.profile.choice.recording": "السماح بتسجيل الزيارة",

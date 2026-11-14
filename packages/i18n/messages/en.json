@@ -2586,7 +2586,7 @@
   "mobile.profile.proxyUntil": "Can book visits and read summaries for you · until {date}",
   "mobile.profile.notLinked": "Not linked",
   "mobile.profile.choices": "Your choices",
-  "mobile.profile.choicesNote": "Change any time. Saying no never changes your care.",
+  "mobile.profile.choicesNote": "To change a choice, ask your clinic. Saying no never changes your care.",
   "mobile.profile.choice.reminders": "Appointment reminders",
   "mobile.profile.choice.sharing": "Share records with other hospitals",
   "mobile.profile.choice.recording": "Allow visit recording",

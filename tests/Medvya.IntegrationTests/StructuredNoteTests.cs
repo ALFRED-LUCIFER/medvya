@@ -41,6 +41,9 @@ public sealed class StructuredNoteTests(PostgresFixture sql) : IClassFixture<Pos
         await h.FrontDesk(h.Reception).CheckInAsync(visit.Id, new CheckIn());
         using var started = await Client().PostAsJsonAsync(U("/v1/encounters"), new { appointmentId = visit.Id });
         encounter = (await Json(started)).GetProperty("id").GetGuid();
+        // Signing needs identity confirmed with the patient (MDV-P1-109).
+        using var confirmed = await Client().PostAsync(U($"/v1/encounters/{encounter}/identity-confirmation"), null);
+        Assert.True(confirmed.IsSuccessStatusCode);
     }
 
     public async Task DisposeAsync()

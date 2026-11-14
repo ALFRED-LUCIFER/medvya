@@ -148,6 +148,8 @@ export function useNoteController(encounterId: string, canSign: boolean, timeZon
       if (failure.kind === 'signed') void queryClient.invalidateQueries({ queryKey: ['note', encounterId] });
       else if (failure.kind === 'stale' && templateKey) saver.markStale({ templateKey, sections: form.getValues('sections'), recordingConsent: consent });
       else if (failure.kind === 'unreviewed') void queryClient.invalidateQueries({ queryKey: ['note', encounterId] }); // the checklist shows what the server holds
+      // MDV-P1-109: a page that thought identity was confirmed reads the encounter again, so the banner offers "Confirmed with the patient".
+      else if (failure.kind === 'identity') void queryClient.invalidateQueries({ queryKey: ['encounter', encounterId] });
       else if (failure.kind === 'blank' && template) { failure.sections = inTemplateOrder(template, failure.sections); form.setFocus(`sections.${failure.sections[0]!}`); }
       setSignProblem(failure.kind === 'signed' || failure.kind === 'stale' ? null : failure);
       if (failure.kind === 'reauth') {
@@ -210,7 +212,9 @@ export function useNoteController(encounterId: string, canSign: boolean, timeZon
     canSign: canSign && !!held && held.status === 'Draft',
     signature: held?.signature ?? null,
     signAsName: held?.signAsName ?? null,
-    confirming, signing, signProblem, signResume,
+    confirming, signing, signResume,
+    // The identity refusal is said until the doctor confirms; then the checklist shows it done and Sign is offered again.
+    signProblem: signProblem?.kind === 'identity' && banner?.encounter.identityConfirmedAt ? null : signProblem,
     onRequestSign: requestSign,
     onCancelSign: () => setConfirming(false),
     onConfirmSign: () => void confirmSign(),

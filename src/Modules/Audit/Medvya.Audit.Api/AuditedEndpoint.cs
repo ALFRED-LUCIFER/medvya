@@ -165,6 +165,7 @@ public static class AuditedEndpoint
             ActorUserId = services.GetRequiredService<ICurrentUser>().UserId,
             Action = metadata.Action,
             ResourceType = metadata.ResourceType,
+            ResourceId = http.Items["audit.resource"] as Guid?, // an endpoint's error mapping may name the record it refused (ids only)
             PatientId = patientId,
             Purpose = metadata.Purpose,
             Outcome = outcome,

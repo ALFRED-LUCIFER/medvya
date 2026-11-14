@@ -102,6 +102,13 @@ public static class NoteEndpoints
         {
             return Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "Confirm your identity to sign", extensions: new Dictionary<string, object?> { ["code"] = "reauth_required" });
         }
+        catch (IdentityNotConfirmedException e)
+        {
+            // The audit filter's Rejected row carries the code and the encounter; nothing about the patient or the note.
+            (context.HttpContext.Items["audit.detail"], context.HttpContext.Items["audit.resource"]) = ("identity_not_confirmed", e.EncounterId);
+            return Results.Problem(statusCode: StatusCodes.Status409Conflict, title: "Confirm identity with the patient before signing",
+                extensions: new Dictionary<string, object?> { ["code"] = "identity_not_confirmed" });
+        }
         catch (StaleNoteException e)
         {
             return Results.Problem(statusCode: StatusCodes.Status409Conflict, title: "The note changed since it was read",

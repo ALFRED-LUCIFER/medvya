@@ -66,6 +66,8 @@ describe('sign failures (MDV-P2-012)', () => {
   it('maps conflicts and blank required sections', () => {
     expect(signFailure(409, { code: 'stale_note', currentVersion: 3 })).toEqual({ kind: 'stale' });
     expect(signFailure(409, { code: 'note_signed' })).toEqual({ kind: 'signed' });
+    expect(signFailure(409, { code: 'identity_not_confirmed' })).toEqual({ kind: 'identity' });
+    expect(signFailure(409, { code: 'something_else' })).toEqual({ kind: 'failed' });
     expect(signFailure(400, { errors: { 'sections.plan': ['required'], 'sections.assessment': ['required'] } })).toEqual({ kind: 'blank', sections: ['plan', 'assessment'] });
     expect(signFailure(400, { errors: { body: ['required'] } })).toEqual({ kind: 'failed' });
     expect(signFailure(500, undefined)).toEqual({ kind: 'failed' });

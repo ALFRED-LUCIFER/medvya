@@ -117,6 +117,8 @@ public sealed class ConsultNoteService(
         var note = await db.ConsultNotes.SingleOrDefaultAsync(n => n.EncounterId == encounterId, cancellationToken);
         if (note?.Status == NoteStatus.Signed) return await ViewAsync(note, cancellationToken); // a double click or retry: nothing new is written
         if (command.BaseVersion != (note?.Version ?? 0)) throw new StaleNoteException(note?.Version ?? 0);
+        // MDV-P1-109: the checklist's identity item, held by the server too. Remove it and SignNoteTests.SigningNeedsIdentityConfirmedWithThePatient fails.
+        if (encounter.IdentityConfirmedAt is null) throw new IdentityNotConfirmedException(encounterId);
 
         var template = note is null ? NoteTemplates.Latest(NoteTemplates.Default) : NoteTemplates.Find(note.TemplateKey, note.TemplateVersion);
         var blanks = template!.Sections.Where(s => s.Required && string.IsNullOrWhiteSpace(note?.Sections.GetValueOrDefault(s.Id))).Select(s => ($"sections.{s.Id}", "required")).ToList();

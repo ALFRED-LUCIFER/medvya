@@ -265,11 +265,11 @@ test('a read-only role sees the board without queue actions; as a doctor it only
 
 test('empty, no access, failure and offline each say so', async ({ page, context }) => {
   await open(page, { empty: true });
-  await expect(page.getByRole('alert').filter({ hasText: 'No visits today yet' })).toBeVisible();
+  await expect(page.getByRole('main').getByText('No visits today yet')).toBeVisible(); // an empty state, not an alert (MDV-P2-059)
 
   await page.unrouteAll({ behavior: 'ignoreErrors' });
   const forbidden = await open(page, { status: 403 });
-  await expect(page.getByRole('alert').filter({ hasText: 'You don’t have access to this facility.' })).toBeVisible();
+  await expect(page.getByRole('main').getByText('You don’t have access to this facility.')).toBeVisible();
   expect(forbidden.boards).toBe(1); // not retried
 
   await page.unrouteAll({ behavior: 'ignoreErrors' });
@@ -519,7 +519,7 @@ test.describe('with motion allowed', () => {
     hub.push('BoardChanged', [{ appointmentId: 'a3', state: 'ReadyForDoctor', changedAt: now }]);
     const lakshmi = column(page, 'Ready for doctor').getByRole('article', { name: 'Lakshmi Pillai (synthetic)' });
     await expect(lakshmi.getByText('Updated', { exact: true })).toBeVisible();
-    const look = () => lakshmi.evaluate(el => { const s = getComputedStyle(el), r = el.getBoundingClientRect(); return { animation: s.animationName, transform: s.transform, box: [r.x, r.y, r.width, r.height] }; });
+    const look = () => lakshmi.locator('[data-slot=card]').evaluate(el => { const s = getComputedStyle(el), r = el.getBoundingClientRect(); return { animation: s.animationName, transform: s.transform, box: [r.x, r.y, r.width, r.height] }; });
     const start = await look();
     expect(start.animation).toBe('updated');
     await page.waitForTimeout(600); // mid-fade

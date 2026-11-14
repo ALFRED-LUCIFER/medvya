@@ -1,7 +1,7 @@
 import type { FormEventHandler } from 'react';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 import { useI18n } from '@medvya/i18n';
-import { Button, Switch } from '@medvya/ui';
+import { Button, Card, Switch } from '@medvya/ui';
 import { templateNameKey, type NoteTemplate, type TemplateChoiceForm } from '../domain/note';
 
 type Props = {
@@ -16,7 +16,7 @@ export default function NoteTemplateChoice(p: Props) {
   if (p.loading) return <p role="status">{t('noteEditor.loading')}</p>;
   if (p.loadFailed) return <p role="alert" className="font-bold text-danger-700">{t('noteEditor.loadFailed')}</p>;
   return (
-    <details className="rounded-xl border bg-card p-4">
+    <Card><details>
       <summary className="min-h-11 cursor-pointer text-lg font-extrabold">{t('noteTemplates.choice.title')}</summary>
       <form noValidate onSubmit={p.onSubmit} className="mt-3 flex flex-col gap-3">
         <p className="text-sm text-muted-foreground">{t('noteTemplates.choice.intro')}</p>
@@ -40,6 +40,6 @@ export default function NoteTemplateChoice(p: Props) {
           {p.saveFailed && <span role="alert" className="font-bold text-danger-700">{t('noteTemplates.choice.saveFailed')}</span>}
         </div>
       </form>
-    </details>
+    </details></Card>
   );
 }

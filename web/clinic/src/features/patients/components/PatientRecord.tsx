@@ -2,13 +2,12 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { ArrowLeft, ClipboardList, Eye, TriangleAlert } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, cn, PageContainer, PatientBanner } from '@medvya/ui';
+import { Button, buttonVariants, Card, cn, PageContainer, PageHeader, PageMessage, PatientBanner } from '@medvya/ui';
 import { addressLines, missingParts, type ContactView, type PatientDetails, type RevealedIdentifiers } from '../domain/directory';
 import { consentPolicyVersion, genderIdentities, regionKey } from '../../registration/domain/registration';
 import type { MergeHistoryEntry, Refusal } from '../../merge/domain/merge';
 import { PatientPicker, type PatientSearchView } from '../../schedule/components/BookingPanel';
 import { consentRows, stateOf, type PatientConsents } from '../domain/consents';
-import PatientsMessage from './PatientsMessage';
 
 type Props = {
   patient: PatientDetails | null;
@@ -60,10 +59,11 @@ export default function PatientRecord(props: Props) {
       <PageContainer width="reading">
         {back}
         {live}
-        {state === 'loading' ? <PatientsMessage pageHeading title={t('patients.record.loading')} />
-          : state === 'forbidden' ? <PatientsMessage pageHeading title={t('err.403')} body={t('patients.forbidden.body')} />
-          : state === 'notFound' ? <PatientsMessage pageHeading title={t('patients.record.notFound.title')} body={t('patients.record.notFound.body')} />
-          : <PatientsMessage pageHeading title={t('patients.error.title')} body={t('patients.error.body')} action={{ label: t('patients.retry'), onClick: onRetry }} />}
+        {/* The title is the page's one h1; the message is not a live region, as the status line above already announces the change. */}
+        <PageHeader title={t(state === 'loading' ? 'patients.record.loading' : state === 'forbidden' ? 'err.403' : state === 'notFound' ? 'patients.record.notFound.title' : 'patients.error.title')} />
+        {state === 'forbidden' ? <PageMessage kind="denied">{t('patients.forbidden.body')}</PageMessage>
+          : state === 'notFound' ? <PageMessage kind="error" role={undefined}>{t('patients.record.notFound.body')}</PageMessage>
+          : state !== 'loading' && <PageMessage kind="error" role={undefined} action={<Button variant="outline" onClick={onRetry}>{t('patients.retry')}</Button>}>{t('patients.error.body')}</PageMessage>}
       </PageContainer>
     );
 
@@ -107,11 +107,11 @@ export default function PatientRecord(props: Props) {
 
       {p.status === 'Incomplete' && props.completePath && (
         // The desk's completion task (MDV-P1-015): what quick registration left out, closed once address and payer exist.
-        <section aria-labelledby="completion-task" className="flex flex-col items-start gap-2 rounded-xl border bg-card p-4 shadow-[inset_4px_0_0_var(--color-warning-700)] rtl:shadow-[inset_-4px_0_0_var(--color-warning-700)]">
-          <h2 id="completion-task" className="flex items-center gap-2 font-extrabold"><ClipboardList className="size-5 text-warning-700" aria-hidden />{t('patients.completion.title')}</h2>
-          <p>{t('patients.completion.missing', { items: new Intl.ListFormat([locale], { type: 'conjunction' }).format(missingParts(p).map(m => t(`patients.completion.item.${m}`))) })}</p>
+        <Card className="items-start shadow-[inset_4px_0_0_var(--color-warning-700)] rtl:shadow-[inset_-4px_0_0_var(--color-warning-700)]"
+          title={<span className="flex items-center gap-2"><ClipboardList className="size-5 text-warning-700" aria-hidden />{t('patients.completion.title')}</span>}
+          intro={t('patients.completion.missing', { items: new Intl.ListFormat([locale], { type: 'conjunction' }).format(missingParts(p).map(m => t(`patients.completion.item.${m}`))) })}>
           <Link to={props.completePath} className={buttonVariants()}>{t('patients.completion.action')}</Link>
-        </section>
+        </Card>
       )}
 
       <Section title={t('patients.record.identity')}>
@@ -158,9 +158,7 @@ export default function PatientRecord(props: Props) {
         </> : <Detail label={t('patients.record.payerKind')}>{t('patients.record.payerMissing')}</Detail>}
       </Section>
 
-      <section aria-labelledby="consents-title" className="rounded-xl border bg-card p-4">
-        <h2 id="consents-title" className="text-base font-extrabold">{t('patients.consents.title')}</h2>
-        <p className="mb-3 text-xs text-muted-foreground">{t('patients.consents.note')} <bdi dir="ltr">{t('registration.consents.version', { version: consentPolicyVersion })}</bdi></p>
+      <Card title={t('patients.consents.title')} intro={<>{t('patients.consents.note')} <bdi dir="ltr">{t('registration.consents.version', { version: consentPolicyVersion })}</bdi></>}>
         {props.consents.failed ? <p role="alert" className="text-sm font-semibold text-danger-700">{t('patients.consents.failed')}</p> : (
           <ul className="flex flex-col divide-y">
             <li className="flex min-h-11 items-center justify-between gap-3 py-1">
@@ -188,14 +186,13 @@ export default function PatientRecord(props: Props) {
             })}
           </ul>
         )}
-        {props.consents.changeFailed && <p role="alert" className="mt-2 text-sm font-semibold text-danger-700">{t('patients.consents.changeFailed')}</p>}
-      </section>
+        {props.consents.changeFailed && <p role="alert" className="text-sm font-semibold text-danger-700">{t('patients.consents.changeFailed')}</p>}
+      </Card>
 
       {props.visits}
 
       {props.merges.length > 0 && (
-        <section aria-labelledby="merge-history" className="rounded-xl border bg-card p-4">
-          <h2 id="merge-history" className="mb-3 text-base font-extrabold">{t('merge.history')}</h2>
+        <Card title={t('merge.history')}>
           <ul className="flex flex-col gap-1">
             {props.merges.map(m => (
               <li key={m.id}>
@@ -204,19 +201,17 @@ export default function PatientRecord(props: Props) {
               </li>
             ))}
           </ul>
-        </section>
+        </Card>
       )}
 
       {props.mergeRequest && (
-        <section aria-labelledby="merge-request" className="flex flex-col gap-3 rounded-xl border bg-card p-4">
-          <h2 id="merge-request" className="text-base font-extrabold">{t('merge.request.title')}</h2>
-          <p className="text-sm text-muted-foreground">{t('merge.request.body')}</p>
+        <Card title={t('merge.request.title')} intro={t('merge.request.body')}>
           <PatientPicker search={props.mergeRequest.search} chosen={props.mergeRequest.chosen} registerPath={null} invalid={false} />
           <div className="flex flex-col items-start gap-1">
             <Button variant="outline" loading={props.mergeRequest.busy} disabled={!props.mergeRequest.chosen} onClick={props.mergeRequest.onRequest}>{t('merge.request.action')}</Button>
             {props.mergeRequest.refusal && <p role="alert" className="text-sm font-semibold text-danger-700">{t(`merge.refused.${props.mergeRequest.refusal}`)}</p>}
           </div>
-        </section>
+        </Card>
       )}
 
       {props.canReveal && hasNumbers && !props.revealed && (
@@ -231,12 +226,7 @@ export default function PatientRecord(props: Props) {
 }
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className="rounded-xl border bg-card p-4">
-      <h2 className="mb-3 text-base font-extrabold">{title}</h2>
-      <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">{children}</dl>
-    </section>
-  );
+  return <Card title={title}><dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">{children}</dl></Card>;
 }
 
 function Detail({ label, children }: { label: string; children: ReactNode }) {

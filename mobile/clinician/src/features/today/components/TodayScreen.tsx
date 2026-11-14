@@ -1,5 +1,5 @@
 import { useI18n, type MessageKey } from '@medvya/i18n';
-import { AppHeader, Avatar, Button, Card, Chip, ListRow, Loading, Screen, Section, Stat, StateMessage, Text, type IconName, type Tone } from '@medvya/ui-native';
+import { AppHeader, Avatar, Banner, Button, Card, Chip, ListRow, Loading, Screen, Section, Stat, StateMessage, Text, type IconName, type Tone } from '@medvya/ui-native';
 import { theme } from '@medvya/tokens';
 import { statuses, type Status } from '@medvya/tokens/status';
 import { StyleSheet, View } from 'react-native';
@@ -16,7 +16,7 @@ const queueLook = (s: QueueStatus) => statuses[({ withDoctor: 'InConsult', next:
 
 type Props = {
   session: Session; today: Today | null; loading: boolean; error: string | null; refreshing: boolean; onRefresh: () => void; canConsult: boolean;
-  onOpenAccount: () => void; onOpenPatient: (id: string) => void; onStartConsult: () => void };
+  offlineSince: string | null; onOpenAccount: () => void; onOpenPatient: (id: string) => void; onStartConsult: () => void };
 
 export function TodayScreen(vm: Props) {
   const { t } = useI18n();
@@ -29,6 +29,7 @@ export function TodayScreen(vm: Props) {
   const { next, queue } = vm.today;
   return (
     <Screen header={header} refresh={{ refreshing: vm.refreshing, onRefresh: vm.onRefresh }}>
+      {vm.offlineSince ? <Banner tone="warning" icon="cloud-off" text={t('mobile.today.offline', { time: vm.offlineSince })} /> : null}
       {next ? (
         <Card accent={theme.color.brand700}>
           <Text variant="overline">{t('mobile.today.upNext')}</Text>

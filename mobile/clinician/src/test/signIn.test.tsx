@@ -3,6 +3,7 @@ import { SignInScreen } from '../features/session/components/SignInScreen';
 import { useSession } from '../features/session/hooks/session';
 import { useSignInController } from '../features/session/hooks/useSignInController';
 import { tabsFor } from '../features/session/domain/session';
+import { keychain } from './fakes';
 import { renderApp } from './render';
 
 let mockHardware = false;
@@ -30,9 +31,17 @@ async function signIn(email: string, code: string) {
   await fireEvent.press(screen.getByRole('button', { name: 'Sign in' }));
 }
 
+async function choosePin(confirm = '246810') {
+  await fireEvent.changeText(await screen.findByLabelText('App PIN'), '246810');
+  await fireEvent.changeText(screen.getByLabelText('Enter the PIN again'), confirm);
+  await fireEvent.press(screen.getByRole('button', { name: 'Continue' }));
+}
+
 it('signs a doctor in through code and facility, with the clinical tabs', async () => {
   await signIn('arjun.rao@example.com', '123456');
   await fireEvent.press(await screen.findByRole('button', { name: /Adyar/ }));
+  await choosePin();
+  expect(keychain.get('medvya.pin')).toMatch(/^[\w-]+:[0-9a-f]{64}$/); // salt and hash, never the PIN
   await fireEvent.press(await screen.findByRole('button', { name: 'Continue' }));
   expect(await screen.findByTestId('signed-in')).toHaveTextContent('Adyar|today,patients,consult,inbox');
 });
@@ -40,8 +49,17 @@ it('signs a doctor in through code and facility, with the clinical tabs', async 
 it('gives front desk no Consult tab', async () => {
   await signIn('reception.desk@example.com', '123456');
   await fireEvent.press(await screen.findByRole('button', { name: /Velachery/ }));
+  await choosePin();
   await fireEvent.press(await screen.findByRole('button', { name: 'Continue' }));
   expect(await screen.findByTestId('signed-in')).toHaveTextContent('Velachery|today,patients,inbox');
+});
+
+it('asks for the PIN twice and refuses two that differ', async () => {
+  await signIn('arjun.rao@example.com', '123456');
+  await fireEvent.press(await screen.findByRole('button', { name: /Adyar/ }));
+  await choosePin('135791');
+  expect(await screen.findByText('The two PINs do not match')).toBeOnTheScreen();
+  expect(keychain.has('medvya.pin')).toBe(false);
 });
 
 it('treats an unknown email like a known one until the code, then refuses', async () => {
@@ -61,6 +79,7 @@ it('offers the unlock this phone has, with a Not now that leaves it off (MDV-P5-
   mockHardware = true;
   await signIn('arjun.rao@example.com', '123456');
   await fireEvent.press(await screen.findByRole('button', { name: /Adyar/ }));
+  await choosePin();
   expect(await screen.findByText('Use Touch ID?')).toBeOnTheScreen(); // jest-expo runs as iOS; the mock phone has a fingerprint reader
   await fireEvent.press(await screen.findByRole('button', { name: 'Not now' })); // shown once the phone reports enrolled biometrics
   expect(await screen.findByTestId('biometric')).toHaveTextContent('off');

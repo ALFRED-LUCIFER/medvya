@@ -259,6 +259,22 @@ public class FeatureFlagTests(PostgresFixture sql) : IClassFixture<PostgresFixtu
         Assert.False(handlerRan);
     }
 
+    // The whole grant list of the console's login, table and column rights: a right added anywhere else shows here, whatever a policy would hide.
+    [Fact]
+    public async Task TheFeaturesLoginHoldsExactlyItsThreeRightsOnTheReleaseTable()
+    {
+        await using var conn = await sql.OpenAs("dbo");
+        await using var cmd = new NpgsqlCommand("""
+            SELECT table_schema || '.' || table_name || ' ' || privilege_type FROM information_schema.role_table_grants WHERE grantee = 'medvya_features'
+            UNION SELECT table_schema || '.' || table_name || '.' || column_name || ' ' || privilege_type FROM information_schema.column_privileges
+            WHERE grantee = 'medvya_features' AND NOT (table_schema = 'tenancy' AND table_name = 'FeatureReleases') ORDER BY 1
+            """, conn);
+        var rights = new List<string>();
+        await using (var reader = await cmd.ExecuteReaderAsync())
+            while (await reader.ReadAsync()) rights.Add(reader.GetString(0));
+        Assert.Equal(["tenancy.FeatureReleases INSERT", "tenancy.FeatureReleases SELECT", "tenancy.FeatureReleases UPDATE"], rights);
+    }
+
     // The console's login, whatever the host's code does: tenancy."FeatureReleases" and nothing else, and never a delete.
     [Theory]
     [InlineData("SELECT * FROM tenancy.\"Tenants\" LIMIT 1")]

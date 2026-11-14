@@ -41,7 +41,7 @@ export function useFeaturesController(role: PlatformRole) {
   const countries = releases.data?.map(c => c.country) ?? [];
   const country = chosen && countries.includes(chosen) ? chosen : countries[0] ?? null;
   const failed = save.isError ? save.error : turnOff.isError ? turnOff.error : null;
-  const fieldRefusal = failed instanceof ApiError && Object.keys(change.formState.errors).length > 0;
+  const fieldRefusal = save.isError && Object.keys(change.formState.errors).length > 0; // a turn-off failure always shows its message
 
   return {
     state: releases.isPending ? 'loading' as const : releases.isError ? 'error' as const : 'ready' as const,

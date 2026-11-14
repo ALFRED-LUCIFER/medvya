@@ -1730,6 +1730,21 @@ Deliberately NOT in this ticket: (1) The footer on other forms (nurse intake, se
 * Given every field, when it is reached with Tab, then it is fully visible and not under the footer
 * Given 400 % zoom, when the page scrolls, then the footer scrolls with it
 * Given English and Arabic, when axe runs, then there is no violation and the footer mirrors"
+MDV-P2-064,To do,Story,"One screen per task: top bar, content that fits, bottom bar; long lists scroll inside their panel, never the page",MDV-P1-E12,High,phase-P2 design-system ui layout epic-ux-programme track-design wave-d3,4,2027-01-18,2027-01-22,R2 · Consult,P0-07,,"MDV-P1-082, MDV-P2-062, MDV-P2-063",65,Medium,"Programme: MDV-P1-E12. Owner request of 14 Nov 2026: ""Everything should be in one screen; a little scroll is enough, not going down and down.""
+
+Persona and route: Every task screen · doctor, nurse, receptionist, owner, practice admin.
+Rationale: Staff work in short bursts between patients. When the commit button is below the fold and the form runs several screens long, every task costs scrolling and hunting. The workspace concept fits the whole consultation in 1440 by 900 with a footer.
+Proposed UX behaviour: A named layout rule in DESIGN.md, beside the top bar: top bar (who and where) · content (fits one screen; at most a short scroll) · bottom bar (StickyActionBar: status at the start, the task's commit actions at the end, always visible). Screens: nurse intake, booking and walk-in, the medicines and problems sub-pages, practice settings forms (profile, hours, add doctor, add staff, services), waitlist, the front desk board (columns scroll inside themselves), My day. Long lists (patient record history, audit log, directory, staff) keep the page still and scroll inside their panel. Registration is covered by MDV-P2-063 and the consultation by MDV-P1-092. No field, rule, order, wording or validation changes.
+Components and tokens affected: StickyActionBar, SplitLayout, PageContainer; a fits-one-screen Playwright helper.
+Front end and back end split: Front end only.
+Clinical sign-off: Not required: no clinical content, order or wording changes; the patient strip and allergy stay pinned.
+Effort and regression risk: M · Medium: layout on many screens.
+Deliberately NOT in this ticket: (1) Removing fields or sections. (2) Mobile apps. (3) Phones under 768 px, where pages scroll by design.","* Given each task screen at 1440 by 900 with a mouse, when it renders with typical synthetic data, then the page scroll height is at most 1.25 times the viewport and its commit action is visible without scrolling
+* Given 1024 by 768, when the same screens render, then the commit action is visible without scrolling
+* Given the front desk board, the patient record history and the audit log with long data, when they scroll, then only their panel scrolls and the top bar, strip and bottom bar stay in place
+* Given DESIGN.md, when read, then the top bar, content and bottom bar rule is written with the 1.25 limit
+* Given every field, when it is reached with Tab, then it is not under the bottom bar
+* Given English and Arabic, when axe runs, then there is no violation"
 MDV-P3-001,To do,Spike,Spike: Azure AI Speech and Azure OpenAI in-region capability check and ADR for speech/LLM providers,MDV-P3-E06,Highest,phase-P3 ai spike adr,2,2027-01-18,2027-01-22,R3 · Scribe,"P3-07, P3-03",,MDV-P0-003,70,Medium,"In the launch region confirm: batch transcription with diarisation and language identification for en-IN, hi-IN, ta-IN (and ar-AE for UAE), Azure OpenAI chat model with JSON-schema output, data residency/processing terms. Run 10 synthetic recordings through the pipeline and measure WER, diarisation error and latency. Record ADR-007 (speech/LLM providers, models, versions, regions, fallback).","* ADR-007 accepted with model names/versions, regions, quotas and fallback provider abstraction.
 * Measured latency supports the ≤ 60 s p50 draft target or the gap is quantified with a plan.
 * Language/diarisation quality per language is recorded on the synthetic set.

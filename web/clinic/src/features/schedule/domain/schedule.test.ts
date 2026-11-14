@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, columnTracks, hasStarted, layoutDay, minSlotPx, stepDate, type ScheduleDay } from './schedule';
+import { addDays, columnTracks, foldPast, hasStarted, layoutDay, minSlotPx, stepDate, type ScheduleDay } from './schedule';
 
 // 09:00–13:00 and 17:00–20:00 IST with 20-minute slots (UTC+05:30), as the API sends it.
 const day: ScheduleDay = {
@@ -55,6 +55,28 @@ describe('day layout', () => {
     // Hours that start off the frame's start (09:10) put the marks on 09:10, 09:30 …
     const late = { ...day, columns: [{ ...day.columns[0]!, hours: [{ start: '2026-10-19T03:40:00Z', end: '2026-10-19T07:30:00Z', room: null }] }] };
     expect(layoutDay(late).marks.slice(0, 2).map(m => m.at)).toEqual(['2026-10-19T03:40:00.000Z', '2026-10-19T04:00:00.000Z']);
+  });
+
+  it('opens today at the current slot row, the rows before it folded with a count of their visits (MDV-P1-097)', () => {
+    const layout = layoutDay(day);
+    const ppm = minSlotPx / 20;
+    // 10:05 IST (04:35Z): the current row is 10:00 (04:30Z); the 09:00 and 09:20 slots fold, the 09:40 visit runs across the cut.
+    const folded = foldPast(layout, Date.parse('2026-10-19T04:35:00Z'))!;
+    expect(folded.earlier).toBe(0); // the visit has not ended, so it is not folded
+    expect(folded.day.marks[0]).toEqual({ at: '2026-10-19T04:30:00.000Z', top: 0 }); // the first row shown is now
+    expect(folded.day.height).toBe(layout.height - 60 * ppm);
+    expect(folded.day.columns[0]!.items.map(i => [i.kind, i.top, i.height])).toEqual([['appointment', 0, 20 * ppm], ['unavailable', 180 * ppm, 240 * ppm]]);
+    expect(folded.day.columns[1]!.items.map(i => [i.top, i.height])).toEqual([[0, 11 * 60 * ppm - 60 * ppm]]); // the all-day block is cut, not dropped
+    // 15:00 IST: the visit has ended and folds with the morning; it is counted.
+    expect(foldPast(layout, Date.parse('2026-10-19T09:30:00Z'))!.earlier).toBe(1);
+  });
+
+  it('folds nothing before the first row or on another day (MDV-P1-097)', () => {
+    const layout = layoutDay(day);
+    expect(foldPast(layout, Date.parse('2026-10-19T03:00:00Z'))).toBeNull(); // 08:30 IST, before the day starts
+    expect(foldPast(layout, Date.parse('2026-10-19T03:40:00Z'))).toBeNull(); // in the first row: nothing before it
+    expect(foldPast(layout, Date.parse('2026-10-20T04:55:00Z'))).toBeNull(); // the next day: the 19th is not today
+    expect(foldPast(layout, Date.parse('2026-10-18T19:00:00Z'))).toBeNull(); // 00:30 IST on the 19th is before the day: still nothing
   });
 
   it('steps from the date asked for, so a fast double click moves two days', () => {

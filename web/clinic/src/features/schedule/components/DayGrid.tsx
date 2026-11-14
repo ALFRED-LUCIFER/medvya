@@ -1,6 +1,7 @@
 import type { DragEvent } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Card, cn, scheduleLooks } from '@medvya/ui';
+import { Button, Card, cn, scheduleLooks } from '@medvya/ui';
 import { columnTracks, hasStarted, type CalendarKind, type ColumnItem, type ColumnLayout, type DayLayout } from '../domain/schedule';
 import { hatched } from './looks';
 import { AppointmentChip } from './AppointmentChip';
@@ -23,9 +24,12 @@ export type GridActions = {
   moving?: { patient: string; kind: CalendarKind };
 };
 
+/** Today's rows before now, folded into one row (MDV-P1-097): how many visits it holds, whether it is open, and the toggle. */
+export type Earlier = { count: number; open: boolean; onToggle: () => void };
+
 /** Day view: a column per doctor and resource on one time scale, so a 40-minute visit spans two 20-minute slots. */
-export default function DayGrid({ day, updating, now, ...actions }: { day: DayLayout; updating: boolean; now: number } & GridActions) {
-  const { t, formatTime } = useI18n();
+export default function DayGrid({ day, updating, now, earlier, ...actions }: { day: DayLayout; updating: boolean; now: number; earlier: Earlier | null } & GridActions) {
+  const { t, tCount, formatTime } = useI18n();
   const time = (iso: string) => formatTime(new Date(iso), day.timeZone);
   // The grid scrolls inside its own box so headers stick to its top and the time axis to its reading-start side.
   // Focusable, so keyboard users can scroll it too (WCAG 2.1.1); the global focus ring shows where focus is.
@@ -35,6 +39,12 @@ export default function DayGrid({ day, updating, now, ...actions }: { day: DayLa
       <div className="grid" style={{ gridTemplateColumns: `56px ${columnTracks(day.columns)}` }}>
         <div className="sticky start-0 top-0 z-30 border-e border-b bg-card" />
         {day.columns.map(c => <ColumnHeader key={c.calendarId} column={c} />)}
+        {earlier && (
+          <Button variant="ghost" aria-expanded={earlier.open} onClick={earlier.onToggle} style={{ gridColumn: '1 / -1' }}
+            className="justify-start rounded-none border-b bg-muted focus-visible:-outline-offset-2">
+            <ChevronDown aria-hidden className={cn('motion-safe:transition-transform', earlier.open && 'rotate-180')} />{tCount('schedule.earlier', earlier.count)}
+          </Button>
+        )}
         <div aria-hidden className="sticky start-0 z-10 border-e bg-card" style={{ height: day.height }}>
           {day.marks.map(m => (
             <span key={m.at} className="absolute inset-x-0 border-t px-2 pt-0.5 font-mono text-xs text-muted-foreground" style={{ top: m.top }}>{time(m.at)}</span>
@@ -57,9 +67,10 @@ function ColumnHeader({ column: c }: { column: ColumnLayout }) {
     : c.rooms.length > 0 ? t('schedule.column.slots', { room: c.rooms.join(', '), minutes: c.slotMinutes ?? 0 })
     : t('schedule.column.slotsOnly', { minutes: c.slotMinutes ?? 0 });
   return (
-    <div className="sticky top-0 z-20 border-s border-b bg-card px-3 py-2.5">
-      <h2 id={`schedule-col-${c.calendarId}`} className="text-sm font-bold">{c.name || t('schedule.doctor')}</h2>
-      <p className="text-xs text-muted-foreground">{sub}</p>
+    // One line each, so a narrow column does not make the header row taller (MDV-P1-097); the full words are the tooltip.
+    <div className="sticky top-0 z-20 min-w-0 border-s border-b bg-card px-3 py-2.5" title={`${c.name || t('schedule.doctor')}\n${sub}`}>
+      <h2 id={`schedule-col-${c.calendarId}`} className="truncate text-sm font-bold">{c.name || t('schedule.doctor')}</h2>
+      <p className="truncate text-xs text-muted-foreground">{sub}</p>
     </div>
   );
 }
@@ -102,11 +113,17 @@ function Item({ item, column, day, time, now, onSlot, onOpen, onDrop, moving }: 
     return (
       <li className={cn('absolute border-t', lane(item, 'inset-x-0'))} style={box}>
         {onSlot && (!moving || moving.kind === column.calendarKind) ? (
-          <button type="button" aria-label={moving ? t('schedule.slot.moveTo', { patient: moving.patient, name, time: time(item.start) }) : t('schedule.slot.book', { name, time: time(item.start) })}
+          <button type="button" aria-label={moving ? t('schedule.slot.moveTo', { patient: moving.patient, name, time: time(item.start) }) : undefined}
             onClick={() => onSlot(column.calendarId, name, item.start)}
             onDragOver={onDrop ? e => e.preventDefault() : undefined} onDrop={onDrop ? drop(item.start) : undefined}
             className={cn('size-full px-2 pt-0.5 text-start align-top hover:bg-accent focus-visible:-outline-offset-2', moving && 'bg-accent/40')}>
             <span aria-hidden className="font-mono text-xs text-muted-foreground">{time(item.start)}</span>
+            {/* Below 1280 px there is no helper card beside the grid, so a free slot says what it does itself (MDV-P1-097). Named by its
+                content, not aria-label, so the words shown are part of its name (WCAG 2.5.3); blocks, so the words are spaced in the name. */}
+            {!moving && <>
+              <span className="block text-xs font-bold text-action-600 lg:hidden">{t('schedule.slot.tapToBook')}</span>
+              <span className="sr-only block">{t('schedule.slot.book', { name, time: time(item.start) })}</span>
+            </>}
           </button>
         ) : (
           <span className="block px-2 pt-0.5">

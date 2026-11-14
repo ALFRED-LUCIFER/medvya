@@ -201,6 +201,7 @@ test('a free slot that has started is unavailable, not a button; later slots sta
   await page.clock.setFixedTime(new Date(ist('2026-10-19', '10:25'))); // 10:00 and 10:20 have started
   await open(page);
   const rao = column(page, 'Dr. Arjun Rao (synthetic)');
+  await page.getByRole('button', { name: 'Earlier today · 1 appointment' }).click(); // 10:00 is folded with the 09:00 visit (MDV-P1-097)
   for (const time of ['10:00', '10:20']) {
     await expect(bookButton(page, time)).toHaveCount(0);
     await expect(rao.getByRole('listitem').filter({ hasText: `Slot at ${time} has already passed` })).toHaveCount(1);
@@ -223,6 +224,103 @@ test('a slot stops being bookable when its start passes, without a reload', asyn
   await page.clock.fastForward('01:00');
   await expect(bookButton(page, '10:20')).toHaveCount(0);
   await expect(page.getByText('Slot at 10:20 has already passed')).toHaveCount(1);
+});
+
+// MDV-P1-097: today's day view opens at now; the rows before it fold into one row that opens on demand.
+const earlier = (page: Page) => page.getByRole('button', { name: /^Earlier today/ });
+const firstMark = (page: Page) => page.getByRole('region', { name: 'Day schedule' }).locator('[aria-hidden] > span').first();
+
+test('today opens at the current time, the past folded into one row that Enter opens and closes', async ({ page }) => {
+  await page.clock.setFixedTime(new Date(ist('2026-10-19', '15:10')));
+  await open(page);
+  await expect(firstMark(page)).toHaveText('15:00'); // the first row shown is the current one, within an hour of now
+  // The 09:00 visit and the cancelled 12:30 one have ended: one row, with the count, closed.
+  await expect(earlier(page)).toHaveText('Earlier today · 2 appointments');
+  await expect(earlier(page)).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.getByText('Meera Iyer (synthetic)')).toHaveCount(0);
+  await expect(column(page, 'Dr. Arjun Rao (synthetic)').getByRole('listitem').filter({ hasText: 'Unavailable 13:00–17:00 · Not working' })).toHaveCount(1); // runs across now: kept
+
+  await earlier(page).focus();
+  await page.keyboard.press('Enter');
+  await expect(earlier(page)).toHaveAttribute('aria-expanded', 'true');
+  await expect(firstMark(page)).toHaveText('09:00');
+  await expect(column(page, 'Dr. Arjun Rao (synthetic)').getByRole('button', { name: /Meera Iyer \(synthetic\)/ })).toBeVisible(); // each visit shows
+  await expect(column(page, 'Procedure room (synthetic)').getByText('Kavya Rao (synthetic)')).toBeVisible();
+  await page.keyboard.press('Enter');
+  await expect(earlier(page)).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.getByText('Meera Iyer (synthetic)')).toHaveCount(0);
+
+  // Another day opens at its first working hour, nothing folded; today again folds.
+  await page.getByRole('button', { name: 'Next day' }).click();
+  await expect(shown(page)).toHaveText('Tuesday, 20 October 2026');
+  await expect(earlier(page)).toHaveCount(0);
+  await expect(firstMark(page)).toHaveText('09:00');
+  await page.getByRole('button', { name: 'Today' }).click();
+  await expect(earlier(page)).toHaveAttribute('aria-expanded', 'false');
+});
+
+test('before the first slot nothing is folded, and a free slot after now books as before', async ({ page }) => {
+  await page.clock.setFixedTime(new Date(ist('2026-10-19', '10:25')));
+  const calls = await open(page);
+  await expect(earlier(page)).toHaveText('Earlier today · 1 appointment');
+  await expect(firstMark(page)).toHaveText('10:20');
+  await bookButton(page, '10:40').click();
+  await expect(page.getByRole('complementary', { name: 'Book appointment' })).toContainText('Dr. Arjun Rao (synthetic) · 10:40–11:00');
+  expect(calls.holds[0]).toMatchObject({ calendarId: 'd-1', start: ist('2026-10-19', '10:40') });
+
+  await page.unrouteAll({ behavior: 'ignoreErrors' });
+  await page.clock.setFixedTime(new Date(ist('2026-10-19', '08:30')));
+  await open(page);
+  await expect(firstMark(page)).toHaveText('09:00');
+  await expect(earlier(page)).toHaveCount(0);
+});
+
+test.describe('a clinic PC at 1024 by 768', () => {
+  test.use({ timezoneId: 'Asia/Kolkata' }); // in the facility's zone, so the page need not say its times are the facility's
+  for (const locale of ['en', 'ar'] as const)
+  test(`at 1024 by 768 the first slot is in the top 240 px; Print and Leave are in More, the legend behind Key; axe is clean (${locale})`, async ({ page }) => {
+    const ar = locale === 'ar';
+    await page.setViewportSize({ width: 1024, height: 768 });
+    await page.clock.setFixedTime(new Date(ist('2026-10-19', '10:25')));
+    await open(page, { locale });
+    const grid = page.getByRole('region', { name: ar ? 'جدول اليوم' : 'Day schedule' });
+    const toggle = page.getByRole('button', { name: ar ? /^في وقت سابق اليوم/ : /^Earlier today/ });
+    // The day's first row (here the folded past, the current slot right under it) starts in the top 240 px.
+    expect((await toggle.boundingBox())!.y).toBeLessThanOrEqual(240);
+    await expect(page.getByText(/Asia\/Kolkata/)).toHaveCount(0);
+    // No helper card below 1280 px: the free slot says it itself.
+    await expect(page.getByRole('complementary', { name: ar ? 'حجز موعد' : 'Book appointment' })).toBeHidden();
+    await expect(grid.getByRole('button', { name: ar ? /^اضغط للحجز .*10:40$/ : /^Tap to book Book Dr\. Arjun Rao \(synthetic\) at 10:40$/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: ar ? 'طباعة جدول اليوم' : 'Print day sheet' })).toBeHidden();
+    await page.getByRole('button', { name: ar ? 'المزيد' : 'More', exact: true }).click();
+    await expect(page.getByRole('menuitem', { name: ar ? 'طباعة جدول اليوم' : 'Print day sheet' })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: ar ? 'الإجازات والاستثناءات' : 'Leave and exceptions' })).toBeVisible();
+    await page.keyboard.press('Escape');
+    const legend = page.getByRole('list', { name: ar ? 'معنى الألوان والأشكال' : 'What the colours and shapes mean' });
+    await expect(legend).toBeHidden();
+    const key = page.getByText(ar ? 'دليل الرموز' : 'Key', { exact: true });
+    await key.click();
+    await expect(legend).toBeVisible();
+
+    for (const open of [false, true]) {
+      if (open) await toggle.click();
+      await expect(toggle).toHaveAttribute('aria-expanded', String(open));
+      await page.addScriptTag({ path: axePath });
+      const violations = await page.evaluate(async () =>
+        (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations
+          .map(v => `${v.id} (${v.nodes.length})`));
+      expect(violations).toEqual([]);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  });
+
+  test('at 1024 by 768 a day with nothing folded starts its first slot in the top 240 px', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 768 });
+    await open(page);
+    const first = column(page, 'Dr. Arjun Rao (synthetic)').getByRole('listitem').first();
+    await expect(first).toBeVisible();
+    expect((await first.boundingBox())!.y).toBeLessThanOrEqual(240);
+  });
 });
 
 test('moves between days and back to today', async ({ page }) => {

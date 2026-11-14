@@ -32,7 +32,7 @@ test('a weekly series: the review shows the conflict, the desk moves it, four vi
     await page.getByRole('button', { name: 'Register patient' }).click();
     await expect(page.getByRole('link', { name: 'Check in now (walk-in)' })).toBeVisible();
     await page.goto(`/app/schedule?date=${days.first}`);
-    const first = await rao(page).getByRole('button', { name: /^Book / }).first().getAttribute('aria-label');
+    const first = await rao(page).getByRole('button', { name: /^Book / }).first().textContent(); // named by its content (MDV-P1-097)
     time = /at (\d\d:\d\d)$/.exec(first ?? '')![1]!;
   });
 

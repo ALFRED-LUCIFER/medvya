@@ -76,7 +76,8 @@ export default function BookingPanel(p: Props) {
 
   if (!p.choice)
     return (
-      <aside aria-label={t('booking.title')}><Card>
+      // data-hint: only the plain "select an empty slot" hint, which the schedule hides below 1280 px.
+      <aside aria-label={t('booking.title')} data-hint={!p.seriesDone && !p.booked && !p.rebook ? true : undefined}><Card>
         {p.seriesDone ? (
           <div role="status" className="flex flex-col items-start gap-2">
             <p className="flex items-center gap-2 font-bold text-success-700"><CircleCheck aria-hidden className="size-5" />{t('series.done.title', { count: p.seriesDone.booked })}</p>

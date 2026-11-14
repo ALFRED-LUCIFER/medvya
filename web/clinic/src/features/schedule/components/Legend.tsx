@@ -5,10 +5,10 @@ import { hatched } from './looks';
 const legend = ['booked', 'checkedIn', 'inRoom', 'completed', 'noShow', 'cancelled', 'held'] as const;
 
 /** What each look means, so states can be told apart by shape and words as well as colour. */
-export function Legend() {
+export function Legend({ className }: { className?: string }) {
   const { t } = useI18n();
   return (
-    <ul aria-label={t('schedule.legend')} className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
+    <ul aria-label={t('schedule.legend')} className={cn('flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-muted-foreground', className)}>
       {legend.map(k => {
         const look: Look = scheduleLooks[k], Icon = look.icon;
         return (

@@ -2466,6 +2466,36 @@
         }
       }
     },
+    "/v1/appointments/{appointmentId}/token-slip": {
+      "get": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "appointmentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenSlip"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/appointments/{appointmentId}/reassign": {
       "post": {
         "tags": [
@@ -13053,6 +13083,34 @@
             "items": {
               "$ref": "#/components/schemas/AppointmentChip"
             }
+          }
+        }
+      },
+      "TokenSlip": {
+        "required": [
+          "clinicName",
+          "token",
+          "doctorName",
+          "issuedAt",
+          "timeZone"
+        ],
+        "type": "object",
+        "properties": {
+          "clinicName": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string"
+          },
+          "doctorName": {
+            "type": "string"
+          },
+          "issuedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "timeZone": {
+            "type": "string"
           }
         }
       },

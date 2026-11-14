@@ -109,7 +109,8 @@ test('front desk: register, book, check in, see the board, cancel', async ({ pag
 
   await test.step('sign out ends the provider session too and comes back to the sign-in start (#912)', async () => {
     const providerSignOut = page.waitForRequest(r => new URL(r.url()).pathname === '/dev-idp/logout');
-    await page.getByRole('button', { name: 'Sign out' }).first().click();
+    await page.getByRole('button', { name: /^Signed in as / }).click();
+    await page.getByRole('menuitem', { name: 'Sign out' }).click();
     expect(new URL((await providerSignOut).url()).searchParams.get('post_logout_redirect_uri')).toMatch(/\/signout-callback-oidc$/);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Sign in to Medvya');
   });

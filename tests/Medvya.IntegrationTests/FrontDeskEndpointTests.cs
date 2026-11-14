@@ -186,4 +186,43 @@ public sealed class FrontDeskEndpointTests(PostgresFixture sql) : IClassFixture<
         Assert.Equal(["appointment.check_in", "appointment.check_in", "appointment.status", "appointment.status", "appointment.status", "appointment.status", "appointment.status"],
             (await AuditActions()).Where(a => a.StartsWith("appointment.", StringComparison.Ordinal) && a != "appointment.book").Order(StringComparer.Ordinal));
     }
+
+    // SAFETY (MDV-P2-046), mutation checks: a patient field added to TokenSlip fails the field list; dropping the void-state refusal
+    // in TokenSlipAsync reprints the left visit's token and fails the 409.
+    [Fact]
+    public async Task TheTokenSlipCarriesClinicTokenDoctorAndTimeOnlyAndAVoidTokenIsRefused()
+    {
+        var visit = await h.BookAsync(9);
+        var booked = await h.BookAsync(10);
+        var reception = Client(h.Reception);
+        using var checkIn = await reception.PostAsJsonAsync($"/v1/appointments/{visit.Id}/check-in", new { elapsedMs = 9000 });
+        var token = JsonDocument.Parse(await checkIn.Content.ReadAsStringAsync()).RootElement.GetProperty("token").GetString();
+
+        using var slip = await reception.GetAsync($"/v1/appointments/{visit.Id}/token-slip");
+        Assert.Equal(HttpStatusCode.OK, slip.StatusCode);
+        var body = await slip.Content.ReadAsStringAsync();
+        var json = JsonDocument.Parse(body).RootElement;
+        // Exactly these fields: the slip leaves the clinic in the patient's hand, so a name, MRN, phone or reason must never join them.
+        Assert.Equal(["clinicName", "token", "doctorName", "issuedAt", "timeZone"], json.EnumerateObject().Select(p => p.Name));
+        Assert.Equal(token, json.GetProperty("token").GetString());
+        Assert.False(string.IsNullOrEmpty(json.GetProperty("doctorName").GetString()));
+        Assert.DoesNotContain("Meera", body, StringComparison.Ordinal);
+        Assert.DoesNotContain("000001", body, StringComparison.Ordinal);
+        Assert.Equal(body, await reception.GetStringAsync($"/v1/appointments/{visit.Id}/token-slip")); // a reprint is the same token
+
+        async Task<(HttpStatusCode, string?)> Refused(Guid id, HttpClient client)
+        {
+            using var r = await client.GetAsync($"/v1/appointments/{id}/token-slip");
+            var text = await r.Content.ReadAsStringAsync();
+            return (r.StatusCode, r.StatusCode == HttpStatusCode.Conflict ? JsonDocument.Parse(text).RootElement.GetProperty("code").GetString() : null);
+        }
+        Assert.Equal((HttpStatusCode.Conflict, "no_token"), await Refused(booked.Id, reception)); // not checked in
+        Assert.Equal((HttpStatusCode.Forbidden, (string?)null), await Refused(visit.Id, Client(h.PortalUser)));
+        Assert.Equal((HttpStatusCode.NotFound, (string?)null), await Refused(visit.Id, Client(other.Reception, other.Tenant)));
+
+        using var left = await reception.PostAsJsonAsync($"/v1/appointments/{visit.Id}/left", new { reason = "PatientUnwell" });
+        Assert.Equal(HttpStatusCode.OK, left.StatusCode);
+        Assert.Equal((HttpStatusCode.Conflict, "token_void"), await Refused(visit.Id, reception));
+        Assert.Contains("appointment.token_slip.read", await AuditActions());
+    }
 }

@@ -209,6 +209,21 @@ public sealed partial class FrontDeskService(
         return await CardAsync(moved, cancellationToken);
     }
 
+    public async Task<TokenSlip> TokenSlipAsync(Guid appointmentId, CancellationToken cancellationToken = default)
+    {
+        var visit = await db.Appointments.AsNoTracking().SingleOrDefaultAsync(a => a.Id == appointmentId, cancellationToken)
+            ?? throw new AppointmentNotFoundException();
+        await context.RequireAsync(visit.FacilityId, SchedulingAccess.CanRunQueue, cancellationToken);
+        // The token of a visit that will not be seen is void: a reprint would put a dead number back in the waiting room.
+        if (visit.State is AppointmentState.Cancelled or AppointmentState.NoShow or AppointmentState.LeftWithoutBeingSeen or AppointmentState.NeedsRebooking)
+            throw new VisitTransitionException("token_void");
+        var token = await db.QueueTokens.AsNoTracking().Where(t => t.AppointmentId == appointmentId)
+            .Select(t => new { t.Prefix, t.Number, t.IssuedAt }).SingleOrDefaultAsync(cancellationToken) ?? throw new VisitTransitionException("no_token");
+        var (facility, _) = await context.FacilityAsync(visit.FacilityId, cancellationToken);
+        var doctor = (await context.CalendarsAsync(visit.FacilityId, cancellationToken)).FirstOrDefault(c => c.Id == visit.CalendarId)?.Name ?? "";
+        return new(facility.Name, QueueToken.Format(token.Prefix, token.Number), doctor, token.IssuedAt, facility.TimeZone);
+    }
+
     public async Task<string> WatchGroupAsync(Guid facilityId, CancellationToken cancellationToken = default)
     {
         await context.RequireAsync(facilityId, SchedulingAccess.CanViewBoard, cancellationToken);

@@ -23,6 +23,12 @@ public sealed record BoardCard(
 public sealed record FrontDeskBoard(Guid FacilityId, string TimeZone, DateOnly Date, DateTimeOffset Now, IReadOnlyList<BoardCard> Cards, int LeftWithoutBeingSeen = 0);
 
 /// <summary>
+/// The waiting-room token slip (MDV-P2-046): clinic, token, the doctor whose queue it is in now and when it was issued. Nothing
+/// about the patient: no name, MRN, phone or reason, because the slip is left on chairs and handed across the desk.
+/// </summary>
+public sealed record TokenSlip(string ClinicName, string Token, string DoctorName, DateTimeOffset IssuedAt, string TimeZone);
+
+/// <summary>
 /// Check in a visit. ElapsedMs is how long the desk took, from opening Walk-in or tapping "Check in" to this call (exit gate 3
 /// measures the median); it is a number only, never patient data. Missing or outside <see cref="PilotMetricRules.TimedMs"/>: not measured.
 /// </summary>
@@ -116,6 +122,12 @@ public interface IFrontDeskService
 
     /// <exception cref="SchedulingAccessDeniedException">No board access at this facility.</exception>
     Task<ClinicOverview> GetOverviewAsync(Guid facilityId, CancellationToken cancellationToken = default);
+
+    /// <summary>The visit's token slip, to print or reprint (MDV-P2-046); the same token every time.</summary>
+    /// <exception cref="AppointmentNotFoundException">No such appointment in this tenant.</exception>
+    /// <exception cref="SchedulingAccessDeniedException">May not run the queue at the visit's facility.</exception>
+    /// <exception cref="VisitTransitionException">"token_void": cancelled, a no-show or left without being seen; "no_token": not checked in.</exception>
+    Task<TokenSlip> TokenSlipAsync(Guid appointmentId, CancellationToken cancellationToken = default);
 
     /// <summary>Moves a waiting visit to another active doctor of the facility, atomically and audited; its token stays.</summary>
     /// <exception cref="AppointmentNotFoundException">No such appointment in this tenant.</exception>

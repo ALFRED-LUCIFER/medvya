@@ -99,7 +99,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P1-105](P1-front-desk/MDV-P1-105.md) | Redeploy Azure dev from main, capture it again at 768 and 375 px, and mark its synthetic patients | P1 | wk 4–4 | 85% |
 | [MDV-P1-108](P1-front-desk/MDV-P1-108.md) | UX validation sessions with the pilot doctor, nurse, receptionist and owner: the 21 decisions, the brand list, the training date and the device check | P1 | wk 4–6 | 55% |
 
-## Week 5 · 23 Nov 2026 – 27 Nov 2026 · load 32.2 dev-days ⚠ over capacity
+## Week 5 · 23 Nov 2026 – 27 Nov 2026 · load 33.2 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -127,6 +127,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P1-101](P1-front-desk/MDV-P1-101.md) | Patient picker rows show date of birth and last visit, and mark possible duplicates | P1 | wk 5–5 | 75% |
 | [MDV-P1-104](P1-front-desk/MDV-P1-104.md) | The nurse's chief complaint prefills the doctor's note, marked from nurse intake | P1 | wk 5–5 | 72% |
 | [MDV-P1-108](P1-front-desk/MDV-P1-108.md) | UX validation sessions with the pilot doctor, nurse, receptionist and owner: the 21 decisions, the brand list, the training date and the device check | P1 | wk 4–6 | 55% |
+| [MDV-P1-109](P1-front-desk/MDV-P1-109.md) | The server refuses to sign a consultation note until the doctor has confirmed identity with the patient | P1 | wk 5–5 | 85% |
 
 ## Week 6 · 30 Nov 2026 – 04 Dec 2026 · load 41.8 dev-days ⚠ over capacity
 

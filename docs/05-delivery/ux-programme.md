@@ -112,6 +112,7 @@ Existing labels keep their colours: `phase:` blue `1D76DB`, `type:` purple `5319
 - MDV-P2-048 (#1206) Nurse intake: one confirmation for all flagged readings, and a correction with a reason until the doctor starts · needs clinical sign-off
 - MDV-P2-049 (#1207) Signed note print: vitals, allergies and diagnoses by default, and a page heading · needs clinical sign-off
 - MDV-P2-050 (#1208) Audit log: every action has a plain name; the default view is chart opens and changes
+- MDV-P1-109 (#1288) The server refuses to sign a consultation note until the doctor has confirmed identity with the patient
 - MDV-P5-053 (#1209) Fix the Expo bundling error, then run the same UX audit on the mobile apps in a simulator
 
 **People gate (not code)**

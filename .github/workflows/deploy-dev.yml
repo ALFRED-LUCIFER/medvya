@@ -14,6 +14,7 @@ permissions:
   contents: read
   id-token: write
   checks: read
+  actions: read # to wait for the pr run on this commit
 
 concurrency:
   group: deploy-dev
@@ -22,7 +23,7 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45 # up to 25 waiting for CI, then about 13 to deploy
     environment: dev # the federated credential trusts this environment only
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -40,6 +41,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # A deploy started right after a merge waits for that commit's pr run (up to 25 minutes) instead of failing on a check
+          # that has not finished yet. It still ships only when the run ends green.
+          for i in $(seq 1 50); do
+            running=$(gh run list -R "$GITHUB_REPOSITORY" --workflow pr.yml --commit "$GITHUB_SHA" --json status --jq '[.[]|select(.status!="completed")]|length')
+            [ "$running" = 0 ] && break
+            echo "CI on $GITHUB_SHA is still running; waiting ($i/50)"; sleep 30
+          done
           for check in dotnet web secrets; do
             got=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs?check_name=$check" --jq '.check_runs|sort_by(.started_at)|last|.conclusion // "not finished or never run"')
             [ "$got" = success ] || { echo "::error::check '$check' on $GITHUB_SHA is '$got'; deploy a commit on main whose pr run is green"; exit 1; }

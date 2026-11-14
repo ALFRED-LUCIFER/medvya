@@ -41,3 +41,22 @@ test('an approved organisation shows no notice', async ({ page }) => {
   await expect(page.getByRole('navigation').first()).toBeVisible();
   await expect(page.getByRole('note').filter({ hasText: /Medvya has not approved|is suspended/ })).toHaveCount(0);
 });
+
+// MDV-P2-055 AC4: an approved organisation (one approved before ADR-016 has no request: the endpoint answers 404) opens /organisation to
+// "Approved" and the page asks nothing that answers 404; it has no menu entry, and the shell notice is gone once approved.
+for (const [locale, approved] of [['en', 'Approved. Patients, booking and notes are on.'], ['ar', /^تمت الموافقة/]] as const)
+  test(`an approved organisation's /organisation says Approved and no request answers 404, axe clean (${locale})`, async ({ page }) => {
+    const notFound: string[] = [];
+    page.on('response', r => { if (r.status() === 404) notFound.push(new URL(r.url()).pathname); });
+    await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
+    await page.route('**/v1/me/context', r => r.fulfill({ json: context('Approved', { StaffRolesIntegrations: 'Config' }) }));
+    await page.route('**/v1/settings/**', r => r.fulfill({ json: {} }));
+    await page.route('**/v1/organisation/request', r => r.fulfill({ status: 404, json: { title: 'Not found' } }));
+    await page.goto('/organisation');
+    await expect(page.getByRole('status').filter({ hasText: approved })).toBeVisible();
+    await expect(page.getByRole('navigation').getByRole('link', { name: locale === 'en' ? /Organisation|request/i : /المؤسسة/ })).toHaveCount(0);
+    await page.waitForLoadState('networkidle');
+    expect(notFound.filter(p => p.startsWith('/v1/'))).toEqual([]);
+    expect(await page.evaluate(() => document.documentElement.dir)).toBe(locale === 'ar' ? 'rtl' : 'ltr');
+    expect(await axe(page)).toEqual([]);
+  });

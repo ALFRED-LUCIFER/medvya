@@ -1,6 +1,8 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
 import { targetPx } from './support/targets';
+import { t } from './support/desk';
+import { expectStacked } from './support/stacked';
 
 // MDV-P2-005: the timeline and trends (E-02). CI has no API: endpoints are mocked in the shapes the server sends, and the filter query the
 // screen sends is checked. Ordering, "Load earlier" without gaps or repeats, the gate and the audit are covered by PatientTimelineTests.
@@ -129,3 +131,15 @@ for (const locale of ['en', 'ar'])
       (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations.map(v => `${v.id} (${v.nodes.length})`));
     expect(violations).toEqual([]);
   });
+
+// MDV-P2-054 AC5: at 375 px each reading is a stacked block: the date first and bold, the value and source under their names.
+test.describe('at 375 px', () => {
+  test.use({ viewport: { width: 375, height: 812 } });
+  for (const locale of ['en', 'ar'])
+    test(`the trend readings are stacked with every field labelled and nothing scrolling sideways (${locale})`, async ({ page }) => {
+      await open(page, { locale, all: many });
+      const name = t(locale, 'patient360.code.HbA1c');
+      await expectStacked(page, page.getByRole('region', { name: t(locale, 'timeline.trends.table', { name, unit: '%' }) }),
+        [t(locale, 'timeline.trends.value', { unit: '%' }), t(locale, 'timeline.source')]);
+    });
+});

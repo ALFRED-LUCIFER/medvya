@@ -7,7 +7,7 @@ import { Button, buttonVariants, cn, Dialog, DialogContent, DialogDescription, D
 import { isDeviceZone, type CancelForm } from '../../schedule/domain/changes';
 import CancelReasonFields from '../../schedule/components/CancelReasonFields';
 import type { workload } from '../domain/overview';
-import { ageYears, canReprint, endKinds, minutesSince, needsRebooking, nextConsultId, nextState, tokenSlipPath, visibleColumns, type Board, type BoardCard, type BoardColumn, type EndKind, type LiveStatus, type MoveError, type Notice, type VisitSteps } from '../domain/board';
+import { aheadWords, ageYears, canReprint, endKinds, minutesSince, needsRebooking, nextConsultId, nextState, tokenSlipPath, visibleColumns, type Board, type BoardCard, type BoardColumn, type EndKind, type LiveStatus, type MoveError, type Notice, type VisitSteps } from '../domain/board';
 
 // Every column is words and an icon (never colour alone), following the Clinician App board (P-01).
 const columnIcons: Record<BoardColumn, LucideIcon> = {
@@ -269,7 +269,7 @@ function Column(props: Props & { state: BoardColumn; board: Board; hiddenOnPhone
 }
 
 function Card({ card, primary, board, steps, now, workload, failedVisitIds, canMove, canCancel, online, confirmingId, pendingId, failure, paymentAction, consultAction, nurseStep, followUp, onStartCheckIn, onConfirmCheckIn, onCancelCheckIn, onMove, onStartEnd }: Props & { card: BoardCard; board: Board; primary: string | null }) {
-  const { t, formatTime, formatCalendarDate } = useI18n();
+  const i18n = useI18n(), { t, formatTime, formatCalendarDate } = i18n;
   const state = card.state as BoardColumn;
   const next = nextState(state, steps);
   const busy = pendingId === card.id;
@@ -293,7 +293,8 @@ function Card({ card, primary, board, steps, now, workload, failedVisitIds, canM
         {failedVisitIds.has(card.id) && <FrontDeskTag kind="messageFailed" />}
         {card.walkIn && <FrontDeskTag kind="walkIn" />}
         {card.registrationIncomplete && <FrontDeskTag kind="incomplete" />}
-        {card.token && <FrontDeskTag kind="token" text={t('board.token', { token: card.token })} />}
+        {/* The token and, while waiting, how many are ahead in the doctor's queue (MDV-P1-103): "Token A-03 · 2 ahead". */}
+        {card.token && <FrontDeskTag kind="token" text={[t('board.token', { token: card.token }), card.queuePlace != null && aheadWords(i18n, card.queuePlace - 1)].filter(Boolean).join(' · ')} />}
       </div>
       {(state === 'CheckedIn' || state === 'ReadyForDoctor') && <FrontDeskTag kind="waiting" text={t('board.waiting', { minutes: minutesSince(card.since, now) })} />}
       {card.room && state === 'InConsult' && <FrontDeskTag kind="room" text={t('board.room', { room: card.room })} />}

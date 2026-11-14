@@ -5,12 +5,16 @@ namespace Medvya.Scheduling.Application;
 /// <summary>
 /// The one order of a facility's waiting patients (MDV-P1-103). The doctor's day, the board's columns, the clinic overview and the queue
 /// display all take it from here, so they never disagree. A nurse escalation comes first; then booked before walk-ins when the clinic says
-/// so; then the clinic's rule. A walk-in counts from its arrival, never from the far slot it was given.
+/// so; then the clinic's rule. A walk-in counts from its arrival, never from the far slot it was given. Each doctor has their own sequence
+/// (validation-plan decision 10): a visit's place is counted among the visits of its own calendar only.
 /// </summary>
 public static class QueueRules
 {
-    /// <summary>A waiting visit as the rule sees it. Arrived is the check-in (token issue) time; Prefix and Number make its token.</summary>
-    public sealed record Waiting(Guid Id, DateTimeOffset Start, bool WalkIn, DateTimeOffset? Arrived, string? Prefix, int Number, bool Escalated);
+    /// <summary>
+    /// A waiting visit as the rule sees it. Queue is its calendar (the doctor it waits for; every visit, walk-in or reassigned, has one).
+    /// Arrived is the check-in (token issue) time; Prefix and Number make its token.
+    /// </summary>
+    public sealed record Waiting(Guid Id, Guid Queue, DateTimeOffset Start, bool WalkIn, DateTimeOffset? Arrived, string? Prefix, int Number, bool Escalated);
 
     /// <summary>The ids in queue order.</summary>
     public static IReadOnlyList<Guid> Order(IEnumerable<Waiting> waiting, QueueOrder order, bool bookedFirst)
@@ -24,6 +28,10 @@ public static class QueueRules
         };
         return [.. sorted.ThenBy(Arrival).ThenBy(w => w.Number).ThenBy(w => w.Id).Select(w => w.Id)]; // tokens issued in one instant keep their numbers
     }
+
+    /// <summary>Each visit's place, 1, 2, … within its own doctor's queue: "how many ahead" is the place minus one.</summary>
+    public static Dictionary<Guid, int> Places(IEnumerable<Waiting> waiting, QueueOrder order, bool bookedFirst) =>
+        waiting.GroupBy(w => w.Queue).SelectMany(q => Order(q, order, bookedFirst).Select((id, i) => (id, i))).ToDictionary(x => x.id, x => x.i + 1);
 
     // A visit with no token yet (an older row) counts from its slot.
     static DateTimeOffset Arrival(Waiting w) => w.Arrived ?? w.Start;

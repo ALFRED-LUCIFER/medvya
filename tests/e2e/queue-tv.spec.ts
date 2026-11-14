@@ -6,8 +6,9 @@ import { fakeHub } from './support/fakeHub';
 // shapes the server sends (IQueueService.cs). The TV must make no request but its own: pairing, its queue and its hub.
 const token = `${'A'.repeat(40)}Synthetic_Display-Token1`; // 64 base64url characters, like a real display token
 const queue = (now: { token: string; room: string | null; doctor: string }[]) => ({
-  now, next: [{ token: 'A-08', waitMinutes: 10, doctor: 'Dr. Arjun Rao (synthetic)' }, { token: 'B-03', waitMinutes: 15, doctor: 'Dr. Sana Khan (synthetic)' },
-    { token: 'A-09', waitMinutes: 25, doctor: 'Dr. Sana Khan (synthetic)' }], // A-09 was reassigned: it keeps its letter, the display names its doctor (MDV-P1-103)
+  now, next: [{ token: 'A-08', waitMinutes: 10, doctor: 'Dr. Arjun Rao (synthetic)', ahead: 0 }, { token: 'B-03', waitMinutes: 15, doctor: 'Dr. Sana Khan (synthetic)', ahead: 0 },
+    // A-09 was reassigned: it keeps its letter, the display names its doctor and counts it in her queue, one patient behind B-03 (MDV-P1-103)
+    { token: 'A-09', waitMinutes: 25, doctor: 'Dr. Sana Khan (synthetic)', ahead: 1 }],
 });
 const called = [{ token: 'A-07', room: 'Room 3', doctor: 'Dr. Arjun Rao (synthetic)' }];
 
@@ -44,7 +45,8 @@ test('pairs from its link, then shows tokens, rooms, doctors and waits only', as
   await expect(page.getByRole('heading', { name: 'Now calling' })).toBeVisible();
   const now = page.getByRole('region', { name: 'Now calling' }).getByRole('listitem');
   await expect(now).toHaveText(/A-07\s*Room 3\s*Dr\. Arjun Rao \(synthetic\)/);
-  await expect(page.getByRole('region', { name: 'Next' }).getByRole('listitem')).toHaveText([/A-08\s*Dr. Arjun Rao \(synthetic\) · ≈ 10 min/, /B-03\s*Dr. Sana Khan \(synthetic\) · ≈ 15 min/, /A-09\s*Dr. Sana Khan \(synthetic\) · ≈ 25 min/]); // the doctor per token (MDV-P1-103)
+  await expect(page.getByRole('region', { name: 'Next' }).getByRole('listitem')).toHaveText([/A-08\s*Dr. Arjun Rao \(synthetic\) · Next in line · ≈ 10 min/, /B-03\s*Dr. Sana Khan \(synthetic\) · Next in line · ≈ 15 min/,
+    /A-09\s*Dr. Sana Khan \(synthetic\) · 1 ahead · ≈ 25 min/]); // the doctor per token and how many are ahead in that doctor's queue (MDV-P1-103)
   await expect(page.getByText('Emergency? Tell the front desk immediately.')).toBeVisible();
   await expect(page.getByRole('status').filter({ hasText: 'Live updates' })).toHaveText('Live updates');
 
@@ -92,6 +94,7 @@ for (const [locale, nowLabel] of [['en', 'Now calling'], ['ar', 'يُنادى ا
       await openTv(page, { locale });
       await expect(page.getByRole('heading', { name: nowLabel })).toBeVisible();
       if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+      await expect(page.getByRole('listitem').filter({ hasText: 'A-09' })).toContainText(locale === 'ar' ? 'قبله مريض واحد' : '1 ahead'); // MDV-P1-103
       for (const t of await page.locator('bdi').all()) {
         expect(parseFloat(await t.evaluate(e => getComputedStyle(e).fontSize))).toBeGreaterThanOrEqual(48);
         await expect(t).toHaveAttribute('dir', 'ltr'); // "A-07" reads the same in Arabic

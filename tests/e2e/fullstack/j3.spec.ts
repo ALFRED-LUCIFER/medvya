@@ -21,7 +21,8 @@ journey('J3', {
     await page.getByRole('link', { name: 'Back to Front desk' }).first().click();
     const card = page.getByRole('region', { name: /^Ready for doctor/ }).getByRole('article', { name: patient.name }); // nurse intake is off (the default): check-in goes straight to Ready for doctor (#1104)
     await expect(card.getByText('Walk-in', { exact: true })).toBeVisible();
-    await expect(card.getByText(/^Token [A-Z]-\d+$/)).toBeVisible();
+    // The token and how many wait ahead in Dr. Rao's own queue, in words (MDV-P1-103, decision 10).
+    await expect(card.getByText(/^Token [A-Z]-\d+ · (Next in line|\d+ ahead)$/)).toBeVisible();
     await expect(card.getByText('Registration incomplete')).toBeVisible(); // quick-registered at the desk (J3.2)
     await expectArabicAxeClean(browser, joseph, '/app/front-desk/walk-in');
     expect(watch.leaks([patient.name, patient.dob, patient.mobile, patient.mobile.replace(/\D/g, '')])).toEqual([]);
@@ -197,11 +198,11 @@ journey('J3', {
     await walkIn(page, patient, rao);
     await page.goto(board);
     const ready = page.getByRole('region', { name: /^Ready for doctor/ }).getByRole('article', { name: patient.name });
-    const token = await ready.getByText(/^Token [A-Z]-\d+$/).textContent();
+    const token = (await ready.getByText(/^Token [A-Z]-\d+/).textContent())!.match(/[A-Z]-\d+/)![0]; // the tag also says how many are ahead
     await ready.getByRole('button', { name: 'Call in' }).click();
     await expect(page.getByRole('region', { name: /^In consult/ }).getByRole('article', { name: patient.name })).toBeVisible();
     await page.getByRole('button', { name: 'Undo' }).click();
-    await expect(ready.getByText(token!, { exact: true })).toBeVisible();
+    await expect(ready).toContainText(`Token ${token}`);
     await expect(page.getByRole('status').filter({ hasText: 'Undone' })).toContainText(`${patient.name} is back in Ready for doctor`);
     await page.reload(); // the server holds the undo
     await expect(ready).toBeVisible();

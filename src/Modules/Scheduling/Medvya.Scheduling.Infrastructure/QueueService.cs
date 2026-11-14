@@ -40,16 +40,16 @@ public sealed class QueueService(SchedulingDbContext db, SchedulingContext conte
         var now = queue.Where(q => q.Visit.State == AppointmentState.InConsult).GroupBy(q => q.Visit.CalendarId)
             .Select(g => g.MaxBy(q => q.Visit.ChangedAt)).OrderByDescending(q => q.Visit.ChangedAt)
             .Select(q => new QueueTvNow(q.Token, q.Visit.Room, names.GetValueOrDefault(q.Visit.CalendarId, ""))).ToList();
-        // Next: each doctor's waiting tokens in the clinic's queue order (MDV-P1-103), after whoever is with the doctor now; each names its
-        // doctor, since a reassigned token keeps its letter.
-        var next = queue.Where(q => places.ContainsKey(q.Visit.Id)).GroupBy(q => q.Visit.CalendarId).SelectMany(g =>
+        // Next: each doctor's waiting tokens in their place in that doctor's queue (MDV-P1-103), after whoever is with the doctor now; each
+        // names its doctor, since a reassigned token keeps its letter, and how many wait ahead of it.
+        var busy = queue.Where(q => q.Visit.State == AppointmentState.InConsult).Select(q => q.Visit.CalendarId).ToHashSet();
+        var next = queue.Where(q => places.ContainsKey(q.Visit.Id)).Select(q =>
             {
-                var busy = queue.Any(q => q.Visit.CalendarId == g.Key && q.Visit.State == AppointmentState.InConsult) ? 1 : 0;
-                var minutes = slots.GetValueOrDefault(g.Key, DefaultSlotMinutes);
-                return g.OrderBy(q => places[q.Visit.Id]).Select((q, place) =>
-                    (Place: places[q.Visit.Id], Next: new QueueTvNext(q.Token, RoundUp((place + busy) * minutes), names.GetValueOrDefault(g.Key, ""))));
+                var ahead = places[q.Visit.Id] - 1;
+                var minutes = slots.GetValueOrDefault(q.Visit.CalendarId, DefaultSlotMinutes);
+                return new QueueTvNext(q.Token, RoundUp((ahead + (busy.Contains(q.Visit.CalendarId) ? 1 : 0)) * minutes), names.GetValueOrDefault(q.Visit.CalendarId, ""), ahead);
             })
-            .OrderBy(n => n.Next.WaitMinutes).ThenBy(n => n.Place).Take(MaxNext).Select(n => n.Next).ToList();
+            .OrderBy(n => n.WaitMinutes).ThenBy(n => n.Ahead).Take(MaxNext).ToList();
         return new(now, next);
     }
 

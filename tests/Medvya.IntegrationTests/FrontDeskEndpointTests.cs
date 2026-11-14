@@ -203,8 +203,9 @@ public sealed class FrontDeskEndpointTests(PostgresFixture sql) : IClassFixture<
         var body = await slip.Content.ReadAsStringAsync();
         var json = JsonDocument.Parse(body).RootElement;
         // Exactly these fields: the slip leaves the clinic in the patient's hand, so a name, MRN, phone or reason must never join them.
-        Assert.Equal(["clinicName", "token", "doctorName", "issuedAt", "timeZone"], json.EnumerateObject().Select(p => p.Name));
+        Assert.Equal(["clinicName", "token", "doctorName", "issuedAt", "timeZone", "ahead"], json.EnumerateObject().Select(p => p.Name));
         Assert.Equal(token, json.GetProperty("token").GetString());
+        Assert.Equal(0, json.GetProperty("ahead").GetInt32()); // the only patient waiting for the doctor: next in line (MDV-P1-103)
         Assert.False(string.IsNullOrEmpty(json.GetProperty("doctorName").GetString()));
         Assert.DoesNotContain("Meera", body, StringComparison.Ordinal);
         Assert.DoesNotContain("000001", body, StringComparison.Ordinal);

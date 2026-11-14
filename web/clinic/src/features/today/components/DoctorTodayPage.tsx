@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import { Activity, CalendarCheck, FilePen, Pill, Siren, CircleAlert, CircleCheck, CircleHelp, ClipboardCheck, DoorOpen, ReceiptText, Syringe, UserCheck, type LucideIcon } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
 import { Button, buttonVariants, Card, cn, FrontDeskTag, PageContainer, PageHeader, PageMessage } from '@medvya/ui';
-import type { BoardCard, BoardColumn, LiveStatus } from '../../front-desk/domain/board';
+import { aheadWords, type BoardCard, type BoardColumn, type LiveStatus } from '../../front-desk/domain/board';
 import { canConsult } from '../../encounters/domain/encounter';
 import type { AllergyState } from '../../patient360/domain/chart';
 import { authoriseTarget } from '../../prescription/domain/authorisation';
@@ -127,12 +127,13 @@ function Hero(p: Props & { card: BoardCard }) {
 }
 
 function Chips(p: Props & { card: BoardCard }) {
-  const { t } = useI18n();
+  const i18n = useI18n(), { t } = i18n;
   const c = p.card, Icon = stateIcons[c.state] ?? CalendarCheck;
   return (
     <div className="flex flex-wrap gap-1.5">
       <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-[13px] font-bold">
         <Icon aria-hidden className="size-4" />{t(`board.column.${c.state as BoardColumn}`)}{c.state === 'CheckedIn' && ` · ${t('board.waiting', { minutes: p.waitMinutes(c.since) })}`}
+        {c.queuePlace != null && ` · ${aheadWords(i18n, c.queuePlace - 1)}`}
       </span>
       {p.escalations[c.id] && (
         <span className="inline-flex items-center gap-1.5 rounded-full border-2 border-danger-700 px-2.5 py-1 text-danger-700 text-[13px] font-bold">

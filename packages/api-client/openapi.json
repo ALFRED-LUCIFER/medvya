@@ -11267,7 +11267,8 @@
         "required": [
           "token",
           "waitMinutes",
-          "doctor"
+          "doctor",
+          "ahead"
         ],
         "type": "object",
         "properties": {
@@ -11284,6 +11285,14 @@
           },
           "doctor": {
             "type": "string"
+          },
+          "ahead": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -13265,7 +13274,8 @@
           "token",
           "doctorName",
           "issuedAt",
-          "timeZone"
+          "timeZone",
+          "ahead"
         ],
         "type": "object",
         "properties": {
@@ -13284,6 +13294,15 @@
           },
           "timeZone": {
             "type": "string"
+          },
+          "ahead": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },

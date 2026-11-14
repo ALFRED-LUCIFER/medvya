@@ -84,5 +84,11 @@ public interface IScheduleService
     /// <summary>Visits that still occupy a slot on the facility-local date, by time (for a holiday's "needs moving" list). Needs configure access.</summary>
     Task<IReadOnlyList<AppointmentToMove>> AppointmentsOnAsync(Guid facilityId, DateOnly day, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// How many of the organisation's visits are with the nurse now (MDV-P2-055), so the owner's nurse-intake switch says it before it changes.
+    /// A count only, no patient data; the caller's endpoint checks who may ask.
+    /// </summary>
+    Task<int> CountWithNurseAsync(CancellationToken cancellationToken = default);
+
     Task<ResourceView> AddResourceAsync(AddResource command, CancellationToken cancellationToken = default);
 }

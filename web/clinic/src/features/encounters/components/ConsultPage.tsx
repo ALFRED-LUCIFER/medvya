@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { CircleAlert } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants } from '@medvya/ui';
+import { Button, buttonVariants, SegmentedControl } from '@medvya/ui';
 import type { ClinicalRefusal } from '../../clinical-access/domain/clinicalAccess';
 import { openPastDay, type ConsultView, type EncounterBanner } from '../domain/encounter';
 import PatientStrip from './PatientStrip';
@@ -41,11 +41,8 @@ export default function ConsultPage(p: Props) {
         {p.canReconcile && <Link to={`/consult/${encounter.id}/problems`} className={buttonVariants({ variant: 'outline' })}>{t('consult.codeProblems')}</Link>}
         {p.canReconcile && <Link to={`/consult/${encounter.id}/medicines`} className={buttonVariants({ variant: 'outline' })}>{t('consult.reconcileMedicines')}</Link>}
         <Link to={p.boardPath} className={buttonVariants({ variant: 'outline' })}>{t(ended ? 'consult.backToBoard' : 'consult.leave')}</Link>
-        <div role="group" aria-label={t('studio.view.label')} className="ms-auto flex gap-1">
-          {(['page', 'steps'] as const).map(v => (
-            <Button key={v} variant={p.view === v ? 'selected' : 'outline'} aria-pressed={p.view === v} onClick={() => p.onView(v)}>{t(`studio.view.${v}`)}</Button>
-          ))}
-        </div>
+        <SegmentedControl label={t('studio.view.label')} className="ms-auto" value={p.view} onValueChange={p.onView}
+          options={(['page', 'steps'] as const).map(v => ({ value: v, label: t(`studio.view.${v}`) }))} />
       </div>
       {openPastDay(encounter, p.banner.timeZone) && (
         <p role="status" className="inline-flex items-center gap-2 rounded-lg border border-warning-700 p-3 font-bold">

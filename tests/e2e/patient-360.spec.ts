@@ -194,6 +194,7 @@ test('MDV-P2-033: the section buttons filter the page, work from the keyboard, a
   await buttons.getByRole('button', { name: 'History' }).focus();
   await page.keyboard.press('Enter');
   await expect(buttons.getByRole('button', { name: 'History' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(buttons.getByRole('button', { name: 'History' }).locator('[data-slot=chip] svg.lucide-check')).toHaveCount(1); // MDV-P2-060
   await expect(page.getByRole('region', { name: 'History' })).toBeVisible();
   for (const hidden of ['Problems', 'Last vitals', 'Results and trends', 'Timeline', 'Chronic care'])
     await expect(page.getByRole('region', { name: hidden, exact: true })).toHaveCount(0);

@@ -799,6 +799,7 @@ test('a status count shows only its group, says it is pressed, and pressing agai
   await expect(booked).toHaveAttribute('aria-pressed', 'false');
   await booked.click();
   await expect(booked).toHaveAttribute('aria-pressed', 'true');
+  await expect(booked.locator('[data-slot=chip] svg.lucide-check')).toHaveCount(1); // a filter chip with a tick when on (MDV-P2-060)
   await expect(group(page, 'Booked')).toBeVisible();
   await expect(group(page, 'Checked in')).toBeHidden();
   await filters(page).getByRole('button', { name: 'Done · 1' }).click(); // done opens when it is the one shown

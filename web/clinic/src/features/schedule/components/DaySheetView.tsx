@@ -1,5 +1,5 @@
 import { useI18n } from '@medvya/i18n';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState } from '@medvya/ui';
+import { PageHeader, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState } from '@medvya/ui';
 import type { DaySheet } from '../domain/daySheet';
 
 /** Print-only day sheet (MDV-P1-050): one page per doctor in facility time, plain black on white, state in words. */
@@ -11,7 +11,8 @@ export default function DaySheetView({ sheet, printedBy }: { sheet: DaySheet; pr
     <div className="hidden bg-white text-black print:block">
       {sheet.pages.map(page => (
         <section key={page.calendarId} aria-labelledby={`sheet-${page.calendarId}`} className="break-after-page p-2 last:break-after-auto">
-          <h1 className="text-sm font-bold">{`${t('schedule.sheet.title')}, ${formatDay(sheet.date)}, ${sheet.timeZone}`}</h1>
+          {/* Wraps rather than truncates: on paper there is no hover or resize to read a cut title. */}
+          <PageHeader className="[&_h1]:whitespace-normal" title={`${t('schedule.sheet.title')}, ${formatDay(sheet.date)}, ${sheet.timeZone}`} />
           <h2 id={`sheet-${page.calendarId}`} className="mb-2 text-xl font-extrabold">{page.doctorName || t('schedule.doctor')}</h2>
           <TableState state={page.rows.length === 0 ? 'empty' : 'ready'} messages={{ loading: '', error: '', empty: t('schedule.sheet.empty') }}>
             <Table label={`${t('schedule.sheet.title')}, ${page.doctorName || t('schedule.doctor')}`} className="border-collapse text-base" containerClassName="overflow-visible rounded-none border-0">

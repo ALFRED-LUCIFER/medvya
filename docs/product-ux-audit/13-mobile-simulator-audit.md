@@ -73,6 +73,7 @@ First screens: [clinician sign-in](evidence/mobile-simulator/ios-clinician-01-fi
 | Evidence | Arabic text is translated but the layout stays left to right: monogram at the left, headings left-aligned. [clinician](evidence/mobile-simulator/ios-clinician-01-first-screen-ar.jpg), [patient](evidence/mobile-simulator/ios-patient-01-first-screen-ar.jpg). Neither `app.json` sets `supportsRTL` for `expo-localization`, and no code calls `I18nManager.forceRTL` |
 | Consequence | UAE users get a mirrored-wrong layout; the RTL chevron and back-arrow code in `ui-native` never takes effect |
 | Remedy | `supportsRTL: true` in both apps' `expo-localization` plugin config, and `I18nManager.allowRTL`/`forceRTL` from the locale with one reload; check in Expo Go and a dev build |
+| Fixed | MDV-P5-056: `supportsRTL: true` in both apps. A development build follows the device language on first open: [clinician Arabic](evidence/mobile-simulator/ios-devbuild-clinician-ar.jpg), [clinician English](evidence/mobile-simulator/ios-devbuild-clinician-en.jpg), [patient Arabic](evidence/mobile-simulator/ios-devbuild-patient-ar.jpg), [patient English](evidence/mobile-simulator/ios-devbuild-patient-en.jpg). Expo Go 58 cannot: it ships no Arabic localisation, so iOS reports English to it, and it resets `forceRTL` from the manifest on every load (tried on the simulator), so a JavaScript `forceRTL` never takes effect there |
 
 ### M-04 · Allergy and medicines share one icon, and the allergy chip does not say "allergy"
 | | |

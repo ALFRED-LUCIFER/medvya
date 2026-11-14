@@ -71,8 +71,17 @@ sealed class StaffSessions(IdentityDbContext db) : IStaffSessions
         var session = await db.Sessions.SingleOrDefaultAsync(s => s.Id == sessionId && s.UserId == userId, cancellationToken);
         if (session is null || !session.IsActive(now)) return null;
         session.RevokedAt = now;
+        session.PushToken = null;
         await db.SaveChangesAsync(cancellationToken);
         return session;
+    }
+
+    public async Task<bool> SetPushTokenAsync(Guid userId, Guid sessionId, string? token, CancellationToken cancellationToken = default)
+    {
+        if (token is not null)
+            await db.Sessions.Where(s => s.PushToken == token && s.Id != sessionId).ExecuteUpdateAsync(u => u.SetProperty(s => s.PushToken, (string?)null), cancellationToken);
+        return await db.Sessions.Where(s => s.Id == sessionId && s.UserId == userId && s.RevokedAt == null && s.RefreshTokenHash != null)
+            .ExecuteUpdateAsync(u => u.SetProperty(s => s.PushToken, token), cancellationToken) == 1;
     }
 
     public async Task<RefreshRotation> RotateRefreshAsync(Guid sessionId, byte[]? current, byte[] replacement, CancellationToken cancellationToken = default)
@@ -97,13 +106,13 @@ sealed class StaffSessions(IdentityDbContext db) : IStaffSessions
     {
         var now = DateTimeOffset.UtcNow;
         return db.Sessions.Where(s => s.UserId == userId && s.TenantId == tenantId && (s.MembershipId == membershipId || s.MembershipId == null) && s.RevokedAt == null)
-            .ExecuteUpdateAsync(u => u.SetProperty(s => s.RevokedAt, now), cancellationToken);
+            .ExecuteUpdateAsync(u => u.SetProperty(s => s.RevokedAt, now).SetProperty(s => s.PushToken, (string?)null), cancellationToken);
     }
 
     public Task<int> RevokeInTenantAsync(Guid userId, Guid tenantId, CancellationToken cancellationToken = default)
     {
         var now = DateTimeOffset.UtcNow;
         return db.Sessions.Where(s => s.UserId == userId && s.TenantId == tenantId && s.RevokedAt == null)
-            .ExecuteUpdateAsync(u => u.SetProperty(s => s.RevokedAt, now), cancellationToken);
+            .ExecuteUpdateAsync(u => u.SetProperty(s => s.RevokedAt, now).SetProperty(s => s.PushToken, (string?)null), cancellationToken);
     }
 }

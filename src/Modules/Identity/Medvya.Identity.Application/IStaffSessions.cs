@@ -26,6 +26,12 @@ public interface IStaffSessions
     /// </summary>
     Task<RefreshRotation> RotateRefreshAsync(Guid sessionId, byte[]? current, byte[] replacement, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Registers, replaces or (with null) removes the push token of the user's live native session; false if there is none. A token that was
+    /// on another session (switch user on a shared phone) leaves it, so a phone is pushed to for one session only.
+    /// </summary>
+    Task<bool> SetPushTokenAsync(Guid userId, Guid sessionId, string? token, CancellationToken cancellationToken = default);
+
     /// <summary>When each of these users last signed in (the newest session start, live or ended); users who never did are left out.</summary>
     Task<IReadOnlyDictionary<Guid, DateTimeOffset>> LastSignInAsync(IReadOnlyCollection<Guid> userIds, Guid tenantId, CancellationToken cancellationToken = default);
 

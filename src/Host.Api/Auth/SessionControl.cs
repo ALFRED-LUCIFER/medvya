@@ -3,6 +3,7 @@ using Medvya.Audit.Api;
 using Medvya.Audit.Application;
 using Medvya.Audit.Domain;
 using Medvya.Identity.Application;
+using Medvya.Identity.Domain;
 using Medvya.Tenancy.Api;
 using Medvya.Tenancy.Application;
 using Medvya.Tenancy.Domain;
@@ -33,6 +34,9 @@ public static class SessionControl
     public const string StaffAdminPolicy = "staff-admin";
 
     public sealed record FacilityChoiceRequest(Guid MembershipId);
+    public sealed record PushTokenRequest(string? Token);
+
+    static IResult NotAnApp() => Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "Only the app's own session has a push token");
 
     public static AuthorizationBuilder AddStaffAdminPolicy(this AuthorizationBuilder builder) =>
         builder.AddPolicy(StaffAdminPolicy, p => p.RequireAuthenticatedUser()
@@ -169,6 +173,18 @@ public static class SessionControl
             return await sessions.RevokeAsync(Read(http.User, ClaimTypes.NameIdentifier)!.Value, id, http.RequestAborted) is null
                 ? Results.NotFound() : Results.NoContent();
         }).RequireAuthorization();
+
+        // Push token (MDV-P5-033, ADR-011 §8): the app registers or replaces its device's token on its own native session, or removes it; any
+        // revoke (sign-out, My devices, offboarding, a refresh replay) removes it too. The token travels in the body only and is never logged.
+        app.MapPut("/v1/me/push-token", async (PushTokenRequest body, HttpContext http, [FromServices] IStaffSessions sessions) =>
+            !NativeAuthentication.IsNative(http.User) ? NotAnApp()
+            : !StaffSession.IsPushToken(body.Token) ? Results.ValidationProblem(new Dictionary<string, string[]> { ["token"] = ["invalid"] })
+            : await sessions.SetPushTokenAsync(Read(http.User, ClaimTypes.NameIdentifier)!.Value, Read(http.User, SessionIdClaim)!.Value, body.Token, http.RequestAborted)
+                ? Results.NoContent() : Results.NotFound()).RequireAuthorization();
+        app.MapDelete("/v1/me/push-token", async (HttpContext http, [FromServices] IStaffSessions sessions) =>
+            !NativeAuthentication.IsNative(http.User) ? NotAnApp()
+            : await sessions.SetPushTokenAsync(Read(http.User, ClaimTypes.NameIdentifier)!.Value, Read(http.User, SessionIdClaim)!.Value, null, http.RequestAborted)
+                ? Results.NoContent() : Results.NotFound()).RequireAuthorization();
 
         // Tenant admin ends a staff member's sessions in this tenant only; their sessions in other clinics are not this tenant's to end.
         app.MapDelete("/v1/staff/{userId:guid}/sessions", async (Guid userId, HttpContext http, [FromServices] IStaffSessions sessions) =>

@@ -242,6 +242,96 @@ public sealed class NativeSignInTests(PostgresFixture sql) : IClassFixture<Postg
         Assert.Equal(HttpStatusCode.BadRequest, (await Refresh(tokens.Refresh)).StatusCode);
     }
 
+    // Push tokens (MDV-P5-033 check 1, ADR-011 §8). Synthetic Expo-style tokens.
+    const string PushA = "ExponentPushToken[synthetic-aaaa]", PushB = "ExponentPushToken[synthetic-bbbb]";
+
+    async Task<string?> PushTokenOf(Guid userId) => (await SessionOf(userId)).PushToken;
+
+    Task<HttpResponseMessage> RegisterPush(string access, string? token) => Api(access, HttpMethod.Put, "/v1/me/push-token", new { token });
+
+    [Fact]
+    public async Task ThePhoneRegistersReplacesAndRemovesItsPushToken()
+    {
+        var (user, _) = await Doctor();
+        var tokens = await SignIn(user);
+
+        Assert.Equal(HttpStatusCode.NoContent, (await RegisterPush(tokens.Access, PushA)).StatusCode);
+        Assert.Equal(PushA, await PushTokenOf(user.Id));
+        Assert.Equal(HttpStatusCode.NoContent, (await RegisterPush(tokens.Access, PushB)).StatusCode); // the OS rotated it
+        Assert.Equal(PushB, await PushTokenOf(user.Id));
+        foreach (var bad in new[] { null, "", "token <script>", new string('a', StaffSession.PushTokenMaxLength + 1) })
+            Assert.Equal(HttpStatusCode.BadRequest, (await RegisterPush(tokens.Access, bad)).StatusCode);
+        Assert.Equal(PushB, await PushTokenOf(user.Id));
+
+        Assert.Equal(HttpStatusCode.NoContent, (await Api(tokens.Access, HttpMethod.Delete, "/v1/me/push-token")).StatusCode);
+        Assert.Null(await PushTokenOf(user.Id));
+    }
+
+    [Fact]
+    public async Task OffboardingRemovesThePushTokenWithTheSessionAndOnlyInItsOwnPractice()
+    {
+        var (user, membership) = await Doctor();
+        var first = await SignIn(user);
+        await Api(first.Access, HttpMethod.Post, "/v1/me/facility", new { membershipId = membership });
+        var tokens = await Read(await Refresh(first.Refresh));
+        Assert.Equal(HttpStatusCode.NoContent, (await RegisterPush(tokens.Access, PushA)).StatusCode);
+
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var sessions = scope.ServiceProvider.GetRequiredService<Medvya.Identity.Application.IStaffSessions>();
+            // Another practice ending this person's sessions there leaves this practice's phone alone.
+            await sessions.RevokeInTenantAsync(user.Id, Guid.NewGuid());
+            Assert.Equal(PushA, await PushTokenOf(user.Id));
+            await sessions.RevokeForMembershipAsync(user.Id, tenant, membership);
+        }
+
+        Assert.Null(await PushTokenOf(user.Id)); // a revoked device gets no push
+        Assert.Equal(HttpStatusCode.Unauthorized, (await RegisterPush(tokens.Access, PushA)).StatusCode);
+    }
+
+    [Fact]
+    public async Task SigningOutOrRevokingInMyDevicesRemovesThePushToken()
+    {
+        var (user, membership) = await Doctor();
+        var first = await SignIn(user);
+        await Api(first.Access, HttpMethod.Post, "/v1/me/facility", new { membershipId = membership });
+        var tokens = await Read(await Refresh(first.Refresh));
+        await RegisterPush(tokens.Access, PushA);
+        Assert.Equal(HttpStatusCode.NoContent, (await Api(tokens.Access, HttpMethod.Post, "/bff/logout")).StatusCode);
+        Assert.Null(await PushTokenOf(user.Id));
+
+        var phone = await SignIn(user);
+        await Api(phone.Access, HttpMethod.Post, "/v1/me/facility", new { membershipId = membership });
+        phone = await Read(await Refresh(phone.Refresh));
+        await RegisterPush(phone.Access, PushB);
+        var lost = await SessionOf(user.Id);
+        var laptop = await SignIn(user); // reports the phone lost from another device
+        await Api(laptop.Access, HttpMethod.Post, "/v1/me/facility", new { membershipId = membership });
+        laptop = await Read(await Refresh(laptop.Refresh));
+        Assert.Equal(HttpStatusCode.NoContent, (await Api(laptop.Access, HttpMethod.Delete, $"/v1/me/sessions/{lost.Id}")).StatusCode);
+        await using var db = sql.Identity();
+        Assert.Null(await db.Sessions.Where(s => s.Id == lost.Id).Select(s => s.PushToken).SingleAsync());
+    }
+
+    [Fact]
+    public async Task APhonesTokenFollowsTheLatestSessionAndABrowserHasNone()
+    {
+        var (user, _) = await Doctor();
+        var first = await SignIn(user);
+        await RegisterPush(first.Access, PushA);
+        var second = await SignIn(user); // a new sign-in on the same phone (switch user): the same device token, a new session
+        Assert.Equal(HttpStatusCode.NoContent, (await RegisterPush(second.Access, PushA)).StatusCode);
+        await using (var db = sql.Identity())
+            Assert.Equal(new string?[] { null, PushA }, await db.Sessions.Where(s => s.UserId == user.Id).OrderBy(s => s.CreatedAt).Select(s => s.PushToken).ToListAsync());
+
+        // A browser session is not a device the app can push to.
+        using var browser = Browser();
+        await StaffSignInTests.SignIn(browser, user.Subject);
+        using var request = new HttpRequestMessage(HttpMethod.Put, new Uri("/v1/me/push-token", UriKind.Relative)) { Content = JsonContent.Create(new { token = PushB }) };
+        request.Headers.Add(StaffAuthentication.CsrfHeader, "1");
+        Assert.Equal(HttpStatusCode.Forbidden, (await browser.SendAsync(request)).StatusCode);
+    }
+
     [Fact]
     public async Task APhoneOutlivesTheBrowserIdleTimeoutButNotAWeekUnused()
     {

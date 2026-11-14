@@ -595,7 +595,7 @@ erDiagram
 | Table | Columns | Primary key | Notes |
 |---|---|---|---|
 | `OnboardingDrafts` | 6 | UserId |  |
-| `Sessions` | 11 | Id | tenant-scoped |
+| `Sessions` | 12 | Id | tenant-scoped |
 | `Users` | 4 | Id |  |
 
 <details><summary><code>identity.OnboardingDrafts</code> columns</summary>
@@ -622,6 +622,7 @@ erDiagram
 | `LastSeenAt` | timestamptz |  |  |
 | `MembershipId` | guid | yes | id of `tenancy.Memberships` |
 | `PreviousRefreshTokenHash` | bytes |  |  |
+| `PushToken` | character varying(512) |  |  |
 | `RefreshTokenHash` | bytes |  |  |
 | `RevokedAt` | timestamptz | yes |  |
 | `TenantId` | guid | yes | `tenancy.Tenants` |

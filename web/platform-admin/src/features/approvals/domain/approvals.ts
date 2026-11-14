@@ -5,6 +5,11 @@ export type OrgType = 'Clinic' | 'Hospital';
 export type Filter = 'Waiting' | 'NeedsChanges' | 'Decided' | 'All';
 export const filters: readonly Filter[] = ['Waiting', 'NeedsChanges', 'Decided', 'All'];
 
+/** Column definitions are data: each is its heading's i18n key, and the first identifies a row (MDV-P2-054). */
+export const queueColumns = ['platform.approvals.col.organisation', 'platform.approvals.col.state', 'platform.approvals.col.wait'] as const;
+export const documentColumns = ['platform.approvals.docs.document', 'platform.approvals.docs.checks'] as const;
+export const historyColumns = ['platform.audit.when', 'platform.approvals.history.decision', 'platform.audit.who', 'platform.audit.reason'] as const;
+
 /** What an operator may do to an organisation; each is a POST to /v1/organisations/{id}/{action}. */
 export type Action = 'approve' | 'request-changes' | 'reject' | 'suspend' | 'reinstate';
 

@@ -1,13 +1,13 @@
 import {
   Calendar, CalendarDays, ClipboardCheck, Forward, Headset, Inbox, MessageSquare, Mic, ReceiptText,
-  SlidersHorizontal, Syringe, UserPlus, Users, Video, type LucideIcon,
+  SlidersHorizontal, Syringe, Users, Video, type LucideIcon,
 } from 'lucide-react';
 import type { NavGroup, NavId } from '../domain/navigation';
 
 // Icons follow the Clinician App sidebar (Material symbols mapped to Lucide).
 export const navIcons: Record<NavId, LucideIcon> = {
   today: CalendarDays, patients: Users, messages: MessageSquare, video: Video, referrals: Forward, inbox: Inbox,
-  carePlans: ClipboardCheck, frontDesk: Headset, schedule: Calendar, register: UserPlus, nurse: Syringe,
+  carePlans: ClipboardCheck, frontDesk: Headset, schedule: Calendar, nurse: Syringe,
   billing: ReceiptText, devices: Mic, settings: SlidersHorizontal,
 };
 

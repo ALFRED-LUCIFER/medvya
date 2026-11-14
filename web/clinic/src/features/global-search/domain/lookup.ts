@@ -1,7 +1,7 @@
 import type { PatientSummary } from '../../patients/domain/directory';
 
-// Global search (⌘K, MDV-P2-003): POST /v1/patients/lookup. A result is the desk's search row (MDV-P1-101: name, age, sex, date of birth, MRN and
-// phone tails, last visit, duplicate mark); the server says whether the caller may open the chart. Nothing here grants anything.
+// Global search (⌘K, MDV-P2-003): POST /v1/patients/lookup. A result is the desk's search row (MDV-P1-101: name, age, sex, MRN and phone tails,
+// last visit, duplicate mark; no date of birth, decision 15); the server says whether the caller may open the chart. Nothing here grants anything.
 export type LookupAccess = 'Open' | 'CanRequest' | 'RequestPending' | 'NoAccess';
 export type LookupRow = Omit<PatientSummary, 'status'> & { access: LookupAccess };
 export type LookupResult = { items: LookupRow[]; total: number };

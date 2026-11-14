@@ -64,7 +64,7 @@ test('the title and the actions do not move while the day loads', async ({ page 
   const held = new Promise<void>(r => { release = r; });
   await page.route('**/v1/front-desk/board?*', async r => { await held; await r.fallback(); });
   await page.reload();
-  const title = page.getByRole('heading', { level: 1, name: 'Today' }), mine = page.getByRole('button', { name: 'My patients' });
+  const title = page.getByRole('heading', { level: 1, name: 'My day' }), mine = page.getByRole('button', { name: 'My patients' });
   await expect(page.locator('main [data-slot=page-message][data-kind=busy]')).toBeVisible();
   const before = [await title.boundingBox(), await mine.boundingBox()];
   release();

@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { Link } from 'react-router';
-import { ChevronLeft, ChevronRight, CircleAlert, Info, Search, TriangleAlert } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CircleAlert, Info, Search, TriangleAlert, UserPlus } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
 import { Button, EmptyState, Input, Label, PageContainer, PageHeader, PageMessage, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead,
   TableHeader, TableRow, Tag, Tooltip, buttonVariants, cn } from '@medvya/ui';
@@ -20,7 +20,7 @@ type Props = {
   state: 'loading' | 'ready' | 'invalid' | 'forbidden' | 'notFound' | 'error';
   errorCode: SearchErrorCode | null;
   onRetry: () => void;
-  /** Path of the registration screen, when this membership may register (empty state link). */
+  /** Path of the registration screen, when this membership may register (header button and empty state link). */
   registerPath: string | null;
   /** Merge review (P-03); null when this role has no part in it. */
   mergePath: string | null;
@@ -39,8 +39,12 @@ export default function PatientDirectory(p: Props) {
     : '';
   return (
     <PageContainer width="reading">
+      {/* Register patient is here and on Front desk, not in the menu (MDV-P2-051); outlined, as Search is this view's primary button. */}
       <PageHeader title={t('patients.directory.title')}
-        actions={p.mergePath && <Link to={p.mergePath} className={buttonVariants({ variant: 'link' })}>{t('merge.open')}</Link>} />
+        actions={<>
+          {p.mergePath && <Link to={p.mergePath} className={buttonVariants({ variant: 'link' })}>{t('merge.open')}</Link>}
+          {p.registerPath && <Link to={p.registerPath} className={buttonVariants({ variant: 'outline' })}><UserPlus aria-hidden />{t('nav.register')}</Link>}
+        </>} />
 
       {/* Search and filter on one 44 px row (audit B-16): the Search button names the field (WCAG G167), the hint sits behind the info button. */}
       <div>
@@ -145,7 +149,6 @@ function Row({ row, to }: { row: PatientSummary; to: string }) {
       </TableHead>
       <TableCell>{age}</TableCell>
       <TableCell>{sex}</TableCell>
-      <TableCell className="whitespace-nowrap">{row.dateOfBirth && formatCalendarDate(row.dateOfBirth)}</TableCell>
       {/* The column heads say MRN and Phone; the cells show only the masked ending (audit B-16). */}
       <TableCell className="font-mono"><bdi dir="ltr">{`··${row.mrnTail}`}</bdi></TableCell>
       <TableCell className="font-mono"><bdi dir="ltr">{`··${row.mobileTail}`}</bdi></TableCell>

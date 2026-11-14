@@ -5714,6 +5714,7 @@ export interface paths {
                     After?: string;
                     Limit?: number | string;
                     PatientRecords?: boolean;
+                    Chart?: boolean;
                 };
                 header?: never;
                 path?: never;
@@ -5755,6 +5756,7 @@ export interface paths {
                     After?: string;
                     Limit?: number | string;
                     PatientRecords?: boolean;
+                    Chart?: boolean;
                 };
                 header?: never;
                 path: {

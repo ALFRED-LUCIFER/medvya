@@ -32,31 +32,36 @@ async function signInAs(page: Page, context: object, locale = 'en') {
 
 const sidebar = (page: Page) => page.locator('nav:visible').first();
 
-test('receptionist sees only Practice items and lands on the front desk', async ({ page }) => {
+test('receptionist sees Front desk · Schedule · Patients and lands on Front desk; Register patient is a button there (MDV-P2-051)', async ({ page }) => {
   await signInAs(page, receptionist);
+  await page.route('**/v1/front-desk/board?*', r => r.fulfill({ json: { facilityId: 'f-1', timeZone: 'Asia/Kolkata', date: '2026-10-19', now: '2026-10-19T04:40:00Z', cards: [] } }));
   await page.goto('/');
   await expect(page).toHaveURL('/front-desk');
   const nav = page.getByRole('navigation');
-  await expect(nav.getByRole('heading')).toHaveText(['Practice']);
-  await expect(nav.getByRole('link')).toHaveText(['Front desk', 'Schedule', 'Register patient']);
+  await expect(nav.getByRole('heading')).toHaveCount(0); // one list in the role's order (blueprint section 3)
+  await expect(nav.getByRole('link')).toHaveText(['Front desk', 'Schedule', 'Patients']);
+  await expect(page.getByRole('main').getByRole('heading', { level: 1 })).toHaveText(/^Front desk/);
+  await expect(page.getByRole('main').getByRole('link', { name: 'Register patient' })).toBeVisible();
   // Name and role are in the account menu (MDV-P1-093), not the sidebar.
   await page.getByRole('button', { name: 'Signed in as A. Joseph' }).click();
   await expect(page.getByRole('menu')).toContainText('Receptionist');
   // A clinical address is not a route for this role: the page says so (MDV-P1-096), not "Page not found".
-  await page.goto('/patients');
+  await page.goto('/patients/p-1');
+  await expect(page.getByRole('heading', { name: 'Screen not available' })).toBeVisible();
+  // My day is the doctor's: no menu item, and its address says so too.
+  await page.goto('/today');
   await expect(page.getByRole('heading', { name: 'Screen not available' })).toBeVisible();
 });
 
-test('doctor sees Clinical and Practice items; flag-off items are not rendered', async ({ page }) => {
+test('doctor sees My day · Patients · Schedule · Front desk · Settings; flag-off items are not rendered (MDV-P2-051)', async ({ page }) => {
   await signInAs(page, doctor);
   await page.goto('/');
   await expect(page).toHaveURL('/today');
   const nav = page.getByRole('navigation');
-  await expect(nav.getByRole('heading')).toHaveText(['Clinical', 'Practice', 'Admin']);
-  await expect(nav.getByRole('link')).toHaveText(['Today', 'Patients', 'Front desk', 'Schedule', 'Register patient', 'Practice settings']);
-  await expect(nav.getByRole('link', { name: 'Today' })).toHaveAttribute('aria-current', 'page');
-  // MDV-P2-002: a doctor's Today is their own screen, not the reception board.
-  await expect(page.getByRole('main').getByRole('heading', { name: /^Today/ })).toBeVisible();
+  await expect(nav.getByRole('link')).toHaveText(['My day', 'Patients', 'Schedule', 'Front desk', 'Practice settings']);
+  await expect(nav.getByRole('link', { name: 'My day' })).toHaveAttribute('aria-current', 'page');
+  // MDV-P2-002: the doctor's day is their own screen, never the board; the menu and the title say the same name.
+  await expect(page.getByRole('main').getByRole('heading', { level: 1 })).toHaveText('My day');
 });
 
 test('a member of one clinic who has not chosen it yet goes straight in: there is nothing to pick (UX-08)', async ({ page }) => {
@@ -67,7 +72,7 @@ test('a member of one clinic who has not chosen it yet goes straight in: there i
   await page.route('**/v1/me/context', r => r.fulfill({ json: chosen ? doctor : { user: doctor.user, memberships: doctor.memberships, active: null } }));
   await page.route('**/v1/me/facility', r => { posts.push(r.request().postDataJSON()); chosen = true; return r.fulfill({ status: 204 }); });
   await page.goto('/today');
-  await expect(page.getByRole('main').getByRole('heading', { name: /^Today/ })).toBeVisible();
+  await expect(page.getByRole('main').getByRole('heading', { name: 'My day' })).toBeVisible();
   await expect(page).toHaveURL('/today'); // back to the address asked for
   await expect(page.getByRole('heading', { name: 'Where are you working today?' })).toHaveCount(0);
   expect(posts).toEqual([{ membershipId: 'm-1' }]);
@@ -91,9 +96,26 @@ test('a nurse lands on the nurse queue, and /patients/new says the role cannot r
   await expect(page.getByRole('heading', { name: 'Register patient' })).toBeVisible();
   await expect(page.getByText('Your role at this facility cannot register patients.')).toBeVisible();
   await expect(page.getByText('This patient was not found')).toHaveCount(0);
+  // The menu names the nurse queue as its title does, and Today is gone: it used to open the board a second time (AC2).
+  await expect(page.getByRole('navigation').getByRole('link')).toHaveText(['Nurse queue', 'Patients', 'Front desk', 'Schedule']);
+  await page.getByRole('navigation').getByRole('link', { name: 'Nurse queue' }).click();
+  await expect(page.getByRole('main').getByRole('heading', { level: 1 })).toHaveText('Nurse queue');
 });
 
-test('page not found offers the start page, not Today, to a role without Today (UX-08)', async ({ page }) => {
+test('a bookmarked /today still opens the board for a nurse without intake, as it did before My day (MDV-P2-051 AC5)', async ({ page }) => {
+  await signInAs(page, { ...nurse, active: { ...nurse.active, flags: [] } });
+  await page.route('**/v1/front-desk/board?*', r => r.fulfill({ json: { facilityId: 'f-1', timeZone: 'Asia/Kolkata', date: '2026-10-19', now: '2026-10-19T04:40:00Z', cards: [] } }));
+  await page.goto('/today');
+  await expect(page).toHaveURL('/front-desk');
+  await expect(page.getByRole('main').getByRole('heading', { level: 1 })).toHaveText(/^Front desk/);
+  // AC2: with intake off, one item per screen.
+  await expect(page.getByRole('navigation').getByRole('link')).toHaveText(['Front desk', 'Schedule', 'Patients']);
+  // The old Patients address opens the directory, its page.
+  await page.goto('/patients');
+  await expect(page).toHaveURL('/patients/directory');
+});
+
+test('page not found offers the start page, not My day, to a role without My day (UX-08)', async ({ page }) => {
   await signInAs(page, receptionist);
   await page.goto('/no-such-page');
   await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible();
@@ -123,11 +145,11 @@ for (const locale of ['en', 'ar']) {
     await expect(tabs).toHaveCount(1);
     box = (await tabs.boundingBox())!;
     expect(box.y + box.height).toBe(760);
-    await expect(tabs.getByRole('link')).toHaveCount(5); // Today · Patients · Front desk · Schedule · More (Inbox and Messages are flag-off)
+    await expect(tabs.getByRole('link')).toHaveText(rtl ? ['يومي', 'المرضى', 'المواعيد', 'الاستقبال', 'المزيد'] : ['My day', 'Patients', 'Schedule', 'Front desk', 'More']); // the role's first four, then More
     for (const link of await tabs.getByRole('link').all()) expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(48);
     await tabs.getByRole('link').last().click();
     await expect(page).toHaveURL('/more');
-    await expect(page.getByRole('main').getByRole('link')).toHaveCount(7); // includes My devices (MDV-P0-012)
+    await expect(page.getByRole('main').getByRole('link')).toHaveCount(6); // the five menu items and My devices (MDV-P0-012)
   });
 }
 
@@ -135,7 +157,7 @@ test('keyboard: skip link is first, visible on focus and moves focus to main', a
   await signInAs(page, receptionist);
   await page.goto('/front-desk');
   // goto resolves on load, but the shell renders only after /v1/me/context answers; a Tab during loading lands nowhere.
-  await expect(page.getByRole('main').getByRole('heading', { name: /^Reception board/ })).toBeVisible(); // the P-01 board (MDV-P1-028)
+  await expect(page.getByRole('main').getByRole('heading', { level: 1, name: /^Front desk/ })).toBeVisible(); // the P-01 board (MDV-P1-028)
   await page.keyboard.press('Tab');
   const skip = page.getByRole('link', { name: 'Skip to main content' });
   await expect(skip).toBeFocused();
@@ -259,11 +281,11 @@ test('at 1440 px the sidebar shows until the user folds it; the labelled rail is
   await signInAs(page, doctor);
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/today');
-  await expect(sidebar(page).getByRole('link', { name: 'Today' })).toBeVisible();
+  await expect(sidebar(page).getByRole('link', { name: 'My day' })).toBeVisible();
   expect((await sidebar(page).boundingBox())!.width).toBe(232);
   await page.getByRole('button', { name: 'Collapse menu' }).click();
   expect((await sidebar(page).boundingBox())!.width).toBe(72);
-  await expect(sidebar(page).getByRole('link', { name: 'Today' })).toBeVisible(); // labelled, never icon-only
+  await expect(sidebar(page).getByRole('link', { name: 'My day' })).toBeVisible(); // labelled, never icon-only
   await page.reload();
   await expect(page.getByRole('button', { name: 'Expand menu' })).toBeVisible();
   expect((await sidebar(page).boundingBox())!.width).toBe(72);
@@ -291,7 +313,7 @@ for (const [roleName, context] of [['doctor', doctor], ['receptionist', receptio
 test('the account menu opens and closes by keyboard and gives focus back to the avatar; the skip link stays first', async ({ page }) => {
   await signInAs(page, receptionist);
   await page.goto('/front-desk');
-  const board = page.getByRole('main').getByRole('heading', { name: /^Reception board/ }); // the shell has rendered: a Tab before it lands nowhere
+  const board = page.getByRole('main').getByRole('heading', { level: 1, name: /^Front desk/ }); // the shell has rendered: a Tab before it lands nowhere
   await expect(board).toBeVisible();
   const avatar = page.getByRole('button', { name: 'Signed in as A. Joseph' });
   await avatar.focus();

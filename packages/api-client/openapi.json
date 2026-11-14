@@ -4567,6 +4567,13 @@
             "schema": {
               "type": "boolean"
             }
+          },
+          {
+            "name": "Chart",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -4643,6 +4650,13 @@
           },
           {
             "name": "PatientRecords",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "Chart",
             "in": "query",
             "schema": {
               "type": "boolean"

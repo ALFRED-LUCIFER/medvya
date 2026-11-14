@@ -11,7 +11,6 @@ type Props = {
   loading: boolean; notFound: boolean; refusal: ClinicalRefusal | null; failed: boolean;
   canLoadMore: boolean; loadingMore: boolean; loadMoreFailed: boolean;
   choice: TrendChoice; series: TrendSeries | null; trendsLoading: boolean; trendsFailed: boolean;
-  backPath: string;
   /** Links from a prescribed medicine to its visit and (with `printRx`) its printed prescription (MDV-1087). */
   consultPath: (encounterId: string) => string; printRx: boolean;
   onKind: (k: TimelineKind) => void; onAllKinds: () => void; onSource: (s: ChartSource | null) => void; onClear: () => void; onChoice: (c: TrendChoice) => void; onMore: () => void;
@@ -24,8 +23,8 @@ type Props = {
  */
 export default function TimelinePage(p: Props) {
   const { t } = useI18n();
-  // One header in every state, so the title and the way back never move (MDV-P2-059).
-  const header = <PageHeader title={t('timeline.title')} actions={<Link to={p.backPath} className={buttonVariants({ variant: 'outline' })}>{t('timeline.backToChart')}</Link>} />;
+  // One header in every state, so the title never moves (MDV-P2-059); the record's tabs above it are the way back (MDV-P2-051).
+  const header = <PageHeader title={t('timeline.title')} />;
   if (p.refusal)
     return <PageContainer>{header}<PageMessage kind="denied" title={t('patient360.refused.title')}>{t(p.refusal.canRequest ? 'consult.refused.ask' : 'patient360.refused.role')}</PageMessage></PageContainer>;
   if (p.notFound || p.failed) return <PageContainer>{header}<PageMessage kind="error">{t(p.notFound ? 'patient360.notFound' : 'timeline.loadFailed')}</PageMessage></PageContainer>;

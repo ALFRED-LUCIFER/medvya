@@ -75,6 +75,16 @@ public sealed record NextVisit(Guid Id, DateTimeOffset Start, AppointmentState S
 public sealed record WaitingVisit(Guid Id, string? Token, string PatientName, Guid CalendarId, AppointmentState State, DateTimeOffset Start, DateTimeOffset Since);
 
 /// <summary>
+/// The owner's Clinic today (MDV-P2-053), from the same visits as the board so the two agree at the same moment. Counts and staff names only.
+/// Booked: today's booked visits (not walk-ins) on the board; ToArrive: of them, still Booked. Arrived: past Booked, split walk-in and booked.
+/// Waiting: checked in, with the nurse or ready; LongestWaitMinutes: the longest any of them has been in that state (the waiting room's Since), null when nobody waits.
+/// Doctors: the facility's doctor calendars (a doctor's calendar id is their user id), to name the per-doctor counts.
+/// </summary>
+public sealed record ClinicToday(DateTimeOffset Now, string TimeZone, int Booked, int ToArrive, int ArrivedWalkIn, int ArrivedBooked, int Waiting, int? LongestWaitMinutes, IReadOnlyList<StaffName> Doctors);
+
+public sealed record StaffName(Guid Id, string Name);
+
+/// <summary>
 /// How late a doctor is running, in whole minutes: the later of how late the current consultation started and how long the
 /// earliest waiting patient is past their appointment time; 0 when on time.
 /// shortcut: from the board's states and times only; learn per-doctor consultation lengths when visit timings exist (P2).
@@ -123,6 +133,9 @@ public interface IFrontDeskService
 
     /// <exception cref="SchedulingAccessDeniedException">No board access at this facility.</exception>
     Task<ClinicOverview> GetOverviewAsync(Guid facilityId, CancellationToken cancellationToken = default);
+
+    /// <exception cref="SchedulingAccessDeniedException">May not configure the facility (owner, practice admin).</exception>
+    Task<ClinicToday> GetClinicTodayAsync(Guid facilityId, CancellationToken cancellationToken = default);
 
     /// <summary>The visit's token slip, to print or reprint (MDV-P2-046); the same token every time.</summary>
     /// <exception cref="AppointmentNotFoundException">No such appointment in this tenant.</exception>

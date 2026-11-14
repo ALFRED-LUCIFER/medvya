@@ -10,6 +10,7 @@ import { useDeskVisitsController } from '../features/visits/hooks/useVisitsContr
 import PatientRecord from '../features/patients/components/PatientRecord';
 import RecordTabs from '../features/patients/components/RecordTabs';
 import { recordTabs, type RecordAccess } from '../features/patients/domain/recordTabs';
+import { asFilter } from '../features/patients/domain/directory';
 import MergeReview from '../features/merge/components/MergeReview';
 import { useMergeController, useMergeHistory, useMergeRequest } from '../features/merge/hooks/useMergeController';
 import { usePatientDirectoryController } from '../features/patients/hooks/usePatientDirectoryController';
@@ -26,7 +27,8 @@ const recordPath = (id: string) => `${patientDirectory.path}/${id}`;
 
 /** A row opens the Patient record on the first tab this role may open: Summary for clinicians, Details for the desk (MDV-P2-051). */
 export function PatientDirectoryRoute({ registerPath, mergePath, access }: { registerPath: string | null; mergePath: string | null; access: RecordAccess }) {
-  return <PatientDirectory {...usePatientDirectoryController()} registerPath={registerPath} mergePath={mergePath} recordPath={id => recordTabs(id, access)[0]?.path ?? recordPath(id)} />;
+  const [params] = useSearchParams();
+  return <PatientDirectory {...usePatientDirectoryController(asFilter(params.get('filter')))} registerPath={registerPath} mergePath={mergePath} recordPath={id => recordTabs(id, access)[0]?.path ?? recordPath(id)} />;
 }
 
 /** The one Patient record (MDV-P2-051): its tabs above whichever tab is open; each tab's route and the server decide access as before. */

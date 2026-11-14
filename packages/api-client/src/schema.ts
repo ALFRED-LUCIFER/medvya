@@ -3395,6 +3395,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/front-desk/clinic-today": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    facilityId?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ClinicTodayView"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/queue/tv": {
         parameters: {
             query?: never;
@@ -9344,6 +9381,37 @@ export interface components {
             now: string;
             doctors: components["schemas"]["DoctorLoad"][];
             waiting: components["schemas"]["WaitingVisit"][];
+        };
+        ClinicTodayDoctor: {
+            /** Format: uuid */
+            id: string;
+            name: null | string;
+            /** Format: int32 */
+            notesToSign: number | string;
+            /** Format: int32 */
+            notesBeforeToday: number | string;
+            /** Format: int32 */
+            toAuthorise: number | string;
+        };
+        ClinicTodayView: {
+            /** Format: date-time */
+            now: string;
+            timeZone: string;
+            /** Format: int32 */
+            booked: number | string;
+            /** Format: int32 */
+            toArrive: number | string;
+            /** Format: int32 */
+            arrivedWalkIn: number | string;
+            /** Format: int32 */
+            arrivedBooked: number | string;
+            /** Format: int32 */
+            waiting: number | string;
+            /** Format: int32 */
+            longestWaitMinutes: null | number | string;
+            /** Format: int32 */
+            incompleteRegistrations: number | string;
+            doctors: components["schemas"]["ClinicTodayDoctor"][];
         };
         ClosePregnancy: {
             outcome: null | components["schemas"]["PregnancyOutcome"];

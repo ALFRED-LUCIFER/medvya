@@ -289,6 +289,9 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
     Guid FacilityId() => facility.FacilityId ?? throw new InvalidOperationException("No facility context.");
 
     /// <summary>Every location's live patients of the organisation (the tenant filter and row-level security do the isolation).</summary>
+    public Task<int> IncompleteCountAsync(CancellationToken cancellationToken = default) =>
+        OrgPatients().CountAsync(p => p.Status == RegistrationStatus.Incomplete, cancellationToken);
+
     IQueryable<Patient> OrgPatients() => db.Patients.AsNoTracking().Where(p => p.MergedIntoPatientId == null);
 
     /// <summary>At most this many possible matches are shown: enough to decide, too few to browse the register through this door.</summary>

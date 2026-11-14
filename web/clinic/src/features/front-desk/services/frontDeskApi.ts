@@ -1,6 +1,6 @@
 import { newIdempotencyKey } from '../../api/services/idempotencyKey';
 import { csrf, post, send } from '../../schedule/services/scheduleApi';
-import type { Board, BoardCard, BoardColumn, WalkInChoice, WalkInVisit } from '../domain/board';
+import type { Board, BoardCard, BoardColumn, TokenSlip, WalkInChoice, WalkInVisit } from '../domain/board';
 import type { ClinicOverview, ReassignReason } from '../domain/overview';
 
 /** A walk-in: the next free slot today, or queued with the chosen doctor. Ids and list values in the body, never in the URL. */
@@ -27,7 +27,10 @@ export const fetchOverview = (facilityId: string) => send<ClinicOverview>(`/v1/f
 export const reassignVisit = (appointmentId: string, calendarId: string, reason: ReassignReason) =>
   post<BoardCard>(`/v1/appointments/${appointmentId}/reassign`, { calendarId, reason });
 
-export const moveVisit = (appointmentId: string, state: BoardColumn) => post<BoardCard>(`/v1/appointments/${appointmentId}/status`, { state });
+/** The visit's token slip (MDV-P2-046): clinic, token, doctor and time; 409 token_void for a cancelled or left visit. */
+export const fetchTokenSlip = (appointmentId: string) => send<TokenSlip>(`/v1/appointments/${appointmentId}/token-slip`);
+
+export const moveVisit =(appointmentId: string, state: BoardColumn) => post<BoardCard>(`/v1/appointments/${appointmentId}/status`, { state });
 
 /** Undo this desk's last move of the visit; `state` is the state that move left it in, so the server refuses if it has moved since (MDV-P1-100). */
 export const undoMove = (appointmentId: string, state: BoardColumn) => post<BoardCard>(`/v1/appointments/${appointmentId}/undo`, { state });

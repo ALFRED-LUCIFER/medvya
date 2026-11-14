@@ -88,6 +88,8 @@ test('a new walk-in is quick-registered and checked in within a minute, then wai
   await expect(page.getByRole('heading', { name: 'Arjun Nair (synthetic) is checked in' })).toBeVisible();
   await expect(page.getByText('Walk-in with Dr. Arjun Rao (synthetic) at 10:40. The patient now waits in the Checked in column of the board.')).toBeVisible();
   await expect(page.getByText('Token A-02')).toBeVisible(); // MDV-P1-052: the token is on the success screen, not only on the board
+  // MDV-P2-046: printing the slip is offered, not required; the 5 clicks above are measured without it.
+  await expect(page.getByRole('link', { name: 'Print slip' })).toHaveAttribute('href', '/front-desk/token/a-9');
   expect(Date.now() - started).toBeLessThan(60_000);
 
   // The walk-in, then the board's own check-in with the time taken (exit gate 3).

@@ -2949,6 +2949,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/appointments/{appointmentId}/token-slip": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    appointmentId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TokenSlip"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/appointments/{appointmentId}/reassign": {
         parameters: {
             query?: never;
@@ -10180,6 +10217,14 @@ export interface components {
             /** Format: date-time */
             changedAt: null | string;
             appointmentsOutsideHours: components["schemas"]["AppointmentChip"][];
+        };
+        TokenSlip: {
+            clinicName: string;
+            token: string;
+            doctorName: string;
+            /** Format: date-time */
+            issuedAt: string;
+            timeZone: string;
         };
         UnavailableBlock: {
             /** Format: date-time */

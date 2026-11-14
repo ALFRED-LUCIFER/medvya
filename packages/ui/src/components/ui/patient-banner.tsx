@@ -1,10 +1,11 @@
 import * as React from "react"
 import { CircleAlert, CircleCheck, CircleHelp, Check } from "lucide-react"
 import { ltr, useI18n } from "@medvya/i18n"
-import { cn, scrollContainer } from "#lib/utils"
+import { cn, inFixedLayer, scrollContainer } from "#lib/utils"
 import { statusIcons } from "../../primitives"
 import { Button } from "#components/ui/button"
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "#components/ui/dialog"
+import { Tooltip } from "#components/ui/tooltip"
 
 export type BannerAllergy = { substance: string; reaction?: string }
 /** Three states that never look alike (unknown is not none). "noneKnown" must be said explicitly: an empty list is not it. */
@@ -76,9 +77,13 @@ function AllergyBlock({ allergy }: { allergy: AllergyState }) {
       {allergy.allergies.slice(0, allergiesInWords).map((a, i) => <AllergyWords key={i} allergy={a} />)}
       {rest > 0 && (
         <Dialog>
-          <DialogTrigger asChild>
-            <Button variant="outline" className="border-danger-border text-danger-text">{t("patientBanner.moreAllergies", { count: rest })}</Button>
-          </DialogTrigger>
+          {/* Founder decision on question 3 (14 Nov): hover or focus lists the folded allergies; a click still opens the full list. */}
+          <Tooltip content={<ul data-slot="more-allergies">{allergy.allergies.slice(allergiesInWords).map((a, i) => <li key={i}>{a.reaction
+            ? t("patientBanner.allergyReaction", { substance: a.substance, reaction: a.reaction }) : t("patientBanner.allergy", { substance: a.substance })}</li>)}</ul>}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="border-danger-border text-danger-text">{t("patientBanner.moreAllergies", { count: rest })}</Button>
+            </DialogTrigger>
+          </Tooltip>
           <DialogContent closeLabel={t("patientBanner.close")} aria-describedby={undefined}>
             <DialogTitle className="text-heading">{t("patient360.allergies")}</DialogTitle>
             <ul className="flex flex-col items-start gap-2">{allergy.allergies.map((a, i) => <li key={i}><AllergyWords allergy={a} /></li>)}</ul>
@@ -114,7 +119,7 @@ function usePinnedTop(ref: React.RefObject<HTMLElement | null>, pinned: boolean 
     observer.observe(el)
     const onFocus = (e: FocusEvent) => {
       const target = e.target
-      if (!(target instanceof HTMLElement)) return
+      if (!(target instanceof HTMLElement) || inFixedLayer(target)) return
       const pins = [...document.querySelectorAll<HTMLElement>("[data-pinned=top]")]
         .filter(p => !p.contains(target) && getComputedStyle(p).position === "sticky").map(p => p.getBoundingClientRect())
       const t = target.getBoundingClientRect()

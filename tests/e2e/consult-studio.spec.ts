@@ -2,6 +2,7 @@ import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
 import { encounterOf, mockNote, type NoteMock } from './support/note';
 import { obscuredWhenTabbing } from './support/pinned';
+import { t } from './support/desk';
 import { targetPx } from './support/targets';
 
 // MDV-P2-041: the consultation on one page (CONSULTATION STUDIO). CI has no API: the encounter, note, reconciliation and chart are mocked in the
@@ -130,28 +131,54 @@ test('verified vitals go into Objective from the Vitals section only on request;
   await expect(note(page)).not.toContainText('No recording for this visit');
 });
 
+// MDV-P1-094 AC2: a diagnosis is added inline in Assessment, with no trip to the problems page; the typed note stays on screen.
+test('a coded diagnosis is added in Assessment without leaving the consultation, and the typed note text is still there', async ({ page }) => {
+  const mock = await open(page, { version: 1, sections: { chiefComplaint: 'Thirst for two weeks (synthetic)' } });
+  await page.route('**/v1/diagnosis-codes', r => r.fulfill({ json: { system: 'ICD-10', version: '2019-medvya-starter-1', codes: [{ code: 'E11.9', title: 'Type 2 diabetes mellitus without complications' }, { code: 'I20.9', title: 'Angina, not specified' }] } }));
+  const adds: unknown[] = [];
+  await page.route('**/v1/encounters/e-1/problems', r => {
+    if (r.request().method() !== 'POST') return r.fallback();
+    adds.push(r.request().postDataJSON());
+    mock.problems.push({ id: 'pr-2', code: 'I20.9', description: 'Angina, not specified', verification: 'Verified', status: 'Active', addedHere: true, confirmed: true });
+    return r.fulfill({ json: { encounterId: 'e-1', patientId: 'p-a1', rows: mock.problems, locked: false } });
+  });
+  const url = page.url();
+  await note(page).getByRole('button', { name: 'Add diagnosis' }).click();
+  await note(page).getByLabel('Search ICD-10 by code or words').fill('angina');
+  await note(page).getByRole('list', { name: 'Matching codes' }).getByRole('button', { name: /I20\.9/ }).click();
+  await note(page).getByRole('button', { name: 'Add problem' }).click();
+  await expect(note(page).getByRole('list', { name: 'Diagnoses in this consultation' })).toContainText('Angina, not specified');
+  expect(adds).toHaveLength(1);
+  expect(page.url()).toBe(url);
+  await expect(note(page).getByLabel('Chief complaint')).toHaveValue('Thirst for two weeks (synthetic)');
+});
+
 // MDV-P1-094: under 1024 px the chart panel is a drawer opened from the section bar, so it never pushes the note down or sideways.
-// From 768 px (under 768 the draft opens on a tablet, MDV-P1-098).
-for (const [width, height] of [[768, 1024]] as const)
-  test(`at ${width} px the chart opens from the section bar in one action and closes back to the same place`, async ({ page }) => {
-    await page.setViewportSize({ width, height });
-    await open(page);
-    await expect(note(page).getByRole('complementary', { name: 'Consultation tools' })).toHaveCount(0); // not beside the note, not below it
-    await expect(note(page).getByRole('heading', { name: /^\d · Plan$/ })).toBeVisible(); // the note is there: the page can scroll
+// From 768 px (under 768 the draft opens on a tablet, MDV-P1-098). AC3: the page under the drawer keeps its place (mutation check: drop
+// inFixedLayer from the focus handlers in packages/ui patient-banner.tsx or sticky-action-bar.tsx and the scroll assertions fail). AC10: axe on the drawer in en and ar.
+for (const locale of ['en', 'ar'])
+  test(`at 768 px the chart opens from the section bar in one action and closes back to the same place (${locale})`, async ({ page }) => {
+    const tr = (key: string) => t(locale, key);
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await open(page, {}, locale);
+    await expect(note(page).getByRole('complementary', { name: tr('studio.panel.label') })).toHaveCount(0); // not beside the note, not below it
+    await expect(page.getByRole('navigation', { name: tr('studio.nav') })).toBeVisible();
     await page.evaluate(() => window.scrollTo(0, 500));
-    await page.waitForFunction(() => window.scrollY > 0);
-    const chart = bar(page).getByRole('button', { name: 'Chart' });
+    await page.waitForFunction(() => window.scrollY === 500);
+    const chart = page.getByRole('navigation', { name: tr('studio.nav') }).getByRole('button', { name: tr('studio.panel.chart') });
     await chart.click();
-    const drawer = page.getByRole('dialog', { name: 'Consultation tools' });
+    const drawer = page.getByRole('dialog', { name: tr('studio.panel.label') });
     await expect(drawer).toBeVisible();
-    await drawer.getByRole('tab', { name: 'Chart' }).click();
-    for (const heading of ['Active medicines', 'Active problems', 'Recent results']) await expect(drawer.getByRole('heading', { name: heading })).toBeVisible();
+    expect(await page.evaluate(() => window.scrollY)).toBe(500);
+    await drawer.getByRole('tab', { name: tr('studio.panel.chart') }).click();
+    for (const key of ['studio.chart.medicines', 'studio.chart.problems', 'studio.chart.results']) await expect(drawer.getByRole('heading', { name: tr(key) })).toBeVisible();
     await expect(drawer).toContainText('Type 2 diabetes (synthetic)');
     await expect(drawer).toContainText('Amoxicillin'); // the allergies, in words
+    expect(await page.evaluate(() => window.scrollY)).toBe(500);
+    expect(await axe(page)).toEqual([]);
     await page.keyboard.press('Escape');
     await expect(chart).toBeFocused();
-    // shortcut: AC3's "same scroll position" is not met yet: focus moving inside the drawer still scrolls the page under it (traced to focus
-    // calls in the open sheet, not the scroll lock or anchoring); assert it here once the Sheet focus fix lands (MDV-P1-094 PR notes).
+    expect(await page.evaluate(() => window.scrollY)).toBe(500);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
 

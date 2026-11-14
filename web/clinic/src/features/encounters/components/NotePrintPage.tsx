@@ -75,14 +75,14 @@ function AtSigning({ record, timeZone }: { record: NoteRecord | null; timeZone: 
       const line = t('noteAssist.vitalLine', { label: t(vitalNameKey(v.code)), value: String(v.value), unit: v.unit,
         source: v.recordedByName ? t('noteAssist.source', { name: v.recordedByName, ...when(v.takenAt) }) : t('noteAssist.sourceNoName', when(v.takenAt)) });
       return v.flag ? t('notePrint.flagged', { line, flag: t(`noteAssist.flag.${v.flag}`) }) : line;
-    }) },
+    }), after: record.vitals.some(v => v.code === 'Weight') ? undefined : t('notePrint.weightNotRecorded') },
     { id: 'allergies', title: t('patient360.allergies'), empty: t(record.allergies.state === 'NoKnownAllergies' ? 'banner.noAllergies' : 'banner.allergiesNotRecorded'),
       lines: record.allergies.allergies.map(a => t(a.reaction ? 'notePrint.allergyReaction' : 'notePrint.allergy', {
         substance: a.substance, reaction: a.reaction ?? '', status: t(`patient360.allergyStatus.${a.status}`), source: t(`timeline.source.${a.source}`) })) },
     { id: 'diagnoses', title: t('problems.title'), empty: t('problems.empty'), lines: record.diagnoses.map(d => t('notePrint.diagnosis', {
-      description: d.description, code: d.icd10Code ? ltr(d.icd10Code) : t('problems.uncoded'), verification: t(`problems.verification.${d.verification}`), source: t(`timeline.source.${d.source}`) })) },
+      description: d.description, code: d.icd10Code ? ltr(d.icd10Code) : t('problems.uncoded'), status: t(`problems.status.${d.status}`), verification: t(`problems.verification.${d.verification}`), source: t(`timeline.source.${d.source}`) })) },
     { id: 'medicines', title: t('rxPrint.medicines'), empty: t('notePrint.medicinesEmpty'),
-      lines: record.medicines.map(m => t('notePrint.medicine', { medicine: m.dose ? `${m.name} ${m.dose}` : m.name })) },
+      lines: record.medicines.map(m => t('notePrint.medicine', { medicine: m.dose ? `${m.name} ${m.dose}` : m.name, number: ltr(m.number) })) },
   ];
   return (
     <section aria-labelledby="print-at-signing" className="flex flex-col gap-2">
@@ -91,6 +91,7 @@ function AtSigning({ record, timeZone }: { record: NoteRecord | null; timeZone: 
         <section key={l.id} aria-labelledby={`print-${l.id}`}>
           <h3 id={`print-${l.id}`} className="font-bold">{l.title}</h3>
           {l.lines.length === 0 ? <p>{l.empty}</p> : <ul className="list-disc ps-5">{l.lines.map((line, i) => <li key={i}>{line}</li>)}</ul>}
+          {'after' in l && l.after && <p>{l.after}</p>}
         </section>
       ))}
     </section>

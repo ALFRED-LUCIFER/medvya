@@ -79,7 +79,7 @@ function Loaded({ data, loading, failed, children }: ChartPanelProps['chart'] & 
 }
 
 function Part({ title, children }: { title: string; children: ReactNode }) {
-  return <section className="flex flex-col gap-1"><h4 className="font-bold">{title}</h4>{children}</section>;
+  return <section className="flex flex-col gap-1"><h3 className="font-bold">{title}</h3>{children}</section>; // h3: under the drawer's h2 title, no level skipped (axe heading-order)
 }
 
 /** The chart at a glance while writing: allergies, active medicines and problems, and the latest results. */

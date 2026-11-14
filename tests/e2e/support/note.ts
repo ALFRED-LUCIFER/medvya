@@ -34,7 +34,7 @@ type NoteRecord = {
   vitals: { code: string; value: number; unit: string; takenAt: string; source: string; recordedByName: string | null; flag: string | null }[];
   allergies: { state: 'NotRecorded' | 'NoKnownAllergies' | 'Listed'; allergies: { substance: string; reaction: string | null; status: string; source: string }[] };
   diagnoses: { icd10Code: string | null; description: string; verification: string; onsetOn: string | null; source: string; status: string }[];
-  medicines: { name: string; dose: string | null; prescriptionId: string }[];
+  medicines: { name: string; dose: string | null; prescriptionId: string; number: string }[];
 };
 type ComplaintSource = { source: 'NurseIntake' | 'EditedByDoctor'; byName: string | null; at: string | null };
 // The doctor profile's name, which the server uses for the signature, the addenda and the sign button; the session's display name differs on purpose.

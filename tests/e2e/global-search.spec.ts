@@ -75,7 +75,7 @@ test('a patient outside the care relationship shows Request access, not the char
   const search = page.getByRole('dialog', { name: 'Search patients' });
   await search.getByRole('combobox').fill('la');
   await search.getByRole('option').nth(1).click();
-  await expect(search.getByRole('button', { name: 'Open chart' })).toHaveCount(0);
+  await expect(search.getByRole('button', { name: 'Open record' })).toHaveCount(0);
   const ask = search.getByRole('alert').filter({ hasText: 'Ask an owner for access' });
   await ask.getByRole('combobox', { name: 'Why you need access' }).click();
   await page.getByRole('option', { name: 'Covering for a colleague' }).click();

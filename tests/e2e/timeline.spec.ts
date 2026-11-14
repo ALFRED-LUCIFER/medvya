@@ -64,9 +64,9 @@ test('each entry shows date, title, subtitle, author and source tag; filters com
   expect(queries.at(-1)).toBe('?kinds=Lab%2CMedicine&source=Imported');
 
   // They stay applied when the doctor goes to the chart and comes back.
-  await page.getByRole('link', { name: 'Back to the chart' }).click();
+  await page.getByRole('group', { name: 'Patient record' }).getByRole('link', { name: 'Summary' }).click(); // the record's tabs are the way back (MDV-P2-051)
   await expect(page).toHaveURL(/\/patients\/p-1$/);
-  await page.getByRole('link', { name: 'Timeline' }).click();
+  await page.getByRole('group', { name: 'Patient record' }).getByRole('link', { name: 'Timeline' }).click();
   await expect(filters.getByRole('button', { name: 'Labs' })).toHaveAttribute('aria-pressed', 'true');
   await expect(list.getByRole('listitem')).toHaveCount(1);
 

@@ -1,8 +1,7 @@
 import { useRef } from 'react';
-import { Link } from 'react-router';
 import { Camera, CircleAlert, CircleCheck, Hourglass, Pencil, ShieldAlert, Upload } from 'lucide-react';
 import { ltr, useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, Card, Input, Label, PageContainer, PageHeader, PageMessage, ProvenanceTag, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
+import { Button, Card, Input, Label, PageContainer, PageHeader, PageMessage, ProvenanceTag, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
 import type { ClinicalRefusal } from '../../patient360/domain/chart';
 import { provenanceOf } from '../../patient360/domain/chart';
 import { canOpenDocument, documentSources, documentTypes, sizeLabel, type DocumentList, type DocumentRow, type DocumentSource, type DocumentType, type ScanStatus, type UploadFailure, type ViewLink } from '../domain/documents';
@@ -17,7 +16,6 @@ type Props = {
   viewer: ViewLink | null; expired: boolean; opening: string | null; openProblem: 'scan_pending' | 'quarantined' | 'failed' | null; onOpen: (id: string) => void; onCloseViewer: () => void;
   editing: { id: string; type: DocumentType; date: string } | null; saving: boolean; editFailed: boolean;
   onEdit: (d: DocumentRow) => void; onEditChange: (patch: { type?: DocumentType; date?: string }) => void; onSaveEdit: () => void; onCancelEdit: () => void;
-  backPath: string;
 };
 
 /**
@@ -26,8 +24,8 @@ type Props = {
  */
 export default function DocumentsPage(p: Props) {
   const { t, formatCalendarDate } = useI18n();
-  // One header in every state, so the title and the way back never move (MDV-P2-059).
-  const header = <PageHeader title={t('documents.title')} actions={<Link to={p.backPath} className={buttonVariants({ variant: 'outline' })}>{t('documents.back')}</Link>} />;
+  // One header in every state, so the title never moves (MDV-P2-059); the record's tabs above it are the way back (MDV-P2-051).
+  const header = <PageHeader title={t('documents.title')} />;
   if (p.loading) return <PageContainer>{header}<PageMessage kind="busy">{t('documents.loading')}</PageMessage></PageContainer>;
   if (p.refusal)
     return <PageContainer>{header}<PageMessage kind="denied" title={t('patient360.refused.title')}>{t(p.refusal.canRequest ? 'consult.refused.ask' : 'documents.refused.role')}</PageMessage></PageContainer>;

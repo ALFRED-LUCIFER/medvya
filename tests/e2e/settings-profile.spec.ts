@@ -120,7 +120,6 @@ async function settings(page: Page, locale = 'en') {
 }
 
 test('at 1024 px and wider the sections are a left sub-navigation and every ?tab= address opens its section', async ({ page }) => {
-  test.setTimeout(90_000); // 19 full page loads on the dev server: the 30 s default runs out on CI runners
   await page.setViewportSize({ width: 1024, height: 900 });
   await settings(page);
   for (const [id, name] of Object.entries(sections)) {

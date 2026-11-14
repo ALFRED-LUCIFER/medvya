@@ -1,3 +1,5 @@
+import { useI18n } from '@medvya/i18n';
+import TabletOnly from './TabletOnly';
 import { useNavigate, useParams } from 'react-router';
 import IntakePage from '../features/nurse-intake/components/IntakePage';
 import NurseQueuePage from '../features/nurse-intake/components/NurseQueuePage';
@@ -27,5 +29,11 @@ export function NurseIntakeRoute({ online, nursePath }: { online: boolean; nurse
 function Intake({ appointmentId, online, nursePath }: { appointmentId: string; online: boolean; nursePath: string }) {
   const navigate = useNavigate();
   const intake = useIntakeController(appointmentId, () => void navigate(nursePath));
-  return <IntakePage {...intake} online={online} queuePath={nursePath} />;
+  const { t } = useI18n();
+  // Nurse vitals entry waits for a tablet until the strip is pinned and one group shows per screen (MDV-P1-098).
+  return (
+    <TabletOnly title={t('nav.nurse')} patientName={intake.screen?.patient.fullName}>
+      <IntakePage {...intake} online={online} queuePath={nursePath} />
+    </TabletOnly>
+  );
 }

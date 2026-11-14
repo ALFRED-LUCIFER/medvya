@@ -60,6 +60,7 @@ export function useBoardController(facilityId: string, online: boolean) {
     const timer = setTimeout(() => setNotice(n => n && { ...n, undo: false }), undoWindowMs);
     return () => clearTimeout(timer);
   }, [notice]);
+  const [phoneColumn, setPhoneColumn] = useState<BoardColumn | null>(null);
   const [ending, setEnding] = useState<Ending | null>(null);
   const [endFailed, setEndFailed] = useState(false);
   const endForm = useForm<CancelForm>({ resolver: zodResolver(cancelSchema), defaultValues: emptyCancel });
@@ -175,6 +176,9 @@ export function useBoardController(facilityId: string, online: boolean) {
       void endForm.handleSubmit(form => ending?.kind && end.mutate({ ending, form }))();
     },
     onCancelEnd: closeEnd,
+    /** Under 768 px the board is one list; the status it shows (null: the first with visits). */
+    phoneColumn,
+    onPhoneColumn: setPhoneColumn,
   };
 }
 

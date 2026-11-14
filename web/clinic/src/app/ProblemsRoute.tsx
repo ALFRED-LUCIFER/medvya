@@ -1,3 +1,5 @@
+import { useI18n } from '@medvya/i18n';
+import TabletOnly from './TabletOnly';
 import { useParams } from 'react-router';
 import ProblemsPage from '../features/problems/components/ProblemsPage';
 import { useProblemsController } from '../features/problems/hooks/useProblemsController';
@@ -9,5 +11,11 @@ export default function ProblemsRoute({ boardPath, online }: { boardPath: string
 }
 
 function Problems({ encounterId, boardPath, online }: { encounterId: string; boardPath: string; online: boolean }) {
-  return <ProblemsPage {...useProblemsController(encounterId)} online={online} consultPath={`/consult/${encounterId}`} boardPath={boardPath} />;
+  const problems = useProblemsController(encounterId);
+  const { t } = useI18n();
+  return (
+    <TabletOnly title={t('problems.title')} patientName={problems.banner?.patient.fullName}>
+      <ProblemsPage {...problems} online={online} consultPath={`/consult/${encounterId}`} boardPath={boardPath} />
+    </TabletOnly>
+  );
 }

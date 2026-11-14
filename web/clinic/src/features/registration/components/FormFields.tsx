@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Controller, type Control, type FieldErrors, type UseFormRegister } from 'react-hook-form';
 import { CircleAlert } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { ErrorSummary, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
+import { ChoiceRow, ErrorSummary, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
 import type { Country } from '@medvya/i18n';
 import { errorCode, fieldLabel, sexes, type FormField, type RegistrationForm } from '../domain/registration';
 
@@ -68,11 +68,9 @@ export function SexField({ f }: { f: FormProps }) {
       </legend>
       <div className="flex flex-wrap gap-2">
         {sexes.map((s, i) => (
-          <label key={s} className="flex min-h-11 cursor-pointer items-center gap-2 rounded-md border border-input px-3 has-[:checked]:border-brand-700 has-[:checked]:bg-accent">
-            <input id={i === 0 ? 'sexAtBirth' : undefined} type="radio" value={s} {...f.register('sexAtBirth')} aria-invalid={error ? true : undefined}
-              className="size-4 accent-brand-700" />
+          <ChoiceRow key={s} className="gap-2 rounded-md border border-input px-3 has-[:checked]:border-brand-700 has-[:checked]:bg-accent" id={i === 0 ? 'sexAtBirth' : undefined} type="radio" value={s} {...f.register('sexAtBirth')} aria-invalid={error ? true : undefined}>
             {t(`patients.sex.${s}`)}
-          </label>
+          </ChoiceRow>
         ))}
       </div>
       {error && (
@@ -86,10 +84,9 @@ export function SexField({ f }: { f: FormProps }) {
 
 export function Checkbox({ f, name, label }: { f: FormProps; name: 'ageInstead'; label: string }) {
   return (
-    <label className="flex min-h-11 cursor-pointer items-center gap-2 self-start">
-      <input type="checkbox" {...f.register(name)} className="size-4 accent-brand-700" />
+    <ChoiceRow className="gap-2 self-start" type="checkbox" {...f.register(name)}>
       {label}
-    </label>
+    </ChoiceRow>
   );
 }
 

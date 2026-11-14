@@ -1,5 +1,6 @@
 import { useI18n, type Country, type MessageKey } from '@medvya/i18n';
 import { consentPolicyVersion, hieFor, type FormField, type RegistrationForm } from '../domain/registration';
+import { ChoiceRow } from '@medvya/ui';
 import type { FormProps } from './FormFields';
 
 type ConsentField = Extract<FormField, `consent${string}`>;
@@ -16,15 +17,13 @@ function Decision({ f, values, name, title, body, locked = false }: {
   const bound = name ? f.register(name) : { checked: true, readOnly: true };
   const on = locked || (name !== undefined && values?.[name] === true);
   return (
-    <label htmlFor={id} className="flex min-h-11 cursor-pointer items-start gap-3">
-      <input id={id} type="checkbox" role="switch" disabled={locked} aria-labelledby={`${id}-title`} aria-describedby={body ? `${id}-body` : undefined} {...bound}
-        className="mt-1.5 size-5 shrink-0 accent-brand-700" />
+    <ChoiceRow className="items-start gap-3 [&>input]:mt-1.5 [&>input]:size-5" id={id} type="checkbox" role="switch" disabled={locked} aria-labelledby={`${id}-title`} aria-describedby={body ? `${id}-body` : undefined} {...bound}>
       <span className="flex min-w-0 flex-1 flex-col">
         <span id={`${id}-title`} className="font-bold">{title}</span>
         {body && <span id={`${id}-body`} className="text-sm text-muted-foreground">{body}</span>}
       </span>
       <span className="mt-1 text-sm font-bold">{locked ? t('registration.consents.required') : on ? t('registration.consents.on') : t('registration.consents.off')}</span>
-    </label>
+    </ChoiceRow>
   );
 }
 

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { useI18n, type Country } from '@medvya/i18n';
-import { Button, ErrorSummary, Field, FieldMarks, Input, PageHeader } from '@medvya/ui';
+import { Button, ChoiceRow, ErrorSummary, Field, FieldMarks, Input, PageHeader } from '@medvya/ui';
 import AuthFrame from '../../session/components/AuthFrame';
 import type { SignUpForm } from '../domain/signUp';
 import Frame from './OnboardingFrame';
@@ -15,13 +15,12 @@ export function CountryChoice({ country, onChange }: { country: Country; onChang
     <fieldset className="flex flex-col gap-2">
       <legend className="mb-1 text-sm font-bold">{t('onboarding.start.legend')}</legend>
       {countries.map(c => (
-        <label key={c} className="flex min-h-11 items-center gap-2.5 rounded-lg border p-3 text-sm has-checked:border-2 has-checked:border-brand-700">
-          <input type="radio" name="country" value={c} checked={country === c} onChange={() => onChange(c)} className="size-4 accent-brand-700" />
+        <ChoiceRow key={c} className="gap-2.5 rounded-lg border p-3 text-sm has-checked:border-2 has-checked:border-brand-700" type="radio" name="country" value={c} checked={country === c} onChange={() => onChange(c)}>
           <span className="flex flex-col">
             <span className="font-bold">{t(`onboarding.country.${c}`)}</span>
             <span className="text-muted-foreground">{t(`signin.region.${c}`)}</span>
           </span>
-        </label>
+        </ChoiceRow>
       ))}
       <p className="text-xs text-muted-foreground">{t('onboarding.start.residency')}</p>
     </fieldset>
@@ -83,10 +82,9 @@ export default function SignUpPage({ languageSwitcher, form, step, country, erro
             <legend className="mb-1 text-sm font-bold">{t('signin.create.youAre')}</legend>
             <div className="grid grid-cols-2 gap-2">
               {(['doctor', 'manager'] as const).map(r => (
-                <label key={r} className="flex min-h-11 items-center gap-2.5 rounded-lg border p-3 text-sm has-checked:border-2 has-checked:border-brand-700">
-                  <input type="radio" value={r} className="size-4 accent-brand-700" {...form.register('role')} />
+                <ChoiceRow key={r} className="gap-2.5 rounded-lg border p-3 text-sm has-checked:border-2 has-checked:border-brand-700" type="radio" value={r} {...form.register('role')}>
                   {t(`signin.create.${r}`)}
-                </label>
+                </ChoiceRow>
               ))}
             </div>
           </fieldset>

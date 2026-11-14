@@ -24,6 +24,10 @@ export type Rule = { allowed: true } | { allowed: false; why: Why };
 export const localDate = (iso: string, timeZone: string) =>
   new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(iso));
 
+/** This device is in the facility's zone (aliases such as Asia/Calcutta and Asia/Kolkata are one zone): the zone then goes unsaid. */
+export const isDeviceZone = (timeZone: string) =>
+  new Intl.DateTimeFormat('en', { timeZone }).resolvedOptions().timeZone === Intl.DateTimeFormat().resolvedOptions().timeZone;
+
 const ended = (a: Appointment): Why | null =>
   a.state === 'Done' ? 'completed' : a.state === 'Cancelled' ? 'cancelled' : a.state === 'NoShow' ? 'noShow' : a.state === 'LeftWithoutBeingSeen' ? 'left' : null;
 

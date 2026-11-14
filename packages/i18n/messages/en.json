@@ -2558,7 +2558,6 @@
   "mobile.home.labLine": "Ordered today · bring the QR code from Records",
   "mobile.home.medicine": "{name} dose changed",
   "mobile.home.emergency": "For an emergency, call {number}",
-  "mobile.visits.title": "Visits",
   "mobile.visits.book": "Book a visit",
   "mobile.visits.upcoming": "Upcoming",
   "mobile.visits.past": "Past",

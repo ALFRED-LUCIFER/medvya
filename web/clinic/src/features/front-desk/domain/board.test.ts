@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canUndo, endKinds, inToday, groupByColumn, needsRebooking, minutesSince, ageYears, moveError, nextState, serverNow, visibleColumns, walkInError, type BoardCard } from './board';
+import { canReprint, canUndo, endKinds, inToday, groupByColumn, needsRebooking, minutesSince, ageYears, moveError, nextState, serverNow, visibleColumns, walkInError, type BoardCard } from './board';
 
 describe('walk-in (MDV-P1-025)', () => {
   it('tells "no free slot" (choose a doctor to queue with) and "busy" from other failures', () => {
@@ -23,6 +23,14 @@ describe('undo and the card menu (MDV-P1-100)', () => {
   });
   it('knows the new refusals by their codes', () => {
     expect([moveError('changed'), moveError('undo_expired'), moveError('with_doctor')]).toEqual(['changed', 'undo_expired', 'with_doctor']);
+  });
+});
+
+describe('token slip (MDV-P2-046)', () => {
+  it('offers Reprint on a waiting card with a token only', () => {
+    expect((['CheckedIn', 'WithNurse', 'ReadyForDoctor'] as const).map(s => canReprint({ state: s, token: 'A-07' }))).toEqual([true, true, true]);
+    expect([canReprint({ state: 'CheckedIn', token: null }), canReprint({ state: 'Booked', token: null }), canReprint({ state: 'LeftWithoutBeingSeen', token: 'A-07' }),
+      canReprint({ state: 'Cancelled', token: 'A-07' }), canReprint({ state: 'Done', token: 'A-07' })]).toEqual([false, false, false, false, false]);
   });
 });
 

@@ -1,12 +1,13 @@
 import { useRef, type ReactNode } from 'react';
+import { Link } from 'react-router';
 import type { UseFormReturn } from 'react-hook-form';
-import { CalendarCheck, CalendarClock, CircleCheck, ClipboardCheck, DoorOpen, Ellipsis, EyeOff, ReceiptText, Syringe, Undo2, UserCheck, type LucideIcon } from 'lucide-react';
+import { CalendarCheck, CalendarClock, CircleCheck, ClipboardCheck, DoorOpen, Ellipsis, EyeOff, Printer, ReceiptText, Syringe, Undo2, UserCheck, type LucideIcon } from 'lucide-react';
 import { useI18n, type MessageKey } from '@medvya/i18n';
-import { Button, Dialog, DialogContent, DialogDescription, DialogTitle, FrontDeskTag, PageContainer, PageHeader } from '@medvya/ui';
+import { Button, buttonVariants, Dialog, DialogContent, DialogDescription, DialogTitle, FrontDeskTag, PageContainer, PageHeader } from '@medvya/ui';
 import type { CancelForm } from '../../schedule/domain/changes';
 import CancelReasonFields from '../../schedule/components/CancelReasonFields';
 import type { workload } from '../domain/overview';
-import { ageYears, endKinds, minutesSince, needsRebooking, nextState, visibleColumns, type Board, type BoardCard, type BoardColumn, type EndKind, type LiveStatus, type MoveError, type Notice, type VisitSteps } from '../domain/board';
+import { ageYears, canReprint, endKinds, minutesSince, needsRebooking, nextState, tokenSlipPath, visibleColumns, type Board, type BoardCard, type BoardColumn, type EndKind, type LiveStatus, type MoveError, type Notice, type VisitSteps } from '../domain/board';
 
 // Every column is words and an icon (never colour alone), following the Clinician App board (P-01).
 const columnIcons: Record<BoardColumn, LucideIcon> = {
@@ -303,6 +304,12 @@ function Card({ card, board, steps, now, failedVisitIds, canMove, canCancel, onl
       ))}
       {consultAction?.(card)}
       {state === 'Done' && card.followUp && followUp?.(card)}
+      {/* MDV-P2-046: the same token again, for a lost slip; a void token is off the board and the server refuses it anyway. */}
+      {canMove && canReprint(card) && (
+        <Link to={tokenSlipPath(card.id)} className={buttonVariants({ variant: 'ghost', className: 'whitespace-normal' })}>
+          <Printer aria-hidden />{t('tokenSlip.reprint', { token: card.token! })}
+        </Link>
+      )}
       {ends.length > 0 && (
         <Button id={`board-more-${card.id}`} variant="ghost" className="whitespace-normal" disabled={!online}
           aria-label={t('board.more.for', { name: card.patientName || t('board.unknownPatient') })} onClick={() => onStartEnd(card, ends.length === 1 ? ends[0]! : null)}>

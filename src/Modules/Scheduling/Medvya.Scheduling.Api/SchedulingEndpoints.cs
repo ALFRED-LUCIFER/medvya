@@ -128,6 +128,10 @@ public static class SchedulingEndpoints
         appointments.MapPost("/{appointmentId:guid}/check-in", (Guid appointmentId, CheckIn? command, [FromServices] IFrontDeskService service, CancellationToken ct) =>
                 service.CheckInAsync(appointmentId, command ?? new CheckIn(), ct))
             .AuditedWriteWithErrors(SchedulingAudit.CheckIn, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment);
+        // The token slip (MDV-P2-046): clinic, token, doctor and time, never patient data; a void token is a 409.
+        appointments.MapGet("/{appointmentId:guid}/token-slip", (Guid appointmentId, [FromServices] IFrontDeskService service, CancellationToken ct) =>
+                service.TokenSlipAsync(appointmentId, ct))
+            .AuditedWithErrors("appointment.token_slip.read", SchedulingAudit.AppointmentResource);
         appointments.MapPost("/{appointmentId:guid}/reassign", (Guid appointmentId, ReassignVisit command, [FromServices] IFrontDeskService service, CancellationToken ct) =>
                 service.ReassignAsync(appointmentId, command, ct))
             .AuditedWriteWithErrors(SchedulingAudit.Reassign, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment);

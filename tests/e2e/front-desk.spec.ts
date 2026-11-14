@@ -419,3 +419,39 @@ for (const locale of ['en', 'ar'])
     expect(dismissed).toEqual(['PatientDeclined']);
     await expect(deepak.getByRole('group')).toHaveCount(0);
   });
+
+// MDV-P2-046: the token slip. Reprint sits on a waiting card with a token; the slip names the clinic, token, doctor, date and time and
+// nothing about the patient. The server's field list and the void-token refusal are proven in FrontDeskEndpointTests.
+const slip = { clinicName: 'Iyer Family Clinic · Adyar', token: 'A-07', doctorName: 'Dr. Arjun Rao (synthetic)', issuedAt: ist('10:20'), timeZone: 'Asia/Kolkata' };
+for (const locale of ['en', 'ar'])
+  test(`Reprint opens the same token's slip: clinic, token, doctor and time, no patient details, axe clean (${locale})`, async ({ page }) => {
+    const reads: string[] = [];
+    await page.route('**/v1/appointments/*/token-slip', r => { reads.push(r.request().url().split('/').at(-2)!); return r.fulfill({ json: slip }); });
+    await open(page, { locale });
+    await expect(cardOf(page, 'Meera Iyer (synthetic)').getByRole('link')).toHaveCount(0); // booked: no token yet, nothing to reprint
+    await cardOf(page, 'Farhan Qureshi (synthetic)').getByRole('link', { name: locale === 'en' ? 'Reprint token A-07' : /A-07/ }).click();
+    await expect(page).toHaveURL(/\/front-desk\/token\/a2$/);
+    // The slip is named by its token; the board's cards (named by patient) may still be on screen for a moment while the page loads.
+    const paper = page.getByRole('article', { name: /A-07/ });
+    await expect(paper).toBeVisible();
+    await expect(page.getByRole('article')).toHaveCount(1);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
+    await expect(paper).toContainText('A-07');
+    await expect(paper).toContainText('Iyer Family Clinic · Adyar');
+    await expect(paper).toContainText('Dr. Arjun Rao (synthetic)');
+    await expect(paper).toContainText('10:20'); // issued, in facility time although the device is in New York
+    // The test fails if a patient detail is added: no name, MRN, phone or reason.
+    for (const leak of ['Farhan', 'Qureshi', 'APT-A2', '+91', 'General', '1972']) await expect(paper).not.toContainText(leak);
+    expect(reads).toEqual(['a2']);
+    if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+    await page.addScriptTag({ path: axePath });
+    expect(await axeViolations(page)).toEqual([]);
+  });
+
+test('a void token (the visit was cancelled or the patient left) is refused by the server and says so', async ({ page }) => {
+  await page.route('**/v1/appointments/*/token-slip', r => r.fulfill({ status: 409, json: { title: 'Visit cannot make this move', code: 'token_void' } }));
+  await page.route('**/v1/me/context', r => r.fulfill({ json: reception }));
+  await page.goto('/front-desk/token/a9');
+  await expect(page.getByRole('alert')).toHaveText('This visit was cancelled or the patient left, so its token is void and cannot be printed.');
+  await expect(page.getByRole('article')).toHaveCount(0);
+});

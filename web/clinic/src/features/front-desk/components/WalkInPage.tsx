@@ -1,11 +1,11 @@
 import { Link } from 'react-router';
-import { ArrowLeft, CircleAlert, CircleCheck, UserPlus } from 'lucide-react';
+import { ArrowLeft, CircleAlert, CircleCheck, Printer, UserPlus } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
 import { Button, buttonVariants, Card, cn, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, PageContainer, PageHeader, PageMessage } from '@medvya/ui';
 import { PatientPicker, type PatientSearchView } from '../../schedule/components/BookingPanel';
 import { reasonCategories, visitTypes, type PatientMatch } from '../../schedule/domain/booking';
 import { termsPath } from '../../settings/domain/settings';
-import { isBoardColumn, type BoardCard, type WalkInChoice, type WalkInError, type WalkInVisit } from '../domain/board';
+import { isBoardColumn, tokenSlipPath, type BoardCard, type WalkInChoice, type WalkInError, type WalkInVisit } from '../domain/board';
 
 type Props = {
   patientSearch: PatientSearchView;
@@ -53,7 +53,11 @@ export default function WalkInPage(p: Props) {
             {p.result.unscheduled ? t('walkIn.done.queued', { doctor }) : t('walkIn.done.slot', { doctor, time: formatTime(new Date(p.result.start), p.timeZone ?? 'UTC') })}
             {isBoardColumn(p.result.state) && <> {t('walkIn.done.column', { column: t(`board.column.${p.result.state}`) })}</>}
           </p>
-          <Link to={p.boardPath} className={buttonVariants()}>{t('walkIn.back')}</Link>
+          <div className="flex flex-wrap gap-3">
+            <Link to={p.boardPath} className={buttonVariants()}>{t('walkIn.back')}</Link>
+            {/* Optional (MDV-P2-046): the walk-in path is measured without it. */}
+            {p.result.token && <Link to={tokenSlipPath(p.result.id)} className={buttonVariants({ variant: 'outline' })}><Printer aria-hidden />{t('tokenSlip.printSlip')}</Link>}
+          </div>
         </Card>
       </PageContainer>
     );

@@ -115,6 +115,13 @@ export type EndKind = 'left' | 'cancel';
 export const endKinds = (state: AppointmentState, canCancel: boolean): EndKind[] =>
   state === 'CheckedIn' || state === 'ReadyForDoctor' ? (canCancel ? ['left', 'cancel'] : ['left']) : state === 'WithNurse' ? ['left'] : [];
 
+// MDV-P2-046: GET /v1/appointments/{id}/token-slip (IFrontDeskService.TokenSlipAsync). Nothing about the patient, by design.
+export type TokenSlip = { clinicName: string; token: string; doctorName: string; issuedAt: string; timeZone: string };
+/** Reprint is offered on a waiting card with a token; the server refuses a void one (cancelled, left) whatever the client shows. */
+export const canReprint = (card: Pick<BoardCard, 'state' | 'token'>) => card.token !== null && waitingColumns.includes(card.state as BoardColumn);
+/** The slip's print view, opened from Walk-in's result and from a waiting card. Only the opaque visit id is in the address. */
+export const tokenSlipPath = (appointmentId: string) => `/front-desk/token/${appointmentId}`;
+
 /** What the status line says after a change on this desk; `undo` is offered for 30 seconds or until the next change. */
 export type Notice = { kind: 'moved' | 'undone' | EndKind; id: string; name: string; state: BoardColumn; undo: boolean };
 

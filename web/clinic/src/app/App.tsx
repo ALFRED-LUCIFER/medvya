@@ -47,6 +47,7 @@ const MergeReviewRoute = lazy(() => import('./PatientRoutes').then(m => ({ defau
 const RegistrationRoute = lazy(() => import('./PatientRoutes').then(m => ({ default: m.RegistrationRoute })));
 // Walk-in (MDV-P1-025) brings the patient picker and booking lists: loaded when opened, never at first paint.
 const WalkInRoute = lazy(() => import('./WalkInRoute'));
+const TokenSlipRoute = lazy(() => import('./WalkInRoute').then(m => ({ default: m.TokenSlipRoute })));
 const WaitlistRoute = lazy(() => import('./WaitlistRoute'));
 const TodayRoute = lazy(() => import('./TodayRoute'));
 const ConsultRoute = lazy(() => import('./ConsultRoute'));
@@ -165,6 +166,9 @@ export default function App({ locale, onLocaleChange }: Props) {
           {leavePath && <Route path={leavePath} element={<AdjustmentsRoute facilityId={active.facilityId} canConfigure={active.capabilities.StaffRolesIntegrations === 'Config'} userId={shell.session?.user.id ?? ''} schedulePath={pathOf('schedule')!} boardPath={pathOf('frontDesk')} />} />}
           {walkInPath && registerPath &&
             <Route path={walkInPath} element={<WalkInRoute facilityId={active.facilityId} boardPath={pathOf('frontDesk')!} registerPath={`${registerPath}?mode=quick`} />} />}
+          {/* The token slip (MDV-P2-046): whoever runs the queue; the server refuses a void token. */}
+          {pathOf('frontDesk') && active.capabilities.CheckInQueue === 'Full' &&
+            <Route path="/front-desk/token/:appointmentId" element={<TokenSlipRoute boardPath={pathOf('frontDesk')!} />} />}
           {waitlistPath && <Route path={waitlistPath} element={<WaitlistRoute facilityId={active.facilityId} boardPath={pathOf('frontDesk')!} />} />}
           {/* shortcut: reachable by URL only; the Staff screen and its navigation entry come with F-10 (MDV-P1-008). */}
           {/* The owner's onboarding request (ADR-016, MDV-P1-062): status, documents and Submit; the shell notice links here until approval. */}

@@ -76,7 +76,7 @@ export default function MergeReview(props: Props) {
       {review && (
         <Card title={<>{t('merge.compare')} <span className="text-sm font-bold text-muted-foreground">{t(`merge.status.${review.status}`)}</span></>}>
           <p className="text-sm text-muted-foreground">{t('merge.explain')}</p>
-          <Table label={t('merge.compare')} className="table-fixed" containerClassName="overflow-visible rounded-none border-0">
+          <Table label={t('merge.compare')} stacked className="table-fixed" containerClassName="overflow-visible rounded-none border-0">
             <TableCaption className="sr-only">{t('merge.compare')}</TableCaption>
             <TableHeader className="bg-transparent">
               <TableRow className="border-b-0">
@@ -88,9 +88,9 @@ export default function MergeReview(props: Props) {
             <TableBody>
               {rows.map(([label, cell]) => (
                 <TableRow key={label} className="border-t border-b-0">
-                  <TableHead scope="row" className="h-auto w-[28%] p-2 text-xs font-bold break-words whitespace-normal text-muted-foreground">{label}</TableHead>
-                  <TableCell className="p-2 align-top break-words">{cell(review.survivor)}</TableCell>
-                  <TableCell className="p-2 align-top break-words">{cell(review.merged)}</TableCell>
+                  <TableHead scope="row" className="h-auto p-2 font-bold break-words whitespace-normal md:w-[28%] md:text-xs md:text-muted-foreground">{label}</TableHead>
+                  <TableCell label={t('merge.survivor')} className="p-2 align-top break-words">{cell(review.survivor)}</TableCell>
+                  <TableCell label={t('merge.merged')} className="p-2 align-top break-words">{cell(review.merged)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

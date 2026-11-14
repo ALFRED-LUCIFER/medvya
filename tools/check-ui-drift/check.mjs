@@ -12,10 +12,12 @@ import { fileURLToPath } from 'node:url';
 
 const APPS = ['web/clinic/src/features/', 'web/platform-admin/src/'];
 const LIBRARY = 'packages/ui/src/';
+const NATIVE = ['mobile/clinician/src/', 'mobile/patient/src/', 'packages/ui-native/src/'];
 const BASELINE = fileURLToPath(new URL('baseline.json', import.meta.url));
 
 const matches = re => text => (text.match(re) ?? []).length;
 const inApps = f => APPS.some(root => f.startsWith(root));
+const inNative = f => NATIVE.some(root => f.startsWith(root));
 
 const HEX = /["'[]#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})["'\]]/g;
 
@@ -27,6 +29,8 @@ export const RULES = {
   // shortcut: stays here, not in oxlint, because oxlint 1.90 has no no-restricted-syntax; move it when oxlint can express it.
   rawHexLibrary: { in: f => f.startsWith(LIBRARY), count: matches(HEX) },
   rawHexApps: { in: inApps, count: matches(HEX) },
+  // The Expo apps and packages/ui-native take every colour from theme (packages/tokens); at zero from the start (MDV-P5-032).
+  rawHexNative: { in: inNative, count: matches(HEX) },
   // A local Field reached zero in MDV-P2-058 (medvya-ui/no-local-field). A raw h1, an inline "border bg-card" and a local Message, Card or Empty
   // reached zero in MDV-P2-059: react/forbid-elements (h1), medvya-ui/no-inline-card and medvya-ui/no-local-surface now fail them (tools/oxlint-plugin).
 };
@@ -70,12 +74,20 @@ function selfTest() {
   const at = files => measure(files);
   const base = at([[page, sample]]);
   const totals = Object.fromEntries(Object.entries(base).map(([k, v]) => [k, total(v)]));
-  assert(JSON.stringify(totals) === JSON.stringify({ rawHexLibrary: 0, rawHexApps: 2 }), `a rule's pattern changed: ${JSON.stringify(totals)}`);
+  assert(JSON.stringify(totals) === JSON.stringify({ rawHexLibrary: 0, rawHexApps: 2, rawHexNative: 0 }), `a rule's pattern changed: ${JSON.stringify(totals)}`);
 
   // Scope: tests and other folders are not counted; the library has its own count.
   assert(total(at([['web/clinic/src/app/App.tsx', sample]]).rawHexApps) === 0, 'clinic app/ is outside the scope');
   const library = at([['packages/ui/src/primitives.tsx', sample]]);
   assert(total(library.rawHexLibrary) === 2 && total(library.rawHexApps) === 0, 'the library counts as the library');
+  // Native: both Expo apps and ui-native, at a zero baseline, so one React Native colour string fails and names the file.
+  const rn = `<View style={{ backgroundColor: '#0f766e', borderColor: "#FFF" }} />`;
+  for (const f of ['mobile/clinician/src/features/x/components/Row.tsx', 'mobile/patient/src/app/_layout.tsx', 'packages/ui-native/src/controls.tsx']) {
+    const native = at([[f, rn]]);
+    assert(total(native.rawHexNative) === 2 && total(native.rawHexApps) === 0 && total(native.rawHexLibrary) === 0, `${f} counts as native`);
+    assert(compare({}, native).rose[0]?.startsWith(`rawHexNative: ${f} has 2, baseline 0`), `a raw hex in ${f} fails against the zero baseline`);
+  }
+  assert(total(at([['mobile/clinician/app.json', rn]]).rawHexNative) === 0, 'only src/ is native code');
 
   // The guard itself: at the baseline it passes, one more hit fails and names the file, one fewer asks for the baseline to be lowered.
   const same = compare(base, at([[page, sample]]));
@@ -95,7 +107,7 @@ if (process.argv.includes('--self-test')) {
   process.exit(0);
 }
 
-const files = [...APPS, LIBRARY]
+const files = [...APPS, LIBRARY, ...NATIVE]
   .flatMap(root => readdirSync(root, { recursive: true }).map(f => root + f.replaceAll('\\', '/')))
   .filter(f => /\.tsx?$/.test(f) && !/\.test\.tsx?$/.test(f))
   .sort()

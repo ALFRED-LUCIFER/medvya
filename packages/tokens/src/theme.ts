@@ -251,5 +251,11 @@ export const theme = {
     "spacingControl": 44,
     "spacingControlSm": 44,
     "spacingRow": 48
+  },
+  "native": {
+    "action": 52,
+    "body": 15,
+    "bodyPatient": 17,
+    "targetPatient": 48
   }
 } as const;

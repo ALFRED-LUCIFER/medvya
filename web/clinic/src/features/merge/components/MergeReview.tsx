@@ -49,7 +49,7 @@ export default function MergeReview(props: Props) {
   ];
 
   return (
-    <PageContainer width="reading">
+    <PageContainer>
       <PageHeader title={t('merge.title')} back={
         <Link to={props.backPath} className={cn(buttonVariants({ variant: 'ghost' }), 'px-2')}>
           <ArrowLeft className="rtl:rotate-180" aria-hidden />{t('patients.record.back')}

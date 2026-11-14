@@ -39,12 +39,12 @@ export default function WalkInPage(p: Props) {
     </Link>
   );
   if (p.error === 'forbidden')
-    return <PageContainer width="form"><PageHeader back={back} title={t('walkIn.title')} /><PageMessage kind="denied" title={t('err.403')}>{t('walkIn.forbidden')}</PageMessage></PageContainer>;
+    return <PageContainer><PageHeader back={back} title={t('walkIn.title')} /><PageMessage kind="denied" title={t('err.403')}>{t('walkIn.forbidden')}</PageMessage></PageContainer>;
   if (p.result) {
     const doctor = p.doctors.find(d => d.id === p.result!.calendarId)?.name ?? '';
     return (
       // The whole result is the live region, so "… is checked in" is announced with its token, as before the title moved into PageHeader.
-      <PageContainer width="form" role="status">
+      <PageContainer role="status">
         <PageHeader back={back} title={<span className="inline-flex items-center gap-2"><CircleCheck className="size-6 shrink-0 text-success-700" aria-hidden />{t('walkIn.done.title', { name: p.result.patientName })}</span>} />
         <Card className="items-start">
           {/* The token the waiting room is called by: read out to the patient now, not looked up on the board later. */}
@@ -64,7 +64,7 @@ export default function WalkInPage(p: Props) {
   }
 
   return (
-    <PageContainer width="form" className="gap-5">
+    <PageContainer className="gap-5">
       <PageHeader back={back} title={t('walkIn.title')} description={t('walkIn.intro')} />
       <Card>
         <form id="walk-in-form" noValidate onSubmit={e => { e.preventDefault(); p.onConfirm(); }} className="flex flex-col gap-5">

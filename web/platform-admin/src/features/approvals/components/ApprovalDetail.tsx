@@ -2,8 +2,8 @@ import { Ban, Check, Eye, MessageSquareWarning, Play, X } from 'lucide-react';
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { useI18n, type MessageKey } from '@medvya/i18n';
-import { Button, Card, EmptyState, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState } from '@medvya/ui';
-import ReasonPanel from '../../shell/components/ReasonPanel';
+import { Button, Card, EmptyState, StickyActionBar, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState } from '@medvya/ui';
+import ReasonPanel, { ReasonBar } from '../../shell/components/ReasonPanel';
 import type { ReasonForm } from '../../team/domain/team';
 import { documentColumns, historyColumns, isDestructive, isDocumentKind, sizeLabel, taxCheck, type Action, type Detail, type DocumentView, type EmailPreview } from '../domain/approvals';
 import DocumentViewer from './DocumentViewer';
@@ -86,28 +86,11 @@ export default function ApprovalDetail({ vm, operator }: { vm: DetailVm; operato
         {vm.viewing && <DocumentViewer file={vm.viewing} operator={operator} onClose={vm.onClose} />}
       </section>
 
-      <section aria-labelledby="approvals-decision" className="flex flex-col gap-3">
+      {/* The decision buttons are in the page's bottom bar (DecisionBar); the reason and the sent email show here. */}
+      {(vm.pending || vm.sent) && <section aria-labelledby="approvals-decision" className="flex flex-col gap-3">
         <h3 id="approvals-decision" className="text-base font-bold">{t('platform.approvals.decision.title')}</h3>
-        {!vm.canDecide && <p className="text-sm text-muted-foreground">{t('platform.approvals.decision.readOnly')}</p>}
-        {vm.canDecide && vm.allowed.length === 0 && <p className="text-sm text-muted-foreground">{t('platform.approvals.decision.none')}</p>}
-        {vm.canDecide && vm.allowed.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {vm.allowed.map(a => {
-              const Icon = icons[a];
-              const blocked = a === 'approve' && vm.blockedByDpa;
-              return (
-                <Button key={a} variant={isDestructive(a) ? 'destructive' : a === 'approve' || a === 'reinstate' ? 'default' : 'outline'} disabled={blocked}
-                  aria-describedby={blocked ? 'approvals-dpa' : undefined} onClick={() => vm.onStart(a)}>
-                  <Icon aria-hidden />{t(`platform.approvals.action.${a}` as MessageKey)}
-                </Button>
-              );
-            })}
-          </div>
-        )}
-        {vm.canDecide && vm.allowed.includes('approve') && vm.blockedByDpa && <p id="approvals-dpa" className="text-sm font-semibold text-danger-700">{t('platform.approvals.error.dpa')}</p>}
         {vm.pending && (
-          <ReasonPanel title={t(`platform.approvals.confirm.${vm.pending}.title` as MessageKey)} form={vm.form} confirmLabel={t(`platform.approvals.confirm.${vm.pending}.confirm` as MessageKey)}
-            destructive={isDestructive(vm.pending)} busy={vm.busy} problem={vm.problem} onConfirm={vm.onConfirm} onCancel={vm.onCancel}>
+          <ReasonPanel title={t(`platform.approvals.confirm.${vm.pending}.title` as MessageKey)} form={vm.form} onConfirm={vm.onConfirm}>
             <p className="text-sm">{t(`platform.approvals.confirm.${vm.pending}.body` as MessageKey)}</p>
           </ReasonPanel>
         )}
@@ -120,7 +103,7 @@ export default function ApprovalDetail({ vm, operator }: { vm: DetailVm; operato
             <Button variant="ghost" className="self-start" onClick={vm.onDismissSent}>{t('platform.link.done')}</Button>
           </Card>
         )}
-      </section>
+      </section>}
 
       <section aria-labelledby="approvals-history" className="flex flex-col gap-2">
         <h3 id="approvals-history" className="text-base font-bold">{t('platform.approvals.history.title')}</h3>
@@ -145,3 +128,33 @@ export default function ApprovalDetail({ vm, operator }: { vm: DetailVm; operato
     </>
   );
 }
+
+/** The decision for the open request, in the page's bottom bar (MDV-P2-065): why it cannot be decided at the start, the actions at the end, the filled one last. */
+export function DecisionBar({ vm }: { vm: DetailVm }) {
+  const { t } = useI18n();
+  if (!vm.selected || vm.state !== 'ready' || !vm.detail) return null;
+  if (vm.pending)
+    return <ReasonBar confirmLabel={t(`platform.approvals.confirm.${vm.pending}.confirm` as MessageKey)} destructive={isDestructive(vm.pending)} busy={vm.busy} problem={vm.problem} onCancel={vm.onCancel} />;
+  const actions = vm.canDecide ? [...vm.allowed].sort((a, b) => Number(isFilled(a)) - Number(isFilled(b))) : [];
+  const status = !vm.canDecide ? t('platform.approvals.decision.readOnly')
+    : vm.allowed.length === 0 ? t('platform.approvals.decision.none') : null;
+  return (
+    <StickyActionBar status={<>
+      {status && <p className="text-sm text-muted-foreground">{status}</p>}
+      {vm.canDecide && vm.allowed.includes('approve') && vm.blockedByDpa && <p id="approvals-dpa" className="text-sm font-semibold text-danger-700">{t('platform.approvals.error.dpa')}</p>}
+    </>}>
+      {actions.map(a => {
+        const Icon = icons[a];
+        const blocked = a === 'approve' && vm.blockedByDpa;
+        return (
+          <Button key={a} variant={isDestructive(a) ? 'destructive' : isFilled(a) ? 'default' : 'outline'} disabled={blocked}
+            aria-describedby={blocked ? 'approvals-dpa' : undefined} onClick={() => vm.onStart(a)}>
+            <Icon aria-hidden />{t(`platform.approvals.action.${a}` as MessageKey)}
+          </Button>
+        );
+      })}
+    </StickyActionBar>
+  );
+}
+
+const isFilled = (a: Action) => a === 'approve' || a === 'reinstate';

@@ -39,7 +39,7 @@ export default function PatientDirectory(p: Props) {
     : '';
   return (
     // One screen (MDV-P2-064): the search stays put and a long result list scrolls inside its table.
-    <PageContainer width="reading" fit>
+    <PageContainer fit>
       {/* Register patient is here and on Front desk, not in the menu (MDV-P2-051); outlined, as Search is this view's primary button. */}
       <PageHeader title={t('patients.directory.title')}
         actions={<>

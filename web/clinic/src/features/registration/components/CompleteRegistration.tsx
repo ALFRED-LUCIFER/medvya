@@ -36,15 +36,15 @@ export default function CompleteRegistration(p: Props) {
   // One header in every state, so the title and the way back never move (MDV-P2-059).
   const header = <PageHeader back={back} title={t('registration.complete.title')} description={t('registration.complete.intro')} />;
   if (p.failure === 'notFound')
-    return <PageContainer width="reading">{header}<PageMessage kind="error" title={t('patients.record.notFound.title')}>{t('patients.record.notFound.body')}</PageMessage></PageContainer>;
+    return <PageContainer>{header}<PageMessage kind="error" title={t('patients.record.notFound.title')}>{t('patients.record.notFound.body')}</PageMessage></PageContainer>;
   if (p.failure === 'forbidden')
-    return <PageContainer width="reading">{header}<PageMessage kind="denied" title={t('err.403')}>{t('registration.forbidden.body')}</PageMessage></PageContainer>;
-  if (p.loading) return <PageContainer width="reading">{header}<PageMessage kind="busy">{t('registration.complete.loading')}</PageMessage></PageContainer>;
+    return <PageContainer>{header}<PageMessage kind="denied" title={t('err.403')}>{t('registration.forbidden.body')}</PageMessage></PageContainer>;
+  if (p.loading) return <PageContainer>{header}<PageMessage kind="busy">{t('registration.complete.loading')}</PageMessage></PageContainer>;
 
   const { register, control, formState: { errors } } = p.form;
   const f = { register, control, errors };
   return (
-    <PageContainer width="reading" className="gap-5">
+    <PageContainer className="gap-5">
       {header}
       {p.status ? (
         <Card role="status" className={cn('flex-row items-center gap-2 font-bold', p.status === 'Complete' ? 'text-success-700' : 'text-warning-700')}>

@@ -90,7 +90,7 @@ export default function Registration(p: Props) {
       recordPath={p.recordPath(p.result.patientId)} bookPath={p.bookPath} slot={p.slot} checkInPath={p.checkInPath}
       quick={p.quick} missing={p.missing} timeZone={p.timeZone} />;
   if (p.failure === 'forbidden')
-    return <PageContainer width="reading"><PageHeader title={t('registration.title')} /><PageMessage kind="denied" title={t('err.403')}>{t('registration.forbidden.body')}</PageMessage></PageContainer>;
+    return <PageContainer><PageHeader title={t('registration.title')} /><PageMessage kind="denied" title={t('err.403')}>{t('registration.forbidden.body')}</PageMessage></PageContainer>;
 
   const { register, control, formState: { errors } } = p.form;
   const f = { register, control, errors };

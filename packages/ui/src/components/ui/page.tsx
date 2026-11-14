@@ -1,14 +1,12 @@
 import * as React from "react"
 import { cn } from "#lib/utils"
 
-/** The three page widths. One place sets them, so every page lines up with the shell (MDV audit UX-01). */
+/** The page widths. One place sets them, so every page lines up with the shell (MDV audit UX-01). */
 export const pageWidths = {
   /** The full width between the sidebar and the gutter (owner ruling of 14 Nov 2026, DESIGN.md Screen layout standard). */
   fluid: "max-w-none",
-  /** One form or one decision: a comfortable single column. */
+  /** Print pages only (note print, token slip): the printed sheet's width (MDV-P2-065). Every other page is fluid. */
   form: "max-w-form",
-  /** Record and settings pages: wide enough for two columns, narrow enough to read. */
-  reading: "max-w-reading",
 } as const
 
 export type PageWidth = keyof typeof pageWidths

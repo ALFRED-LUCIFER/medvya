@@ -1,7 +1,7 @@
 import { useI18n, type MessageKey } from '@medvya/i18n';
 import { Button, PageContainer, PageHeader, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState, Tabs, TabsContent, TabsList, TabsTrigger, cn } from '@medvya/ui';
 import { filters, queueColumns, waitDays, type Filter, type QueueItem } from '../domain/approvals';
-import ApprovalDetail, { type DetailVm } from './ApprovalDetail';
+import ApprovalDetail, { DecisionBar, type DetailVm } from './ApprovalDetail';
 
 export type QueueVm = {
   state: 'loading' | 'error' | 'empty' | 'ready'; forbidden: boolean; items: QueueItem[]; filter: Filter; selectedId: string | null; asOf: Date;
@@ -51,6 +51,7 @@ export default function ApprovalsPage({ vm, operator }: { vm: { queue: QueueVm; 
           <ApprovalDetail vm={vm.detail} operator={operator} />
         </section>
       </div>
+      <DecisionBar vm={vm.detail} />
     </PageContainer>
   );
 }

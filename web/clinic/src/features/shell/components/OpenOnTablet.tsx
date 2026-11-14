@@ -21,5 +21,5 @@ export default function OpenOnTablet({ patientName, title }: Props) {
       {t('phoneRule.message')}
     </PageMessage>
   );
-  return title ? <PageContainer width="form"><PageHeader title={title} />{message}</PageContainer> : message;
+  return title ? <PageContainer><PageHeader title={title} />{message}</PageContainer> : message;
 }

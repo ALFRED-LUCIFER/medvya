@@ -41,14 +41,14 @@ export function useTeamController() {
     // Measured at the time the team was read, so rendering stays pure.
     reviewDue: team.data ? isReviewDue(team.data, new Date(team.dataUpdatedAt)) : false,
     inviting, inviteForm: inviteFormState, inviteBusy: sendInvite.isPending, inviteFailed: sendInvite.isError && !inviteFormState.formState.errors.email,
-    onStartInvite: () => { setIssued(null); setInviting(true); },
+    onStartInvite: () => { setIssued(null); setPending(null); setInviting(true); },
     onCancelInvite: () => setInviting(false),
     onInvite: inviteFormState.handleSubmit(form => sendInvite.mutate(form)),
     pending, reasonForm: reasonFormState, actionBusy: act.isPending,
     // 409: yourself, or the last owner. The server refuses; the screen says why.
     actionRefused: act.error instanceof ApiError && act.error.status === 409,
     actionFailed: act.isError && !(act.error instanceof ApiError && act.error.status === 409),
-    onStartAction: (action: PendingAction) => { act.reset(); reasonFormState.reset(); setIssued(null); setPending(action); },
+    onStartAction: (action: PendingAction) => { act.reset(); reasonFormState.reset(); setIssued(null); setInviting(false); setPending(action); },
     onCancelAction: () => setPending(null),
     onConfirmAction: reasonFormState.handleSubmit(({ reason }) => { if (pending) act.mutate({ action: pending, reason }); }),
     issued, copied,

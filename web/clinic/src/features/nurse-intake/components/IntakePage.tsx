@@ -41,7 +41,7 @@ export default function IntakePage(p: Props) {
   if (p.loading) return <p role="status">{t('intake.loading')}</p>;
   if (p.refused || p.notFound || p.failed || !p.screen)
     return (
-      <PageContainer width="form" role="alert">
+      <PageContainer role="alert">
         <PageHeader title={t(p.refused ? 'intake.refused' : p.notFound ? 'intake.notFound' : 'intake.loadFailed')}
           actions={<Link to={p.queuePath} className={buttonVariants({ variant: 'outline' })}>{t('intake.back')}</Link>} />
       </PageContainer>
@@ -58,7 +58,7 @@ export default function IntakePage(p: Props) {
   ];
 
   return (
-    <PageContainer width="reading">
+    <PageContainer>
       <Identity patient={patient} intake={intake} />
       {readOnly && <p role="status" className="font-bold">{t(correctable(intake) ? 'intake.handedOff.correctable' : 'intake.handedOff')}</p>}
       {/* One screen (MDV-P2-064): vitals beside allergies and medicines from 1024 px; the commit actions in the bottom bar. */}

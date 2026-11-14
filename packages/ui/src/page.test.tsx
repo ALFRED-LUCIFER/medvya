@@ -10,9 +10,9 @@ describe('PageContainer', () => {
     render(<PageContainer data-testid="c">x</PageContainer>);
     expect(screen.getByTestId('c').className).toContain('max-w-none');
   });
-  it.each([['form', 'max-w-form'], ['reading', 'max-w-reading']] as const)('caps the %s width', (width, cls) => {
-    render(<PageContainer width={width} data-testid="c">x</PageContainer>);
-    expect(screen.getByTestId('c').className).toContain(cls);
+  it('caps a print page at the form width', () => {
+    render(<PageContainer width="form" data-testid="c">x</PageContainer>);
+    expect(screen.getByTestId('c').className).toContain('max-w-form');
   });
 });
 

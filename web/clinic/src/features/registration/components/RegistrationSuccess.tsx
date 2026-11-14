@@ -21,7 +21,7 @@ export default function RegistrationSuccess({ result, name, actorName, onRegiste
   const at = new Date(result.registeredAt);
   return (
     // The whole result is the live region, so "… is registered" is announced with its MRN, as before the title moved into PageHeader.
-    <PageContainer width="reading" role="status">
+    <PageContainer role="status">
       <PageHeader title={<span className="inline-flex items-center gap-2"><UserCheck className="size-6 shrink-0 text-success-700" aria-hidden />{t('registration.done.title', { name })}</span>} />
       <Card>
         <p className="text-muted-foreground">

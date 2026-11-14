@@ -49,7 +49,7 @@ export default function AdjustmentsPage(p: Props) {
   const fieldError = (m: 'calendar' | 'range' | 'window' | 'tooLong') => t(`adjustment.error.${m}`);
 
   return (
-    <PageContainer width="form" className="gap-5">
+    <PageContainer className="gap-5">
       <PageHeader title={t('adjustment.title')} description={t('adjustment.intro')} back={
         <Link to={p.backPath} className={cn(buttonVariants({ variant: 'ghost' }), 'px-2')}>
           <ArrowLeft className="rtl:rotate-180" aria-hidden />{t('adjustment.back')}

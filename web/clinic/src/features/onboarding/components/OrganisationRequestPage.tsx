@@ -46,7 +46,7 @@ export default function OrganisationRequestPage(p: Props) {
   ];
   if (p.approved) {
     return (
-      <PageContainer width="form">
+      <PageContainer>
         <PageHeader title={t('orgRequest.title')} />
         <p role="status" className="flex items-start gap-2 rounded-lg bg-muted p-3 font-semibold">
           <CircleCheck className="mt-0.5 size-4 shrink-0" aria-hidden />{t('orgRequest.status.Approved')}
@@ -57,7 +57,7 @@ export default function OrganisationRequestPage(p: Props) {
   // Every state keeps the page heading (UX-08): a loading or refused page is never a bare sentence.
   if (p.loading || !p.request) {
     return (
-      <PageContainer width="form">
+      <PageContainer>
         <PageHeader title={t('orgRequest.title')} />
         {p.loading ? <p role="status">{t('orgRequest.loading')}</p>
           : <p role="alert" className={error}>{t(p.forbidden ? 'orgRequest.forbidden' : p.notFound ? 'orgRequest.none' : 'orgRequest.loadFailed')}</p>}
@@ -67,7 +67,7 @@ export default function OrganisationRequestPage(p: Props) {
   const { request: r } = p;
   const uploadMessage = p.uploadError ? t(`orgRequest.error.${uploadErrorKey(p.uploadError)}`) : null;
   return (
-    <PageContainer width="form" className="gap-6">
+    <PageContainer className="gap-6">
       <PageHeader title={t('orgRequest.title')} description={t('orgRequest.intro', { type: t(`orgRequest.type.${r.type}`) })} className="flex-col items-stretch">
         <p role="status" className="flex items-start gap-2 rounded-lg bg-muted p-3 font-semibold">
           <Info className="mt-0.5 size-4 shrink-0" aria-hidden />{t(`orgRequest.status.${r.state}`)}

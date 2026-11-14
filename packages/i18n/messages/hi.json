@@ -2483,6 +2483,7 @@
   "mobile.inbox.messages": "मरीज़ों के संदेश",
   "mobile.inbox.replyBy": "{time} तक जवाब दें",
   "mobile.inbox.reply": "जवाब दें",
+  "mobile.inbox.replyTo": "{patient} को जवाब दें",
   "mobile.inbox.noMessages": "कोई संदेश बाकी नहीं",
   "mobile.consult.title": "रिकॉर्ड करने से पहले पूछें",
   "mobile.consult.sayThis": "मरीज़ से यह कहें",

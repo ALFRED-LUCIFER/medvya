@@ -40,7 +40,7 @@ export function InboxScreen(vm: Props) {
               <Chip label={t('mobile.inbox.replyBy', { time: m.replyBy })} tone="warning" icon="schedule" />
             </View>
             <Text>{m.text}</Text>
-            <Button label={t('mobile.inbox.reply')} variant="secondary" icon="reply" disabled hint={t('mobile.common.comingSoon')} />
+            <Button label={t('mobile.inbox.reply')} accessibilityLabel={t('mobile.inbox.replyTo', { patient: m.patient })} variant="secondary" icon="reply" disabled hint={t('mobile.common.comingSoon')} />
           </Card>
         ))}
       </Section>

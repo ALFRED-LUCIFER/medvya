@@ -2493,6 +2493,7 @@
   "mobile.inbox.messages": "رسائل المرضى",
   "mobile.inbox.replyBy": "الرد قبل {time}",
   "mobile.inbox.reply": "رد",
+  "mobile.inbox.replyTo": "الرد على {patient}",
   "mobile.inbox.noMessages": "لا رسائل بالانتظار",
   "mobile.consult.title": "اطلب الإذن قبل التسجيل",
   "mobile.consult.sayThis": "قل هذا للمريض",

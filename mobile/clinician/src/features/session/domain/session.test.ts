@@ -1,4 +1,4 @@
-import { codeForm, emailForm, LOCK_AFTER_MS, shouldLock, tabsFor, unlockMethod } from './session';
+import { codeForm, emailForm, LOCK_AFTER_MS, newPinForm, offersPin, PIN_TRIES, pinTriesLeft, shouldLock, tabsFor, unlockMethod } from './session';
 
 it('gives front desk no clinical tab', () => {
   expect(tabsFor('frontDesk')).not.toContain('consult');
@@ -24,4 +24,23 @@ it('never says Face ID or Touch ID on Android, and names what an iPhone has (MDV
   expect(unlockMethod('ios', { face: true, finger: false })).toBe('faceId');
   expect(unlockMethod('ios', { face: false, finger: true })).toBe('touchId');
   expect(unlockMethod('ios', { face: false, finger: false })).toBe('ios');
+});
+
+it('allows five wrong PINs, then none (ADR-011 §3 failed-PIN limit)', () => {
+  expect(pinTriesLeft(0)).toBe(PIN_TRIES);
+  expect(pinTriesLeft(4)).toBe(1);
+  expect(pinTriesLeft(5)).toBe(0);
+  expect(pinTriesLeft(9)).toBe(0);
+});
+
+it('offers the app PIN when face or fingerprint unlock is off or has failed', () => {
+  expect(offersPin(false, false)).toBe(true);
+  expect(offersPin(true, false)).toBe(false);
+  expect(offersPin(true, true)).toBe(true);
+});
+
+it('takes a six-digit PIN typed the same twice', () => {
+  expect(newPinForm.safeParse({ pin: '246810', confirm: '246810' }).success).toBe(true);
+  expect(newPinForm.safeParse({ pin: '246810', confirm: '246811' }).error?.issues[0]?.message).toBe('mobile.pin.mismatch');
+  expect(newPinForm.safeParse({ pin: '2468', confirm: '2468' }).success).toBe(false);
 });

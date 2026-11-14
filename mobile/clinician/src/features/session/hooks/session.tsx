@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { shouldLock, type Session } from '../domain/session';
 import { onForeground } from '../services/appState';
+import { wipeDevice } from '../services/session';
 
 // shortcut: duplicated in mobile/patient; both move to packages/auth-client with native tokens (MDV-P5-033).
 type SessionState = {
@@ -26,6 +27,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [biometric, setBiometric] = useState(false);
   const backgroundedAt = useRef<number | null>(null);
 
+  // The session lives in memory, so anything on the phone at launch is left from a session that ended without a sign-out.
+  // shortcut: once MDV-P5-033 keeps the session in secure-store, wipe here only when no session is stored.
+  useEffect(() => { void wipeDevice(); }, []);
+
   useEffect(() => onForeground(active => {
     if (!active) { backgroundedAt.current = Date.now(); return; }
     if (shouldLock(backgroundedAt.current, Date.now())) setLocked(true);
@@ -37,7 +42,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     begin: (s, b) => { setSession(s); setBiometric(b); setLocked(false); },
     lock: () => setLocked(true),
     unlock: () => setLocked(false),
-    signOut: () => { setSession(null); setLocked(false); setBiometric(false); queryClient.clear(); }, // nothing cached outlives the session
+    // Sign-out, Switch user and the failed-PIN limit all end here: nothing cached outlives the session (ADR-011 §3, §5).
+    // shortcut: a revoke (the first 401 from a refresh) has no signal until native tokens (MDV-P5-033); that path must call signOut.
+    signOut: () => { setSession(null); setLocked(false); setBiometric(false); queryClient.clear(); void wipeDevice(); },
   }), [session, locked, biometric, queryClient]);
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }

@@ -31,7 +31,7 @@ it('names whom each Reply answers, so two Reply buttons never share a name', asy
 });
 
 it('reads the Up next card as one label with every flag in it, not chip by chip', async () => {
-  await renderApp(<TodayScreen session={session} today={cast.today} loading={false} error={null} refreshing={false} onRefresh={noop} canConsult
+  await renderApp(<TodayScreen session={session} today={cast.today} loading={false} error={null} refreshing={false} onRefresh={noop} canConsult offlineSince={null}
     onOpenAccount={noop} onOpenPatient={noop} onStartConsult={noop} />);
   const card = screen.getByLabelText('Up next, Meera Iyer, 54 F · Diabetes follow-up · Room 3, Allergy: Penicillin, HbA1c 7.9 %, Brief · not reviewed');
   expect(card.props.accessible).toBe(true);

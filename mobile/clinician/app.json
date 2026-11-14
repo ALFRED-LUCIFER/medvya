@@ -11,7 +11,11 @@
       "supportsTablet": true
     },
     "android": {
-      "package": "com.medvya.clinician"
+      "package": "com.medvya.clinician",
+      "blockedPermissions": [
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_IMAGES"
+      ]
     },
     "plugins": [
       "expo-router",
@@ -27,6 +31,13 @@
         }
       ],
       "expo-status-bar",
+      "expo-secure-store",
+      [
+        "expo-sqlite",
+        {
+          "useSQLCipher": true
+        }
+      ],
       [
         "expo-local-authentication",
         {

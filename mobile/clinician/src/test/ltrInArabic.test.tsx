@@ -40,7 +40,7 @@ it('keeps the email left to right on the account screen', async () => {
 });
 
 it('keeps the queue token left to right on Today, on Android as well as iOS', async () => {
-  await renderApp(<TodayScreen session={session} today={cast.today} loading={false} error={null} refreshing={false} onRefresh={noop} canConsult
+  await renderApp(<TodayScreen session={session} today={cast.today} loading={false} error={null} refreshing={false} onRefresh={noop} canConsult offlineSince={null}
     onOpenAccount={noop} onOpenPatient={noop} onStartConsult={noop} />, 'ar');
   expect(screen.getByText(isolated('A-09'))).toBeOnTheScreen();
 });

@@ -74,7 +74,7 @@ export const printView = () => ({
   patientAge: 53, diagnoses: [{ description: 'Type 2 diabetes (synthetic)', provisional: false }], followUpOn: '2026-11-02',
 });
 
-type AuthState = { authorised: ReturnType<typeof authorised> | null; changed: boolean };
+type AuthState = { authorised: ReturnType<typeof authorised> | null; changed: boolean; discard?: { reason: string; discardedBy: string; discardedAt: string } | null; editable?: boolean };
 
 export async function mockPrescription(page: Page, opts: {
   locale?: string; ended?: boolean; allowed?: boolean; lines?: RxLine[]; checks?: RxChecks; authorisation?: AuthState; reauthFirst?: boolean;
@@ -86,13 +86,20 @@ export async function mockPrescription(page: Page, opts: {
   const ordered = await mockOrders(page, { locale: opts.locale, ended: opts.ended });
   const lines: RxLine[] = [...(opts.lines ?? [])];
   const formulary = opts.formulary ?? [medicine('fi-metformin', 'Metformin', '500 mg', 'Tablet', ['Glycomet'])];
-  const calls = { added: [] as unknown[], saved: [] as unknown[], included: [] as unknown[], searched: [] as string[], checked: 0, overrides: [] as unknown[], authorised: 0, approved: 0 };
-  let state: AuthState = opts.authorisation ?? { authorised: null, changed: false };
+  const calls = { added: [] as unknown[], saved: [] as unknown[], included: [] as unknown[], searched: [] as string[], checked: 0, overrides: [] as unknown[], authorised: 0, approved: 0, discarded: [] as unknown[] };
+  let state: AuthState = { editable: !opts.ended, ...(opts.authorisation ?? { authorised: null, changed: false }) };
   await page.route('**/v1/encounters/e-1/prescription/authorisation', r => {
     if (r.request().method() === 'GET') return r.fulfill({ json: state });
     calls.authorised++;
     if (opts.reauthFirst && calls.authorised === 1) return r.fulfill({ status: 403, json: { code: 'reauth_required' } });
-    state = { authorised: authorised((state.authorised?.versionNo ?? 0) + 1), changed: false };
+    state = { ...state, authorised: authorised((state.authorised?.versionNo ?? 0) + 1), changed: false };
+    return r.fulfill({ json: state });
+  });
+  // MDV-P1-090: discarding closes the draft for good (DiscardAsync); the reason travels in the body.
+  await page.route('**/v1/encounters/e-1/prescription/discard', r => {
+    const body = r.request().postDataJSON() as { reason: string };
+    calls.discarded.push(body);
+    state = { ...state, editable: false, discard: { reason: body.reason, discardedBy: 'u-rao', discardedAt: '2026-10-19T04:55:00Z' } };
     return r.fulfill({ json: state });
   });
   await page.route('**/v1/encounters/e-1/prescription/print', r =>

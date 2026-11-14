@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { authoriseProblem, isCurrent, pdfProblem, qrCells, type RxAuthorisation } from './authorisation';
+import { authoriseProblem, isCurrent, pdfProblem, qrCells, unfinishedMedicines, type RxAuthorisation } from './authorisation';
 
 describe('prescription authorisation (MDV-P2-017)', () => {
   it('reads the server refusal as a problem the panel can word', () => {
@@ -26,5 +26,24 @@ describe('prescription authorisation (MDV-P2-017)', () => {
   it('tells a script the PDF cannot show from a failure', () => {
     expect(pdfProblem(422)).toBe('unsupported');
     expect(pdfProblem(500)).toBe('failed');
+  });
+});
+
+describe('unfinished prescription (MDV-P1-090)', () => {
+  const lines = [
+    { kind: 'Prescribe', included: true, medicine: 'Metformin' },
+    { kind: 'Prescribe', included: false, medicine: 'Removed' },
+    { kind: 'Discontinue', included: true, medicine: 'Atorvastatin' },
+  ];
+  const auth = { versionNo: 1, number: 'RX-1', authorisedBy: 'u', authorisedAt: '', contentHash: '', lines: 1, cancellation: null } satisfies RxAuthorisation;
+  it('names the included lines of a draft that is not authorised, or changed since', () => {
+    expect(unfinishedMedicines(lines, { authorised: null, changed: false })).toEqual(['Metformin', 'Atorvastatin']);
+    expect(unfinishedMedicines(lines, { authorised: auth, changed: true })).toEqual(['Metformin', 'Atorvastatin']);
+  });
+  it('asks nothing once authorised and unchanged, discarded, or before the state is known', () => {
+    expect(unfinishedMedicines(lines, { authorised: auth, changed: false })).toEqual([]);
+    expect(unfinishedMedicines(lines, { authorised: null, changed: false, discard: { reason: 'x', discardedBy: 'u', discardedAt: '' } })).toEqual([]);
+    expect(unfinishedMedicines(lines, null)).toEqual([]);
+    expect(unfinishedMedicines([], { authorised: null, changed: false })).toEqual([]);
   });
 });

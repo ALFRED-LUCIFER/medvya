@@ -19,6 +19,7 @@ public sealed class PrescribingDbContext(DbContextOptions<PrescribingDbContext> 
     public DbSet<RxAlertOverride> RxAlertOverrides => Set<RxAlertOverride>();
     public DbSet<AuthorisedPrescription> AuthorisedPrescriptions => Set<AuthorisedPrescription>();
     public DbSet<PrescriptionCancellation> PrescriptionCancellations => Set<PrescriptionCancellation>();
+    public DbSet<PrescriptionDiscard> PrescriptionDiscards => Set<PrescriptionDiscard>();
     public DbSet<RxAdvice> RxAdvice => Set<RxAdvice>();
     public DbSet<PrescriptionPdf> PrescriptionPdfs => Set<PrescriptionPdf>();
     public DbSet<PrintedPaper> PrintedPapers => Set<PrintedPaper>();
@@ -138,6 +139,12 @@ public sealed class PrescribingDbContext(DbContextOptions<PrescribingDbContext> 
         {
             e.Property(x => x.Reason).HasMaxLength(PrescriptionCancellation.MaxReason);
             e.HasIndex(x => new { x.TenantId, x.PrescriptionId }).IsUnique(); // two cancellations at once: the second loses here
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<PrescriptionDiscard>(e =>
+        {
+            e.Property(x => x.Reason).HasMaxLength(PrescriptionDiscard.MaxReason);
+            e.HasIndex(x => new { x.TenantId, x.EncounterId }).IsUnique(); // two discards at once: the second loses here
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<PrescriptionPdf>(e =>

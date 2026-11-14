@@ -497,10 +497,15 @@ journey('J2', {
     await signIn(page, rao);
     await page.goto(studioPath);
     const note = page.getByRole('region', { name: 'Consultation note' });
+    // MDV-P1-090: step 10's metformin is still a draft, so Sign note first names it; signing does not authorise it.
+    const unfinished = page.getByRole('dialog', { name: `Not finished for ${meera}` });
     await note.getByRole('button', { name: 'Sign note' }).click();
+    await expect(unfinished.getByRole('region', { name: 'Prescription not authorised' })).toContainText('Metformin');
+    await unfinished.getByRole('button', { name: 'Sign anyway' }).click();
     await page.getByRole('dialog', { name: `Sign note for ${meera}?` }).getByRole('button', { name: /^Sign as Dr\. Arjun Rao/ }).click();
     await stepUp(page);
     await note.getByRole('button', { name: 'Sign note' }).click();
+    await unfinished.getByRole('button', { name: 'Sign anyway' }).click();
     await page.getByRole('dialog').getByRole('button', { name: /^Sign as Dr\. Arjun Rao/ }).click();
     await expect(note).toContainText('SIGNED v1 · read-only');
     await expect(note.getByRole('textbox', { name: /^Plan/ })).toHaveJSProperty('readOnly', true);
@@ -508,6 +513,10 @@ journey('J2', {
     await expect(note).toContainText('SIGNED v1 · read-only');
     await expectNoAxeViolations(page);
     await page.getByRole('button', { name: 'End consultation' }).click(); // leaves Dr. Rao no open consultation for the later journeys
+    // The draft is discarded with a reason on the server (MDV-P1-090), so it does not wait on Dr. Rao's day in the later journeys.
+    await unfinished.getByRole('button', { name: 'Discard the draft' }).click();
+    await unfinished.getByLabel('Reason for discarding').fill('Journey test: not prescribed (synthetic)');
+    await unfinished.getByRole('button', { name: 'Discard and continue' }).click();
     await expect(page.getByRole('status').filter({ hasText: 'Consultation ended' })).toBeVisible();
     expect(watch.leaks(['Meera', 'Iyer', '1972-03-12', 'DQ-10-4482', 'sugars'])).toEqual([]);
   },

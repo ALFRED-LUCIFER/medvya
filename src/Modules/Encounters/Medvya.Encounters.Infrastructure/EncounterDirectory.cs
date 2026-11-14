@@ -18,6 +18,11 @@ public sealed class EncounterDirectory(EncountersDbContext db, IFollowUpBookings
         await db.Encounters.AsNoTracking().Where(e => e.Id == encounterId)
             .Select(e => new EncounterView(e.Id, e.AppointmentId, e.PatientId, e.FacilityId, e.LeadClinicianId, e.Status, e.AuthorityMode, e.StartedAt, e.EndedAt, null, e.IdentityConfirmedAt, e.IdentityConfirmedBy))
             .SingleOrDefaultAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<EncounterView>> FindManyAsync(IReadOnlyCollection<Guid> encounterIds, CancellationToken cancellationToken = default) =>
+        await db.Encounters.AsNoTracking().Where(e => encounterIds.Contains(e.Id))
+            .Select(e => new EncounterView(e.Id, e.AppointmentId, e.PatientId, e.FacilityId, e.LeadClinicianId, e.Status, e.AuthorityMode, e.StartedAt, e.EndedAt, null, e.IdentityConfirmedAt, e.IdentityConfirmedBy))
+            .ToListAsync(cancellationToken);
 }
 
 /// <summary>The patient's own, scanned-clean documents (<see cref="IDocumentDirectory"/>).</summary>

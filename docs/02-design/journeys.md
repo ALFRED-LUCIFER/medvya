@@ -33,6 +33,7 @@ Each step: who acts, on which screen, and what changes. 🔒 = clinician approva
 | 10 | E-05 | Doctor | Add medicine from the chart | Goes on the open consultation's draft; amoxicillin blocked by the penicillin allergy. | 🔒 |
 | 11 | E-04 | Doctor | One-page consultation | Seven numbered sections; Sign locked until the checklist is complete. | 🔒 |
 | 12 | E-06 | Doctor | Sign | Step-up, then signed v1 and read-only: only what was signed shows (no section left "To do"). | 🔒 |
+| 13 | E-04 | Doctor | End with an unfinished prescription | End consultation names Meera and the draft; End anyway; My day lists it under Prescriptions to authorise, which opens the prescription to authorise (MDV-P1-090). | 🔒 |
 
 ## J3 · Busy reception → nurse handoff — Front desk · M1–M2
 

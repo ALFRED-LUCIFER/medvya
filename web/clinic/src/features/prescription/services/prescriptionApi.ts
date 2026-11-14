@@ -25,6 +25,12 @@ export const authorise = (encounterId: string) => post<RxAuthorisationState>(`/v
 /** Cancel without a replacement (step-up as for authorising); the doctor's reason travels in the body. */
 export const cancelPrescription = (encounterId: string, reason: string) =>
   post<RxAuthorisationState>(`/v1/encounters/${encounterId}/prescription/cancellation`, { reason: reason.trim() });
+/** MDV-P1-090: discard the unfinished draft; the doctor's reason travels in the body. */
+export const discardDraft = (encounterId: string, reason: string) =>
+  post<RxAuthorisationState>(`/v1/encounters/${encounterId}/prescription/discard`, { reason: reason.trim() });
+/** MDV-P1-090: the signed-in doctor's ended consultations whose prescription waits to be authorised, at the session's facility. */
+export const fetchPendingPrescriptions = () =>
+  send<{ more: boolean; items: { encounterId: string; patientName: string | null; endedAt: string; lines: number }[] }>('/v1/prescriptions/pending');
 // The advice for the patient (MDV-P2-043): its text travels in the body.
 export const fetchAdvice = (encounterId: string) => send<RxAdvice>(`/v1/encounters/${encounterId}/prescription/advice`);
 export const saveAdvice = (encounterId: string, text: string) => put<RxAdvice>(`/v1/encounters/${encounterId}/prescription/advice`, { text: text.trim() || null });

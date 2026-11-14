@@ -1,10 +1,10 @@
-import type { FormEventHandler, ReactNode } from 'react';
+import { useEffect, type FormEventHandler, type ReactNode } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { Link } from 'react-router';
 import { CircleAlert, CircleSlash, TrendingDown, CircleX, FilePen, History, Plus, Printer, ShieldCheck, Trash2, UserRound } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
 import { Button, buttonVariants, ClinicalAlert, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@medvya/ui';
-import { isCurrent, type AuthoriseProblem, type RxAuthorisationState } from '../domain/authorisation';
+import { authoriseTarget, isCurrent, type AuthoriseProblem, type RxAuthorisationState } from '../domain/authorisation';
 import { describedBy, fieldError } from '../../settings/components/fieldStyles';
 import { Section } from '../../settings/components/Section';
 import { lineSafety } from '../domain/checks';
@@ -45,6 +45,12 @@ type Props = SafetyProps & {
   onCancelling: (open: boolean) => void;
   onCancel: FormEventHandler<HTMLFormElement>;
   onConfirmIdentity: () => void;
+  discarding: boolean;
+  discardForm: UseFormReturn<{ reason: string }>;
+  discardPending: boolean;
+  discardFailed: boolean;
+  onDiscarding: (open: boolean) => void;
+  onDiscard: FormEventHandler<HTMLFormElement>;
   printPath: string;
   /** The Add medicine panel (MDV-P2-039), opened from here while the consultation is open. */
   addMedicine?: ReactNode;
@@ -66,10 +72,16 @@ export default function PrescriptionPanel(p: Props) {
   const prescribed = p.lines.filter(l => l.kind === 'Prescribe' && l.included);
   // Stops, changes and tapers follow the reconciliation (MDV-P2-011, MDV-P2-043): read here, decided there.
   const stopped = p.lines.filter(l => l.kind !== 'Prescribe');
+  // MDV-P1-090: after the visit ended the server says whether this doctor may still finish the draft; once discarded, nobody may.
+  const discarded = !!p.authorisation?.discard;
+  const finishing = p.ended && !!p.authorisation?.editable;
+  // Arriving from Today's "Prescriptions to authorise": focus the Authorise button once the draft is there.
+  const ready = !p.loading && !!p.authorisation;
+  useEffect(() => { if (ready && window.location.hash === `#${authoriseTarget}`) document.getElementById(authoriseTarget)?.focus(); }, [ready]);
   const status = p.loading ? t('rx.loading') : p.failed ? t('rx.loadFailed') : prescribed.length === 0 && stopped.length === 0 ? t('rx.empty') : null;
 
   return (
-    <Section title={t('rx.title')} intro={t(p.ended ? 'rx.ended' : 'rx.intro')}>
+    <Section title={t('rx.title')} intro={t(finishing ? 'rx.endedFinish' : p.ended ? 'rx.ended' : 'rx.intro')}>
       <div className="flex flex-wrap items-end gap-3">
         <Select value={p.language} onValueChange={v => p.onLanguage(v as PrintLanguage)}>
           <Field id="rx-language" label={t('rx.language')} className="min-w-56">
@@ -78,7 +90,7 @@ export default function PrescriptionPanel(p: Props) {
           <SelectContent>{printLanguages.map(l => <SelectItem key={l} value={l}>{t(`rx.lang.${l}`)}</SelectItem>)}</SelectContent>
         </Select>
         <AuthorisationState state={p.authorisation} />
-        {!p.ended && p.addMedicine}
+        {!p.ended && !discarded && p.addMedicine}
       </div>
 
       {status && <p role="status">{status}</p>}
@@ -119,7 +131,7 @@ export default function PrescriptionPanel(p: Props) {
 
       {p.lines.length > 0 && <Authorise {...p} />}
 
-      {!p.ended && (
+      {!p.ended && !discarded && (
         <form noValidate onSubmit={p.onAddFreeText} className="flex flex-col gap-3 border-t pt-4">
           <h3 className="font-bold">{t('rx.add.title')}</h3>
           <Field id="rx-medicine" label={t('rx.add.search')} hint={t('rx.add.hint')} error={p.add.formState.errors.medicine && t('rx.error.required')}>
@@ -151,7 +163,8 @@ export default function PrescriptionPanel(p: Props) {
 function AuthorisationState({ state }: { state: RxAuthorisationState | null }) {
   const { t } = useI18n();
   const a = state?.authorised;
-  const [Icon, text] = !a ? [FilePen, t('rx.draftState')]
+  const [Icon, text] = state?.discard ? [CircleX, t('rx.discarded', { reason: state.discard.reason })]
+    : !a ? [FilePen, t('rx.draftState')]
     : a.cancellation ? [CircleX, t('rx.auth.cancelled', { version: a.versionNo, number: a.number })]
     : state.changed ? [CircleAlert, t('rx.auth.changed')]
     : [ShieldCheck, t('rx.auth.authorised', { version: a.versionNo, number: a.number })];
@@ -163,6 +176,7 @@ function Authorise(p: Props) {
   const { t } = useI18n();
   const state = p.authorisation;
   const current = isCurrent(state);
+  const locked = !(state?.editable ?? !p.ended);
   const cancellation = state?.authorised?.cancellation;
   const reasonError = p.cancelForm.formState.errors.reason;
   return (
@@ -171,8 +185,8 @@ function Authorise(p: Props) {
       {(p.checks?.unresolved ?? 0) > 0 && <p className="text-sm font-bold">{t('rx.auth.unresolved')}</p>}
       {cancellation && <p className="text-sm">{t('rx.auth.cancelledReason', { reason: cancellation.reason })}</p>}
       <div className="flex flex-wrap gap-3">
-        {!current && (
-          <Button loading={p.authorising} disabled={p.busy} onClick={p.onAuthorise}>
+        {!current && !locked && (
+          <Button id={authoriseTarget} loading={p.authorising} disabled={p.busy} onClick={p.onAuthorise}>
             <ShieldCheck aria-hidden className="size-4" />{t(cancellation ? 'rx.auth.reissue' : state?.authorised ? 'rx.auth.again' : 'rx.auth.authorise')}
           </Button>
         )}
@@ -180,7 +194,23 @@ function Authorise(p: Props) {
         {current && !p.cancelling && (
           <Button variant="outline" onClick={() => p.onCancelling(true)}><CircleX aria-hidden className="size-4" />{t('rx.auth.cancel')}</Button>
         )}
+        {/* MDV-P1-090: an ended visit's unfinished draft can be discarded here as well as from End consultation. */}
+        {p.ended && !current && !locked && !p.discarding && (
+          <Button variant="outline" onClick={() => p.onDiscarding(true)}><Trash2 aria-hidden className="size-4" />{t('rx.discard.confirm')}</Button>
+        )}
       </div>
+      {p.ended && !current && !locked && p.discarding && (
+        <form noValidate onSubmit={p.onDiscard} className="flex flex-col gap-2">
+          <Field id="rx-discard-reason" label={t('finish.discardReason')} error={p.discardForm.formState.errors.reason && t('finish.discardReasonRequired')}>
+            <Input autoComplete="off" {...p.discardForm.register('reason')} />
+          </Field>
+          {p.discardFailed && <p role="alert" className={fieldError}>{t('finish.discardFailed')}</p>}
+          <div className="flex flex-wrap gap-2">
+            <Button type="submit" variant="destructive" loading={p.discardPending}>{t('rx.discard.confirm')}</Button>
+            <Button type="button" variant="outline" onClick={() => p.onDiscarding(false)}>{t('finish.back')}</Button>
+          </div>
+        </form>
+      )}
       {current && p.cancelling && (
         <form noValidate onSubmit={p.onCancel} className="flex flex-col gap-2">
           <Field id="rx-cancel-reason" label={t('rx.auth.cancelReason')} hint={t('rx.auth.cancelHint')} error={reasonError && t('rx.auth.cancelReasonRequired')}>
@@ -227,13 +257,13 @@ function Sig({ line, language }: { line: RxLine; language: PrintLanguage }) {
   );
 }
 
-function Line({ line, ended, busy, language, checks, draftOf, saveOf, invalidOf, onInclude, onField }: Props & { line: RxLine }) {
+function Line({ line, ended, busy, language, checks, authorisation, draftOf, saveOf, invalidOf, onInclude, onField }: Props & { line: RxLine }) {
   const { t } = useI18n();
   const id = line.id ?? '';
   const draft = draftOf(line);
   const invalid = invalidOf(line);
   const save = saveOf(id);
-  const locked = ended;
+  const locked = !(authorisation?.editable ?? !ended);
   const fieldId = (f: SigField) => `rx-${id}-${f}`;
   // One row per medicine: each control is named by its column header, and a wrong value is said under it.
   const text = (f: 'dose' | 'durationDays' | 'quantity' | 'instructions') => (
@@ -279,7 +309,7 @@ function Line({ line, ended, busy, language, checks, draftOf, saveOf, invalidOf,
       </TableHead>
       {sigFields.map(f => cells[f])}
       <TableCell className="align-top">
-        {!ended && <Button variant="outline" disabled={busy} aria-label={t('rx.remove', { name: line.medicine })} onClick={() => onInclude(id, false)}><Trash2 aria-hidden className="size-4" />{t('rx.removeShort')}</Button>}
+        {!locked && <Button variant="outline" disabled={busy} aria-label={t('rx.remove', { name: line.medicine })} onClick={() => onInclude(id, false)}><Trash2 aria-hidden className="size-4" />{t('rx.removeShort')}</Button>}
       </TableCell>
     </TableRow>
   );

@@ -2473,6 +2473,7 @@
   "mobile.inbox.critical": "गंभीर · स्वीकार नहीं किया गया",
   "mobile.inbox.abnormal": "असामान्य · समीक्षा नहीं हुई",
   "mobile.inbox.markReviewed": "समीक्षित चिह्नित करें",
+  "mobile.inbox.markReviewedFor": "समीक्षित चिह्नित करें: {patient}, {test}",
   "mobile.inbox.noResults": "आपके लिए कोई रिपोर्ट बाकी नहीं",
   "mobile.inbox.messages": "मरीज़ों के संदेश",
   "mobile.inbox.replyBy": "{time} तक जवाब दें",

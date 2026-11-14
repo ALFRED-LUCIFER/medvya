@@ -34,7 +34,7 @@ export function VisitsScreen(vm: Props) {
               {vm.visits.past.map((v, i) => (
                 <View key={v.id} style={i > 0 && styles.divider}>
                   <ListRow title={v.reason} subtitle={`${formatDate(new Date(v.at), tz)} · ${v.doctor}`}
-                    trailing={<Chip label={t(`mobile.visits.status.${v.status}`)} tone={v.status === 'cancelled' ? 'neutral' : 'brand'} />} />
+                    chips={[{ label: t(`mobile.visits.status.${v.status}`), tone: v.status === 'cancelled' ? 'neutral' : 'brand' }]} />
                 </View>
               ))}
             </Card>

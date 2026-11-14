@@ -2483,6 +2483,7 @@
   "mobile.inbox.critical": "حرج · لم يُقَرّ به",
   "mobile.inbox.abnormal": "غير طبيعي · لم يُراجَع",
   "mobile.inbox.markReviewed": "تعليم كمُراجَع",
+  "mobile.inbox.markReviewedFor": "تعليم كمُراجَع: {patient}، {test}",
   "mobile.inbox.noResults": "لا نتائج بانتظارك",
   "mobile.inbox.messages": "رسائل المرضى",
   "mobile.inbox.replyBy": "الرد قبل {time}",

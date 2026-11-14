@@ -2484,6 +2484,7 @@
   "mobile.inbox.critical": "Critical · not acknowledged",
   "mobile.inbox.abnormal": "Abnormal · not reviewed",
   "mobile.inbox.markReviewed": "Mark reviewed",
+  "mobile.inbox.markReviewedFor": "Mark reviewed: {patient}, {test}",
   "mobile.inbox.noResults": "No results waiting for you",
   "mobile.inbox.messages": "Patient messages",
   "mobile.inbox.replyBy": "Reply by {time}",

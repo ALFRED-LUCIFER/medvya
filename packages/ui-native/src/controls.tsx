@@ -12,13 +12,14 @@ const ICON_SCALE_CAP = 1.5;
 export function Icon({ name, size = 22, color = theme.color.ink600, fixed }: { name: IconName; size?: number; color?: string; fixed?: boolean }) {
   const { fontScale } = useWindowDimensions();
   const scaled = fixed ? size : Math.round(size * Math.min(Math.max(fontScale, 1), ICON_SCALE_CAP));
-  return <MaterialIcons name={name} size={scaled} color={color} accessible={false} />;
+  // Hidden on both platforms: accessible={false} alone still lets Android merge the glyph into a parent label (audit M-02).
+  return <MaterialIcons name={name} size={scaled} color={color} accessible={false} importantForAccessibility="no" accessibilityElementsHidden />;
 }
 
-type ButtonProps = { label: string; onPress?: () => void; variant?: 'primary' | 'secondary' | 'ghost' | 'inverse'; icon?: IconName; disabled?: boolean; busy?: boolean; hint?: string };
+type ButtonProps = { label: string; accessibilityLabel?: string; onPress?: () => void; variant?: 'primary' | 'secondary' | 'ghost' | 'inverse'; icon?: IconName; disabled?: boolean; busy?: boolean; hint?: string };
 
 /** One button for both apps. Disabled buttons take a grey fill from tokens (as on the web, not opacity) and show `hint` as the reason under them. */
-export function Button({ label, onPress, variant = 'primary', icon, disabled, busy, hint }: ButtonProps) {
+export function Button({ label, accessibilityLabel, onPress, variant = 'primary', icon, disabled, busy, hint }: ButtonProps) {
   const { solid, target } = useBrand();
   const off = disabled || busy;
   const fg = disabled ? theme.color.ink600 : { primary: theme.color.card, secondary: theme.color.ink900, ghost: solid, inverse: solid }[variant];
@@ -31,7 +32,7 @@ export function Button({ label, onPress, variant = 'primary', icon, disabled, bu
   const button = (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={label}
+      accessibilityLabel={accessibilityLabel ?? label}
       accessibilityHint={hint}
       accessibilityState={{ disabled: !!off, busy: !!busy }}
       disabled={off}

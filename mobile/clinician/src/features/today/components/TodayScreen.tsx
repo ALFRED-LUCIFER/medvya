@@ -1,16 +1,18 @@
 import { useI18n, type MessageKey } from '@medvya/i18n';
 import { AppHeader, Avatar, Button, Card, Chip, ListRow, Loading, Screen, Section, Stat, StateMessage, Text, type IconName, type Tone } from '@medvya/ui-native';
 import { theme } from '@medvya/tokens';
+import { statuses, type Status } from '@medvya/tokens/status';
 import { StyleSheet, View } from 'react-native';
 import type { Session } from '../../session/domain/session';
 import type { Flag, QueueStatus, Today } from '../domain/today';
 
 const flagLook: Record<Flag['kind'], { icon: IconName; tone: Tone }> = {
-  allergy: { icon: 'medication', tone: 'danger' },
+  allergy: { icon: statuses.allergy.native, tone: statuses.allergy.tone },
   result: { icon: 'trending-up', tone: 'warning' },
-  brief: { icon: 'auto-awesome', tone: 'ai' },
+  brief: { icon: statuses.ai.native, tone: statuses.ai.tone },
 };
-const statusTone: Record<QueueStatus, Tone> = { withDoctor: 'info', next: 'success', waiting: 'warning', booked: 'neutral' };
+// Queue states take the words, tone and glyph of the visit state they are (MDV-P5-057).
+const queueLook = (s: QueueStatus) => statuses[({ withDoctor: 'InConsult', next: 'ReadyForDoctor', waiting: 'CheckedIn', booked: 'Booked' } as const satisfies Record<QueueStatus, Status>)[s]];
 
 type Props = {
   session: Session; today: Today | null; loading: boolean; error: string | null; refreshing: boolean; onRefresh: () => void; canConsult: boolean;
@@ -38,7 +40,7 @@ export function TodayScreen(vm: Props) {
             </View>
           </View>
           <View style={styles.flags}>
-            {next.flags.map(f => <Chip key={f.label} label={f.label} tone={flagLook[f.kind].tone} icon={flagLook[f.kind].icon} />)}
+            {next.flags.map(f => <Chip key={f.label} label={f.kind === 'allergy' ? t(statuses.allergy.label, { substance: f.label }) : f.label} tone={flagLook[f.kind].tone} icon={flagLook[f.kind].icon} />)}
           </View>
           {vm.canConsult
             ? <Button label={t('mobile.today.startConsult')} icon="mic" onPress={vm.onStartConsult} />
@@ -61,7 +63,7 @@ export function TodayScreen(vm: Props) {
                 subtitle={t('mobile.today.queueLine', { age: q.age, sex: t(`mobile.sex.${q.sex}`), note: q.note })}
                 leading={<Text variant="caption" style={styles.token}>{q.token}</Text>}
                 trailing={<View style={styles.trailing}>
-                  <Chip label={t(`mobile.queue.${q.status}`)} tone={statusTone[q.status]} />
+                  <Chip label={t(queueLook(q.status).label)} tone={queueLook(q.status).tone} icon={queueLook(q.status).native} />
                   {q.viaApp ? <Chip label={t('mobile.today.viaApp')} tone="brand" icon="smartphone" /> : null}
                 </View>}
                 onPress={() => vm.onOpenPatient(q.patientId)}

@@ -97,6 +97,7 @@ function Trends(p: Props) {
   const { t, formatDate } = useI18n();
   const lines = p.series ? chartLines(p.series) : null;
   const name = t(`patient360.trend.${p.choice}`);
+  const valueLabel = p.series && t('timeline.trends.value', { unit: p.series.unit });
   return (
     <Card title={t('patient360.trends')}>
       <div className="flex flex-wrap gap-2">
@@ -119,7 +120,7 @@ function Trends(p: Props) {
               <TableHeader>
                 <TableRow>
                   <TableHead scope="col">{t('timeline.trends.date')}</TableHead>
-                  <TableHead scope="col">{t('timeline.trends.value', { unit: p.series.unit })}</TableHead>
+                  <TableHead scope="col">{valueLabel}</TableHead>
                   <TableHead scope="col">{t('timeline.source')}</TableHead>
                 </TableRow>
               </TableHeader>
@@ -127,7 +128,7 @@ function Trends(p: Props) {
                 {p.series.rows.map(r => (
                   <TableRow key={r.takenAt}>
                     <TableHead scope="row"><time dateTime={r.takenAt}>{formatDate(new Date(r.takenAt), p.timeZone)}</time></TableHead>
-                    <TableCell label={t('timeline.trends.value', { unit: p.series.unit })}>{ltr(r.value)}</TableCell>
+                    <TableCell label={valueLabel ?? undefined}>{ltr(r.value)}</TableCell>
                     <TableCell label={t('timeline.source')}><ProvenanceTag source={provenanceOf[r.source]} /></TableCell>
                   </TableRow>
                 ))}

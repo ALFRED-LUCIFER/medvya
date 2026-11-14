@@ -2494,6 +2494,7 @@
   "mobile.inbox.messages": "Patient messages",
   "mobile.inbox.replyBy": "Reply by {time}",
   "mobile.inbox.reply": "Reply",
+  "mobile.inbox.replyTo": "Reply to {patient}",
   "mobile.inbox.noMessages": "No messages waiting",
   "mobile.consult.title": "Ask before recording",
   "mobile.consult.sayThis": "Say this to the patient",

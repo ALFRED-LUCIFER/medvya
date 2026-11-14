@@ -27,20 +27,25 @@ export function TodayScreen(vm: Props) {
   if (vm.error || !vm.today) return <Screen header={header} scroll={false}><StateMessage icon="cloud-off" title={t('mobile.common.unavailable')} body={t((vm.error ?? 'mobile.error.generic') as MessageKey)} /></Screen>;
 
   const { next, queue } = vm.today;
+  const nextLine = next && t('mobile.today.nextLine', { age: next.age, sex: t(`mobile.sex.${next.sex}`), reason: next.reason, room: next.room });
+  const flags = next?.flags.map(f => ({ ...flagLook[f.kind], label: f.kind === 'allergy' ? t(statuses.allergy.label, { substance: f.label }) : f.label })) ?? [];
   return (
     <Screen header={header} refresh={{ refreshing: vm.refreshing, onRefresh: vm.onRefresh }}>
       {next ? (
         <Card accent={theme.color.brand700}>
-          <Text variant="overline">{t('mobile.today.upNext')}</Text>
-          <View style={styles.who}>
-            <Avatar initials={next.initials} size={48} />
-            <View style={styles.whoText}>
-              <Text variant="title">{next.name}</Text>
-              <Text variant="caption">{t('mobile.today.nextLine', { age: next.age, sex: t(`mobile.sex.${next.sex}`), reason: next.reason, room: next.room })}</Text>
+          {/* One stop for the screen reader: who, why, where and every flag, instead of each chip on its own. */}
+          <View style={styles.summary} accessible accessibilityLabel={[t('mobile.today.upNext'), next.name, nextLine, ...flags.map(f => f.label)].join(', ')}>
+            <Text variant="overline">{t('mobile.today.upNext')}</Text>
+            <View style={styles.who}>
+              <Avatar initials={next.initials} size={48} />
+              <View style={styles.whoText}>
+                <Text variant="title">{next.name}</Text>
+                <Text variant="caption">{nextLine}</Text>
+              </View>
             </View>
-          </View>
-          <View style={styles.flags}>
-            {next.flags.map(f => <Chip key={f.label} label={f.kind === 'allergy' ? t(statuses.allergy.label, { substance: f.label }) : f.label} tone={flagLook[f.kind].tone} icon={flagLook[f.kind].icon} />)}
+            <View style={styles.flags}>
+              {flags.map(f => <Chip key={f.label} {...f} />)}
+            </View>
           </View>
           {vm.canConsult
             ? <Button label={t('mobile.today.startConsult')} icon="mic" onPress={vm.onStartConsult} />
@@ -77,6 +82,7 @@ export function TodayScreen(vm: Props) {
 }
 
 const styles = StyleSheet.create({
+  summary: { gap: 10 },
   who: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   whoText: { flex: 1, gap: 2 },
   flags: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },

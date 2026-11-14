@@ -124,7 +124,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P1-088](P1-front-desk/MDV-P1-088.md) | Load the pilot clinic's brand names into the formulary, mapped to generic and class; offer generic matches for typed text | P1 | wk 4–6 | 60% |
 | [MDV-P1-090](P1-front-desk/MDV-P1-090.md) | Ending or signing with an unfinished prescription or order asks first; unfinished ones show on the doctor's day | P1 | wk 5–5 | 68% |
 | [MDV-P1-100](P1-front-desk/MDV-P1-100.md) | Front desk: undo the last move, Left without being seen, cancel a checked-in visit; the desk cannot close a visit under the doctor | P1 | wk 5–6 | 65% |
-| [MDV-P1-101](P1-front-desk/MDV-P1-101.md) | Patient picker rows show date of birth and last visit, and mark possible duplicates | P1 | wk 5–5 | 75% |
+| [MDV-P1-101](P1-front-desk/MDV-P1-101.md) | Patient picker rows show last visit and mark possible duplicates (no date of birth) | P1 | wk 5–5 | 75% |
 | [MDV-P1-104](P1-front-desk/MDV-P1-104.md) | The nurse's chief complaint prefills the doctor's note, marked from nurse intake | P1 | wk 5–5 | 72% |
 | [MDV-P1-108](P1-front-desk/MDV-P1-108.md) | UX validation sessions with the pilot doctor, nurse, receptionist and owner: the 21 decisions, the brand list, the training date and the device check | P1 | wk 4–6 | 55% |
 

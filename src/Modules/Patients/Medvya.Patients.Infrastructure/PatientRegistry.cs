@@ -206,7 +206,6 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
             var country = CountryRules.For(p.CountryCode);
             return new PatientSearchRow(p.Id, Initials(p.FullName), p.FullName, CountryRules.AgeOn(country.Today(now), p.DateOfBirth),
                 p.DateOfBirthEstimated, p.SexAtBirth, Tail(p.Mrn), p.Mobile.Length <= 4 ? p.Mobile : p.Mobile[^4..], p.Status,
-                p.DateOfBirthEstimated ? null : p.DateOfBirth,
                 visited.TryGetValue(p.Id, out var at) ? country.Today(at) : null, // Today(at): the calendar day of that moment in the country's zone
                 duplicates.Contains(p.Id) ? DuplicateMark.PossibleDuplicate : mains.Contains(p.Id) ? DuplicateMark.MainRecord : null);
         }).ToList();

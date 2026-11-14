@@ -21,7 +21,7 @@ POST   /v1/sessions/{id}/revoke
 GET    /v1/admin/audit?scope=authorized            # P0/P1 (F-12)
 POST   /v1/patients                                # P1 (P-02)
 POST   /v1/patients/search                         # privacy-safe results (D-02); text in the body, never the URL (P1-018)
-POST   /v1/patients/lookup                         # ⌘K results (D-02): the desk's search row (name, age, sex, date of birth, MRN and phone tails, last visit day, duplicate mark; P1-101) + open/request-access verdict per row (P2-003)
+POST   /v1/patients/lookup                         # ⌘K results (D-02): the desk's search row (name, age, sex, MRN and phone tails, last visit day, duplicate mark; P1-101; no date of birth, decision 15) + open/request-access verdict per row (P2-003)
 GET    /v1/patients/{id}                           # open a record (audited read, purpose registration); national/insurance numbers masked to the last 4
 POST   /v1/patients/{id}/identifiers/reveal        # full numbers on request (Register / book at Full), audited, rate-limited
 POST   /v1/patients/duplicate-check                # while typing (P1-05)

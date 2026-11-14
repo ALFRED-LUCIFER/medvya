@@ -242,7 +242,7 @@ function List(props: Props & { board: Board }) {
   const primary = consultAction ? nextConsultId(columns) : null;
   const confirming = (r: ListRow) => canMove && confirmingId === r.id;
   const heading = (state: BoardColumn) => {
-    const Icon = columnIcons[state], count = columns[state].length;
+    const Icon = statusIcons[state], count = columns[state].length;
     return (
       <h2 className="flex items-center gap-1.5 text-label">
         <Icon aria-hidden className="size-4" />{t(`board.column.${state}`)}
@@ -271,7 +271,7 @@ function List(props: Props & { board: Board }) {
     <>
       <div role="group" aria-label={t('board.list.filters')} className="flex flex-wrap gap-2">
         {statuses.map(c => {
-          const Icon = columnIcons[c];
+          const Icon = statusIcons[c];
           return (
             <Button key={c} variant={listFilter === c ? 'selected' : 'outline'} aria-pressed={listFilter === c} onClick={() => onListFilter(c)}>
               <Icon aria-hidden />{t('board.statusTab', { column: t(`board.column.${c}`), count: columns[c].length })}

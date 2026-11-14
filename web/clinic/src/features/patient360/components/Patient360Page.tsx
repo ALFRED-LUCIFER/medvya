@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { ltr, useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, PatientBanner, ProvenanceTag, Skeleton, SkeletonGroup, Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@medvya/ui';
+import { AllergyBlock, Button, buttonVariants, PatientBanner, ProvenanceTag, Skeleton, SkeletonGroup, Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@medvya/ui';
 import { Armchair, ArrowDown, ArrowUp, Baby, CircleAlert, CircleCheck, CircleHelp, Droplet, HeartPulse, Languages, User, Users } from 'lucide-react';
 import RequestAccess from '../../clinical-access/components/RequestAccess';
 import type { AccessReason } from '../../clinical-access/domain/clinicalAccess';
@@ -110,7 +110,8 @@ export default function Patient360Page(p: Props) {
                         <strong>{a.substance}</strong>
                         <span>{[a.reaction, t(`patient360.allergyStatus.${a.status}`)].filter(Boolean).join(' · ')}</span>
                       </Item>))}</List>
-                  : <p className="inline-flex items-center gap-1.5 font-bold">{t(chart.allergyState === 'NoKnownAllergies' ? 'banner.noAllergies' : 'banner.allergiesNotRecorded')}</p>}
+                  // Not recorded or none known: the one allergy look (MDV-P2-060 AC4); a listed allergy keeps its reaction, status and source here.
+                  : <div><AllergyBlock allergy={{ state: chart.allergyState === 'NoKnownAllergies' ? 'noneKnown' : 'notRecorded' }} /></div>}
               </Card>
               <Card title={t('patient360.problems')}>
                 {chart.problems.length === 0 ? <Empty text={t('patient360.problems.empty')} />

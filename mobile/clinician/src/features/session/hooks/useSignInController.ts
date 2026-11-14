@@ -7,11 +7,13 @@ import { errorKey } from '../../api/domain/errors';
 import { codeForm, emailForm, type CodeForm, type EmailForm, type Facility, type SignInStep, type Staff } from '../domain/session';
 import { biometricsAvailable, listFacilities, startSignIn, unlockWithBiometrics, verifyCode } from '../services/session';
 import { useSession } from './session';
+import { useUnlockMethod } from './useUnlockMethod';
 
-/** Staff sign-in (MDV-P5-034): work email, code, facility, then the offer to unlock with Face ID or fingerprint. */
+/** Staff sign-in (MDV-P5-034): work email, code, facility, then the offer to unlock with the phone's face or fingerprint unlock. */
 export function useSignInController() {
   const { t } = useI18n();
   const { begin } = useSession();
+  const unlockMethod = useUnlockMethod();
   const [step, setStep] = useState<SignInStep>('email');
   const [email, setEmail] = useState('');
   const [staff, setStaff] = useState<Staff | null>(null);
@@ -49,6 +51,7 @@ export function useSignInController() {
     facilitiesLoading: facilities.isPending && !!staff,
     onChooseFacility: (f: Facility) => { setFacility(f); setStep('biometric'); },
     biometricAvailable: canBiometric.data ?? false,
+    unlockMethod,
     onEnableBiometric: () => enable.mutate(),
     onSkipBiometric: () => finish(false),
     error: failure ? errorKey(failure) : null,

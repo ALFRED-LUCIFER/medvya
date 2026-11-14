@@ -152,6 +152,10 @@ jobs:
       - run: pnpm -r lint
       - run: pnpm -r build # includes tsc type-checking
       - run: pnpm -r test
+      - name: Both Expo apps still bundle (MDV-P5-053; about 10 s each, one platform per app)
+        run: |
+          pnpm --filter @medvya/mobile-clinician exec expo export --platform ios --output-dir "$RUNNER_TEMP/clinician"
+          pnpm --filter @medvya/mobile-patient exec expo export --platform android --output-dir "$RUNNER_TEMP/patient"
       - run: pnpm audit --audit-level high
       - run: node tools/check-synthetic/check.mjs --self-test && node tools/check-synthetic/check.mjs
       - name: UI drift counts may only fall (DESIGN.md guardrails, MDV-P1-076)

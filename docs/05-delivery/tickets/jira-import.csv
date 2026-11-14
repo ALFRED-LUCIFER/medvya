@@ -2126,6 +2126,84 @@ Deliberately NOT in this ticket: (1) Dark and high-contrast themes themselves (M
 * Given the patient picker, when it is used by keyboard, then arrow keys, Enter and Escape work and each option is announced with name and date of birth
 * Given the walk-in and registration paths, when measured, then the click counts did not rise
 * Given English and Arabic, when axe runs with the picker open, then there is no violation"
+MDV-P5-055,To do,Story,"Native rows and tabs give screen readers the flag's words, not icon glyphs; each Mark reviewed names its result",MDV-P1-E12,High,phase-P5 mobile a11y safety epic-ux-programme track-safety wave-s3,1,2026-12-28,2027-01-01,R5 · v1.0 GA,P5-10,X-01,MDV-P5-053,75,Medium,"Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Created from the mobile simulator audit of MDV-P5-053, findings M-01, M-02, M-10.
+
+Findings and evidence: docs/product-ux-audit/13-mobile-simulator-audit.md, findings M-01, M-02, M-10, with screenshots of synthetic cast data in docs/product-ux-audit/evidence/mobile-simulator.
+Components affected: packages/ui-native ListRow, Icon and the tab bar; the clinician Inbox. No new component.
+Prerequisites and blocked by: MDV-P5-053. Not in the pilot flow: the pilot runs on the web app.
+Clinical sign-off: Not required.
+Deliberately NOT in this ticket: real data in the apps (MDV-P5-033) and store builds.","* Given a patient row with an allergy or critical flag, when a screen reader reads it, then its accessible name includes the flag's words
+* Given any tab, banner or row with an icon, when the accessibility tree is read on Android and iOS, then no accessible name contains an icon glyph
+* Given two results in the Inbox, when their buttons are read, then each Mark reviewed names its patient and result
+* Given the change, when the ui-native tests run, then a test fails if the flag is dropped from the row's label (mutation check)"
+MDV-P5-056,To do,Story,Arabic lays out right to left in both Expo apps,MDV-P1-E12,High,phase-P5 mobile i18n rtl a11y epic-ux-programme track-safety wave-s3,1,2026-12-28,2027-01-01,R5 · v1.0 GA,P5-10,X-01,MDV-P5-053,75,Medium,"Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Created from the mobile simulator audit of MDV-P5-053, findings M-03.
+
+Findings and evidence: docs/product-ux-audit/13-mobile-simulator-audit.md, findings M-03, with screenshots of synthetic cast data in docs/product-ux-audit/evidence/mobile-simulator.
+Components affected: both apps' app.json (expo-localization supportsRTL) and the start-up locale handling. No new component.
+Prerequisites and blocked by: MDV-P5-053. Not in the pilot flow: the pilot runs on the web app.
+Clinical sign-off: Not required.
+Deliberately NOT in this ticket: real data in the apps (MDV-P5-033) and store builds.","* Given the device in Arabic, when either app opens, then it lays out right to left after at most one reload, in Expo Go and in a development build
+* Given the device in English or Hindi, when either app opens, then it lays out left to right
+* Given the change, when the PR is opened, then it holds screenshots of both apps in Arabic and English"
+MDV-P5-057,To do,Story,One status icon map shared by web and native; allergy has its own icon and says Allergy,MDV-P1-E12,High,phase-P5 mobile design-system a11y safety epic-ux-programme track-safety wave-s3,1,2026-12-28,2027-01-01,R5 · v1.0 GA,P5-10,X-01,MDV-P5-053,75,Medium,"Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Created from the mobile simulator audit of MDV-P5-053, findings M-04, C-21.
+
+Findings and evidence: docs/product-ux-audit/13-mobile-simulator-audit.md, findings M-04, C-21, with screenshots of synthetic cast data in docs/product-ux-audit/evidence/mobile-simulator.
+Components affected: packages/tokens (one map), packages/ui and packages/ui-native status chips. No new component.
+Prerequisites and blocked by: MDV-P5-053. Not in the pilot flow: the pilot runs on the web app.
+Clinical sign-off: Not required.
+Deliberately NOT in this ticket: real data in the apps (MDV-P5-033) and store builds.","* Given a status, when it is shown on web and on native, then both use the same glyph and words from one map in packages/tokens
+* Given an allergy, when its chip is shown on native, then it reads Allergy: <substance> with a glyph not used for medicines
+* Given any status, when shown, then it is never conveyed by colour alone (icon and words)"
+MDV-P5-058,To do,Story,Disabled mobile actions say why on screen; the message field is disabled when sending is,MDV-P1-E12,Medium,phase-P5 mobile a11y epic-ux-programme track-safety wave-s3,1,2026-12-28,2027-01-01,R5 · v1.0 GA,P5-10,X-01,MDV-P5-053,75,Medium,"Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Created from the mobile simulator audit of MDV-P5-053, findings M-05, M-09.
+
+Findings and evidence: docs/product-ux-audit/13-mobile-simulator-audit.md, findings M-05, M-09, with screenshots of synthetic cast data in docs/product-ux-audit/evidence/mobile-simulator.
+Components affected: packages/ui-native Button disabled state; the patient Messages composer. No new component.
+Prerequisites and blocked by: MDV-P5-053. Not in the pilot flow: the pilot runs on the web app.
+Clinical sign-off: Not required.
+Deliberately NOT in this ticket: real data in the apps (MDV-P5-033) and store builds.","* Given a disabled action, when it is shown, then its reason is visible as text under it, not only in the accessibility hint
+* Given a disabled button, when contrast is computed, then its label meets 4.5:1 with colours from tokens, not opacity
+* Given sending is not available, when Messages opens, then the field cannot take text that would be lost"
+MDV-P5-059,To do,Story,"Biometric wording per platform, with a Not now on the offer",MDV-P1-E12,Medium,phase-P5 mobile i18n epic-ux-programme track-safety wave-s3,1,2026-12-28,2027-01-01,R5 · v1.0 GA,P5-10,X-01,MDV-P5-053,75,Medium,"Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Created from the mobile simulator audit of MDV-P5-053, findings M-06.
+
+Findings and evidence: docs/product-ux-audit/13-mobile-simulator-audit.md, findings M-06, with screenshots of synthetic cast data in docs/product-ux-audit/evidence/mobile-simulator.
+Components affected: the sign-in biometric offer, Account, Profile and Welcome strings in en, hi and ar. No new component.
+Prerequisites and blocked by: MDV-P5-053. Not in the pilot flow: the pilot runs on the web app.
+Clinical sign-off: Not required.
+Deliberately NOT in this ticket: real data in the apps (MDV-P5-033) and store builds.","* Given Android, when any screen mentions biometrics, then it never says Face ID
+* Given iOS, when the device has Face ID or Touch ID, then the matching word is used
+* Given the biometric offer after sign-in, when it shows, then it has a Not now that leaves biometrics off"
+MDV-P5-060,To do,Story,Mobile footer actions stay above the keyboard,MDV-P1-E12,Medium,phase-P5 mobile a11y epic-ux-programme track-safety wave-s3,1,2026-12-28,2027-01-01,R5 · v1.0 GA,P5-10,X-01,MDV-P5-053,75,Medium,"Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Created from the mobile simulator audit of MDV-P5-053, findings M-07.
+
+Findings and evidence: docs/product-ux-audit/13-mobile-simulator-audit.md, findings M-07, with screenshots of synthetic cast data in docs/product-ux-audit/evidence/mobile-simulator.
+Components affected: packages/ui-native Screen footer. No new component.
+Prerequisites and blocked by: MDV-P5-053. Not in the pilot flow: the pilot runs on the web app.
+Clinical sign-off: Not required.
+Deliberately NOT in this ticket: real data in the apps (MDV-P5-033) and store builds.","* Given the keyboard is up on clinician sign-in or the patient's mobile number, when the screen is shown, then the primary button is visible without closing the keyboard"
+MDV-P5-061,To do,Story,Patient choices on Profile: honest wording until they can be changed in the app,MDV-P1-E12,High,phase-P5 mobile consent epic-ux-programme track-safety wave-s3,1,2026-12-28,2027-01-01,R5 · v1.0 GA,P5-10,X-01,MDV-P5-053,75,Medium,"Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Created from the mobile simulator audit of MDV-P5-053, findings M-08.
+
+Findings and evidence: docs/product-ux-audit/13-mobile-simulator-audit.md, findings M-08, with screenshots of synthetic cast data in docs/product-ux-audit/evidence/mobile-simulator.
+Components affected: the patient Profile Your choices section. No new component.
+Prerequisites and blocked by: MDV-P5-053. Not in the pilot flow: the pilot runs on the web app.
+Clinical sign-off: Not required.
+Deliberately NOT in this ticket: real data in the apps (MDV-P5-033) and store builds.","* Given Profile, when Your choices is shown and no control exists, then it says how to change them (ask the clinic) and never Change any time
+* Given a choice that has a control, when shown, then Change any time may appear
+* Given the new wording, when it ships, then the privacy reviewer has agreed it (recorded on the issue)"
+MDV-P5-062,To do,Task,Development cast dates relative to today in both mobile apps,MDV-P1-E12,Medium,phase-P5 mobile dev-data epic-ux-programme track-safety wave-s3,1,2026-12-28,2027-01-01,R5 · v1.0 GA,P5-10,X-01,MDV-P5-053,75,Medium,"Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Created from the mobile simulator audit of MDV-P5-053, findings M-11.
+
+Findings and evidence: docs/product-ux-audit/13-mobile-simulator-audit.md, findings M-11, with screenshots of synthetic cast data in docs/product-ux-audit/evidence/mobile-simulator.
+Components affected: mobile/*/src/dev/cast.ts. No new component.
+Prerequisites and blocked by: MDV-P5-053. Not in the pilot flow: the pilot runs on the web app.
+Clinical sign-off: Not required.
+Deliberately NOT in this ticket: real data in the apps (MDV-P5-033) and store builds.","* Given any day, when the development cast loads, then upcoming items are in the future and past items in the past
+* Given the cast, when pnpm check:synthetic runs, then it still passes"
+MDV-P5-063,To do,Story,Patient tab names match their screens; mobile icons scale with font size,MDV-P1-E12,Medium,phase-P5 mobile a11y epic-ux-programme track-safety wave-s3,1,2026-12-28,2027-01-01,R5 · v1.0 GA,P5-10,X-01,MDV-P5-053,75,Medium,"Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Created from the mobile simulator audit of MDV-P5-053, findings M-12.
+
+Findings and evidence: docs/product-ux-audit/13-mobile-simulator-audit.md, findings M-12, with screenshots of synthetic cast data in docs/product-ux-audit/evidence/mobile-simulator.
+Components affected: the patient tab bar and screen titles; packages/ui-native Icon. No new component.
+Prerequisites and blocked by: MDV-P5-053. Not in the pilot flow: the pilot runs on the web app.
+Clinical sign-off: Not required.
+Deliberately NOT in this ticket: real data in the apps (MDV-P5-033) and store builds.","* Given the Book tab, when it opens, then the screen title matches the tab's name and no two tabs open screens of the same name
+* Given 200 % system font, when a chip or button is shown, then its icon grows with the text up to a cap"
 MDV-P6-001,To do,Chore,"Hardware partner, device certification and regulated-device classification advice",MDV-P6-E01,Highest,phase-P6 hardware regulatory,2,2027-06-07,2027-06-18,R6 · Clip,P6-01,,,45,Low,"Select the hardware partner (ESP32-S3 prototype limits: BLE control path, Wi-Fi or phone audio), obtain radio/safety certifications needed per country and classification advice (India CDSCO, UAE) for the intended use (recording accessory, human-approved documentation).","* Partner contract and BOM recorded; certification plan with dates.
 * Written classification advice for the final intended use and marketing claims.
 * Go/no-go decision recorded against the phone-capture metrics from P3."

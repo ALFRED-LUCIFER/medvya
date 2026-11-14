@@ -230,7 +230,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P2-050](P2-doctor-workspace/MDV-P2-050.md) | Audit log: every action has a plain name; the default view is chart opens and changes | P2 | wk 9–9 | 85% |
 | [MDV-P5-053](P5-commercial-launch/MDV-P5-053.md) | Fix the Expo bundling error, then run the same UX audit on the mobile apps in a simulator | P5 | wk 9–9 | 70% |
 
-## Week 10 · 28 Dec 2026 – 01 Jan 2027 · load 14.7 dev-days ⚠ over capacity
+## Week 10 · 28 Dec 2026 – 01 Jan 2027 · load 23.7 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -245,6 +245,15 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P2-024](P2-doctor-workspace/MDV-P2-024.md) | Clinical authorisation: care relationship and purpose checks, request access for clinics | P2 | wk 9–10 | 84% |
 | [MDV-P2-048](P2-doctor-workspace/MDV-P2-048.md) | Nurse intake: one confirmation for all flagged readings, and a correction with a reason until the doctor starts | P2 | wk 9–10 | 60% |
 | [MDV-P2-049](P2-doctor-workspace/MDV-P2-049.md) | Signed note print: vitals, allergies and diagnoses by default, and a page heading | P2 | wk 10–10 | 65% |
+| [MDV-P5-055](P5-commercial-launch/MDV-P5-055.md) | Native rows and tabs give screen readers the flag's words, not icon glyphs; each Mark reviewed names its result | P5 | wk 10–10 | 75% |
+| [MDV-P5-056](P5-commercial-launch/MDV-P5-056.md) | Arabic lays out right to left in both Expo apps | P5 | wk 10–10 | 75% |
+| [MDV-P5-057](P5-commercial-launch/MDV-P5-057.md) | One status icon map shared by web and native; allergy has its own icon and says Allergy | P5 | wk 10–10 | 75% |
+| [MDV-P5-058](P5-commercial-launch/MDV-P5-058.md) | Disabled mobile actions say why on screen; the message field is disabled when sending is | P5 | wk 10–10 | 75% |
+| [MDV-P5-059](P5-commercial-launch/MDV-P5-059.md) | Biometric wording per platform, with a Not now on the offer | P5 | wk 10–10 | 75% |
+| [MDV-P5-060](P5-commercial-launch/MDV-P5-060.md) | Mobile footer actions stay above the keyboard | P5 | wk 10–10 | 75% |
+| [MDV-P5-061](P5-commercial-launch/MDV-P5-061.md) | Patient choices on Profile: honest wording until they can be changed in the app | P5 | wk 10–10 | 75% |
+| [MDV-P5-062](P5-commercial-launch/MDV-P5-062.md) | Development cast dates relative to today in both mobile apps | P5 | wk 10–10 | 75% |
+| [MDV-P5-063](P5-commercial-launch/MDV-P5-063.md) | Patient tab names match their screens; mobile icons scale with font size | P5 | wk 10–10 | 75% |
 
 ## Week 11 · 04 Jan 2027 – 08 Jan 2027 · load 23.9 dev-days ⚠ over capacity
 

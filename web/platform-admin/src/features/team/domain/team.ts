@@ -11,6 +11,9 @@ export type Team = { members: TeamMember[]; lastAccessReviewAt: string | null; a
 export type IssuedLink = { memberId: string; token: string; expiresAt: string };
 
 /** Key column: registered, invited but not joined, or joined with no live key (lost key, recovery pending). */
+/** Column definitions are data: each is its heading's i18n key. The person identifies a row; the actions column has no heading (MDV-P2-054). */
+export const teamColumns = ['platform.team.person', 'platform.team.role', 'platform.team.key', 'platform.team.lastActive', 'platform.team.accessEnds'] as const;
+
 export const keyState = (m: TeamMember): 'registered' | 'invited' | 'none' => (m.hasKey ? 'registered' : m.joined ? 'none' : 'invited');
 
 /** The link an owner shares (only after checking the person on a video call); the token stays in the fragment. */

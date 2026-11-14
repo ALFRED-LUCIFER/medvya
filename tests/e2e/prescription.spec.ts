@@ -2,6 +2,7 @@ import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
 import { authorised, clearChecks, line, mockPrescription, paracetamolForWeight, patientAlert, penicillinAlert, stopLine } from './support/prescription';
 import { mockNote } from './support/note';
+import { obscuredWhenTabbing } from './support/pinned';
 import { doctor } from './support/orders';
 
 // MDV-P2-015 (E-05, E-11): the doctor adds a formulary medicine and builds its dose, which autosaves and shows the instruction in the chosen
@@ -278,4 +279,15 @@ for (const locale of ['en', 'ar'])
     await page.keyboard.press('Escape');
     await expect(dialog).toHaveCount(0);
     expect(ends).toEqual([]);
+  });
+
+// MDV-P1-094 / WCAG 2.2 SC 2.4.11: the medicine table scrolls sideways in the note column; Tab onto a control the scroll box half clips brings it fully
+// into view (the Table container does it: remove its onFocus and the last columns stay half clipped, and this fails at 1024 and 768 px).
+for (const [width, height] of [[1440, 900], [1280, 720], [1024, 768], [768, 1024]] as const)
+  test(`every control in a medicine row is fully in view when Tab reaches it (${width} by ${height})`, async ({ page }) => {
+    await page.setViewportSize({ width, height });
+    await mockPrescription(page, { lines: [line('rx-1', 'Metformin')] });
+    await page.goto('/consult/e-1');
+    await expect(page.getByRole('region', { name: 'Medicines to prescribe' })).toBeVisible();
+    expect(await obscuredWhenTabbing(page)).toEqual([]);
   });

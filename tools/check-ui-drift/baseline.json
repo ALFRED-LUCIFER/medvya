@@ -52,9 +52,7 @@
     "web/clinic/src/features/patient360/components/Patient360Page.tsx": 2,
     "web/clinic/src/features/patients/components/PatientRecord.tsx": 1,
     "web/clinic/src/features/problems/components/ProblemsPage.tsx": 1,
-    "web/clinic/src/features/reconciliation/components/ReconciliationPage.tsx": 1,
-    "web/clinic/src/features/registration/components/RegistrationSuccess.tsx": 1,
-    "web/clinic/src/features/schedule/components/DaySheetView.tsx": 1
+    "web/clinic/src/features/reconciliation/components/ReconciliationPage.tsx": 1
   },
   "inlineCard": {
     "web/clinic/src/features/encounters/components/ConsultPage.tsx": 1,
@@ -66,7 +64,6 @@
     "web/clinic/src/features/front-desk/components/BoardPage.tsx": 3,
     "web/clinic/src/features/front-desk/components/ClinicOverviewPage.tsx": 2,
     "web/clinic/src/features/front-desk/components/FrontDeskViews.tsx": 1,
-    "web/clinic/src/features/front-desk/components/WalkInPage.tsx": 1,
     "web/clinic/src/features/nurse-intake/components/AllergiesSection.tsx": 1,
     "web/clinic/src/features/nurse-intake/components/IntakePage.tsx": 2,
     "web/clinic/src/features/nurse-intake/components/MedicinesSection.tsx": 1,
@@ -77,11 +74,6 @@
     "web/clinic/src/features/patients/components/PatientsMessage.tsx": 1,
     "web/clinic/src/features/problems/components/ProblemsPage.tsx": 2,
     "web/clinic/src/features/reconciliation/components/ReconciliationPage.tsx": 2,
-    "web/clinic/src/features/registration/components/CompleteRegistration.tsx": 5,
-    "web/clinic/src/features/registration/components/DuplicateReview.tsx": 1,
-    "web/clinic/src/features/registration/components/Registration.tsx": 2,
-    "web/clinic/src/features/registration/components/RegistrationSidePanel.tsx": 2,
-    "web/clinic/src/features/registration/components/RegistrationSuccess.tsx": 1,
     "web/clinic/src/features/settings/components/SettingsPage.tsx": 1,
     "web/clinic/src/features/shell/components/MorePage.tsx": 2
   },

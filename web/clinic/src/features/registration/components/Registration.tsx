@@ -4,8 +4,7 @@ import type { Missing } from '../../patients/domain/directory';
 import { Link } from 'react-router';
 import { Check, Loader2, UserSearch } from 'lucide-react';
 import { useI18n, type Country } from '@medvya/i18n';
-import { Button, cn, PageContainer, PageHeader } from '@medvya/ui';
-import PatientsMessage from '../../patients/components/PatientsMessage';
+import { Banner, Button, Card, cn, PageContainer, PageHeader, PageMessage } from '@medvya/ui';
 import {
   identifierInputs, steps, type DuplicateCandidate, type FormField, type DuplicateDecision, type RegistrationForm, type RegistrationResult, type Step,
 } from '../domain/registration';
@@ -72,12 +71,11 @@ type Props = {
  */
 export default function Registration(p: Props) {
   const { t, formatCalendarDate } = useI18n();
-  const heading = useRef<HTMLHeadingElement>(null);
   const shown = useRef({ step: p.step, failure: p.errorSummary.focusKey });
   useEffect(() => {
     // Moving between steps puts focus on the new step's heading, so keyboard and screen-reader users start at its top;
     // a failed save that moves back to a step leaves focus on the error summary instead.
-    if (shown.current.step !== p.step && shown.current.failure === p.errorSummary.focusKey) heading.current?.focus();
+    if (shown.current.step !== p.step && shown.current.failure === p.errorSummary.focusKey) document.getElementById('registration-step')?.focus();
     shown.current = { step: p.step, failure: p.errorSummary.focusKey };
   }, [p.step, p.errorSummary.focusKey]);
 
@@ -93,7 +91,8 @@ export default function Registration(p: Props) {
     return <RegistrationSuccess result={p.result} name={p.registeredName} actorName={p.actorName} onRegisterAnother={p.onRegisterAnother}
       recordPath={p.recordPath(p.result.patientId)} bookPath={p.bookPath} slot={p.slot} checkInPath={p.checkInPath}
       quick={p.quick} missing={p.missing} timeZone={p.timeZone} />;
-  if (p.failure === 'forbidden') return <PatientsMessage title={t('err.403')} body={t('registration.forbidden.body')} />;
+  if (p.failure === 'forbidden')
+    return <PageContainer width="reading"><PageHeader title={t('registration.title')} /><PageMessage kind="denied" title={t('err.403')}>{t('registration.forbidden.body')}</PageMessage></PageContainer>;
 
   const { register, control, formState: { errors } } = p.form;
   const f = { register, control, errors };
@@ -148,13 +147,8 @@ export default function Registration(p: Props) {
             </ol>
           )}
 
-          <section aria-labelledby="registration-step" className="flex flex-col gap-4 rounded-xl border bg-card p-4">
-            <div className="flex flex-col gap-1">
-              <h2 id="registration-step" ref={heading} tabIndex={-1} className="text-base font-extrabold outline-none">
-                {t(step ? `registration.step.${step}.title` : 'registration.quick.section')}
-              </h2>
-              {step && <p className="text-sm text-muted-foreground">{t(`registration.step.${step}.intro.${p.country}`)}</p>}
-            </div>
+          <Card headingId="registration-step" title={t(step ? `registration.step.${step}.title` : 'registration.quick.section')}
+            intro={step && t(`registration.step.${step}.intro.${p.country}`)}>
             {p.quick && <QuickFields f={f} country={p.country} ageInstead={p.ageInstead} minor={p.minor} />}
             {p.quick && <TreatmentConsent f={f} />}
             {step === 'identity' && <IdentityStep f={f} country={p.country} ageInstead={p.ageInstead} values={p.values} today={today} />}
@@ -163,16 +157,13 @@ export default function Registration(p: Props) {
             {step === 'payer' && <PayerStep f={f} country={p.country} values={p.values} />}
             {step === 'consents' && <ConsentsStep f={f} country={p.country} values={p.values} />}
             {step === 'review' && <ReviewStep country={p.country} values={p.values} ageInstead={p.ageInstead} onEdit={p.onGoTo} />}
-          </section>
+          </Card>
 
           <div aria-live="polite" className="flex flex-col gap-2">
             {p.checking && <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" aria-hidden />{t('registration.duplicates.checking')}</p>}
             {p.checkFailed && <p className="text-sm font-semibold text-warning-700">{t('registration.duplicates.checkFailed')}</p>}
             {unresolved && (
-              <p className="flex items-center gap-2 rounded-md border bg-card px-3 py-2 text-sm font-bold text-warning-700">
-                <UserSearch className="size-5 shrink-0" aria-hidden />
-                {t(atReview ? 'registration.duplicates.inline' : 'registration.duplicates.inlineLater', { n: p.candidates.length })}
-              </p>
+              <Banner tone="warning" icon={UserSearch} title={t(atReview ? 'registration.duplicates.inline' : 'registration.duplicates.inlineLater', { n: p.candidates.length })} />
             )}
           </div>
 

@@ -62,61 +62,63 @@ export default function WalkInPage(p: Props) {
   return (
     <PageContainer width="form" className="gap-5">
       <PageHeader back={back} title={t('walkIn.title')} description={t('walkIn.intro')} />
-      <form noValidate onSubmit={e => { e.preventDefault(); p.onConfirm(); }} className="flex flex-col gap-5 rounded-xl border bg-card p-4">
-        <PatientPicker search={p.patientSearch} chosen={p.patientId} registerPath={null} invalid={false} />
-        <div className="flex flex-col gap-1">
-          {p.patient?.loading && <p className="text-sm text-muted-foreground">{t('patients.loading')}</p>}
-          {p.patient?.match && <p className="font-bold" role="status">{t('walkIn.patient', { name: p.patient.match.fullName, mrn: p.patient.match.mrn })}</p>}
-          <Link to={p.registerPath} onClick={p.onRegister} className={cn(buttonVariants({ variant: 'link' }), 'self-start px-0')}><UserPlus aria-hidden />{t('walkIn.register')}</Link>
-        </div>
+      <Card>
+        <form noValidate onSubmit={e => { e.preventDefault(); p.onConfirm(); }} className="flex flex-col gap-5">
+          <PatientPicker search={p.patientSearch} chosen={p.patientId} registerPath={null} invalid={false} />
+          <div className="flex flex-col gap-1">
+            {p.patient?.loading && <p className="text-sm text-muted-foreground">{t('patients.loading')}</p>}
+            {p.patient?.match && <p className="font-bold" role="status">{t('walkIn.patient', { name: p.patient.match.fullName, mrn: p.patient.match.mrn })}</p>}
+            <Link to={p.registerPath} onClick={p.onRegister} className={cn(buttonVariants({ variant: 'link' }), 'self-start px-0')}><UserPlus aria-hidden />{t('walkIn.register')}</Link>
+          </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="walk-in-doctor">{t('walkIn.doctor')}</Label>
-            <Select value={p.choice.calendarId || nextAvailable} onValueChange={v => p.onChoice({ calendarId: v === nextAvailable ? '' : v })} disabled={p.doctorsLoading}>
-              <SelectTrigger id="walk-in-doctor" className="w-full"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value={nextAvailable}>{t('walkIn.nextAvailable')}</SelectItem>
-                {p.doctors.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="walk-in-type">{t('booking.visitType')}</Label>
-            <Select value={p.choice.visitType} onValueChange={v => p.onChoice({ visitType: v as WalkInChoice['visitType'] })}>
-              <SelectTrigger id="walk-in-type" className="w-full"><SelectValue /></SelectTrigger>
-              <SelectContent>{visitTypes.map(v => <SelectItem key={v} value={v}>{t(`visitType.${v}`)}</SelectItem>)}</SelectContent>
-            </Select>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="walk-in-reason">{t('booking.reasonCategory')}</Label>
-            <Select value={p.choice.reasonCategory} onValueChange={v => p.onChoice({ reasonCategory: v as WalkInChoice['reasonCategory'] })}>
-              <SelectTrigger id="walk-in-reason" className="w-full"><SelectValue /></SelectTrigger>
-              <SelectContent>{reasonCategories.map(r => <SelectItem key={r} value={r}>{t(`reasonCategory.${r}`)}</SelectItem>)}</SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        <div aria-live="polite">
-          {p.error && (
-            <p role="alert" className="flex items-start gap-1.5 text-sm font-semibold text-danger-700">
-              <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />{t(`walkIn.error.${p.error}`)}
-              {p.error === 'terms_not_accepted' && <Link to={termsPath} className={cn(buttonVariants({ variant: 'link' }), 'h-auto px-0')}>{t('terms.open')}</Link>}
-            </p>
-          )}
-          {p.error === 'already_today' && (
-            <div className="mt-3 flex flex-wrap gap-3">
-              <Link to={p.boardPath} className={buttonVariants({ variant: 'outline' })}>{t('walkIn.back')}</Link>
-              <Button type="button" variant="outline" loading={p.saving} onClick={p.onConfirmRepeat}>{t('walkIn.repeat')}</Button>
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="walk-in-doctor">{t('walkIn.doctor')}</Label>
+              <Select value={p.choice.calendarId || nextAvailable} onValueChange={v => p.onChoice({ calendarId: v === nextAvailable ? '' : v })} disabled={p.doctorsLoading}>
+                <SelectTrigger id="walk-in-doctor" className="w-full"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={nextAvailable}>{t('walkIn.nextAvailable')}</SelectItem>
+                  {p.doctors.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
-          )}
-        </div>
-        {/* Disabled until a patient is chosen, and says so in words beside it (MDV-P2-058). */}
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <Button type="submit" disabled={!p.canConfirm} loading={p.saving} aria-describedby={p.patientId ? undefined : 'walk-in-confirm-reason'}>{t('walkIn.confirm')}</Button>
-          {!p.patientId && <p id="walk-in-confirm-reason" className="text-body text-muted-foreground">{t('walkIn.confirmReason')}</p>}
-        </div>
-      </form>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="walk-in-type">{t('booking.visitType')}</Label>
+              <Select value={p.choice.visitType} onValueChange={v => p.onChoice({ visitType: v as WalkInChoice['visitType'] })}>
+                <SelectTrigger id="walk-in-type" className="w-full"><SelectValue /></SelectTrigger>
+                <SelectContent>{visitTypes.map(v => <SelectItem key={v} value={v}>{t(`visitType.${v}`)}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="walk-in-reason">{t('booking.reasonCategory')}</Label>
+              <Select value={p.choice.reasonCategory} onValueChange={v => p.onChoice({ reasonCategory: v as WalkInChoice['reasonCategory'] })}>
+                <SelectTrigger id="walk-in-reason" className="w-full"><SelectValue /></SelectTrigger>
+                <SelectContent>{reasonCategories.map(r => <SelectItem key={r} value={r}>{t(`reasonCategory.${r}`)}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div aria-live="polite">
+            {p.error && (
+              <p role="alert" className="flex items-start gap-1.5 text-sm font-semibold text-danger-700">
+                <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />{t(`walkIn.error.${p.error}`)}
+                {p.error === 'terms_not_accepted' && <Link to={termsPath} className={cn(buttonVariants({ variant: 'link' }), 'h-auto px-0')}>{t('terms.open')}</Link>}
+              </p>
+            )}
+            {p.error === 'already_today' && (
+              <div className="mt-3 flex flex-wrap gap-3">
+                <Link to={p.boardPath} className={buttonVariants({ variant: 'outline' })}>{t('walkIn.back')}</Link>
+                <Button type="button" variant="outline" loading={p.saving} onClick={p.onConfirmRepeat}>{t('walkIn.repeat')}</Button>
+              </div>
+            )}
+          </div>
+          {/* Disabled until a patient is chosen, and says so in words beside it (MDV-P2-058). */}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <Button type="submit" disabled={!p.canConfirm} loading={p.saving} aria-describedby={p.patientId ? undefined : 'walk-in-confirm-reason'}>{t('walkIn.confirm')}</Button>
+            {!p.patientId && <p id="walk-in-confirm-reason" className="text-body text-muted-foreground">{t('walkIn.confirmReason')}</p>}
+          </div>
+        </form>
+      </Card>
     </PageContainer>
   );
 }

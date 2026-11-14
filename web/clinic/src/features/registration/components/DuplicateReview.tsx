@@ -1,7 +1,7 @@
 import { Link } from 'react-router';
 import { CircleCheck, UserSearch } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, cn } from '@medvya/ui';
+import { Button, buttonVariants, Card, cn } from '@medvya/ui';
 import type { IdentifierScheme } from '../../patients/domain/directory';
 import type { DuplicateCandidate, DuplicateDecision } from '../domain/registration';
 
@@ -25,16 +25,9 @@ export default function DuplicateReview({ candidates, resolution, onResolve, onR
   const { t } = useI18n();
   const byName = candidates.some(c => c.matchedOnNameAndDateOfBirth);
   return (
-    <section aria-labelledby="duplicate-review" className="flex flex-col gap-4 rounded-xl border bg-card p-4 shadow-[inset_4px_0_0_var(--color-warning-700)] rtl:shadow-[inset_-4px_0_0_var(--color-warning-700)]">
-      <div className="flex items-start gap-2">
-        <UserSearch className="mt-0.5 size-5 shrink-0 text-warning-700" aria-hidden />
-        <div>
-          <h2 id="duplicate-review" className="font-extrabold">{t('registration.duplicates.title')}</h2>
-          <p className="text-sm text-muted-foreground">
-            {t(byName ? 'registration.duplicates.matchedNameDob' : 'registration.duplicates.matchedId')} {t('registration.duplicates.phoneNever')}
-          </p>
-        </div>
-      </div>
+    <Card className="shadow-[inset_4px_0_0_var(--color-warning-700)] rtl:shadow-[inset_-4px_0_0_var(--color-warning-700)]"
+      title={<span className="inline-flex items-start gap-2"><UserSearch className="mt-0.5 size-5 shrink-0 text-warning-700" aria-hidden />{t('registration.duplicates.title')}</span>}
+      intro={<>{t(byName ? 'registration.duplicates.matchedNameDob' : 'registration.duplicates.matchedId')} {t('registration.duplicates.phoneNever')}</>}>
 
       <ul className="flex flex-col gap-3">
         {candidates.map(c => (
@@ -75,6 +68,6 @@ export default function DuplicateReview({ candidates, resolution, onResolve, onR
           <Button type="button" variant="outline" onClick={() => onResolve('MergeReview')}>{t('registration.duplicates.mergeReview')}</Button>
         </div>
       )}
-    </section>
+    </Card>
   );
 }

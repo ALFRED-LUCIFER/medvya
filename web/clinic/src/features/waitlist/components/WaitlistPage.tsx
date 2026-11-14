@@ -2,8 +2,7 @@ import { Link } from 'react-router';
 import type { UseFormReturn } from 'react-hook-form';
 import { ArrowLeft, CalendarClock, CircleAlert, CircleCheck, Clock, Send } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, Card, cn, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, PageContainer, PageHeader } from '@medvya/ui';
-import PatientsMessage from '../../patients/components/PatientsMessage';
+import { Button, buttonVariants, Card, cn, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, PageContainer, PageHeader, PageMessage } from '@medvya/ui';
 import { PatientPicker, type PatientSearchView } from '../../schedule/components/BookingPanel';
 import { reasonCategories, visitTypes, type PatientMatch } from '../../schedule/domain/booking';
 import { termsPath } from '../../settings/domain/settings';
@@ -38,7 +37,9 @@ const anyDoctor = 'any';
 /** P-05 Waitlist (MDV-P1-027): who wants a slot, the free slot that suits each, "Offer {time}", and the patient's answer. */
 export default function WaitlistPage(p: Props) {
   const { t, formatTime, formatDate, formatDay } = useI18n();
-  if (p.forbidden) return <PatientsMessage pageHeading title={t('err.403')} body={t('waitlist.forbidden')} />;
+  const back = <Link to={p.boardPath} className={cn(buttonVariants({ variant: 'ghost' }), 'px-2')}><ArrowLeft className="rtl:rotate-180" aria-hidden />{t('walkIn.back')}</Link>;
+  if (p.forbidden)
+    return <PageContainer width="reading"><PageHeader title={t('waitlist.title')} back={back} /><PageMessage kind="denied" title={t('err.403')}>{t('waitlist.forbidden')}</PageMessage></PageContainer>;
   const zone = p.timeZone ?? 'UTC';
   const when = (start: string) => t('appointment.messages.at', { day: formatDate(new Date(start), zone), time: formatTime(new Date(start), zone) });
   const slot = (s: SlotMatch) => t('waitlist.slot', { when: when(s.start), doctor: s.calendarName });
@@ -48,8 +49,7 @@ export default function WaitlistPage(p: Props) {
 
   return (
     <PageContainer width="reading" className="gap-5">
-      <PageHeader title={t('waitlist.title')} description={t('waitlist.intro')}
-        back={<Link to={p.boardPath} className={cn(buttonVariants({ variant: 'ghost' }), 'px-2')}><ArrowLeft className="rtl:rotate-180" aria-hidden />{t('walkIn.back')}</Link>} />
+      <PageHeader title={t('waitlist.title')} description={t('waitlist.intro')} back={back} />
 
       <div aria-live="polite">
         {p.outcome && (

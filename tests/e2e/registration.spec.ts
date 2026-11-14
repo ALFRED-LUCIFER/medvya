@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page, type Request } from '@playwright/test';
+import { t } from './support/desk';
 
 // MDV-P1-016 duplicate warning while typing and resolution before save, on the quick registration form (MDV-P1-015).
 // The full flows (MDV-P1-013/014) are in registration-full.spec.ts.
@@ -152,7 +153,7 @@ for (const locale of ['en', 'ar'])
       await page.locator('#mobile').fill('+91 90000 00201');
       await page.locator('#dateOfBirth').fill('1979-08-14');
       await page.getByRole('radio').nth(1).check();
-      await expect(page.locator('section[aria-labelledby="duplicate-review"]')).toBeVisible();
+      await expect(page.getByRole('region', { name: t(locale, 'registration.duplicates.title') })).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.dir)).toBe(locale === 'ar' ? 'rtl' : 'ltr');
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       for (const b of await page.locator('main button, main a, main input:not([type=radio]):not([type=checkbox])').all())

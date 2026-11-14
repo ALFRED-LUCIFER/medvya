@@ -10,8 +10,13 @@ type Props = { slip: TokenSlip | null; loading: boolean; problem: 'void' | 'forb
  * The waiting-room token slip (MDV-P2-046), in the house print style: clinic, token, doctor, how many are ahead in that doctor's queue
  * (MDV-P1-103), date and time, and nothing about the
  * patient (no name, MRN, phone or reason), because the paper is handed over and left on chairs. The page prints; the shell hides itself.
- * shortcut: browser print on any printer; a thermal printer integration waits for a clinic that asks for one.
+ * It prints on an 80 mm receipt page (founder decision, 15 Nov 2026), so a thermal receipt printer gives the patient a small physical token.
+ * shortcut: browser print on the printer the desk chooses; a direct thermal printer integration waits for a clinic that asks for one.
  */
+// Only while this page is mounted; every other print keeps A4. 120 mm is longer than the slip, so it is always one page. White, so a
+// thermal printer does not shade the page tint; no page padding, so the token uses the paper's width.
+const receiptPage = '@page { size: 80mm 120mm; margin: 4mm; } @media print { html, body, main { background: white !important; padding: 0 !important; } }';
+
 export default function TokenSlipPrintPage(p: Props) {
   const i18n = useI18n(), { t, formatDate, formatTime } = i18n;
   const back = <Link to={p.boardPath} className={buttonVariants({ variant: 'outline' })}>{t('tokenSlip.back')}</Link>;
@@ -28,11 +33,12 @@ export default function TokenSlipPrintPage(p: Props) {
   const issued = new Date(slip.issuedAt);
   return (
     <PageContainer width="form">
+      <style>{receiptPage}</style>
       <div className="flex flex-wrap gap-3 print:hidden">
         <Button onClick={p.onPrint}><Printer aria-hidden className="size-4" />{t('tokenSlip.print')}</Button>
         {back}
       </div>
-      <article aria-labelledby="token-slip-token" className="flex max-w-panel flex-col gap-3 rounded-xl border bg-white p-6 text-black print:rounded-none print:border-0 print:p-0">
+      <article aria-labelledby="token-slip-token" className="flex max-w-panel flex-col gap-3 rounded-xl border bg-white p-6 text-black print:max-w-none print:gap-1 print:rounded-none print:border-0 print:p-0">
         <PageHeader title={t('tokenSlip.title')} description={<span className="font-bold text-black">{slip.clinicName}</span>} />
         <p id="token-slip-token" className="text-display">
           <span className="sr-only">{t('tokenSlip.token')} </span><bdi dir="ltr" className="font-mono">{slip.token}</bdi>

@@ -30,7 +30,7 @@ Doctors want the queue, the patient summary and recording on their phone. Patien
 5. **Shared phone.** One signed-in person per app install. "Switch user" means a full sign-out and wipe, then a new sign-in. No accounts are cached side by side.
 
 6. **Screenshots and the app switcher.**
-   - **Staff app:** screenshots and screen recording are blocked on Android (`FLAG_SECURE`). On iOS the app-switcher preview is blurred, and screenshots are detected and audited.
+   - **Staff app:** screenshots and screen recording are blocked on Android (`FLAG_SECURE`) and on iOS 13 and later, and the iOS app-switcher preview is blurred. Amended 15 Nov 2026 (MDV-P5-034, owner decision): iOS blocks screenshots instead of detecting and auditing them, so there is no device-event audit endpoint to build. On iOS older than 13 a screenshot is not blocked.
    - **Patient app:** switcher blur only, so patients can keep their own prescription or booking.
 
 7. **Rooted or jailbroken phones.** The staff app refuses to sign in on a detected device, because it holds other patients' data offline. The patient app warns and works. Detection is best effort; it is recorded, not relied on.
@@ -49,4 +49,4 @@ Doctors want the queue, the patient summary and recording on their phone. Patien
 - AGENTS.md 1.2 names the on-device exception and points here. Any wider use of device storage needs a new ADR.
 - The threat model gains boundary B7 (phone apps), and the data map gains device storage and push payloads.
 - Unsent recordings on a revoked phone are lost by design; the flagged visit is the safety net.
-- Rooted-device detection and screenshot detection on iOS can be bypassed by a determined user. Server-side authorisation and the short offline window remain the real controls.
+- Rooted-device detection and the screenshot block can be bypassed by a determined user (a second camera always can). Server-side authorisation and the short offline window remain the real controls.

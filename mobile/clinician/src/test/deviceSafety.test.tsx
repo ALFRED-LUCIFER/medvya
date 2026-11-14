@@ -74,6 +74,14 @@ it('unlocks with the right PIN and counts down the wrong ones', async () => {
   expect(await screen.findByRole('button', { name: 'Lock now' })).toBeOnTheScreen();
 });
 
+it('counts two wrong PINs checked at the same time as two tries', async () => {
+  await signedInThenLocked();
+  await fireEvent.changeText(await screen.findByLabelText('App PIN'), '111111');
+  const unlock = screen.getByRole('button', { name: 'Unlock' });
+  await act(async () => { void fireEvent.press(unlock); void fireEvent.press(unlock); }); // both checks run before either answers
+  expect(await screen.findByText('Wrong PIN. Tries left before this phone is cleared: 3')).toBeOnTheScreen();
+});
+
 it('signs out and wipes the phone after five wrong PINs', async () => {
   await signedInThenLocked();
   for (let i = 0; i < 4; i++) {

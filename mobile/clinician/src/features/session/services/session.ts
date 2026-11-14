@@ -39,7 +39,7 @@ const pinHash = (salt: string, pin: string) => Crypto.digestStringAsync(Crypto.C
 /**
  * Keeps the app PIN's check value (salt and hash, never the PIN) in secure-store (ADR-011 §3).
  * shortcut: a 6-digit PIN's hash falls to brute force for anyone who can read the Keychain/Keystore item; the
- * device-only Keychain and the 5-try wipe are the controls. Bind the PIN to the device key with native tokens (MDV-P5-033).
+ * device-only Keychain and the 5-try wipe are the controls. With native tokens (MDV-P5-033) the server checks the PIN and counts tries (owner decision 15 Nov 2026).
  */
 export async function setPin(pin: string) {
   const salt = Crypto.randomUUID();
@@ -55,12 +55,10 @@ export async function checkPin(pin: string) {
 export const wipeDevice = () => Promise.all([wipeStore(), SecureStore.deleteItemAsync(PIN)]);
 
 /**
- * ADR-011 §6 for the staff app. Android: FLAG_SECURE blocks screenshots and screen recording, and blanks the
- * recent-apps preview. iOS: the app-switcher preview is blurred.
- * shortcut: iOS screenshots are not yet detected and audited: there is no audit endpoint for device events. Add
- * ScreenCapture.addScreenshotListener with that endpoint over native tokens (MDV-P5-033).
+ * ADR-011 §6 for the staff app: screenshots and screen recording are blocked on both platforms (FLAG_SECURE on
+ * Android, which also blanks the recent-apps preview; the secure-field method on iOS 13+), and iOS blurs the app switcher.
  */
-export const protectScreen = () => (Platform.OS === 'android' ? ScreenCapture.preventScreenCaptureAsync() : ScreenCapture.enableAppSwitcherProtectionAsync());
+export const protectScreen = () => Promise.all([ScreenCapture.preventScreenCaptureAsync(), Platform.OS === 'ios' && ScreenCapture.enableAppSwitcherProtectionAsync()]);
 
 /** What this phone can unlock with, in the words its platform uses. */
 export async function phoneUnlockMethod() {

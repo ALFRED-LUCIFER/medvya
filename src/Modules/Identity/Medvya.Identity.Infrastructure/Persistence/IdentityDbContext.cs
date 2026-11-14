@@ -33,7 +33,7 @@ public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> option
             e.HasIndex(x => new { x.UserId, x.CreatedAt });
             e.HasIndex(x => new { x.TenantId, x.UserId });
             e.Property(x => x.PushToken).HasMaxLength(StaffSession.PushTokenMaxLength);
-            e.HasIndex(x => x.PushToken).HasFilter("\"PushToken\" IS NOT NULL");
+            e.HasIndex(x => x.PushToken).IsUnique().HasFilter("\"PushToken\" IS NOT NULL");
         });
         // Also a person's own data, not a clinic's. Every query in OnboardingDrafts names the user.
         modelBuilder.Entity<OnboardingDraft>(e =>

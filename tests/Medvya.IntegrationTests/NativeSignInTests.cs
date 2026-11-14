@@ -333,6 +333,40 @@ public sealed class NativeSignInTests(PostgresFixture sql) : IClassFixture<Postg
     }
 
     [Fact]
+    public async Task OneTokenIsNeverOnTwoSessionsEvenWhenClaimedAtOnce()
+    {
+        const string PushC = "ExponentPushToken[synthetic-cccc]";
+        var (user, _) = await Staff();
+        var a = await SignIn(user);
+        var b = await SignIn(user);
+        for (var i = 0; i < 5; i++)
+        {
+            var claims = await Task.WhenAll(RegisterPush(a.Access, PushC), RegisterPush(b.Access, PushC));
+            Assert.All(claims, r => Assert.Equal(HttpStatusCode.NoContent, r.StatusCode));
+            await using var db = sql.Identity();
+            Assert.Equal(1, await db.Sessions.CountAsync(s => s.PushToken == PushC));
+        }
+        // The database itself refuses a second holder (the unique index), not only the service.
+        await using (var db = sql.Identity())
+            await Assert.ThrowsAnyAsync<Exception>(() => db.Sessions.Where(s => s.UserId == user.Id).ExecuteUpdateAsync(u => u.SetProperty(s => s.PushToken, PushC)));
+    }
+
+    [Fact]
+    public async Task ATimedOutPhoneKeepsNoPushTokenOnceRevoked()
+    {
+        var (user, _) = await Staff();
+        var tokens = await SignIn(user);
+        await RegisterPush(tokens.Access, PushA);
+        var session = await SessionOf(user.Id);
+        await using (var db = sql.Identity())
+            await db.Sessions.Where(s => s.Id == session.Id).ExecuteUpdateAsync(u => u.SetProperty(s => s.LastSeenAt, DateTimeOffset.UtcNow - TimeSpan.FromDays(8)));
+
+        await using (var scope = factory.Services.CreateAsyncScope())
+            Assert.Null(await scope.ServiceProvider.GetRequiredService<Medvya.Identity.Application.IStaffSessions>().RevokeAsync(user.Id, session.Id));
+        Assert.Null(await PushTokenOf(user.Id));
+    }
+
+    [Fact]
     public async Task APhoneOutlivesTheBrowserIdleTimeoutButNotAWeekUnused()
     {
         var (user, _) = await Staff();

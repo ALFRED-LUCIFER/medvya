@@ -69,19 +69,39 @@ sealed class StaffSessions(IdentityDbContext db) : IStaffSessions
     {
         var now = DateTimeOffset.UtcNow;
         var session = await db.Sessions.SingleOrDefaultAsync(s => s.Id == sessionId && s.UserId == userId, cancellationToken);
-        if (session is null || !session.IsActive(now)) return null;
+        if (session is null) return null;
+        session.PushToken = null; // a timed-out session keeps no push token either
+        if (!session.IsActive(now))
+        {
+            await db.SaveChangesAsync(cancellationToken);
+            return null;
+        }
         session.RevokedAt = now;
-        session.PushToken = null;
         await db.SaveChangesAsync(cancellationToken);
         return session;
     }
 
     public async Task<bool> SetPushTokenAsync(Guid userId, Guid sessionId, string? token, CancellationToken cancellationToken = default)
     {
-        if (token is not null)
-            await db.Sessions.Where(s => s.PushToken == token && s.Id != sessionId).ExecuteUpdateAsync(u => u.SetProperty(s => s.PushToken, (string?)null), cancellationToken);
-        return await db.Sessions.Where(s => s.Id == sessionId && s.UserId == userId && s.RevokedAt == null && s.RefreshTokenHash != null)
-            .ExecuteUpdateAsync(u => u.SetProperty(s => s.PushToken, token), cancellationToken) == 1;
+        // Move and set in one transaction; the unique index means a token never sits on two sessions, so a push never reaches two phones.
+        for (var attempt = 0; ; attempt++)
+        {
+            await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+            try
+            {
+                if (token is not null)
+                    await db.Sessions.Where(s => s.PushToken == token && s.Id != sessionId).ExecuteUpdateAsync(u => u.SetProperty(s => s.PushToken, (string?)null), cancellationToken);
+                var set = await db.Sessions.Where(s => s.Id == sessionId && s.UserId == userId && s.RevokedAt == null && s.RefreshTokenHash != null)
+                    .ExecuteUpdateAsync(u => u.SetProperty(s => s.PushToken, token), cancellationToken) == 1;
+                await transaction.CommitAsync(cancellationToken);
+                return set;
+            }
+            // A concurrent claim of the same token committed first: run once more, which moves it from there.
+            catch (Exception e) when (attempt == 0 && (e as Npgsql.PostgresException ?? e.InnerException as Npgsql.PostgresException) is { SqlState: Npgsql.PostgresErrorCodes.UniqueViolation })
+            {
+                await transaction.RollbackAsync(cancellationToken);
+            }
+        }
     }
 
     public async Task<RefreshRotation> RotateRefreshAsync(Guid sessionId, byte[]? current, byte[] replacement, CancellationToken cancellationToken = default)

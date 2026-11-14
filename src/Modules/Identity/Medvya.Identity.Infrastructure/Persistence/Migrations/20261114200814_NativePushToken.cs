@@ -23,6 +23,7 @@ namespace Medvya.Identity.Infrastructure.Persistence.Migrations
                 schema: "identity",
                 table: "Sessions",
                 column: "PushToken",
+                unique: true,
                 filter: "\"PushToken\" IS NOT NULL");
         }
 

@@ -97,6 +97,7 @@ namespace Medvya.Identity.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("PushToken")
+                        .IsUnique()
                         .HasFilter("\"PushToken\" IS NOT NULL");
 
                     b.HasIndex("TenantId", "UserId");

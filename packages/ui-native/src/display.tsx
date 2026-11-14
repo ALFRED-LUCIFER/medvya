@@ -1,5 +1,5 @@
 import { theme } from '@medvya/tokens';
-import type { ReactNode } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import { ActivityIndicator, I18nManager, Pressable, StyleSheet, View } from 'react-native';
 import { useBrand } from './brand';
 import { Icon, type IconName } from './controls';
@@ -40,8 +40,8 @@ export function Avatar({ initials, solid, size = 40 }: { initials: string; solid
   );
 }
 
-/** A tappable row: leading avatar or icon, two lines, a trailing chip or value, and a chevron that flips in RTL. */
-export function ListRow({ title, subtitle, leading, trailing, onPress, label }: { title: string; subtitle?: string; leading?: ReactNode; trailing?: ReactNode; onPress?: () => void; label?: string }) {
+/** A tappable row: leading avatar or icon, two lines, trailing chips, and a chevron that flips in RTL. Chips are data so their words (allergy, critical) are always in the row's spoken label. */
+export function ListRow({ title, subtitle, leading, chips = [], onPress }: { title: string; subtitle?: string; leading?: ReactNode; chips?: ComponentProps<typeof Chip>[]; onPress?: () => void }) {
   const { target } = useBrand();
   const content = (
     <>
@@ -50,12 +50,12 @@ export function ListRow({ title, subtitle, leading, trailing, onPress, label }: 
         <Text variant="label">{title}</Text>
         {subtitle ? <Text variant="caption">{subtitle}</Text> : null}
       </View>
-      {trailing}
+      {chips.length > 0 ? <View style={styles.rowChips}>{chips.map(chip => <Chip key={chip.label} {...chip} />)}</View> : null}
       {onPress ? <Icon name={I18nManager.isRTL ? 'chevron-left' : 'chevron-right'} color={c.ink400} /> : null}
     </>
   );
   return onPress
-    ? <Pressable accessibilityRole="button" accessibilityLabel={label ?? [title, subtitle].filter(Boolean).join(', ')} onPress={onPress}
+    ? <Pressable accessibilityRole="button" accessibilityLabel={[title, subtitle, ...chips.map(chip => chip.label)].filter(Boolean).join(', ')} onPress={onPress}
         style={({ pressed }) => [styles.row, { minHeight: target + 12 }, pressed && styles.pressed]}>{content}</Pressable>
     : <View style={[styles.row, { minHeight: target + 12 }]}>{content}</View>;
 }
@@ -110,6 +110,7 @@ const styles = StyleSheet.create({
   avatar: { alignItems: 'center', justifyContent: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
   rowText: { flex: 1, gap: 2 },
+  rowChips: { alignItems: 'flex-end', gap: 4 },
   pressed: { opacity: 0.7 },
   banner: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, padding: 12, borderRadius: 12 },
   bannerText: { flex: 1 },

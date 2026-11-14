@@ -52,7 +52,7 @@ export function RecordsScreen(vm: Props) {
           <Card style={styles.list}>
             {vm.records.medicines.map((m, i) => (
               <View key={m.id} style={i > 0 && styles.divider}>
-                <ListRow title={m.name} subtitle={m.dose} trailing={m.changed ? <Chip label={t('mobile.records.changed')} tone="info" icon="update" /> : undefined} />
+                <ListRow title={m.name} subtitle={m.dose} chips={m.changed ? [{ label: t('mobile.records.changed'), tone: 'info', icon: 'update' }] : []} />
               </View>
             ))}
           </Card>

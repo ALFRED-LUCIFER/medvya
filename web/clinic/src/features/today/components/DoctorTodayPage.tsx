@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { Activity, FilePen, Pill, Siren, CircleAlert, CircleCheck, CircleHelp, type LucideIcon } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, Card, cn, FrontDeskTag, PageContainer, PageHeader, PageMessage, statusIcons, statuses, type Status } from '@medvya/ui';
+import { Button, buttonVariants, Card, Chip, cn, FrontDeskTag, PageContainer, PageHeader, PageMessage, SegmentedControl, statusIcons, statuses, type Status } from '@medvya/ui';
 import { aheadWords, type BoardCard, type BoardColumn, type LiveStatus } from '../../front-desk/domain/board';
 import { canConsult } from '../../encounters/domain/encounter';
 import type { AllergyState } from '../../patient360/domain/chart';
@@ -32,7 +32,8 @@ type Props = {
   /** Ended visits whose prescription waits to be authorised (MDV-P1-090), oldest first; each opens the consultation at the prescription. */
   pendingRx: PendingRx[]; pendingRxMore: boolean; pendingRxFailed: boolean;
   /** "Start consultation" for a visit (MDV-P2-001): the same control as the board, which also asks for access when there is no care relationship. */
-  consultAction: (card: BoardCard) => ReactNode;
+  /** The visit's Start or Open consultation button; `primary` only on the next-patient card, so one filled button shows (MDV-P2-060). */
+  consultAction: (card: BoardCard, primary: boolean) => ReactNode;
 };
 
 /** D-01 Doctor Today: the next patient, then the day's visits, mine or the clinic's. Names and times only; no clinical content. */
@@ -42,23 +43,16 @@ export default function DoctorTodayPage(p: Props) {
     <PageContainer width="fluid">
       {/* The title is fixed and the day is secondary text that arrives without moving the row (MDV-P2-059 AC2); no eyebrow repeating the menu item. */}
       <PageHeader title={t('nav.today')} meta={p.day && formatDay(p.day)}
-        actions={<>
-          {!p.forbidden && <p role="status" className="inline-flex min-h-9 items-center"><FrontDeskTag kind={p.live} /></p>}
-          <div role="group" aria-label={t('today.scope')} className="flex gap-1">
-            {(['mine', 'clinic'] as const).map(s => <ScopeButton key={s} scope={s} active={p.scope === s} onScope={p.onScope} />)}
-          </div>
-        </>} />
+        actions={!p.forbidden && <p role="status" className="inline-flex min-h-9 items-center"><FrontDeskTag kind={p.live} /></p>}>
+        {/* Under the title, as the board's view switch: the 48 px track would make the title row taller than 44 px (MDV-P2-059). */}
+        <SegmentedControl label={t('today.scope')} value={p.scope} onValueChange={p.onScope} options={(['mine', 'clinic'] as const).map(s => ({ value: s, label: t(`today.scope.${s}`) }))} />
+      </PageHeader>
       {p.escalationsFailed && <p role="alert" className="text-sm font-semibold text-danger-700">{t('today.escalation.error')}</p>}
       <Body {...p} />
       <PendingNotes {...p} />
       <PendingPrescriptions {...p} />
     </PageContainer>
   );
-}
-
-function ScopeButton({ scope, active, onScope }: { scope: Scope; active: boolean; onScope: (s: Scope) => void }) {
-  const { t } = useI18n();
-  return <Button variant={active ? 'selected' : 'outline'} aria-pressed={active} onClick={() => onScope(scope)}>{t(`today.scope.${scope}`)}</Button>;
 }
 
 function Body(p: Props) {
@@ -93,7 +87,7 @@ function Escalated(p: Props) {
               <p className="text-subheading"><Token card={c} /><PatientLink {...p} card={c} stretch /></p>
               <Chips {...p} card={c} />
             </div>
-            {canConsult(c.state) && <div className="relative [&_button]:min-w-40">{p.consultAction(c)}</div>}
+            {canConsult(c.state) && <div className="relative [&_button]:min-w-40">{p.consultAction(c, false)}</div>}
           </li>
         ))}
       </ul>
@@ -118,7 +112,7 @@ function Hero(p: Props & { card: BoardCard }) {
       </div>
       <Chips {...p} card={c} />
       {/* Full width and the first thing on a phone, so the thumb reaches it. */}
-      <div className="relative [&_button]:w-full [&_button]:min-h-12">{canConsult(c.state) ? p.consultAction(c) : null}</div>
+      <div className="relative [&_button]:w-full [&_button]:min-h-12">{canConsult(c.state) ? p.consultAction(c, true) : null}</div>
     </section>
   );
 }
@@ -128,21 +122,11 @@ function Chips(p: Props & { card: BoardCard }) {
   const c = p.card, Icon = statusIcons[c.state in statuses ? c.state as Status : 'Booked'];
   return (
     <div className="flex flex-wrap gap-1.5">
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-[13px] font-bold">
-        <Icon aria-hidden className="size-4" />{t(`board.column.${c.state as BoardColumn}`)}{c.state === 'CheckedIn' && ` · ${t('board.waiting', { minutes: p.waitMinutes(c.since) })}`}
-        {c.queuePlace != null && ` · ${aheadWords(i18n, c.queuePlace - 1)}`}
-      </span>
-      {p.escalations[c.id] && (
-        <span className="inline-flex items-center gap-1.5 rounded-full border-2 border-danger-700 px-2.5 py-1 text-danger-700 text-[13px] font-bold">
-          <Siren aria-hidden className="size-4" />{t('today.escalation', { reason: p.escalations[c.id]! })}
-        </span>
-      )}
+      <Chip tone="neutral" icon={Icon} label={[t(`board.column.${c.state as BoardColumn}`), c.state === 'CheckedIn' ? t('board.waiting', { minutes: p.waitMinutes(c.since) }) : '',
+        c.queuePlace != null ? aheadWords(i18n, c.queuePlace - 1) : ''].filter(Boolean).join(' · ')} className="whitespace-normal" />
+      {p.escalations[c.id] && <Chip tone="danger" icon={Siren} label={t('today.escalation', { reason: p.escalations[c.id]! })} className="whitespace-normal" />}
       <AllergyFlag state={p.allergyFlags[c.patientId]?.state} />
-      {p.allergyFlags[c.patientId]?.abnormalVitals && (
-        <span className="inline-flex items-center gap-1.5 rounded-full border-2 border-danger-700 px-2.5 py-1 text-danger-700 text-[13px] font-bold">
-          <Activity aria-hidden className="size-4" />{t('today.vitals.abnormal')}
-        </span>
-      )}
+      {p.allergyFlags[c.patientId]?.abnormalVitals && <Chip tone="danger" icon={Activity} label={t('today.vitals.abnormal')} />}
       {c.registrationIncomplete && <FrontDeskTag kind="incomplete" />}
       {c.walkIn && <FrontDeskTag kind="walkIn" />}
     </div>
@@ -162,7 +146,7 @@ function Visit(p: Props & { card: BoardCard }) {
         <p className="text-xs text-muted-foreground">{[t(`reasonCategory.${c.reasonCategory}`), p.scope === 'clinic' ? c.calendarName : ''].filter(Boolean).join(' · ')}</p>
         <Chips {...p} card={c} />
       </div>
-      {canConsult(c.state) && <div className="relative [&_button]:min-w-40">{p.consultAction(c)}</div>}
+      {canConsult(c.state) && <div className="relative [&_button]:min-w-40">{p.consultAction(c, false)}</div>}
     </Card>
   );
 }
@@ -179,18 +163,19 @@ function PatientLink(p: Props & { card: BoardCard; stretch?: boolean }) {
     : <>{name}</>;
 }
 
-// An allergy state is an icon and words, never colour alone; "not recorded" is never worded as "none".
+// An allergy state is an icon and words, never colour alone; "not recorded" is never worded as "none". Tones as AllergyBlock's: recorded danger,
+// not recorded warning, none known neutral (MDV-P1-081, MDV-P2-060).
 const flagLooks = {
-  Listed: { Icon: statusIcons.allergy, key: 'today.allergy.listed' },
-  NoKnownAllergies: { Icon: CircleCheck, key: 'banner.noAllergies' },
-  NotRecorded: { Icon: CircleHelp, key: 'banner.allergiesNotRecorded' },
-} as const satisfies Record<AllergyState, { Icon: LucideIcon; key: string }>;
+  Listed: { Icon: statusIcons.allergy, key: 'today.allergy.listed', tone: 'danger' },
+  NoKnownAllergies: { Icon: CircleCheck, key: 'banner.noAllergies', tone: 'neutral' },
+  NotRecorded: { Icon: CircleHelp, key: 'banner.allergiesNotRecorded', tone: 'warning' },
+} as const satisfies Record<AllergyState, { Icon: LucideIcon; key: string; tone: 'danger' | 'neutral' | 'warning' }>;
 
 function AllergyFlag({ state }: { state: AllergyState | undefined }) {
   const { t } = useI18n();
   if (!state) return null;
-  const { Icon, key } = flagLooks[state];
-  return <span className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[13px] font-bold"><Icon aria-hidden className="size-4" />{t(key)}</span>;
+  const { Icon, key, tone } = flagLooks[state];
+  return <Chip tone={tone} icon={Icon} label={t(key)} />;
 }
 
 /**

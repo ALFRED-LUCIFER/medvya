@@ -56,9 +56,9 @@ export function PatientRecordScreen(vm: Props) {
           <Card style={styles.list}>
             {r.sinceLastVisit.length === 0 ? <Text variant="caption">{t('mobile.record.nothingNew')}</Text> : r.sinceLastVisit.map((f, i) => (
               <View key={f.text} style={i > 0 && styles.divider}>
-                <ListRow title={f.text} trailing={f.status === 'verified'
-                  ? <Chip label={t('mobile.record.verified')} tone="success" icon="verified" />
-                  : <Chip label={t('mobile.record.aiUnreviewed')} tone="ai" icon="auto-awesome" />} />
+                <ListRow title={f.text} chips={[f.status === 'verified'
+                  ? { label: t('mobile.record.verified'), tone: 'success', icon: 'verified' }
+                  : { label: t('mobile.record.aiUnreviewed'), tone: 'ai', icon: 'auto-awesome' }]} />
               </View>
             ))}
           </Card>

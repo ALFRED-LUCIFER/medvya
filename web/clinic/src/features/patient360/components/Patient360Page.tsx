@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { ltr, useI18n } from '@medvya/i18n';
-import { AllergyBlock, Button, buttonVariants, PatientBanner, ProvenanceTag, Skeleton, SkeletonGroup, Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@medvya/ui';
+import { AllergyBlock, buttonVariants, FilterChip, PatientBanner, ProvenanceTag, Skeleton, SkeletonGroup, Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@medvya/ui';
 import { Armchair, ArrowDown, ArrowUp, Baby, CircleAlert, CircleCheck, CircleHelp, Droplet, HeartPulse, Languages, User, Users } from 'lucide-react';
 import RequestAccess from '../../clinical-access/components/RequestAccess';
 import type { AccessReason } from '../../clinical-access/domain/clinicalAccess';
@@ -83,10 +83,8 @@ export default function Patient360Page(p: Props) {
         <Link to={p.backPath} className={buttonVariants({ variant: 'outline' })}>{t('patient360.back')}</Link>
       </div>
       <div role="group" aria-label={t('patient360.section.label')} className="sticky top-0 z-10 flex flex-wrap gap-2 bg-background py-1">
-        {chartSections.map(s => (
-          <Button key={s} variant={s === p.section ? 'selected' : 'outline'} aria-pressed={s === p.section} onClick={() => p.onSection(s)}>
-            {t(s === 'stage' ? `patient360.section.stage.${lifeStage}` : `patient360.section.${s}`)}
-          </Button>))}
+        {chartSections.map(s => <FilterChip key={s} on={s === p.section} onClick={() => p.onSection(s)}
+          label={t(s === 'stage' ? `patient360.section.stage.${lifeStage}` : `patient360.section.${s}`)} />)}
       </div>
       {show('trends') && (
         <section aria-label={t('patient360.vitals')} className="flex flex-col gap-3">
@@ -104,14 +102,13 @@ export default function Patient360Page(p: Props) {
           {show('summary') && (
             <div className="grid gap-4 md:grid-cols-2">
               <Card title={t('patient360.allergies')} wide>
-                {chart.allergyState === 'Listed'
-                  ? <List>{chart.allergies.map((a, i) => (
-                      <Item key={i} source={a.source}>
-                        <strong>{a.substance}</strong>
-                        <span>{[a.reaction, t(`patient360.allergyStatus.${a.status}`)].filter(Boolean).join(' · ')}</span>
-                      </Item>))}</List>
-                  // Not recorded or none known: the one allergy look (MDV-P2-060 AC4); a listed allergy keeps its reaction, status and source here.
-                  : <div><AllergyBlock allergy={{ state: chart.allergyState === 'NoKnownAllergies' ? 'noneKnown' : 'notRecorded' }} /></div>}
+                {/* The one allergy look first (MDV-P2-060 AC4); AllergyBlock carries words only, so each allergy's reaction, status and source follow. */}
+                <div><AllergyBlock allergy={bannerAllergyState(chart, s => t(`patient360.allergyStatus.${s}`))} /></div>
+                {chart.allergyState === 'Listed' && <List>{chart.allergies.map((a, i) => (
+                  <Item key={i} source={a.source}>
+                    <strong>{a.substance}</strong>
+                    <span>{[a.reaction, t(`patient360.allergyStatus.${a.status}`)].filter(Boolean).join(' · ')}</span>
+                  </Item>))}</List>}
               </Card>
               <Card title={t('patient360.problems')}>
                 {chart.problems.length === 0 ? <Empty text={t('patient360.problems.empty')} />

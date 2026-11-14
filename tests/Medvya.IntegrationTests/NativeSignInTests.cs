@@ -27,7 +27,7 @@ public sealed class NativeSignInTests(PostgresFixture sql) : IClassFixture<Postg
 
     sealed record Tokens(string Access, string Refresh);
 
-    async Task<(StaffUser User, Guid Membership)> Doctor()
+    async Task<(StaffUser User, Guid Membership)> Staff(Role role = Role.SoloDoctor)
     {
         var facility = Guid.NewGuid();
         await using (var db = sql.Context(tenant))
@@ -43,7 +43,7 @@ public sealed class NativeSignInTests(PostgresFixture sql) : IClassFixture<Postg
             db.Users.Add(user);
             await db.SaveChangesAsync();
         }
-        var membership = new Membership { Id = Guid.NewGuid(), TenantId = tenant, UserId = id, FacilityId = facility, Role = Role.SoloDoctor, Status = MembershipStatus.Active };
+        var membership = new Membership { Id = Guid.NewGuid(), TenantId = tenant, UserId = id, FacilityId = facility, Role = role, Status = MembershipStatus.Active };
         await using (var db = sql.Context(tenant))
         {
             db.Memberships.Add(membership);
@@ -117,7 +117,7 @@ public sealed class NativeSignInTests(PostgresFixture sql) : IClassFixture<Postg
     [Fact]
     public async Task AppSignsInChoosesAFacilityAndRefreshesWithoutACookie()
     {
-        var (user, membership) = await Doctor();
+        var (user, membership) = await Staff();
         var tokens = await SignIn(user);
         Assert.True((await SessionOf(user.Id)).IsNative);
 
@@ -136,7 +136,7 @@ public sealed class NativeSignInTests(PostgresFixture sql) : IClassFixture<Postg
     [Fact]
     public async Task TheBrowserCookieFromTheSignInCannotReachTheNativeSession()
     {
-        var (user, _) = await Doctor();
+        var (user, _) = await Staff();
         var (_, challenge) = Pkce();
         using var browser = Browser();
         string? cookie = null;
@@ -164,7 +164,7 @@ public sealed class NativeSignInTests(PostgresFixture sql) : IClassFixture<Postg
     [Fact]
     public async Task ACodeNeedsItsOwnVerifierAndRedirectAndWorksOnce()
     {
-        var (user, _) = await Doctor();
+        var (user, _) = await Staff();
         var (verifier, challenge) = Pkce();
         using var browser = Browser();
         var code = await BrowserSignIn(browser, user.Subject, challenge);
@@ -181,7 +181,7 @@ public sealed class NativeSignInTests(PostgresFixture sql) : IClassFixture<Postg
     [Fact]
     public async Task AReplayedRefreshTokenEndsTheWholeSessionAndIsAudited()
     {
-        var (user, membership) = await Doctor();
+        var (user, membership) = await Staff();
         var first = await SignIn(user);
         await Api(first.Access, HttpMethod.Post, "/v1/me/facility", new { membershipId = membership });
         var second = await Read(await Refresh(first.Refresh));
@@ -198,7 +198,7 @@ public sealed class NativeSignInTests(PostgresFixture sql) : IClassFixture<Postg
     public async Task AForgedRefreshTokenWithKnownIdsNeitherEndsNorExtendsTheSession()
     {
         // #883: session and user ids are not secret (audit rows carry them); only the replaced token coming back is a replay.
-        var (user, _) = await Doctor();
+        var (user, _) = await Staff();
         var tokens = await SignIn(user);
         var before = await SessionOf(user.Id);
         var (forged, _) = RefreshToken.New(before.Id, user.Id); // the right ids, a secret that was never issued
@@ -213,7 +213,7 @@ public sealed class NativeSignInTests(PostgresFixture sql) : IClassFixture<Postg
     [Fact]
     public async Task OffboardingRevokesThePhoneOnItsNextRequestAndRefresh()
     {
-        var (user, membership) = await Doctor();
+        var (user, membership) = await Staff();
         var first = await SignIn(user);
         await Api(first.Access, HttpMethod.Post, "/v1/me/facility", new { membershipId = membership });
         var tokens = await Read(await Refresh(first.Refresh));
@@ -230,7 +230,7 @@ public sealed class NativeSignInTests(PostgresFixture sql) : IClassFixture<Postg
     public async Task OffboardingTheMembershipRevokesThePairedPhoneToo()
     {
         // #225 "paired devices": the offboard endpoint ends sessions per membership; a phone's refresh token is such a session.
-        var (user, membership) = await Doctor();
+        var (user, membership) = await Staff();
         var first = await SignIn(user);
         await Api(first.Access, HttpMethod.Post, "/v1/me/facility", new { membershipId = membership });
         var tokens = await Read(await Refresh(first.Refresh));
@@ -245,7 +245,7 @@ public sealed class NativeSignInTests(PostgresFixture sql) : IClassFixture<Postg
     [Fact]
     public async Task APhoneOutlivesTheBrowserIdleTimeoutButNotAWeekUnused()
     {
-        var (user, _) = await Doctor();
+        var (user, _) = await Staff();
         var tokens = await SignIn(user);
         var session = await SessionOf(user.Id);
         await using var db = sql.Identity();
@@ -261,12 +261,48 @@ public sealed class NativeSignInTests(PostgresFixture sql) : IClassFixture<Postg
     [Fact]
     public async Task SigningOutFromTheAppEndsTheSession()
     {
-        var (user, _) = await Doctor();
+        var (user, _) = await Staff();
         var tokens = await SignIn(user);
         Assert.Equal(HttpStatusCode.NoContent, (await Api(tokens.Access, HttpMethod.Post, "/bff/logout")).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await Api(tokens.Access, HttpMethod.Get, "/v1/me/context")).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await Refresh(tokens.Refresh)).StatusCode);
     }
+
+    // The clinical calls behind the staff app's Today, patient record, inbox and Consult tabs (MDV-P5-034). Ids are random: the policy refuses before any lookup.
+    static readonly (string Method, string Path, object? Body)[] ClinicalCalls =
+    [
+        ("GET", "/v1/notes/pending", null),
+        ("POST", "/v1/chart/allergy-flags", new { patientIds = new[] { Guid.NewGuid() } }),
+        ("GET", $"/v1/patients/{Guid.NewGuid()}/chart", null),
+        ("GET", $"/v1/patients/{Guid.NewGuid()}/timeline", null),
+        ("GET", $"/v1/intake-escalations?facilityId={Guid.NewGuid()}", null),
+        ("POST", "/v1/encounters", new { appointmentId = Guid.NewGuid() }),
+        ("GET", $"/v1/encounters/{Guid.NewGuid()}/note", null),
+        ("PUT", $"/v1/encounters/{Guid.NewGuid()}/note", new { }),
+        ("POST", $"/v1/encounters/{Guid.NewGuid()}/note/sign", new { }),
+    ];
+
+    async Task<IReadOnlyList<(string Call, HttpStatusCode Status)>> ClinicalCallsAs(Role role)
+    {
+        var (user, membership) = await Staff(role);
+        var first = await SignIn(user);
+        Assert.Equal(HttpStatusCode.NoContent, (await Api(first.Access, HttpMethod.Post, "/v1/me/facility", new { membershipId = membership })).StatusCode);
+        var tokens = await Read(await Refresh(first.Refresh));
+        var results = new List<(string, HttpStatusCode)>();
+        foreach (var (method, path, body) in ClinicalCalls)
+            results.Add(($"{method} {path}", (await Api(tokens.Access, new HttpMethod(method), path, body)).StatusCode));
+        return results;
+    }
+
+    [Fact]
+    public async Task FrontDeskOnThePhoneIsRefusedEveryClinicalCall() =>
+        // MDV-P5-034 check 2: the app hides the clinical tabs from front desk; the API is what refuses them, through the native bearer session.
+        Assert.All(await ClinicalCallsAs(Role.Receptionist), r => Assert.Equal(HttpStatusCode.Forbidden, r.Status));
+
+    [Fact]
+    public async Task ADoctorsPhonePassesTheSameClinicalPolicies() =>
+        // The control: the 403 above is the role, not the bearer token or the route.
+        Assert.All(await ClinicalCallsAs(Role.SoloDoctor), r => Assert.True(r.Status is not (HttpStatusCode.Forbidden or HttpStatusCode.Unauthorized), $"{r.Call}: {r.Status}"));
 
     [Fact]
     public async Task AGarbledOrMissingTokenIsRefused()

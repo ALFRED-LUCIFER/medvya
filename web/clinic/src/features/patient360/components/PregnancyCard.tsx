@@ -1,5 +1,5 @@
 import { useI18n } from '@medvya/i18n';
-import { Button, ErrorSummary, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
+import { Button, Card, ErrorSummary, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
 import { CalendarClock, CircleAlert, CircleCheck, CircleDashed, HeartPulse, TriangleAlert } from 'lucide-react';
 import type { FormEventHandler, ReactNode } from 'react';
 import type { FieldErrors, UseFormReturn } from 'react-hook-form';
@@ -31,7 +31,8 @@ export default function PregnancyCard(p: Props) {
     {open ? <Open p={p} open={open} /> : <None p={p} />}
   </>;
   return (
-    <section aria-label={t('pregnancy.title')} className="flex flex-col gap-4 rounded-xl border bg-card p-4">
+    // The title is drawn here, not in Card's slot: folded, it is the <summary> that opens the card.
+    <Card aria-label={t('pregnancy.title')} className="gap-4">
       {p.folded ? (
         // Kept open while a form is in use, so a save or a refusal is never hidden.
         <details open={p.form !== null || undefined}>
@@ -45,7 +46,7 @@ export default function PregnancyCard(p: Props) {
         </div>
         {body}
       </>}
-    </section>
+    </Card>
   );
 }
 

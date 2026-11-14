@@ -215,7 +215,7 @@ public sealed class ConsultNoteAssistTests(PostgresFixture sql) : IClassFixture<
         {
             var row = await db.SignedNoteVersions.SingleAsync(v => v.EncounterId == encounter);
             Assert.Equal((ComplaintSource.EditedByDoctor, h.Nurse, h.Clock.GetUtcNow()), (row.ChiefComplaintSource, row.ChiefComplaintBy, row.ChiefComplaintAt));
-            Assert.Equal(SignedNoteVersion.Hash(row.TemplateKey, row.TemplateVersion, row.Sections, complaintSource: (row.ChiefComplaintSource!.Value, row.ChiefComplaintBy, row.ChiefComplaintAt)), row.ContentHash);
+            Assert.Equal(SignedNoteVersion.Hash(row.TemplateKey, row.TemplateVersion, row.Sections, complaintSource: (row.ChiefComplaintSource!.Value, row.ChiefComplaintBy, row.ChiefComplaintAt), atSigning: row.AtSigning), row.ContentHash);
         }
         // Tenant isolation: the complaint and the source stay inside this clinic, even with the EF filter off (row-level security).
         await using var elsewhere = sql.Encounters(Guid.NewGuid());

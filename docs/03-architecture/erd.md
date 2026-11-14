@@ -1565,7 +1565,7 @@ erDiagram
 | `PregnancyRuledOuts` | 7 | Id | tenant-scoped |
 | `Problems` | 17 | Id | tenant-scoped |
 | `SignedNotePdfs` | 8 | Id | append-only ledger; tenant-scoped |
-| `SignedNoteVersions` | 17 | Id | append-only ledger; tenant-scoped |
+| `SignedNoteVersions` | 18 | Id | append-only ledger; tenant-scoped |
 
 <details><summary><code>encounters.Allergies</code> columns</summary>
 
@@ -2018,6 +2018,7 @@ erDiagram
 |---|---|---|---|
 | `Id` | guid |  |  |
 | `AmendsVersionId` | guid | yes | id of `encounters.SignedNoteVersions` |
+| `AtSigning` | jsonb |  |  |
 | `ChiefComplaintAt` | timestamptz | yes |  |
 | `ChiefComplaintBy` | guid | yes |  |
 | `ChiefComplaintSource` | character varying(20) |  |  |

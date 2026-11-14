@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { MessageKey } from '@medvya/i18n';
 import { isStructured, keepItems } from './structured';
 import type { ComplaintSource } from './complaint';
+import type { Allergy, AllergyState, Problem } from '../../patient360/domain/chart';
 
 // The consultation note draft (MDV-P2-009) and its templates (MDV-P2-025): what the server answers. The server decides access, structure and
 // versions; these rules only save a round trip and keep the doctor's text safe.
@@ -37,6 +38,15 @@ export type NoteView = {
   suggestedTemplateKey?: string | null;
   /** MDV-P1-104: the chief complaint came from nurse intake (signed: as signed). */
   chiefComplaintSource?: ComplaintSource | null;
+  /** MDV-P2-049: the visit record kept with the signature (signed notes); null on a note signed before it was kept. */
+  atSigning?: NoteRecord | null;
+  /** The encounter's facility (signed notes): the print's heading. */
+  facilityName?: string | null;
+};
+/** What the visit record held when the note was signed (MDV-P2-049): never today's chart. A medicine is a line of a prescription authorised before signing. */
+export type NoteRecord = {
+  vitals: VerifiedVital[]; allergies: { state: AllergyState; allergies: Allergy[] }; diagnoses: Problem[];
+  medicines: { name: string; dose: string | null; prescriptionId: string }[];
 };
 /** What an autosave sends besides the version: the template, the whole note (a section left out is cleared) and the recording consent. */
 export type NoteDraft = { templateKey: string; sections: NoteSections; recordingConsent: RecordingConsent | null };

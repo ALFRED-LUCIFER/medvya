@@ -399,22 +399,46 @@ test('a role without Sign sees the history and the print view, but no addendum',
   await expect(history(page).getByRole('link', { name: 'Print view and PDF' })).toBeVisible();
 });
 
-const withAddendum = { ...signedSeed, addenda: [{ versionNo: 2, amendsVersionNo: 1, reason: 'Dose typed wrongly', text: 'Synthetic: metformin 1000 mg', signedBy: 'u-rao', signedAt: at, contentHash: 'c'.repeat(64), signerName: signer }] };
+// MDV-P2-049: the record kept at signing, as the server answers it (NotePrintRecordTests proves it is the signed one on PostgreSQL).
+const record = {
+  vitals: [{ code: 'Pulse', value: 72, unit: '/min', takenAt: at, source: 'ClinicianVerified', recordedByName: 'Kavya Nair (synthetic)', flag: null },
+    { code: 'BloodPressureSystolic', value: 150, unit: 'mmHg', takenAt: at, source: 'ClinicianVerified', recordedByName: null, flag: 'High' }],
+  allergies: { state: 'Listed' as const, allergies: [{ substance: 'Penicillin', reaction: 'Rash', status: 'Confirmed', source: 'ClinicianVerified' }] },
+  diagnoses: [{ icd10Code: 'E11.9', description: 'Type 2 diabetes (synthetic)', verification: 'Verified', onsetOn: null, source: 'ClinicianVerified', status: 'Active' }],
+  medicines: [{ name: 'Metformin', dose: '500 mg', prescriptionId: 'rx-1' }],
+};
+const withAddendum = { ...signedSeed, facilityName: 'Iyer Family Clinic · Adyar', atSigning: record,
+  signature: { ...signedSeed.signature, signerLicence: 'Tamil Nadu Medical Council 84213' },
+  addenda: [{ versionNo: 2, amendsVersionNo: 1, reason: 'Dose typed wrongly', text: 'Synthetic: metformin 1000 mg', signedBy: 'u-rao', signedAt: at, contentHash: 'c'.repeat(64), signerName: signer }] };
 
 test('print view: the original then each addendum in order, with identifiers; the PDF is the server\'s', async ({ page }) => {
   const mock = await open(page, withAddendum);
   await history(page).getByRole('link', { name: 'Print view and PDF' }).click();
   await expect(page).toHaveURL(/\/consult\/e-1\/note\/print$/);
   const article = page.getByRole('article', { name: 'Signed consultation note' });
+  // MDV-P2-049: one h1 with the clinic, then the signer and the licence.
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(['Iyer Family Clinic · Adyar · Signed consultation note']);
+  await expect(article).toContainText(`${signer} · licence`);
+  await expect(article).toContainText('Tamil Nadu Medical Council 84213');
   await expect(article).toContainText('Meera Iyer (synthetic)');
   await expect(article).toContainText('000001');
   await expect(article).toContainText('12 Mar 1972');
-  await expect(article.getByRole('heading', { level: 2 })).toHaveText(['Chief complaint', 'Assessment', 'Plan', 'Version history']);
-  await expect(article.getByRole('listitem')).toHaveCount(2);
-  await expect(article.getByRole('listitem').first()).toContainText(`signed by ${signer}`); // the same name as the banner and the sign button, not the account's
-  await expect(article.getByRole('listitem').last()).toContainText(`signed by ${signer}`);
+  await expect(article.getByRole('heading', { level: 2 })).toHaveText(['Recorded at signing', 'Chief complaint', 'Assessment', 'Plan', 'Version history']);
+  // AC1: vitals with who and when, the allergy in words with its status and source, the coded diagnosis, the medicine by its prescription.
+  const kept = article.getByRole('region', { name: 'Recorded at signing' });
+  await expect(kept.getByRole('heading', { level: 3 })).toHaveText(['Verified vitals for this visit', 'Allergies', 'Problems and diagnoses', 'Medicines']);
+  await expect(kept.getByRole('region', { name: 'Verified vitals for this visit' }).getByRole('listitem')).toHaveText([
+    'Pulse 72 /min (Kavya Nair (synthetic), nurse intake, verified 19 Oct 2026 10:05)',
+    'Blood pressure, systolic 150 mmHg (nurse intake, verified 19 Oct 2026 10:05) · Flagged high by the nurse']);
+  await expect(kept.getByRole('region', { name: 'Allergies' })).toHaveText('AllergiesPenicillin (Rash) · Verified · Clinician verified');
+  await expect(kept.getByRole('region', { name: 'Problems and diagnoses' }).getByRole('listitem')).toContainText(/Type 2 diabetes \(synthetic\) · \u2066E11\.9\u2069 · Verified · Clinician verified/);
+  await expect(kept.getByRole('region', { name: 'Medicines' })).toContainText('Metformin 500 mg · prescribed at this visit');
+  const versions = article.getByRole('region', { name: 'Version history' });
+  await expect(versions.getByRole('listitem')).toHaveCount(2);
+  await expect(versions.getByRole('listitem').first()).toContainText(`signed by ${signer}`); // the same name as the banner and the sign button, not the account's
+  await expect(versions.getByRole('listitem').last()).toContainText(`signed by ${signer}`);
   await expect(article).not.toContainText('Arjun');
-  await expect(article.getByRole('listitem').last()).toContainText('Addendum to version 1');
+  await expect(versions.getByRole('listitem').last()).toContainText('Addendum to version 1');
   await expect(article).toContainText('Corrections are added as signed addenda.');
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Download PDF' }).click();
@@ -423,6 +447,28 @@ test('print view: the original then each addendum in order, with identifiers; th
   await page.getByRole('button', { name: 'Download PDF' }).click();
   await expect(page.getByRole('alert')).toHaveText('This note has text the PDF cannot show yet. Use Print instead.');
   expect(mock.pdfs).toBe(2);
+});
+
+// AC2: the allergy state is said in words; a note signed before the record was kept says so and never reads as "none".
+test('print view: no known allergies and nothing recorded are said in words; a note signed before the record was kept says so', async ({ page }) => {
+  await open(page, { ...withAddendum, atSigning: { vitals: [], allergies: { state: 'NoKnownAllergies', allergies: [] }, diagnoses: [], medicines: [] } });
+  await page.goto('/consult/e-1/note/print');
+  const kept = page.getByRole('region', { name: 'Recorded at signing' });
+  await expect(kept.getByRole('region', { name: 'Allergies' })).toHaveText('AllergiesNo known allergies');
+  await expect(kept).toContainText('No verified vitals for this visit.');
+  await expect(kept).toContainText('No problems recorded.');
+  await expect(kept).toContainText('No prescription was authorised in this visit before the note was signed.');
+  await expect(kept).not.toContainText(/\bnone\b/i);
+
+  await open(page, { ...withAddendum, atSigning: { vitals: [], allergies: { state: 'NotRecorded', allergies: [] }, diagnoses: [], medicines: [] } });
+  await page.goto('/consult/e-1/note/print');
+  await expect(page.getByRole('region', { name: 'Allergies' })).toHaveText('AllergiesAllergies not recorded');
+
+  await open(page, { ...withAddendum, atSigning: null });
+  await page.goto('/consult/e-1/note/print');
+  const article = page.getByRole('article', { name: 'Signed consultation note' });
+  await expect(article).toContainText('This note was signed before vitals, allergies and diagnoses were kept with the signature');
+  await expect(article.getByRole('region', { name: 'Allergies' })).toHaveCount(0);
 });
 
 test('a role without Sign sees no Sign button, only why', async ({ page }) => {
@@ -608,6 +654,25 @@ for (const locale of ['en', 'ar'])
     await expect(page.getByRole('article')).toContainText('000001');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     expect(await axeViolations(page)).toEqual([]);
+
+    // MDV-P2-049 AC4: five widths, one h1 each time, no violation, no sideways scrolling.
+    for (const width of [360, 768, 1024, 1280, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `width ${width}`).toBe(true);
+      expect(await axeViolations(page)).toEqual([]);
+    }
+    // AC6: printed on A4 (794 CSS px wide) at 200 % zoom leaves 397 px: the record and the heading wrap inside the page, nothing is cut or hidden.
+    await page.emulateMedia({ media: 'print' });
+    await page.setViewportSize({ width: 397, height: 1123 });
+    const article = page.getByRole('article');
+    await expect(article.getByRole('region', { name: locale === 'ar' ? 'المسجّل عند التوقيع' : 'Recorded at signing' })).toBeVisible();
+    await expect(page.getByRole('button', { name: locale === 'ar' ? 'طباعة' : 'Print' })).toBeHidden(); // the buttons do not print
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    expect(await page.getByRole('heading', { level: 1 }).evaluate(h => h.scrollWidth <= h.clientWidth)).toBe(true); // the clinic's name wraps, never truncated
+    expect(await article.evaluate(a => [...a.querySelectorAll('li, p, h1, h2, h3')].every(e => e.getBoundingClientRect().right <= window.innerWidth + 1 && e.getBoundingClientRect().left >= -1))).toBe(true);
+    if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+    await page.emulateMedia({ media: 'screen' });
   });
 
 // MDV-P2-009 (4/4): the editor by keyboard only and at 200% zoom. No mouse call below: every control is reached with Tab and worked with Enter,

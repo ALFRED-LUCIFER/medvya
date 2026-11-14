@@ -24,7 +24,16 @@ public sealed record NoteAddendum(int VersionNo, int AmendsVersionNo, string Rea
 public sealed record NoteView(
     Guid EncounterId, string TemplateKey, int TemplateVersion, NoteStatus Status, bool Manual, IReadOnlyDictionary<string, string> Sections, int Version, DateTimeOffset? UpdatedAt,
     NoteSignature? Signature = null, IReadOnlyList<NoteAddendum>? Addenda = null, string? SignAsName = null, RecordingConsent? RecordingConsent = null, IReadOnlyList<string>? UndecidedAi = null,
-    string? SuggestedTemplateKey = null, ComplaintSourceView? ChiefComplaintSource = null);
+    string? SuggestedTemplateKey = null, ComplaintSourceView? ChiefComplaintSource = null, NoteRecord? AtSigning = null, string? FacilityName = null);
+
+/// <summary>
+/// MDV-P2-049: the visit record kept with a signed note's version 1 (see <see cref="NoteAtSigning"/>), for the print and the PDF. Null on a note signed
+/// before it was kept: the print says so and never reads today's chart instead. <see cref="NoteView.FacilityName"/> is the encounter's facility (signed notes only).
+/// </summary>
+public sealed record NoteRecord(IReadOnlyList<VerifiedVital> Vitals, AllergyBanner Allergies, IReadOnlyList<ProblemView> Diagnoses, IReadOnlyList<SignedMedicine> Medicines);
+
+/// <summary>A medicine authorised in the visit before signing, by reference to its prescription version.</summary>
+public sealed record SignedMedicine(string Name, string? Dose, Guid PrescriptionId);
 
 /// <summary>
 /// MDV-P1-104: the chief complaint came from nurse intake (and the doctor may have changed it since). <see cref="ByName"/> and <see cref="At"/>

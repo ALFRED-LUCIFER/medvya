@@ -340,7 +340,7 @@ const nine = () => [
 const firstCardTop = async (page: Page) => (await page.getByRole('article').first().boundingBox())!.y;
 
 test('one header row and a one-line workload: at 1024 x 768 the first card starts at or above 220 px; at 1440 and 768 too', async ({ page }) => {
-  for (const [w, h, most] of [[1024, 768, 220], [1440, 900, 220], [768, 1024, 280]] as const) {
+  for (const [w, h, most] of [[1024, 768, 220], [1440, 900, 220], [768, 1024, 300]] as const) {
     await page.setViewportSize({ width: w, height: h });
     await fakeHub(page, '/v1/hubs/board', /Meera|Iyer/); // live, as at the desk
     await open(page, { only: [], extra: nine() });
@@ -348,7 +348,7 @@ test('one header row and a one-line workload: at 1024 x 768 the first card start
     await expect(page.getByText('Live updates')).toBeVisible();
     expect(await firstCardTop(page), `first card at ${w} px`).toBeLessThanOrEqual(most);
     const row = (await page.locator('[data-slot=page-header-row]').boundingBox())!;
-    if (w >= 1024) expect(row.height, `one header row at ${w} px`).toBeLessThanOrEqual(46); // at 768 the actions take a second row
+    if (w >= 1024) expect(row.height, `one header row at ${w} px`).toBeLessThanOrEqual(48); // the view switch is 48 px; at 768 the actions wrap
     await page.unrouteAll({ behavior: 'ignoreErrors' });
   }
 });

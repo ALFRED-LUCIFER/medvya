@@ -1273,6 +1273,9 @@ namespace Medvya.Encounters.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("AmendsVersionId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("AtSigning")
+                        .HasColumnType("jsonb");
+
                     b.Property<DateTimeOffset?>("ChiefComplaintAt")
                         .HasColumnType("timestamp with time zone");
 

@@ -4,6 +4,7 @@ import { ltr, useI18n, type MessageKey } from '@medvya/i18n';
 import { Button, Dialog, DialogContent, DialogDescription, DialogTitle } from '@medvya/ui';
 import { checklistKey, type ChecklistItem } from '../domain/checklist';
 import { sectionLabelKey, withTitle, type NoteSignature, type SignFailure, type SignPatient } from '../domain/note';
+import type { StepUpReturn } from '../domain/stepUp';
 
 export type SignProblem = SignFailure | { kind: 'unsaved' } | { kind: 'finding' } | null;
 type Props = {
@@ -11,6 +12,8 @@ type Props = {
   /** Checklist items still to do (MDV-P2-044): Sign stays locked until none is left. */
   remaining: number;
   onRequest: () => void; onCancel: () => void; onConfirm: () => void;
+  /** Back from the step-up (MDV-P2-047): focus on Sign and a status line. */
+  resume: StepUpReturn;
 };
 
 /** E-06: Sign note, with a confirmation that says what signing means. Hidden without the capability (the server decides either way). */
@@ -21,11 +24,13 @@ export function SignNote(p: Props) {
     <div className="flex flex-col gap-3">
       {p.canSign && (
         <div className="flex flex-wrap items-center gap-3">
-          <Button ref={signRef} loading={p.signing} disabled={p.remaining > 0} aria-describedby="sign-remaining" onClick={p.onRequest}>{t('noteSign.button')}</Button>
+          {/* Inline on purpose: it runs again each render, so focus lands once the checklist has loaded and Sign is enabled. */}
+          <Button ref={el => { signRef.current = el; p.resume.focus(el); }} loading={p.signing} disabled={p.remaining > 0} aria-describedby="sign-remaining" onClick={p.onRequest}>{t('noteSign.button')}</Button>
           <p id="sign-remaining" aria-live="polite" className="inline-flex items-center gap-1.5 font-bold">
             {p.remaining > 0 ? <CircleAlert aria-hidden className="size-4" /> : <CircleCheck aria-hidden className="size-4" />}
             {p.remaining > 0 ? tCount('signChecklist.remaining', p.remaining) : t('signChecklist.ready')}
           </p>
+          {p.resume.confirmed && <p role="status" className="font-bold">{t('stepUp.confirmed', { action: t('noteSign.button') })}</p>}
         </div>
       )}
       <SignProblemText problem={p.problem} />

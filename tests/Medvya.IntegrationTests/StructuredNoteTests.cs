@@ -97,7 +97,7 @@ public sealed class StructuredNoteTests(PostgresFixture sql) : IClassFixture<Pos
             Assert.Equal("""{"chestPain":{"answer":"no"},"tinglingFeet":{"answer":"yes"}}""", row.Sections[NoteTemplates.ReviewOfSystems]);
             Assert.Equal("""{"heart":{"answer":"normal"},"feet":{"answer":"abnormal","note":"Reduced monofilament both soles"},"nervousSystem":{"answer":"notExamined"}}""",
                 row.Sections[NoteTemplates.Examination]);
-            Assert.Equal(SignedNoteVersion.Hash(Diabetes, 2, row.Sections), row.ContentHash);
+            Assert.Equal(SignedNoteVersion.Hash(Diabetes, 2, row.Sections, atSigning: row.AtSigning), row.ContentHash);
         }
 
         using var pdf = await Client().PostAsync(U($"/v1/encounters/{encounter}/note/pdf"), null);

@@ -2,6 +2,7 @@ import type { UseFormRegisterReturn } from 'react-hook-form';
 import { useI18n } from '@medvya/i18n';
 import type { ChecklistItem } from '../domain/checklist';
 import type { NoteSignature, NoteTemplate, RecordingConsent, SavePhase, SignPatient } from '../domain/note';
+import type { StepUpReturn } from '../domain/stepUp';
 import NoteAssist, { type Assist } from './NoteAssist';
 import { NoteSectionField, SaveState, SignedBanner, TemplatePicker, type SectionSource, type StructuredProps } from './NoteParts';
 import { SignChecklist, SignedLine, SignNote, type SignProblem } from './NoteSign';
@@ -23,6 +24,8 @@ export type NoteEditorProps = StructuredProps & {
   onRetry: () => void; onReapply: () => void;
   canSign: boolean; signing: boolean; confirming: boolean; signProblem: SignProblem; signature: NoteSignature | null;
   onRequestSign: () => void; onCancelSign: () => void; onConfirmSign: () => void;
+  /** Back from the step-up (MDV-P2-047). */
+  signResume: StepUpReturn;
   signAsName: string | null; timeZone: string | undefined; patient: SignPatient | null;
   consent: RecordingConsent | null; onConsent: (value: RecordingConsent) => void;
   /** Empty without Sign or once signed. */
@@ -57,7 +60,7 @@ export default function NoteEditor(p: NoteEditorProps) {
           {!p.canSign && <p className="text-sm text-muted-foreground">{t('noteSign.onlyDoctor')}</p>}
           {p.checklist.length > 0 && <SignChecklist items={p.checklist} />}
           <SignNote canSign={p.canSign} remaining={p.remaining} patient={p.patient} doctorName={p.signAsName} signing={p.signing} confirming={p.confirming} problem={p.signProblem}
-            onRequest={p.onRequestSign} onCancel={p.onCancelSign} onConfirm={p.onConfirmSign} />
+            onRequest={p.onRequestSign} onCancel={p.onCancelSign} onConfirm={p.onConfirmSign} resume={p.signResume} />
         </>
       )}
     </section>

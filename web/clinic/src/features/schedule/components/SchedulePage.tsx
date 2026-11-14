@@ -1,13 +1,14 @@
 import { useRef, type ReactNode } from 'react';
+import { flushSync } from 'react-dom';
 import { Link } from 'react-router';
-import { CalendarOff, ChevronLeft, ChevronRight, Plus, Printer } from 'lucide-react';
+import { CalendarOff, ChevronLeft, ChevronRight, Info, Ellipsis, Plus, Printer } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, cn, EmptyState, FocusScope, PageContainer, PageHeader, PageMessage, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
+import { Button, buttonVariants, cn, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, EmptyState, FocusScope, PageContainer, PageHeader, PageMessage, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
 import type { DayLayout, ScheduleColumn } from '../domain/schedule';
 import { scheduleViews, type AgendaEntry, type ScheduleView, type WeekDay } from '../domain/views';
 import AgendaView from './AgendaView';
 import type { DaySheet } from '../domain/daySheet';
-import DayGrid, { type GridActions } from './DayGrid';
+import DayGrid, { type Earlier, type GridActions } from './DayGrid';
 import DaySheetView from './DaySheetView';
 import { Legend } from './Legend';
 import WeekView from './WeekView';
@@ -21,10 +22,14 @@ type Props = {
   /** Monday and Sunday of the week around `date`. */
   weekSpan: { from: string; to: string } | null;
   timeZone: string | null;
+  /** This device is in another zone than the facility: the page then says times are the facility's. */
+  otherZone: boolean;
   calendars: { id: string; name: string }[];
   /** The doctor or resource shown; null shows every column (day and list only). */
   filter: string | null;
   day: DayLayout | null;
+  /** Today's rows before now, folded into one row (MDV-P1-097); null when nothing is folded. */
+  earlier: Earlier | null;
   agenda: { column: ScheduleColumn; entries: AgendaEntry[] }[];
   week: WeekDay[] | null;
   weekName: string;
@@ -67,7 +72,7 @@ const all = '__all';
 
 /** P-04 Schedule (MDV-P1-011, 021, 023): day, week and list views; times in the facility's zone. */
 export default function SchedulePage(props: Props) {
-  const { t, formatDay, formatShortDay } = useI18n();
+  const { t, formatDay, formatShortDay, dir } = useI18n();
   const panelRef = useRef<HTMLDivElement>(null);
   const { date, view, weekSpan, onClosePanel } = props;
   const drawer = !!onClosePanel && props.tablet;
@@ -79,8 +84,9 @@ export default function SchedulePage(props: Props) {
     <>
     {props.sheet && <DaySheetView sheet={props.sheet} printedBy={props.printedBy} />}
     {/* While a day sheet prints, the screen content stays off the paper. */}
-    <PageContainer className={cn('max-md:pb-16', props.sheet && 'print:hidden')}>
-      <PageHeader title={t('nav.schedule')} meta={shown} description={props.timeZone && t('schedule.facilityTime', { zone: props.timeZone })} />
+    {/* Tighter chrome, so at 1024 by 768 the day starts in the top 240 px (MDV-P1-097). */}
+    <PageContainer className={cn('gap-2 max-md:pb-16', props.sheet && 'print:hidden')}>
+      <PageHeader title={t('nav.schedule')} meta={shown} description={props.timeZone && props.otherZone && t('schedule.facilityTime', { zone: props.timeZone })} />
       {/* The day's controls are a toolbar under the header, not its actions: nine of them do not fit beside the title, and the title row stays
           one 44 px row (MDV-P2-059). Printing (the list view is the paper agenda) keeps the heading and the schedule, not the controls. */}
       <div className="flex flex-wrap items-center gap-2 print:hidden">
@@ -105,17 +111,34 @@ export default function SchedulePage(props: Props) {
             </SelectContent>
           </Select>
         )}
-        <Button variant="outline" disabled={!date || props.printing} onClick={props.onPrintSheet}><Printer aria-hidden />{t('schedule.sheet.print')}</Button>
-        {props.leavePath && <Link to={props.leavePath} className={buttonVariants({ variant: 'outline' })}><CalendarOff aria-hidden />{t('schedule.leave')}</Link>}
+        {/* Below 1280 px Print and Leave move into a More menu and the legend behind a Key button, so the toolbar stays one row (MDV-P1-097). */}
+        <Button variant="outline" className="max-lg:hidden" disabled={!date || props.printing} onClick={props.onPrintSheet}><Printer aria-hidden />{t('schedule.sheet.print')}</Button>
+        {props.leavePath && <Link to={props.leavePath} className={buttonVariants({ variant: 'outline', className: 'max-lg:hidden' })}><CalendarOff aria-hidden />{t('schedule.leave')}</Link>}
+        <DropdownMenu dir={dir} modal={false}>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="icon" className="lg:hidden" aria-label={t('nav.more')}><Ellipsis aria-hidden /></Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem disabled={!date || props.printing} onSelect={props.onPrintSheet}><Printer aria-hidden />{t('schedule.sheet.print')}</DropdownMenuItem>
+            {props.leavePath && <DropdownMenuItem asChild><Link to={props.leavePath}><CalendarOff aria-hidden />{t('schedule.leave')}</Link></DropdownMenuItem>}
+          </DropdownMenuContent>
+        </DropdownMenu>
+        {/* A disclosure, so it states collapsed or expanded itself; opened, the legend takes its own line under the controls. */}
+        <details className="open:basis-full lg:hidden">
+          <summary className={cn(buttonVariants({ variant: 'outline' }), 'w-fit cursor-pointer list-none [&::-webkit-details-marker]:hidden')}><Info aria-hidden />{t('schedule.key')}</summary>
+          <Legend className="pt-2" />
+        </details>
       </div>
       {props.printFailed && <p role="alert" className="text-sm font-bold text-destructive print:hidden">{t('schedule.sheet.failed')}</p>}
-      <Legend />
+      <Legend className="max-lg:hidden" />
       {/* The schedule takes the full width when no booking panel sits beside it (the week view). */}
-      <div className={cn('grid grid-cols-[minmax(0,1fr)] items-start gap-5', props.panel && 'lg:grid-cols-[minmax(0,1fr)_340px]')}>
+      {/* With one doctor shown, an open drawer leaves the column beside it rather than over it (MDV-P1-097). */}
+      <div className={cn('grid grid-cols-[minmax(0,1fr)] items-start gap-5', props.panel && 'lg:grid-cols-[minmax(0,1fr)_340px]', drawer && view === 'day' && props.day?.columns.length === 1 && 'pe-96')}>
         <Body {...props} />
         {/* Only an open booking or visit is a drawer on a tablet; the hint and the "booked" note sit above the schedule, as on phones. */}
         {props.panel && onClosePanel && <div aria-hidden className="fixed inset-0 z-30 hidden bg-black/40 md:max-lg:block print:hidden" onClick={onClosePanel} />}
-        {props.panel && <div ref={panelRef} {...(drawer && { role: 'dialog', 'aria-modal': true, 'aria-label': t('schedule.drawer') })} className={cn('scroll-mt-20 max-lg:order-first lg:sticky lg:top-20 lg:max-h-[calc(100dvh-6rem)] lg:overflow-y-auto print:hidden',
+        {/* Below 1280 px the "select an empty slot" hint is not shown: the free slots say Tap to book (MDV-P1-097). */}
+        {props.panel && <div ref={panelRef} {...(drawer && { role: 'dialog', 'aria-modal': true, 'aria-label': t('schedule.drawer') })} className={cn('scroll-mt-20 max-lg:order-first max-lg:has-[[data-hint]]:hidden lg:sticky lg:top-20 lg:max-h-[calc(100dvh-6rem)] lg:overflow-y-auto print:hidden',
           onClosePanel && 'md:max-lg:fixed md:max-lg:inset-y-0 md:max-lg:end-0 md:max-lg:z-30 md:max-lg:w-96 md:max-lg:overflow-y-auto md:max-lg:bg-background md:max-lg:p-3 md:max-lg:shadow-xl')}
           // Escape closes the drawer, not the side column on a wide screen; a portalled menu inside (a Select) is not in this element and closes itself.
           onKeyDown={e => { if (e.key === 'Escape' && drawer && e.currentTarget.contains(e.target as Node)) onClosePanel(); }}>
@@ -126,7 +149,8 @@ export default function SchedulePage(props: Props) {
       {props.onBookNext && (
         // Pinned above the phone's bottom tabs; the panel it opens sits above the list, so it is brought into view.
         <Button className="fixed end-4 bottom-20 z-20 shadow-lg md:hidden print:hidden"
-          onClick={() => { props.onBookNext?.(); panelRef.current?.scrollIntoView({ block: 'start' }); }}>
+          // Rendered at once, so the panel, hidden while it was only the hint, is shown before it is scrolled to.
+          onClick={() => { flushSync(() => props.onBookNext?.()); panelRef.current?.scrollIntoView({ block: 'start' }); }}>
           <Plus aria-hidden />{t('schedule.bookNext')}
         </Button>
       )}
@@ -148,5 +172,5 @@ function Body(p: Props) {
       ? <WeekView name={p.weekName} calendarId={p.weekCalendar} days={p.week} timeZone={p.timeZone} updating={p.updating} onOpenDay={p.onOpenDay} onOpen={p.actions.onOpen} />
       : <PageMessage kind="busy">{t('schedule.loading')}</PageMessage>;
   if (p.view === 'list') return <AgendaView sections={p.agenda} timeZone={p.timeZone} updating={p.updating} now={p.now} onSlot={p.actions.onSlot} onOpen={p.actions.onOpen} moving={p.actions.moving} />;
-  return <DayGrid day={p.day} updating={p.updating} now={p.now} {...p.actions} />;
+  return <DayGrid day={p.day} updating={p.updating} now={p.now} earlier={p.earlier} {...p.actions} />;
 }

@@ -3,7 +3,7 @@ import { expect, type Page } from '@playwright/test';
 import { journey } from '../journeys/storyboard';
 import { openPart } from '../support/disclosure';
 import { obscuredWhenTabbing } from '../support/pinned';
-import { choosePatient, expectArabicAxeClean, expectNoAxeViolations, setNurseIntake, signIn, syntheticPatient, walkIn, watchUrls } from './support';
+import { choosePatient, expectArabicAxeClean, expectNoAxeViolations, notOpaque, setNurseIntake, signIn, syntheticPatient, walkIn, watchUrls } from './support';
 
 // MDV-P0-023: journey J2 (returning diabetic patient, docs/02-design/journeys.md) through the real stack. Steps not built yet
 // name the ticket that builds them. Meera Iyer is the seeded synthetic patient (docs/00-overview/personas.md).
@@ -53,7 +53,7 @@ async function startVisit(page: Page, intake?: () => Promise<void>) {
 /** The dev sign-in provider has no password: picking the same doctor again is the step-up (the real Entra prompt=login and MFA are not exercised). */
 async function stepUp(page: Page) {
   await page.getByRole('link', { name: rao }).click();
-  await page.waitForURL(/\/app\/consult\/[0-9a-f-]{36}$/);
+  await page.waitForURL(/\/app\/consult\/[0-9a-f-]{36}(\?resume=(authorise|sign))?$/); // MDV-P2-047: the page then drops the word
 }
 
 /** The verify page shows `answer` for the paper's QR token (public: opened signed out). The stack's link origin is the dev server's, so the path is opened here. */
@@ -215,7 +215,7 @@ journey('J2', {
       await rx.getByRole('button', { name: 'Authorise prescription' }).click();
       await rx.getByRole('button', { name: 'Confirm identity' }).click(); // asked only now: the server checks the alerts before the step-up
       await typed.getByRole('link', { name: rao }).click(); // the step-up, as stepUp() does for the journey's own page
-      await typed.waitForURL(/\/app\/consult\/[0-9a-f-]{36}$/);
+      await typed.waitForURL(/\/app\/consult\/[0-9a-f-]{36}(\?resume=authorise)?$/);
       await rx.getByRole('button', { name: 'Authorise prescription' }).click();
       await expect(status).toHaveText(/^Authorised · version 1 · RX-[0-9A-F]{8}$/);
       await rx.getByRole('link', { name: 'Print prescription' }).click();
@@ -261,12 +261,39 @@ journey('J2', {
     }
     await expect(line).toContainText('Take 1 tablet by mouth twice a day.');
 
-    await rx.getByRole('button', { name: 'Authorise prescription' }).click();
+    const authorise = rx.getByRole('button', { name: 'Authorise prescription' });
+    await authorise.click();
     await expect(rx.getByRole('alert')).toContainText('Confirm your identity to authorise.');
+    // MDV-P2-047: the round trip carries opaque identifiers only (AC4): every address (the provider's address that /bff/reauth answers is the
+    // next request, so it is in the list) and the provider's state value, which the server
+    // protects (encrypted), so the return address and the session inside it cannot be read from it either.
+    const trip: string[] = [];
+    const states: string[] = [];
+    let authorisePosts = 0;
+    page.on('request', r => {
+      trip.push(r.url());
+      const state = new URL(r.url()).searchParams.get('state');
+      if (state) states.push(state);
+      if (r.url().endsWith('/bff/reauth')) trip.push((r.postDataJSON() as { returnUrl: string }).returnUrl);
+      if (r.method() === 'POST' && r.url().endsWith('/prescription/authorisation')) authorisePosts++;
+    });
     await rx.getByRole('button', { name: 'Confirm identity' }).click();
     await stepUp(page);
-    await rx.getByRole('button', { name: 'Authorise prescription' }).click();
+    // Back on the section that asked (AC1, AC2): Authorise is in view and focused, and the status says what to press.
+    await expect(authorise).toBeFocused();
+    await expect(authorise).toBeInViewport();
+    await expect(rx.getByRole('status').filter({ hasText: 'Identity confirmed. Press Authorise prescription.' })).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`${consultPath}$`)); // the word leaves the address once read
+    expect(trip).toContain(`${consultPath}?resume=authorise`);
+    expect(notOpaque(trip)).toEqual([]);
+    expect(states.length).toBeGreaterThan(0);
+    for (const state of states) expect(Buffer.from(state, 'base64url').toString('latin1')).not.toMatch(/resume|consult|reauth|Meera/);
+    await expectNoAxeViolations(page); // AC6 in English here; Arabic after the return is in rx-print.spec.ts
+    expect(authorisePosts).toBe(0); // AC3: coming back authorised nothing
+    await expect(rx.getByRole('status').filter({ hasText: /^Draft/ })).toBeVisible();
+    await authorise.click();
     await expect(rx.getByRole('status').filter({ hasText: 'Authorised' })).toHaveText(/^Authorised · version 1 · RX-[0-9A-F]{8}$/);
+    expect(authorisePosts).toBe(1);
 
     await openPart(page, 'Orders');
     const orders = page.getByRole('region', { name: 'Orders' });
@@ -524,6 +551,13 @@ journey('J2', {
     await page.reload();
     await expect(note).toContainText('SIGNED v1 · read-only');
     await expectNoAxeViolations(page);
+    // MDV-P2-049: the print holds the allergy the nurse recorded at step 9, as kept with the signature, under one h1 naming the clinic.
+    await page.getByRole('link', { name: 'Print view and PDF' }).click();
+    await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Signed consultation note');
+    await expect(page.getByRole('region', { name: 'Recorded at signing' }).getByRole('region', { name: 'Allergies' })).toContainText('Penicillin');
+    await expectNoAxeViolations(page);
+    await page.goto(studioPath);
     await page.getByRole('button', { name: 'End consultation' }).click(); // leaves Dr. Rao no open consultation for the later journeys
     // The draft is discarded with a reason on the server (MDV-P1-090), so it does not wait on Dr. Rao's day in the later journeys.
     await unfinished.getByRole('button', { name: 'Discard the draft' }).click();

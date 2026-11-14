@@ -119,7 +119,7 @@ export function ConsultFooter(p: NoteEditorProps & { finish?: ReactNode }) {
   return (
     <StickyActionBar status={note && <SaveState phase={p.phase} savedAt={p.savedAt} reloading={p.reloading} onRetry={p.onRetry} onReapply={p.onReapply} />}>
       {note && <SignNote canSign={p.canSign} remaining={p.remaining} patient={p.patient} doctorName={p.signAsName} signing={p.signing} confirming={p.confirming}
-        problem={p.signProblem} onRequest={p.onRequestSign} onCancel={p.onCancelSign} onConfirm={p.onConfirmSign} />}
+        problem={p.signProblem} onRequest={p.onRequestSign} onCancel={p.onCancelSign} onConfirm={p.onConfirmSign} resume={p.signResume} />}
       {p.finish}
     </StickyActionBar>
   );

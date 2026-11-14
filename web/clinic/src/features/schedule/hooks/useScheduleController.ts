@@ -3,10 +3,10 @@ import { useSearchParams } from 'react-router';
 import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
 import type { DaySheet } from '../domain/daySheet';
-import { layoutDay, stepDate } from '../domain/schedule';
+import { foldPast, layoutDay, stepDate } from '../domain/schedule';
 import { agenda, filterColumns, firstFreeSlot, readAddress, weekDays, weekSpan, type ScheduleAddress, type ScheduleView } from '../domain/views';
 import { ApiError, fetchScheduleDay, fetchScheduleWeek, printDaySheet } from '../services/scheduleApi';
-import { isPhoneWidth, isTabletWidth, onTabletWidthChange, printPage } from '../services/viewport';
+import { isDeviceTimeZone, isPhoneWidth, isTabletWidth, onTabletWidthChange, printPage } from '../services/viewport';
 
 /** The current instant, refreshed each minute so slots that start while the screen is open stop being offered without a reload. */
 const useNow = () => {
@@ -77,6 +77,11 @@ export function useScheduleController(facilityId: string, userId: string) {
   useEffect(() => { if (sheet) printPage(() => setSheet(null)); }, [sheet]);
 
   const shown = date ?? today;
+  // MDV-P1-097: today opens at now, the rows before it folded into one "Earlier today" row; opening it shows the whole day, for that date only.
+  const laidOut = useMemo(() => (filtered ? layoutDay(filtered) : null), [filtered]);
+  const fold = useMemo(() => (laidOut ? foldPast(laidOut, now) : null), [laidOut, now]);
+  const [openedEarlier, setOpenedEarlier] = useState<string | null>(null);
+  const earlierOpen = !!laidOut && openedEarlier === laidOut.date;
   return {
     tablet: useSyncExternalStore(onTabletWidthChange, isTabletWidth),
     sheet,
@@ -88,9 +93,12 @@ export function useScheduleController(facilityId: string, userId: string) {
     date: shown,
     weekSpan: shown ? weekSpan(shown) : null,
     timeZone: query.data?.timeZone ?? null,
+    // MDV-P1-097: the page names the facility's zone only on a device elsewhere.
+    otherZone: !!query.data && !isDeviceTimeZone(query.data.timeZone),
     calendars: columns.map(c => ({ id: c.calendarId, name: c.name })),
     filter: isWeek ? weekCalendar : filter,
-    day: useMemo(() => (filtered ? layoutDay(filtered) : null), [filtered]),
+    day: fold && !earlierOpen ? fold.day : laidOut,
+    earlier: fold && { count: fold.earlier, open: earlierOpen, onToggle: () => setOpenedEarlier(earlierOpen ? null : fold.day.date) },
     agenda: useMemo(() => (filtered ? agenda(filtered) : []), [filtered]),
     week: useMemo(() => (week.data ? weekDays(week.data) : null), [week.data]),
     weekName: columns.find(c => c.calendarId === weekCalendar)?.name ?? '',

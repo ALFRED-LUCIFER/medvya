@@ -9764,6 +9764,8 @@ export interface components {
             /** Format: int32 */
             waitMinutes: number | string;
             doctor: string;
+            /** Format: int32 */
+            ahead: number | string;
         };
         QueueTvNow: {
             token: string;
@@ -10227,6 +10229,8 @@ export interface components {
             /** Format: date-time */
             issuedAt: string;
             timeZone: string;
+            /** Format: int32 */
+            ahead: null | number | string;
         };
         UnavailableBlock: {
             /** Format: date-time */

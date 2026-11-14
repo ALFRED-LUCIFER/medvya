@@ -218,10 +218,17 @@ public sealed partial class FrontDeskService(
         if (visit.State is AppointmentState.Cancelled or AppointmentState.NoShow or AppointmentState.LeftWithoutBeingSeen or AppointmentState.NeedsRebooking)
             throw new VisitTransitionException("token_void");
         var token = await db.QueueTokens.AsNoTracking().Where(t => t.AppointmentId == appointmentId)
-            .Select(t => new { t.Prefix, t.Number, t.IssuedAt }).SingleOrDefaultAsync(cancellationToken) ?? throw new VisitTransitionException("no_token");
+            .Select(t => new { t.Prefix, t.Number, t.IssuedAt, t.Date }).SingleOrDefaultAsync(cancellationToken) ?? throw new VisitTransitionException("no_token");
         var (facility, _) = await context.FacilityAsync(visit.FacilityId, cancellationToken);
         var doctor = (await context.CalendarsAsync(visit.FacilityId, cancellationToken)).FirstOrDefault(c => c.Id == visit.CalendarId)?.Name ?? "";
-        return new(facility.Name, QueueToken.Format(token.Prefix, token.Number), doctor, token.IssuedAt, facility.TimeZone);
+        // The doctor's queue of that day, as the queue display reads it: the visits holding the day's tokens at this facility.
+        var queue = await (from t in db.QueueTokens.AsNoTracking()
+                           join a in db.Appointments.AsNoTracking() on t.AppointmentId equals a.Id
+                           where t.FacilityId == visit.FacilityId && t.Date == token.Date && a.CalendarId == visit.CalendarId
+                           select a).ToListAsync(cancellationToken);
+        var places = await ordering.PlacesAsync(queue, facility.Queue, cancellationToken);
+        return new(facility.Name, QueueToken.Format(token.Prefix, token.Number), doctor, token.IssuedAt, facility.TimeZone,
+            places.TryGetValue(visit.Id, out var place) ? place - 1 : null);
     }
 
     public async Task<string> WatchGroupAsync(Guid facilityId, CancellationToken cancellationToken = default)

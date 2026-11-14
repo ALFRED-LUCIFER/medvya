@@ -2,17 +2,18 @@ import { Link } from 'react-router';
 import { Printer } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
 import { Button, buttonVariants, PageContainer, PageHeader } from '@medvya/ui';
-import type { TokenSlip } from '../domain/board';
+import { aheadWords, type TokenSlip } from '../domain/board';
 
 type Props = { slip: TokenSlip | null; loading: boolean; problem: 'void' | 'forbidden' | 'failed' | null; onPrint: () => void; boardPath: string };
 
 /**
- * The waiting-room token slip (MDV-P2-046), in the house print style: clinic, token, doctor, date and time, and nothing about the
+ * The waiting-room token slip (MDV-P2-046), in the house print style: clinic, token, doctor, how many are ahead in that doctor's queue
+ * (MDV-P1-103), date and time, and nothing about the
  * patient (no name, MRN, phone or reason), because the paper is handed over and left on chairs. The page prints; the shell hides itself.
  * shortcut: browser print on any printer; a thermal printer integration waits for a clinic that asks for one.
  */
 export default function TokenSlipPrintPage(p: Props) {
-  const { t, formatDate, formatTime } = useI18n();
+  const i18n = useI18n(), { t, formatDate, formatTime } = i18n;
   const back = <Link to={p.boardPath} className={buttonVariants({ variant: 'outline' })}>{t('tokenSlip.back')}</Link>;
   if (p.loading) return <PageContainer width="form"><p role="status">{t('tokenSlip.loading')}</p></PageContainer>;
   if (p.problem || !p.slip)
@@ -38,6 +39,7 @@ export default function TokenSlipPrintPage(p: Props) {
         </p>
         <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1">
           <dt className="font-bold">{t('tokenSlip.doctor')}</dt><dd>{slip.doctorName}</dd>
+          {slip.ahead !== null && <><dt className="font-bold">{t('tokenSlip.queue')}</dt><dd>{aheadWords(i18n, slip.ahead)}</dd></>}
           <dt className="font-bold">{t('tokenSlip.issued')}</dt>
           <dd className="tabular-nums">{`${formatDate(issued, slip.timeZone)} ${formatTime(issued, slip.timeZone)}`}</dd>
         </dl>

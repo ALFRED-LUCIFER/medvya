@@ -31,7 +31,7 @@ async function open(page: Page, locale = 'en') {
   await page.route('**/v1/front-desk/board?*', r => r.fulfill({ json: { facilityId: 'f-1', timeZone: 'Asia/Kolkata', date: '2026-10-19', now: ist('10:04'), cards: [
     card('a1', 'Meera Iyer (synthetic)', '10:00', 'ReadyForDoctor', 'u-rao', { token: 'A-03', queuePlace: 2 }),
     card('a2', 'Deepak Nair (synthetic)', '10:20', 'Booked', 'u-rao', { registrationIncomplete: true }),
-    card('a3', 'Farah Ali (synthetic)', '10:10', 'CheckedIn', 'u-khan', { token: 'B-01', queuePlace: 3 }),
+    card('a3', 'Farah Ali (synthetic)', '10:10', 'CheckedIn', 'u-khan', { token: 'B-01', queuePlace: 1 }), // first in Dr. Khan's own queue (decision 10)
     // MDV-P1-103: a walk-in given a 19:00 slot, escalated by the nurse: first in the clinic's queue (the server's place), pinned above Next patient.
     card('a4', 'Lakshmi Rajan (synthetic)', '19:00', 'WithNurse', 'u-rao', { token: 'A-05', queuePlace: 1, walkIn: true }),
   ] } }));
@@ -111,7 +111,8 @@ test('each visit shows its allergy state in words and links to the chart; a pati
 });
 
 // MDV-P1-103 AC1, AC3: at 1024 by 768 the escalated visit is in the first viewport, above Next patient, with its reason in words and an
-// icon; the doctor's day lists the waiting patients in the server's queue order (escalation first), each arrived row with its token.
+// icon; the doctor's day lists the waiting patients in the server's queue order (escalation first), each arrived row with its token and,
+// in words, how many are ahead of it in this doctor's queue (decision 10).
 test("a nurse's escalation is pinned above Next patient in words, and the day follows the clinic's queue order with tokens", async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 768 });
   await open(page);
@@ -127,6 +128,9 @@ test("a nurse's escalation is pinned above Next patient in words, and the day fo
   await expect(rows.first()).toContainText('Lakshmi Rajan (synthetic)'); // row 1, though her slot is 19:00
   await expect(rows.nth(0)).toContainText('A-05');
   await expect(rows.nth(1)).toContainText('A-03');
+  await expect(rows.nth(0)).toContainText('Next in line');
+  await expect(rows.nth(1)).toContainText('1 ahead');
+  await expect(rows.filter({ hasText: 'Deepak Nair' })).not.toContainText('ahead'); // booked, not waiting yet
   await expect(rows.filter({ hasText: 'Deepak Nair' })).not.toContainText('Nurse escalation');
 });
 
@@ -176,6 +180,8 @@ for (const locale of ['en', 'ar'])
     await open(page, locale);
     await expect(page.getByRole('region', { name: locale === 'ar' ? 'المريض التالي' : 'Next patient' })).toBeVisible();
     if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+    // How many are ahead, in words (MDV-P1-103): Meera is second in Dr. Rao's queue.
+    await expect(page.getByRole('region', { name: locale === 'ar' ? 'المريض التالي' : 'Next patient' })).toContainText(locale === 'ar' ? 'قبله مريض واحد' : '1 ahead');
     for (const b of await page.getByRole('main').getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
     await page.addScriptTag({ path: axePath });
     const violations = await page.evaluate(async () =>

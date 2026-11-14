@@ -2,7 +2,7 @@ namespace Medvya.Scheduling.Application;
 
 /// <summary>
 /// What a waiting-room TV shows (P-05, MDV-P1-031): the tokens being called with their room and doctor, and the next tokens
-/// with an estimated wait. Tokens, rooms, doctor display names and minutes only: never a patient's name, initials, MRN, date
+/// with an estimated wait and the count ahead. Tokens, rooms, doctor display names, minutes and counts only: never a patient's name, initials, MRN, date
 /// of birth or reason (a contract test pins these exact fields).
 /// </summary>
 public sealed record QueueTv(IReadOnlyList<QueueTvNow> Now, IReadOnlyList<QueueTvNext> Next);
@@ -10,8 +10,11 @@ public sealed record QueueTv(IReadOnlyList<QueueTvNow> Now, IReadOnlyList<QueueT
 /// <summary>A token called in: where to go and to whom. Room is null when the doctor's session has none.</summary>
 public sealed record QueueTvNow(string Token, string? Room, string Doctor);
 
-/// <summary>A waiting token, about how many minutes until it is called, and the doctor whose queue it is in (it may have been reassigned, MDV-P1-103).</summary>
-public sealed record QueueTvNext(string Token, int WaitMinutes, string Doctor);
+/// <summary>
+/// A waiting token, about how many minutes until it is called, the doctor whose queue it is in (it may have been reassigned, MDV-P1-103)
+/// and how many patients wait ahead of it in that doctor's queue (0: next in line; decision 10).
+/// </summary>
+public sealed record QueueTvNext(string Token, int WaitMinutes, string Doctor, int Ahead);
 
 /// <summary>Adds a TV for the facility; Name says where it hangs ("Waiting room TV").</summary>
 public sealed class CreateDisplay

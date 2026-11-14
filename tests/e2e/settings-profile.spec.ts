@@ -119,21 +119,25 @@ async function settings(page: Page, locale = 'en') {
   await page.route('**/v1/settings/profile', r => r.fulfill({ json: profile }));
 }
 
-test('at 1024 px and wider the sections are a left sub-navigation and every ?tab= address opens its section', async ({ page }) => {
-  await page.setViewportSize({ width: 1024, height: 900 });
-  await settings(page);
-  for (const [id, name] of Object.entries(sections)) {
+// One test per address (MDV-P1-110): eighteen dev-server page loads in one test ran past its 30 s timeout on CI.
+for (const [id, name] of Object.entries(sections))
+  test(`at 1024 px the ?tab=${id} address opens its section in the left sub-navigation`, async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 900 });
+    await settings(page);
     await page.goto(`/settings?tab=${id}`);
     if (id === 'notifications') { // the Messages group has one section: no sub-navigation
       await expect(page.getByRole('tab', { name: 'Messages', selected: true })).toBeVisible();
       await expect(page.getByRole('tablist', { name: 'Settings sections' })).toHaveCount(0);
-      continue;
+      return;
     }
     const list = page.getByRole('tablist', { name: 'Settings sections' });
     await expect(list.getByRole('tab', { name, exact: true, selected: true })).toBeVisible();
     await expect(list).toHaveAttribute('aria-orientation', 'vertical');
-  }
+  });
 
+test('at 1024 px and wider the sections are a left sub-navigation, moved with up and down, and narrower a row above', async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 900 });
+  await settings(page);
   await page.goto('/settings?tab=profile');
   const list = page.getByRole('tablist', { name: 'Settings sections' });
   const panel = page.getByRole('tabpanel', { name: 'Profile' });

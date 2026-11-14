@@ -363,7 +363,22 @@ for (const locale of ['en', 'ar'])
     expect(await axe(page)).toEqual([]);
   });
 
-test('rows are 36 px with a mouse; Offboard is a 44 px menu item that opens a confirmation', async ({ page }) => {
+// shortcut: with the settings sub-navigation (MDV-P2-055) and the full 232 px sidebar, the staff panel is under ~830 px below 1440, so the
+// row's two actions wrap and the row is two lines; nothing is hidden and nothing scrolls sideways. Upgrade: stack a table by its container
+// width, not the viewport, if pilot owners use settings at 1280–1366.
+test('below 1440 the staff row may wrap, but nothing scrolls sideways and both actions stay visible', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await setUp(page);
+  await page.route('**/v1/staff', r => r.request().method() === 'GET' ? r.fulfill({ json: [staff[0], member({ membershipId: 'c', userId: 'u-joseph', name: 'A. Joseph (synthetic)' })] }) : r.fallback());
+  await page.goto('/settings?tab=staff');
+  const row = page.getByRole('row', { name: /A\. Joseph/ });
+  await expect(row.getByRole('button', { name: 'Change role for A. Joseph (synthetic)' })).toBeInViewport();
+  await expect(row.getByRole('button', { name: 'Actions for A. Joseph (synthetic)' })).toBeInViewport();
+  expect(await page.getByRole('region', { name: /staff/i }).first().evaluate(e => e.scrollWidth - e.clientWidth)).toBe(0);
+});
+
+test('rows are 36 px with a mouse at 1440; Offboard is a 44 px menu item that opens a confirmation', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
   await setUp(page);
   await page.route('**/v1/staff', r => r.request().method() === 'GET' ? r.fulfill({ json: [staff[0], member({ membershipId: 'c', userId: 'u-joseph', name: 'A. Joseph (synthetic)' })] }) : r.fallback());
   await page.goto('/settings?tab=staff');

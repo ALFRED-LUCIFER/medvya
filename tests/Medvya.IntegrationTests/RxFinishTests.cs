@@ -141,7 +141,7 @@ public sealed class RxFinishTests(PostgresFixture sql) : IClassFixture<PostgresF
             Assert.True(r.IsSuccessStatusCode, await r.Content.ReadAsStringAsync());
             Assert.Equal(1, (await Json(r)).GetProperty("authorised").GetProperty("versionNo").GetInt32());
         }
-        var authorise = Assert.Single((await AuditAsync("rx.authorise")).Where(e => e.Outcome == AuditOutcome.Allowed)); // its own record, by the doctor who led the visit
+        var authorise = Assert.Single(await AuditAsync("rx.authorise"), e => e.Outcome == AuditOutcome.Allowed); // its own record, by the doctor who led the visit
         Assert.Equal(h.Doctor, authorise.ActorUserId);
         Assert.Equal(0, (await PendingAsync(h.Doctor)).GetArrayLength()); // authorised: off Today
     }
@@ -184,7 +184,7 @@ public sealed class RxFinishTests(PostgresFixture sql) : IClassFixture<PostgresF
             Assert.Equal("Patient will buy it later (synthetic)", state.GetProperty("discard").GetProperty("reason").GetString());
             Assert.False(state.GetProperty("editable").GetBoolean());
         }
-        var discard = Assert.Single((await AuditAsync("rx.discard")).Where(e => e.Outcome == AuditOutcome.Allowed));
+        var discard = Assert.Single(await AuditAsync("rx.discard"), e => e.Outcome == AuditOutcome.Allowed);
         await using (var db = sql.Prescribing(h.Tenant))
         {
             var row = await db.PrescriptionDiscards.AsNoTracking().SingleAsync();
@@ -223,7 +223,7 @@ public sealed class RxFinishTests(PostgresFixture sql) : IClassFixture<PostgresF
         await h.Get<IEncounters>(h.Doctor).EndAsync(encounter);
 
         var events = new[] { "note.sign", "rx.authorise", "order.place", "encounter.end" };
-        foreach (var action in events) Assert.Single((await AuditAsync(action)).Where(e => e.Outcome == AuditOutcome.Allowed));
+        foreach (var action in events) Assert.Single(await AuditAsync(action), e => e.Outcome == AuditOutcome.Allowed);
 
         // Finishing after the visit changes the draft, never the authorised version: a change is a new version to authorise.
         using (var r = await Client(h.Doctor).PutAsJsonAsync(U($"/v1/prescription-items/{line}"), Twice with { DurationDays = 7 })) Assert.Equal(HttpStatusCode.OK, r.StatusCode);

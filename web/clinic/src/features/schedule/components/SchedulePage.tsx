@@ -3,7 +3,7 @@ import { flushSync } from 'react-dom';
 import { Link } from 'react-router';
 import { CalendarOff, ChevronLeft, ChevronRight, Info, Ellipsis, Plus, Printer } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, cn, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, EmptyState, FocusScope, PageContainer, PageHeader, PageMessage, SegmentedControl, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
+import { Button, buttonVariants, cn, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, EmptyState, FocusScope, PageContainer, PageHeader, PageMessage, SegmentedControl, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Skeleton, SkeletonGroup } from '@medvya/ui';
 import type { DayLayout, ScheduleColumn } from '../domain/schedule';
 import { scheduleViews, type AgendaEntry, type ScheduleView, type WeekDay } from '../domain/views';
 import AgendaView from './AgendaView';
@@ -155,13 +155,14 @@ export default function SchedulePage(props: Props) {
   );
 }
 
-// Offline is not handled here: the shell's OfflineBanner says it once for every screen.
+// Offline is not handled here: the shell's offline strip says it once for every screen.
 function Body(p: Props) {
   const { t } = useI18n();
   if (p.forbidden) return <PageMessage kind="denied" title={t('err.403')}>{t('schedule.forbidden.body')}</PageMessage>;
   if (p.failed)
     return <PageMessage kind="error" title={t('schedule.error.title')} action={<Button onClick={p.onRetry}>{t('schedule.retry')}</Button>}>{t('schedule.error.body')}</PageMessage>;
-  if (p.loading || !p.day || !p.timeZone) return <PageMessage kind="busy">{t('schedule.loading')}</PageMessage>;
+  // The day grid's box while it loads (MDV-P2-056), so the page keeps its height when the day comes.
+  if (p.loading || !p.day || !p.timeZone) return <SkeletonGroup label={t('schedule.loading')}><Skeleton className="h-[calc(100dvh-12rem)] min-h-80 rounded-xl" /></SkeletonGroup>;
   if (p.day.columns.length === 0 && p.calendars.length === 0) return <EmptyState title={t('schedule.empty.title')}>{t('schedule.empty.body')}</EmptyState>;
   if (p.view === 'week')
     return p.week && p.weekCalendar

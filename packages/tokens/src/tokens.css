@@ -164,6 +164,7 @@
   --container-form: 768px; /* form maximum */
   --container-panel: 320px; /* side panel */
   --container-panel-chart: 360px; /* consultation chart panel */
+  --container-note: 860px; /* consultation note column maximum */
   --shadow-popover: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); /* menus and popovers (the value select menus render today) */
   --shadow-dialog: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); /* dialogs, sheets and drawers (the value dialogs render today) */
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1); /* the one curve; replaces the Tailwind ease-out default */

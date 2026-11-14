@@ -1,10 +1,10 @@
 import type { HubConnection } from '@microsoft/signalr';
 import { csrf } from '../../schedule/services/scheduleApi';
-import { retryDelay, type LiveStatus } from '../domain/board';
+import { retryDelay, type BoardChange, type LiveStatus } from '../domain/board';
 
 type Handlers = {
-  /** Something changed (the board: ids and state only; the queue TV: nothing at all): the caller refetches. */
-  onChange: () => void;
+  /** Something changed (the board: which visit and its state; the queue TV: nothing at all): the caller refetches. */
+  onChange: (change?: BoardChange) => void;
   /** Joined, first time or again: anything missed meanwhile must be fetched now. */
   onResync: () => void;
   onStatus: (status: LiveStatus) => void;

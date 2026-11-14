@@ -3,12 +3,12 @@ import { Link } from 'react-router';
 import type { UseFormReturn } from 'react-hook-form';
 import { CalendarClock, Ellipsis, EyeOff, Printer, Undo2 } from 'lucide-react';
 import { useI18n, type MessageKey } from '@medvya/i18n';
-import { Button, buttonVariants, cn, Dialog, DialogContent, DialogDescription, DialogTitle, FrontDeskTag, PageContainer, PageHeader, SegmentedControl, statusIcons } from '@medvya/ui';
+import { Button, buttonVariants, cn, Dialog, DialogContent, DialogDescription, DialogTitle, FrontDeskTag, PageContainer, PageHeader, SegmentedControl, Skeleton, SkeletonGroup, statusIcons } from '@medvya/ui';
 import { isDeviceZone, type CancelForm } from '../../schedule/domain/changes';
 import CancelReasonFields from '../../schedule/components/CancelReasonFields';
 import QueueTable from './QueueTable';
 import type { workload } from '../domain/overview';
-import { aheadWords, ageYears, canReprint, endKinds, listGroups, minutesSince, needsRebooking, nextConsultId, nextState, tokenSlipPath, visibleColumns, type Board, type BoardCard, type BoardColumn, type EndKind, type ListRow, type LiveStatus, type MoveError, type Notice, type VisitSteps } from '../domain/board';
+import { aheadWords, ageYears, canReprint, endKinds, groupByColumn, listGroups, minutesSince, needsRebooking, nextConsultId, nextState, tokenSlipPath, visibleColumns, type Board, type BoardCard, type BoardColumn, type EndKind, type ListRow, type LiveStatus, type MoveError, type Notice, type VisitSteps } from '../domain/board';
 
 // Every column is words and an icon (never colour alone), from the shared status map (MDV-P5-057).
 
@@ -27,6 +27,10 @@ type Props = {
   failedVisitIds: ReadonlySet<string>;
   /** Server-clock milliseconds, for wait timers. */
   now: number;
+  /** Cards changed elsewhere in the last 5 seconds, as the live connection reported (MDV-P2-056): tagged Updated. */
+  updated: ReadonlySet<string>;
+  /** Those the latest refresh is the first to show: said once in the status line's live region. */
+  updatedCards: BoardCard[];
   loading: boolean;
   offline: boolean;
   online: boolean;
@@ -116,8 +120,9 @@ export default function BoardPage(props: Props) {
  * One line under the header: each doctor's workload, then what this desk last did (announced when it changes) with Undo beside it
  * for 30 seconds (the server refuses later), today's left-without-being-seen count and the live mark.
  */
-function StatusLine({ board, notice, undoing, online, canMove, onUndo, workload, live, forbidden }: Props) {
+function StatusLine({ board, notice, undoing, online, canMove, onUndo, workload, live, forbidden, updatedCards }: Props) {
   const { t } = useI18n();
+  const updated = updatedCards.map(c => t('board.updated.item', { name: c.patientName || t('board.unknownPatient'), column: t(`board.column.${c.state as BoardColumn}`) }));
   const left = board?.leftWithoutBeingSeen ?? 0;
   return (
     // A line of text, so it costs 20 px; Undo makes it a control's height while it is offered.
@@ -126,11 +131,13 @@ function StatusLine({ board, notice, undoing, online, canMove, onUndo, workload,
       <div className="ms-auto flex flex-wrap items-center gap-x-3 gap-y-1">
         <p role="status" className="font-bold">
           {notice && t(`board.notice.${notice.kind}`, { name: notice.name || t('board.unknownPatient'), column: t(`board.column.${notice.state}`) })}
+          {/* A change made elsewhere, said once in this same live region; the card itself shows the Updated tag (MDV-P2-056). */}
+          {updated.length > 0 && <span className="sr-only">{t('board.updated.announce', { list: updated.join('; ') })}</span>}
         </p>
         {notice?.undo && canMove && <Button variant="outline" loading={undoing} disabled={!online} onClick={onUndo}><Undo2 aria-hidden />{t('board.undo')}</Button>}
         {left > 0 && <p className="text-muted-foreground">{t('board.leftToday', { count: left })}</p>}
-        {/* Live or paused: announced when it changes, in words and an icon, never colour alone. Nothing animates. */}
-        {!forbidden && <p role="status" className="inline-flex items-center"><FrontDeskTag kind={live} /></p>}
+        {/* Live or paused: announced when it changes, in words and an icon, never colour alone. Nothing animates. Offline, the shell's strip says it. */}
+        {!forbidden && online && <p role="status" className="inline-flex items-center"><FrontDeskTag kind={live} /></p>}
       </div>
     </div>
   );
@@ -208,7 +215,7 @@ function Body(props: Props) {
   if (forbidden) return <Message title={t('err.403')} body={t('board.forbidden.body')} />;
   if (offline) return <Message title={t('state.offline.title')} body={t('board.offline')} />;
   if (failed) return <Message title={t('board.error.title')} body={t('board.error.body')} action={{ label: t('schedule.retry'), run: props.onRetry }} />;
-  if (loading || !board) return <Message busy title={t('board.loading')} />;
+  if (loading || !board) return <BoardSkeleton {...props} />;
   if (board.cards.length === 0) return <Message title={t('board.empty.title')} body={t('board.empty.body')} />;
   if (props.list) return <List {...props} board={board} />;
   const shown = visibleColumns(props.steps, props.columns);
@@ -228,6 +235,25 @@ function Body(props: Props) {
         <Rebooking cards={needsRebooking(board.cards)} timeZone={board.timeZone} />
       </section>
     </>
+  );
+}
+
+/**
+ * The board's final layout while it loads (MDV-P2-056): the same region and columns at their minimum height, so the page keeps its
+ * height when the cards come. One column under 768 px, as the phone list.
+ */
+function BoardSkeleton({ steps }: Props) {
+  const { t } = useI18n();
+  const shown = visibleColumns(steps, groupByColumn([]));
+  return (
+    <SkeletonGroup label={t('board.loading')} className="flex flex-col gap-3 overflow-hidden md:flex-row">
+      {shown.map((c, i) => (
+        <Skeleton key={c} className={cn('flex min-h-90 flex-col gap-2 rounded-xl p-2.5 md:flex-[1_0_13rem]', i > 0 && 'max-md:hidden')}>
+          <div className="h-5 w-2/3 rounded-sm bg-card" />
+          <div className="h-32 rounded-lg bg-card" />
+        </Skeleton>
+      ))}
+    </SkeletonGroup>
   );
 }
 
@@ -338,7 +364,7 @@ function Column(props: Props & { state: BoardColumn; board: Board; hiddenOnPhone
 }
 
 function Card(props: Props & { card: BoardCard; board: Board; primary: string | null }) {
-  const { card, primary, board, now, workload, failedVisitIds, canMove, canCancel, online, confirmingId, failure, paymentAction, consultAction, followUp, onStartEnd } = props;
+  const { card, primary, board, now, updated, workload, failedVisitIds, canMove, canCancel, online, confirmingId, failure, paymentAction, consultAction, followUp, onStartEnd } = props;
   const i18n = useI18n(), { t, formatTime } = i18n;
   const state = card.state as BoardColumn;
   const nameId = `board-card-${card.id}`;
@@ -347,16 +373,19 @@ function Card(props: Props & { card: BoardCard; board: Board; primary: string | 
   const age = ageYears(card.dateOfBirth, now);
   const ends = canMove ? endKinds(card.state, canCancel) : [];
   // The doctor only when more than one works today, so two doctors' patients are told apart (MDV-P1-095).
+  const changed = updated.has(card.id);
   const who = [age !== null && t('patients.age', { age }), age !== null && card.sex && t(`patients.sex.${card.sex}`), workload.length > 1 && card.calendarName].filter(Boolean);
 
   return (
-    <article aria-labelledby={nameId} className="flex min-w-0 flex-col gap-1.5 rounded-lg border bg-card p-3">
+    // Changed elsewhere: the Updated tag in words, and where motion is allowed the background fades from the brand tint to white. Nothing moves.
+    <article aria-labelledby={nameId} className={cn('flex min-w-0 flex-col gap-1.5 rounded-lg border bg-card p-3', changed && 'motion-safe:animate-updated')}>
       <div className="flex justify-between gap-1.5">
         <h3 id={nameId} className="min-w-0 break-words text-label">{card.patientName || t('board.unknownPatient')}</h3>
         <span className="shrink-0 font-mono text-caption text-muted-foreground tabular-nums">{formatTime(new Date(card.start), board.timeZone)}</span>
       </div>
       {who.length > 0 && <p className="break-words text-caption text-muted-foreground">{who.join(' · ')}</p>}
       <div className="flex flex-wrap gap-1">
+        {changed && <FrontDeskTag kind="updated" />}
         {failedVisitIds.has(card.id) && <FrontDeskTag kind="messageFailed" />}
         {card.walkIn && <FrontDeskTag kind="walkIn" />}
         {card.registrationIncomplete && <FrontDeskTag kind="incomplete" />}

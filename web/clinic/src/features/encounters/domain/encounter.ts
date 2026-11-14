@@ -26,7 +26,7 @@ export type EncounterBanner = {
 /** The consultation's two views (MDV-P2-041): one page, or the guided steps of before. Both edit the same note through the same autosave. */
 export type ConsultView = 'page' | 'steps';
 /** The one page's side panel: Assist (hidden when the patient declined recording), a chart summary, and the review-and-sign checklist. */
-export type StudioPanel = 'assist' | 'chart' | 'check';
+export type StudioPanel = 'assist' | 'chart' | 'past' | 'check';
 
 /** Still open after the facility's day it started on (MDV audit UX-11): nobody pressed End. Days are counted in the facility's time zone. */
 export const openPastDay = (e: Pick<Encounter, 'status' | 'startedAt'>, timeZone: string, now = new Date()) =>

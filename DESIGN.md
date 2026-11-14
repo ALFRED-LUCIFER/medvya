@@ -143,9 +143,10 @@ A feature composes library components and does not style its own copy of a patte
 | Card, Section, PageMessage, EmptyState | Title, intro, actions; busy, error, empty, denied | MDV-P1-086 (#1182) |
 | SegmentedControl | The one view switch | MDV-P1-086 (#1182) |
 | SplitLayout, Sheet | Main and side pane; the side becomes a drawer under 1024 | MDV-P1-086 (#1182) |
+| Skeleton, SkeletonGroup | Placeholder blocks in the final layout: shown after 200 ms, opacity pulse, static under reduced motion; the group says Loading once | MDV-P2-056 (#1215) |
 | ConfirmDialog on End consultation | "Authorise now, discard, or end anyway" | MDV-P1-090 (#1186), clinical sign-off |
 
-Later: Combobox; date and time pickers in the app language; Skeleton; dark and high-contrast themes.
+Later: Combobox; date and time pickers in the app language; dark and high-contrast themes.
 
 **States.** Every interactive component defines: default, hover (pointer only), focus-visible (2 px ring, 2 px offset, at full colour at once), pressed or selected, disabled (grey fill, not opacity), loading (label kept, `aria-busy`), invalid (danger border and message), read-only.
 

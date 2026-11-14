@@ -38,16 +38,17 @@ const cards = () => [
 type Calls = { checkIns: { id: string; body: { elapsedMs: number }; csrf: string | undefined }[]; moves: { id: string; state: string }[]; boards: number;
   undos: { id: string; state: string }[]; ends: { id: string; how: string; reason: string }[] };
 
-async function open(page: Page, { locale = 'en', as = reception, status = 200, moveCode = '', undoCode = '', empty = false, only = null as string[] | null, extra = [] as Card[] } = {}) {
+async function open(page: Page, { locale = 'en', as = reception, status = 200, moveCode = '', undoCode = '', empty = false, only = null as string[] | null, extra = [] as Card[], boardDelayMs = 0 } = {}) {
   const calls: Calls = { checkIns: [], moves: [], boards: 0, undos: [], ends: [] };
   const before = new Map<string, string>(); // where each card was before its last move, for undo
   let left = 0;
   const state = empty ? [] : [...cards().filter(c => !only || only.includes(c.state)), ...extra];
   await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
   await page.route('**/v1/me/context', r => r.fulfill({ json: as }));
-  await page.route('**/v1/front-desk/board?*', r => {
+  await page.route('**/v1/front-desk/board?*', async r => {
     expect(new URL(r.request().url()).searchParams.get('facilityId')).toBe('f-1');
     calls.boards++;
+    if (boardDelayMs) await new Promise(done => setTimeout(done, boardDelayMs)); // a slow connection
     return status === 200 ? r.fulfill({ json: { facilityId: 'f-1', timeZone: 'Asia/Kolkata', date: '2026-10-19', now, cards: state, leftWithoutBeingSeen: left } }) : r.fulfill({ status, json: {} });
   });
   await page.route('**/v1/appointments/*/check-in', r => {
@@ -463,6 +464,166 @@ test('live: unreachable hub shows the paused state, in Arabic too', async ({ pag
   await expect(page.getByRole('status').filter({ hasText: 'التحديثات المباشرة متوقفة مؤقتًا' })).toBeVisible();
   await expect(cardOf(page, 'Meera Iyer (synthetic)')).toBeVisible(); // the board itself still loads and refreshes
 });
+
+// MDV-P2-056: truthful status and small motion. Two desks share one board: only the change the live connection delivered is marked.
+const liveDesk = async (page: Page) => {
+  const hub = await fakeHub(page, '/v1/hubs/board', /Meera|Iyer/);
+  const calls = await open(page);
+  await expect.poll(() => calls.boards).toBe(2); // joined: the first load, then the refetch on joining
+  return { hub, calls };
+};
+const updatedTag = (page: Page, name: string) => cardOf(page, name).getByText('Updated', { exact: true });
+
+test('two desks: a card moved at one says Updated at the other for 5 seconds, announced once; the desk that moved it sees no mark', async ({ page, browser }) => {
+  const other = await browser.newContext({ baseURL: test.info().project.use.baseURL, timezoneId: 'America/New_York', reducedMotion: 'reduce' });
+  const second = await other.newPage();
+  const a = await liveDesk(page), b = await liveDesk(second);
+
+  // Desk A sends Farhan to the doctor; the server tells every desk on the hub, A included.
+  await cardOf(page, 'Farhan Qureshi (synthetic)').getByRole('button', { name: 'Ready for doctor' }).click();
+  await expect(column(page, 'Ready for doctor').getByRole('article', { name: 'Farhan Qureshi (synthetic)' })).toBeVisible();
+  b.calls.state.find(c => c.id === 'a2')!.state = 'ReadyForDoctor';
+  for (const { hub } of [a, b]) hub.push('BoardChanged', [{ appointmentId: 'a2', state: 'ReadyForDoctor', changedAt: now }]);
+
+  // Desk B: the card is in its new column with the Updated tag, said once in the status line's live region.
+  const moved = column(second, 'Ready for doctor').getByRole('article', { name: 'Farhan Qureshi (synthetic)' });
+  await expect(moved.getByText('Updated', { exact: true })).toBeVisible();
+  const said = second.getByRole('status').filter({ hasText: 'Updated elsewhere' });
+  await expect(said).toHaveCount(1);
+  await expect(said).toContainText('Updated elsewhere: Farhan Qureshi (synthetic), Ready for doctor.');
+  // Desk A moved it itself: its own change coming back is not someone else's.
+  await expect.poll(() => a.calls.boards).toBeGreaterThanOrEqual(4); // load, join, its own move, then the echo
+  await expect(updatedTag(page, 'Farhan Qureshi (synthetic)')).toHaveCount(0);
+  await expect(page.getByRole('status').filter({ hasText: 'Updated elsewhere' })).toHaveCount(0);
+
+  // After 5 seconds the tag and the words go; nothing else on desk B was marked.
+  await expect(moved.getByText('Updated', { exact: true })).toHaveCount(0, { timeout: 7_000 });
+  await expect(said).toHaveCount(0);
+  await expect(second.getByText('Updated', { exact: true })).toHaveCount(0);
+
+  // A resync after a drop marks nothing: those changes were not delivered live.
+  b.hub.drop();
+  b.calls.state.find(c => c.id === 'a3')!.state = 'ReadyForDoctor';
+  b.hub.restore();
+  await expect(column(second, 'Ready for doctor').getByRole('article', { name: 'Lakshmi Pillai (synthetic)' })).toBeVisible({ timeout: 20_000 });
+  await expect(updatedTag(second, 'Lakshmi Pillai (synthetic)')).toHaveCount(0);
+  await other.close();
+});
+
+test.describe('with motion allowed', () => {
+  test.use({ reducedMotion: 'no-preference' });
+
+  test('the Updated card fades from the brand tint and does not move; a skeleton pulses in place; a focused button has its full ring on the first frame', async ({ page }) => {
+    const { hub, calls } = await liveDesk(page);
+    calls.state.find(c => c.id === 'a3')!.state = 'ReadyForDoctor';
+    hub.push('BoardChanged', [{ appointmentId: 'a3', state: 'ReadyForDoctor', changedAt: now }]);
+    const lakshmi = column(page, 'Ready for doctor').getByRole('article', { name: 'Lakshmi Pillai (synthetic)' });
+    await expect(lakshmi.getByText('Updated', { exact: true })).toBeVisible();
+    const look = () => lakshmi.evaluate(el => { const s = getComputedStyle(el), r = el.getBoundingClientRect(); return { animation: s.animationName, transform: s.transform, box: [r.x, r.y, r.width, r.height] }; });
+    const start = await look();
+    expect(start.animation).toBe('updated');
+    await page.waitForTimeout(600); // mid-fade
+    const mid = await look();
+    expect(mid.box).toEqual(start.box); // colour only: nothing changes position
+    expect(mid.transform).toBe('none');
+
+    // AC5: the focus ring is at full colour on the frame focus arrives, not faded in. Recorded synchronously on focusin, before any transition runs.
+    await page.evaluate(() => document.addEventListener('focusin', e => {
+      const el = e.target as HTMLElement;
+      (window as unknown as { rings: string[][] }).rings = [...((window as unknown as { rings?: string[][] }).rings ?? []), [el.textContent ?? '', getComputedStyle(el).outlineColor]];
+    }));
+    const button = cardOf(page, 'Meera Iyer (synthetic)').getByRole('button', { name: 'Check in' });
+    await cardOf(page, 'Meera Iyer (synthetic)').getByRole('heading').click(); // a pointer click on text, then the keyboard
+    while (!(await button.evaluate(el => el === document.activeElement))) await page.keyboard.press('Tab');
+    const first = await page.evaluate(() => (window as unknown as { rings: string[][] }).rings.findLast(([text]) => text === 'Check in')![1]);
+    await page.waitForTimeout(400);
+    expect(first).toBe(await button.evaluate(el => getComputedStyle(el).outlineColor)); // the settled ring colour
+    expect(first).not.toBe(await button.evaluate(el => getComputedStyle(el).color));
+
+    // A skeleton block on a slow load pulses its opacity only.
+    await page.unrouteAll({ behavior: 'ignoreErrors' });
+    await page.route('**/v1/me/context', r => r.fulfill({ json: reception }));
+    await page.route('**/v1/front-desk/board?*', () => {}); // never answers
+    await page.goto('/front-desk');
+    const block = page.locator('[data-slot=skeleton][data-shown]').first();
+    await expect(block).toBeVisible();
+    expect(await block.evaluate(el => [getComputedStyle(el).animationName, getComputedStyle(el).transform])).toEqual(['skeleton', 'none']);
+    await page.unrouteAll({ behavior: 'ignoreErrors' });
+  });
+});
+
+test('under reduced motion the Updated mark is the tag alone and skeletons are static blocks', async ({ page }) => {
+  const { hub, calls } = await liveDesk(page);
+  calls.state.find(c => c.id === 'a3')!.state = 'ReadyForDoctor';
+  hub.push('BoardChanged', [{ appointmentId: 'a3', state: 'ReadyForDoctor', changedAt: now }]);
+  const lakshmi = cardOf(page, 'Lakshmi Pillai (synthetic)');
+  await expect(lakshmi.getByText('Updated', { exact: true })).toBeVisible();
+  expect(await lakshmi.evaluate(el => getComputedStyle(el).animationName)).toBe('none');
+
+  await page.unrouteAll({ behavior: 'ignoreErrors' });
+  await page.route('**/v1/me/context', r => r.fulfill({ json: reception }));
+  await page.route('**/v1/front-desk/board?*', () => {});
+  await page.goto('/front-desk');
+  const block = page.locator('[data-slot=skeleton][data-shown]').first();
+  await expect(block).toBeVisible();
+  expect(await block.evaluate(el => getComputedStyle(el).animationName)).toBe('none');
+  await page.unrouteAll({ behavior: 'ignoreErrors' });
+});
+
+test('on a slow connection the board appears after 200 ms as a skeleton in its final layout, and the page height changes by less than 10 % when the cards come', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await open(page, { boardDelayMs: 1_500 });
+  const loading = page.getByRole('status').filter({ hasText: 'Loading Front desk' });
+  await expect(loading).toBeVisible();
+  await expect(page.locator('[data-slot=skeleton][data-shown]').first()).toBeVisible();
+  // The content's height (main itself stretches to the window): from its first child's top to its last child's bottom.
+  const height = () => page.getByRole('main').evaluate(el => el.lastElementChild!.getBoundingClientRect().bottom - el.firstElementChild!.getBoundingClientRect().top);
+  const before = await height();
+  await expect(page.getByRole('article').first()).toBeVisible();
+  const after = await height();
+  expect(Math.abs(after - before) / before).toBeLessThan(0.1);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true); // nor sideways
+});
+
+test('offline, a strip under the top bar names the last update, covers no column and does not mention recordings', async ({ page, context }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await open(page);
+  await expect(page.getByRole('article').first()).toBeVisible();
+  await context.setOffline(true);
+  const strip = page.getByRole('status').filter({ hasText: 'You are offline.' });
+  await expect(strip).toHaveText('You are offline. The board shows the last update from 10:32. Actions are paused.'); // the board's now, in facility time
+  await expect(strip).not.toContainText(/record/i);
+  const bar = (await page.getByRole('banner').boundingBox())!, box = (await strip.boundingBox())!;
+  expect(box.y).toBeGreaterThanOrEqual(bar.y + bar.height - 1); // under the top bar
+  expect(box.height).toBeGreaterThanOrEqual(40);
+  for (const c of await page.getByRole('region', { name: 'Visits by status' }).locator('section').all()) {
+    const col = (await c.boundingBox())!;
+    expect(col.y).toBeGreaterThanOrEqual(box.y + box.height); // in the flow, above every column, overlapping none
+  }
+  await expect(page.getByRole('button', { name: 'Check in' })).toBeDisabled(); // actions are paused, as it says
+  await context.setOffline(false);
+  await expect(strip).toHaveCount(0);
+});
+
+for (const locale of ['en', 'ar'])
+  test(`axe finds no violations with the skeleton and with the offline strip showing (${locale})`, async ({ page, context }) => {
+    await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
+    await page.route('**/v1/me/context', r => r.fulfill({ json: reception }));
+    await page.route('**/v1/front-desk/board?*', () => {}); // never answers
+    await page.goto('/front-desk');
+    await expect(page.locator('[data-slot=skeleton][data-shown]').first()).toBeVisible();
+    await page.addScriptTag({ path: axePath });
+    expect(await axeViolations(page)).toEqual([]);
+
+    await page.unrouteAll({ behavior: 'ignoreErrors' });
+    await open(page, { locale });
+    await expect(page.getByRole('article').first()).toBeVisible();
+    await context.setOffline(true);
+    await expect(page.getByRole('status').filter({ hasText: locale === 'en' ? 'You are offline.' : 'أنت غير متصل.' })).toBeVisible();
+    await page.addScriptTag({ path: axePath });
+    expect(await axeViolations(page)).toEqual([]);
+    await context.setOffline(false);
+  });
 
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 const axeViolations = (page: Page) => page.evaluate(async () =>

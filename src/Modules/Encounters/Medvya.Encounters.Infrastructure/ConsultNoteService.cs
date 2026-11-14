@@ -348,7 +348,8 @@ public sealed class ConsultNoteService(
         var sections = new Dictionary<string, string>();
         foreach (var (id, text) in input)
         {
-            var section = template?.Sections.FirstOrDefault(s => s.Id == id);
+            // MDV-P2-067: the reserved Notes section is on every template. Remove it and VisitNotesAreSavedSignedInTheHashAndPrinted fails.
+            var section = id == NoteTemplates.Notes.Id ? NoteTemplates.Notes : template?.Sections.FirstOrDefault(s => s.Id == id);
             if (template is not null && section is null) errors.Add(($"sections.{id}", "unknown_section"));
             else if (text.Length > ConsultNote.MaxSectionLength) errors.Add(($"sections.{id}", "too_long"));
             else if (string.IsNullOrWhiteSpace(text) || section is null) continue;

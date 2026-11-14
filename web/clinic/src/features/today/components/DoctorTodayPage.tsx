@@ -150,11 +150,10 @@ function Chips(p: Props & { card: BoardCard }) {
 function Visit(p: Props & { card: BoardCard }) {
   const { t, formatTime } = useI18n();
   const c = p.card, age = ageOn(c.dateOfBirth, p.day ?? '');
-  const nameId = `today-visit-${c.id}`;
   return (
-    <Card size="item" aria-labelledby={nameId} className="flex-row flex-wrap items-center justify-between gap-3">
+    <Card size="item" className="flex-row flex-wrap items-center justify-between gap-3">
       <div className="flex min-w-0 flex-col gap-1.5">
-        <h3 id={nameId} className="text-sm font-bold">
+        <h3 className="text-sm font-bold">
           <span className="font-mono text-xs font-semibold text-muted-foreground">{formatTime(new Date(c.start), p.timeZone ?? undefined)}</span>{' '}
           <Token card={c} /><PatientLink {...p} card={c} />{age !== null && <span className="font-normal text-muted-foreground">{' · '}{t('today.age', { years: age })}</span>}
         </h3>

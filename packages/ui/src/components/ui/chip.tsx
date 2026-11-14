@@ -1,5 +1,5 @@
 import * as React from "react"
-import type { LucideIcon } from "lucide-react"
+import { Check, type LucideIcon } from "lucide-react"
 import { useI18n } from "@medvya/i18n"
 import { cn } from "#lib/utils"
 
@@ -50,4 +50,19 @@ function Chip({ tone, label, icon: Icon, size = "md", className, ...props }: Chi
   )
 }
 
-export { Chip }
+type FilterChipProps = Omit<React.ComponentProps<"button">, "children" | "aria-pressed"> & { label: string; on: boolean; icon?: LucideIcon }
+
+/**
+ * A filter as a pressable Chip (MDV-P2-060): brand with a tick when on, neutral otherwise, and aria-pressed says which, so the state
+ * is never colour alone. The button is the 44 px target; the chip inside keeps its size.
+ */
+function FilterChip({ label, on, icon, className, ...props }: FilterChipProps) {
+  return (
+    <button type="button" aria-pressed={on} data-slot="filter-chip"
+      className={cn("inline-flex min-h-11 items-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50", className)} {...props}>
+      <Chip tone={on ? "brand" : "neutral"} icon={on ? Check : icon} label={label} className={cn("whitespace-normal", !on && "bg-card")} />
+    </button>
+  )
+}
+
+export { Chip, FilterChip }

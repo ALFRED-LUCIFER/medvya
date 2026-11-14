@@ -212,7 +212,7 @@ export default function BookingPanel(p: Props) {
 
         {/* One visit is the usual case: repeating stays folded until the desk asks for it (UX-10); folding it again books one visit. */}
         <details open={p.repeatOpen} onToggle={e => p.onRepeatOpen(e.currentTarget.open)} className="rounded-md border p-3">
-          <summary className="flex min-h-11 cursor-pointer items-center text-sm font-bold">{t('series.toggle')}</summary>
+          <summary className="flex min-h-control cursor-pointer items-center text-sm font-bold">{t('series.toggle')}</summary>
           {p.repeatOpen && <div className="mt-2 flex flex-col gap-4">
             <div className={field}>
               <Label htmlFor="booking-unit">{t('series.unit')}</Label>

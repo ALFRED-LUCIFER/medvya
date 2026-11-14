@@ -75,7 +75,7 @@ function Section({ view, p }: { view: SectionView; p: Props }) {
       ) : view.current ? <Version entry={view.current} zone={p.timeZone} /> : <p className="text-muted-foreground">{t('history.notRecorded')}</p>}
       {view.earlier.length > 0 && (
         <details className="text-sm">
-          <summary className="min-h-11 cursor-pointer content-center">{t('history.earlier', { count: view.earlier.length })}</summary>
+          <summary className="min-h-control cursor-pointer content-center">{t('history.earlier', { count: view.earlier.length })}</summary>
           <ul className="flex flex-col gap-2 ps-4">{view.earlier.map((e, i) => <li key={i}><Version entry={e} zone={p.timeZone} /></li>)}</ul>
         </details>
       )}

@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
+import { targetPx } from './support/targets';
 
 // MDV-P2-004, MDV-P2-033: Patient 360 on one page (E-01). CI has no API: the session and the chart are mocked in the shapes the server sends. The care-relationship check,
 // the receptionist's 403, the audit rows and the source on every fact are covered by PatientChartTests on PostgreSQL.
@@ -146,11 +147,14 @@ test('"no known allergies" and "not recorded" read differently', async ({ page }
   const banner = page.getByRole('region', { name: 'Patient Meera Iyer (synthetic)' });
   await expect(banner).toContainText('No known allergies');
   await expect(banner).not.toContainText('not recorded');
+  await expect(page.getByRole('region', { name: 'Allergies', exact: true }).locator('[data-slot=allergy-state]')).toHaveText('No known allergies');
   await page.unroute('**/v1/patients/p-1/chart');
   await page.route('**/v1/patients/p-1/chart', r => r.fulfill({ json: chart({ allergyState: 'NotRecorded', allergies: [] }) }));
   await page.reload();
   await expect(banner).toContainText('Allergies not recorded');
   await expect(banner).not.toContainText('No known allergies');
+  // MDV-P2-060 AC4: the Allergies card says it with the library AllergyBlock too.
+  await expect(page.getByRole('region', { name: 'Allergies', exact: true }).locator('[data-slot=allergy-state]')).toHaveText('Allergies not recorded');
 });
 
 test('an open consultation is one tap away', async ({ page }) => {
@@ -191,6 +195,7 @@ test('MDV-P2-033: the section buttons filter the page, work from the keyboard, a
   await buttons.getByRole('button', { name: 'History' }).focus();
   await page.keyboard.press('Enter');
   await expect(buttons.getByRole('button', { name: 'History' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(buttons.getByRole('button', { name: 'History' }).locator('[data-slot=chip] svg.lucide-check')).toHaveCount(1); // MDV-P2-060
   await expect(page.getByRole('region', { name: 'History' })).toBeVisible();
   for (const hidden of ['Problems', 'Last vitals', 'Results and trends', 'Timeline', 'Chronic care'])
     await expect(page.getByRole('region', { name: hidden, exact: true })).toHaveCount(0);
@@ -291,13 +296,13 @@ for (const [width, height] of [[375, 800], [640, 800]] as const) // a phone, and
 
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 for (const [locale, name] of [['en', 'Patient Meera Iyer (synthetic)'], ['ar', 'المريض Meera Iyer (synthetic)']] as const)
-  test(`axe finds no violations (${locale}); 44 px targets; the right-hand column on a laptop`, async ({ page }) => {
+  test(`axe finds no violations (${locale}); control-size targets; the right-hand column on a laptop`, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await open(page, { locale, entry: 'Full', response: { json: chart({ openEncounterId: 'e-9', bloodGroup: 'B+', careTeam: ['Dr. Arjun Rao (synthetic)'] }) } });
     await expect(page.getByRole('region', { name })).toBeVisible();
     if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
-    for (const l of await page.getByRole('main').getByRole('link').all()) expect((await l.boundingBox())!.height).toBeGreaterThanOrEqual(44);
-    for (const b of await page.getByRole('main').getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    for (const l of await page.getByRole('main').getByRole('link').all()) expect((await l.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
+    for (const b of await page.getByRole('main').getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
     const aside = page.getByRole('complementary');
     const [main, side] = [await aside.locator('xpath=preceding-sibling::div[1]').boundingBox(), await aside.boundingBox()];
     expect(main!.y).toBe(side!.y); // the right-hand column sits beside the chart
@@ -314,7 +319,7 @@ for (const [locale, button] of [['en', 'Start consultation with Meera Iyer (synt
     await open(page, { locale, response: { json: chart({ startableAppointmentId: 'a-1' }) } });
     const start = page.getByRole('button', { name: button });
     await expect(start).toBeVisible();
-    expect((await start.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    expect((await start.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
     await expect(page.getByText('To start a consultation, use the visit on Front desk.')).toHaveCount(0);
     await page.addScriptTag({ path: axePath });
     const violations = await page.evaluate(async () =>
@@ -412,12 +417,12 @@ test('MDV-P2-034: a doctor starts a pregnancy; a nurse records "not pregnant" bu
 });
 
 for (const [locale, title] of [['en', 'Pregnancy'], ['ar', 'الحمل']] as const)
-  test(`MDV-P2-034: the pregnancy card has no axe violations and 44 px targets (${locale})`, async ({ page }) => {
+  test(`MDV-P2-034: the pregnancy card has no axe violations and control-size targets (${locale})`, async ({ page }) => {
     await open(page, { locale, entry: 'Full', notes: 'Sign', response: { json: pregnant } });
     const card = page.getByRole('region', { name: title, exact: true });
     await expect(card).toBeVisible();
     if (locale === 'ar') await expect(card).toContainText('الثلث الثاني');
-    for (const b of await card.getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    for (const b of await card.getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
     await page.addScriptTag({ path: axePath });
     // The card only: the page-wide axe run is the one-page chart's own test (MDV-P2-033).
     const violations = await card.evaluate(async el =>

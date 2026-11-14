@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
+import { targetPx } from './support/targets';
 
 // MDV-P2-036: a child's immunisations and milestones on Patient 360 (E-01). CI has no API: the session, the chart and the card are mocked in the
 // shapes the server sends. Due and overdue from the date of birth, the deferral reason, tenant isolation and the role checks are covered by
@@ -124,11 +125,11 @@ test('without vitals entry the card is read-only', async ({ page }) => {
 
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 for (const [locale, title] of [['en', 'Immunisations'], ['ar', 'التطعيمات']] as const)
-  test(`axe finds no violations (${locale}); 44 px targets`, async ({ page }) => {
+  test(`axe finds no violations (${locale}); control-size targets`, async ({ page }) => {
     await open(page, { locale });
     await expect(page.getByRole('region', { name: title })).toBeVisible();
     if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
-    for (const b of await page.getByRole('region', { name: title }).getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    for (const b of await page.getByRole('region', { name: title }).getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
     await page.addScriptTag({ path: axePath });
     const violations = await page.evaluate(async () =>
       (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations.map(v => `${v.id} (${v.nodes.length})`));

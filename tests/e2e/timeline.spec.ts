@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
+import { targetPx } from './support/targets';
 
 // MDV-P2-005: the timeline and trends (E-02). CI has no API: endpoints are mocked in the shapes the server sends, and the filter query the
 // screen sends is checked. Ordering, "Load earlier" without gaps or repeats, the gate and the audit are covered by PatientTimelineTests.
@@ -118,11 +119,11 @@ test('an empty record says so', async ({ page }) => {
 
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 for (const locale of ['en', 'ar'])
-  test(`axe finds no violations (${locale}); 44 px targets`, async ({ page }) => {
+  test(`axe finds no violations (${locale}); control-size targets`, async ({ page }) => {
     await open(page, { locale, all: many, pageSize: 3 });
     await expect(page.getByRole('region', { name: locale === 'ar' ? 'عناصر الخط الزمني' : 'Timeline entries' }).getByRole('listitem').first()).toBeVisible();
     if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
-    for (const b of await page.getByRole('main').getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    for (const b of await page.getByRole('main').getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
     await page.addScriptTag({ path: axePath });
     const violations = await page.evaluate(async () =>
       (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations.map(v => `${v.id} (${v.nodes.length})`));

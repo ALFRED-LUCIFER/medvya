@@ -1,6 +1,7 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
 import { authorised, line, mockPrescription } from './support/prescription';
+import { targetPx } from './support/targets';
 
 // MDV-P2-017 (E-05, E-10): authorising is its own action after the checks (the server asks for the step-up first); only an authorised, unchanged
 // prescription prints, in English plus the chosen language (Arabic right to left); the doctor approves the layout; the QR check is public and
@@ -107,7 +108,7 @@ for (const locale of ['en', 'ar'])
     if (locale === 'en') await expect(page.getByRole('article')).toContainText('Diagnosis: Type 2 diabetes (synthetic)');
     await expect(page.getByRole('img', { name: locale === 'ar' ? 'رمز QR للتحقق من صلاحية هذه الوصفة' : 'QR code to check this prescription is valid' })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-    for (const target of await page.locator('main button, main a').all()) expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    for (const target of await page.locator('main button, main a').all()) expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
     expect(await axeViolations(page)).toEqual([]);
 
     await page.route('**/v1/prescriptions/verify', r => r.fulfill({ json: verified }));

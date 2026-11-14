@@ -11,7 +11,8 @@ type SortDirection = "ascending" | "descending" | "none"
 // readers on a phone, and shows while a sort button in it has keyboard focus.
 const TableLayout = React.createContext({ compact: false, stacked: false })
 
-// Comfortable rows are at least 48 px, text-only ones too (DESIGN.md, Density); a stacked phone row is a block and keeps its own height.
+// Comfortable rows are the row token, 40 px with a mouse and 48 px on touch, text-only ones too (DESIGN.md, Density); cells pad 4 px, so buttons in
+// adjacent rows stay 8 px apart (MDV-P2-052) and a text row is the row token. A stacked phone row is a block and keeps its own height.
 const comfortableRows = (stacked: boolean) => (stacked ? "md:[&>tr]:h-row" : "[&>tr]:h-row")
 // Compact rows are 36 px with a mouse and 48 px on any coarse pointer (DESIGN.md, Density). Stacked phone rows keep their own height.
 // A row's button is 32 px with a mouse, so with the row's rule the row stays 36 px, and 44 px on a coarse pointer; its cell has no padding.
@@ -47,6 +48,8 @@ function Table({
         role="region"
         aria-label={label}
         tabIndex={0}
+        // Chromium leaves a control that Tab reaches half clipped by this scroll box where it is; scroll it fully in (WCAG 2.2 SC 2.4.11).
+        onFocus={e => { if (e.target !== e.currentTarget) e.target.scrollIntoView?.({ block: "nearest", inline: "nearest" }) }}
         className={cn("relative w-full overflow-x-auto rounded-lg border focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1 focus-visible:outline-ring", containerClassName)}
       >
         <table
@@ -128,14 +131,14 @@ function TableHead({
       data-slot="table-head"
       role={stacked ? (props.scope === "row" ? "rowheader" : "columnheader") : undefined}
       aria-sort={onSort ? sort ?? "none" : undefined}
-      className={cn("h-11 px-3 align-middle font-bold whitespace-nowrap text-foreground", numeric ? "text-end" : "text-start", stacked && "max-md:block max-md:h-auto max-md:py-1 max-md:text-start max-md:whitespace-normal", className)}
+      className={cn("h-control px-3 align-middle font-bold whitespace-nowrap text-foreground", numeric ? "text-end" : "text-start", stacked && "max-md:block max-md:h-auto max-md:py-1 max-md:text-start max-md:whitespace-normal", className)}
       {...props}
     >
       {onSort ? (
         <button
           type="button"
           onClick={onSort}
-          className={cn("inline-flex min-h-11 min-w-11 cursor-pointer items-center gap-1 font-bold focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1 focus-visible:outline-ring", numeric && "flex-row-reverse")}
+          className={cn("inline-flex min-h-control min-w-control cursor-pointer items-center gap-1 font-bold focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1 focus-visible:outline-ring", numeric && "flex-row-reverse")}
         >
           {children}
           <Icon aria-hidden className="size-4 shrink-0" />
@@ -152,7 +155,7 @@ function TableCell({ className, numeric, label, children, ...props }: React.Comp
     <td
       data-slot="table-cell"
       role={stacked ? "cell" : undefined}
-      className={cn("min-h-11 p-3 align-middle", numeric && "text-end tabular-nums", stacked && "max-md:block max-md:py-1 max-md:text-start", className)}
+      className={cn("px-3 py-1 align-middle", numeric && "text-end tabular-nums", stacked && "max-md:block max-md:py-1 max-md:text-start", className)}
       {...props}
     >
       {stacked && label && <span aria-hidden className="block text-sm font-semibold text-muted-foreground md:hidden">{label}</span>}

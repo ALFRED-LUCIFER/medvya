@@ -5,7 +5,7 @@ import { cn } from "#lib/utils"
 
 // shadcn dropdown-menu, trimmed to the parts in use: 44 px items, logical sides for right-to-left, the popover elevation.
 const item =
-  "relative flex min-h-11 cursor-default items-center gap-2 rounded-md px-2 text-body outline-hidden select-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:text-muted-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
+  "relative flex min-h-control cursor-default items-center gap-2 rounded-md px-2 text-body outline-hidden select-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:text-muted-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
 const surface = "z-50 min-w-48 rounded-lg border bg-popover p-1 text-popover-foreground shadow-popover"
 
 function DropdownMenu(props: React.ComponentProps<typeof DropdownMenuPrimitive.Root>) {

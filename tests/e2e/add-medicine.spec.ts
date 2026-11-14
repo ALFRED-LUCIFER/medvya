@@ -25,7 +25,8 @@ test('from the consultation: search, strength, how often, when, how long and ins
   const p = panel(page);
   await expect(p.getByRole('region', { name: 'Patient' })).toContainText('Meera Iyer (synthetic)');
   await expect(p.getByRole('region', { name: 'Patient' })).toContainText('54 years · Female');
-  await expect(p.getByRole('region', { name: 'Patient' })).toContainText('Allergies: not recorded yet');
+  // MDV-P2-060 AC4: the allergy is the library AllergyBlock, worded as the patient strip.
+  await expect(p.getByRole('region', { name: 'Patient' }).locator('[data-slot=allergy-state]')).toHaveText('Allergies not recorded');
 
   await p.getByLabel('Search medicine').fill('lipi'); // a brand finds the generic
   await p.getByRole('button', { name: /Atorvastatin · Tablet/ }).click();
@@ -102,7 +103,7 @@ test('from the chart with no open consultation, the panel says one must be start
   await page.getByRole('region', { name: 'Medicines', exact: true }).getByRole('button', { name: 'Add medicine' }).click();
   const p = panel(page);
   await expect(p).toContainText('Start a consultation first. A medicine is only prescribed within a consultation.');
-  await expect(p.getByRole('region', { name: 'Patient' })).toContainText('Penicillin');
+  await expect(p.getByRole('region', { name: 'Patient' }).locator('[data-slot=allergy]')).toHaveText('Allergy: Penicillin (Verified)'); // AllergyBlock (MDV-P2-060 AC4)
   await expect(p.getByLabel('Search medicine')).toHaveCount(0);
   await expect(p.getByRole('button', { name: 'Add to prescription' })).toHaveCount(0);
   await page.keyboard.press('Escape'); // keyboard path: Escape closes and hands focus back

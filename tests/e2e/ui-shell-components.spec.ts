@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
+import { targetPx } from './support/targets';
 
 // MDV-P1-084: AccountMenu, NavRailItem, PageHeader and Tooltip on /__ui, in English and Arabic, with axe.
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
@@ -71,7 +72,7 @@ for (const locale of ['en', 'ar'] as const) {
       if (i > 0) await page.keyboard.press('ArrowDown');
       else await expect(menuItems.nth(0)).toBeFocused();
       await expect(menuItems.nth(i)).toBeFocused();
-      expect((await menuItems.nth(i).boundingBox())!.height).toBeGreaterThanOrEqual(43.5);
+      expect((await menuItems.nth(i).boundingBox())!.height).toBeGreaterThanOrEqual((await targetPx(page)) - 0.5);
     }
     const signOut = (await menuItems.nth(3).boundingBox())!, separator = (await menu.getByRole('separator').last().boundingBox())!;
     expect(separator.y).toBeLessThan(signOut.y);

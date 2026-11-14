@@ -66,7 +66,7 @@ export default function HoursPanel({ choice, hours, schedules }: Props) {
               const bad = hours.problems.includes(r.weekday);
               return (
                 <li key={r.weekday} className="flex flex-wrap items-center gap-3 p-3">
-                  <label className="flex min-h-11 w-48 items-center gap-3 font-bold">
+                  <label className="flex min-h-control w-48 items-center gap-3 font-bold">
                     <Switch checked={r.open} onCheckedChange={on => hours.onToggle(r.weekday, on)} />
                     <span>{t(`settings.weekday.${r.weekday}`)}</span>
                     <span className="text-sm font-normal text-muted-foreground">{t(r.open ? 'settings.hours.open' : 'settings.hours.closed')}</span>

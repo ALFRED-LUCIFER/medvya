@@ -1,9 +1,9 @@
 import type { FormEventHandler } from 'react';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 import { Link } from 'react-router';
-import { CircleCheck, CircleHelp, MessageCircle } from 'lucide-react';
+import { CircleCheck, CircleHelp, MessageCircle, type LucideIcon } from 'lucide-react';
 import { ltr, useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, Card, Field, PageContainer, PageHeader, PageMessage, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead, TableHeader, StickyActionBar, TableRow, TableState } from '@medvya/ui';
+import { Button, buttonVariants, Card, Field, PageContainer, PageHeader, PageMessage, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead, TableHeader, StickyActionBar, TableRow, TableState, Tag, type Tone } from '@medvya/ui';
 import type { ClinicalRefusal } from '../../clinical-access/domain/clinicalAccess';
 import type { EncounterBanner } from '../../encounters/domain/encounter';
 import PatientStrip from '../../encounters/components/PatientStrip';
@@ -72,12 +72,14 @@ export default function ProblemsPage(p: Props) {
   );
 }
 
-/** The state in words with its own icon, never colour alone; provisional also gets a dashed outline. */
+const verificationLooks = {
+  Verified: { icon: CircleCheck, tone: 'success' }, PatientReported: { icon: MessageCircle, tone: 'neutral' }, Provisional: { icon: CircleHelp, tone: 'warning' },
+} as const satisfies Record<ProblemRow['verification'], { icon: LucideIcon; tone: Exclude<Tone, 'ai'> }>;
+
+/** The state as the library Tag (MDV-P2-060): words with its own icon, never colour alone; provisional keeps its dashed outline. */
 function VerificationTag({ row }: { row: ProblemRow }) {
   const { t } = useI18n();
-  const Icon = row.verification === 'Verified' ? CircleCheck : row.verification === 'Provisional' ? CircleHelp : MessageCircle;
-  const dashed = row.verification === 'Provisional' ? 'rounded-md border border-dashed border-foreground px-2 py-0.5' : '';
-  return <span className={`inline-flex items-center gap-1.5 font-semibold ${dashed}`}><Icon aria-hidden className="size-4 shrink-0" />{t(`problems.verification.${verificationKey(row)}`)}</span>;
+  return <Tag {...verificationLooks[row.verification]} label={t(`problems.verification.${verificationKey(row)}`)} className={row.verification === 'Provisional' ? 'border-dashed' : undefined} />;
 }
 
 function EditRow(p: Props & { row: ProblemRow }) {

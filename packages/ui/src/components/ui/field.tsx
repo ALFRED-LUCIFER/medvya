@@ -45,8 +45,9 @@ function Field({ id, label, hint, error, required, unit, className, children, ..
         {label}
         {word && <span className="font-normal text-muted-foreground"> {word}</span>}
       </Label>
-      {hint && <p id={`${id}-hint`} className="text-caption text-muted-foreground">{hint}</p>}
       {unit ? <div className="flex items-center gap-2">{control}<span className="shrink-0 text-body text-muted-foreground">{unit}</span></div> : control}
+      {/* Under the control, as in the registration design (MDV-P2-062); still read through aria-describedby. */}
+      {hint && <p id={`${id}-hint`} className="text-caption text-muted-foreground">{hint}</p>}
       {error && (
         <p id={`${id}-error`} className="flex items-start gap-1.5 text-label text-danger-text">
           <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />

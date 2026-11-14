@@ -70,7 +70,7 @@ function SheetContent({
       >
         {children}
         <SheetPrimitive.Close
-          className="absolute end-2 top-2 inline-flex size-11 items-center justify-center rounded-md text-muted-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          className="absolute end-2 top-2 inline-flex size-control items-center justify-center rounded-md text-muted-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           aria-label={closeLabel}
         >
           <XIcon className="size-4" aria-hidden />

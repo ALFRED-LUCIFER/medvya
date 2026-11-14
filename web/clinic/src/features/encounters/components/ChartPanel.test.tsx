@@ -49,7 +49,8 @@ describe('ChartPanel (MDV-P1-094)', () => {
   it('shows the chart in one view: allergies in words, active medicines and problems, results flagged in words', () => {
     render(<Side />);
     const panel = screen.getByRole('complementary', { name: 'Consultation tools' });
-    expect(within(panel).getByText('Allergy: Penicillin (Patient reported)')).toBeTruthy();
+    // The library AllergyBlock (MDV-P2-060 AC4).
+    expect(within(panel).getByText('Allergy: Penicillin (Patient reported)').closest('[data-slot=allergy]')).toBeTruthy();
     expect(within(panel).getByText('Metformin')).toBeTruthy();
     expect(within(panel).queryByText('Amoxicillin')).toBeNull();
     expect(within(panel).getByText('Type 2 diabetes')).toBeTruthy();

@@ -8,7 +8,7 @@ function Switch({ className, ...props }: React.ComponentProps<typeof SwitchPrimi
     <SwitchPrimitive.Root
       data-slot="switch"
       className={cn(
-        "peer group/switch -mx-1.5 -my-[0.8rem] inline-flex size-11 shrink-0 items-center justify-center rounded-full disabled:cursor-not-allowed",
+        "peer group/switch -mx-[calc((var(--spacing-control)-2rem)/2)] -my-[calc((var(--spacing-control)-1.15rem)/2)] inline-flex size-control shrink-0 items-center justify-center rounded-full disabled:cursor-not-allowed",
         className
       )}
       {...props}

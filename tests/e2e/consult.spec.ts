@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
+import { targetPx } from './support/targets';
 
 // MDV-P2-001: the doctor starts a consultation from the board, lands on its identity banner, and ends it; another open consultation and a
 // missing care relationship (MDV-P2-024) each ask the doctor what to do. CI has no API: endpoints are mocked in the shapes the server sends;
@@ -116,12 +117,12 @@ test('a role that cannot open consultations is told so, with nothing to ask for'
 
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 for (const locale of ['en', 'ar'])
-  test(`axe finds no violations on the consultation (${locale}); 44 px targets`, async ({ page }) => {
+  test(`axe finds no violations on the consultation (${locale}); control-size targets`, async ({ page }) => {
     await open(page, { locale });
     await page.goto('/consult/e-1');
     await expect(page.locator('[data-slot=patient-banner]')).toBeVisible();
     if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
-    for (const b of await page.getByRole('main').getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    for (const b of await page.getByRole('main').getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
     await page.addScriptTag({ path: axePath });
     const violations = await page.evaluate(async () =>
       (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations

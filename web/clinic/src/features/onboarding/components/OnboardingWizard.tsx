@@ -71,7 +71,7 @@ export default function OnboardingWizard(p: Props) {
               return (
                 <li key={s}>
                   <button type="button" disabled={done !== null || i > index} onClick={() => p.onGoTo(s)} aria-current={current ? 'step' : undefined}
-                    className={`flex min-h-11 w-full items-start gap-3 rounded-lg px-3 py-2 text-start disabled:cursor-default ${current ? 'bg-card shadow-sm' : ''}`}>
+                    className={`flex min-h-control w-full items-start gap-3 rounded-lg px-3 py-2 text-start disabled:cursor-default ${current ? 'bg-card shadow-sm' : ''}`}>
                     <span className={`flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${past ? 'bg-brand-700 text-white' : current ? 'bg-ink-900 text-white' : 'bg-muted text-muted-foreground'}`}>
                       {past ? <Check className="size-3.5" aria-hidden /> : s}
                     </span>

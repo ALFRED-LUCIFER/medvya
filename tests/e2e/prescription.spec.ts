@@ -2,6 +2,7 @@ import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
 import { authorised, clearChecks, line, mockPrescription, paracetamolForWeight, patientAlert, penicillinAlert, stopLine } from './support/prescription';
 import { mockNote } from './support/note';
+import { obscuredWhenTabbing } from './support/pinned';
 import { doctor } from './support/orders';
 
 // MDV-P2-015 (E-05, E-11): the doctor adds a formulary medicine and builds its dose, which autosaves and shows the instruction in the chosen
@@ -24,7 +25,7 @@ test('a formulary medicine gets a dose that autosaves and reads in the chosen pr
   await rx.getByRole('button', { name: 'Add Metformin 500 mg Tablet' }).click();
   expect(calls.added).toEqual([{ formularyItemId: 'fi-metformin' }]);
   const metformin = card(page, 'Metformin');
-  await expect(metformin).toContainText('Added by you');
+  await expect(metformin.getByText('Added by you', { exact: true })).toHaveAttribute('data-slot', 'tag'); // the library Tag (MDV-P2-060)
   await expect(metformin).toContainText('Fill in the dose to build the instruction.');
 
   await metformin.getByLabel('Dose').fill('1');
@@ -109,8 +110,9 @@ test('a severe allergy alert is in words with its evidence and needs a reason; w
   const alert = checks.getByRole('list', { name: 'Safety alerts' }).getByRole('alert');
   await expect(alert).toContainText('Severe · Allergy: Penicillin · verified. Amoxicillin: penicillin class.');
   await expect(checks).toContainText('Severe alerts without a reason: 1.');
-  await expect(card(page, 'Amoxicillin')).toContainText('Safety: severe alert');
-  await expect(card(page, 'Herbal tonic X')).toContainText('Safety: not fully checked');
+  // MDV-P2-060: the library Chip, its tone beside the words (never colour alone).
+  await expect(card(page, 'Amoxicillin').getByText('Safety: severe alert', { exact: true })).toHaveAttribute('data-tone', 'danger');
+  await expect(card(page, 'Herbal tonic X').getByText('Safety: not fully checked', { exact: true })).toHaveAttribute('data-slot', 'chip');
   await expect(checks).toContainText('Herbal tonic X: typed as free text, so not checked for allergies, interactions or dose.');
 
   await checks.getByRole('button', { name: 'Give a reason to go ahead' }).click();
@@ -279,3 +281,27 @@ for (const locale of ['en', 'ar'])
     await expect(dialog).toHaveCount(0);
     expect(ends).toEqual([]);
   });
+
+// MDV-P1-094 / WCAG 2.2 SC 2.4.11: the medicine table scrolls sideways in the note column; Tab onto a control the scroll box half clips brings it fully
+// into view (the Table container does it: remove its onFocus and the last columns stay half clipped, and this fails at 1024 and 768 px).
+for (const [width, height] of [[1440, 900], [1280, 720], [1024, 768], [768, 1024]] as const)
+  test(`every control in a medicine row is fully in view when Tab reaches it (${width} by ${height})`, async ({ page }) => {
+    await page.setViewportSize({ width, height });
+    await mockPrescription(page, { lines: [line('rx-1', 'Metformin')] });
+    await page.goto('/consult/e-1');
+    await expect(page.getByRole('region', { name: 'Medicines to prescribe' })).toBeVisible();
+    expect(await obscuredWhenTabbing(page)).toEqual([]);
+  });
+
+// MDV-P2-047: a step-up return focuses Authorise even when the note loads after the prescription's section (the real server answers in that order;
+// the prescription must not mount, then mount again once the note is there, which dropped the focus and the returned-with word).
+test('back from the step-up with the note still loading, Authorise is focused once the page is there', async ({ page }) => {
+  await mockPrescription(page, { lines: [line('rx-1', 'Metformin', { dose: '1', doseUnit: 'Tablet', route: 'Oral', frequency: 'BD', durationDays: 5 })] });
+  await mockNote(page, {});
+  await page.route('**/v1/encounters/e-1/note', async r => { if (r.request().method() === 'GET') await new Promise(done => setTimeout(done, 1500)); await r.fallback(); });
+  await page.goto('/consult/e-1?resume=authorise');
+  await expect(page.getByRole('region', { name: 'Consultation note' })).toBeVisible();
+  const rx = page.getByRole('region', { name: 'Prescription' });
+  await expect(rx.getByRole('button', { name: 'Authorise prescription' })).toBeFocused();
+  await expect(rx.getByRole('status').filter({ hasText: 'Identity confirmed. Press Authorise prescription.' })).toBeVisible();
+});

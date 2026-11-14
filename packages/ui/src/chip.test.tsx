@@ -1,14 +1,29 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { CircleAlert } from 'lucide-react';
 import axe from 'axe-core';
-import { Banner, Chip, Tag, toneClasses, type Tone } from './index';
+import { Banner, Chip, FilterChip, Tag, toneClasses, type Tone } from './index';
 
 afterEach(cleanup);
 const tones = Object.keys(toneClasses) as Tone[];
 
 describe('Chip, Tag and Banner (MDV-P1-083)', () => {
+  it('FilterChip exposes its state, ticks when on and keeps the words (MDV-P2-060)', () => {
+    let pressed = 0;
+    const { rerender } = render(<FilterChip label="Booked · 2" on={false} icon={CircleAlert} onClick={() => pressed++} />);
+    const button = screen.getByRole('button', { name: 'Booked · 2' });
+    expect(button.getAttribute('aria-pressed')).toBe('false');
+    expect(button.querySelector('[data-slot=chip]')!.getAttribute('data-tone')).toBe('neutral');
+    fireEvent.click(button);
+    expect(pressed).toBe(1);
+    rerender(<FilterChip label="Booked · 2" on icon={CircleAlert} />);
+    expect(button.getAttribute('aria-pressed')).toBe('true');
+    expect(button.querySelector('[data-slot=chip]')!.getAttribute('data-tone')).toBe('brand');
+    expect(button.querySelector('svg')!.getAttribute('class')).toContain('lucide-check');
+  });
+
+
   it('maps each of the seven tones to its own token pair, and only ai is dashed', () => {
     expect(tones).toEqual(['danger', 'warning', 'success', 'info', 'brand', 'ai', 'neutral']);
     for (const tone of tones) {

@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
+import { targetPx } from './support/targets';
 
 // MDV-P2-002 (D-01): the doctor's Today shows their own visits by default and the clinic's when toggled, with the next patient first, status
 // as icon plus words, and "Start consultation" from the board's control. CI has no API: the session, board and encounter are mocked in the
@@ -209,19 +210,19 @@ test('on a phone the next patient and the consult button come first and the page
   await expect(button).toHaveAccessibleName('Start consultation with Lakshmi Rajan (synthetic)');
   const box = (await button.boundingBox())!;
   expect(box.y + box.height).toBeLessThan(844 - 90); // above the bottom tabs, within thumb reach
-  expect(box.height).toBeGreaterThanOrEqual(44);
+  expect(box.height).toBeGreaterThanOrEqual(await targetPx(page));
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 for (const locale of ['en', 'ar'])
-  test(`axe finds no violations on Today (${locale}); 44 px targets`, async ({ page }) => {
+  test(`axe finds no violations on Today (${locale}); control-size targets`, async ({ page }) => {
     await open(page, locale);
     await expect(page.getByRole('region', { name: locale === 'ar' ? 'المريض التالي' : 'Next patient' })).toBeVisible();
     if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
     // How many are ahead, in words (MDV-P1-103): Meera is second in Dr. Rao's queue.
     await expect(page.getByRole('region', { name: locale === 'ar' ? 'المريض التالي' : 'Next patient' })).toContainText(locale === 'ar' ? 'قبله مريض واحد' : '1 ahead');
-    for (const b of await page.getByRole('main').getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    for (const b of await page.getByRole('main').getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
     await page.addScriptTag({ path: axePath });
     const violations = await page.evaluate(async () =>
       (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations

@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page, type Request } from '@playwright/test';
+import { targetPx } from './support/targets';
 
 // MDV-P1-013 (India) and MDV-P1-014 (UAE) full registration in steps (P-02). CI has no API: /v1/me/context and /v1/patients/*
 // are mocked with the synthetic cast; the server rules are covered by PatientRulesTests and PatientRegistrationFlowTests.
@@ -193,19 +194,21 @@ test('switching to quick mode keeps what was typed; only steps already reached c
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 for (const [country, locale] of [['IN', 'en'], ['IN', 'hi'], ['AE', 'ar'], ['AE', 'en']] as const)
   for (const width of [1366, 768, 375])
-    test(`full registration is axe clean, fits and keeps 44px targets (${country}, ${locale}, ${width}px)`, async ({ page }) => {
+    test(`full registration is axe clean, fits and keeps control-size targets (${country}, ${locale}, ${width}px)`, async ({ page }) => {
+      // A touch phone gets the open-on-a-tablet message instead (phone-rule.spec.ts), so the touch project measures 768 and 1366 only.
+      test.skip(width < 768 && !!test.info().project.use.hasTouch, 'full registration is tablet-only on a touch phone');
       await page.setViewportSize({ width, height: 900 });
       await desk(page, country, { locale });
       await page.locator('#fullName').fill(country === 'IN' ? 'Deepak Nair' : 'Fatima Al Mansoori');
       await page.locator('#dateOfBirth').fill('1979-08-14');
       await page.getByRole('radio').nth(1).check();
       if (country === 'AE') await page.locator('#emiratesId').fill('784-1988-1234567-1');
-      await page.locator('form button[type=submit]').click();
+      await page.locator('button[type=submit][form=registration-form]').click(); // in the footer (MDV-P2-063)
       await expect(page.locator('#mobile')).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.dir)).toBe(locale === 'ar' ? 'rtl' : 'ltr');
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       for (const b of await page.locator('main button, main a, main input:not([type=radio]):not([type=checkbox])').all())
-        if (await b.isVisible()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+        if (await b.isVisible()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
       await page.addScriptTag({ path: axePath });
       const violations = await page.evaluate(async () =>
         (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations

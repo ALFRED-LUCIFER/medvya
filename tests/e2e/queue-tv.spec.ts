@@ -1,6 +1,7 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
 import { fakeHub } from './support/fakeHub';
+import { targetPx } from './support/targets';
 
 // MDV-P1-031: the waiting-room TV (P-05) and the staff "Queue displays" screen. CI has no API, so the endpoints are mocked in the
 // shapes the server sends (IQueueService.cs). The TV must make no request but its own: pairing, its queue and its hub.
@@ -153,7 +154,7 @@ test('a practice admin adds a display, gets its link once and revokes it', async
   await expect(page.getByText(/^Revoked/)).toBeVisible();
   expect(calls.revoked).toEqual(['d-1']);
   expect(calls.csrf).toEqual(['1', '1']);
-  for (const b of await page.getByRole('button').all()) if (await b.isVisible()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  for (const b of await page.getByRole('button').all()) if (await b.isVisible()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
   await page.addScriptTag({ path: axePath });
   const violations = await page.evaluate(async () =>
     (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations

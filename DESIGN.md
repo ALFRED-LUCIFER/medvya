@@ -72,21 +72,23 @@ Account menu: name and role, language, my devices, change facility, sign out (la
 
 ## Density
 
-Two densities (ruling 2). Density is chosen by task. A write is never compact.
+Two densities (ruling 2, amended 14 Nov 2026 by MDV-P2-062). Density is chosen by task and, for comfortable, by the pointer, exactly as the workspace concept (`docs/product-ux-audit/concepts/medvya-workspace-concept.html`). A write is never compact.
 
-| | Comfortable (default) | Compact (explicit, per table) |
-|---|---|---|
-| Control height | 44 px | 36 px |
-| Table row | 48 px | 36 px |
-| Cell side padding | 12 px | 8 px |
-| Body text | 14/20 | 14/20, never smaller |
-| Typed clinical text | 16/24 | not allowed |
+| | Comfortable (default): mouse | Comfortable: touch (`any-pointer: coarse`) | Compact (explicit, per table) |
+|---|---|---|---|
+| Control height (`--spacing-control`) | 36 px | 44 px | 36 px |
+| Small button (`--spacing-control-sm`) | 30 px | 44 px | — |
+| Table row (`--spacing-row`) | 40 px | 48 px | 36 px (48 px on touch) |
+| Cell side padding | 12 px | 12 px | 8 px |
+| Body text | 14/20 | 14/20 | 14/20, never smaller |
+| Typed clinical text | 16/24 | 16/24 | not allowed |
 
 - **Comfortable is the default and is mandatory** for every control that changes state, every row that picks a patient, medicine lines, sign and authorise, registration, nurse intake, the front-desk queue, and any device that reports a coarse pointer (`any-pointer: coarse`).
 - **Compact is an explicit per-table choice, allowed on four tables only:** the audit log, the formulary, order sets and the staff list. Not on the patient directory, not on the front-desk list. `<Table density="compact">`; lint (`medvya-ui/compact-table`) fails it anywhere else. On a coarse pointer a compact table's rows are 48 px. Built by MDV-P2-054 (#1213).
 - Tighter page chrome (headers, toolbars, empty cards) is accepted everywhere.
-- 44 px is the library default. A feature never patches a control height (defaults: MDV-P1-077, #1173; patches removed: MDV-P1-078, #1174).
-- WCAG 2.2 SC 2.5.8 sets a 24 by 24 px floor; 44 px is the project's stricter rule. Any row height under 44 px outside the four tables needs AGENTS.md section 4 amended in the same change.
+- The library reads the tokens: a feature writes `min-h-control`, `size-control` or `h-row`, never a pixel height, and never patches a library control (defaults: MDV-P1-077, #1173; patches removed: MDV-P1-078, #1174; by pointer: MDV-P2-062). The tokens switch on `any-pointer: coarse`, so a tablet, a phone or a touch laptop gets 44 px everywhere.
+- WCAG 2.2 SC 2.5.8 sets a 24 by 24 px floor; the project rule is 36 px with a mouse (30 px small buttons) and 44 px on touch (48 px in the patient portal), never under 24 px. A smaller target needs AGENTS.md section 4 amended in the same change.
+- Tabs are text with a 2 px underline; the chosen tab is also bold and in the brand colour (concept `.tabs`, Medvya Web `.tab`).
 
 ## Spacing, type, radius, elevation
 
@@ -141,7 +143,7 @@ A feature composes library components and does not style its own copy of a patte
 
 | Component | Purpose | Built by |
 |---|---|---|
-| Input, Select, Textarea | 44 px by default in the library | MDV-P1-077 (#1173) |
+| Input, Select, Textarea | The control token by default in the library (36 px mouse, 44 px touch) | MDV-P1-077 (#1173), MDV-P2-062 |
 | Table | `label` is required; names the scrollable region | MDV-P1-077 (#1173) |
 | Table density, stacked rows, TablePagination, `useTableController` | Compact on the four tables; labelled blocks under 768 px; sort announced; paged over 50 rows | MDV-P2-054 (#1213) |
 | PatientBanner | One banner: `full`, `strip` (pinned, one row), `desk` (no clinical data). Never covers a focused element | MDV-P1-081 (#1177), clinical sign-off |
@@ -258,7 +260,7 @@ Targets, by WCAG 2.2 success criterion (level A and AA). These are design requir
 | 1.4.4 Resize Text, 1.4.10 Reflow | 200 % zoom; no sideways scroll at 320 px wide |
 | 2.1.1 Keyboard, 2.4.3 Focus Order, 2.4.7 Focus Visible | Every path by keyboard, in order, with a visible ring |
 | 2.4.11 Focus Not Obscured (Minimum) | Nothing focusable under pinned chrome |
-| 2.5.8 Target Size (Minimum) | 24 px floor; 44 px project rule (48 px in the patient portal) |
+| 2.5.8 Target Size (Minimum) | 24 px floor; project rule 36 px with a mouse, 44 px on touch (48 px in the patient portal) |
 | 3.2.3 Consistent Navigation, 3.2.4 Consistent Identification | One name per screen |
 | 3.3.1 Error Identification, 3.3.3 Error Suggestion | Error beside the field and in a summary that takes focus |
 | 3.3.4 Error Prevention (Legal, Financial, Data) | Undo or confirm on visit moves, End and offboarding |
@@ -280,7 +282,7 @@ Also required: Arabic right-to-left with logical properties, and reduced motion 
 2. Sign the note, authorise the prescription, place orders and end the consultation stay four separate, recorded acts. One identity step-up may cover them.
 3. The walk-in path must not get longer: at most 6 clicks for a new patient and 3 for a returning one. Re-measure after every desk change.
 4. No tick, Saved, or number the system did not earn.
-5. Every control that changes state is comfortable, 44 px (48 px rows on a coarse pointer). Compact rows only on the audit log, formulary, order sets and staff tables.
+5. Every control that changes state is comfortable: 36 px with a mouse, 44 px and 48 px rows on a coarse pointer. Compact rows only on the audit log, formulary, order sets and staff tables.
 6. No palette or typeface change.
 7. No second component library, no new state library.
 

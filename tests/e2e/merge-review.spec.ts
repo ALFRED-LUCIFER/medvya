@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
+import { targetPx } from './support/targets';
 
 // MDV-P1-017 merge review (P-03). CI has no API: /v1/me/context and /v1/patients/merge-requests* are mocked with the synthetic cast;
 // the approvals, suppression, undo and audit rules are covered server-side by PatientMergeTests on SQL Server.
@@ -101,7 +102,7 @@ for (const locale of ['en', 'ar'])
       await expect(page.getByRole('table')).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.dir)).toBe(locale === 'ar' ? 'rtl' : 'ltr');
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-      for (const button of await page.getByRole('main').getByRole('button').all()) expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+      for (const button of await page.getByRole('main').getByRole('button').all()) expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
       expect(await axe(page)).toEqual([]);
     });
 

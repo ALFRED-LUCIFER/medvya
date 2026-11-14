@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
+import { targetPx } from './support/targets';
 
 // MDV-P1-086: Card, PageMessage, SegmentedControl, SplitLayout and Sheet on /__ui, in English and Arabic, with axe.
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
@@ -34,7 +35,7 @@ for (const locale of ['en', 'ar'] as const) {
       // AC2: Tab moves between segments, Enter selects, the selected one is pressed, each is at least 44 px tall.
       const segments = page.locator('[data-slot=segmented-control] button');
       await expect(segments).toHaveCount(3);
-      for (const s of await segments.all()) expect((await s.boundingBox())!.height).toBeGreaterThanOrEqual(43.5);
+      for (const s of await segments.all()) expect((await s.boundingBox())!.height).toBeGreaterThanOrEqual((await targetPx(page)) - 0.5);
       await segments.nth(0).focus();
       await page.keyboard.press('Tab');
       await expect(segments.nth(1)).toBeFocused();

@@ -47,6 +47,8 @@ function Table({
         role="region"
         aria-label={label}
         tabIndex={0}
+        // Chromium leaves a control that Tab reaches half clipped by this scroll box where it is; scroll it fully in (WCAG 2.2 SC 2.4.11).
+        onFocus={e => { if (e.target !== e.currentTarget) e.target.scrollIntoView?.({ block: "nearest", inline: "nearest" }) }}
         className={cn("relative w-full overflow-x-auto rounded-lg border focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1 focus-visible:outline-ring", containerClassName)}
       >
         <table

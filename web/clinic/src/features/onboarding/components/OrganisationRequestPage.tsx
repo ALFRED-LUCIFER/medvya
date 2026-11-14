@@ -6,6 +6,7 @@ import { Button, buttonVariants, Card, ErrorSummary, Field, FieldMarks, Input, L
 import { uploadErrorKey, type DocumentKind, type FileProblem, type ItContactForm, type OrganisationRequest, type RequestError } from '../domain/organisationRequest';
 
 type Props = {
+  approved: boolean;
   request: OrganisationRequest | null;
   loading: boolean;
   forbidden: boolean;
@@ -43,6 +44,16 @@ export default function OrganisationRequestPage(p: Props) {
     ...(nameError ? [{ id: 'it-name', label: t('orgRequest.it.name'), message: nameError }] : []),
     ...(emailError ? [{ id: 'it-email', label: t('orgRequest.it.email'), message: emailError }] : []),
   ];
+  if (p.approved) {
+    return (
+      <PageContainer width="form">
+        <PageHeader title={t('orgRequest.title')} />
+        <p role="status" className="flex items-start gap-2 rounded-lg bg-muted p-3 font-semibold">
+          <CircleCheck className="mt-0.5 size-4 shrink-0" aria-hidden />{t('orgRequest.status.Approved')}
+        </p>
+      </PageContainer>
+    );
+  }
   // Every state keeps the page heading (UX-08): a loading or refused page is never a bare sentence.
   if (p.loading || !p.request) {
     return (

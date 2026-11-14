@@ -169,7 +169,7 @@ export default function App({ locale, onLocaleChange }: Props) {
           {waitlistPath && <Route path={waitlistPath} element={<WaitlistRoute facilityId={active.facilityId} boardPath={pathOf('frontDesk')!} />} />}
           {/* shortcut: reachable by URL only; the Staff screen and its navigation entry come with F-10 (MDV-P1-008). */}
           {/* The owner's onboarding request (ADR-016, MDV-P1-062): status, documents and Submit; the shell notice links here until approval. */}
-          {active.capabilities.StaffRolesIntegrations === 'Config' && <Route path={organisationPath} element={<OrganisationRoute />} />}
+          {active.capabilities.StaffRolesIntegrations === 'Config' && <Route path={organisationPath} element={<OrganisationRoute approved={active.organisationState === 'Approved'} />} />}
           {/* D-04 clinic overview (MDV-P1-030): for everyone who sees the board; moving patients needs the full queue capability. */}
           {pathOf('frontDesk') && <Route path="/front-desk/overview" element={
             <OverviewRoute facilityId={active.facilityId} online={online} canMove={active.capabilities.CheckInQueue === 'Full'}

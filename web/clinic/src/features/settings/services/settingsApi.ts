@@ -56,8 +56,10 @@ export const saveNotificationPrefs = (prefs: NotificationPrefs) => send<Notifica
 export const fetchTemplatePreviews = (language: string) => send<TemplatePreview[]>(`/v1/settings/notifications/templates?${new URLSearchParams({ language })}`);
 
 // Nurse intake before the doctor (MDV-P2-007): one practice-wide switch; the server lets only an owner or practice admin change it and audits it.
-export const fetchNurseIntake = () => send<{ enabled: boolean }>('/v1/settings/nurse-intake');
-export const saveNurseIntake = (enabled: boolean) => send<{ enabled: boolean }>('/v1/settings/nurse-intake', json('PUT', { enabled }));
+// withNurse: how many of the practice's patients are with the nurse now (MDV-P2-055), said before the switch changes.
+export const fetchNurseIntake = () => send<NurseIntake>('/v1/settings/nurse-intake');
+export const saveNurseIntake = (enabled: boolean) => send<NurseIntake>('/v1/settings/nurse-intake', json('PUT', { enabled }));
+type NurseIntake = { enabled: boolean; withNurse: number };
 
 // The queue rule (MDV-P1-103): only an owner or practice admin may change it; the server audits each change.
 export const fetchQueueRule = () => send<QueueRule>('/v1/settings/queue-rule');

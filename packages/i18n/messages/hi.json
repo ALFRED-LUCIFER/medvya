@@ -2452,7 +2452,7 @@
   "mobile.today.viaApp": "ऐप से",
   "mobile.patients.search": "मरीज़ खोजें",
   "mobile.patients.searchHint": "नाम, या फ़ोन या MRN के आख़िरी 4 अंक",
-  "mobile.patients.line": "{age} {sex} · ••{last4}",
+  "mobile.patients.line": "{age} {sex} · {last4}",
   "mobile.patients.none": "कोई मरीज़ नहीं मिला",
   "mobile.patients.noneHint": "वर्तनी जाँचें या फ़ोन के आख़िरी 4 अंक आज़माएँ।",
   "mobile.patients.flag.allergy": "एलर्जी",

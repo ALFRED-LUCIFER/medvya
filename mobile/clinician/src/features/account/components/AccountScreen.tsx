@@ -1,4 +1,4 @@
-import { locales, useI18n, type Locale } from '@medvya/i18n';
+import { locales, ltr, useI18n, type Locale } from '@medvya/i18n';
 import { Avatar, Button, Card, Chip, Icon, IconButton, ListRow, Screen, Section, Text } from '@medvya/ui-native';
 import { theme } from '@medvya/tokens';
 import { I18nManager, StyleSheet, View } from 'react-native';
@@ -19,7 +19,7 @@ export function AccountScreen(vm: Props) {
       <View style={styles.identity}>
         <Avatar initials={vm.staff.initials} size={64} />
         <Text variant="title">{vm.staff.name}</Text>
-        <Text variant="caption">{vm.staff.email}</Text>
+        <Text variant="caption">{ltr(vm.staff.email)}</Text>
         <Chip label={t(`mobile.role.${vm.staff.role}`)} tone="brand" icon="badge" />
       </View>
 

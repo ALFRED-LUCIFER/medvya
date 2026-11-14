@@ -55,6 +55,23 @@ export function watchUrls(page: Page) {
   };
 }
 
+/**
+ * MDV-P2-047 (AC4): the addresses of a step-up round trip that hold more than opaque identifiers. Every path segment and query value must be
+ * one token (an id, a fixed protocol word, or a random protocol value such as state, nonce or code); `redirect_uri` is checked the same way,
+ * `scope` word by word, and `resume` may only be a word from the app's list. A name, a date of birth or free text cannot pass (no spaces,
+ * no `@`, no `:` outside the origin), and `leaks` above catches a single-word value such as a surname.
+ */
+export function notOpaque(urls: string[]) {
+  const token = /^[A-Za-z0-9_.~-]+$/;
+  const opaque = (u: string): boolean => {
+    const url = new URL(u, 'http://localhost');
+    return url.pathname.split('/').every(s => s === '' || token.test(s)) && url.hash === ''
+      && [...url.searchParams].every(([k, v]) => k === 'resume' ? ['authorise', 'sign'].includes(v)
+        : k === 'redirect_uri' ? opaque(v) : k === 'scope' ? v.split(' ').every(w => token.test(w)) : token.test(k) && token.test(v));
+  };
+  return urls.filter(u => !opaque(u));
+}
+
 /** A synthetic patient unique to this run (a kept database never flags it as a duplicate): letters for digits in the surname, +91 90000 0xxxx. */
 export function syntheticPatient(first: string, last: string) {
   const n = Math.floor(Math.random() * 9000) + 1000;

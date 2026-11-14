@@ -5,6 +5,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import { ApiError } from '../../schedule/services/scheduleApi';
 import { overrideSchema } from '../domain/checks';
 import { startReauth } from '../../encounters/services/noteApi';
+import { useStepUpReturn } from '../../encounters/hooks/useStepUpReturn';
 import { authoriseProblem, type AuthoriseProblem } from '../domain/authorisation';
 import { withDefaults } from '../domain/addMedicine';
 import { freeTextSchema, invalidFields, problemOf, toDraft, type PrintLanguage, type RxLine, type RxProblem, type SaveState, type SigDraft, type SigField } from '../domain/prescription';
@@ -44,6 +45,7 @@ export function usePrescriptionController(encounterId: string) {
   const authKey = ['prescription-authorisation', encounterId];
   const authorisation = useQuery({ queryKey: authKey, queryFn: () => fetchAuthorisation(encounterId), enabled: list.isSuccess, retry: false });
   const [authProblem, setAuthProblem] = useState<AuthoriseProblem | null>(null);
+  const resume = useStepUpReturn('authorise');
   const doAuthorise = useMutation({
     mutationFn: () => authorise(encounterId),
     onSuccess: s => { queryClient.setQueryData(authKey, s); setAuthProblem(null); },
@@ -119,15 +121,16 @@ export function usePrescriptionController(encounterId: string) {
     authorising: doAuthorise.isPending,
     authProblem,
     onAuthorise: () => doAuthorise.mutate(),
+    resume,
     cancelling, cancelForm, cancelPending: doCancel.isPending, cancelProblem,
     onCancelling: (open: boolean) => { setCancelling(open); setCancelProblem(null); cancelForm.reset({ reason: '' }); },
     onCancel: cancelForm.handleSubmit(v => doCancel.mutate(v.reason)),
     discarding, discardForm, discardPending: doDiscard.isPending, discardFailed: doDiscard.isError,
     onDiscarding: (open: boolean) => { setDiscarding(open); discardForm.reset({ reason: '' }); doDiscard.reset(); },
     onDiscard: discardForm.handleSubmit(v => doDiscard.mutate(v.reason)),
-    /** The step-up leaves for the provider and comes back here; the draft is already saved on the server, nothing is put in browser storage. */
+    /** The step-up leaves for the provider and comes back here, to Authorise (MDV-P2-047); the draft is saved on the server, nothing is in browser storage. */
     onConfirmIdentity: async () => {
-      try { await startReauth(); } catch { setAuthProblem('failed'); }
+      try { await startReauth('authorise'); } catch { setAuthProblem('failed'); }
     },
     onOverride: (alertKey: string | null) => { setOverriding(alertKey); reasonForm.reset({ reason: '' }); },
     onReason: reasonForm.handleSubmit(v => { if (overriding) override.mutate({ key: overriding, reason: v.reason }); }),

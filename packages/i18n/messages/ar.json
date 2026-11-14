@@ -4316,6 +4316,7 @@
   "rx.auth.print": "طباعة الوصفة",
   "rx.auth.reauth": "أكّد هويتك لاعتماد الوصفة. ما أدخلته يبقى هنا.",
   "rx.auth.confirm": "تأكيد الهوية",
+  "stepUp.confirmed": "تم تأكيد الهوية. اضغط «{action}».",
   "rx.auth.error.unresolved_alerts": "لا يوجد سبب بعد لتنبيه شديد. اذكره في فحوص السلامة، ثم اعتمد.",
   "rx.auth.error.nothing_to_authorise": "لا يوجد ما يُعتمد بعد. أضف دواءً أولًا.",
   "rx.auth.error.no_instructions": "كل دواء مضمّن يحتاج إلى تعليمات. أدخل جرعته أولًا.",

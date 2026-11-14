@@ -115,3 +115,69 @@ for (const locale of ['en', 'ar'])
     await expect(page.getByRole('heading', { name: locale === 'ar' ? 'التحقق من الوصفة' : 'Prescription check' })).toBeVisible();
     expect(await axeViolations(page)).toEqual([]);
   });
+
+// MDV-P2-047: the step-up remembers only the word "authorise"; back on the page Authorise is in view and focused and the status says what to
+// press, but nothing is authorised until the doctor presses it. The provider is stubbed to send the browser straight back to the return address.
+for (const locale of ['en', 'ar'])
+  test(`back from the step-up, Authorise is in view and focused and waits for the press (${locale})`, async ({ page }) => {
+    const { calls } = await mockPrescription(page, { locale, lines: [metformin], reauthFirst: true });
+    const asked: { returnUrl: string }[] = [];
+    await page.route('**/bff/reauth', r => {
+      const body = r.request().postDataJSON() as { returnUrl: string };
+      asked.push(body);
+      return r.fulfill({ json: { location: body.returnUrl } });
+    });
+    await page.goto('/consult/e-1');
+    const rx = page.getByRole('region', { name: locale === 'ar' ? 'الوصفة الطبية' : 'Prescription' });
+    const authorise = rx.getByRole('button', { name: locale === 'ar' ? 'اعتماد الوصفة' : 'Authorise prescription' });
+    await authorise.click();
+    await rx.getByRole('button', { name: locale === 'ar' ? 'تأكيد الهوية' : 'Confirm identity' }).click();
+
+    await expect(authorise).toBeFocused();
+    await expect(authorise).toBeInViewport();
+    const said = locale === 'ar' ? 'تم تأكيد الهوية. اضغط «اعتماد الوصفة».' : 'Identity confirmed. Press Authorise prescription.';
+    await expect(rx.getByRole('status').filter({ hasText: said })).toBeVisible();
+    expect(asked).toEqual([{ returnUrl: '/consult/e-1?resume=authorise' }]); // the opaque path and one fixed word, nothing else
+    await expect(page).toHaveURL(/\/consult\/e-1$/); // the word leaves the address, so a reload says nothing
+    expect(await axeViolations(page)).toEqual([]);
+    expect(calls.authorised).toBe(1); // only the refused try before the step-up: coming back authorised nothing
+
+    await page.keyboard.press('Enter');
+    await expect(rx).toContainText(locale === 'ar' ? 'معتمدة · الإصدار 1' : 'Authorised · version 1');
+    expect(calls.authorised).toBe(2);
+    await expect(rx.getByRole('status').filter({ hasText: said })).toHaveCount(0);
+  });
+
+test('back from the step-up for cancelling, Cancel prescription is focused and nothing is cancelled', async ({ page }) => {
+  await mockPrescription(page, { lines: [metformin], authorisation: { authorised: authorised(1), changed: false } });
+  let cancels = 0;
+  page.on('request', r => { if (r.method() !== 'GET' && r.url().includes('/prescription/')) cancels++; });
+  await page.goto('/consult/e-1?resume=authorise');
+  const rx = page.getByRole('region', { name: 'Prescription' });
+  await expect(rx.getByRole('button', { name: 'Cancel prescription' })).toBeFocused();
+  await expect(rx.getByRole('status').filter({ hasText: 'Identity confirmed. Press Cancel prescription.' })).toBeVisible();
+  expect(cancels).toBe(0);
+});
+
+test('a click before Authorise appears keeps the focus where the doctor put it', async ({ page }) => {
+  await mockPrescription(page, { lines: [metformin] });
+  let release = () => {};
+  const held = new Promise<void>(r => { release = r; });
+  await page.route('**/v1/encounters/e-1/prescription', async r => { await held; return r.fallback(); });
+  await page.goto('/consult/e-1?resume=authorise');
+  await page.getByRole('region', { name: 'Patient identity' }).click();
+  release();
+  const authorise = page.getByRole('region', { name: 'Prescription' }).getByRole('button', { name: 'Authorise prescription' });
+  await expect(authorise).toBeVisible();
+  await expect(authorise).not.toBeFocused();
+  await expect(page.getByText('Identity confirmed. Press Authorise prescription.')).toHaveCount(0);
+});
+
+test('a word that is not on the list in the return address moves nothing and says nothing', async ({ page }) => {
+  await mockPrescription(page, { lines: [metformin] });
+  await page.goto('/consult/e-1?resume=meera');
+  const authorise = page.getByRole('region', { name: 'Prescription' }).getByRole('button', { name: 'Authorise prescription' });
+  await expect(authorise).toBeVisible();
+  await expect(authorise).not.toBeFocused();
+  await expect(page.getByText('Identity confirmed. Press Authorise prescription.')).toHaveCount(0);
+});

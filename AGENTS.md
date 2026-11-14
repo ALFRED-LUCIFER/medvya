@@ -67,6 +67,13 @@ src/features/<feature>/components/ presentational: props in, events out (no serv
 - **A new shared component is not done until it is in the `/__ui` gallery in English and Arabic.**
 - **Drift counts may only fall.** `pnpm check:ui-drift` (CI, web job) counts raw hex colours against `tools/check-ui-drift/baseline.json`. A rise fails. A local `Field`, an arbitrary font size or an `sm:` column rule in a feature is a lint error (`medvya-ui/no-local-field`, MDV-P2-058; `medvya-ui/no-arbitrary-text-size` and `medvya-ui/no-sm-columns`, MDV-P2-057). When your change lowers a count, run `pnpm check:ui-drift --update` and commit the baseline in the same PR. Never raise a number by hand.
 
+**Mobile apps (`mobile/`, `packages/ui-native`)**, ADR-011. Detail: [DESIGN.md "Native apps"](DESIGN.md#native-apps).
+
+- UI comes only from `@medvya/ui-native`; every colour, radius, space and type size from `theme` in `@medvya/tokens` (one `tokens.json` feeds web and native). Zero raw hex: `pnpm check:ui-drift` fails one.
+- The ADR-009 layers and `react/jsx-no-literals` hold, lint-enforced in `mobile/.oxlintrc.json`. Never import web UI or another app.
+- Targets: 44 px in the clinic app, 48 px in the patient app (17 px minimum text); primary actions and inputs 52 px. Arabic right to left (`supportsRTL`).
+- Screen readers get words, never glyphs; a disabled action shows its reason as text and uses token colours, not opacity; the primary action sits in `Screen`'s footer, above the keyboard.
+
 ## 5 · Definition of Done (every PR)
 
 - [ ] Ticket acceptance criteria met and demonstrated

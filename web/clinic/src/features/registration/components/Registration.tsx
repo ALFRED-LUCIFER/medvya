@@ -104,7 +104,7 @@ export default function Registration(p: Props) {
     date: p.ageInstead ? t('registration.duplicates.age', { age: p.values.ageYears }) : p.values.dateOfBirth && formatCalendarDate(p.values.dateOfBirth),
   };
   return (
-    <PageContainer width="reading" className="gap-5">
+    <PageContainer width="fluid" className="gap-5">
       <PageHeader title={t('registration.title')} description={t(p.quick ? 'registration.quick.intro' : `registration.full.intro.${p.country}`)}
 >
         {/* The one view switch (MDV-P2-060), under the title: its 48 px track would make the 44 px title row taller (MDV-P2-059). */}
@@ -118,19 +118,21 @@ export default function Registration(p: Props) {
           <Button type="button" variant="outline" size="sm" onClick={p.onRegisterAnother}>{t('registration.draft.startAgain')}</Button>
         </p>
       )}
-      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
-        <form noValidate onSubmit={e => { e.preventDefault(); if (atReview) p.onSubmit(); else p.onContinue(); }} className="flex min-w-0 flex-col gap-5">
+      {/* As in the registration design (MDV-P2-062): steps as a vertical list from 1024 px, the side panel beside the form only from 1600 px. */}
+      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
+        <form noValidate onSubmit={e => { e.preventDefault(); if (atReview) p.onSubmit(); else p.onContinue(); }}
+          className={cn('flex min-w-0 flex-col gap-5', step && 'wide:grid wide:grid-cols-[13rem_minmax(0,1fr)] wide:items-start wide:[&>*:not(ol)]:col-start-2')}>
           <FormErrorSummary f={f} summary={p.errorSummary} country={p.country} values={p.values} quick={p.quick} />
           {step && (
-            <ol aria-label={t('registration.steps.label')} className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+            <ol aria-label={t('registration.steps.label')} className="grid grid-cols-2 gap-2 sm:grid-cols-3 wide:row-span-5 wide:grid-cols-1 wide:gap-1">
               {steps.map((s, i) => {
                 const current = s === step;
                 const done = i < steps.indexOf(step);
                 return (
                   <li key={s}>
                     <button type="button" onClick={() => p.onGoTo(s)} disabled={i > p.reachedIndex} aria-current={current ? 'step' : undefined}
-                      className={cn('flex min-h-11 w-full items-center gap-2 rounded-md border px-2 text-start text-sm disabled:opacity-60',
-                        current ? 'border-brand-700 bg-accent font-bold' : 'bg-card')}>
+                      className={cn('flex min-h-control w-full items-center gap-2 rounded-md border px-2 text-start text-body disabled:opacity-60 wide:border-transparent',
+                        current ? 'border-brand-700 bg-accent font-bold' : 'bg-card wide:bg-transparent')}>
                       <span aria-hidden className={cn('flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-bold',
                         current ? 'bg-brand-700 text-white' : done ? 'bg-success-700 text-white' : 'bg-muted')}>{done ? <Check className="size-4" /> : i + 1}</span>
                       <span>{t(`registration.step.${s}`)}{done && <span className="sr-only">{t('registration.steps.done')}</span>}</span>

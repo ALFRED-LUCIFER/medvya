@@ -42,7 +42,7 @@ export default function NotificationsPanel(p: Props) {
             {messageToggles.map(name => (
               <li key={name} className="p-3">
                 <Controller control={p.form.control} name={name} render={({ field }) => (
-                  <label className="flex min-h-11 items-center gap-3 font-bold">
+                  <label className="flex min-h-control items-center gap-3 font-bold">
                     <Switch checked={field.value} onCheckedChange={field.onChange} />
                     <span>{t(`settings.notifications.message.${name}`)}</span>
                     <span className="text-sm font-normal text-muted-foreground">{t(field.value ? 'settings.notifications.on' : 'settings.notifications.off')}</span>
@@ -59,7 +59,7 @@ export default function NotificationsPanel(p: Props) {
             {channelToggles.map(name => (
               <li key={name} className="p-3">
                 <Controller control={p.form.control} name={name} render={({ field }) => (
-                  <label className="flex min-h-11 items-center gap-3 font-bold">
+                  <label className="flex min-h-control items-center gap-3 font-bold">
                     <Switch checked={field.value} onCheckedChange={field.onChange} />
                     <span>{t(`settings.notifications.channel.${name}`)}</span>
                     <span className="text-sm font-normal text-muted-foreground">{t(field.value ? 'settings.notifications.on' : 'settings.notifications.off')}</span>
@@ -68,7 +68,7 @@ export default function NotificationsPanel(p: Props) {
               </li>
             ))}
             <li className="p-3">
-              <label className="flex min-h-11 items-center gap-3 font-bold">
+              <label className="flex min-h-control items-center gap-3 font-bold">
                 <Switch checked={false} disabled aria-describedby="notifications-whatsapp" />
                 <span>{t('settings.notifications.channel.whatsapp')}</span>
               </label>

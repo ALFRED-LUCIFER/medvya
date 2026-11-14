@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
+import { controlPx, rowPx, targetPx } from './support/targets';
 
 // MDV-P1-008. CI has no API: the staff endpoints are mocked with the synthetic cast (docs/00-overview/personas.md).
 // The server-side rules (403 for other roles, custom roles capped at practice admin, audit) are tested on SQL Server in StaffTests.cs.
@@ -229,7 +230,7 @@ for (const locale of ['en', 'ar'])
     const nameSort = table.locator('th[aria-sort]').first().getByRole('button');
     const firstRow = () => table.locator('tbody tr').first().locator('th').innerText();
     await expect(table.locator('th[aria-sort="none"]')).toHaveCount(2);
-    expect((await nameSort.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    expect((await nameSort.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
     await nameSort.focus();
     await page.keyboard.press('Enter');
     await expect(table.locator('th[aria-sort="ascending"]')).toHaveCount(1);
@@ -377,7 +378,7 @@ test('below 1440 the staff row may wrap, but nothing scrolls sideways and both a
   expect(await page.getByRole('region', { name: /staff/i }).first().evaluate(e => e.scrollWidth - e.clientWidth)).toBe(0);
 });
 
-test('rows are 36 px with a mouse at 1440; Offboard is a 44 px menu item that opens a confirmation', async ({ page }) => {
+test('rows are 36 px with a mouse at 1440; Offboard is a menu item of at least the control height that opens a confirmation', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await setUp(page);
   await page.route('**/v1/staff', r => r.request().method() === 'GET' ? r.fulfill({ json: [staff[0], member({ membershipId: 'c', userId: 'u-joseph', name: 'A. Joseph (synthetic)' })] }) : r.fallback());
@@ -388,7 +389,7 @@ test('rows are 36 px with a mouse at 1440; Offboard is a 44 px menu item that op
   expect(await axe(page)).toEqual([]);
   await row.getByRole('button', { name: 'Actions for A. Joseph (synthetic)' }).click();
   const offboard = page.getByRole('menuitem', { name: 'Offboard A. Joseph (synthetic)' });
-  expect((await offboard.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  expect((await offboard.boundingBox())!.height).toBeGreaterThanOrEqual(await controlPx(page));
   await offboard.click();
   // A confirmation, not an action: the reason and the destructive button come first, and nothing was sent.
   await expect(page.getByLabel('Reason (kept in the audit trail)')).toBeFocused();
@@ -404,8 +405,8 @@ test.describe('on a coarse pointer', () => {
     expect(await page.evaluate(() => matchMedia('(any-pointer: coarse)').matches)).toBe(true);
     const row = page.getByRole('row', { name: /A\. Joseph/ });
     await expect(row).toBeVisible();
-    expect(Math.round((await row.boundingBox())!.height)).toBeGreaterThanOrEqual(48);
-    for (const button of await row.getByRole('button').all()) expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    expect(Math.round((await row.boundingBox())!.height)).toBeGreaterThanOrEqual(await rowPx(page));
+    for (const button of await row.getByRole('button').all()) expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
   });
 });
 

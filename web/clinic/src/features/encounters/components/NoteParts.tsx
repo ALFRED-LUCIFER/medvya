@@ -76,7 +76,7 @@ export function StructuredField({ section, text, readOnly, onChange, heading }: 
               <div role="group" aria-labelledby={label} className="flex flex-wrap items-center gap-2">
                 <span id={label} className="min-w-32 text-sm font-bold">{t(itemLabelKey(item))}</span>
                 {answersFor(section).map(answer => (
-                  <Button key={answer} type="button" size="sm" variant={a?.answer === answer ? 'selected' : 'outline'} className="min-w-11" aria-pressed={a?.answer === answer}
+                  <Button key={answer} type="button" size="sm" variant={a?.answer === answer ? 'selected' : 'outline'} className="min-w-control" aria-pressed={a?.answer === answer}
                     onClick={() => onChange(writeAnswers(section, toggle(answers, item, answer)))}>{t(answerLabelKey(answer))}</Button>
                 ))}
               </div>

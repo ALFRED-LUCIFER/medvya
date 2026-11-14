@@ -24,7 +24,7 @@ describe('AccountMenu', () => {
     expect(last.previousElementSibling!.getAttribute('role')).toBe('separator');
     expect(menu.textContent).toContain('Meera Iyer');
     expect(menu.textContent).toContain('Doctor');
-    for (const i of screen.getAllByRole('menuitem')) expect(i.className.split(/\s+/)).toContain('min-h-11');
+    for (const i of screen.getAllByRole('menuitem')) expect(i.className.split(/\s+/)).toContain('min-h-control');
   });
 
   it('hides change facility for one facility, and calls the handler for the chosen item', () => {

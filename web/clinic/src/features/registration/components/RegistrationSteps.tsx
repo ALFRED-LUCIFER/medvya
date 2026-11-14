@@ -9,7 +9,8 @@ import {
 } from '../domain/registration';
 import { Checkbox, SelectField, SexField, TextField, type FormProps } from './FormFields';
 
-const grid = 'grid gap-4 md:grid-cols-2';
+// Fields auto-fit at a 200 px minimum, five to a row at 1440 px, as in the registration design (MDV-P2-062).
+const grid = 'grid grid-cols-[repeat(auto-fit,minmax(min(200px,100%),1fr))] gap-x-4 gap-y-3.5';
 
 const isRelationship = (country: Country, r: string): r is (typeof relationships)[Country][number] => (relationships[country] as readonly string[]).includes(r);
 
@@ -48,7 +49,7 @@ export function QuickFields({ f, country, ageInstead, minor }: { f: FormProps; c
   );
 }
 
-/** The guardian (UAE: guardian or sponsor of a dependant): required while the patient is under 18. Cells of a two-column grid. */
+/** The guardian (UAE: guardian or sponsor of a dependant): required while the patient is under 18. Cells of the field grid. */
 function GuardianFields({ f, country, minor }: { f: FormProps; country: Country; minor: boolean | null }) {
   const { t } = useI18n();
   const hint = t(minor ? 'registration.hint.guardian.minor' : minor === false ? 'registration.hint.guardian.adult' : 'registration.hint.guardian.unknown');
@@ -62,7 +63,7 @@ function GuardianFields({ f, country, minor }: { f: FormProps; country: Country;
   );
 }
 
-/** The emergency contact: a name and number to call, never a portal user. Cells of a two-column grid. */
+/** The emergency contact: a name and number to call, never a portal user. Cells of the field grid. */
 export function EmergencyContactFields({ f, country, required }: { f: FormProps; country: Country; required: boolean }) {
   const { t } = useI18n();
   return (
@@ -155,7 +156,7 @@ export function ContactStep({ f, country, values }: { f: FormProps; country: Cou
   );
 }
 
-/** Indian address with PIN, or UAE address with emirate (which selects the HIE), Makani and P.O. Box. Cells of a two-column grid. */
+/** Indian address with PIN, or UAE address with emirate (which selects the HIE), Makani and P.O. Box. Cells of the field grid. */
 export function AddressFields({ f, country, values }: { f: FormProps; country: Country; values: RegistrationForm }) {
   const { t } = useI18n();
   const hie = hieFor(values.region);

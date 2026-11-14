@@ -1,6 +1,7 @@
 import { createRequire } from 'node:module';
 import { expect, test } from '@playwright/test';
 import { mockNurse } from './support/nurse';
+import { targetPx } from './support/targets';
 
 // MDV-P2-007 (N-01): the nurse opens the intake from the queue, an impossible value is refused with words, an out-of-range one is flagged in
 // words and must be re-measured or kept before the handoff, an escalation needs a reason, and the handoff returns to the queue. The server
@@ -193,7 +194,7 @@ test('a correction sent after the doctor started is refused in words', async ({ 
 
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 for (const locale of ['en', 'ar'])
-  test(`axe finds no violations on the intake (${locale}); tablet targets are 44 px`, async ({ page }) => {
+  test(`axe finds no violations on the intake (${locale}); control-size targets on a tablet`, async ({ page }) => {
     await page.setViewportSize({ width: 820, height: 1180 });
     await mockNurse(page, locale, { unreviewed: true });
     await page.goto('/nurse/a1');
@@ -201,8 +202,8 @@ for (const locale of ['en', 'ar'])
     await page.getByRole('button').filter({ hasText: /^(Save vitals|احفظ العلامات الحيوية)$/ }).click();
     await expect(page.getByText(locale === 'ar' ? /مرتفع · أعد القياس/ : 'High · re-check')).toBeVisible();
     if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
-    for (const target of await page.getByRole('main').getByRole('button').all()) expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(44);
-    for (const target of await page.getByRole('main').getByRole('textbox').all()) expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    for (const target of await page.getByRole('main').getByRole('button').all()) expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
+    for (const target of await page.getByRole('main').getByRole('textbox').all()) expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
     await page.addScriptTag({ path: axePath });
     const violations = await page.evaluate(async () =>
       (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations
@@ -211,7 +212,7 @@ for (const locale of ['en', 'ar'])
   });
 
 for (const locale of ['en', 'ar'])
-  test(`axe finds no violations on the queue with a checked-in patient (${locale}); targets are 44 px`, async ({ page }) => {
+  test(`axe finds no violations on the queue with a checked-in patient (${locale}); control-size targets`, async ({ page }) => {
     await page.setViewportSize({ width: 820, height: 1180 });
     await mockNurse(page, locale, { checkedIn: true });
     await page.goto('/nurse');
@@ -219,7 +220,7 @@ for (const locale of ['en', 'ar'])
     await expect(take).toHaveCount(1);
     if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
     // Every button, the table's sort headers included, is a 44 px target.
-    for (const b of await page.getByRole('main').getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    for (const b of await page.getByRole('main').getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
     await page.addScriptTag({ path: axePath });
     const violations = await page.evaluate(async () =>
       (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations
@@ -229,7 +230,7 @@ for (const locale of ['en', 'ar'])
 
 // MDV-P2-048 at 1024 touch: the flagged list and the correction form, in English and Arabic.
 for (const locale of ['en', 'ar'])
-  test(`axe finds no violations on the flagged list (${locale}); targets are 44 px`, async ({ page }) => {
+  test(`axe finds no violations on the flagged list (${locale}); control-size targets`, async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 768 });
     await mockNurse(page, locale);
     await page.goto('/nurse/a1');
@@ -238,7 +239,7 @@ for (const locale of ['en', 'ar'])
     await page.getByRole('button').filter({ hasText: /^(Save vitals|احفظ العلامات الحيوية)$/ }).click();
     await expect(page.getByRole('status').filter({ has: page.getByRole('list') })).toBeVisible();
     if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
-    for (const target of await page.getByRole('main').getByRole('button').all()) expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    for (const target of await page.getByRole('main').getByRole('button').all()) expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
     await page.addScriptTag({ path: axePath });
     const violations = await page.evaluate(async () =>
       (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations.map(v => `${v.id} (${v.nodes.length})`));
@@ -246,15 +247,15 @@ for (const locale of ['en', 'ar'])
   });
 
 for (const locale of ['en', 'ar'])
-  test(`axe finds no violations on the correction form after the handoff (${locale}); targets are 44 px`, async ({ page }) => {
+  test(`axe finds no violations on the correction form after the handoff (${locale}); control-size targets`, async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 768 });
     await mockNurse(page, locale, { handedOff: [{ kind: 'Weight', value: 7.2, flag: null, previousValue: null, previousAt: null, flagKept: false, recordedAt: '2026-10-19T04:30:00Z' }] });
     await page.goto('/nurse/a1');
     await page.getByRole('main').getByRole('button', { name: /^(Correct Weight|تصحيح الوزن)$/ }).click();
     await expect(page.getByRole('group')).toBeVisible();
     if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
-    for (const target of await page.getByRole('main').getByRole('button').all()) expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(44);
-    for (const target of await page.getByRole('group').getByRole('textbox').all()) expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    for (const target of await page.getByRole('main').getByRole('button').all()) expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
+    for (const target of await page.getByRole('group').getByRole('textbox').all()) expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
     await page.addScriptTag({ path: axePath });
     const violations = await page.evaluate(async () =>
       (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations.map(v => `${v.id} (${v.nodes.length})`));

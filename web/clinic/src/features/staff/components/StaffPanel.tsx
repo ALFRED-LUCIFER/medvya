@@ -138,7 +138,7 @@ export default function StaffPanel(p: Props) {
                     <TableCell>
                       <span className="flex flex-wrap items-center gap-2">
                         {actions.visible && (
-                          <Button type="button" variant="outline" className="min-w-11" disabled={act[actions.visible].disabled} aria-label={t(`staff.${actions.visible}Named`, { name: who })} onClick={act[actions.visible].run}>
+                          <Button type="button" variant="outline" className="min-w-control" disabled={act[actions.visible].disabled} aria-label={t(`staff.${actions.visible}Named`, { name: who })} onClick={act[actions.visible].run}>
                             {t(`staff.${actions.visible}`)}
                           </Button>
                         )}

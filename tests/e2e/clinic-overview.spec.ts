@@ -1,6 +1,7 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
 import { fakeHub } from './support/fakeHub';
+import { targetPx } from './support/targets';
 
 // MDV-P1-030: D-04 clinic overview and the board's doctor workload. CI has no API, so the endpoints are mocked in the shapes
 // the server sends (IFrontDeskService.cs).
@@ -108,11 +109,11 @@ test('the board shows each doctor\'s workload and switches to the by-doctor view
 
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 for (const locale of ['en', 'ar'])
-  test(`axe finds no violations on the overview and the move form (${locale}); 44 px targets`, async ({ page }) => {
+  test(`axe finds no violations on the overview and the move form (${locale}); control-size targets`, async ({ page }) => {
     await open(page, { locale });
     if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
     await page.getByRole('button', { name: locale === 'en' ? 'Move to another doctor' : 'نقل إلى طبيب آخر' }).click();
-    for (const b of await page.getByRole('main').getByRole('button').all()) if (await b.isVisible()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    for (const b of await page.getByRole('main').getByRole('button').all()) if (await b.isVisible()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
     await page.addScriptTag({ path: axePath });
     const violations = await page.evaluate(async () =>
       (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations

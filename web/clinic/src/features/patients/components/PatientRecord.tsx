@@ -163,7 +163,7 @@ export default function PatientRecord(props: Props) {
         <p className="mb-3 text-xs text-muted-foreground">{t('patients.consents.note')} <bdi dir="ltr">{t('registration.consents.version', { version: consentPolicyVersion })}</bdi></p>
         {props.consents.failed ? <p role="alert" className="text-sm font-semibold text-danger-700">{t('patients.consents.failed')}</p> : (
           <ul className="flex flex-col divide-y">
-            <li className="flex min-h-11 items-center justify-between gap-3 py-1">
+            <li className="flex min-h-control items-center justify-between gap-3 py-1">
               <span className="font-bold">{t('registration.consents.treatment.title')}</span>
               <span className="text-sm font-bold">{t('registration.consents.required')}</span>
             </li>
@@ -172,7 +172,7 @@ export default function PatientRecord(props: Props) {
               const label = row.type === 'Reminders' ? `${t('registration.consents.reminders.title')}: ${t(row.title)}` : t(row.title);
               const action = t(state?.granted ? 'patients.consents.withdraw' : 'patients.consents.grant');
               return (
-                <li key={row.id} className="flex min-h-11 items-center justify-between gap-3 py-1">
+                <li key={row.id} className="flex min-h-control items-center justify-between gap-3 py-1">
                   <span className="min-w-0 font-bold">{label}</span>
                   <span className="flex items-center gap-3">
                     <span className="text-sm font-bold">{state ? t(state.granted ? 'registration.consents.on' : 'registration.consents.off') : t('patients.consents.notRecorded')}</span>

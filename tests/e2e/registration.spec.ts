@@ -1,6 +1,7 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page, type Request } from '@playwright/test';
 import { t } from './support/desk';
+import { targetPx } from './support/targets';
 
 // MDV-P1-016 duplicate warning while typing and resolution before save, on the quick registration form (MDV-P1-015).
 // The full flows (MDV-P1-013/014) are in registration-full.spec.ts.
@@ -157,7 +158,7 @@ for (const locale of ['en', 'ar'])
       expect(await page.evaluate(() => document.documentElement.dir)).toBe(locale === 'ar' ? 'rtl' : 'ltr');
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       for (const b of await page.locator('main button, main a, main input:not([type=radio]):not([type=checkbox])').all())
-        if (await b.isVisible()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+        if (await b.isVisible()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
       await page.addScriptTag({ path: axePath });
       const violations = await page.evaluate(async () =>
         (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations

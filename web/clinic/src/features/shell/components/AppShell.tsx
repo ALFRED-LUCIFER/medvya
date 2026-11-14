@@ -94,7 +94,7 @@ export default function AppShell({ displayName, role, facilityName, items, tabs,
         <header data-pinned="top" className="sticky top-0 z-10 flex h-(--shell-top) items-center gap-3 border-b bg-card px-4 md:px-6 print:hidden">
           <p className="min-w-0 flex-1 truncate font-bold">{facilityName}</p>
           {globalSearch ?? (searchPath && (
-            <Link to={searchPath} className={cn(buttonVariants({ variant: 'outline' }), 'max-sm:size-11 max-sm:px-0')}>
+            <Link to={searchPath} className={cn(buttonVariants({ variant: 'outline' }), 'max-sm:size-control max-sm:px-0')}>
               <Search aria-hidden /><span className="max-sm:sr-only">{t('patients.search.open')}</span>
             </Link>
           ))}

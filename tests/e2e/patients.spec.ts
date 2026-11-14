@@ -1,6 +1,7 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page, type Request } from '@playwright/test';
 import { t } from './support/desk';
+import { controlPx, targetPx } from './support/targets';
 
 // MDV-P1-018 directory and privacy-safe search. CI has no API: /v1/me/context and /v1/patients/* are mocked with the synthetic
 // cast (docs/00-overview/personas.md); the server side is covered by PatientEndpointTests on SQL Server.
@@ -148,13 +149,13 @@ test('keyboard only: search, then open the first result', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Meera Iyer (synthetic)' })).toBeVisible();
 });
 
-// MDV-P2-059 AC5 (audit B-16): search and filter share one 44 px row, so on a 1024 x 768 laptop the list starts by 300 px; cells do not repeat their column's name.
+// MDV-P2-059 AC5 (audit B-16): search and filter share one control-height row (36 px with a mouse, MDV-P2-062), so on a 1024 x 768 laptop the list starts by 300 px; cells do not repeat their column's name.
 test('at 1024 x 768 the first patient row starts at or above 300 px', async ({ page }) => {
   await deskWith(page, found);
   await page.setViewportSize({ width: 1024, height: 768 });
   await page.goto('/patients/directory');
   const search = (await page.getByRole('search').boundingBox())!;
-  expect(search.height).toBe(44);
+  expect(search.height).toBe(await controlPx(page));
   const first = page.getByRole('main').getByRole('table').getByRole('row').nth(1);
   expect((await first.boundingBox())!.y).toBeLessThanOrEqual(300);
   // Visible text: the stacked phone layout's column name is in the cell but hidden from 768 px up.
@@ -206,7 +207,7 @@ for (const locale of ['en', 'ar'])
       await expect(page.getByRole('main').getByRole('table').getByRole('link')).toHaveCount(2);
       expect(await page.evaluate(() => document.documentElement.dir)).toBe(locale === 'ar' ? 'rtl' : 'ltr');
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-      for (const link of await page.getByRole('main').getByRole('table').getByRole('link').all()) expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+      for (const link of await page.getByRole('main').getByRole('table').getByRole('link').all()) expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
       expect(await axe(page)).toEqual([]);
 
       await page.goto(`/patients/directory/${meeraId}`);

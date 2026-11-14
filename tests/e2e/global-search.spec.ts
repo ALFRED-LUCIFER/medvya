@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
+import { targetPx } from './support/targets';
 
 // MDV-P2-003 (D-02): the ⌘K overlay searches from any screen, shows the desk's search row (MDV-P1-101: name, last visit, masked MRN and phone; no date of birth, decision 15), opens a chart with the keyboard,
 // and offers "Request access" for a patient outside the care relationship. CI has no API: the session and the lookup are mocked in the shapes
@@ -105,7 +106,7 @@ test('no match says so and offers to register a patient', async ({ page }) => {
 
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 for (const locale of ['en', 'ar'])
-  test(`axe finds no violations in the open search (${locale}); 44 px targets, 48 px rows`, async ({ page }) => {
+  test(`axe finds no violations in the open search (${locale}); control-size targets, 48 px rows`, async ({ page }) => {
     await open(page, { locale, items: [row('p-1', 'MI', 'Open', { duplicate: 'MainRecord' }), row('p-2', 'MI', 'CanRequest', { mrnTail: '0002', lastVisitOn: null, duplicate: 'PossibleDuplicate' })] });
     await page.keyboard.press('Control+k');
     const search = page.getByRole('dialog');
@@ -113,7 +114,7 @@ for (const locale of ['en', 'ar'])
     await expect(search.getByRole('option')).toHaveCount(2);
     await search.getByRole('option').first().click();
     if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
-    for (const b of await search.getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    for (const b of await search.getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
     for (const o of await search.getByRole('option').all()) expect((await o.boundingBox())!.height).toBeGreaterThanOrEqual(48);
     if (locale === 'en') {
       // MDV-P1-101: two people with one name differ by MRN ending, last visit and the duplicate mark; the main record is first.

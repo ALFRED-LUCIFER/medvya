@@ -1,6 +1,7 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
 import { encounterOf, mockNote, type NoteMock } from './support/note';
+import { targetPx } from './support/targets';
 
 // MDV-P2-009: the consultation note editor on the consultation page, and the doctor's template choice (MDV-P2-025). CI has no API: the note and
 // template endpoints are mocked in the shapes the server sends (versioning, 409 stale_note and the audit rows are ConsultNoteTests on PostgreSQL).
@@ -580,7 +581,7 @@ test('a signed note offers nothing to add', async ({ page }) => {
 
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 for (const locale of ['en', 'ar'])
-  test(`axe finds no violations on the add-to-note panel (${locale}); targets are 44 px`, async ({ page }) => {
+  test(`axe finds no violations on the add-to-note panel (${locale}); control-size targets`, async ({ page }) => {
     const mock = await open(page, { sections: { plan: 'x' }, version: 1 }, locale);
     mock.vitals = verified;
     mock.previous = earlier;
@@ -588,7 +589,7 @@ for (const locale of ['en', 'ar'])
     const assist = page.getByRole('region', { name: locale === 'ar' ? 'ملاحظة الاستشارة' : 'Consultation note' }).getByRole('region', { name: locale === 'ar' ? 'الإضافة إلى الملاحظة' : 'Add to the note' });
     await assist.locator('summary').click();
     if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
-    for (const target of await assist.locator('button, summary').all()) expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    for (const target of await assist.locator('button, summary').all()) expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
     await page.addScriptTag({ path: axePath });
     const violations = await page.evaluate(async () =>
       (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations
@@ -597,7 +598,7 @@ for (const locale of ['en', 'ar'])
   });
 
 for (const locale of ['en', 'ar'])
-  test(`axe finds no violations on the note (${locale}); targets are 44 px`, async ({ page }) => {
+  test(`axe finds no violations on the note (${locale}); control-size targets`, async ({ page }) => {
     const mock = await open(page, { sections: { plan: 'x' }, version: 1 }, locale);
     mock.chiefComplaint = fromNurse; // MDV-P1-104: with the nurse-intake mark on Chief complaint
     await page.reload();
@@ -606,7 +607,7 @@ for (const locale of ['en', 'ar'])
     await expect(page.getByRole('region', { name: locale === 'ar' ? 'المراجعة والتوقيع' : 'Review and sign' })).toBeVisible(); // the checklist with items to do
     await expect(page.locator('textarea').first()).toBeVisible();
     if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
-    for (const target of await page.getByRole('main').locator('button:not([role=switch]), [role=combobox], label:has([role=switch]), textarea, summary').all()) expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    for (const target of await page.getByRole('main').locator('button:not([role=switch]), [role=combobox], label:has([role=switch]), textarea, summary').all()) expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
     await page.addScriptTag({ path: axePath });
     const violations = await page.evaluate(async () =>
       (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations
@@ -675,7 +676,7 @@ for (const locale of ['en', 'ar'])
     const versions = page.getByRole('region', { name: locale === 'ar' ? 'سجل النسخ' : 'Version history' });
     await versions.getByRole('button', { name: locale === 'ar' ? 'إضافة ملحق' : 'Add addendum' }).click();
     await versions.getByRole('button', { name: locale === 'ar' ? 'توقيع الملحق' : 'Sign addendum' }).click(); // the alert in words
-    for (const target of await versions.locator('button, a, input, textarea').all()) expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    for (const target of await versions.locator('button, a, input, textarea').all()) expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
     expect(await axeViolations(page)).toEqual([]);
 
     // WCAG 1.4.10: 200% zoom on a 1280 px screen leaves 640 CSS px; the print view reflows with no sideways scrolling.
@@ -806,7 +807,7 @@ test('200% zoom: the note, the sign dialog and its buttons stay readable and rea
 });
 
 for (const locale of ['en', 'ar'])
-  test(`the sign dialog and the signed note: axe clean, 44 px targets, no animation under reduced motion (${locale})`, async ({ page }) => {
+  test(`the sign dialog and the signed note: axe clean, control-size targets, no animation under reduced motion (${locale})`, async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     const mock = await open(page, { version: 1, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' }, recordingConsent: 'Declined' }, locale);
     mock.reauthed = true;
@@ -816,7 +817,7 @@ for (const locale of ['en', 'ar'])
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
     expect(await dialog.evaluate(d => d.getAnimations().length)).toBe(0);
-    for (const target of await dialog.locator('button').all()) expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    for (const target of await dialog.locator('button').all()) expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
     expect(await axeViolations(page)).toEqual([]);
     await dialog.getByRole('button', { name: ar ? /^التوقيع بصفتي/ : /^Sign as/ }).click();
     await expect(page.getByRole('status').filter({ hasText: ar ? 'موقّعة v1' : 'SIGNED v1' })).toBeVisible();

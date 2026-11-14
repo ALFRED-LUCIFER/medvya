@@ -21,7 +21,7 @@ export default function NurseIntakePanel(p: Props) {
   const turn = p.confirming ? 'on' : 'off';
   return (
     <Section title={t('settings.nurseIntake.title')} intro={t('settings.nurseIntake.intro')}>
-      <label className="flex min-h-11 items-center gap-3 font-bold">
+      <label className="flex min-h-control items-center gap-3 font-bold">
         <Switch id={switchId} checked={p.enabled} disabled={p.saving} onCheckedChange={p.onChange} />
         <span>{t('settings.nurseIntake.label')}</span>
         <span className="text-sm font-normal text-muted-foreground">{t(p.enabled ? 'settings.notifications.on' : 'settings.notifications.off')}</span>

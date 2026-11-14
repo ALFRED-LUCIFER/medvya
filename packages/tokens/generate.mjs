@@ -27,10 +27,15 @@ export function render(source) {
     : Object.entries(v).map(([p, x]) => [p === 'font-size' ? cssVar(g, k) : `${cssVar(g, k)}--${p}`, x]));
   const lines = groups.flatMap(g => Object.entries(t[g]).flatMap(([k, v]) => decls(g, k, v).map(([name, value], i) =>
     `  ${name}: ${value};${i === 0 && t.notes[`${g}-${k}`] ? ` /* ${t.notes[`${g}-${k}`]} */` : ''}`)));
-  const css = `/* Generated from tokens.json by generate.mjs. Do not edit. */\n@theme static {\n${lines.join('\n')}\n}\n`;
+  // Density by pointer (workspace concept): `coarse` overrides theme variables on a touch device. Outside @theme, so the public site parser reads only the block above.
+  const coarse = Object.entries(source.coarse).map(([name, value]) => {
+    if (!lines.some(l => l.startsWith(`  --${name}:`))) throw new Error(`coarse names a token that does not exist: ${name}`);
+    return `    --${name}: ${value};`;
+  });
+  const css = `/* Generated from tokens.json by generate.mjs. Do not edit. */\n@theme static {\n${lines.join('\n')}\n}\n@media (any-pointer: coarse) {\n  :root {\n${coarse.join('\n')}\n  }\n}\n`;
   const plain = v => (typeof v === 'string' ? num(v) : obj(v));
   const obj = o => Object.fromEntries(Object.entries(o).map(([k, v]) => [camel(k), plain(v)]));
-  const theme = `// Generated from tokens.json by generate.mjs. Do not edit. Plain values for React Native (px and ms become numbers).\nexport const theme = ${JSON.stringify({ ...Object.fromEntries(groups.map(g => [camel(g), obj(t[g])])), tone }, null, 2)} as const;\n`;
+  const theme = `// Generated from tokens.json by generate.mjs. Do not edit. Plain values for React Native (px and ms become numbers).\nexport const theme = ${JSON.stringify({ ...Object.fromEntries(groups.map(g => [camel(g), obj(t[g])])), tone, coarse: obj(t.coarse) }, null, 2)} as const;\n`;
   return { css, theme };
 }
 

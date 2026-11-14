@@ -308,7 +308,7 @@ function List(props: Props & { board: Board }) {
       {groups.map(({ state, rows }) => state === 'Done' ? (
         // Folded unless Done is the pressed count; the key opens it afresh when the filter changes.
         <details key={`${state}-${listFilter}`} open={listFilter === 'Done'} className="flex flex-col gap-2">
-          <summary className="flex min-h-11 cursor-pointer items-center">{heading(state)}</summary>
+          <summary className="flex min-h-control cursor-pointer items-center">{heading(state)}</summary>
           {rowsOf(state, rows)}
         </details>
       ) : (

@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
+import { rowPx } from './support/targets';
 
 // MDV-P1-035. CI has no API: the access-log endpoints are mocked with the synthetic cast (docs/00-overview/personas.md).
 // The server rules (403 and Denied audit for other roles, patient filter, paging, watermarked audited export) are tested on SQL Server in AccessLogTests.cs.
@@ -193,7 +194,7 @@ test.describe('on a coarse pointer', () => {
     expect(await page.evaluate(() => matchMedia('(any-pointer: coarse)').matches)).toBe(true);
     const r = table(page).getByRole('row').nth(1);
     await expect(r).toBeVisible();
-    expect(Math.round((await r.boundingBox())!.height)).toBeGreaterThanOrEqual(48);
+    expect(Math.round((await r.boundingBox())!.height)).toBeGreaterThanOrEqual(await rowPx(page));
   });
 });
 

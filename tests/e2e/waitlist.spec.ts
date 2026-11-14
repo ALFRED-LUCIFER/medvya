@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page, type Request } from '@playwright/test';
+import { targetPx } from './support/targets';
 
 // MDV-P1-027 waitlist: add with preferences, "Offer {time}" holds a slot and messages the patient, the patient's yes books it and takes
 // them off the list, a no releases it. Not a step of J1-J6 (the journeys are the clinic-flow stories; the waitlist is a P-05 side panel
@@ -134,12 +135,12 @@ test('a role without full booking access gets no Waitlist link', async ({ page }
 
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 for (const locale of ['en', 'ar'])
-  test(`axe finds no violations on the waitlist (${locale}); 44 px targets; RTL`, async ({ page }) => {
+  test(`axe finds no violations on the waitlist (${locale}); control-size targets; RTL`, async ({ page }) => {
     await desk(page, { locale });
     await page.goto('/front-desk/waitlist');
     await expect(page.getByTestId('waitlist-entry')).toHaveCount(2);
     if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
-    for (const b of await page.getByRole('main').getByRole('button').all()) if (await b.isVisible()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    for (const b of await page.getByRole('main').getByRole('button').all()) if (await b.isVisible()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
     await page.addScriptTag({ path: axePath });
     const violations = await page.evaluate(async () =>
       (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations

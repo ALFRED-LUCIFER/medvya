@@ -154,9 +154,10 @@
   --spacing-gutter: 16px; /* page gutter on phones */
   --spacing-gutter-md: 24px; /* page gutter on tablets */
   --spacing-gutter-xl: 32px; /* page gutter at 1600 and up */
-  --spacing-control: 44px; /* comfortable control height, the default */
+  --spacing-control: 36px; /* control height with a mouse; 44 px under any-pointer: coarse (the coarse group) */
+  --spacing-control-sm: 30px; /* small button with a mouse; 44 px under any-pointer: coarse */
   --spacing-control-compact: 36px; /* compact: the four read-only tables only */
-  --spacing-row: 48px; /* comfortable table row */
+  --spacing-row: 40px; /* table row with a mouse; 48 px under any-pointer: coarse */
   --spacing-row-compact: 36px; /* compact: the four read-only tables only */
   --container-page: 1600px; /* fluid page maximum (max-w-page) */
   --container-reading: 1152px; /* reading maximum */
@@ -169,4 +170,11 @@
   --shadow-dialog: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); /* dialogs, sheets and drawers (the value dialogs render today) */
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1); /* the one curve; replaces the Tailwind ease-out default */
   --transition-duration-fast: 150ms; /* the one duration (duration-fast) */
+}
+@media (any-pointer: coarse) {
+  :root {
+    --spacing-control: 44px;
+    --spacing-control-sm: 44px;
+    --spacing-row: 48px;
+  }
 }

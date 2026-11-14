@@ -55,7 +55,7 @@ function PageHeader({ title, eyebrow, description, actions, back, meta, classNam
         </div>
         {actions && <div className="flex min-w-0 flex-wrap items-center gap-2">{actions}</div>}
       </div>
-      {description && <p className="text-muted-foreground">{description}</p>}
+      {description && <p className="text-body text-muted-foreground">{description}</p>}
       {children}
     </header>
   )

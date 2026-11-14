@@ -2,6 +2,7 @@ import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
 import { encounterOf, mockNote, type NoteMock } from './support/note';
 import { obscuredWhenTabbing } from './support/pinned';
+import { targetPx } from './support/targets';
 
 // MDV-P2-041: the consultation on one page (CONSULTATION STUDIO). CI has no API: the encounter, note, reconciliation and chart are mocked in the
 // shapes the server sends. The guided steps are consult-note.spec.ts; both views edit the same note through the same autosave.
@@ -155,12 +156,12 @@ for (const [width, height] of [[768, 1024]] as const)
   });
 
 for (const locale of ['en', 'ar'])
-  test(`axe finds no violations on the one page (${locale}); right to left in Arabic; targets are 44 px`, async ({ page }) => {
+  test(`axe finds no violations on the one page (${locale}); right to left in Arabic; control-size targets`, async ({ page }) => {
     await open(page, { version: 1, sections: { chiefComplaint: 'Thirst', plan: 'Rest' } }, locale);
     const ar = locale === 'ar';
     await expect(page.getByRole('navigation', { name: ar ? 'أقسام الملاحظة' : 'Note sections' })).toBeVisible();
     if (ar) await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
-    for (const target of await page.getByRole('main').locator('nav a, [role=tab], button:not([role=switch]), textarea').filter({ visible: true }).all()) expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    for (const target of await page.getByRole('main').locator('nav a, [role=tab], button:not([role=switch]), textarea').filter({ visible: true }).all()) expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
     expect(await axe(page)).toEqual([]);
   });
 
@@ -217,7 +218,7 @@ test('a signed note shows the answers in words and leaves an unanswered item out
 });
 
 for (const locale of ['en', 'ar'])
-  test(`axe finds no violations on the review of systems and examination (${locale}); targets are 44 px`, async ({ page }) => {
+  test(`axe finds no violations on the review of systems and examination (${locale}); control-size targets`, async ({ page }) => {
     await open(page, { templateKey: 'older-adult-review', version: 1, sections: { chiefComplaint: 'Dizzy', reviewOfSystems: '{"dizzyOnStanding":{"answer":"yes"}}', examination: '{"joints":{"answer":"abnormal"}}' } }, locale);
     const ar = locale === 'ar';
     const main = page.getByRole('main'); // the note region's name is in the page's language
@@ -227,7 +228,7 @@ for (const locale of ['en', 'ar'])
     if (ar) await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
     for (const target of await main.locator('[role=group] [role=group] button, input[id$="-note"]').all()) {
       const box = (await target.boundingBox())!;
-      expect(Math.min(box.height, box.width)).toBeGreaterThanOrEqual(44);
+      expect(Math.min(box.height, box.width)).toBeGreaterThanOrEqual(await targetPx(page));
     }
     expect(await axe(page)).toEqual([]);
   });

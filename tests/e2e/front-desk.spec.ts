@@ -1,6 +1,7 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
 import { fakeHub } from './support/fakeHub';
+import { targetPx, rowPx } from './support/targets';
 
 // MDV-P1-028: the P-01 reception board and one-tap check-in. CI has no API, so /v1/me/context and the front-desk endpoints
 // are mocked with the synthetic cast in the shapes the server sends (IFrontDeskService.cs). The device runs in New York to
@@ -298,7 +299,7 @@ test('Arabic is right-to-left with Booked on the reading-start side', async ({ p
   await expect(page.getByRole('group', { name: 'تأكيد الهوية' })).toBeVisible();
 });
 
-test('keyboard checks in; 44 px targets; at 200% zoom the board is one list by status, the tablet board scrolls on its own, never the page', async ({ page }) => {
+test('keyboard checks in; control-size targets; at 200% zoom the board is one list by status, the tablet board scrolls on its own, never the page', async ({ page }) => {
   await page.setViewportSize({ width: 683, height: 768 }); // a 1366 px screen at 200 %: under 768 px, one list (MDV-P1-095)
   const calls = await open(page);
   const tabs = page.getByRole('group', { name: 'Show visits by status' });
@@ -308,14 +309,14 @@ test('keyboard checks in; 44 px targets; at 200% zoom the board is one list by s
   await page.keyboard.press('Enter');
   await expect(page.getByRole('button', { name: 'Confirm arrival' })).toBeFocused();
   for (const b of await page.getByRole('group', { name: 'Confirm identity' }).getByRole('button').all())
-    expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
   await page.keyboard.press('Enter');
   await tabs.getByRole('button', { name: 'Checked in · 2' }).click();
   await expect(column(page, 'Checked in').getByRole('article')).toHaveCount(2);
   await expect(column(page, 'Booked')).toBeHidden(); // one status at a time
   expect(calls.checkIns).toHaveLength(1);
   for (const b of await page.getByRole('main').getByRole('button').all())
-    if (await b.isVisible() && await b.isEnabled()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    if (await b.isVisible() && await b.isEnabled()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   const board = page.getByRole('region', { name: 'Visits by status' });
   expect(await board.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true); // a list: nothing sideways
@@ -807,7 +808,7 @@ test('a status count shows only its group, says it is pressed, and pressing agai
   await expect(group(page, 'Booked')).toBeVisible();
 });
 
-test('40 long names at 1024 x 768 and 1440 x 900: nothing is clipped, nothing scrolls sideways; rows 48 px, actions 44 px and 8 px apart', async ({ page }) => {
+test('40 long names at 1024 x 768 and 1440 x 900: nothing is clipped, nothing scrolls sideways; rows and actions at the row and control size and 8 px apart', async ({ page }) => {
   await chooseList(page);
   await open(page, { only: [], extra: forty() });
   for (const [w, h] of [[1024, 768], [1440, 900]] as const) {
@@ -822,10 +823,10 @@ test('40 long names at 1024 x 768 and 1440 x 900: nothing is clipped, nothing sc
     expect(clipped).toEqual([]);
     const rows = await page.locator('[data-slot="table-container"] tbody tr').evaluateAll(els => els.map(el => el.getBoundingClientRect().height));
     expect(rows).toHaveLength(40);
-    expect(Math.min(...rows)).toBeGreaterThanOrEqual(48);
+    expect(Math.min(...rows)).toBeGreaterThanOrEqual(await rowPx(page));
     for (const name of ['Checked in', 'Booked']) {
       const boxes = await group(page, name).getByRole('button').evaluateAll(els => els.map(el => el.getBoundingClientRect()).map(r => ({ top: r.top, bottom: r.bottom, height: r.height })));
-      expect(Math.min(...boxes.map(b => b.height))).toBeGreaterThanOrEqual(44);
+      expect(Math.min(...boxes.map(b => b.height))).toBeGreaterThanOrEqual(await targetPx(page));
       for (let i = 1; i < boxes.length; i++) expect(boxes[i]!.top - boxes[i - 1]!.bottom).toBeGreaterThanOrEqual(8);
     }
   }

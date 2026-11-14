@@ -19,8 +19,8 @@ export default function ApprovalsPage({ vm, operator }: { vm: { queue: QueueVm; 
         <section aria-labelledby="approvals-queue" className="flex min-w-0 flex-col gap-3">
           <h2 id="approvals-queue" className="sr-only">{t('platform.approvals.queue')}</h2>
           <Tabs value={q.filter} onValueChange={v => q.onFilter(v as Filter)}>
-            <TabsList variant="line">
-              {filters.map(f => <TabsTrigger key={f} value={f} className="text-foreground">{t(`platform.approvals.filter.${f}` as MessageKey)}</TabsTrigger>)}
+            <TabsList>
+              {filters.map(f => <TabsTrigger key={f} value={f}>{t(`platform.approvals.filter.${f}` as MessageKey)}</TabsTrigger>)}
             </TabsList>
             <TabsContent value={q.filter}>
               <TableState state={q.state} messages={{ loading: t('platform.state.loading'), error: t(q.forbidden ? 'platform.state.forbidden' : 'platform.state.error'), empty: t('platform.approvals.empty') }}>

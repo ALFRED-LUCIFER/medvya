@@ -83,7 +83,7 @@ function Views() {
 }
 
 describe('SegmentedControl', () => {
-  it('is a named group of 44 px buttons; the selected one is pressed', async () => {
+  it('is a named group of control-height buttons; the selected one is pressed', async () => {
     const { container } = render(<Views />);
     expect(screen.getByRole('group', { name: 'View' })).toBeTruthy();
     const [status, doctor] = screen.getAllByRole('button');

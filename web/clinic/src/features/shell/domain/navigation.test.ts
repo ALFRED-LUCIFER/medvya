@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { toSession, type Access, type Capability, type Role } from '../../session/domain/session';
-import { allows, homeItem, mobileTabs, navItems, patientDirectory, visibleNav } from './navigation';
+import { allows, homeItem, mobileTabs, navItems, patientDirectory, refusedAddress, visibleNav } from './navigation';
 
 // Copy of RoleMatrix.cs rows (what /v1/me/context sends as `capabilities` for each role).
 const roles: Role[] = ['SoloDoctor', 'HospitalDoctor', 'Receptionist', 'Nurse', 'CareCoordinator', 'Patient', 'PracticeAdmin', 'HospitalIt'];
@@ -87,5 +87,24 @@ describe('role-based navigation', () => {
       .toEqual(['today', 'patients', 'inbox', 'messages']);
     expect(mobileTabs(visibleNav({ role: 'Receptionist', capabilities: capabilities('Receptionist'), flags: [] })).map(i => i.id))
       .toEqual(['frontDesk', 'schedule', 'register']);
+  });
+
+  it('says "your role does not include this screen" only for a screen the app has but the role may not open (MDV-P1-096)', () => {
+    const refused = (role: Role, path: string, flags: string[] = []) => refusedAddress(path, { role, capabilities: capabilities(role), flags });
+    // Receptionist: Today, Settings, a consultation and a chart are refused.
+    for (const path of ['/today', '/settings', '/consult/e-1', '/consult/e-1/medicines', '/patients/p-1', '/patients'])
+      expect(refused('Receptionist', path), path).toBe(true);
+    // Nurse: Settings and a consultation (its note needs the full chart); practice admin: the chart.
+    expect(refused('Nurse', '/settings')).toBe(true);
+    expect(refused('Nurse', '/consult/e-1')).toBe(true);
+    expect(refused('PracticeAdmin', '/patients/p-1')).toBe(true);
+    // Not refused: unknown addresses, a switched-off screen, and a mistyped address under a screen the role has.
+    expect(refused('Receptionist', '/no-such-page')).toBe(false);
+    expect(refused('Receptionist', '/todayx')).toBe(false);
+    expect(refused('SoloDoctor', '/messages')).toBe(false); // flag off: "not found"
+    expect(refused('Nurse', '/messages', allFlags)).toBe(false); // flag on and allowed: a later route, not a refusal
+    expect(refused('SoloDoctor', '/consult/e-1/nothing')).toBe(false);
+    expect(refused('Receptionist', '/patients/directory/p-1/nothing')).toBe(false);
+    expect(refused('Receptionist', '/admin/staff')).toBe(false); // removed (MDV-P1-107)
   });
 });

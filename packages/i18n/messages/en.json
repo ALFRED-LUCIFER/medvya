@@ -59,6 +59,8 @@
   "state.notFound.title": "Page not found",
   "state.notFound.body": "The link may be old. Nothing has been changed.",
   "state.notFound.cta": "Go to my start page",
+  "denied.title": "Screen not available",
+  "denied.body": "Your role does not include this screen. Ask your practice admin if you expected access.",
   "state.offline.title": "You are offline",
   "state.offline.body": "Recording continues to the encrypted device buffer. Notes and orders will save when you reconnect.",
   "state.offline.cta": "Retry now",

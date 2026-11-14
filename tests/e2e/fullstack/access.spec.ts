@@ -44,6 +44,30 @@ test('a receptionist is refused administration and the audit log, in the API and
   await expect(page.getByRole('heading', { name: /not found/i })).toBeVisible();
 });
 
+// MDV-P1-096: a refused screen says so; the server's 403 behind it is unchanged.
+const encounterId = '00000000-0000-4000-8000-000000000096'; // any id: the capability check refuses before any lookup
+test('a receptionist on Today, Settings or a consultation is told her role does not include the screen; the API still answers 403', async ({ page }) => {
+  await signIn(page, /A\. Joseph/);
+  for (const path of ['/v1/notes/pending', `/v1/encounters/${encounterId}/note`, '/v1/settings/doctors'])
+    expect((await page.request.get(path)).status(), path).toBe(403);
+  for (const path of ['/app/today', '/app/settings', `/app/consult/${encounterId}`]) {
+    await page.goto(path);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Screen not available');
+    await expect(page.getByRole('main')).toContainText('Your role does not include this screen.');
+  }
+  await page.getByRole('button', { name: 'Go to my start page' }).click();
+  await expect(page).toHaveURL(/\/app\/front-desk$/);
+});
+
+test('a nurse opening a consultation sees one calm message and no error lines; the note API still answers 403', async ({ page }) => {
+  await signIn(page, /S\. Thomas/);
+  expect((await page.request.get(`/v1/encounters/${encounterId}/note`)).status()).toBe(403);
+  await page.goto(`/app/consult/${encounterId}`);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Screen not available');
+  await expect(page.getByRole('main').getByRole('alert')).toHaveCount(0);
+  await expectNoAxeViolations(page);
+});
+
 test('the practice administrator is allowed what the receptionist is refused (the control for the test above)', async ({ page }) => {
   await signIn(page, /K\. Lakshmi/);
   expect((await page.request.get('/v1/staff')).status()).toBe(200);

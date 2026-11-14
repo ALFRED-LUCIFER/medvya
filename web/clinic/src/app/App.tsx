@@ -7,6 +7,7 @@ import OfflineBanner from '../features/connectivity/components/OfflineBanner';
 import { useConnectivityController } from '../features/connectivity/hooks/useConnectivityController';
 import LoadErrorBoundary from '../features/errors/components/LoadErrorBoundary';
 import NotFoundPage from '../features/errors/components/NotFoundPage';
+import DeniedPage from '../features/errors/components/DeniedPage';
 import TermsNotice from '../features/settings/components/TermsNotice';
 import { useTermsNotice } from '../features/settings/hooks/useTermsNotice';
 import OrganisationNotice from '../features/onboarding/components/OrganisationNotice';
@@ -17,7 +18,7 @@ import SessionExpiredPage from '../features/session/components/SessionExpiredPag
 import AppShell from '../features/shell/components/AppShell';
 import MorePage from '../features/shell/components/MorePage';
 import ShellMessage, { ComingSoon } from '../features/shell/components/ShellMessage';
-import { allows, homeItem, patientDirectory } from '../features/shell/domain/navigation';
+import { allows, homeItem, patientDirectory, refusedAddress } from '../features/shell/domain/navigation';
 import { useShellController } from '../features/shell/hooks/useShellController';
 import GlobalSearchRoute from './GlobalSearchRoute';
 import NotificationsRoute from './NotificationsRoute';
@@ -175,8 +176,9 @@ export default function App({ locale, onLocaleChange }: Props) {
               userId={shell.session?.user.id ?? ''} boardPath={pathOf('frontDesk')!} />} />}
           {/* Nurse intake (MDV-P2-007): one visit's intake, reached from the queue or a With nurse card; the server checks clinical access on every call. */}
           {nursePath && <Route path={`${nursePath}/:appointmentId`} element={<NurseIntakeRoute online={online} nursePath={nursePath} />} />}
-          {/* A consultation (MDV-P2-001) for any role that treats patients; the server checks the care relationship on every call. */}
-          {['Read', 'Limited', 'Full', 'Sign'].includes(active.capabilities.Patient360Chart ?? 'None') &&
+          {/* A consultation (MDV-P2-001); the server checks the care relationship on every call. */}
+          {/* Only the full chart opens one: its note needs it on the server, so a nurse gets the one "not your role" message, not two errors (MDV-P1-096). */}
+          {active.capabilities.Patient360Chart === 'Full' &&
             <Route path="/consult/:encounterId" element={<ConsultRoute boardPath={pathOf('frontDesk') ?? '/'} online={online} canOrder={active.capabilities.PrescriptionsOrders === 'Sign'} canReconcile={active.capabilities.Patient360Chart === 'Full'} canSign={active.capabilities.ClinicalNotes === 'Sign'} userId={shell.session?.user.id ?? ''} />} />}
           {/* The signed note's print view and PDF (MDV-P2-013): the note's readers (Patient 360 at Full); the server decides for this patient. */}
           {active.capabilities.Patient360Chart === 'Full' &&
@@ -216,7 +218,8 @@ export default function App({ locale, onLocaleChange }: Props) {
           {/* My devices (MDV-P0-012): any signed-in member; the server only ever lists and ends the caller's own sessions. */}
           <Route path={devicesPath} element={<MyDevicesRoute timeZone={active.timeZone} />} />
           <Route path="/more" element={<MorePage {...account} devicesPath={devicesPath} role={active.role} facilityName={active.facilityName} groups={shell.groups} />} />
-          <Route path="*" element={<NotFoundPage onHome={toHome} />} />
+          {/* A screen the app has but this role may not open says so; anything else is "Page not found" (MDV-P1-096). */}
+          <Route path="*" element={refusedAddress(location.pathname, active) ? <DeniedPage onHome={toHome} /> : <NotFoundPage onHome={toHome} />} />
         </Route>
       </>;
 

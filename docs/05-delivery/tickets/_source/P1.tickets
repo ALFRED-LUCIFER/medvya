@@ -3344,3 +3344,37 @@ tests:
 notes:
 - Owner decision 14 Nov 2026: yes, the server refuses (epic #1170 open finding).
 - Regression risk: low.
+
+=== MDV-P1-110
+title: The schedule's first render keeps its 2.5 s budget, and the settings sub-navigation test stops timing out
+type: Chore
+epic: MDV-P1-E12
+prd: P1-06
+screens: E-02
+priority: MUST
+roles: Receptionist, PracticeAdmin
+labels: performance, ci, e2e, epic: ux programme
+estimate: 1
+weeks: 5
+depends: MDV-P1-023, MDV-P1-037
+confidence: 85 | The early session read (MDV-P1-037) already runs while the bundle downloads; the schedule's day read can start the same way.
+sources: tests/e2e/schedule-performance.spec.ts; tests/e2e/settings-profile.spec.ts; web/clinic/public/prefetch.js; web/clinic/src/features/schedule/services/scheduleApi.ts
+desc:
+Programme: MDV-P1-E12 · UX programme. Two CI failures that slow every PR (session A, 14 Nov 2026).
+
+1. The schedule's first render over throttled 4G (MDV-P1-023, NFR 1: under 2.5 s) measured 2,400 to 2,510 ms on CI and failed several runs a day. The day's read started only after the bundle had downloaded and run. The budget is not raised.
+2. settings-profile.spec.ts:122 loaded 18 settings addresses in one test on the unbundled dev server and ran past its 30 s timeout on CI.
+
+Fix: public/prefetch.js starts the active facility's day read as soon as the early session read answers, on /schedule only, with ids and a valid address date only (never patient data), and a 15 s timeout. fetchScheduleDay takes that answer once, only when its URL is the one it would ask for; a 5xx or failed early read is read again through the shared client, and a 4xx is kept as the answer. The settings test becomes one test per address, with the keyboard and narrow-width checks in their own test.
+Deliberately NOT in this ticket: (1) Splitting the English catalog (about 81 KB gzipped) or moving zod and react-hook-form out of the first load; these are the next levers if the budget tightens again. (2) Early reads for other screens.
+ac:
+- Given the production build over throttled 4G, when the 3-doctor day opens, then the first render stays under 2,500 ms with the budget unchanged, about 300 ms under it locally
+- Given the address /schedule?date=…, when the page loads, then the early read asks for the same facility and date as the app, a broken date is left out, and the app makes no second read
+- Given an early read for another facility or date, a 5xx or a failure, when the app reads the day, then it reads again; a 403 is kept as the answer and not read again
+- Given the URL match removed from fetchScheduleDay, when the unit tests run, then they fail (mutation check)
+- Given the settings spec on CI, when it runs, then no test loads more than one address and every ?tab= address still opens its section
+tests:
+- Vitest: scheduleApi.test.ts (taken once, mismatch, 503, failure, 403 kept).
+- Playwright: schedule-performance.spec.ts under budget; schedule.spec.ts, J3 and the settings specs stay green.
+notes:
+- Measured locally: 2,390 to 2,440 ms before, 2,066 to 2,090 ms after (5 runs each).

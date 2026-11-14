@@ -1,15 +1,16 @@
 import { useI18n, type MessageKey } from '@medvya/i18n';
 import { AppHeader, Avatar, Card, ListRow, Loading, Screen, StateMessage, TextField, type IconName, type Tone } from '@medvya/ui-native';
 import { theme } from '@medvya/tokens';
+import { statuses } from '@medvya/tokens/status';
 import { StyleSheet, View } from 'react-native';
 import type { Session } from '../../session/domain/session';
 import type { PatientFlag, PatientListItem } from '../domain/patients';
 
 export const patientFlagLook: Record<PatientFlag, { tone: Tone; icon: IconName }> = {
-  allergy: { tone: 'danger', icon: 'medication' },
+  allergy: { tone: statuses.allergy.tone, icon: statuses.allergy.native },
   overdue: { tone: 'warning', icon: 'schedule' },
   new: { tone: 'info', icon: 'fiber-new' },
-  critical: { tone: 'danger', icon: 'error' },
+  critical: { tone: statuses.critical.tone, icon: statuses.critical.native },
 };
 
 type Props = {

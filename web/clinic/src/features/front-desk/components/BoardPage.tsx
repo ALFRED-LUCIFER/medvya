@@ -1,18 +1,15 @@
 import { useRef, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import type { UseFormReturn } from 'react-hook-form';
-import { CalendarCheck, CalendarClock, CircleCheck, ClipboardCheck, DoorOpen, Ellipsis, EyeOff, Printer, ReceiptText, Syringe, Undo2, UserCheck, type LucideIcon } from 'lucide-react';
+import { CalendarClock, Ellipsis, EyeOff, Printer, Undo2 } from 'lucide-react';
 import { useI18n, type MessageKey } from '@medvya/i18n';
-import { Button, buttonVariants, cn, Dialog, DialogContent, DialogDescription, DialogTitle, FrontDeskTag, PageContainer, PageHeader, SegmentedControl } from '@medvya/ui';
+import { Button, buttonVariants, cn, Dialog, DialogContent, DialogDescription, DialogTitle, FrontDeskTag, PageContainer, PageHeader, SegmentedControl, statusIcons } from '@medvya/ui';
 import { isDeviceZone, type CancelForm } from '../../schedule/domain/changes';
 import CancelReasonFields from '../../schedule/components/CancelReasonFields';
 import type { workload } from '../domain/overview';
 import { aheadWords, ageYears, canReprint, endKinds, minutesSince, needsRebooking, nextConsultId, nextState, tokenSlipPath, visibleColumns, type Board, type BoardCard, type BoardColumn, type EndKind, type LiveStatus, type MoveError, type Notice, type VisitSteps } from '../domain/board';
 
-// Every column is words and an icon (never colour alone), following the Clinician App board (P-01).
-const columnIcons: Record<BoardColumn, LucideIcon> = {
-  Booked: CalendarCheck, CheckedIn: UserCheck, WithNurse: Syringe, ReadyForDoctor: ClipboardCheck, InConsult: DoorOpen, Billing: ReceiptText, Done: CircleCheck,
-};
+// Every column is words and an icon (never colour alone), from the shared status map (MDV-P5-057).
 
 /** The action that moves a card out of each column (the design's CTA per column). Done has none. */
 const actionKeys: Record<Exclude<BoardColumn, 'Done'>, MessageKey> = {
@@ -214,7 +211,7 @@ function Body(props: Props) {
     <>
       {/* Under 768 px the board is one list, chosen by status; the page never scrolls sideways. */}
       <SegmentedControl label={t('board.statusTabs')} className="flex-wrap md:hidden" value={phone} onValueChange={props.onPhoneColumn}
-        options={shown.map(c => ({ value: c, icon: columnIcons[c], label: t('board.statusTab', { column: t(`board.column.${c}`), count: props.columns[c].length }) }))} />
+        options={shown.map(c => ({ value: c, icon: statusIcons[c], label: t('board.statusTab', { column: t(`board.column.${c}`), count: props.columns[c].length }) }))} />
       {/* From 768 px the board scrolls on its own, both ways, so each column's header stays in view; scroll padding keeps focus clear of it. */}
       <section id="board-region" aria-label={t('board.region')} tabIndex={0}
         className="relative rounded-lg md:max-h-[max(20rem,calc(100dvh-12rem))] md:scroll-pt-12 md:overflow-auto">
@@ -245,7 +242,7 @@ function Rebooking({ cards, timeZone }: { cards: BoardCard[]; timeZone: string }
 function Column(props: Props & { state: BoardColumn; board: Board; hiddenOnPhone: boolean; primary: string | null }) {
   const { t, tCount } = useI18n();
   const { state, columns } = props;
-  const cards = columns[state], Icon = columnIcons[state];
+  const cards = columns[state], Icon = statusIcons[state];
   const id = `board-col-${state}`;
   const empty = cards.length === 0;
   return (

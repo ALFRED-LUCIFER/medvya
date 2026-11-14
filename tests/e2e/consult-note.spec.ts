@@ -628,13 +628,13 @@ for (const locale of ['en', 'ar'])
     const ar = locale === 'ar';
     const mock = await open(page, { version: 1, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' }, recordingConsent: 'Declined' }, locale);
     mock.reauthed = true;
-    const banner = page.getByRole('region', { name: ar ? 'هوية المريض' : 'Patient identity' });
+    const banner = page.locator('[data-slot=patient-banner]'); // MDV-P1-092: identity lives in the pinned patient strip
     const region = page.getByRole('region', { name: ar ? 'ملاحظة الاستشارة' : 'Consultation note' });
-    const confirm = banner.getByRole('button', { name: ar ? 'تم التأكيد مع المريض' : 'Confirmed with the patient' });
+    const confirm = page.getByRole('button', { name: ar ? 'تم التأكيد مع المريض' : 'Confirmed with the patient' }); // offered under the strip
     await expect(banner).toContainText(ar ? 'تم تأكيد الهوية مع المريض' : 'Identity confirmed with the patient');
     await expect(confirm).toHaveCount(0);
     mock.identityConfirmedAt = null; // the server holds no confirmation; this page does not know
-    await region.getByRole('button', { name: ar ? 'توقيع الملاحظة' : 'Sign note' }).click();
+    await page.getByRole('button', { name: ar ? 'توقيع الملاحظة' : 'Sign note' }).click(); // Sign sits in the footer (MDV-P1-092)
     await page.getByRole('dialog').getByRole('button', { name: ar ? 'التوقيع بصفتي Dr Asha Raman (synthetic)' : 'Sign as Dr Asha Raman (synthetic)' }).click();
     await expect(region.getByRole('alert')).toHaveText(ar
       ? 'لم تُوقَّع الملاحظة: لم يتم تأكيد الهوية مع المريض. تحقّق من اسمه وتاريخ ميلاده معه، ثم اضغط "تم التأكيد مع المريض" أعلى الصفحة، ثم وقّع.'
@@ -646,7 +646,7 @@ for (const locale of ['en', 'ar'])
     await confirm.click();
     await expect(region.getByRole('alert')).toHaveCount(0); // confirmed: the refusal is not said any more
     expect(mock.identityConfirms).toBe(1);
-    await region.getByRole('button', { name: ar ? 'توقيع الملاحظة' : 'Sign note' }).click();
+    await page.getByRole('button', { name: ar ? 'توقيع الملاحظة' : 'Sign note' }).click();
     await page.getByRole('dialog').getByRole('button', { name: ar ? 'التوقيع بصفتي Dr Asha Raman (synthetic)' : 'Sign as Dr Asha Raman (synthetic)' }).click();
     await expect.poll(() => mock.note.status).toBe('Signed');
   });

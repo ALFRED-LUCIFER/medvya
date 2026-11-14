@@ -149,7 +149,6 @@ function Row({ row, to }: { row: PatientSummary; to: string }) {
       </TableHead>
       <TableCell>{age}</TableCell>
       <TableCell>{sex}</TableCell>
-      <TableCell className="whitespace-nowrap">{row.dateOfBirth && formatCalendarDate(row.dateOfBirth)}</TableCell>
       {/* The column heads say MRN and Phone; the cells show only the masked ending (audit B-16). */}
       <TableCell className="font-mono"><bdi dir="ltr">{`··${row.mrnTail}`}</bdi></TableCell>
       <TableCell className="font-mono"><bdi dir="ltr">{`··${row.mobileTail}`}</bdi></TableCell>

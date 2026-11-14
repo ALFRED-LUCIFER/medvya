@@ -2978,7 +2978,7 @@ notes:
 - Regression risk: medium.
 
 === MDV-P1-101
-title: Patient picker rows show date of birth and last visit, and mark possible duplicates
+title: Patient picker rows show last visit and mark possible duplicates (no date of birth)
 type: Story
 epic: MDV-P1-E12
 prd: P1-05, P2-01
@@ -2996,16 +2996,16 @@ Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the
 Persona and route: Walk-in, booking and waitlist pickers; header search · receptionist, doctor.
 Findings and reviewers: F-08 · reviewer A-05.
 Rationale: Two Deepak Nair, 47 y, Male rows differed only in the last four MRN digits; a hurried person picks the first, which was the duplicate. Visits, vitals and allergies then split across two charts.
-Proposed UX behaviour: Every result row, on two lines: name, age and sex, date of birth, masked MRN, masked phone, last visit date. A record with an open merge request shows the words Possible duplicate; the older record sorts first and is marked Main record. Rows are comfortable height (never compact) and the whole row is the target. The doctor's header search shows the same fields in place of initials only, within what the role may already search. Show full numbers stays a logged reveal.
+Proposed UX behaviour: Every result row, on two lines: name, age and sex, masked MRN, masked phone, last visit date. No date of birth in any search result, picker or the directory list (validation-plan decision 15, 14 Nov 2026: the desk screen is shared); identity is confirmed with the patient at check-in. A record with an open merge request shows the words Possible duplicate; the older record sorts first and is marked Main record. Rows are comfortable height (never compact) and the whole row is the target. The doctor's header search shows the same fields in place of initials only, within what the role may already search. Show full numbers stays a logged reveal.
 Prototype and blueprint reference: docs/product-ux-audit/concepts/medvya-workspace-concept.html, receptionist view: type 90000 (audit note 8); screenshots docs/product-ux-audit/concepts/screenshots/desk-1440-phone-lookup.png and desk-1440-confirm-dob.png.
 Components and tokens affected: The shared picker row; Tag for Possible duplicate and Main record. No new component.
 Front end and back end split: Front end; back end adds last visit and the merge flag to the search results the role may already see.
 Prerequisites and blocked by: None in code. Privacy decision: date of birth in a list the desk already may search.
-Clinical sign-off: Decision required before merge: question 15 of the validation plan (owner and receptionist), recorded on the issue.
+Clinical sign-off: Question 15 of the validation plan, recorded on the issue on 14 Nov 2026: no date of birth in search results at the desk.
 Effort and regression risk: M · Low. Search authorisation and masking must not widen.
 Deliberately NOT in this ticket: (1) One find-or-check-in box (a new flow; not before the pilot). (2) Unmasking MRN or phone. (3) Merge itself.
 ac:
-- Given two patients with the same name, age and sex, when the picker lists them, then the rows differ in at least two shown fields (date of birth, last visit or the duplicate mark)
+- Given two patients with the same name, age and sex, when the picker lists them, then the rows differ in at least two shown fields (MRN ending, last visit or the duplicate mark) and show no date of birth
 - Given a record with an open merge request, when it is listed, then it reads Possible duplicate and the older record is first and reads Main record
 - Given a search, when the address bar, logs and telemetry are read, then they hold no name, phone digits or date of birth
 - Given Show full numbers, when it is used, then an audit row is written as today
@@ -3013,7 +3013,7 @@ ac:
 - Given a touch device, when rows are measured, then each is at least 48 px tall and the whole row is the target; axe finds no violation in English or Arabic
 tests:
 - Integration: search result shape per role, tenant isolation.
-- Playwright (tests/e2e/patients.spec.ts, global-search.spec.ts; J3 step 2): search 0102 → two rows with different dates of birth or a duplicate mark.
+- Playwright (tests/e2e/patients.spec.ts, global-search.spec.ts; J3 step 2): search 0102 → two rows with different MRN endings, last visits or a duplicate mark, and no date of birth.
 - Walk-in click count unchanged.
 notes:
 - Regression risk: low.

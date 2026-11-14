@@ -6,7 +6,7 @@ import { Armchair, ArrowDown, ArrowUp, Baby, CircleAlert, CircleCheck, CircleHel
 import RequestAccess from '../../clinical-access/components/RequestAccess';
 import type { AccessReason } from '../../clinical-access/domain/clinicalAccess';
 import type { Bmi, ChartSection, ClinicalRefusal, LifeStage, Patient360, Vital, VitalTile } from '../domain/chart';
-import { bannerAlerts, bannerAllergyState, chartSections, otherVitals, pathOf, provenanceOf, resultRows, showsSection, sparkBox, vitalTiles } from '../domain/chart';
+import { bannerAlerts, bannerAllergyState, chartSections, labColumns, otherVitals, pathOf, provenanceOf, resultRows, showsSection, sparkBox, vitalTiles } from '../domain/chart';
 
 type Props = {
   data: Patient360 | null; loading: boolean; notFound: boolean; refusal: ClinicalRefusal | null; failed: boolean;
@@ -260,15 +260,11 @@ function Results({ chart, zone }: { chart: Patient360['chart']; zone: string }) 
   return (
     <Card title={t('patient360.labs')}>
       {rows.length === 0 ? <p className="text-muted-foreground">{t('patient360.labs.empty')}</p> : <>
-        <Table label={t('patient360.labs.table')}>
+        <Table label={t('patient360.labs.table')} stacked>
           <TableCaption className="sr-only">{t('patient360.labs')}</TableCaption>
           <TableHeader>
             <TableRow>
-              <TableHead scope="col">{t('patient360.labs.test')}</TableHead>
-              <TableHead scope="col">{t('patient360.labs.latest')}</TableHead>
-              <TableHead scope="col">{t('patient360.labs.range')}</TableHead>
-              <TableHead scope="col">{t('patient360.labs.trend')}</TableHead>
-              <TableHead scope="col">{t('patient360.labs.flag')}</TableHead>
+              {labColumns.map(c => <TableHead key={c} scope="col">{t(`patient360.labs.${c}`)}</TableHead>)}
               <TableHead scope="col">{t('timeline.source')}</TableHead>
             </TableRow>
           </TableHeader>
@@ -277,12 +273,12 @@ function Results({ chart, zone }: { chart: Patient360['chart']; zone: string }) 
               const name = t(`patient360.code.${l.code}`), value = ltr(`${l.value} ${l.unit}`), date = formatDate(new Date(l.takenAt), zone);
               return (
                 <TableRow key={l.code}>
-                  <TableCell><span className="flex flex-col"><strong>{name}</strong><time dateTime={l.takenAt} className="text-sm text-muted-foreground">{date}</time></span></TableCell>
-                  <TableCell className="font-bold">{value}</TableCell>
-                  <TableCell>{l.range ? ltr(`${l.range} ${l.unit}`) : t('patient360.labs.noRange')}</TableCell>
-                  <TableCell><Spark label={t('patient360.trend.alt', { name, value, date, count })} points={points} /></TableCell>
-                  <TableCell>{l.flag && l.range ? <Flag flag={l.flag} text={t(`patient360.flag.${l.flag}`, { range: ltr(`${l.range} ${l.unit}`) })} /> : l.range && t('patient360.labs.inRange')}</TableCell>
-                  <TableCell><ProvenanceTag source={provenanceOf[l.source]} /></TableCell>
+                  <TableHead scope="row"><span className="flex flex-col">{name}<time dateTime={l.takenAt} className="text-sm font-normal text-muted-foreground">{date}</time></span></TableHead>
+                  <TableCell label={t('patient360.labs.latest')} className="font-bold">{value}</TableCell>
+                  <TableCell label={t('patient360.labs.range')}>{l.range ? ltr(`${l.range} ${l.unit}`) : t('patient360.labs.noRange')}</TableCell>
+                  <TableCell label={t('patient360.labs.trend')}><Spark label={t('patient360.trend.alt', { name, value, date, count })} points={points} /></TableCell>
+                  <TableCell label={l.range ? t('patient360.labs.flag') : undefined}>{l.flag && l.range ? <Flag flag={l.flag} text={t(`patient360.flag.${l.flag}`, { range: ltr(`${l.range} ${l.unit}`) })} /> : l.range && t('patient360.labs.inRange')}</TableCell>
+                  <TableCell label={t('timeline.source')}><ProvenanceTag source={provenanceOf[l.source]} /></TableCell>
                 </TableRow>);
             })}
           </TableBody>

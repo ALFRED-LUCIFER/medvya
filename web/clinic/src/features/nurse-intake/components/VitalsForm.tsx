@@ -40,7 +40,7 @@ export default function VitalsForm(p: VitalsFormProps) {
         </>
       )}
       {!p.readOnly && p.onKeepAll && confirmAll(p.vitals) && <FlaggedList vitals={p.vitals} keeping={p.keepingAll ?? false} online={p.online} onKeepAll={p.onKeepAll} />}
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2">
         {vitalKinds.map(kind => (
           <VitalField key={kind} kind={kind} form={p.form} timeZone={p.timeZone} view={p.vitals.find(v => v.kind === kind)} readOnly={p.readOnly}
             invalid={errors[kind] !== undefined ? 'value' : p.badKind === kind && p.problem?.kind === 'invalid' ? p.problem.code : null}
@@ -101,7 +101,7 @@ function VitalField({ kind, form, view, timeZone, readOnly, invalid, keeping, on
     <div className="flex flex-col gap-1.5">
       <Label htmlFor={id} className="text-base font-bold">{name}</Label>
       <div className="flex items-center gap-2">
-        <Input id={id} inputMode="decimal" autoComplete="off" readOnly={readOnly} className="h-14 max-w-[9rem] text-2xl font-bold" aria-invalid={invalid !== null}
+        <Input id={id} inputMode="decimal" autoComplete="off" readOnly={readOnly} className="h-14 max-w-[9rem] text-title" aria-invalid={invalid !== null}
           aria-describedby={hint} {...form.register(kind)} />
         <span className="text-base text-muted-foreground">{ltr(vitalUnits[kind])}</span>
       </div>

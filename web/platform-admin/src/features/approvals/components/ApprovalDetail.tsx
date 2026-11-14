@@ -46,7 +46,7 @@ export default function ApprovalDetail({ vm, operator }: { vm: DetailVm; operato
       </header>
 
       <Card size="item" title={t('platform.approvals.profile.title')}>
-        <dl className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
+        <dl className="grid gap-x-6 gap-y-2 md:grid-cols-2">
           {profile.map(([label, value]) => (
             <div key={label}><dt className="text-sm text-muted-foreground">{t(label)}</dt><dd dir="auto" className="font-semibold break-words">{value ?? t('platform.approvals.notGiven')}</dd></div>
           ))}

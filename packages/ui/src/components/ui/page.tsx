@@ -3,12 +3,12 @@ import { cn } from "#lib/utils"
 
 /** The three page widths. One place sets them, so every page lines up with the shell (MDV audit UX-01). */
 export const pageWidths = {
-  /** Lists, boards, schedules: use the whole workspace. */
+  /** The full width between the sidebar and the gutter (owner ruling of 14 Nov 2026, DESIGN.md Screen layout standard). */
   fluid: "max-w-none",
   /** One form or one decision: a comfortable single column. */
-  form: "max-w-3xl",
+  form: "max-w-form",
   /** Record and settings pages: wide enough for two columns, narrow enough to read. */
-  reading: "max-w-6xl",
+  reading: "max-w-reading",
 } as const
 
 export type PageWidth = keyof typeof pageWidths

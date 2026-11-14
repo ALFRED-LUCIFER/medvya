@@ -21,8 +21,10 @@
 
 @layer base {
   html { background: var(--color-background); color: var(--color-foreground); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
-  /* Body text is 14/20 (workspace concept, MDV-P2-062); on body, not html, so rem-based spacing keeps its 16 px root. */
-  body { font-size: var(--text-body); line-height: var(--text-body--line-height); }
+  /* Body text is 14/20 at weight 500 (workspace concept, MDV-P2-062, MDV-P2-057); on body, not html, so rem-based spacing keeps its 16 px root. */
+  body { font-size: var(--text-body); line-height: var(--text-body--line-height); font-weight: var(--text-body--font-weight); }
+  /* Paragraphs, descriptions and hints stop at about 72 characters (DESIGN.md Layout, MDV-P2-057); form grids and tables are not paragraphs. */
+  p { max-width: var(--container-measure); }
   * { border-color: var(--color-border); }
   /* Handoff: visible 2px focus ring on every interactive element. */
   :focus-visible { outline: 2px solid var(--color-ring); outline-offset: 2px; }

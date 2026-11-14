@@ -75,7 +75,7 @@ function Body(p: Props & { pending: ReactNode }) {
         </div>
       )}
       <section aria-labelledby="today-list" className="flex flex-col gap-2 wide:col-start-2 wide:row-span-2 wide:row-start-1 wide:min-h-0">
-        <h2 id="today-list" className="text-[15px] font-extrabold">{t('today.list')}</h2>
+        <h2 id="today-list" className="text-subheading">{t('today.list')}</h2>
         <ul className="-m-1 flex flex-col gap-2 p-1 wide:min-h-0 wide:overflow-y-auto">{p.visits.map(v => <li key={v.id}><Visit {...p} card={v} /></li>)}</ul>
       </section>
       <div className="-m-1 flex flex-col gap-4 p-1 empty:hidden wide:col-start-1 wide:row-start-2 wide:min-h-0 wide:overflow-y-auto">{p.pending}</div>
@@ -114,7 +114,7 @@ function Hero(p: Props & { card: BoardCard }) {
   const c = p.card;
   return (
     <section aria-labelledby="today-next" className="relative flex flex-col gap-3 rounded-xl border-2 border-action-600 bg-card p-4">
-      <h2 id="today-next" className="text-[13px] font-bold text-action-600">{t(c.state === 'InConsult' ? 'today.hero.current' : 'today.hero.next')}</h2>
+      <h2 id="today-next" className="text-label font-bold text-action-600">{t(c.state === 'InConsult' ? 'today.hero.current' : 'today.hero.next')}</h2>
       <div>
         <p className="text-xl font-extrabold"><Token card={c} /><PatientLink {...p} card={c} stretch /></p>
         <p className="text-sm text-muted-foreground">{formatTime(new Date(c.start), p.timeZone ?? undefined)}{' · '}{t(`reasonCategory.${c.reasonCategory}`)}</p>
@@ -199,13 +199,13 @@ function PendingNotes(p: Props) {
     <>
       {toSign.length > 0 && (
         <section aria-labelledby="today-pending" className="flex flex-col gap-2">
-          <h2 id="today-pending" className="text-[15px] font-extrabold">{p.pendingMore ? t('today.pending.more', { count: toSign.length }) : tCount('today.pending', toSign.length)}</h2>
+          <h2 id="today-pending" className="text-subheading">{p.pendingMore ? t('today.pending.more', { count: toSign.length }) : tCount('today.pending', toSign.length)}</h2>
           <ul className="flex flex-col gap-2">{toSign.map(n => <PendingRow key={n.encounterId} note={n} {...p} />)}</ul>
         </section>
       )}
       {open.length > 0 && (
         <section aria-labelledby="today-open" className="flex flex-col gap-2">
-          <h2 id="today-open" className="text-[15px] font-extrabold">{t('today.open.title')}</h2>
+          <h2 id="today-open" className="text-subheading">{t('today.open.title')}</h2>
           <ul className="flex flex-col gap-2">{open.map(n => <PendingRow key={n.encounterId} note={n} {...p} />)}</ul>
         </section>
       )}

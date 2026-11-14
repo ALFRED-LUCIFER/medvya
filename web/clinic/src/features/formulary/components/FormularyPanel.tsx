@@ -71,7 +71,7 @@ export default function FormularyPanel(p: Props) {
       </Section>
 
       <Section title={t('formulary.add.title')} intro={t('formulary.add.intro')}>
-        <form noValidate onSubmit={p.onSubmit} className="grid gap-4 sm:grid-cols-2">
+        <form noValidate onSubmit={p.onSubmit} className="grid gap-4 md:grid-cols-2">
           <Field id="med-generic" label={t('formulary.field.generic')} error={problem(errors.generic)}>
             <Input autoComplete="off" {...p.form.register('generic')} />
           </Field>
@@ -94,7 +94,7 @@ export default function FormularyPanel(p: Props) {
               <SelectContent>{classesFor(p.country).map(c => <SelectItem key={c} value={c}>{t(`formulary.class.${c}`)}</SelectItem>)}</SelectContent>
             </Select>
           )} />
-          <Field id="med-brands" label={t('formulary.field.brands')} hint={t('formulary.field.brands.hint')} error={problem(errors.brands)} className="sm:col-span-2">
+          <Field id="med-brands" label={t('formulary.field.brands')} hint={t('formulary.field.brands.hint')} error={problem(errors.brands)} className="md:col-span-2">
             <Input autoComplete="off" {...p.form.register('brands')} />
           </Field>
           <Field id="med-code" label={t('formulary.field.nationalCode')} error={problem(errors.nationalCode)}>
@@ -103,10 +103,10 @@ export default function FormularyPanel(p: Props) {
           <Field id="med-atc" label={t('formulary.field.atc')} error={problem(errors.atc)}>
             <Input dir="ltr" autoComplete="off" {...p.form.register('atc')} />
           </Field>
-          <Field id="med-sig" label={t('formulary.field.defaultSig')} error={problem(errors.defaultSig)} className="sm:col-span-2">
+          <Field id="med-sig" label={t('formulary.field.defaultSig')} error={problem(errors.defaultSig)} className="md:col-span-2">
             <Input autoComplete="off" {...p.form.register('defaultSig')} />
           </Field>
-          <div className="flex flex-col gap-2 sm:col-span-2">
+          <div className="flex flex-col gap-2 md:col-span-2">
             {p.formError && <p role="alert" className={fieldError}>{t(`formulary.error.${p.formError}`)}</p>}
             {p.saved && <p role="status" className="flex items-center gap-2 font-bold"><CircleCheck aria-hidden className="size-5" />{t('formulary.add.saved')}</p>}
             <Button type="submit" className="self-start" loading={p.saving}>{t('formulary.add.submit')}</Button>

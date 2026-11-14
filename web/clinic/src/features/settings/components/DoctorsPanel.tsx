@@ -7,7 +7,7 @@ import type { Authority, Doctor, DoctorForm, DoctorStep, FieldProblem, LicenceFo
 import type { Location } from '../domain/settings';
 import { licenceFields } from '../domain/doctors';
 import DoctorWizard, { LicenceFields, StepErrorSummary } from './DoctorWizard';
-import { fieldError } from './fieldStyles';
+import { fieldError, fieldGrid } from './fieldStyles';
 import { Section } from './Section';
 
 type Wizard = {
@@ -104,10 +104,10 @@ function DoctorRow({ doctor: d, ...p }: Props & { doctor: Doctor }) {
       {d.expired && <p role="note" className="text-sm font-semibold">{t('doctors.licence.expiredNote')}</p>}
       {!editing && <div><Button type="button" variant="outline" onClick={() => p.onCorrect(d)}>{t(d.expired ? 'doctors.licence.renew' : 'doctors.licence.correct')}</Button></div>}
       {editing && (
-        <form noValidate onSubmit={p.onSubmitLicence} className="grid gap-4 sm:grid-cols-2" aria-label={t('doctors.licence.correct')}>
+        <form noValidate onSubmit={p.onSubmitLicence} className={fieldGrid} aria-label={t('doctors.licence.correct')}>
           <StepErrorSummary errors={p.licenceErrors} fields={licenceFields} prefix={`c-${d.id}`} focusKey={p.licenceForm.formState.submitCount} />
           <LicenceFields form={p.licenceForm} errors={p.licenceErrors} authorities={p.authorities} prefix={`c-${d.id}`} />
-          <div className="flex flex-wrap items-center gap-3 sm:col-span-2" aria-live="polite">
+          <div className="flex flex-wrap items-center gap-3 col-span-full" aria-live="polite">
             <Button type="submit" loading={p.correctingBusy}>{t('doctors.licence.resubmit')}</Button>
             <Button type="button" variant="ghost" onClick={() => p.onCorrect(null)}>{t('settings.cancel')}</Button>
             {p.correctFailed && <span role="alert" className={fieldError}>{t('settings.saveFailed')}</span>}

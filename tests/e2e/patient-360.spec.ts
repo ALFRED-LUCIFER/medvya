@@ -1,6 +1,8 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
 import { targetPx } from './support/targets';
+import { t } from './support/desk';
+import { expectStacked } from './support/stacked';
 
 // MDV-P2-004, MDV-P2-033: Patient 360 on one page (E-01). CI has no API: the session and the chart are mocked in the shapes the server sends. The care-relationship check,
 // the receptionist's 403, the audit rows and the source on every fact are covered by PatientChartTests on PostgreSQL.
@@ -436,3 +438,14 @@ for (const [locale, title] of [['en', 'Pregnancy'], ['ar', 'الحمل']] as con
     expect(await card.evaluate(async el =>
       (await (window as unknown as { axe: { run: (c: Element) => Promise<{ violations: { id: string }[] }> } }).axe.run(el)).violations.map(v => v.id))).toEqual([]);
   });
+
+// MDV-P2-054 AC5: at 375 px each result is a stacked block: the test first and bold, the value, range, trend, any flag and the source under their names.
+test.describe('at 375 px', () => {
+  test.use({ viewport: { width: 375, height: 812 } });
+  for (const locale of ['en', 'ar'])
+    test(`the results are stacked with every field labelled and nothing scrolling sideways (${locale})`, async ({ page }) => {
+      await open(page, { locale });
+      const col = (c: string) => t(locale, `patient360.labs.${c}`);
+      await expectStacked(page, page.getByRole('region', { name: t(locale, 'patient360.labs.table') }), [col('latest'), col('range'), col('trend'), t(locale, 'timeline.source')]);
+    });
+});

@@ -3,7 +3,7 @@ import { Button, buttonVariants, ErrorSummary, Field, Input, Label, StickyAction
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import type { ProfileForm } from '../domain/settings';
-import { cardBar, fieldError } from './fieldStyles';
+import { cardBar, fieldError, fieldGrid } from './fieldStyles';
 import { Section } from './Section';
 
 type Props = {
@@ -50,14 +50,14 @@ export default function ProfilePanel(p: Props) {
   return (
     <div className="flex flex-col gap-4">
       <Section title={t('settings.profile.title')} intro={t('settings.profile.intro')}>
-        <form noValidate onSubmit={p.onSubmit} className="grid gap-4 sm:grid-cols-2">
+        <form noValidate onSubmit={p.onSubmit} className={fieldGrid}>
           {/* The server's refusal of a web address in the name moves focus too, once it arrives. */}
-          <ErrorSummary title={t('field.errorSummary')} focusKey={`${submitCount}:${p.nameHasLink}`} className="sm:col-span-2"
+          <ErrorSummary title={t('field.errorSummary')} focusKey={`${submitCount}:${p.nameHasLink}`} className="col-span-full"
             errors={fields.flatMap(f => (f.message ? [{ id: f.id, label: f.label, message: f.message }] : []))} />
-          <Field id="profile-name" label={t('settings.profile.name')} required error={error('profile-name')} className="sm:col-span-2">
+          <Field id="profile-name" label={t('settings.profile.name')} required error={error('profile-name')} className="md:col-span-2">
             <Input autoComplete="organization" {...p.form.register('name')} />
           </Field>
-          <Field id="profile-address" label={t('settings.profile.address')} error={error('profile-address')} className="sm:col-span-2">
+          <Field id="profile-address" label={t('settings.profile.address')} error={error('profile-address')} className="md:col-span-2">
             <Textarea rows={3} autoComplete="street-address" {...p.form.register('address')} />
           </Field>
           <Field id="profile-registration" label={t('settings.profile.registration')} hint={t('settings.profile.registrationHint')} error={error('profile-registration')}>
@@ -75,7 +75,7 @@ export default function ProfilePanel(p: Props) {
           <Field id="profile-email" label={t('settings.profile.email')} error={error('profile-email')}>
             <Input type="email" dir="ltr" autoComplete="email" {...p.form.register('email')} />
           </Field>
-          <StickyActionBar className={`${cardBar} sm:col-span-2`} aria-live="polite" status={<>
+          <StickyActionBar className={`${cardBar} col-span-full`} aria-live="polite" status={<>
             {p.saved && <span>{t('settings.saved')}</span>}
             {p.changed && (
               <span role="alert" className={fieldError}>

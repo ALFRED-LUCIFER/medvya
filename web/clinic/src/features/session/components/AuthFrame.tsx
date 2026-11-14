@@ -43,10 +43,10 @@ export default function AuthFrame({ languageSwitcher, children, steps, country }
       <aside aria-label={t('app.name')} className="hidden w-[42%] shrink-0 flex-col gap-6 bg-brand-950 px-12 py-10 text-white md:flex [&_:focus-visible]:outline-white">
         <Mark light />
         <div className="mt-auto flex max-w-[440px] flex-col gap-[18px]">
-          <p className="text-[28px] leading-tight font-bold">{t('signin.tagline')}</p>
+          <p className="text-display leading-tight font-bold">{t('signin.tagline')}</p>
           <ul className="flex flex-col gap-3">
             {points.map(({ icon: Icon, key }) => (
-              <li key={key} className="flex items-start gap-3 text-[15px] text-nav-ink">
+              <li key={key} className="flex items-start gap-3 text-body-large text-nav-ink">
                 <Icon className="mt-0.5 size-5 shrink-0 text-brand-500" aria-hidden />{t(key)}
               </li>
             ))}
@@ -65,7 +65,7 @@ export default function AuthFrame({ languageSwitcher, children, steps, country }
             })}
           </ol>
         )}
-        <p className="mt-auto flex items-center gap-2 text-[13px] text-nav-muted"><ShieldCheck className="size-4 shrink-0" aria-hidden />{t('signin.trust')}</p>
+        <p className="mt-auto flex items-center gap-2 text-caption text-nav-muted"><ShieldCheck className="size-4 shrink-0" aria-hidden />{t('signin.trust')}</p>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col bg-card">
         <header className="flex items-center justify-between gap-3 px-4 py-3 md:px-8 md:py-5">
@@ -75,7 +75,7 @@ export default function AuthFrame({ languageSwitcher, children, steps, country }
         </header>
         <main className="flex flex-1 flex-col">
           {steps && (
-            <div className="flex items-center gap-3 px-4 pb-2 text-[13px] font-bold text-muted-foreground md:hidden">
+            <div className="flex items-center gap-3 px-4 pb-2 text-label font-bold text-muted-foreground md:hidden">
               <span>{t('signin.create.stepOf', { n: current, total: steps.length })}</span>
               <span aria-hidden className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
                 <span className="block h-full bg-brand-700" style={{ width: `${(current / steps.length) * 100}%` }} />
@@ -87,7 +87,7 @@ export default function AuthFrame({ languageSwitcher, children, steps, country }
           </div>
         </main>
         {country && (
-          <footer className="flex flex-wrap items-center gap-1.5 px-4 py-4 text-[13px] text-muted-foreground md:px-8">
+          <footer className="flex flex-wrap items-center gap-1.5 px-4 py-4 text-caption text-muted-foreground md:px-8">
             <Globe className="size-4 shrink-0" aria-hidden />{t('signin.region')}
             <strong className="text-foreground">{t(`signin.region.${country}`)}</strong>
           </footer>

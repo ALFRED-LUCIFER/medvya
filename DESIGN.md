@@ -102,7 +102,7 @@ Two densities (ruling 2, amended 14 Nov 2026 by MDV-P2-062). Density is chosen b
 | title | 20/28 | 700 | Page title in the 44 px header |
 | heading | 18/26 | 700 | Section and card titles; patient name in the strip |
 | subheading | 16/24 | 700 | Sub-sections; patient name in rows |
-| body | 14/20 | 500 | Default, tables, controls. *Awaiting the founder's yes* |
+| body | 14/20 | 500 | Default, tables, controls. Set on `body` by MDV-P2-057 (#1216); the founder's yes is still to be confirmed |
 | body-large | 16/24 | 500 | Typed clinical text, patient-facing pages |
 | label | 14/20 | 600 | Field labels, table headers, buttons |
 | caption | 12/16 | 600 | Hints, metadata, chips |
@@ -271,8 +271,8 @@ Also required: Arabic right-to-left with logical properties, and reduced motion 
 
 ## Guardrails
 
-- No `min-h-11` or `h-11` on library controls in features: oxlint `medvya-ui/no-height-patch` fails it (MDV-P1-078, #1174; re-run `node tools/codemods/remove-height-patches.mjs` on a branch). No arbitrary font sizes or raw hex colours; no `sm:grid-cols-*`; no raw `h1` in features (MDV-P1-076, #1172).
-- Counts in CI that may only fall: `pnpm check:ui-drift` compares the patterns above, the `border bg-card` string and local `Message`, `Field`, `Card` and `Empty` components with `tools/check-ui-drift/baseline.json`. A rise fails; a fall is committed with `--update` in the same pull request. When a count reaches zero, that ticket turns the matching lint rule to error and removes the count.
+- No `min-h-11` or `h-11` on library controls in features: oxlint `medvya-ui/no-height-patch` fails it (MDV-P1-078, #1174; re-run `node tools/codemods/remove-height-patches.mjs` on a branch). No raw hex colours and no raw `h1` in features (MDV-P1-076, #1172). No arbitrary font size (`medvya-ui/no-arbitrary-text-size`; the queue display and print pages are exempt) and no column rule at `sm:` (`medvya-ui/no-sm-columns`) in features: both lint errors since MDV-P2-057 (#1216).
+- Counts in CI that may only fall: `pnpm check:ui-drift` compares raw hex colours in the apps and the library with `tools/check-ui-drift/baseline.json` (the other patterns reached zero and are lint errors). A rise fails; a fall is committed with `--update` in the same pull request. When a count reaches zero, that ticket turns the matching lint rule to error and removes the count.
 - One browser test, mutation-checked: the patient strip is visible after scrolling the consultation (MDV-P1-092, #1188).
 - The contrast test reads the tone tokens (MDV-P1-080, #1176).
 

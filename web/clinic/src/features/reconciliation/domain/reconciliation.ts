@@ -47,3 +47,6 @@ export type Problem = 'undecided' | 'ended' | 'confirmed' | 'invalid' | 'failed'
 /** The server's 409 code, or a rejected field ("reason:required"), as one of the messages the screen has. */
 export const problemOf = (code: string | undefined): Problem =>
   code === 'undecided' || code === 'ended' || code === 'confirmed' ? code : code?.includes(':') ? 'invalid' : 'failed';
+
+/** Reconciliation columns; the label of each is the i18n key `reconcile.col.<key>`. One row per medicine, so no sort or paging. */
+export const reconcileColumns = ['medicine', 'chart', 'patient', 'other', 'conflict', 'decision'] as const;

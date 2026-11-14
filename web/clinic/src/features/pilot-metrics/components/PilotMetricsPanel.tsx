@@ -75,7 +75,7 @@ export default function PilotMetricsPanel(p: Props) {
       </Section>
 
       <Section title={t('pilotMetrics.recordTitle')} intro={t('pilotMetrics.recordIntro')}>
-        <form noValidate onSubmit={p.onSubmit} className="grid gap-4 sm:grid-cols-2">
+        <form noValidate onSubmit={p.onSubmit} className="grid gap-4 md:grid-cols-2">
           <Controller control={p.form.control} name="metric" render={({ field }) => (
             <Select value={field.value} onValueChange={field.onChange}>
               <Field id="baseline-metric" label={t('pilotMetrics.metric')}>
@@ -87,7 +87,7 @@ export default function PilotMetricsPanel(p: Props) {
           <Field id="baseline-value" label={t('pilotMetrics.value')} error={errors.value ? t('pilotMetrics.error.value') : null}>
             <Input inputMode="decimal" autoComplete="off" {...p.form.register('value')} />
           </Field>
-          <Field id="baseline-method" label={t('pilotMetrics.method')} hint={t('pilotMetrics.methodHint')} className="sm:col-span-2"
+          <Field id="baseline-method" label={t('pilotMetrics.method')} hint={t('pilotMetrics.methodHint')} className="md:col-span-2"
             error={errors.method ? t('pilotMetrics.error.method') : null}>
             <Input autoComplete="off" maxLength={200} {...p.form.register('method')} />
           </Field>
@@ -97,7 +97,7 @@ export default function PilotMetricsPanel(p: Props) {
           <Field id="baseline-to" label={t('pilotMetrics.to')} error={errors.toDate ? t('pilotMetrics.error.toDate') : null}>
             <Input type="date" {...p.form.register('toDate')} />
           </Field>
-          <div className="flex flex-wrap items-center gap-3 sm:col-span-2" aria-live="polite">
+          <div className="flex flex-wrap items-center gap-3 md:col-span-2" aria-live="polite">
             <Button type="submit" loading={p.saving}>{t('pilotMetrics.record')}</Button>
             {p.saveFailed && <p role="alert" className={fieldError}>{t('pilotMetrics.saveFailed')}</p>}
             {p.saved && !p.saving && <p>{t('pilotMetrics.saved')}</p>}

@@ -97,6 +97,7 @@ function Trends(p: Props) {
   const { t, formatDate } = useI18n();
   const lines = p.series ? chartLines(p.series) : null;
   const name = t(`patient360.trend.${p.choice}`);
+  const valueLabel = p.series && t('timeline.trends.value', { unit: p.series.unit });
   return (
     <Card title={t('patient360.trends')}>
       <div className="flex flex-wrap gap-2">
@@ -114,21 +115,21 @@ function Trends(p: Props) {
               <path d={pathOf(lines.main)} stroke="currentColor" strokeWidth="1.5" />
               {lines.main.map((pt, i) => <circle key={i} cx={pt.x} cy={pt.y} r="1.6" fill="currentColor" />)}
             </svg>
-            <Table label={t('timeline.trends.table', { name, unit: p.series.unit })}>
+            <Table label={t('timeline.trends.table', { name, unit: p.series.unit })} stacked>
               <TableCaption className="sr-only">{t('timeline.trends.table', { name, unit: p.series.unit })}</TableCaption>
               <TableHeader>
                 <TableRow>
                   <TableHead scope="col">{t('timeline.trends.date')}</TableHead>
-                  <TableHead scope="col">{t('timeline.trends.value', { unit: p.series.unit })}</TableHead>
+                  <TableHead scope="col">{valueLabel}</TableHead>
                   <TableHead scope="col">{t('timeline.source')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {p.series.rows.map(r => (
                   <TableRow key={r.takenAt}>
-                    <TableCell><time dateTime={r.takenAt}>{formatDate(new Date(r.takenAt), p.timeZone)}</time></TableCell>
-                    <TableCell>{ltr(r.value)}</TableCell>
-                    <TableCell><ProvenanceTag source={provenanceOf[r.source]} /></TableCell>
+                    <TableHead scope="row"><time dateTime={r.takenAt}>{formatDate(new Date(r.takenAt), p.timeZone)}</time></TableHead>
+                    <TableCell label={valueLabel ?? undefined}>{ltr(r.value)}</TableCell>
+                    <TableCell label={t('timeline.source')}><ProvenanceTag source={provenanceOf[r.source]} /></TableCell>
                   </TableRow>
                 ))}
               </TableBody>

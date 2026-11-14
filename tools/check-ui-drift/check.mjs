@@ -21,18 +21,12 @@ const HEX = /["'[]#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})["'\]]/g;
 
 export const RULES = {
   // A height patch on a library control reached zero in MDV-P1-078; oxlint's medvya-ui/no-height-patch rule now fails it (tools/oxlint-plugin).
-  // Type sizes come from the scale. The queue display and the print pages are read from a distance or on paper (MDV-P2-057).
-  arbitraryFontSize: {
-    in: f => inApps(f) && !/\/queue-tv\/|PrintPage\.tsx$/.test(f),
-    count: matches(/\btext-\[[\d.]+(?:px|rem|em)\]/g),
-  },
+  // An arbitrary font size and an sm:grid-cols reached zero in MDV-P2-057: medvya-ui/no-arbitrary-text-size and medvya-ui/no-sm-columns now fail them.
   // Colours come from the tokens: no hex in a class name (bg-[#…]) or a string ('#…') (MDV-P1-080).
   // At zero since MDV-P1-080, so any hex in packages/ui fails CI.
   // shortcut: stays here, not in oxlint, because oxlint 1.90 has no no-restricted-syntax; move it when oxlint can express it.
   rawHexLibrary: { in: f => f.startsWith(LIBRARY), count: matches(HEX) },
   rawHexApps: { in: inApps, count: matches(HEX) },
-  // Columns change at the named tiers, not at the 360 px sm: step (MDV-P2-057).
-  smGridCols: { in: inApps, count: matches(/\bsm:grid-cols-/g) },
   // A local Field reached zero in MDV-P2-058 (medvya-ui/no-local-field). A raw h1, an inline "border bg-card" and a local Message, Card or Empty
   // reached zero in MDV-P2-059: react/forbid-elements (h1), medvya-ui/no-inline-card and medvya-ui/no-local-surface now fail them (tools/oxlint-plugin).
 };
@@ -71,29 +65,25 @@ function selfTest() {
   const assert = (c, msg) => { if (!c) { console.error('self-test failed:', msg); process.exit(1); } };
   const page = 'web/clinic/src/features/x/components/Page.tsx';
   const sample = `
-    function Page() { return <h1 className="text-[13px] sm:grid-cols-2">x</h1>; }
     const Tint = () => <div className="rounded-xl bg-[#E7F6F4]" style={{ color: '#fff' }} />;
-    <div className="sm:grid-cols-3" />`;
+    <div className="text-[13px] sm:grid-cols-3" />`;
   const at = files => measure(files);
   const base = at([[page, sample]]);
   const totals = Object.fromEntries(Object.entries(base).map(([k, v]) => [k, total(v)]));
-  assert(JSON.stringify(totals) === JSON.stringify({ arbitraryFontSize: 1, rawHexLibrary: 0, rawHexApps: 2, smGridCols: 2 }), `a rule's pattern changed: ${JSON.stringify(totals)}`);
+  assert(JSON.stringify(totals) === JSON.stringify({ rawHexLibrary: 0, rawHexApps: 2 }), `a rule's pattern changed: ${JSON.stringify(totals)}`);
 
-  // Scope: tests and other folders are not counted; the library counts hex only; the queue display may size its own text.
-  assert(total(at([['web/clinic/src/app/App.tsx', sample]]).smGridCols) === 0, 'clinic app/ is outside the scope');
+  // Scope: tests and other folders are not counted; the library has its own count.
+  assert(total(at([['web/clinic/src/app/App.tsx', sample]]).rawHexApps) === 0, 'clinic app/ is outside the scope');
   const library = at([['packages/ui/src/primitives.tsx', sample]]);
-  assert(total(library.rawHexLibrary) === 2 && total(library.smGridCols) === 0, 'the library counts raw hex only');
-  assert(total(at([['web/clinic/src/features/queue-tv/components/QueueTvPage.tsx', sample]]).arbitraryFontSize) === 0, 'queue display is allow-listed');
+  assert(total(library.rawHexLibrary) === 2 && total(library.rawHexApps) === 0, 'the library counts as the library');
 
   // The guard itself: at the baseline it passes, one more hit fails and names the file, one fewer asks for the baseline to be lowered.
   const same = compare(base, at([[page, sample]]));
   assert(same.rose.length === 0 && !same.stale, 'a sample at the baseline passes');
   const other = 'web/clinic/src/features/y/components/New.tsx';
-  const more = compare(base, at([[page, sample], [other, '<p className="text-[15px]" />']]));
-  assert(more.rose.length === 1 && more.rose[0].startsWith(`arbitraryFontSize: ${other} has 1, baseline 0`), 'one extra arbitrary font size fails and names the file');
-  const patched = compare(base, at([[page, sample + '<div className="sm:grid-cols-4" />']]));
-  assert(patched.rose.length === 1 && patched.rose[0].startsWith(`smGridCols: ${page} has 3, baseline 2`), 'one extra sm:grid-cols fails and names the file');
-  const lowered = at([[page, sample.replace('sm:grid-cols-3', '')]]);
+  const more = compare(base, at([[page, sample], [other, '<p className="text-[#abc]" />']]));
+  assert(more.rose.length === 1 && more.rose[0].startsWith(`rawHexApps: ${other} has 1, baseline 0`), 'one extra raw hex fails and names the file');
+  const lowered = at([[page, sample.replace("'#fff'", "'white'")]]);
   const fewer = compare(base, lowered);
   assert(fewer.rose.length === 0 && fewer.stale, 'after a fall nothing rose, but the baseline must be lowered');
   assert(compare(lowered, base).rose.length === 1, 'once the baseline is lowered the old number fails');

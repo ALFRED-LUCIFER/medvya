@@ -39,7 +39,7 @@ export default function OrdersPanel(p: Props) {
   return (
     <Section title={t('orders.title')} intro={t(p.ended ? 'orders.ended' : 'orders.intro')}>
       <TableState state={tableState} messages={{ loading: t('orders.loading'), error: t('orders.loadFailed'), empty: t('orders.empty') }}>
-        <Table label={t('orders.tableLabel')} className="min-w-[640px]">
+        <Table label={t('orders.tableLabel')} stacked className="md:min-w-[640px]">
           <TableHeader>
             <TableRow>{orderColumns.map(c => <TableHead key={c} scope="col">{t(`orders.col.${c}`)}</TableHead>)}</TableRow>
           </TableHeader>
@@ -49,10 +49,10 @@ export default function OrdersPanel(p: Props) {
               return (
                 <TableRow key={o.id}>
                   <TableHead scope="row">{o.name}</TableHead>
-                  <TableCell>{t(`orders.kind.${o.kind}`)}</TableCell>
-                  <TableCell>{o.note}</TableCell>
-                  <TableCell><span className="inline-flex items-center gap-1.5 font-bold"><Icon aria-hidden className="size-4 shrink-0" />{t(`orders.state.${o.state}`)}</span></TableCell>
-                  <TableCell>
+                  <TableCell label={t('orders.col.kind')}>{t(`orders.kind.${o.kind}`)}</TableCell>
+                  <TableCell label={o.note ? t('orders.col.note') : undefined}>{o.note}</TableCell>
+                  <TableCell label={t('orders.col.state')}><span className="inline-flex items-center gap-1.5 font-bold"><Icon aria-hidden className="size-4 shrink-0" />{t(`orders.state.${o.state}`)}</span></TableCell>
+                  <TableCell label={canSwitch(o) && !p.ended ? t('orders.col.include') : undefined}>
                     {canSwitch(o) && !p.ended && <Switch checked={isIncluded(o)} disabled={p.busy} aria-label={t('orders.include', { name: o.name })} onCheckedChange={on => p.onInclude(o.id, on)} />}
                   </TableCell>
                 </TableRow>
@@ -64,8 +64,8 @@ export default function OrdersPanel(p: Props) {
 
       {!p.ended && (
         <>
-          <form noValidate onSubmit={p.onAdd} className="grid gap-4 sm:grid-cols-2">
-            <h3 className="font-bold sm:col-span-2">{t('orders.add.title')}</h3>
+          <form noValidate onSubmit={p.onAdd} className="grid gap-4 md:grid-cols-2">
+            <h3 className="font-bold md:col-span-2">{t('orders.add.title')}</h3>
             <Controller control={p.form.control} name="kind" render={({ field }) => (
               <Select value={field.value ?? 'Lab'} onValueChange={field.onChange}>
                 <Field id="order-kind" label={t('orders.field.kind')}>
@@ -77,7 +77,7 @@ export default function OrdersPanel(p: Props) {
             <Field id="order-name" label={t('orders.field.name')} error={nameError}>
               <Input autoComplete="off" {...p.form.register('name')} />
             </Field>
-            <Field id="order-note" label={t('orders.field.note')} className="sm:col-span-2">
+            <Field id="order-note" label={t('orders.field.note')} className="md:col-span-2">
               <Input autoComplete="off" {...p.form.register('note')} />
             </Field>
             <Button type="submit" variant="outline" className="self-start" disabled={p.busy}>{t('orders.add')}</Button>

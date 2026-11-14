@@ -1,5 +1,6 @@
 // Medvya's own oxlint rules (jsPlugins): no height patch on a library control (MDV-P1-078); compact tables only where allowed (MDV-P2-054);
-// no local Field in a feature (MDV-P2-058); no inline card and no local Message, Card or Empty in a feature (MDV-P2-059).
+// no local Field in a feature (MDV-P2-058); no inline card and no local Message, Card or Empty in a feature (MDV-P2-059);
+// no arbitrary font size and no column change at the 360 px sm: step in a feature (MDV-P2-057).
 const CONTROLS = new Set(['Input', 'SelectTrigger', 'Textarea', 'Button']);
 const PATCH = /(?<![\w:-])(?:min-)?h-11(?![\w-])/;
 
@@ -19,6 +20,20 @@ function strings(node, out = []) {
 // The library component a feature uses instead of declaring its own (MDV-P2-059).
 const SURFACES = { Message: 'PageMessage', Card: 'Card (or Section inside a Card)', Empty: 'EmptyState' };
 const INLINE_CARD = /\bborder bg-card\b/;
+
+// text-[13.5px], text-[1.1rem]: sizes come from the nine type tokens (DESIGN.md Typography).
+const ARBITRARY_SIZE = /(?<![\w-])text-\[[\d.]+(?:px|rem|em)\]/;
+// sm: is 360 px, so a column rule there applies on phones; columns change at md (768) or wide (1024) (DESIGN.md Layout).
+const SM_COLUMNS = /(?<![\w-])sm:(?:grid-cols|col-span|col-start|col-end)-/;
+
+// Reports every string literal or template text that matches `re`.
+const classText = (re, message) => context => {
+  const report = node => context.report({ node, message });
+  return {
+    Literal(node) { if (typeof node.value === 'string' && re.test(node.value)) report(node); },
+    TemplateElement(node) { if (re.test(node.value.cooked ?? node.value.raw)) report(node); },
+  };
+};
 
 const attr = (node, name) => node.attributes.find(a => a.type === 'JSXAttribute' && a.name.name === name);
 
@@ -65,13 +80,15 @@ export default {
     },
     'no-inline-card': {
       meta: { type: 'problem', docs: { description: 'A card surface is Card or Section from @medvya/ui, never a hand-written "border bg-card".' } },
-      create(context) {
-        const report = node => context.report({ node, message: 'A card is Card or Section from @medvya/ui, not "border bg-card" by hand (DESIGN.md, MDV-P2-059). A control that only looks outlined uses buttonVariants({ variant: \'outline\' }).' });
-        return {
-          Literal(node) { if (typeof node.value === 'string' && INLINE_CARD.test(node.value)) report(node); },
-          TemplateElement(node) { if (INLINE_CARD.test(node.value.cooked ?? node.value.raw)) report(node); },
-        };
-      },
+      create: classText(INLINE_CARD, 'A card is Card or Section from @medvya/ui, not "border bg-card" by hand (DESIGN.md, MDV-P2-059). A control that only looks outlined uses buttonVariants({ variant: \'outline\' }).'),
+    },
+    'no-arbitrary-text-size': {
+      meta: { type: 'problem', docs: { description: 'A feature uses the type tokens (text-body, text-label, ...), never an arbitrary font size.' } },
+      create: classText(ARBITRARY_SIZE, 'Use a type token (text-caption, text-body, text-label, text-subheading, text-heading, text-title, text-display), not an arbitrary size (DESIGN.md Typography, MDV-P2-057). The queue display and print pages are the only exceptions.'),
+    },
+    'no-sm-columns': {
+      meta: { type: 'problem', docs: { description: 'Columns change at md (768) or wide (1024), never at the 360 px sm: step.' } },
+      create: classText(SM_COLUMNS, 'sm: is 360 px, so this column rule applies on phones: use md: (768) or wide: (1024) (DESIGN.md Layout, MDV-P2-057).'),
     },
     'compact-table': {
       meta: { type: 'problem', docs: { description: 'Compact density (36 px rows) is allowed on four tables only: audit log, formulary, order sets, staff.' } },

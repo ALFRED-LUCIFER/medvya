@@ -15,7 +15,7 @@ export default function OverviewPage({ displayName, role, items }: { displayName
   return (
     <PageContainer width="reading">
       <PageHeader title={t('platform.overview.title')} description={t('platform.overview.welcome', { name: displayName, role: t(`platform.role.${role}`) })} />
-      <ul className="grid gap-3 sm:grid-cols-2">
+      <ul className="grid gap-3 md:grid-cols-2">
         {items.flatMap(i => (i.id === 'overview' ? [] : [{ ...i, blurb: blurbs[i.id] }])).map(i => (
           <li key={i.id}>
             {/* The link covers the whole card, so the card stays one 44 px+ target. */}

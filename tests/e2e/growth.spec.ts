@@ -1,6 +1,8 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
 import { targetPx } from './support/targets';
+import { t } from './support/desk';
+import { expectStacked } from './support/stacked';
 
 // MDV-P2-035: a child's growth on Patient 360 (E-01). CI has no API: the session, the chart and the card are mocked in the shapes the server
 // sends. The z-scores against WHO's tables, the flags, the over-5 rule, the role checks and tenant isolation are covered by GrowthTests.
@@ -116,3 +118,14 @@ for (const [locale, title] of [['en', 'Growth'], ['ar', 'النمو الجسدي
       (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations.map(v => `${v.id} (${v.nodes.length})`));
     expect(violations).toEqual([]);
   });
+
+// MDV-P2-054 AC5: at 375 px each measurement is a stacked block: the date first and bold, each measure under its name.
+test.describe('at 375 px', () => {
+  test.use({ viewport: { width: 375, height: 812 } });
+  for (const locale of ['en', 'ar'])
+    test(`the measurements are stacked with every field labelled and nothing scrolling sideways (${locale})`, async ({ page }) => {
+      await open(page, { locale });
+      const col = (c: string) => t(locale, `childHealth.growth.col.${c}`);
+      await expectStacked(page, page.getByRole('region', { name: t(locale, 'childHealth.growth.table') }), [col('weight'), col('length')]);
+    });
+});

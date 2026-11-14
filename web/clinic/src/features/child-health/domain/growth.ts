@@ -94,3 +94,6 @@ export function growthProblemOf(status: number | undefined, code: string | undef
   if (status === 403) return 'refused';
   return 'failed';
 }
+
+/** Measurements table columns; the label of each is the i18n key `childHealth.growth.col.<key>`. Newest first, so no sort or paging. */
+export const growthColumns = ['date', 'weight', 'length', 'head'] as const;

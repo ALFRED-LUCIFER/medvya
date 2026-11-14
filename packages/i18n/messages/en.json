@@ -5001,6 +5001,7 @@
   "audit.actionName.intake.escalations.read": "Escalations viewed",
   "audit.actionName.intake.handoff": "Handed to the doctor",
   "audit.actionName.intake.keep": "Unusual reading kept",
+  "audit.actionName.intake.correct": "Reading corrected",
   "audit.actionName.intake.medicine.add": "Current medicine recorded at intake",
   "audit.actionName.intake.read": "Intake opened",
   "audit.actionName.intake.record": "Vital sign recorded",

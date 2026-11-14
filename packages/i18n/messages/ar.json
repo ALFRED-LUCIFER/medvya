@@ -4998,6 +4998,7 @@
   "audit.actionName.intake.escalations.read": "عُرضت الإحالات العاجلة",
   "audit.actionName.intake.handoff": "سُلّم إلى الطبيب",
   "audit.actionName.intake.keep": "أُبقيت قراءة غير معتادة",
+  "audit.actionName.intake.correct": "صُحّحت قراءة",
   "audit.actionName.intake.medicine.add": "سُجّل دواء حالي عند الاستقبال التمريضي",
   "audit.actionName.intake.read": "فُتح الاستقبال التمريضي",
   "audit.actionName.intake.record": "سُجّلت علامة حيوية",

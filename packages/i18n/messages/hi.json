@@ -4975,6 +4975,7 @@
   "audit.actionName.intake.escalations.read": "एस्केलेशन देखे गए",
   "audit.actionName.intake.handoff": "डॉक्टर को सौंपा गया",
   "audit.actionName.intake.keep": "असामान्य रीडिंग रखी गई",
+  "audit.actionName.intake.correct": "रीडिंग सुधारी गई",
   "audit.actionName.intake.medicine.add": "इनटेक पर मौजूदा दवा दर्ज",
   "audit.actionName.intake.read": "इनटेक खोला गया",
   "audit.actionName.intake.record": "वाइटल साइन दर्ज",

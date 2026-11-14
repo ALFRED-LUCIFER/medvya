@@ -53,7 +53,8 @@ function SheetContent({
           onCloseAutoFocus?.(e)
           if (e.defaultPrevented || !opener.current?.isConnected) return
           e.preventDefault()
-          opener.current.focus()
+          // The opener may sit in pinned chrome; returning focus must not move the page (the consultation keeps its place).
+          opener.current.focus({ preventScroll: true })
         }}
         {...props}
       >

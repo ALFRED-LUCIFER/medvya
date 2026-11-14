@@ -196,7 +196,8 @@ export const theme = {
     "measure": "72ch",
     "form": 768,
     "panel": 320,
-    "panelChart": 360
+    "panelChart": 360,
+    "note": 860
   },
   "shadow": {
     "popover": "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",

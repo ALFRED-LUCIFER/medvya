@@ -116,6 +116,7 @@ The palette does not change. A tone layer gives each meaning one colour pair on 
 | neutral | Everything else | |
 
 - Status is never colour alone: label always, icon where it helps.
+- One status map for every app: `packages/tokens/src/status.ts` gives each shared status its words, tone and glyph (Lucide on web, the same shape in Material on native). Web reads it through `statusIcons` in `@medvya/ui`; the Expo apps import it directly. Allergy has its own shield glyph, never the medicine or critical one (MDV-P5-057).
 - **One primary (filled) button per view:** the single next action for the signed-in user.
 - No raw hex colours in components.
 - Text contrast at least 4.5:1; large text and control borders at least 3:1.

@@ -157,7 +157,7 @@ for (const [locale, column] of [['en', 'The patient now waits in the Ready for d
     await desk(page, { locale, checkedInState: 'ReadyForDoctor' });
     await page.goto(`/front-desk/walk-in?patient=${patientId}`);
     await expect(page.locator('main [role=status]').first()).toBeVisible(); // the patient lookup has answered
-    await page.locator('form button[type=submit]').click();
+    await page.locator('main button[type=submit]').click();
     const done = page.locator('main [role=status]').filter({ has: page.locator('h1') });
     await expect(done).toContainText(column);
     await expect(done).not.toContainText(locale === 'en' ? 'Checked in column' : 'تم تسجيل الوصول»');
@@ -210,7 +210,7 @@ for (const [locale, message] of [['en', /Check-in is paused: the practice has no
   test(`a walk-in refused for unaccepted terms names Settings → Terms, not a broken button, axe clean (${locale})`, async ({ page }) => {
     await desk(page, { locale, walkInAnswer: () => ({ status: 403, json: { title: 'Terms not accepted', code: 'terms_not_accepted' } }) });
     await page.goto(`/front-desk/walk-in?patient=${patientId}`);
-    await page.locator('form button[type=submit]').click();
+    await page.locator('main button[type=submit]').click();
     const alert = page.getByRole('alert').filter({ hasText: message });
     await expect(alert).toBeVisible();
     await expect(alert.getByRole('link')).toHaveAttribute('href', '/settings?tab=terms');

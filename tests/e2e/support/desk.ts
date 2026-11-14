@@ -110,10 +110,10 @@ export async function problems(page: Page, within = 'body') {
       while (scroller && !(scroller.scrollWidth > scroller.clientWidth && /auto|scroll/.test(getComputedStyle(scroller).overflowX))) scroller = scroller.parentElement;
       if (!scroller && (r.left < -0.5 || r.right > vw + 0.5)) out.push(`${name} is outside the viewport`);
       // Covered by something else (a panel fixed over the page): the tap would land on the cover, not the control. Content under the
-      // sticky top bar or the phone's bottom tabs scrolls out from under them, so those two are not covers.
+      // sticky top bar, the phone's bottom tabs or a bottom bar (MDV-P2-064) scrolls out from under them, so those are not covers.
       const [x, y] = [r.left + r.width / 2, r.top + r.height / 2];
       const top = x >= 0 && x < vw && y >= 0 && y < window.innerHeight ? document.elementFromPoint(x, y) : null;
-      if (top && !el.contains(top) && !top.contains(el) && !el.closest('label')?.contains(top) && !top.closest('header, nav')) out.push(`${name} is covered by ${top.outerHTML.slice(0, 80)}`);
+      if (top && !el.contains(top) && !top.contains(el) && !el.closest('label')?.contains(top) && !top.closest('header, nav, [data-slot=sticky-action-bar]')) out.push(`${name} is covered by ${top.outerHTML.slice(0, 80)}`);
     }
     return out;
   }, within);

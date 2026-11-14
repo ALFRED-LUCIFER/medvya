@@ -38,7 +38,8 @@ export default function PatientDirectory(p: Props) {
     : p.state === 'ready' && p.result ? (p.result.items.length === 0 ? t('patients.empty') : t(`patients.matchedOn.${p.result.matchedOn}`, { n: p.result.total }))
     : '';
   return (
-    <PageContainer width="reading">
+    // One screen (MDV-P2-064): the search stays put and a long result list scrolls inside its table.
+    <PageContainer width="reading" fit>
       {/* Register patient is here and on Front desk, not in the menu (MDV-P2-051); outlined, as Search is this view's primary button. */}
       <PageHeader title={t('patients.directory.title')}
         actions={<>
@@ -104,12 +105,12 @@ function Results(p: Props) {
 
   const pages = pageCount(r);
   return (
-    <section aria-labelledby="patient-results" aria-busy={p.updating || undefined} className={cn('flex flex-col gap-3', p.updating && 'opacity-60')}>
+    <section aria-labelledby="patient-results" aria-busy={p.updating || undefined} className={cn('flex min-h-0 flex-col gap-3', p.updating && 'opacity-60')}>
       <h2 id="patient-results" ref={heading} tabIndex={-1} className="text-sm font-bold text-muted-foreground focus:outline-none">
         {t(`patients.matchedOn.${r.matchedOn}`, { n: r.total })}
       </h2>
-      <Table label={t('patients.tableLabel')} stacked containerClassName="bg-card">
-        <TableHeader>
+      <Table label={t('patients.tableLabel')} stacked containerClassName="min-h-0 bg-card wide:overflow-y-auto">
+        <TableHeader sticky>
           <TableRow>{directoryColumns.map(c => <TableHead key={c} scope="col">{t(`patients.col.${c}`)}</TableHead>)}</TableRow>
         </TableHeader>
         <TableBody>{r.items.map(row => <Row key={row.id} row={row} to={p.recordPath(row.id)} />)}</TableBody>

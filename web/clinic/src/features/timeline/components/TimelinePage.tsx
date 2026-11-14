@@ -33,8 +33,9 @@ export default function TimelinePage(p: Props) {
       {header}
       {p.patient && <ChartBanner data={p.patient} />}
       <Filters {...p} />
-      <div className="grid gap-4 lg:grid-cols-[3fr_2fr]">
-        <Card aria-label={t('timeline.list')}>
+      {/* Beside the trends the history scrolls inside its own card, under the record's tabs, title, strip and filters (MDV-P2-064), as the day grid. */}
+      <div className="grid items-start gap-4 lg:grid-cols-[3fr_2fr]">
+        <Card aria-label={t('timeline.list')} className="lg:max-h-[calc(100dvh-22rem)] lg:overflow-y-auto">
           {p.loading ? <PageMessage kind="busy">{t('timeline.loading')}</PageMessage>
             : p.entries.length === 0 ? <EmptyState action={hasFilters(p.filters) && <Button variant="outline" onClick={p.onClear}>{t('timeline.clear')}</Button>}>
               {t(hasFilters(p.filters) ? 'timeline.empty.filtered' : 'timeline.empty')}

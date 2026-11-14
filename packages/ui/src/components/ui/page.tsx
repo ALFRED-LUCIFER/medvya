@@ -13,16 +13,24 @@ export const pageWidths = {
 
 export type PageWidth = keyof typeof pageWidths
 
+/**
+ * `fit` (MDV-P2-064, DESIGN.md "One screen per task"): from 1024 px the page is exactly one screen under the shell's top bar (--shell-top, less
+ * the shell's 24 px padding above and below), so it never scrolls; a child with `min-h-0 overflow-y-auto` takes the rest and scrolls inside
+ * itself. Under 1024 px and at 400 % zoom (short viewport) the page scrolls as usual.
+ */
 function PageContainer({
   width = "fluid",
+  fit = false,
   className,
   ...props
-}: React.ComponentProps<"div"> & { width?: PageWidth }) {
+}: React.ComponentProps<"div"> & { width?: PageWidth; fit?: boolean }) {
   return (
     <div
       data-slot="page-container"
       data-width={width}
-      className={cn("flex w-full min-w-0 flex-col gap-4", pageWidths[width], className)}
+      data-fit={fit || undefined}
+      className={cn("flex w-full min-w-0 flex-col gap-4", pageWidths[width],
+        fit && "wide:h-[calc(100dvh-var(--shell-top,0px)-3rem)] [@media(max-height:480px)]:h-auto", className)}
       {...props}
     />
   )

@@ -1,10 +1,10 @@
 import { ChevronDown, Lock, Plus } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, ChoiceRow, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, Field, Input, Table, TableBody, TableCell, TableHead, TableHeader, TablePagination, TableRow, TableState, Textarea } from '@medvya/ui';
+import { Button, ChoiceRow, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, Field, Input, Table, TableBody, TableCell, TableHead, TableHeader, TablePagination, TableRow, TableState, StickyActionBar, Textarea } from '@medvya/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
-import { fieldError } from '../../settings/components/fieldStyles';
+import { cardBar, fieldError } from '../../settings/components/fieldStyles';
 import type { Location } from '../../settings/domain/settings';
 import { Section } from '../../settings/components/Section';
 import type { TableView } from '../../table/domain/tableSort';
@@ -324,12 +324,12 @@ export default function StaffPanel(p: Props) {
             {p.addFailed && <p role="alert" className={fieldError}>{t('staff.error.add')}</p>}
             {p.emailFailed && <p role="alert" className={fieldError}>{t('staff.error.email')}</p>}
             {p.planFull && <p role="alert" className={fieldError}>{t('plan.full')}</p>}
-            <div className="flex flex-wrap gap-2">
+            <StickyActionBar className={cardBar}>
               {p.step !== 'role' && <Button type="button" variant="outline" onClick={p.onBack}>{t('staff.back')}</Button>}
               {p.step !== 'permissions' && <Button type="button" disabled={!p.canContinue} onClick={p.onNext}>{t('staff.next')}</Button>}
               {p.step === 'permissions' && <Button type="submit" loading={p.adding}>{t('staff.send')}</Button>}
               <Button type="button" variant="outline" onClick={p.onClose}>{t('settings.cancel')}</Button>
-            </div>
+            </StickyActionBar>
           </form>
         </Section>
       )}

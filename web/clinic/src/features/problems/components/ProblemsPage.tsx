@@ -3,11 +3,11 @@ import { Controller, type UseFormReturn } from 'react-hook-form';
 import { Link } from 'react-router';
 import { CircleCheck, CircleHelp, MessageCircle } from 'lucide-react';
 import { ltr, useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, Card, Field, PageContainer, PageHeader, PageMessage, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState } from '@medvya/ui';
+import { Button, buttonVariants, Card, Field, PageContainer, PageHeader, PageMessage, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead, TableHeader, StickyActionBar, TableRow, TableState } from '@medvya/ui';
 import type { ClinicalRefusal } from '../../clinical-access/domain/clinicalAccess';
 import type { EncounterBanner } from '../../encounters/domain/encounter';
 import PatientStrip from '../../encounters/components/PatientStrip';
-import ProblemAddForm from './ProblemAddForm';
+import ProblemAddForm, { ProblemAddSubmit } from './ProblemAddForm';
 import { statuses, verificationKey, verifications, type AddDraft, type CodeSet, type DiagnosisCode, type EditDraft, type Problem, type ProblemList, type ProblemRow } from '../domain/problems';
 
 type Props = {
@@ -23,6 +23,8 @@ type Props = {
  * Problems with ICD-10 codes and verification states (E-07, MDV-P2-010). Each state is written in words with its own icon; a provisional
  * problem also has a dashed outline, so it never reads as a confirmed diagnosis. Search is by code or words; a code is never guessed.
  */
+const addFormId = 'problems-add';
+
 export default function ProblemsPage(p: Props) {
   const { t } = useI18n();
   if (p.loading) return <p role="status">{t('problems.loading')}</p>;
@@ -58,10 +60,14 @@ export default function ProblemsPage(p: Props) {
             </TableBody>
           </Table>
         </TableState>
-        {view.locked ? <p role="status" className="font-bold">{t('problems.locked')}</p> : <ProblemAddForm {...p} />}
+        {view.locked ? <p role="status" className="font-bold">{t('problems.locked')}</p> : <ProblemAddForm {...p} formId={addFormId} />}
         {p.problem && <p role="alert" className="font-bold text-danger-700">{t(`problems.error.${p.problem}`)}</p>}
-        <div><Link to={p.consultPath} className={buttonVariants({ variant: 'outline' })}>{t('problems.backToConsult')}</Link></div>
       </Card>
+      {/* The bottom bar (MDV-P2-064): Add problem submits the form above. */}
+      <StickyActionBar>
+        {!view.locked && <ProblemAddSubmit formId={addFormId} adding={p.adding} online={p.online} />}
+        <Link to={p.consultPath} className={buttonVariants({ variant: 'outline' })}>{t('problems.backToConsult')}</Link>
+      </StickyActionBar>
     </div>
   );
 }

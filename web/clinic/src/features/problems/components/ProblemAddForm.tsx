@@ -9,6 +9,8 @@ export type ProblemAddFormProps = {
   onSearch: (q: string) => void; onPick: (c: DiagnosisCode) => void; onClearPick: () => void; onAdd: FormEventHandler<HTMLFormElement>;
   /** Inline in the consultation the search takes focus when the area opens; the problems page leaves focus where it is. */
   autoFocus?: boolean;
+  /** The problems page names the form and puts its submit in the bottom bar (MDV-P2-064); inline in the consultation it stays in the form. */
+  formId?: string;
 };
 
 /** ICD-10 search by code or words and the add form (E-07), shared by the problems page and the consultation's Assessment so the two never drift. */
@@ -16,7 +18,7 @@ export default function ProblemAddForm(p: ProblemAddFormProps) {
   const { t } = useI18n();
   const { errors } = p.addForm.formState;
   return (
-    <form noValidate onSubmit={p.onAdd} aria-labelledby="problems-add-title" className="flex flex-col gap-3 rounded-md border p-3">
+    <form id={p.formId} noValidate onSubmit={p.onAdd} aria-labelledby="problems-add-title" className="flex flex-col gap-3 rounded-md border p-3">
       <h3 id="problems-add-title" className="font-extrabold">{t('problems.add.title')}</h3>
       {p.picked ? (
         <div className="flex flex-wrap items-center gap-2">
@@ -53,7 +55,12 @@ export default function ProblemAddForm(p: ProblemAddFormProps) {
           <Input type="date" {...p.addForm.register('onsetOn')} />
         </Field>
       </div>
-      <div><Button type="submit" loading={p.adding} disabled={!p.online}>{t('problems.add.submit')}</Button></div>
+      {!p.formId && <div><ProblemAddSubmit {...p} /></div>}
     </form>
   );
+}
+
+export function ProblemAddSubmit({ formId, adding, online }: Pick<ProblemAddFormProps, 'formId' | 'adding' | 'online'>) {
+  const { t } = useI18n();
+  return <Button type="submit" form={formId} loading={adding} disabled={!online}>{t('problems.add.submit')}</Button>;
 }

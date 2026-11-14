@@ -32,6 +32,16 @@ How to read it:
 
 Breakpoints: 360, 768, **1024**, 1280, 1600. 1024 is the named tier for two-pane layouts. The 360 px `sm:` step is not used for column changes: no `sm:grid-cols-*`. Tokens: MDV-P1-079 (#1175). Applied to screens: MDV-P2-057 (#1216).
 
+### One screen per task
+
+Every task screen is three bands (MDV-P2-064, #1337):
+
+1. **Top bar**: who and where (the shell's 48 px bar; on patient screens the patient strip pins under it).
+2. **Content that fits one screen.** At 1440 by 900 with a mouse the page scrolls at most a quarter of a screen: its scroll height is **at most 1.25 times the viewport**. Two panes from 1024 px when one column would not fit. A long list (patient record history, audit log, directory, staff, the board's columns) never makes the page long: the page stays still and the list scrolls inside its own panel (`PageContainer fit` with a `min-h-0 overflow-y-auto` child).
+3. **Bottom bar**: `StickyActionBar`, last in the flow. Status at the start (saved, what still blocks, why a button is disabled); the task's commit actions at the end, always on screen without scrolling, at 1024 by 768 too. Inside a scrolling panel or card it pins to that panel's foot. No field ever sits under it.
+
+Under 768 px pages scroll by design and the bottom bar pins above the bottom tabs; at 400 % zoom it un-pins.
+
 ## Navigation
 
 | | Phone, under 768 | Tablet, 768 to 1279 | Desktop, 1280 and up |
@@ -191,7 +201,7 @@ footer 56, part of the layout: Saved 10:42 · N to finish · Preview prescriptio
 | Patient strip | Consultation, its sub-pages, nurse intake, patient record | 56 px; two rows at most on a tablet |
 | Section anchors | Consultation | 44 px |
 | Table and column headers | Lists, the board | |
-| Action footer | Consultation, long forms | Part of the layout, never an overlay |
+| Action footer | Every task screen ([One screen per task](#one-screen-per-task)) | Part of the layout, never an overlay |
 
 - Together, pinned chrome takes at most 30 % of the viewport height.
 - Nothing focusable ever sits under it.

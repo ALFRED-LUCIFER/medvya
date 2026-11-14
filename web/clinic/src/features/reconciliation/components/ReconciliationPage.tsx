@@ -3,7 +3,7 @@ import type { UseFormReturn } from 'react-hook-form';
 import { Link } from 'react-router';
 import { CircleAlert, CircleCheck, CircleHelp } from 'lucide-react';
 import { ltr, useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, Card, Input, Label, PageContainer, PageHeader, PageMessage, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState } from '@medvya/ui';
+import { Button, buttonVariants, Card, Input, Label, PageContainer, PageHeader, PageMessage, Table, TableBody, TableCell, TableHead, TableHeader, StickyActionBar, TableRow, TableState } from '@medvya/ui';
 import type { ClinicalRefusal } from '../../clinical-access/domain/clinicalAccess';
 import type { EncounterBanner } from '../../encounters/domain/encounter';
 import PatientStrip from '../../encounters/components/PatientStrip';
@@ -63,15 +63,15 @@ export default function ReconciliationPage(p: Props) {
             </TableBody>
           </Table>
         </TableState>
-        <div className="flex flex-wrap items-center gap-3">
-          {confirmed
-            ? <p role="status" className="inline-flex items-center gap-1.5 font-bold"><CircleCheck aria-hidden className="size-4" />{t('reconcile.confirmedAt', { time: formatTime(new Date(view.confirmedAt!), p.banner?.timeZone) })}</p>
-            : <Button loading={p.confirming} disabled={!canConfirm(view) || !p.online} aria-describedby="reconcile-confirm-note" onClick={p.onConfirm}>{t('reconcile.confirm')}</Button>}
-          <Link to={p.consultPath} className={buttonVariants({ variant: 'outline' })}>{t('reconcile.backToConsult')}</Link>
-        </div>
-        {!confirmed && <p id="reconcile-confirm-note" className="text-sm text-muted-foreground">{t(canConfirm(view) ? 'reconcile.confirmReady' : 'reconcile.confirmBlocked')}</p>}
         {p.problem && <p role="alert" className="font-bold text-danger-700">{t(`reconcile.error.${p.problem}`)}</p>}
       </Card>
+      {/* The bottom bar (MDV-P2-064): whether it can be confirmed at the start, the commit actions at the end. */}
+      <StickyActionBar status={confirmed
+        ? <p role="status" className="inline-flex items-center gap-1.5 font-bold"><CircleCheck aria-hidden className="size-4" />{t('reconcile.confirmedAt', { time: formatTime(new Date(view.confirmedAt!), p.banner?.timeZone) })}</p>
+        : <p id="reconcile-confirm-note" className="text-sm text-muted-foreground">{t(canConfirm(view) ? 'reconcile.confirmReady' : 'reconcile.confirmBlocked')}</p>}>
+        {!confirmed && <Button loading={p.confirming} disabled={!canConfirm(view) || !p.online} aria-describedby="reconcile-confirm-note" onClick={p.onConfirm}>{t('reconcile.confirm')}</Button>}
+        <Link to={p.consultPath} className={buttonVariants({ variant: 'outline' })}>{t('reconcile.backToConsult')}</Link>
+      </StickyActionBar>
     </div>
   );
 }

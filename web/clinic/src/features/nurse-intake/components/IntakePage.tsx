@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import type { UseFormReturn } from 'react-hook-form';
 import { TriangleAlert } from 'lucide-react';
 import { useI18n, type MessageKey } from '@medvya/i18n';
-import { Button, buttonVariants, Card, Label, Textarea, PageContainer, PageHeader, PatientBanner } from '@medvya/ui';
+import { Button, buttonVariants, Card, Label, Textarea, PageContainer, PageHeader, PatientBanner, StickyActionBar } from '@medvya/ui';
 import { bannerAllergyState } from '../../patient360/domain/chart';
 import AllergiesSection from './AllergiesSection';
 import MedicinesSection from './MedicinesSection';
@@ -61,40 +61,43 @@ export default function IntakePage(p: Props) {
     <PageContainer width="reading">
       <Identity patient={patient} intake={intake} />
       {readOnly && <p role="status" className="font-bold">{t(correctable(intake) ? 'intake.handedOff.correctable' : 'intake.handedOff')}</p>}
-      <VitalsForm form={p.form} vitals={intake.vitals} timeZone={timeZone} readOnly={readOnly} online={p.online} problem={p.problem} badKind={p.badKind}
-        saving={p.saving} keeping={p.keeping} onSave={p.onSave} onKeep={p.onKeep} onRemeasure={p.onRemeasure} withComplaint keepingAll={p.keepingAll} onKeepAll={p.onKeepAll}
-        correction={correctable(intake) ? { form: p.correctionForm, correcting: p.correcting, saving: p.savingCorrection, onStart: p.onStartCorrect, onCancel: p.onCancelCorrect, onSave: p.onCorrect } : undefined} />
-
-      <AllergiesSection allergies={intake.allergies} noKnownConfirmed={intake.noKnownAllergiesConfirmed} form={p.allergyForm} readOnly={readOnly} online={p.online}
-        settingId={p.settingAllergy} adding={p.addingAllergy} confirmingNone={p.confirmingNone} onStatus={p.onAllergyStatus} onAdd={p.onAddAllergy} onNone={p.onNoKnownAllergies}
-        invalid={p.problem?.kind === 'invalid' ? p.problem : null} />
-      <MedicinesSection medicines={intake.medicines} form={p.medicineForm} readOnly={readOnly} online={p.online} adding={p.addingMedicine} onAdd={p.onAddMedicine} />
+      {/* One screen (MDV-P2-064): vitals beside allergies and medicines from 1024 px; the commit actions in the bottom bar. */}
+      <div className="grid items-start gap-4 wide:grid-cols-2">
+        <VitalsForm form={p.form} vitals={intake.vitals} timeZone={timeZone} readOnly={readOnly} online={p.online} problem={p.problem} badKind={p.badKind}
+          saving={p.saving} keeping={p.keeping} onSave={p.onSave} onKeep={p.onKeep} onRemeasure={p.onRemeasure} withComplaint keepingAll={p.keepingAll} onKeepAll={p.onKeepAll}
+          correction={correctable(intake) ? { form: p.correctionForm, correcting: p.correcting, saving: p.savingCorrection, onStart: p.onStartCorrect, onCancel: p.onCancelCorrect, onSave: p.onCorrect } : undefined} />
+        <div className="flex min-w-0 flex-col gap-4">
+          <AllergiesSection allergies={intake.allergies} noKnownConfirmed={intake.noKnownAllergiesConfirmed} form={p.allergyForm} readOnly={readOnly} online={p.online}
+            settingId={p.settingAllergy} adding={p.addingAllergy} confirmingNone={p.confirmingNone} onStatus={p.onAllergyStatus} onAdd={p.onAddAllergy} onNone={p.onNoKnownAllergies}
+            invalid={p.problem?.kind === 'invalid' ? p.problem : null} />
+          <MedicinesSection medicines={intake.medicines} form={p.medicineForm} readOnly={readOnly} online={p.online} adding={p.addingMedicine} onAdd={p.onAddMedicine} />
+        </div>
+      </div>
 
       {p.problem && (p.problem.kind !== 'invalid' || (!isVitalsField(p.problem.field) && p.problem.field !== 'substance')) && <p role="alert" className={fieldError}>{t(problemKey(p.problem))}</p>}
       {intake.escalated && <p role="status" className="inline-flex items-center gap-1.5 font-bold"><TriangleAlert aria-hidden className="size-4" />{t('intake.escalated')}</p>}
 
-      {withNurse && (
+      {withNurse && p.escalating && (
         <Card>
-          <div className="flex flex-wrap items-center gap-3">
-            <Button variant="outline" aria-expanded={p.escalating} onClick={p.onToggleEscalate}>{t('intake.escalate')}</Button>
-            <Button variant="default" className="whitespace-normal" loading={p.handingOff} disabled={blocked || !p.online} aria-describedby={blocked ? 'intake-handoff-why' : undefined} onClick={p.onHandOff}>
-              {t('intake.handOff')}
-            </Button>
-            <Link to={p.queuePath} className={buttonVariants({ variant: 'outline' })}>{t('intake.back')}</Link>
-          </div>
-          {blocked && <ul id="intake-handoff-why" className="text-sm font-semibold">{reasons.map(r => <li key={r}>{t(r)}</li>)}</ul>}
-          {p.escalating && (
-            <form noValidate onSubmit={p.onEscalate} className="flex flex-col gap-2">
-              <Label htmlFor="intake-reason" className="font-bold">{t('intake.escalate.reason')}</Label>
-              <Textarea id="intake-reason" rows={2} maxLength={500} className="min-h-14 text-base" aria-invalid={!!p.escalationForm.formState.errors.reason}
-                aria-describedby={p.escalationForm.formState.errors.reason ? 'intake-reason-error' : undefined} {...p.escalationForm.register('reason')} />
-              {p.escalationForm.formState.errors.reason && <p id="intake-reason-error" className={fieldError}>{t('intake.escalate.required')}</p>}
-              <Button type="submit" className="self-start" loading={p.sendingEscalation} disabled={!p.online}>{t('intake.escalate.send')}</Button>
-            </form>
-          )}
+          {/* Focus moves in as it opens: the form sits above the bottom bar, which may be below the fold on a tablet. */}
+          <form noValidate onSubmit={p.onEscalate} className="flex flex-col gap-2">
+            <Label htmlFor="intake-reason" className="font-bold">{t('intake.escalate.reason')}</Label>
+            <Textarea id="intake-reason" rows={2} maxLength={500} autoFocus className="min-h-14 text-base" aria-invalid={!!p.escalationForm.formState.errors.reason}
+              aria-describedby={p.escalationForm.formState.errors.reason ? 'intake-reason-error' : undefined} {...p.escalationForm.register('reason')} />
+            {p.escalationForm.formState.errors.reason && <p id="intake-reason-error" className={fieldError}>{t('intake.escalate.required')}</p>}
+            <Button type="submit" className="self-start" loading={p.sendingEscalation} disabled={!p.online}>{t('intake.escalate.send')}</Button>
+          </form>
         </Card>
       )}
-      {readOnly && <Link to={p.queuePath} className={buttonVariants({ variant: 'outline', className: 'self-start' })}>{t('intake.back')}</Link>}
+      <StickyActionBar status={withNurse && blocked && <ul id="intake-handoff-why" className="text-sm font-semibold">{reasons.map(r => <li key={r}>{t(r)}</li>)}</ul>}>
+        {withNurse && <>
+          <Button variant="outline" aria-expanded={p.escalating} onClick={p.onToggleEscalate}>{t('intake.escalate')}</Button>
+          <Button variant="default" className="whitespace-normal" loading={p.handingOff} disabled={blocked || !p.online} aria-describedby={blocked ? 'intake-handoff-why' : undefined} onClick={p.onHandOff}>
+            {t('intake.handOff')}
+          </Button>
+        </>}
+        <Link to={p.queuePath} className={buttonVariants({ variant: 'outline' })}>{t('intake.back')}</Link>
+      </StickyActionBar>
     </PageContainer>
   );
 }

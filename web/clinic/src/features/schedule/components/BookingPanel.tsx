@@ -3,8 +3,9 @@ import type { UseFormReturn } from 'react-hook-form';
 import { Link } from 'react-router';
 import { ChevronLeft, ChevronRight, CircleAlert, CircleCheck, Hourglass, Search } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, ChoiceRow, buttonVariants, Card, cn, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea } from '@medvya/ui';
+import { Button, ChoiceRow, buttonVariants, Card, cn, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, StickyActionBar, Textarea } from '@medvya/ui';
 import PatientSummaryLine from '../../patients/components/PatientSummaryLine';
+import { cardBar } from '../../settings/components/fieldStyles';
 import { pageCount, spokenExtras, type SearchErrorCode, type SearchResult } from '../../patients/domain/directory';
 import { channels, reasonCategories, visitTypes, type BookedAppointment, type BookingForm, type Hold, type PatientMatch, type SlotChoice, type SlotError } from '../domain/booking';
 import type { VisitLength, VisitType } from '../domain/schedule';
@@ -244,10 +245,11 @@ export default function BookingPanel(p: Props) {
         </details>
 
         {p.bookError && <BookError code={p.bookError} />}
-        <div className="flex flex-wrap gap-2">
+        {/* The bottom bar (MDV-P2-064): pinned at the foot of the panel while the panel scrolls. */}
+        <StickyActionBar className={cardBar}>
           <Button type="submit" loading={p.booking} disabled={!p.hold || p.holding || !p.patient?.match || (p.repeat > 1 && p.unit === 'weekdays' && p.days.length === 0)}>{t(p.repeat > 1 ? 'series.review.action' : 'booking.confirm')}</Button>
           <Button type="button" variant="outline" onClick={p.onClose}>{t('booking.cancel')}</Button>
-        </div>
+        </StickyActionBar>
       </form>
     </Card></aside>
   );

@@ -72,8 +72,8 @@ export default function AppShell({ displayName, role, facilityName, items, tabs,
     </div>
   );
   return (
-    // --shell-top is the top bar's height: a patient strip pins right under it (MDV-P1-092).
-    <div className="min-h-screen [--shell-top:var(--spacing-topbar-phone)] md:grid md:grid-cols-[auto_minmax(0,1fr)] md:[--shell-top:var(--spacing-topbar)]">
+    // --shell-top is the top bar's height: a patient strip pins right under it (MDV-P1-092). --shell-bottom is the phone's bottom tabs: a bottom bar pins above them.
+    <div className="min-h-screen [--shell-bottom:72px] [--shell-top:var(--spacing-topbar-phone)] md:[--shell-bottom:0px] md:grid md:grid-cols-[auto_minmax(0,1fr)] md:[--shell-top:var(--spacing-topbar)]">
       <a href="#main" className="sr-only rounded-md bg-card px-4 py-3 font-bold text-foreground focus:not-sr-only focus:fixed focus:start-4 focus:top-4 focus:z-50">
         {t('shell.skip')}
       </a>

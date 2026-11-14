@@ -89,9 +89,9 @@ test('Today shows my visits first, the clinic when toggled, and starts the consu
   await page.getByRole('button', { name: 'My patients' }).click();
   await hero.getByRole('button', { name: 'Start consultation with Meera Iyer (synthetic)' }).click();
   await expect(page).toHaveURL(/\/consult\/e-1$/);
-  const banner = page.getByRole('region', { name: 'Patient identity' });
+  const banner = page.locator('[data-slot=patient-banner]');
   await expect(banner).toBeVisible();
-  await expect(banner).toContainText('Allergies: Penicillin (Verified)'); // the chart's allergies, not "not recorded yet"
+  await expect(banner).toContainText('Allergy: Penicillin (Verified)'); // the chart's allergies, not "not recorded yet"
 });
 
 test('each visit shows its allergy state in words and links to the chart; a patient outside my care shows no flag', async ({ page }) => {

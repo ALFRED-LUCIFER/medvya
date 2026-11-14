@@ -64,7 +64,8 @@ describe('PatientBanner (MDV-P1-081)', () => {
     expect(fields(full)).toEqual(['ageSex', 'mrn', 'dob', 'lifeStage', 'allergy', 'consent', 'careTeam']);
     expect(fields(strip)).toEqual(['ageSex', 'mrn', 'dob', 'allergy', 'consent', 'token', 'room']);
     expect(text(strip)).toContain('MRN DQ-10-4482');
-    expect(strip.className.split(' ')).toEqual(expect.arrayContaining(['sticky', 'top-0', 'min-h-14', '[@media(max-height:480px)]:static']));
+    expect(strip.className.split(' ')).toEqual(expect.arrayContaining(['sticky', 'top-[var(--shell-top,0px)]', 'min-h-14', '[@media(max-height:480px)]:static']));
+    expect(strip.dataset.pinned).toBe('top'); // marks it for the focus-not-obscured scroll and the chrome pinned under it (MDV-P1-092)
     expect(full.className).not.toContain('sticky');
   });
 

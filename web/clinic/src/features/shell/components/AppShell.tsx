@@ -43,7 +43,8 @@ export default function AppShell({ displayName, role, facilityName, groups, tabs
   const sidebarOnly = navCollapsed ? 'hidden' : 'hidden lg:flex';
   const railOnly = navCollapsed ? '' : 'lg:hidden';
   return (
-    <div className="min-h-screen md:grid md:grid-cols-[auto_minmax(0,1fr)]">
+    // --shell-top is the top bar's height: a patient strip pins right under it (MDV-P1-092).
+    <div className="min-h-screen [--shell-top:var(--spacing-topbar-phone)] md:grid md:grid-cols-[auto_minmax(0,1fr)] md:[--shell-top:var(--spacing-topbar)]">
       <a href="#main" className="sr-only rounded-md bg-card px-4 py-3 font-bold text-foreground focus:not-sr-only focus:fixed focus:start-4 focus:top-4 focus:z-50">
         {t('shell.skip')}
       </a>
@@ -101,7 +102,7 @@ export default function AppShell({ displayName, role, facilityName, groups, tabs
       </nav>
 
       <div className="flex min-w-0 flex-col">
-        <header className="sticky top-0 z-10 flex h-topbar-phone items-center gap-3 border-b bg-card px-4 md:h-topbar md:px-6 print:hidden">
+        <header data-pinned="top" className="sticky top-0 z-10 flex h-(--shell-top) items-center gap-3 border-b bg-card px-4 md:px-6 print:hidden">
           <p className="min-w-0 flex-1 truncate font-bold">{facilityName}</p>
           {globalSearch ?? (searchPath && (
             <Link to={searchPath} className={cn(buttonVariants({ variant: 'outline' }), 'max-sm:size-11 max-sm:px-0')}>

@@ -1,7 +1,7 @@
 import * as React from "react"
 import { CircleAlert, CircleCheck, CircleHelp, Check, TriangleAlert } from "lucide-react"
 import { ltr, useI18n } from "@medvya/i18n"
-import { cn } from "#lib/utils"
+import { cn, scrollContainer } from "#lib/utils"
 import { Button } from "#components/ui/button"
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "#components/ui/dialog"
 
@@ -86,19 +86,53 @@ function AllergyBlock({ allergy }: { allergy: AllergyState }) {
   )
 }
 
-type PatientBannerProps = Omit<React.ComponentProps<"section">, "children"> & (
+type PatientBannerProps = Omit<React.ComponentProps<"section">, "children"> & {
+  /** 1 when the patient's name is the page's title (the consultation, nurse intake, the desk record); 2 by default. */
+  headingLevel?: 1 | 2
+} & (
   | { variant: "desk"; patient: BannerDeskPatient }
   | { variant: "full"; patient: BannerClinical }
   | { variant: "strip"; patient: BannerClinical; token?: React.ReactNode; room?: React.ReactNode; /** pins under the page top while it scrolls; un-pins at 400 % zoom */ pinned?: boolean }
 )
 
 /**
+ * Pinned top chrome is marked data-pinned="top" (the shell top bar, this strip, a section bar under it). A sticky one sets
+ * --patient-strip-bottom on its scroll container, so chrome pinned under it sits there; and an element focused under any of them is
+ * scrolled clear (WCAG 2.2 SC 2.4.11), as Chromium skips the focus scroll when the element is inside the viewport.
+ */
+function usePinnedTop(ref: React.RefObject<HTMLElement | null>, pinned: boolean | undefined) {
+  React.useEffect(() => {
+    const el = ref.current
+    if (!pinned || !el || typeof ResizeObserver === "undefined") return
+    const container = scrollContainer(el)
+    const observer = new ResizeObserver(() => {
+      container.style.setProperty("--patient-strip-bottom", `${(parseFloat(getComputedStyle(el).top) || 0) + el.offsetHeight}px`)
+    })
+    observer.observe(el)
+    const onFocus = (e: FocusEvent) => {
+      const target = e.target
+      if (!(target instanceof HTMLElement)) return
+      const pins = [...document.querySelectorAll<HTMLElement>("[data-pinned=top]")]
+        .filter(p => !p.contains(target) && getComputedStyle(p).position === "sticky").map(p => p.getBoundingClientRect())
+      const t = target.getBoundingClientRect()
+      if (!pins.some(b => t.top < b.bottom && t.bottom > b.top)) return
+      container.scrollBy({ top: t.top - Math.max(...pins.map(b => b.bottom)) - 8 })
+    }
+    document.addEventListener("focusin", onFocus)
+    return () => { observer.disconnect(); document.removeEventListener("focusin", onFocus); container.style.removeProperty("--patient-strip-bottom") }
+  }, [ref, pinned])
+}
+
+/**
  * One patient banner, three variants (MDV-P1-081): full (the chart header), strip (one 56 px row, wrapping rather than clipping) and desk
  * (identity only: no allergy, diagnosis, medicine or vitals, whatever the caller passes). It only presents what the screen passes in.
  */
-function PatientBanner({ variant, patient, className, ...rest }: PatientBannerProps) {
+function PatientBanner({ variant, patient, headingLevel = 2, className, ...rest }: PatientBannerProps) {
   const { t } = useI18n()
   const { token, room, pinned, ...props } = rest as { token?: React.ReactNode; room?: React.ReactNode; pinned?: boolean }
+  const ref = React.useRef<HTMLElement>(null)
+  usePinnedTop(ref, pinned)
+  const Name = headingLevel === 1 ? "h1" : "h2"
   // desk reads identity only, so clinical props a caller passes by mistake never reach the screen.
   const clinical = variant === "desk" ? undefined : (patient as BannerClinical)
   const render = (f: Field): React.ReactNode => {
@@ -120,14 +154,16 @@ function PatientBanner({ variant, patient, className, ...rest }: PatientBannerPr
   const items = bannerFields[variant].map(f => [f, render(f)] as const).filter(([, node]) => node)
   return (
     <section
+      ref={ref}
       data-slot="patient-banner"
+      data-pinned={pinned ? "top" : undefined}
       data-variant={variant}
       aria-label={t("banner.patient", { name: patient.name })}
       className={cn(
         "flex flex-wrap items-center gap-x-4 gap-y-1.5 border-b bg-background text-body",
         variant === "full" ? "rounded-lg border p-4" : "min-h-14 px-4 py-1.5",
-        // shortcut: pinned does not yet scroll a focused element clear of the strip (StickyActionBar does, for the footer); MDV-P1-092 adds it when the strip goes on the screens.
-        pinned && "sticky top-0 z-10 [@media(max-height:480px)]:static",
+        // Under the shell's top bar (--shell-top, set by the app shell) while the page scrolls.
+        pinned && "sticky top-[var(--shell-top,0px)] z-10 [@media(max-height:480px)]:static",
         className,
       )}
       {...props}
@@ -137,7 +173,7 @@ function PatientBanner({ variant, patient, className, ...rest }: PatientBannerPr
           {patient.name.split(" ").map(p => p[0]).slice(0, 2).join("")}
         </span>
       )}
-      <h2 className="min-w-0 break-words text-heading">{patient.name}</h2>
+      <Name className="min-w-0 break-words text-heading">{patient.name}</Name>
       {items.map(([f, node]) => <span key={f} data-field={f} className="flex min-w-0 max-w-full flex-wrap items-center gap-1.5">{node}</span>)}
     </section>
   )

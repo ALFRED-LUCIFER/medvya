@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { ltr, useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, IdentityBanner, ProvenanceTag, Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@medvya/ui';
+import { Button, buttonVariants, PatientBanner, ProvenanceTag, Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@medvya/ui';
 import { Armchair, ArrowDown, ArrowUp, Baby, CircleAlert, CircleCheck, CircleHelp, Droplet, HeartPulse, Languages, User, Users } from 'lucide-react';
 import RequestAccess from '../../clinical-access/components/RequestAccess';
 import type { AccessReason } from '../../clinical-access/domain/clinicalAccess';
 import type { Bmi, ChartSection, ClinicalRefusal, LifeStage, Patient360, Vital, VitalTile } from '../domain/chart';
-import { bannerAlerts, bannerAllergies, chartSections, otherVitals, pathOf, provenanceOf, resultRows, showsSection, sparkBox, vitalTiles } from '../domain/chart';
+import { bannerAlerts, bannerAllergyState, chartSections, otherVitals, pathOf, provenanceOf, resultRows, showsSection, sparkBox, vitalTiles } from '../domain/chart';
 
 type Props = {
   data: Patient360 | null; loading: boolean; notFound: boolean; refusal: ClinicalRefusal | null; failed: boolean;
@@ -27,7 +27,6 @@ type Props = {
   addMedicine?: ReactNode;
 };
 
-const sex = { Female: 'F', Male: 'M', Other: 'X' } as const;
 /** The life stage is said in words beside an icon, never by colour alone. */
 const stageIcon = { Adult: User, Child: Baby, Pregnancy: HeartPulse, OlderAdult: Armchair } as const satisfies Record<LifeStage, unknown>;
 
@@ -53,7 +52,7 @@ export default function Patient360Page(p: Props) {
   return (
     <div className="flex flex-col gap-4">
       <h1 className="sr-only">{t('patient360.title')}</h1>
-      <PatientBanner data={p.data} />
+      <ChartBanner data={p.data} />
       {/* Banner details (MDV-P2-032): blood group, language and care team only when recorded; nothing is guessed. Alerts are the results out of range. */}
       <ul aria-label={t('patient360.bannerDetails')} className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
         <li className="inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 font-bold"><Stage aria-hidden className="size-4" />{t(`patient360.lifeStage.${lifeStage}`)}</li>
@@ -145,11 +144,12 @@ export default function Patient360Page(p: Props) {
   );
 }
 
-/** The identity banner with the allergy state, shared by every Patient 360 screen (chart, timeline, documents). */
-export function PatientBanner({ data: { patient, chart } }: { data: Patient360 }) {
-  const { formatCalendarDate } = useI18n();
+/** The identity banner with the allergy state, shared by every Patient 360 screen (chart, timeline): PatientBanner full (MDV-P1-092). */
+export function ChartBanner({ data: { patient, chart } }: { data: Patient360 }) {
+  const { t, formatCalendarDate } = useI18n();
   return (
-    <IdentityBanner patient={{ name: patient.fullName, age: patient.ageYears, sex: sex[patient.sexAtBirth], mrn: patient.mrn, dob: formatCalendarDate(patient.dateOfBirth), allergies: bannerAllergies(chart) }} />
+    <PatientBanner variant="full" patient={{ name: patient.fullName, age: patient.ageYears, sex: patient.sexAtBirth, mrn: patient.mrn, dob: formatCalendarDate(patient.dateOfBirth),
+      allergy: bannerAllergyState(chart, s => t(`patient360.allergyStatus.${s}`)) }} />
   );
 }
 

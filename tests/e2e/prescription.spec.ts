@@ -91,7 +91,7 @@ test('an ended consultation shows the draft and cannot change it; a role that ma
   await page.unrouteAll({ behavior: 'ignoreErrors' });
   await mockPrescription(page, { allowed: false });
   await page.reload();
-  await expect(page.getByRole('region', { name: 'Patient identity' })).toBeVisible();
+  await expect(page.locator('[data-slot=patient-banner]')).toBeVisible();
   await expect(page.getByRole('region', { name: 'Prescription' })).toHaveCount(0);
 });
 

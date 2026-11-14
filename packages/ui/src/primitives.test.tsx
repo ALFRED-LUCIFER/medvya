@@ -6,7 +6,7 @@ import { I18nProvider } from '@medvya/i18n';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
-  alertLooks, ClinicalAlert, IdentityBanner, provenanceLooks, ProvenanceTag,
+  alertLooks, ClinicalAlert, provenanceLooks, ProvenanceTag,
   RecordingPill, recordingLooks, scheduleLooks, frontDeskLooks, StatusChip, statusLooks, SystemState, systemStates, type Look,
 } from './primitives';
 import { Button } from './components/ui/button';
@@ -17,8 +17,6 @@ import { Textarea } from './components/ui/textarea';
 const ui = (n: React.ReactNode) => render(<>{n}</>);
 // Design tokens are defined once, in packages/tokens; read them so the test checks what ships.
 const tokens = Object.fromEntries([...readFileSync(join(process.cwd(), '../tokens/src/tokens.css'), 'utf8').matchAll(/--color-([\w-]+):\s*(#[0-9a-fA-F]{6})/g)].map(m => [m[1], m[2]]));
-// Visible text without the invisible Unicode isolates used around embedded IDs.
-const visible = (e: HTMLElement) => (e.textContent ?? '').replace(/[\u2068\u2069]/g, '').replaceAll('\u00A0', ' ');
 
 // Looks may name a token (var(--color-x)) instead of a hex value; resolve it to what ships.
 const hex = (c: string) => (c.startsWith('var(--color-') ? tokens[c.slice('var(--color-'.length, -1)]! : c);
@@ -104,14 +102,6 @@ describe('clinical primitives', () => {
     expect(container.textContent).toContain('AI draft · not reviewed');
   });
 
-  it('distinguishes "no known allergies" from "allergies not recorded"', () => {
-    const base = { name: 'Meera Iyer', age: 54, sex: 'F' as const, mrn: 'DQ-10-4482', dob: '12 Mar 1972' };
-    expect(ui(<IdentityBanner patient={{ ...base, allergies: [] }} />).container.textContent).toContain('No known allergies');
-    expect(ui(<IdentityBanner patient={{ ...base, allergies: null }} />).container.textContent).toContain('Allergies not recorded');
-    expect(visible(ui(<IdentityBanner patient={{ ...base, allergies: [{ name: 'Penicillin', status: 'verified' as const }] }} />).container))
-      .toContain('Allergy: Penicillin · verified');
-  });
-
   it('renders translated, right-to-left text in Arabic', async () => {
     const { container, findByText } = render(<I18nProvider locale="ar" country="AE">
       <ProvenanceTag source="ai" /><RecordingPill state="recording" elapsedSeconds={252} /></I18nProvider>);
@@ -140,8 +130,6 @@ describe('clinical primitives', () => {
 
   it('has no axe violations', async () => {
     const { container } = ui(<main>
-      <IdentityBanner patient={{ name: 'Meera Iyer', age: 54, sex: 'F', mrn: 'DQ-10-4482', dob: '12 Mar 1972',
-        allergies: [{ name: 'Penicillin', status: 'verified' as const }], consent: 'given', encounter: 'Encounter 04 Oct 2026 · OPD Room 3', synthetic: true }} />
       <ClinicalAlert severity="critical">Potassium 6.1 mmol/L received 09:12</ClinicalAlert>
       <ClinicalAlert severity="attention">Dose not stated in conversation</ClinicalAlert>
     </main>);

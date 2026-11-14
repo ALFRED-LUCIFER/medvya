@@ -62,7 +62,7 @@ test('the banner shows the allergy with icon and text, and every fact carries it
   await open(page);
   const banner = page.getByRole('region', { name: 'Patient Meera Iyer (synthetic)' });
   await expect(banner.getByRole('heading', { name: /Meera Iyer/ })).toBeVisible();
-  await expect(banner).toContainText(/Allergy: \u2068Penicillin\u2069 · verified/);
+  await expect(banner).toContainText('Allergy: Penicillin (Verified)'); // MDV-P1-092: the shared PatientBanner, the consultation's look
   await expect(banner.locator('svg').first()).toBeVisible(); // icon beside the words, never colour alone
   for (const [section, tags] of [['Problems', ['Clinician verified', 'Patient reported']], ['Medicines', ['Imported', 'Synced from HIS']], ['Last vitals', ['Clinician verified']],
     ['Results and trends', ['Imported', 'Synced from HIS']], ['Timeline', ['Clinician verified']], ['Documents', ['Imported']]] as const) {

@@ -101,7 +101,7 @@ test('an ended consultation shows its orders and cannot change them', async ({ p
 test('orders stay in a closed part of the consultation until the doctor opens it', async ({ page }) => {
   await mockOrders(page);
   await page.goto('/consult/e-1');
-  await expect(page.getByRole('region', { name: 'Patient identity' })).toBeVisible();
+  await expect(page.locator('[data-slot=patient-banner]')).toBeVisible();
   await expect(page.getByRole('region', { name: 'Orders' })).toBeHidden();
   await openPart(page, 'Orders');
   await expect(page.getByRole('region', { name: 'Orders' })).toBeVisible();
@@ -118,7 +118,7 @@ test('orders already placed are open without a click, so none is hidden from the
 test('a role that may not order sees no orders panel', async ({ page }) => {
   await mockOrders(page, { allowed: false });
   await page.goto('/consult/e-1');
-  await expect(page.getByRole('region', { name: 'Patient identity' })).toBeVisible();
+  await expect(page.locator('[data-slot=patient-banner]')).toBeVisible();
   await expect(page.getByRole('region', { name: 'Orders' })).toHaveCount(0);
 });
 

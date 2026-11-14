@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allergySchema, formOf, medicineSchema, intakeFormSchema, intakeProblem, invalidKind, toRecord, undecided, weightChange, type VitalView } from './intake';
+import { allergySchema, chartAllergies, formOf, medicineSchema, intakeFormSchema, intakeProblem, invalidKind, toRecord, undecided, weightChange, type VitalView } from './intake';
 
 const blank = { chiefComplaint: '', SystolicBp: '', DiastolicBp: '', Pulse: '', Temperature: '', OxygenSaturation: '', Weight: '', Height: '', RespiratoryRate: '' };
 const view = (o: Partial<VitalView>): VitalView => ({ kind: 'Weight', value: 72.4, flag: null, previousValue: null, previousAt: null, flagKept: false, recordedAt: '2026-10-19T04:30:00Z', ...o });
@@ -61,4 +61,15 @@ describe('allergy and medicine forms', () => {
     expect(medicineSchema.safeParse({ name: 'a white tablet for sugar', dose: '', frequency: '', needsClarification: true }).success).toBe(true);
     expect(medicineSchema.safeParse({ name: '', dose: '500 mg', frequency: '', needsClarification: false }).success).toBe(false);
   });
+});
+
+describe('chartAllergies (MDV-P1-092): the strip on intake', () => {
+  const a = (status: 'Confirmed' | null) => ({ id: '1', substance: 'Penicillin', reaction: null, status, source: 'PatientReported' as const, statusSetAt: null });
+  it('nothing recorded and nothing confirmed is not recorded, never none', () =>
+    expect(chartAllergies({ allergies: [], noKnownAllergiesConfirmed: false }).allergyState).toBe('NotRecorded'));
+  it('no known allergies only once the nurse confirmed it', () =>
+    expect(chartAllergies({ allergies: [], noKnownAllergiesConfirmed: true }).allergyState).toBe('NoKnownAllergies'));
+  it('a listed allergy with no status yet reads as unknown', () =>
+    expect(chartAllergies({ allergies: [a(null), a('Confirmed')], noKnownAllergiesConfirmed: false })).toMatchObject({
+      allergyState: 'Listed', allergies: [{ status: 'Unknown' }, { status: 'Confirmed' }] }));
 });

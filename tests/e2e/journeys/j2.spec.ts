@@ -105,12 +105,12 @@ journey('J2', {
     await page.goto('/consult/e-1');
     const note = page.getByRole('region', { name: 'Consultation note' });
     await expect(note.getByRole('navigation', { name: 'Note sections' }).getByRole('link')).toHaveCount(7);
-    const sign = note.getByRole('button', { name: 'Sign note' });
+    const sign = page.getByRole('button', { name: 'Sign note' });
     await expect(note.getByRole('group', { name: 'Recording consent for this visit' })).toHaveCount(0); // MDV-AUDIT-1092
     await expect(sign).toBeDisabled();
     await expect(sign).toHaveAccessibleDescription('1 item still needs your review before signing');
-    await page.getByRole('region', { name: 'Patient identity' }).getByRole('button', { name: 'Confirmed with the patient' }).click();
-    await expect(page.getByRole('region', { name: 'Patient identity' })).toContainText(/Identity confirmed with the patient at \d\d:\d\d/);
+    await page.getByRole('button', { name: 'Confirmed with the patient' }).click();
+    await expect(page.locator('[data-slot=patient-banner]')).toContainText(/Identity confirmed with the patient at \d\d:\d\d/);
     await expect(sign).toBeEnabled();
     await expect(sign).toHaveAccessibleDescription('Everything reviewed. Ready to sign.');
   },
@@ -121,7 +121,7 @@ journey('J2', {
     mock.reauthed = true;
     await page.goto('/consult/e-1');
     const note = page.getByRole('region', { name: 'Consultation note' });
-    await note.getByRole('button', { name: 'Sign note' }).click();
+    await page.getByRole('button', { name: 'Sign note' }).click();
     await page.getByRole('dialog').getByRole('button', { name: /^Sign as / }).click();
     await expect(note.getByRole('status').filter({ hasText: 'SIGNED v1' })).toBeVisible();
     // Read-only content only (MDV audit UX-11): no section left "To do", the consent in words instead of radios.
@@ -186,7 +186,7 @@ journey('J2', {
     await page.goto('/today');
     await expect(page.getByRole('region', { name: 'Next patient' })).toContainText('Meera Iyer');
     await page.getByRole('region', { name: 'Next patient' }).getByRole('button', { name: 'Start consultation with Meera Iyer' }).click();
-    const banner = page.getByRole('region', { name: 'Patient identity' });
+    const banner = page.locator('[data-slot=patient-banner]');
     await expect(banner.getByRole('heading', { name: 'Meera Iyer' })).toBeVisible();
     await expect(banner).toContainText('Room 3');
     // MDV-P2-009: the note opens beside the banner, ready to type (no recording, so the manual path).

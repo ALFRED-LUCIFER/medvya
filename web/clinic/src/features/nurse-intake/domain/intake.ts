@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { MessageKey } from '@medvya/i18n';
 import type { SexAtBirth } from '../../patients/domain/directory';
-import type { ChartSource } from '../../patient360/domain/chart';
+import type { ChartSource, Patient360 } from '../../patient360/domain/chart';
 
 // Nurse intake (MDV-P2-007). The server decides what is possible and what is flagged (VitalRules); this file only shapes the form and reads answers.
 export const vitalKinds = ['SystolicBp', 'DiastolicBp', 'Pulse', 'Temperature', 'OxygenSaturation', 'RespiratoryRate', 'Weight', 'Height'] as const;
@@ -28,6 +28,15 @@ export type IntakeView = {
   vitals: VitalView[]; allergies: AllergyView[]; medicines: MedicineView[]; noKnownAllergiesConfirmed: boolean;
   escalated: boolean; handedOff: boolean; blockers: string[];
 };
+
+/**
+ * The intake's allergies in the chart's shape, for the pinned patient strip (MDV-P1-092): listed when any is, no known allergies only once
+ * the nurse confirmed it, else not recorded. A status not set yet reads as unknown, never as confirmed.
+ */
+export function chartAllergies(intake: Pick<IntakeView, 'allergies' | 'noKnownAllergiesConfirmed'>): Pick<Patient360['chart'], 'allergyState' | 'allergies'> {
+  const allergies = intake.allergies.map(a => ({ substance: a.substance, reaction: a.reaction, status: a.status ?? 'Unknown', source: a.source }));
+  return { allergyState: allergies.length > 0 ? 'Listed' : intake.noKnownAllergiesConfirmed ? 'NoKnownAllergies' : 'NotRecorded', allergies };
+}
 
 export type IntakeScreen = {
   intake: IntakeView;

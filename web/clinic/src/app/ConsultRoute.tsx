@@ -1,6 +1,6 @@
 import { useParams } from 'react-router';
 import ConsultPage, { EndConsultation } from '../features/encounters/components/ConsultPage';
-import ConsultStudio from '../features/encounters/components/ConsultStudio';
+import ConsultStudio, { ConsultFooter } from '../features/encounters/components/ConsultStudio';
 import Disclosure from '../features/encounters/components/Disclosure';
 import NoteEditor from '../features/encounters/components/NoteEditor';
 import NoteHistory from '../features/encounters/components/NoteHistory';
@@ -54,19 +54,19 @@ function Consult({ encounterId, boardPath, online, canOrder, canReconcile, canSi
   // Vitals, weight and allergies by the doctor (MDV audit P0-2): in the one page's Vitals section, above the note in the guided steps.
   const entry = (titled: boolean) => consult.banner && !ended
     && <Entry appointmentId={consult.banner.encounter.appointmentId} online={online} onChanged={consult.onChartChanged} titled={titled} />;
+  // Everything of the visit sits inside ConsultPage, so its pinned patient strip and footer stay for the whole page (MDV-P1-092).
   return (
-    <div className="flex flex-col gap-4">
-      <ConsultPage {...consult} boardPath={boardPath} canReconcile={canReconcile}
-        canConfirmIdentity={canSign && consult.banner?.encounter.leadClinicianId === userId}>
-        {consult.view === 'page' ? <ConsultStudio {...note} panel={consult.panel} onPanel={consult.onPanel} chart={consult.chart} plan={plan} entry={entry(false)}
-          finish={!ended && <EndConsultation ending={consult.ending} onEnd={consult.onEnd} />} /> : <>{entry(true)}<NoteEditor {...note} /></>}
-        <NoteHistory {...useAddendumController(encounterId, canSign)} timeZone={consult.banner?.timeZone} printPath={`/consult/${encounterId}/note/print`} />
-        <NoteTemplateChoice {...useNoteTemplatesController()} />
-      </ConsultPage>
+    <ConsultPage {...consult} boardPath={boardPath} canReconcile={canReconcile}
+      canConfirmIdentity={canSign && consult.banner?.encounter.leadClinicianId === userId}
+      footer={consult.view === 'page' && <ConsultFooter {...note} finish={!ended && <EndConsultation ending={consult.ending} onEnd={consult.onEnd} />} />}>
+      {consult.view === 'page' ? <ConsultStudio {...note} panel={consult.panel} onPanel={consult.onPanel} chart={consult.chart} plan={plan} entry={entry(false)} />
+        : <>{entry(true)}<NoteEditor {...note} /></>}
+      <NoteHistory {...useAddendumController(encounterId, canSign)} timeZone={consult.banner?.timeZone} printPath={`/consult/${encounterId}/note/print`} />
+      <NoteTemplateChoice {...useNoteTemplatesController()} />
       {patient && canOrder && <Prescription encounterId={encounterId} ended={ended} patient={patient} />}
       {consult.banner && canOrder && <Orders encounterId={encounterId} ended={ended} />}
       {consult.banner && canOrder && <Referrals patientId={consult.banner.encounter.patientId} encounterId={encounterId} ended={ended} />}
-    </div>
+    </ConsultPage>
   );
 }
 

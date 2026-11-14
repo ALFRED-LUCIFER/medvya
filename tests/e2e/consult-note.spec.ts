@@ -184,7 +184,7 @@ test('sign: confirms what signing means, saves first, then shows the signed note
   const mock = await open(page, { version: 2, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' }, recordingConsent: 'Declined' });
   mock.reauthed = true;
   await note(page).getByLabel('Plan').fill('Rest and fluids'); // typed just before signing: saved first, then that version is signed
-  await note(page).getByRole('button', { name: 'Sign note' }).click();
+  await page.getByRole('button', { name: 'Sign note' }).click();
   const dialog = page.getByRole('dialog', { name: 'Sign note for Meera Iyer (synthetic)?' });
   await expect(dialog).toContainText(/000001.* · 12 Mar 1972/); // who it is for, so a signature cannot land on the wrong chart
   await expect(dialog).not.toContainText('encounter'); // UX-07: no internal visit id in the dialog
@@ -195,7 +195,7 @@ test('sign: confirms what signing means, saves first, then shows the signed note
   await expect(dialog).toContainText('confirm your identity again');
   await dialog.getByRole('button', { name: 'Keep editing' }).click();
   expect(mock.signs).toEqual([]);
-  await note(page).getByRole('button', { name: 'Sign note' }).click();
+  await page.getByRole('button', { name: 'Sign note' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Sign as Dr Asha Raman (synthetic)' }).click();
   await expect(note(page)).toContainText('SIGNED v1 · read-only');
   await expect(note(page)).toContainText(/Signed by Dr Asha Raman \(synthetic\), licence .*Tamil Nadu Medical Council 84213.*, on 19 Oct 2026 at 10:10 · version 1/); // the licence the owner attested
@@ -203,14 +203,14 @@ test('sign: confirms what signing means, saves first, then shows the signed note
   expect(mock.signs).toEqual([{ baseVersion: 3 }]);
   await expect(note(page).getByLabel('Plan')).toHaveJSProperty('readOnly', true);
   await expect(note(page).getByRole('combobox', { name: 'Template' })).toBeDisabled();
-  await expect(note(page).getByRole('button', { name: 'Sign note' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Sign note' })).toHaveCount(0);
 });
 
 test('sign: blank required sections keep Sign locked and are named in the checklist; the server\'s refusal is named and focused', async ({ page }) => {
   const mock = await open(page, { version: 1, sections: { assessment: 'Review' }, recordingConsent: 'Declined' });
   mock.reauthed = true;
-  await expect(note(page).getByRole('button', { name: 'Sign note' })).toBeDisabled();
-  await expect(note(page).getByRole('button', { name: 'Sign note' })).toHaveAccessibleDescription('2 items still need your review before signing');
+  await expect(page.getByRole('button', { name: 'Sign note' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Sign note' })).toHaveAccessibleDescription('2 items still need your review before signing');
   const list = note(page).getByRole('region', { name: 'Review and sign' }).getByRole('listitem');
   await expect(list.filter({ hasText: 'History reviewed' })).toContainText('To do');
   await expect(list.filter({ hasText: 'Plan reviewed' })).toContainText('To do');
@@ -221,7 +221,7 @@ test('sign: blank required sections keep Sign locked and are named in the checkl
   await note(page).getByLabel('Plan').fill('Rest');
   await expect(note(page).getByText('Everything reviewed. Ready to sign.')).toBeVisible();
   mock.signNext = 'blank';
-  await note(page).getByRole('button', { name: 'Sign note' }).click();
+  await page.getByRole('button', { name: 'Sign note' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Sign as Dr Asha Raman (synthetic)' }).click();
   await expect(note(page).getByRole('alert')).toHaveText('These required sections are empty: Chief complaint, Plan. Fill them in, then sign.');
   await expect(note(page).getByLabel('Chief complaint')).toBeFocused();
@@ -230,7 +230,7 @@ test('sign: blank required sections keep Sign locked and are named in the checkl
 // MDV audit P0-2: allergies not recorded lock Sign, and the sign message says so; it never reads "ready" beside them.
 test('checklist: allergies not recorded keep Sign locked', async ({ page }) => {
   await open(page, { version: 1, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' }, recordingConsent: 'Declined' }, 'en', doctor, 'NotRecorded');
-  const sign = note(page).getByRole('button', { name: 'Sign note' });
+  const sign = page.getByRole('button', { name: 'Sign note' });
   await expect(note(page).getByRole('region', { name: 'Review and sign' }).getByRole('listitem').filter({ hasText: 'Allergies reconciled' })).toHaveText('Allergies reconciledTo do');
   await expect(sign).toBeDisabled();
   await expect(sign).toHaveAccessibleDescription('1 item still needs your review before signing');
@@ -246,14 +246,14 @@ test('checklist: an assessment with no diagnosis on the problem list is not Done
   await page.reload();
   const item = note(page).getByRole('region', { name: 'Review and sign' }).getByRole('listitem').filter({ hasText: 'Diagnoses reviewed' });
   await expect(item).toHaveText('Diagnoses reviewedNo diagnosis on the problem list');
-  await expect(note(page).getByRole('button', { name: 'Sign note' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Sign note' })).toBeEnabled();
 });
 
 // MDV-P2-044: the checklist is worked out from the note, the banner and the reconciliation; the server holds the consent and AI gates as well.
 test('checklist: no recording consent step or row until recording exists, and Sign needs none; each item is in words', async ({ page }) => {
   const mock = await open(page, { version: 1, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' } });
   mock.reauthed = true;
-  const sign = note(page).getByRole('button', { name: 'Sign note' });
+  const sign = page.getByRole('button', { name: 'Sign note' });
   await expect(sign).toBeEnabled();
   await expect(sign).toHaveAccessibleDescription('Everything reviewed. Ready to sign.');
   const checklist = note(page).getByRole('region', { name: 'Review and sign' });
@@ -273,7 +273,7 @@ test('checklist: an undecided AI draft and an unconfirmed reconciliation lock Si
   const mock = await open(page, { version: 1, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' }, recordingConsent: 'Declined', undecidedAi: ['subjective'] });
   mock.reconciliation = { confirmedAt: null, total: 2 };
   await page.reload();
-  const sign = note(page).getByRole('button', { name: 'Sign note' });
+  const sign = page.getByRole('button', { name: 'Sign note' });
   await expect(sign).toHaveAccessibleDescription('3 items still need your review before signing');
   const list = note(page).getByRole('region', { name: 'Review and sign' }).getByRole('listitem');
   for (const item of ['Medicines reconciled', 'History reviewed', 'Every AI suggestion accepted or dismissed']) await expect(list.filter({ hasText: item })).toContainText('To do');
@@ -285,7 +285,7 @@ test('checklist: the server refusing an unreviewed note is said in words and the
   const mock = await open(page, { version: 1, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' }, recordingConsent: 'Declined' });
   mock.reauthed = true;
   mock.signNext = 'unreviewed'; // another device holds an AI draft this page has not loaded yet
-  await note(page).getByRole('button', { name: 'Sign note' }).click();
+  await page.getByRole('button', { name: 'Sign note' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Sign as Dr Asha Raman (synthetic)' }).click();
   await expect(note(page).getByRole('alert')).toHaveText('The note was not signed: some checklist items still need your review.');
   await expect(note(page).getByLabel('Plan')).toBeEditable();
@@ -294,7 +294,7 @@ test('checklist: the server refusing an unreviewed note is said in words and the
 test('sign: reauth_required sends the doctor to confirm identity, the draft survives, and signing works on return', async ({ page }) => {
   const mock = await open(page, { version: 1, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' }, recordingConsent: 'Declined' });
   await note(page).getByLabel('Plan').fill('Rest and fluids (unsaved when Sign was pressed)');
-  await note(page).getByRole('button', { name: 'Sign note' }).click();
+  await page.getByRole('button', { name: 'Sign note' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Sign as Dr Asha Raman (synthetic)' }).click();
   await expect(page.getByText('Confirm your identity', { exact: true })).toBeVisible(); // the provider's stub page
   expect(mock.reauths).toEqual([{ returnUrl: '/consult/e-1' }]); // the opaque consult path only
@@ -302,7 +302,7 @@ test('sign: reauth_required sends the doctor to confirm identity, the draft surv
   expect(mock.note.sections.plan).toBe('Rest and fluids (unsaved when Sign was pressed)'); // saved before the redirect
   await page.goto('/consult/e-1'); // the provider returns here
   await expect(note(page).getByLabel('Plan')).toHaveValue('Rest and fluids (unsaved when Sign was pressed)'); // reloaded from the server
-  await note(page).getByRole('button', { name: 'Sign note' }).click();
+  await page.getByRole('button', { name: 'Sign note' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Sign as Dr Asha Raman (synthetic)' }).click();
   await expect(note(page)).toContainText('version 1');
   expect(mock.signs).toHaveLength(2);
@@ -315,7 +315,7 @@ test('sign: a stale note keeps the doctor\'s text and uses the editor\'s reload 
   mock.signNext = 'stale';
   await expect(note(page).getByLabel('Plan')).toHaveValue('Rest');
   mock.note = { ...mock.note, version: 2, sections: { ...mock.note.sections, plan: 'Their plan' } }; // another device saved meanwhile
-  await note(page).getByRole('button', { name: 'Sign note' }).click();
+  await page.getByRole('button', { name: 'Sign note' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Sign as Dr Asha Raman (synthetic)' }).click();
   await expect(note(page).getByRole('alert')).toContainText('changed elsewhere');
   await expect(note(page).getByLabel('Plan')).toHaveValue('Rest');
@@ -329,7 +329,7 @@ test('sign: a refusal is said in words and the note stays a draft', async ({ pag
   const mock = await open(page, { version: 1, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' }, recordingConsent: 'Declined' });
   mock.reauthed = true;
   mock.signNext = 'denied';
-  await note(page).getByRole('button', { name: 'Sign note' }).click();
+  await page.getByRole('button', { name: 'Sign note' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Sign as Dr Asha Raman (synthetic)' }).click();
   await expect(note(page).getByRole('alert')).toContainText('You cannot sign this note.');
   await expect(note(page).getByLabel('Plan')).toBeEditable();
@@ -340,7 +340,7 @@ test('a signed note shows its signature and no way to edit or sign again', async
     signature: { versionNo: 1, signedBy: 'u-other', signedAt: at, contentHash: 'b'.repeat(64) } });
   await expect(note(page)).toContainText('Signed by another clinician on 19 Oct 2026 at 10:05 · version 1');
   await expect(note(page).getByLabel('Plan')).toHaveJSProperty('readOnly', true);
-  await expect(note(page).getByRole('button', { name: 'Sign note' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Sign note' })).toHaveCount(0);
 });
 
 // MDV-P2-013: addenda, version history and the print view. The server rules (v1 never altered, reason and step-up, PDF with identifiers on every
@@ -424,7 +424,7 @@ test('a role without Sign sees no Sign button, only why', async ({ page }) => {
   const nurse = { ...doctor, active: { ...doctor.active, capabilities: { ...doctor.active.capabilities, ClinicalNotes: 'Full' } } };
   await open(page, { version: 1, sections: { plan: 'x' } }, 'en', nurse);
   await expect(note(page)).toContainText('Only a doctor can sign this note.');
-  await expect(note(page).getByRole('button', { name: 'Sign note' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Sign note' })).toHaveCount(0);
 });
 
 // MDV-P2-009 (J2.5, E-04): verified prefill, quick phrases and earlier-note snippets. Nothing is added until the doctor presses a button, and
@@ -689,7 +689,7 @@ test('200% zoom: the note, the sign dialog and its buttons stay readable and rea
   await expect(note(page)).toBeVisible();
   const fits = () => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
   expect(await fits()).toBe(true);
-  const sign = note(page).getByRole('button', { name: 'Sign note' });
+  const sign = page.getByRole('button', { name: 'Sign note' });
   await sign.scrollIntoViewIfNeeded();
   await sign.click();
   const dialog = page.getByRole('dialog');
@@ -727,7 +727,7 @@ for (const locale of ['en', 'ar'])
 test('keyboard: the sign dialog opens with focus on the dialog, not on a button, so Enter on open signs nothing', async ({ page }) => {
   const mock = await open(page, { version: 1, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' }, recordingConsent: 'Declined' });
   mock.reauthed = true;
-  const sign = note(page).getByRole('button', { name: 'Sign note' });
+  const sign = page.getByRole('button', { name: 'Sign note' });
   await tabTo(page, sign);
   await page.keyboard.press('Enter');
   const dialog = page.getByRole('dialog', { name: 'Sign note for Meera Iyer (synthetic)?' });
@@ -743,7 +743,7 @@ test('keyboard: the sign dialog opens with focus on the dialog, not on a button,
 test('keyboard: focus lands on the SIGNED banner after signing, then the addendum field, the new version, and back to the button on cancel', async ({ page }) => {
   const mock = await open(page, { version: 1, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' }, recordingConsent: 'Declined' });
   mock.reauthed = true;
-  await tabTo(page, note(page).getByRole('button', { name: 'Sign note' }));
+  await tabTo(page, page.getByRole('button', { name: 'Sign note' }));
   await page.keyboard.press('Enter');
   await page.keyboard.press('Tab');
   await page.keyboard.press('Enter');

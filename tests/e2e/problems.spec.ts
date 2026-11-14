@@ -8,7 +8,7 @@ import { mockProblems } from './support/problems';
 test('the doctor finds a code by words, adds it as provisional, and resolves another problem', async ({ page }) => {
   const { calls } = await mockProblems(page);
   await page.goto('/consult/e-1/problems');
-  await expect(page.getByRole('region', { name: 'Patient identity' }).getByRole('heading', { name: 'Meera Iyer (synthetic)' })).toBeVisible();
+  await expect(page.locator('[data-slot=patient-banner]').getByRole('heading', { name: 'Meera Iyer (synthetic)' })).toBeVisible();
   await expect(page.getByText('Codes from ICD-10 (2019-medvya-starter-1).', { exact: false })).toBeVisible();
   const table = page.getByRole('region', { name: 'Problem list' });
   await expect(table.getByRole('row', { name: /Type 2 diabetes/ })).toContainText('E11.9');

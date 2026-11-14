@@ -2,7 +2,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import {
   Send, Pipette, Inbox, Eye, Phone, MessageSquareCheck, CircleCheck,
   Sparkles, BadgeCheck, User, ArrowLeftRight, Upload, Lock, Stethoscope, PenLine,
-  CircleAlert, TriangleAlert, Info, Pause, CircleMinus, Pill as PillIcon, CircleHelp,
+  CircleAlert, TriangleAlert, Info, Pause, CircleMinus, CircleHelp,
   Clock, Ban, SearchX, WifiOff, Hourglass, CalendarCheck, Tag as TagIcon, UserCheck, DoorOpen, CalendarClock, CalendarX, CircleX, Radio, RefreshCw, Footprints, Ticket, MessageSquareWarning, type LucideIcon,
 } from 'lucide-react';
 import { useI18n, type MessageKey } from '@medvya/i18n';
@@ -140,46 +140,6 @@ export function RecordingPill({ state, elapsedSeconds = 0 }: { state: keyof type
       {/* animate-pulse stops under prefers-reduced-motion (styles.css) */}
       <span aria-hidden className="size-2 animate-pulse rounded-full bg-white" />
     </Pill>
-  );
-}
-
-export type Allergy = { name: string; status: 'verified' | 'patientReported' | 'unknown' };
-export type BannerPatient = {
-  name: string; age: number; sex: 'F' | 'M' | 'X'; mrn: string; dob: string;
-  /** null = allergies not recorded; [] = no known allergies (explicitly confirmed). Never conflate the two. */
-  allergies: Allergy[] | null;
-  consent?: keyof typeof recordingLooks; encounter?: string; synthetic?: boolean;
-};
-
-// Unicode first-strong isolate + non-breaking spaces: keeps Latin IDs and dates intact (order and line) inside Arabic sentences.
-const iso = (v: string) => `\u2068${v.replaceAll(' ', '\u00A0')}\u2069`;
-
-const allergyLook: Look = { label: 'banner.allergy', icon: PillIcon, bg: 'var(--color-danger-bg)', fg: 'var(--color-danger-text)' };
-const noAllergyLook: Look = { label: 'banner.noAllergies', icon: PillIcon, bg: 'var(--color-neutral-bg)', fg: 'var(--color-neutral-text)' };
-const unknownAllergyLook: Look = { label: 'banner.allergiesNotRecorded', icon: CircleHelp, bg: 'var(--color-warning-bg)', fg: 'var(--color-warning-text)' };
-
-/** Fixed patient identity banner for every clinical screen (Foundations §04). Allergies never collapse. */
-export function IdentityBanner({ patient }: { patient: BannerPatient }) {
-  const { t } = useI18n();
-  const initials = patient.name.split(' ').map(p => p[0]).slice(0, 2).join('');
-  return (
-    <section aria-label={t('banner.patient', { name: patient.name })}
-      className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border bg-card p-3 shadow-[inset_4px_0_0_var(--color-brand-500)] rtl:shadow-[inset_-4px_0_0_var(--color-brand-500)]">
-      <div aria-hidden className="grid size-10 place-items-center rounded-full bg-brand-950 font-extrabold text-white">{initials}</div>
-      <div>
-        <h2 className="text-[17px] font-extrabold">
-          {patient.name} <span className="font-medium text-muted-foreground">{patient.age} {patient.sex}</span>
-        </h2>
-        <p className="font-mono text-xs text-muted-foreground">{t('banner.mrnDob', { mrn: iso(patient.mrn), dob: iso(patient.dob) })}</p>
-      </div>
-      {patient.allergies === null ? <Pill look={unknownAllergyLook} />
-        : patient.allergies.length === 0 ? <Pill look={noAllergyLook} />
-        : patient.allergies.map(a => <Pill key={a.name} look={allergyLook}
-            text={t('banner.allergy', { name: iso(a.name), status: t(`banner.allergy.${a.status}`) })} />)}
-      {patient.consent && <RecordingPill state={patient.consent} />}
-      {patient.encounter && <p className="text-[13px] text-muted-foreground">{patient.encounter}</p>}
-      {patient.synthetic && <span className="rounded-sm bg-warning-bg px-2 py-1 font-mono text-[10px] font-semibold text-warning-700">{t('banner.synthetic')}</span>}
-    </section>
   );
 }
 

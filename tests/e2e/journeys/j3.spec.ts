@@ -52,6 +52,9 @@ journey('J3', {
     await page.getByRole('textbox', { name: 'Pulse' }).fill('72');
     await page.getByRole('button', { name: 'Save vitals' }).click();
     await page.getByRole('button', { name: 'Confirm: no known allergies' }).click();
+    // MDV-P1-092: scrolled down to the handoff, the pinned strip still names the patient.
+    await page.getByRole('button', { name: 'Hand off · Ready for doctor' }).scrollIntoViewIfNeeded();
+    await expect(page.locator('[data-slot=patient-banner]').getByRole('heading', { name: 'Meera Iyer (synthetic)' })).toBeInViewport({ ratio: 1 });
     await page.getByRole('button', { name: 'Hand off · Ready for doctor' }).click();
     await expect(page).toHaveURL(/\/nurse$/);
     await expect(page.getByText('No one is with the nurse')).toBeVisible(); // the empty queue's PageMessage title

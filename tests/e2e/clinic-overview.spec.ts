@@ -119,3 +119,70 @@ for (const locale of ['en', 'ar'])
         .map(v => `${v.id} (${v.nodes.length})`));
     expect(violations).toEqual([]);
   });
+
+// MDV-P2-053: the owner's Clinic today. Counts and staff names only (SchedulingEndpoints.ClinicTodayView).
+const owner = persona('SoloDoctor', 'd-1', 'Dr. Arjun Rao', { RegisterBookPatients: 'Full', CheckInQueue: 'Full', Patient360Chart: 'Full', StaffRolesIntegrations: 'Config' });
+const clinicToday = (waiting = true) => ({
+  now: ist('09:50'), timeZone: 'Asia/Kolkata', booked: 12, toArrive: 5, arrivedWalkIn: 3, arrivedBooked: 7, waiting: waiting ? 4 : 0, longestWaitMinutes: waiting ? 14 : null,
+  incompleteRegistrations: 2,
+  doctors: [
+    { id: 'd-1', name: 'Dr. Arjun Rao (synthetic)', notesToSign: 3, notesBeforeToday: 2, toAuthorise: 1 },
+    { id: 'd-2', name: 'Dr. S. Menon (synthetic)', notesToSign: 0, notesBeforeToday: 0, toAuthorise: 0 },
+  ],
+});
+
+async function openToday(page: Page, { locale = 'en', waiting = true } = {}) {
+  await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
+  await page.route('**/v1/me/context', r => r.fulfill({ json: owner }));
+  await page.route('**/v1/front-desk/clinic-today?*', r => r.fulfill({ json: clinicToday(waiting) }));
+  await page.goto('/clinic-today');
+}
+
+test('Clinic today shows the five counts, revenue not tracked yet, and no seen, consult time, running late or no-show figure', async ({ page }) => {
+  await openToday(page, { waiting: false });
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Clinic today');
+  const counts = page.getByRole('region', { name: 'Today so far' });
+  await expect(counts).toContainText('Booked today12Still to arrive: 5');
+  await expect(counts).toContainText('Arrived10Walk-in: 3 · Booked: 7');
+  await expect(counts).toContainText('Waiting now0No data yet'); // nobody waits: no longest wait, never 0 min
+  await expect(counts).toContainText('Registrations incomplete2');
+  await expect(counts).toContainText('RevenueNot tracked yet');
+  await expect(page.getByRole('row', { name: /Dr\. Arjun Rao/ })).toContainText('Dr. Arjun Rao (synthetic)Notes to sign3 (2 from before today)Prescriptions to authorise1');
+  await expect(page.getByRole('main')).not.toContainText(/seen|median|late|no-show/i);
+  await expect(page.getByRole('navigation').getByRole('link', { name: 'Clinic today' })).toHaveAttribute('aria-current', 'page');
+});
+
+test('each needs-attention line has one action that opens the screen for it', async ({ page }) => {
+  await openToday(page);
+  await page.route('**/v1/patients?*', r => r.fulfill({ json: { items: [], total: 0, page: 1, pageSize: 20 } }));
+  const list = page.getByRole('region', { name: 'Needs attention' }).getByRole('listitem');
+  await expect(list).toHaveCount(3);
+  for (const line of await list.all()) await expect(line.getByRole('link')).toHaveCount(1);
+  await expect(list.nth(0)).toContainText('Your notes to sign: 3 · Prescriptions to authorise: 1');
+  await expect(list.nth(0).getByRole('link', { name: 'Open My day' })).toHaveAttribute('href', '/today');
+  await expect(list.nth(2).getByRole('link', { name: 'Open waiting room' })).toHaveAttribute('href', '/front-desk/overview');
+  await list.nth(1).getByRole('link', { name: 'Open list' }).click();
+  await expect(page).toHaveURL(/\/patients\/directory\?filter=Incomplete$/);
+});
+
+test('a receptionist is told Clinic today is not theirs; the server refuses (403)', async ({ page }) => {
+  await page.route('**/v1/me/context', r => r.fulfill({ json: { ...owner, active: { ...owner.active, role: 'PracticeAdmin' } } }));
+  await page.route('**/v1/front-desk/clinic-today?*', r => r.fulfill({ status: 403, json: { title: 'Forbidden' } }));
+  await page.goto('/clinic-today');
+  await expect(page.getByRole('main')).toContainText('Only the practice owner or admin can see Clinic today.');
+});
+
+for (const locale of ['en', 'ar'])
+  for (const width of [375, 768, 1440])
+    test(`axe finds no violations on Clinic today (${locale}, ${width} px)`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await openToday(page, { locale });
+      if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true); // nothing scrolls sideways
+      await page.addScriptTag({ path: axePath });
+      const violations = await page.evaluate(async () =>
+        (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations
+          .map(v => `${v.id} (${v.nodes.length})`));
+      expect(violations).toEqual([]);
+    });

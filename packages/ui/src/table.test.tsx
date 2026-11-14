@@ -83,6 +83,7 @@ describe('Table layout', () => {
     const { container } = render(layout({}));
     expect(container.querySelector('[data-slot=table-container]')?.getAttribute('data-density')).toBe('comfortable');
     expect(container.querySelector('tbody')?.className).not.toContain('h-row-compact');
+    expect(container.querySelector('tbody')?.className).toContain('[&>tr]:h-row'); // 48 px rows, text-only ones too (DESIGN.md)
     expect(container.querySelector('[role=row], [role=cell]')).toBeNull();
     expect(container.querySelector('td')?.textContent).toBe('500');
   });
@@ -107,6 +108,12 @@ describe('Table layout', () => {
     // Compact applies from 768 px up only; a stacked phone row sizes to its content.
     expect(container.querySelector('tbody')?.className).toContain('md:[&>tr]:h-row-compact');
     expect(container.querySelector('tbody')?.className).not.toMatch(/(^|\s)\[&>tr\]:h-row-compact/);
+  });
+
+  it('a comfortable stacked row is 48 px from 768 px up and sizes to its content on a phone', () => {
+    const body = render(layout({ stacked: true })).container.querySelector('tbody')?.className ?? '';
+    expect(body).toContain('md:[&>tr]:h-row');
+    expect(body).not.toMatch(/(^|\s)\[&>tr\]:h-row/);
   });
 
   it('announces the status politely, and is axe clean stacked', async () => {

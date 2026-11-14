@@ -78,15 +78,17 @@ flowchart LR
   Prescribing -->|"Application"| Patients
   Prescribing -->|"Api, Application"| Tenancy
   Scheduling -->|"Api, Application"| Audit
+  Scheduling -->|"Application"| Encounters
   Scheduling -->|"Application"| Identity
   Scheduling -->|"Application"| Patients
+  Scheduling -->|"Application"| Prescribing
   Scheduling -->|"Api, Application, Domain"| Tenancy
   Tenancy -->|"Application"| Audit
   Tenancy -->|"Application"| Identity
   Tenancy -->|"Application, Domain"| Scheduling
 ```
 
-`Host.Api` references: Audit, Encounters, Identity, Leads, Notifications, Patients, Prescribing, Scheduling, Tenancy. Modules with no incoming arrow from another module: Billing, Leads, Platform, Prescribing.
+`Host.Api` references: Audit, Encounters, Identity, Leads, Notifications, Patients, Prescribing, Scheduling, Tenancy. Modules with no incoming arrow from another module: Billing, Leads, Platform.
 
 ## 3. How the data links across modules
 

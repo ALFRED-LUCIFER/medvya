@@ -88,6 +88,7 @@ export function useBoardController(facilityId: string, online: boolean) {
     return () => clearTimeout(timer);
   }, [notice]);
   const [phoneColumn, setPhoneColumn] = useState<BoardColumn | null>(null);
+  const [listFilter, setListFilter] = useState<BoardColumn | null>(null);
   const [ending, setEnding] = useState<Ending | null>(null);
   const [endFailed, setEndFailed] = useState(false);
   const endForm = useForm<CancelForm>({ resolver: zodResolver(cancelSchema), defaultValues: emptyCancel });
@@ -219,6 +220,9 @@ export function useBoardController(facilityId: string, online: boolean) {
     /** Under 768 px the board is one list; the status it shows (null: the first with visits). */
     phoneColumn,
     onPhoneColumn: setPhoneColumn,
+    /** The status the List view shows alone (MDV-P2-052); pressing it again shows every status. */
+    listFilter,
+    onListFilter: (column: BoardColumn) => setListFilter(f => (f === column ? null : column)),
   };
 }
 

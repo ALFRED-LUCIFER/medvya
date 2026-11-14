@@ -733,3 +733,155 @@ test('a void token (the visit was cancelled or the patient left) is refused by t
   await expect(page.getByRole('alert')).toHaveText('This visit was cancelled or the patient left, so its token is void and cannot be printed.');
   await expect(page.getByRole('article')).toHaveCount(0);
 });
+
+// MDV-P2-052: the List view, a third view beside By status and By doctor; each receptionist's last choice opens next time.
+const views = (page: Page) => page.getByRole('group', { name: 'Front desk views' });
+const group = (page: Page, name: string) => page.getByRole('region', { name, exact: true });
+const filters = (page: Page) => page.getByRole('group', { name: 'Show one status only' });
+// The view a receptionist chose last, as the switch stores it: a view name per user id, nothing about a patient.
+const chooseList = (page: Page, user = 'u-Receptionist') => page.addInitScript(u => localStorage.setItem(`medvya.frontDesk.view.${u}`, 'list'), user);
+const waitingAndBooked = () => [
+  ...Array.from({ length: 20 }, (_, i) => card(`k${i}`, `Booked Patient ${i + 1} (synthetic)`, `${11 + Math.floor(i / 6)}:${String((i % 6) * 10).padStart(2, '0')}`, 'Booked')),
+  ...Array.from({ length: 6 }, (_, i) => card(`w${i}`, `Waiting Patient ${i + 1} (synthetic)`, `10:0${i}`, 'CheckedIn', { token: `A-0${i + 1}`, queuePlace: i + 1 })),
+  card('d1', 'Kavya Iyer (synthetic)', '09:00', 'Done'),
+];
+const parts = ['Anand Krishnamurthy Venkataraghavan', 'Lakshmi Priya Ramasubramanian', 'Mohammed Farhan Abdul Qadir', 'Sreelakshmi Unnikrishnan Nair'];
+const forty = () => (['CheckedIn', 'CheckedIn', 'CheckedIn', 'CheckedIn', 'CheckedIn', 'CheckedIn', 'CheckedIn', 'CheckedIn', 'ReadyForDoctor', 'ReadyForDoctor', 'InConsult', 'InConsult', 'Billing', 'Done', 'Done',
+  ...Array<string>(25).fill('Booked')]).map((state, i) => card(`f${i}`, `${parts[i % 4]} Subramaniam ${i + 1} (synthetic)`, `${9 + Math.floor(i / 6)}:${String((i % 6) * 10).padStart(2, '0')}`, state,
+  { token: ['CheckedIn', 'ReadyForDoctor'].includes(state) ? `A-${10 + i}` : null, queuePlace: ['CheckedIn', 'ReadyForDoctor'].includes(state) ? i + 1 : null, walkIn: i % 5 === 0 }));
+
+test('List is the third view; waiting comes first and done is folded; her last choice opens next time, another user still gets the board', async ({ page }) => {
+  await page.route('**/v1/front-desk/overview?*', r => r.fulfill({ json: { facilityId: 'f-1', timeZone: 'Asia/Kolkata', now, doctors: [], waiting: [] } }));
+  await open(page, { only: [], extra: waitingAndBooked() });
+  await expect(views(page).getByRole('button')).toHaveText(['By status', 'By doctor', 'List']);
+  await expect(views(page).getByRole('button', { name: 'By status' })).toHaveAttribute('aria-pressed', 'true'); // the board stays the default (Q14)
+  await expect(page.getByRole('article')).toHaveCount(27);
+
+  await views(page).getByRole('button', { name: 'List' }).click();
+  await expect(views(page).getByRole('button', { name: 'List' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('article')).toHaveCount(0);
+  await expect(page.locator('main h2:not(.sr-only)')).toHaveText([/^Checked in/, /^Booked/, /^Done/]);
+  await expect(group(page, 'Checked in').getByRole('rowheader')).toHaveCount(6);
+  await expect(group(page, 'Booked').getByRole('rowheader')).toHaveCount(20);
+  await expect(group(page, 'Done')).toBeHidden(); // folded until opened
+  await page.locator('details summary').click();
+  await expect(group(page, 'Done').getByRole('rowheader')).toHaveText(['Kavya Iyer (synthetic)']);
+  expect(page.url()).toMatch(/\/front-desk$/); // the view is not in the address
+
+  await page.reload();
+  await expect(views(page).getByRole('button', { name: 'List' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(group(page, 'Checked in')).toBeVisible();
+  expect(await page.evaluate(() => Object.entries(localStorage).filter(([k]) => k.startsWith('medvya.frontDesk')))).toEqual([['medvya.frontDesk.view.u-Receptionist', 'list']]);
+
+  // Another receptionist on the same desk computer opens the board until she chooses.
+  await page.route('**/v1/me/context', r => r.fulfill({ json: { ...reception, user: { id: 'u-2', displayName: 'S. Das' } } }));
+  await page.reload();
+  await expect(views(page).getByRole('button', { name: 'By status' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('article')).toHaveCount(27);
+  // By doctor keeps its own address and becomes her default too; By status brings the board back.
+  await views(page).getByRole('button', { name: 'By doctor' }).click();
+  await expect(page).toHaveURL(/\/front-desk\/overview$/);
+  await page.goto('/front-desk');
+  await expect(page).toHaveURL(/\/front-desk\/overview$/);
+  await views(page).getByRole('button', { name: 'By status' }).click();
+  await expect(page).toHaveURL(/\/front-desk$/);
+  await expect(page.getByRole('article')).toHaveCount(27);
+});
+
+test('a status count shows only its group, says it is pressed, and pressing again shows all', async ({ page }) => {
+  await chooseList(page);
+  await open(page, { only: [], extra: waitingAndBooked() });
+  await expect(filters(page).getByRole('button')).toHaveText(['Checked in · 6', 'Ready for doctor · 0', 'In consult · 0', 'Booked · 20', 'Done · 1']);
+  const booked = filters(page).getByRole('button', { name: 'Booked · 20' });
+  await expect(booked).toHaveAttribute('aria-pressed', 'false');
+  await booked.click();
+  await expect(booked).toHaveAttribute('aria-pressed', 'true');
+  await expect(group(page, 'Booked')).toBeVisible();
+  await expect(group(page, 'Checked in')).toBeHidden();
+  await filters(page).getByRole('button', { name: 'Done · 1' }).click(); // done opens when it is the one shown
+  await expect(group(page, 'Done')).toBeVisible();
+  await expect(group(page, 'Booked')).toBeHidden();
+  await filters(page).getByRole('button', { name: 'Done · 1' }).click();
+  await expect(filters(page).getByRole('button', { name: 'Done · 1' })).toHaveAttribute('aria-pressed', 'false');
+  await expect(group(page, 'Checked in')).toBeVisible();
+  await expect(group(page, 'Booked')).toBeVisible();
+});
+
+test('40 long names at 1024 x 768 and 1440 x 900: nothing is clipped, nothing scrolls sideways; rows 48 px, actions 44 px and 8 px apart', async ({ page }) => {
+  await chooseList(page);
+  await open(page, { only: [], extra: forty() });
+  for (const [w, h] of [[1024, 768], [1440, 900]] as const) {
+    await page.setViewportSize({ width: w, height: h });
+    await expect(group(page, 'Booked').getByRole('rowheader')).toHaveCount(25);
+    if (!(await group(page, 'Done').isVisible())) await page.locator('details summary').click();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    const fits = await page.locator('[data-slot="table-container"]').evaluateAll(els => els.map(el => el.scrollWidth <= el.clientWidth));
+    expect(fits).toEqual(Array<boolean>(6).fill(true));
+    const clipped = await page.locator('[data-slot="table-container"] th, [data-slot="table-container"] td').evaluateAll(els =>
+      els.filter(el => el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1).map(el => el.textContent));
+    expect(clipped).toEqual([]);
+    const rows = await page.locator('[data-slot="table-container"] tbody tr').evaluateAll(els => els.map(el => el.getBoundingClientRect().height));
+    expect(rows).toHaveLength(40);
+    expect(Math.min(...rows)).toBeGreaterThanOrEqual(48);
+    for (const name of ['Checked in', 'Booked']) {
+      const boxes = await group(page, name).getByRole('button').evaluateAll(els => els.map(el => el.getBoundingClientRect()).map(r => ({ top: r.top, bottom: r.bottom, height: r.height })));
+      expect(Math.min(...boxes.map(b => b.height))).toBeGreaterThanOrEqual(44);
+      for (let i = 1; i < boxes.length; i++) expect(boxes[i]!.top - boxes[i - 1]!.bottom).toBeGreaterThanOrEqual(8);
+    }
+  }
+});
+
+test('Check in from the list confirms name and date of birth first, as on the board; a move offers Undo in the toolbar', async ({ page }) => {
+  await chooseList(page);
+  const calls = await open(page);
+  const meera = group(page, 'Booked').getByRole('row', { name: /Meera Iyer/ });
+  await expect(meera).toContainText('Registration incomplete');
+  await meera.getByRole('button', { name: 'Check in' }).click();
+  const confirm = group(page, 'Booked').getByRole('group', { name: 'Confirm identity' });
+  await expect(confirm).toContainText('Meera Iyer (synthetic) · born 12 Mar 1972');
+  await expect(confirm.getByRole('button', { name: 'Confirm arrival' })).toBeFocused();
+  expect(calls.checkIns).toHaveLength(0); // nothing is sent before the identity is confirmed
+  await confirm.getByRole('button', { name: 'Confirm arrival' }).click();
+  await expect(group(page, 'Checked in').getByRole('rowheader', { name: 'Meera Iyer (synthetic)' })).toBeVisible();
+  expect(calls.checkIns).toMatchObject([{ id: 'a1' }]);
+
+  await group(page, 'Checked in').getByRole('row', { name: /Farhan Qureshi/ }).getByRole('button', { name: 'Ready for doctor' }).click();
+  await expect(group(page, 'Ready for doctor').getByRole('rowheader', { name: 'Farhan Qureshi (synthetic)' })).toBeVisible();
+  await page.getByRole('button', { name: 'Undo' }).click();
+  await expect(group(page, 'Checked in').getByRole('rowheader', { name: 'Farhan Qureshi (synthetic)' })).toBeVisible();
+  expect(calls.undos).toMatchObject([{ id: 'a2' }]);
+});
+
+test('within a status the list keeps the clinic\'s queue order, the order of the board and the queue display', async ({ page }) => {
+  // Arrival order is Farhan, Deepak, Sara; the queue rule (server queue places) puts Sara first.
+  const waiting = [
+    card('q1', 'Farhan Qureshi (synthetic)', '10:00', 'CheckedIn', { token: 'A-01', queuePlace: 3 }),
+    card('q2', 'Deepak Nair (synthetic)', '10:05', 'CheckedIn', { token: 'A-02', queuePlace: 2 }),
+    card('q3', 'Sara Thomas (synthetic)', '10:10', 'CheckedIn', { token: 'A-03', queuePlace: 1 }),
+  ];
+  await open(page, { only: [], extra: waiting });
+  const order = ['Sara Thomas (synthetic)', 'Deepak Nair (synthetic)', 'Farhan Qureshi (synthetic)'];
+  await expect(column(page, 'Checked in').getByRole('heading', { level: 3 })).toHaveText(order);
+  await views(page).getByRole('button', { name: 'List' }).click();
+  await expect(group(page, 'Checked in').getByRole('rowheader')).toHaveText(order);
+  await expect(group(page, 'Checked in').getByRole('row').nth(1)).toContainText('A-03');
+});
+
+for (const locale of ['en', 'ar'])
+  for (const [w, h] of [[1440, 900], [1024, 768], [375, 812]] as const)
+    test(`axe finds no violations on the list at ${w} px (${locale})`, async ({ page }) => {
+      await page.setViewportSize({ width: w, height: h });
+      await chooseList(page);
+      await open(page, { locale, only: [], extra: nine() });
+      await expect(page.getByRole('group', { name: locale === 'ar' ? 'طرق عرض الاستقبال' : 'Front desk views' }).getByRole('button').nth(2)).toHaveAttribute('aria-pressed', 'true');
+      await expect(group(page, locale === 'ar' ? 'محجوز' : 'Booked').getByRole('rowheader')).toHaveCount(3);
+      if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+      await page.addScriptTag({ path: axePath });
+      expect(await axeViolations(page)).toEqual([]);
+      // The identity check open in a row, and done unfolded.
+      await page.locator('details summary').click();
+      await page.locator('[data-slot="table-container"]').filter({ hasText: 'Meera Iyer' }).getByRole('button').first().click();
+      await expect(page.getByRole('group', { name: locale === 'ar' ? 'تأكيد الهوية' : 'Confirm identity' })).toBeVisible();
+      expect(await axeViolations(page)).toEqual([]);
+    });

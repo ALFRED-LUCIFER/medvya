@@ -11,7 +11,7 @@ type Props = { session: Session; visits: { upcoming: Visit[]; past: Visit[] } | 
 export function VisitsScreen(vm: Props) {
   const { t, formatDate, formatTime } = useI18n();
   const tz = vm.session.clinic.timeZone;
-  const header = <AppHeader title={t('mobile.visits.title')} subtitle={`${vm.session.clinic.name} · ${vm.session.clinic.branch}`} initials={vm.session.person.initials} />;
+  const header = <AppHeader title={t('mobile.patient.tab.book')} subtitle={`${vm.session.clinic.name} · ${vm.session.clinic.branch}`} initials={vm.session.person.initials} />;
   return (
     <Screen header={header} footer={<Button label={t('mobile.visits.book')} icon="add" disabled hint={t('mobile.common.comingSoon')} />}>
       {vm.loading ? <Loading label={t('mobile.common.loading')} />
@@ -34,7 +34,7 @@ export function VisitsScreen(vm: Props) {
               {vm.visits.past.map((v, i) => (
                 <View key={v.id} style={i > 0 && styles.divider}>
                   <ListRow title={v.reason} subtitle={`${formatDate(new Date(v.at), tz)} · ${v.doctor}`}
-                    trailing={<Chip label={t(`mobile.visits.status.${v.status}`)} tone={v.status === 'cancelled' ? 'neutral' : 'brand'} />} />
+                    chips={[{ label: t(`mobile.visits.status.${v.status}`), tone: v.status === 'cancelled' ? 'neutral' : 'brand' }]} />
                 </View>
               ))}
             </Card>

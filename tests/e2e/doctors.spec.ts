@@ -59,6 +59,7 @@ test('the Doctors tab lists doctors with who attested the licence, and an expire
   await expect(page.getByRole('tab', { name: 'Doctors' })).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByRole('heading', { name: 'Dr. Arjun Rao (synthetic)' })).toBeVisible();
   await expect(page.getByText('Licence expired')).toBeVisible();
+  await expect(page.getByText('Licence expired', { exact: true })).toHaveAttribute('data-slot', 'tag'); // the library Tag (MDV-P2-060)
   await expect(page.getByText('This licence has passed its expiry date. Renew it and confirm it again. The doctor is not blocked from working.')).toBeVisible();
   await expect(page.getByText('Signing in Medvya is always an authenticated action by the doctor (passkey / MFA), never the image alone.')).toBeVisible();
 

@@ -47,7 +47,7 @@ async function expectSummary(page: Page, items: string[]) {
 
 test('India: full registration in steps, with Aadhaar last 4 only, the PIN rule and the payer, saved once from Review', async ({ page }) => {
   const saves = await desk(page, 'IN');
-  await expect(page.getByRole('link', { name: 'Full registration' })).toHaveAttribute('aria-current', 'page');
+  await expect(page.getByRole('button', { name: 'Full registration' })).toHaveAttribute('aria-pressed', 'true'); // the library SegmentedControl (MDV-P2-060)
   await expect(page.getByText('Verify with ABHA · coming later.')).toBeVisible();
 
   await page.getByLabel('Full name').fill('Lakshmi Pillai');
@@ -184,7 +184,7 @@ test('switching to quick mode keeps what was typed; only steps already reached c
   await desk(page, 'IN');
   await expect(page.getByRole('button', { name: 'Payer' })).toBeDisabled();
   await page.getByLabel('Full name').fill('Kavya Iyer');
-  await page.getByRole('link', { name: 'Quick (busy desk)' }).click();
+  await page.getByRole('button', { name: 'Quick (busy desk)' }).click();
   await expect(page).toHaveURL(/\?mode=quick$/);
   await expect(page.getByLabel('Full name')).toHaveValue('Kavya Iyer');
   await expect(page.getByRole('list', { name: 'Registration steps' })).toBeHidden();
@@ -215,9 +215,9 @@ for (const [country, locale] of [['IN', 'en'], ['IN', 'hi'], ['AE', 'ar'], ['AE'
 
 test('a minor needs a guardian before saving, in quick mode too, and the guardian is sent', async ({ page }) => {
   const saves = await desk(page, 'IN');
-  await page.getByRole('link', { name: 'Quick (busy desk)' }).click();
+  await page.getByRole('button', { name: 'Quick (busy desk)' }).click();
   // Type only once quick mode is on screen: a field filled while the full form is being replaced can miss the new input.
-  await expect(page.getByRole('link', { name: 'Quick (busy desk)' })).toHaveAttribute('aria-current', 'page');
+  await expect(page.getByRole('button', { name: 'Quick (busy desk)' })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByRole('heading', { name: 'Identity', exact: true, level: 2 })).toBeVisible();
   await page.getByLabel('Full name').fill('Arjun Nair');
   await page.getByLabel('Mobile').fill('+91 90000 00413');

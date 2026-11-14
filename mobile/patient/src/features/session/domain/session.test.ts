@@ -1,4 +1,4 @@
-import { maskPhone, phoneForm, shouldLock, LOCK_AFTER_MS, toE164 } from './session';
+import { maskPhone, phoneForm, shouldLock, LOCK_AFTER_MS, toE164, unlockMethod } from './session';
 
 it('normalises Indian and UAE mobile numbers to E.164', () => {
   expect(toE164('IN', '90000 00101')).toBe('+919000000101');
@@ -24,4 +24,11 @@ it('masks all but the last four digits', () => {
 it('locks after 15 minutes away', () => {
   expect(shouldLock(0, LOCK_AFTER_MS - 1)).toBe(false);
   expect(shouldLock(0, LOCK_AFTER_MS)).toBe(true);
+});
+
+it('never says Face ID or Touch ID on Android, and names what an iPhone has (MDV-P5-059)', () => {
+  expect(unlockMethod('android', { face: true, finger: true })).toBe('android');
+  expect(unlockMethod('ios', { face: true, finger: false })).toBe('faceId');
+  expect(unlockMethod('ios', { face: false, finger: true })).toBe('touchId');
+  expect(unlockMethod('ios', { face: false, finger: false })).toBe('ios');
 });

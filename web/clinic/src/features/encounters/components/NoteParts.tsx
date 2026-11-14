@@ -27,7 +27,7 @@ export function SectionField({ section, register, readOnly, source }: { section:
           {source.detail && <span className="text-caption text-muted-foreground">{source.detail}</span>}
         </p>
       )}
-      <Textarea id={`note-${section.id}`} className="min-h-24" maxLength={maxSectionLength} readOnly={readOnly} aria-required={section.required} aria-describedby={source ? sourceId : undefined} {...register(section.id)} />
+      <Textarea id={`note-${section.id}`} className="min-h-24 md:text-base" maxLength={maxSectionLength} readOnly={readOnly} aria-required={section.required} aria-describedby={source ? sourceId : undefined} {...register(section.id)} />
     </div>
   );
 }

@@ -472,7 +472,11 @@ journey('J2', {
     await page.goto(studioPath);
     await expect(page.getByRole('button', { name: 'One page' })).toHaveAttribute('aria-pressed', 'true'); // the default view
     const note = page.getByRole('region', { name: 'Consultation note' });
-    await expect(note.getByRole('navigation', { name: 'Note sections' }).getByRole('link')).toHaveCount(7);
+    // MDV-P1-094: a prescribing doctor's page has Prescription directly after Assessment (eight sections; Prescription carries no tick).
+    const sections = note.getByRole('navigation', { name: 'Note sections' }).getByRole('link');
+    await expect(sections).toHaveCount(8);
+    await expect(sections.nth(4)).toHaveText(/^5 · Assessment/);
+    await expect(sections.nth(5)).toHaveText('6 · Prescription');
     const sign = page.getByRole('button', { name: 'Sign note' });
     await expect(sign).toBeDisabled();
     await expect(sign).toHaveAccessibleDescription(/^\d items? still needs? your review before signing$/);

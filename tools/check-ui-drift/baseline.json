@@ -29,7 +29,8 @@
     "web/clinic/src/features/patient360/components/PregnancyCard.tsx": 2,
     "web/clinic/src/features/patients/components/PatientRecord.tsx": 1,
     "web/clinic/src/features/pilot-metrics/components/PilotMetricsPanel.tsx": 1,
-    "web/clinic/src/features/problems/components/ProblemsPage.tsx": 2,
+    "web/clinic/src/features/problems/components/ProblemAddForm.tsx": 1,
+    "web/clinic/src/features/problems/components/ProblemsPage.tsx": 1,
     "web/clinic/src/features/referrals/components/ReferralsPanel.tsx": 3,
     "web/clinic/src/features/registration/components/Registration.tsx": 1,
     "web/clinic/src/features/settings/components/DataPanel.tsx": 1,
@@ -51,8 +52,9 @@
     "web/clinic/src/features/reconciliation/components/ReconciliationPage.tsx": 1
   },
   "inlineCard": {
+    "web/clinic/src/features/encounters/components/ChartPanel.tsx": 2,
     "web/clinic/src/features/encounters/components/ConsultPage.tsx": 1,
-    "web/clinic/src/features/encounters/components/ConsultStudio.tsx": 4,
+    "web/clinic/src/features/encounters/components/ConsultStudio.tsx": 1,
     "web/clinic/src/features/encounters/components/Disclosure.tsx": 1,
     "web/clinic/src/features/encounters/components/NoteEditor.tsx": 1,
     "web/clinic/src/features/encounters/components/NoteHistory.tsx": 1,

@@ -27,6 +27,7 @@ function SheetContent({
 }) {
   // Radix returns focus only to a SheetTrigger; a sheet opened by state (SplitLayout) returns it to whatever opened it.
   const opener = React.useRef<HTMLElement | null>(null)
+  const content = React.useRef<HTMLDivElement | null>(null)
   return (
     <SheetPrimitive.Portal>
       <SheetPrimitive.Overlay
@@ -48,12 +49,22 @@ function SheetContent({
             : "start-0 border-e motion-safe:data-[state=open]:slide-in-from-start motion-safe:data-[state=closed]:slide-out-to-start",
           className
         )}
-        onOpenAutoFocus={e => { opener.current = document.activeElement as HTMLElement | null; onOpenAutoFocus?.(e) }}
+        ref={content}
+        onOpenAutoFocus={e => {
+          opener.current = document.activeElement as HTMLElement | null
+          onOpenAutoFocus?.(e)
+          if (e.defaultPrevented) return
+          // Radix focuses the first control without preventScroll, which moved the page under the sheet; the page keeps its place.
+          e.preventDefault()
+          // A tab list hands focus on to its active tab without preventScroll, so the first control itself is focused, never the list.
+          content.current?.querySelector<HTMLElement>("button:not([tabindex='-1']), [href], input, select, textarea, [tabindex]:not([tabindex='-1']):not([role=tablist])")?.focus({ preventScroll: true })
+        }}
         onCloseAutoFocus={e => {
           onCloseAutoFocus?.(e)
           if (e.defaultPrevented || !opener.current?.isConnected) return
           e.preventDefault()
-          opener.current.focus()
+          // The opener may sit in pinned chrome; returning focus must not move the page (the consultation keeps its place).
+          opener.current.focus({ preventScroll: true })
         }}
         {...props}
       >

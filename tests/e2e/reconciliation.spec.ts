@@ -1,6 +1,8 @@
 import { createRequire } from 'node:module';
 import { expect, test } from '@playwright/test';
 import { mockReconciliation } from './support/reconciliation';
+import { t } from './support/desk';
+import { expectStacked } from './support/stacked';
 import { targetPx } from './support/targets';
 
 // MDV-P2-011 (E-07): the doctor reconciles the medicines of a consultation. Conflicts are written in words, Confirm stays disabled until every
@@ -71,3 +73,15 @@ for (const locale of ['en', 'ar'] as const) {
     expect(small).toEqual([]);
   });
 }
+
+// MDV-P2-054 AC5: at 375 px each medicine is a stacked block: its name first and bold, every other field under its column's name.
+test.describe('at 375 px', () => {
+  test.use({ viewport: { width: 375, height: 812 } });
+  for (const locale of ['en', 'ar'] as const)
+    test(`the medicine list is stacked with every field labelled and nothing scrolling sideways (${locale})`, async ({ page }) => {
+      await mockReconciliation(page, locale);
+      await page.goto('/consult/e-1/medicines');
+      await page.getByRole('table').waitFor();
+      await expectStacked(page, page.getByRole('region', { name: t(locale, 'reconcile.tableLabel') }), ['chart', 'patient', 'other', 'conflict', 'decision'].map(c => t(locale, `reconcile.col.${c}`)));
+    });
+});

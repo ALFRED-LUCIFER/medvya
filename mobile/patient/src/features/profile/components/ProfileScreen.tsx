@@ -11,6 +11,7 @@ type Props = {
 };
 
 // Changing choices, family access and downloads arrive with MDV-P5-037; here they are shown as they stand.
+// Until then the choices note says to ask the clinic; "Change any time" only returns beside a real control (MDV-P5-061).
 export function ProfileScreen(vm: Props) {
   const { t, formatDate } = useI18n();
   const divider = (i: number) => (i > 0 ? styles.divider : undefined);

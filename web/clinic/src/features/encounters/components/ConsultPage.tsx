@@ -52,7 +52,6 @@ export default function ConsultPage(p: Props) {
           <CircleAlert aria-hidden className="size-4 shrink-0" />{t('consult.openPastDay', { date: formatDate(new Date(encounter.startedAt), p.banner.timeZone) })}
         </p>
       )}
-      {!ended && <p className="text-sm text-muted-foreground">{t('consult.leaveNote')}</p>}
       {p.children}
       {/* On the one page, Finish visit sits in the bar beside Sign (the route composes it into the note); the guided steps keep it here. */}
       {!ended && p.view === 'steps' && (

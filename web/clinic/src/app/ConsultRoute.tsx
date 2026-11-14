@@ -59,7 +59,7 @@ function Consult({ encounterId, boardPath, online, canOrder, canReconcile, canSi
     patient: consult.banner && { name: consult.banner.patient.fullName, mrn: consult.banner.patient.mrn, dateOfBirth: consult.banner.patient.dateOfBirth } };
   const ended = consult.banner?.encounter.status === 'Ended';
   const patient = consult.banner && { ...consult.banner.patient, allergies: consult.banner.allergies };
-  const plan = patient && <Plan encounterId={encounterId} ended={ended} online={online} canOrder={canOrder} canReconcile={canReconcile} patient={patient} />;
+  const plan = patient && <Plan encounterId={encounterId} ended={ended} online={online} canOrder={canOrder} canReconcile={canReconcile} />;
   // Vitals, weight and allergies by the doctor (MDV audit P0-2): in the one page's Vitals section, above the note in the guided steps.
   const entry = (titled: boolean) => consult.banner && !ended && !phone
     && <Entry appointmentId={consult.banner.encounter.appointmentId} online={online} onChanged={consult.onChartChanged} titled={titled} />;
@@ -73,13 +73,15 @@ function Consult({ encounterId, boardPath, online, canOrder, canReconcile, canSi
       canConfirmIdentity={canSign && consult.banner?.encounter.leadClinicianId === userId}
       footer={consult.view === 'page' && !draftOnPhone && <ConsultFooter {...note} finish={!ended && !phone && <EndConsultation ending={consult.ending} onEnd={consult.onEnd} />} />}>
       {draftOnPhone ? phoneGate
-        : consult.view === 'page' ? <ConsultStudio {...note} panel={consult.panel} onPanel={consult.onPanel} chart={consult.chart} plan={phone ? null : plan} entry={entry(false)} />
+        : consult.view === 'page' ? <ConsultStudio {...note} panel={consult.panel} onPanel={consult.onPanel} chart={consult.chart} plan={phone ? null : plan} entry={entry(false)}
+          prescription={!phone && patient && canOrder && <Prescription encounterId={encounterId} ended={ended} patient={patient} />} />
         : <>{entry(true)}<NoteEditor {...note} /></>}
       <NoteHistory {...useAddendumController(encounterId, canSign)} timeZone={consult.banner?.timeZone} printPath={`/consult/${encounterId}/note/print`} />
       <NoteTemplateChoice {...useNoteTemplatesController()} />
       {consult.banner && <UnfinishedDialog {...finish} patientName={consult.banner.patient.fullName} />}
       {phone ? canOrder && !draftOnPhone && phoneGate : <>
-        {patient && canOrder && <Prescription encounterId={encounterId} ended={ended} patient={patient} />}
+        {/* The one page holds the prescription after Assessment (MDV-P1-094); the guided steps keep it under the note. */}
+        {patient && canOrder && consult.view !== 'page' && <Prescription encounterId={encounterId} ended={ended} patient={patient} />}
         {consult.banner && canOrder && <Orders encounterId={encounterId} ended={ended} />}
         {consult.banner && canOrder && <Referrals patientId={consult.banner.encounter.patientId} encounterId={encounterId} ended={ended} />}
       </>}
@@ -88,16 +90,15 @@ function Consult({ encounterId, boardPath, online, canOrder, canReconcile, canSi
 }
 
 /**
- * The one page's Plan (MDV-P2-043): each chart medicine's action (the reconciliation), Add medicine into the prescription (whose composer stays
- * under the note), test toggles, advice for the patient, follow-up and the way to a referral. Each part asks the server, which decides.
+ * The one page's Plan (MDV-P2-043): each chart medicine's action (the reconciliation), test toggles, advice for the patient, follow-up and
+ * the way to a referral; medicines are added in the Prescription section after Assessment (MDV-P1-094). Each part asks the server, which decides.
  */
-function Plan({ encounterId, ended, online, canOrder, canReconcile, patient }: {
-  encounterId: string; ended: boolean; online: boolean; canOrder: boolean; canReconcile: boolean; patient: AddMedicinePatient;
+function Plan({ encounterId, ended, online, canOrder, canReconcile }: {
+  encounterId: string; ended: boolean; online: boolean; canOrder: boolean; canReconcile: boolean;
 }) {
   return (
     <div className="flex flex-col gap-5 border-t pt-4">
       {canReconcile && <Medicines encounterId={encounterId} online={online} />}
-      {canOrder && !ended && <AddMedicine encounterId={encounterId} patient={patient} />}
       {canOrder && <Tests encounterId={encounterId} ended={ended} />}
       {canOrder && <Advice encounterId={encounterId} ended={ended} />}
       {canReconcile && <FollowUp encounterId={encounterId} ended={ended} />}
@@ -113,11 +114,6 @@ function Entry({ appointmentId, online, onChanged, titled }: { appointmentId: st
 function Medicines({ encounterId, online }: { encounterId: string; online: boolean }) {
   const rec = useReconciliationController(encounterId);
   return rec.refusal ? null : <MedicineActions {...rec} online={online} reconcilePath={`/consult/${encounterId}/medicines`} />;
-}
-
-function AddMedicine({ encounterId, patient }: { encounterId: string; patient: AddMedicinePatient }) {
-  const add = useAddMedicineController(encounterId);
-  return <AddMedicinePanel {...add} patient={patient} />;
 }
 
 function Tests({ encounterId, ended }: { encounterId: string; ended: boolean }) {

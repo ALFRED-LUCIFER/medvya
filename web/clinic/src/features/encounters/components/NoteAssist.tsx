@@ -11,12 +11,13 @@ export type Assist = {
   onInsertPhrase: (key: string) => void; onInsertVitals: () => void; onInsertSnippet: (noteId: string, sectionId: string) => void;
 };
 /** Each verified reading with the nurse's flag in words and an icon, never colour alone (MDV-1090). */
-export function VitalList({ vitals }: { vitals: Assist['vitals'] }) {
+export function VitalList({ vitals, row = false }: { vitals: Assist['vitals']; row?: boolean }) {
   const { t } = useI18n();
+  // row: the one page's vitals in one line of readings under the section bar (MDV-P1-094); otherwise a list.
   return (
-    <ul className="list-disc ps-5 text-sm">
+    <ul className={row ? 'flex flex-wrap gap-2 text-sm' : 'list-disc ps-5 text-sm'}>
       {vitals.map(v => (
-        <li key={v.line}>{v.line}{v.flag && <>{' '}<strong className="inline-flex items-center gap-1">
+        <li key={v.line} className={row ? `rounded-lg border px-2.5 py-1.5 ${v.flag ? 'border-warning-700 font-bold' : ''}` : undefined}>{v.line}{v.flag && <>{' '}<strong className="inline-flex items-center gap-1">
           {v.flag === 'High' ? <ArrowUp aria-hidden className="size-4" /> : v.flag === 'Low' ? <ArrowDown aria-hidden className="size-4" /> : <TriangleAlert aria-hidden className="size-4" />}
           {t(`noteAssist.flag.${v.flag}`)}</strong></>}</li>))}
     </ul>

@@ -108,7 +108,7 @@ function Results(p: Props) {
       <h2 id="patient-results" ref={heading} tabIndex={-1} className="text-sm font-bold text-muted-foreground focus:outline-none">
         {t(`patients.matchedOn.${r.matchedOn}`, { n: r.total })}
       </h2>
-      <Table label={t('patients.tableLabel')} containerClassName="bg-card">
+      <Table label={t('patients.tableLabel')} stacked containerClassName="bg-card">
         <TableHeader>
           <TableRow>{directoryColumns.map(c => <TableHead key={c} scope="col">{t(`patients.col.${c}`)}</TableHead>)}</TableRow>
         </TableHeader>
@@ -147,13 +147,14 @@ function Row({ row, to }: { row: PatientSummary; to: string }) {
           </span>
         </Link>
       </TableHead>
-      <TableCell>{age}</TableCell>
-      <TableCell>{sex}</TableCell>
+      <TableCell label={t('patients.col.age')}>{age}</TableCell>
+      <TableCell label={t('patients.col.sex')}>{sex}</TableCell>
       {/* The column heads say MRN and Phone; the cells show only the masked ending (audit B-16). */}
-      <TableCell className="font-mono"><bdi dir="ltr">{`··${row.mrnTail}`}</bdi></TableCell>
-      <TableCell className="font-mono"><bdi dir="ltr">{`··${row.mobileTail}`}</bdi></TableCell>
-      <TableCell className="whitespace-nowrap">{row.lastVisitOn ? formatCalendarDate(row.lastVisitOn) : t('patients.row.noVisit')}</TableCell>
-      <TableCell>
+      <TableCell label={t('patients.col.mrn')}><bdi dir="ltr" className="font-mono">{`··${row.mrnTail}`}</bdi></TableCell>
+      <TableCell label={t('patients.col.phone')}><bdi dir="ltr" className="font-mono">{`··${row.mobileTail}`}</bdi></TableCell>
+      <TableCell label={t('patients.col.lastVisit')} className="whitespace-nowrap">{row.lastVisitOn ? formatCalendarDate(row.lastVisitOn) : t('patients.row.noVisit')}</TableCell>
+      {/* Stacked on a phone, the column's name shows only above a mark, never above an empty value. */}
+      <TableCell label={row.duplicate || incomplete ? t('patients.col.status') : undefined}>
         <span className="flex flex-wrap gap-1">
           {row.duplicate && (
             <Tag size="sm" tone={row.duplicate === 'PossibleDuplicate' ? 'warning' : 'neutral'} label={t(`patients.duplicate.${row.duplicate}`)}

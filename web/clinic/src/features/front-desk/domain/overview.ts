@@ -36,12 +36,10 @@ export function delayMinutes(cards: Pick<BoardCard, 'start' | 'state' | 'since'>
 /** The board's "Doctor workload" panel (P-01): per doctor with visits today, how many wait and how late they run. */
 export function workload(cards: BoardCard[], now: number) {
   const doctors = [...new Map(cards.map(c => [c.calendarId, c.calendarName])).entries()];
-  const rows = doctors.map(([id, name]) => {
+  return doctors.map(([id, name]) => {
     const own = cards.filter(c => c.calendarId === id);
     return { calendarId: id, name, waiting: own.filter(c => isWaiting(c.state)).length, delayMinutes: delayMinutes(own, now) };
   });
-  const most = Math.max(1, ...rows.map(r => r.waiting));
-  return rows.map(r => ({ ...r, share: r.waiting / most }));
 }
 
 export const countsInOrder = (counts: Record<BoardColumn, number>) => boardColumns.map(state => ({ state, count: counts[state] ?? 0 }));

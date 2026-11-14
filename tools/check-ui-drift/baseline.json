@@ -1,6 +1,6 @@
 {
   "arbitraryFontSize": {
-    "web/clinic/src/features/front-desk/components/BoardPage.tsx": 7,
+    "web/clinic/src/features/front-desk/components/BoardPage.tsx": 2,
     "web/clinic/src/features/front-desk/components/ClinicOverviewPage.tsx": 1,
     "web/clinic/src/features/notifications/components/NotificationCentre.tsx": 2,
     "web/clinic/src/features/schedule/components/BookingPanel.tsx": 1,
@@ -21,7 +21,6 @@
     "web/clinic/src/features/child-health/components/GrowthCard.tsx": 1,
     "web/clinic/src/features/encounters/components/NoteParts.tsx": 1,
     "web/clinic/src/features/formulary/components/FormularyPanel.tsx": 1,
-    "web/clinic/src/features/front-desk/components/BoardPage.tsx": 1,
     "web/clinic/src/features/nurse-intake/components/AllergiesSection.tsx": 1,
     "web/clinic/src/features/nurse-intake/components/MedicinesSection.tsx": 1,
     "web/clinic/src/features/nurse-intake/components/VitalsForm.tsx": 1,
@@ -61,9 +60,8 @@
     "web/clinic/src/features/encounters/components/NoteEditor.tsx": 1,
     "web/clinic/src/features/encounters/components/NoteHistory.tsx": 1,
     "web/clinic/src/features/encounters/components/NoteTemplateChoice.tsx": 1,
-    "web/clinic/src/features/front-desk/components/BoardPage.tsx": 3,
+    "web/clinic/src/features/front-desk/components/BoardPage.tsx": 2,
     "web/clinic/src/features/front-desk/components/ClinicOverviewPage.tsx": 2,
-    "web/clinic/src/features/front-desk/components/FrontDeskViews.tsx": 1,
     "web/clinic/src/features/nurse-intake/components/AllergiesSection.tsx": 1,
     "web/clinic/src/features/nurse-intake/components/IntakePage.tsx": 2,
     "web/clinic/src/features/nurse-intake/components/MedicinesSection.tsx": 1,

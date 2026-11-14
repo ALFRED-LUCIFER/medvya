@@ -106,6 +106,25 @@ test('a new walk-in is quick-registered and checked in within a minute, then wai
   await expect(checkedIn.getByText('Waiting 12 min')).toBeVisible();
 });
 
+// MDV-P1-095 AC6: the board's new chrome adds no click to a returning walk-in (limit 3). Typing the name and Enter are not clicks.
+test('a returning walk-in is found and checked in in 3 clicks from the board', async ({ page }) => {
+  const calls = await desk(page);
+  await page.route('**/v1/patients/search**', r => r.fulfill({ json: { matchedOn: 'Name', page: 1, pageSize: 20, total: 1,
+    items: [{ id: patientId, initials: 'AN', fullName: 'Arjun Nair (synthetic)', ageYears: 36, ageEstimated: false, sexAtBirth: 'Male', mrnTail: '0777', mobileTail: '0777', status: 'Complete' }] } }));
+  let clicks = 0;
+  await page.goto('/front-desk');
+  await page.getByRole('link', { name: 'Walk-in' }).click(); clicks++;
+  const search = page.getByRole('searchbox', { name: 'Name, MRN, phone or ID' });
+  await search.fill('Nair');
+  await search.press('Enter');
+  await page.getByRole('button', { name: /^Arjun Nair \(synthetic\)/ }).click(); clicks++;
+  await expect(page.getByText('Patient: Arjun Nair (synthetic) · MRN 000777')).toBeVisible();
+  await page.getByRole('button', { name: 'Check in now' }).click(); clicks++;
+  await expect(page.getByRole('heading', { name: 'Arjun Nair (synthetic) is checked in' })).toBeVisible();
+  expect(calls.checkIns).toHaveLength(1);
+  expect(clicks).toBeLessThanOrEqual(3);
+});
+
 test('with no free slot today the desk chooses a doctor and the patient is queued, not double-booked', async ({ page }) => {
   const calls = await desk(page, {
     walkInAnswer: b => b.calendarId === null

@@ -38,9 +38,11 @@ export default function GlobalSearch(p: Props) {
             <Search aria-hidden className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input id={inlineInputId} type="search" role="combobox" aria-expanded={shown && p.rows.length > 0} aria-controls="gs-list" aria-autocomplete="list" autoComplete="off"
               aria-activedescendant={shown && p.active >= 0 ? `gs-row-${p.active}` : undefined} aria-label={t('patients.search.open')} aria-keyshortcuts="Control+K Meta+K"
-              aria-describedby="gs-inline-status" placeholder={t('patients.search.open')} className="ps-9" value={p.panel ? p.text : ''}
+              aria-describedby="gs-inline-status" placeholder={t('patients.search.open')} className="ps-9 lg:pe-28" value={p.panel ? p.text : ''}
               // Typing opens the results too: after a chart opens, focus can still be in the box without a new focus event.
               onFocus={() => p.onPanel(true)} onChange={e => { p.onPanel(true); p.onText(e.target.value); }} onKeyDown={p.onKeyDown} />
+            {/* Key names read left to right in every language; without it Arabic reorders "⌘K / Ctrl K". Hidden once typing starts (the clear button sits there). */}
+            {!p.text && <kbd dir="ltr" aria-hidden className="pointer-events-none absolute end-3 top-1/2 hidden -translate-y-1/2 rounded border px-1.5 text-xs font-semibold text-muted-foreground lg:inline">{t('globalSearch.shortcut')}</kbd>}
             {/* Announced while typing even before the results open; the visible status sits in the results. */}
             <p id="gs-inline-status" role="status" className="sr-only">{p.panel ? statusText(t, p) : ''}</p>
           </div>

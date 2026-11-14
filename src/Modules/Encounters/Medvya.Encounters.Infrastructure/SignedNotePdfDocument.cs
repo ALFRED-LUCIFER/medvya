@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
+using Medvya.BuildingBlocks.Domain;
 using Medvya.BuildingBlocks.Infrastructure;
 using Medvya.Encounters.Application;
 using Medvya.Encounters.Domain;
@@ -10,7 +11,8 @@ namespace Medvya.Encounters.Infrastructure;
 /// <summary>
 /// The signed note as an A4 PDF (MDV-P2-013, E-06): the patient's name, MRN and date of birth at the top of every page, version 1 with its signer
 /// block, what was recorded at signing (MDV-P2-049: vitals, allergies, diagnoses, medicines, as the print view shows them), then each addendum in
-/// order with its reason and signer, and "Corrections are added as signed addenda" at the foot of every page.
+/// order with its reason and signer, and "Corrections are added as signed addenda" at the foot of every page. The signer's uploaded signature image
+/// (Tenancy settings, when there is one) sits under version 1's signed-by line; each medicine carries its prescription's number (MDV-P2-049 Q9).
 /// Copy comes from the shared English catalogue (packages/i18n/messages/en.json); the server never invents wording.
 /// Written by <see cref="PlainPdf"/>: Hindi, Tamil and Arabic print shaped; text no embedded font has is refused with <see cref="NotePdfUnsupportedTextException"/>.
 /// </summary>
@@ -27,7 +29,7 @@ public static class SignedNotePdfDocument
     public sealed record Version(SignedNoteVersion Row, string SignerName, string? SignerLicence = null);
 
     /// <exception cref="NotePdfUnsupportedTextException"/>
-    public static byte[] Render(PatientSummary patient, string facilityName, TimeZoneInfo zone, NoteTemplate template, IReadOnlyList<Version> versions)
+    public static byte[] Render(PatientSummary patient, string facilityName, TimeZoneInfo zone, NoteTemplate template, IReadOnlyList<Version> versions, byte[]? signature = null)
     {
         var original = versions[0];
         string When(DateTimeOffset at) => Text("notePdf.when", ("date", TimeZoneInfo.ConvertTime(at, zone).ToString("dd MMM yyyy, HH:mm", CultureInfo.InvariantCulture)), ("zone", zone.Id));
@@ -58,7 +60,8 @@ public static class SignedNotePdfDocument
         ];
         try
         {
-            return PlainPdf.Write(header, body, (page, pages) => Text("notePdf.footer", ("page", page.ToString(CultureInfo.InvariantCulture)), ("pages", pages.ToString(CultureInfo.InvariantCulture))));
+            return PlainPdf.Write(header, body, (page, pages) => Text("notePdf.footer", ("page", page.ToString(CultureInfo.InvariantCulture)), ("pages", pages.ToString(CultureInfo.InvariantCulture))),
+                signature: signature, signatureAfter: 0); // body line 0 is version 1's signed-by line
         }
         catch (PdfUnsupportedTextException)
         {
@@ -88,12 +91,13 @@ public static class SignedNotePdfDocument
         string Allergy(AllergyAtSigning a) => Text(a.Reaction is null ? "notePrint.allergy" : "notePrint.allergyReaction", ("substance", a.Substance), ("reaction", a.Reaction ?? ""),
             ("status", Text($"patient360.allergyStatus.{a.Status}")), ("source", Text($"timeline.source.{a.Source}")));
         string Diagnosis(DiagnosisAtSigning d) => Text("notePrint.diagnosis", ("description", d.Description), ("code", d.Icd10Code ?? Text("problems.uncoded")),
-            ("verification", Text($"problems.verification.{d.Verification}")), ("source", Text($"timeline.source.{d.Source}")));
-        string Medicine(MedicineAtSigning m) => Text("notePrint.medicine", ("medicine", m.Dose is null ? m.Name : $"{m.Name} {m.Dose}"));
+            ("status", Text($"problems.status.{d.Status}")), ("verification", Text($"problems.verification.{d.Verification}")), ("source", Text($"timeline.source.{d.Source}")));
+        string Medicine(MedicineAtSigning m) => Text("notePrint.medicine", ("medicine", m.Dose is null ? m.Name : $"{m.Name} {m.Dose}"), ("number", RxNumber.Of(m.PrescriptionId)));
         return [
             (Text("notePrint.atSigning"), true),
             (Text("noteAssist.vitals.title"), true),
             .. r.Vitals.Count == 0 ? [(Text("notePrint.vitalsEmpty"), false)] : r.Vitals.Select(v => (Vital(v), false)),
+            .. r.Vitals.Any(v => v.Code == ObservationCode.Weight) ? Array.Empty<(string, bool)>() : [(Text("notePrint.weightNotRecorded"), false)], // Q9: weight is always on the print, said when not taken
             (Text("patient360.allergies"), true),
             .. r.Allergies.Count > 0 ? r.Allergies.Select(a => (Allergy(a), false)) : [(Text(r.AllergiesRecorded ? "banner.noAllergies" : "banner.allergiesNotRecorded"), false)],
             (Text("problems.title"), true),

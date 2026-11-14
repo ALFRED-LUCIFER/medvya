@@ -166,7 +166,8 @@ public sealed record MedicineAtSigning(
 /// <summary>
 /// SIGNED NOTE PDF (MDV-P2-013): every PDF of a signed note the server rendered, byte for byte with its SHA-256, in an append-only ledger table, so
 /// what was handed out can be shown later. <see cref="VersionNo"/> is the newest version it shows.
-/// shortcut: the bytes are kept in PostgreSQL (a text-only PDF is a few kilobytes); move them to Blob when the PDF carries images (logo, signature).
+/// shortcut: the bytes are kept in PostgreSQL; with the signer's signature image (at most 512 KB, MDV-P2-049 Q9) a render can reach about half a megabyte.
+/// Move them to Blob, as the prescription PDF does, before a clinic renders notes in volume (more than a few hundred a day).
 /// </summary>
 public sealed class SignedNotePdf
 {

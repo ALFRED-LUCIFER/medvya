@@ -25,6 +25,16 @@ describe('AllergyBlock (MDV-P1-081)', () => {
       'Allergy: Penicillin (rash)', 'Allergy: Sulfonamides', 'Allergy: Aspirin (wheeze)', 'Allergy: Latex', 'Allergy: Peanut (swelling)']);
   });
 
+  it('lists the folded allergies on keyboard focus of the count (question 3)', async () => {
+    render(<AllergyBlock allergy={five} />);
+    fireEvent.focus(screen.getByRole('button', { name: '+3 more' }));
+    const tip = await screen.findByRole('tooltip');
+    expect(text(tip)).toContain('Allergy: Aspirin (wheeze)');
+    expect(text(tip)).toContain('Allergy: Latex');
+    expect(text(tip)).toContain('Allergy: Peanut (swelling)');
+    expect(text(tip)).not.toContain('Penicillin');
+  });
+
   it('shows two or fewer allergies with no count', () => {
     render(<AllergyBlock allergy={{ state: 'recorded', allergies: [{ substance: 'Penicillin' }, { substance: 'Latex' }] }} />);
     expect(screen.queryByRole('button')).toBeNull();

@@ -407,7 +407,7 @@ const record = {
     { code: 'BloodPressureSystolic', value: 150, unit: 'mmHg', takenAt: at, source: 'ClinicianVerified', recordedByName: null, flag: 'High' }],
   allergies: { state: 'Listed' as const, allergies: [{ substance: 'Penicillin', reaction: 'Rash', status: 'Confirmed', source: 'ClinicianVerified' }] },
   diagnoses: [{ icd10Code: 'E11.9', description: 'Type 2 diabetes (synthetic)', verification: 'Verified', onsetOn: null, source: 'ClinicianVerified', status: 'Active' }],
-  medicines: [{ name: 'Metformin', dose: '500 mg', prescriptionId: 'rx-1' }],
+  medicines: [{ name: 'Metformin', dose: '500 mg', prescriptionId: 'rx-1', number: 'RX-1A2B3C4D' }],
 };
 const withAddendum = { ...signedSeed, facilityName: 'Iyer Family Clinic · Adyar', atSigning: record,
   signature: { ...signedSeed.signature, signerLicence: 'Tamil Nadu Medical Council 84213' },
@@ -433,8 +433,10 @@ test('print view: the original then each addendum in order, with identifiers; th
     'Pulse 72 /min (Kavya Nair (synthetic), nurse intake, verified 19 Oct 2026 10:05)',
     'Blood pressure, systolic 150 mmHg (nurse intake, verified 19 Oct 2026 10:05) · Flagged high by the nurse']);
   await expect(kept.getByRole('region', { name: 'Allergies' })).toHaveText('AllergiesPenicillin (Rash) · Verified · Clinician verified');
-  await expect(kept.getByRole('region', { name: 'Problems and diagnoses' }).getByRole('listitem')).toContainText(/Type 2 diabetes \(synthetic\) · \u2066E11\.9\u2069 · Verified · Clinician verified/);
-  await expect(kept.getByRole('region', { name: 'Medicines' })).toContainText('Metformin 500 mg · prescribed at this visit');
+  await expect(kept.getByRole('region', { name: 'Problems and diagnoses' }).getByRole('listitem')).toContainText(/Type 2 diabetes \(synthetic\) · \u2066E11\.9\u2069 · Active · Verified · Clinician verified/);
+  await expect(kept.getByRole('region', { name: 'Medicines' })).toContainText(/Metformin 500 mg · prescribed at this visit · Rx \u2066RX-1A2B3C4D\u2069/);
+  // Q9 (founder, 14 Nov): no weight taken at this visit is said in words.
+  await expect(kept.getByRole('region', { name: 'Verified vitals for this visit' })).toContainText('Weight: not recorded at this visit.');
   const versions = article.getByRole('region', { name: 'Version history' });
   await expect(versions.getByRole('listitem')).toHaveCount(2);
   await expect(versions.getByRole('listitem').first()).toContainText(`signed by ${signer}`); // the same name as the banner and the sign button, not the account's

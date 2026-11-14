@@ -293,8 +293,8 @@ public sealed class AuthorisedPrescription
         return Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(advice is null ? json : [.. json, .. System.Text.Encoding.UTF8.GetBytes("\nadvice:" + advice)]));
     }
 
-    /// <summary>The number printed on the paper ("RX-" and eight letters of the id's random part): a reference to read out, not a credential.</summary>
-    public string Number() => "RX-" + Id.ToString("N")[^8..].ToUpperInvariant();
+    /// <summary>The number printed on the paper (see <see cref="RxNumber"/>).</summary>
+    public string Number() => RxNumber.Of(Id);
 }
 
 /// <summary>

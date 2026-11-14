@@ -63,7 +63,7 @@ State: Azure dev runs **v0.0.12** (b6a16e3). Merged after it, not deployed: #915
 3. ~~**#252** back to the held slot with the new patient chosen after registering them~~: done (feat/MDV-P1-021-return-to-held-slot). #252 keeps only the p95 < 300 ms scenario (MDV-P1-037).
 4. **#289** P1-041 pilot metrics (the R1 exit gate needs it), then **#256** no-show metric and reschedule history in the appointment panel.
 5. **#279** a "visits need rebooking" staff notification after leave or offboarding.
-6. **#283** tablet desk: 200% zoom and keyboard pass, drawer scrim and Escape to close.
+6. ~~**#283** tablet desk: 200% zoom and keyboard pass, drawer scrim and Escape to close~~: done (#929, #936); #283 closed 15 Nov, proven by `tests/e2e/tablet.spec.ts`. The real-tablet run is #1222; WebKit is a recorded shortcut in that spec.
 7. **#280** access log: the read-volume alert.
 8. **#284 / #874** schedule first-render headroom over slow 4G (CI measures about 2460 ms against 2500 ms): the shared chunk is mostly `zod` and `tailwind-merge`.
 9. **#259** recurring leftovers (weekday patterns, move one occurrence, one-transaction series) and **#262** waitlist: MUST in the plan but not needed for the first pilot week; confirm with the owner.

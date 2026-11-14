@@ -27,7 +27,15 @@ type Note = { templateKey: string; sections: Record<string, string>; version: nu
   /** MDV-P2-042: the template the server suggests for a note with nothing saved. */
   suggestedTemplateKey?: string | null;
   /** MDV-P1-104: where the chief complaint came from, as the server decides it. */
-  chiefComplaintSource?: ComplaintSource | null };
+  chiefComplaintSource?: ComplaintSource | null;
+  /** MDV-P2-049: the visit record kept with the signature, and the encounter's facility (signed notes). */
+  atSigning?: NoteRecord | null; facilityName?: string | null };
+type NoteRecord = {
+  vitals: { code: string; value: number; unit: string; takenAt: string; source: string; recordedByName: string | null; flag: string | null }[];
+  allergies: { state: 'NotRecorded' | 'NoKnownAllergies' | 'Listed'; allergies: { substance: string; reaction: string | null; status: string; source: string }[] };
+  diagnoses: { icd10Code: string | null; description: string; verification: string; onsetOn: string | null; source: string; status: string }[];
+  medicines: { name: string; dose: string | null; prescriptionId: string }[];
+};
 type ComplaintSource = { source: 'NurseIntake' | 'EditedByDoctor'; byName: string | null; at: string | null };
 // The doctor profile's name, which the server uses for the signature, the addenda and the sign button; the session's display name differs on purpose.
 const signer = 'Dr Asha Raman (synthetic)';
@@ -55,6 +63,8 @@ export type NoteMock = {
   noKnownAllergies: boolean;
   /** MDV-P1-091: when the doctor pressed "Confirmed with the patient" (the encounter's stored confirmation); confirmed unless a spec clears it. */
   identityConfirmedAt: string | null; identityConfirms: number;
+  /** MDV-P2-049: what a sign answers as the record at signing; null: built from this mock's vitals, allergy answer and problems (the server's rule is NotePrintRecordTests). */
+  atSigning: NoteRecord | null;
 };
 
 /** The encounter as the server sends it in the banner, with the stored identity confirmation of the mock (MDV-P1-091). */
@@ -64,7 +74,7 @@ export const encounterOf = (mock: Pick<NoteMock, 'identityConfirmedAt'> | null) 
 });
 
 export async function mockNote(page: Page, seed: Partial<Note> = {}): Promise<NoteMock> {
-  const mock: NoteMock = { note: { templateKey: 'general-opd', sections: {}, version: 0, status: 'Draft', signAsName: signer, recordingConsent: null, undecidedAi: [], ...seed }, puts: [], chosen: [], next: null, saveDelayMs: 0, signs: [], reauths: [], reauthed: false, signNext: null, reconciliation: { confirmedAt: null, total: 0 }, addendumPosts: [], pdfs: 0, pdfNext: null, vitals: [], previous: [], chiefComplaint: null, noKnownAllergies: false, identityConfirmedAt: '2026-10-19T04:36:00Z', identityConfirms: 0,
+  const mock: NoteMock = { note: { templateKey: 'general-opd', sections: {}, version: 0, status: 'Draft', signAsName: signer, recordingConsent: null, undecidedAi: [], ...seed }, puts: [], chosen: [], next: null, saveDelayMs: 0, signs: [], reauths: [], reauthed: false, signNext: null, reconciliation: { confirmedAt: null, total: 0 }, addendumPosts: [], pdfs: 0, pdfNext: null, vitals: [], previous: [], chiefComplaint: null, noKnownAllergies: false, identityConfirmedAt: '2026-10-19T04:36:00Z', identityConfirms: 0, atSigning: null,
     problems: [{ id: 'pr-1', code: 'E11.9', description: 'Type 2 diabetes (synthetic)', verification: 'Verified', status: 'Active', addedHere: false, confirmed: true }] };
   await page.route('**/v1/encounters/e-1/medicines/reconciliation', r => r.fulfill({ json: { encounterId: 'e-1', patientId: 'p-a1', rows: [], decided: 0, disagree: 0, ...mock.reconciliation } }));
   await page.route('**/v1/encounters/e-1/problems', r => r.fulfill({ json: { encounterId: 'e-1', patientId: 'p-a1', rows: mock.problems, locked: false } }));
@@ -107,7 +117,10 @@ export async function mockNote(page: Page, seed: Partial<Note> = {}): Promise<No
     if (next === 'blank') return problem(r, 400, { errors: { 'sections.plan': ['required'], 'sections.chiefComplaint': ['required'] } });
     if (next === 'unreviewed') return problem(r, 400, { errors: { undecidedAi: ['undecided'] } });
     mock.note = { ...mock.note, status: 'Signed', version: mock.note.version + 1,
-      signature: { versionNo: 1, signedBy: 'u-rao', signedAt: '2026-10-19T04:40:00Z', contentHash: 'a'.repeat(64), signerName: signer, signerLicence: 'Tamil Nadu Medical Council 84213' } };
+      signature: { versionNo: 1, signedBy: 'u-rao', signedAt: '2026-10-19T04:40:00Z', contentHash: 'a'.repeat(64), signerName: signer, signerLicence: 'Tamil Nadu Medical Council 84213' },
+      facilityName: 'Iyer Family Clinic · Adyar',
+      atSigning: mock.atSigning ?? { vitals: mock.vitals.map(v => ({ flag: null, ...v })), allergies: { state: mock.noKnownAllergies ? 'NoKnownAllergies' : 'NotRecorded', allergies: [] },
+        diagnoses: mock.problems.map(p => ({ icd10Code: p.code, description: p.description, verification: p.verification, onsetOn: null, source: 'ClinicianVerified', status: p.status })), medicines: [] } };
     return r.fulfill({ json: view() });
   });
   await page.route('**/v1/encounters/e-1/note/addenda', r => {

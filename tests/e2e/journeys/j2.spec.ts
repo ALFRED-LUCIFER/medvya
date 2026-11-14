@@ -119,6 +119,10 @@ journey('J2', {
     await mockChart(page);
     const mock = await mockNote(page, { version: 1, recordingConsent: 'Declined', sections: { chiefComplaint: 'Review of sugars', assessment: 'Type 2 diabetes', plan: 'Continue metformin' } });
     mock.reauthed = true;
+    // MDV-P2-049: what the server keeps with the signature (NotePrintRecordTests on PostgreSQL): the nurse's vitals, the allergy, the coded diagnosis.
+    mock.atSigning = { vitals: [{ code: 'Pulse', value: 76, unit: '/min', takenAt: at, source: 'ClinicianVerified', recordedByName: 'Kavya Nair (synthetic)', flag: null }],
+      allergies: { state: 'Listed', allergies: [penicillin] }, medicines: [],
+      diagnoses: [{ icd10Code: 'E11.9', description: 'Type 2 diabetes (synthetic)', verification: 'Verified', onsetOn: null, source: 'ClinicianVerified', status: 'Active' }] };
     await page.goto('/consult/e-1');
     const note = page.getByRole('region', { name: 'Consultation note' });
     await note.getByRole('button', { name: 'Sign note' }).click();
@@ -127,6 +131,13 @@ journey('J2', {
     // Read-only content only (MDV audit UX-11): no section left "To do", the consent in words instead of radios.
     await expect(note.getByRole('navigation', { name: 'Note sections' })).not.toContainText('To do');
     await expect(note.getByRole('radio')).toHaveCount(0);
+    // E-06 print (MDV-P2-049): one h1 naming the clinic; vitals, the allergy and the diagnosis as at signing, each with its source.
+    await page.getByRole('link', { name: 'Print view and PDF' }).click();
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(['Iyer Family Clinic · Adyar · Signed consultation note']);
+    const kept = page.getByRole('region', { name: 'Recorded at signing' });
+    await expect(kept).toContainText('Pulse 76 /min (Kavya Nair (synthetic), nurse intake, verified 19 Oct 2026 10:00)');
+    await expect(kept).toContainText('Penicillin (Rash) · Patient reported · Patient reported');
+    await expect(kept).toContainText('Type 2 diabetes (synthetic)');
   },
   // E-05: the prescription and the orders are approved separately, each by its own action and neither by signing the note (MDV-P2-017, MDV-P2-018).
   // Authorising asks for the step-up first; the gates themselves are proven on PostgreSQL in RxAuthorisationTests.

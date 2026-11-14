@@ -52,17 +52,41 @@ public sealed class ConsultNoteService(
     {
         if (await db.Encounters.AsNoTracking().SingleOrDefaultAsync(e => e.Id == encounterId, cancellationToken) is not { } encounter) return null;
         await clinical.RequireAsync(encounter.PatientId, encounter.FacilityId, Capability.Patient360Chart, Leads, cancellationToken);
-        // Verified means: a nurse's intake reading of this visit (the appointment), checked by a clinician, and a flagged one kept on purpose.
-        // Labs, imports and other visits' readings are not offered. Remove a condition and ConsultNotePrefillTests fails.
-        var rows = await db.Observations.AsNoTracking().Where(o => o.AppointmentId == encounter.AppointmentId && o.PatientId == encounter.PatientId
-                && o.Source == ChartSource.ClinicianVerified && o.VerifiedBy != null && (o.Flag == null || o.FlagKept))
-            .GroupBy(o => o.Code).Select(g => g.OrderByDescending(o => o.TakenAt).ThenByDescending(o => o.Id).First()).ToListAsync(cancellationToken);
+        var rows = await VerifiedReadingsAsync(encounter, cancellationToken);
         // MDV-P1-104: the chief complaint the nurse saved at this visit's intake. No intake (nurse intake off, or not done): none, never guessed.
         var intake = await IntakeComplaintAsync(encounter, cancellationToken);
         var names = await staff.DisplayNamesAsync([.. rows.Select(o => o.RecordedBy ?? o.VerifiedBy!.Value).Concat(intake?.ChiefComplaintBy is { } nurse ? [nurse] : []).Distinct()], cancellationToken);
         await audit.WriteAsync(Event(PrefillAction, encounter, null), cancellationToken);
         return new([.. rows.OrderBy(o => o.Code).Select(o => new VerifiedVital(o.Code, o.ValueHundredths / 100m, Observation.Units(o.Code), o.TakenAt, o.Source, names.GetValueOrDefault(o.RecordedBy ?? o.VerifiedBy!.Value), o.Flag))],
             intake is { ChiefComplaint: { } text } ? new IntakeComplaint(text, intake.ChiefComplaintBy is { } by ? names.GetValueOrDefault(by) : null, intake.ChiefComplaintAt) : null);
+    }
+
+    /// <summary>
+    /// Verified means: a nurse's intake reading of this visit (the appointment), checked by a clinician, and a flagged one kept on purpose; the latest
+    /// of each kind. Labs, imports and other visits' readings are not offered. Remove a condition and ConsultNotePrefillTests fails.
+    /// </summary>
+    Task<List<Observation>> VerifiedReadingsAsync(Encounter encounter, CancellationToken cancellationToken) =>
+        db.Observations.AsNoTracking().Where(o => o.AppointmentId == encounter.AppointmentId && o.PatientId == encounter.PatientId
+                && o.Source == ChartSource.ClinicianVerified && o.VerifiedBy != null && (o.Flag == null || o.FlagKept))
+            .GroupBy(o => o.Code).Select(g => g.OrderByDescending(o => o.TakenAt).ThenByDescending(o => o.Id).First()).ToListAsync(cancellationToken);
+
+    /// <summary>
+    /// MDV-P2-049: the visit record as it is at this moment, kept with the signature. Same readings as the prefill; the chart's allergies
+    /// (<see cref="ChartReads.BannerOf"/>'s rule); problems of this encounter and the lines of its current authorised prescription (a replaced or cancelled version's lines are stopped). Names are the staff's names now.
+    /// </summary>
+    async Task<NoteAtSigning> RecordAsync(Encounter encounter, List<Allergy> allergies, CancellationToken cancellationToken)
+    {
+        var readings = await VerifiedReadingsAsync(encounter, cancellationToken);
+        var names = await staff.DisplayNamesAsync([.. readings.Select(o => o.RecordedBy ?? o.VerifiedBy!.Value).Distinct()], cancellationToken);
+        var problems = await db.Problems.AsNoTracking().Where(p => p.EncounterId == encounter.Id).OrderBy(p => p.RecordedAt).ThenBy(p => p.Id).ToListAsync(cancellationToken);
+        var medicines = await db.MedicationStatements.AsNoTracking().Where(m => m.EncounterId == encounter.Id && m.PrescriptionId != null && m.State == MedicationState.Active)
+            .OrderBy(m => m.RecordedAt).ThenBy(m => m.Id).ToListAsync(cancellationToken);
+        return new(
+            [.. readings.OrderBy(o => o.Code).Select(o => new VitalAtSigning(o.Code, o.ValueHundredths, o.TakenAt, o.Source, names.GetValueOrDefault(o.RecordedBy ?? o.VerifiedBy!.Value), o.Flag))],
+            allergies.Count > 0,
+            [.. allergies.Where(a => a.Kind == AllergyKind.Substance).OrderBy(a => a.RecordedAt).Select(a => new AllergyAtSigning(a.Substance!, a.Reaction, a.Status, a.Source))],
+            [.. problems.Select(p => new DiagnosisAtSigning(p.Icd10Code, p.Description, p.Verification, p.Status, p.OnsetOn, p.Source))],
+            [.. medicines.Select(m => new MedicineAtSigning(m.Name, m.Dose, m.PrescriptionId!.Value))]);
     }
 
     Task<Intake?> IntakeComplaintAsync(Encounter encounter, CancellationToken cancellationToken) =>
@@ -99,16 +123,18 @@ public sealed class ConsultNoteService(
         // MDV-P2-044: the checklist's server gates (no recording consent until recording exists, MDV-AUDIT-1092), so the locked Sign button is not the only control. Remove one and SignNoteTests fails.
         if (note?.UndecidedAi.Length > 0) blanks.Add(("undecidedAi", "undecided"));
         // Allergies not recorded (no allergy and no "no known allergies" on the chart) is never signed past (MDV audit P0-2).
-        if (!await db.Allergies.AnyAsync(a => a.PatientId == encounter.PatientId, cancellationToken)) blanks.Add(("allergies", "not_recorded"));
+        var allergies = await db.Allergies.AsNoTracking().Where(a => a.PatientId == encounter.PatientId).ToListAsync(cancellationToken);
+        if (allergies.Count == 0) blanks.Add(("allergies", "not_recorded"));
         if (blanks.Count > 0) throw new NoteValidationException(blanks);
+        var atSigning = await RecordAsync(encounter, allergies, cancellationToken);
 
         var signed = new SignedNoteVersion
         {
             Id = Guid.CreateVersion7(), TenantId = TenantId, EncounterId = encounterId, NoteId = note!.Id, VersionNo = 1, TemplateKey = note.TemplateKey,
             TemplateVersion = note.TemplateVersion, Manual = note.Manual, Sections = note.Sections, SignedBy = me, SignedAt = now,
-            ChiefComplaintSource = note.ChiefComplaintSource, ChiefComplaintBy = note.ChiefComplaintBy, ChiefComplaintAt = note.ChiefComplaintAt,
+            ChiefComplaintSource = note.ChiefComplaintSource, ChiefComplaintBy = note.ChiefComplaintBy, ChiefComplaintAt = note.ChiefComplaintAt, AtSigning = atSigning,
             ContentHash = SignedNoteVersion.Hash(note.TemplateKey, note.TemplateVersion, note.Sections,
-                complaintSource: note.ChiefComplaintSource is { } source ? (source, note.ChiefComplaintBy, note.ChiefComplaintAt) : null),
+                complaintSource: note.ChiefComplaintSource is { } source ? (source, note.ChiefComplaintBy, note.ChiefComplaintAt) : null, atSigning: atSigning),
         };
         (note.Status, note.Version, note.UpdatedBy, note.UpdatedAt) = (NoteStatus.Signed, note.Version + 1, me, now);
         db.SignedNoteVersions.Add(signed);
@@ -189,7 +215,7 @@ public sealed class ConsultNoteService(
         var signers = await SignersAsync(encounter.FacilityId, [.. versions.Select(v => v.SignedBy).Distinct()], cancellationToken);
         var facility = await facilities.FindAsync(encounter.FacilityId, cancellationToken) ?? throw new InvalidOperationException("The encounter's facility was not found.");
         var content = SignedNotePdfDocument.Render(patient, facility.Name, TimeZoneInfo.FindSystemTimeZoneById(facility.TimeZone),
-            NoteTemplates.Find(note.TemplateKey, note.TemplateVersion)!, [.. versions.Select(v => new SignedNotePdfDocument.Version(v, signers[v.SignedBy].Name))]);
+            NoteTemplates.Find(note.TemplateKey, note.TemplateVersion)!, [.. versions.Select(v => new SignedNotePdfDocument.Version(v, signers[v.SignedBy].Name, signers[v.SignedBy].Licence))]);
         var pdf = new SignedNotePdf
         {
             Id = Guid.CreateVersion7(), TenantId = TenantId, NoteId = note.Id, VersionNo = versions[^1].VersionNo, Content = content,
@@ -256,7 +282,13 @@ public sealed class ConsultNoteService(
         // Signed: the source as signed (version 1), never the draft's.
         var first = versions.FirstOrDefault(v => v.VersionNo == 1);
         return View(note, versions, await SignersAsync(facilityId, [.. versions.Select(v => v.SignedBy).Distinct()], cancellationToken))
-            with { ChiefComplaintSource = await SourceAsync(first?.ChiefComplaintSource, first?.ChiefComplaintBy, first?.ChiefComplaintAt, cancellationToken) };
+            with
+            {
+                ChiefComplaintSource = await SourceAsync(first?.ChiefComplaintSource, first?.ChiefComplaintBy, first?.ChiefComplaintAt, cancellationToken),
+                // MDV-P2-049: the record as kept at signing, never today's chart. Read it live here and NotePrintRecordTests fails.
+                AtSigning = first?.AtSigning is { } record ? RecordView(record) : null,
+                FacilityName = (await facilities.FindAsync(facilityId, cancellationToken))?.Name,
+            };
     }
 
     async Task<ComplaintSourceView?> SourceAsync(ComplaintSource? source, Guid? by, DateTimeOffset? at, CancellationToken cancellationToken) =>
@@ -349,6 +381,13 @@ public sealed class ConsultNoteService(
         var template = NoteTemplates.Latest(suggested ?? NoteTemplates.Default)!;
         return new(encounterId, template.Key, template.Version, NoteStatus.Draft, false, new Dictionary<string, string>(), 0, null, null, [], null, null, [], suggested);
     }
+
+    static NoteRecord RecordView(NoteAtSigning r) => new(
+        [.. r.Vitals.Select(v => new VerifiedVital(v.Code, v.ValueHundredths / 100m, Observation.Units(v.Code), v.TakenAt, v.Source, v.RecordedByName, v.Flag))],
+        new(r.Allergies.Count > 0 ? AllergyState.Listed : r.AllergiesRecorded ? AllergyState.NoKnownAllergies : AllergyState.NotRecorded,
+            [.. r.Allergies.Select(a => new AllergyView(a.Substance, a.Reaction, a.Status, a.Source))]),
+        [.. r.Diagnoses.Select(d => new ProblemView(d.Icd10Code, d.Description, d.Verification, d.OnsetOn, d.Source, d.Status))],
+        [.. r.Medicines.Select(m => new SignedMedicine(m.Name, m.Dose, m.PrescriptionId))]);
 
     /// <summary>Version 1 is the signature; every later version is an addendum, numbered with the version it follows.</summary>
     static NoteView View(ConsultNote n, IReadOnlyList<SignedNoteVersion>? versions = null, IReadOnlyDictionary<Guid, (string Name, string? Licence)>? signers = null)

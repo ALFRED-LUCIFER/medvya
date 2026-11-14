@@ -126,7 +126,7 @@ public sealed class SignNoteTests(PostgresFixture sql) : IClassFixture<PostgresF
         await using var db = sql.Encounters(h.Tenant);
         var row = await db.SignedNoteVersions.SingleAsync();
         Assert.Equal(("general-opd", 1, h.Doctor, Text), (row.TemplateKey, row.TemplateVersion, row.SignedBy, row.Sections["chiefComplaint"]));
-        Assert.Equal(SignedNoteVersion.Hash("general-opd", 1, row.Sections), row.ContentHash); // the stored hash verifies against the stored content
+        Assert.Equal(SignedNoteVersion.Hash("general-opd", 1, row.Sections, atSigning: row.AtSigning), row.ContentHash); // the stored hash verifies against the stored content
         Assert.Equal(row.ContentHash, view.GetProperty("signature").GetProperty("contentHash").GetString());
         Assert.Null(await BrokenChainRowAsync()); // the ledger chain is intact
 

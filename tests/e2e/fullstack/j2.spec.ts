@@ -507,6 +507,13 @@ journey('J2', {
     await page.reload();
     await expect(note).toContainText('SIGNED v1 · read-only');
     await expectNoAxeViolations(page);
+    // MDV-P2-049: the print holds the allergy the nurse recorded at step 9, as kept with the signature, under one h1 naming the clinic.
+    await page.getByRole('link', { name: 'Print view and PDF' }).click();
+    await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Signed consultation note');
+    await expect(page.getByRole('region', { name: 'Recorded at signing' }).getByRole('region', { name: 'Allergies' })).toContainText('Penicillin');
+    await expectNoAxeViolations(page);
+    await page.goto(studioPath);
     await page.getByRole('button', { name: 'End consultation' }).click(); // leaves Dr. Rao no open consultation for the later journeys
     await expect(page.getByRole('status').filter({ hasText: 'Consultation ended' })).toBeVisible();
     expect(watch.leaks(['Meera', 'Iyer', '1972-03-12', 'DQ-10-4482', 'sugars'])).toEqual([]);

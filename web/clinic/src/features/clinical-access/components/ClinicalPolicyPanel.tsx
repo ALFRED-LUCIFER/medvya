@@ -1,7 +1,7 @@
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { useI18n } from '@medvya/i18n';
-import { Button } from '@medvya/ui';
+import { Button, ChoiceRow } from '@medvya/ui';
 import { fieldError } from '../../settings/components/fieldStyles';
 import { Section } from '../../settings/components/Section';
 import { clinicalPolicies, type ClinicalPolicyForm } from '../domain/clinicalAccess';
@@ -22,13 +22,12 @@ export default function ClinicalPolicyPanel(p: Props) {
         <fieldset className="flex flex-col gap-2">
           <legend className="sr-only">{t('clinicalAccess.policy.title')}</legend>
           {clinicalPolicies.map(policy => (
-            <label key={policy} className="flex min-h-11 items-start gap-3 rounded-lg border p-3">
-              <input type="radio" value={policy} {...p.form.register('policy')} className="mt-1 size-4 accent-brand-700" aria-describedby={`policy-${policy}`} />
+            <ChoiceRow key={policy} className="items-start gap-3 rounded-lg border p-3 [&>input]:mt-1" type="radio" value={policy} {...p.form.register('policy')} aria-describedby={`policy-${policy}`}>
               <span className="flex flex-col">
                 <strong>{t(`clinicalAccess.policy.${policy}`)}</strong>
                 <span id={`policy-${policy}`} className="text-sm text-muted-foreground">{t(`clinicalAccess.policy.${policy}.hint`)}</span>
               </span>
-            </label>
+            </ChoiceRow>
           ))}
         </fieldset>
         <p className="text-sm text-muted-foreground">{t('clinicalAccess.policy.requestNote')}</p>

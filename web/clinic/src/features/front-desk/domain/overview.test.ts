@@ -19,11 +19,11 @@ describe('clinic overview', () => {
     expect(delayMinutes([card('a', 'd-1', 'Booked', 0), card('b', 'd-1', 'Done', 0, 120)], nine + 180 * 60_000)).toBe(0);
   });
 
-  it('shows each doctor with patients waiting and their share of the longest queue', () => {
+  it('shows each doctor with patients waiting and how late they run', () => {
     const rows = workload([card('a', 'd-1', 'CheckedIn', 0), card('b', 'd-1', 'WithNurse', 20), card('c', 'd-2', 'ReadyForDoctor', 40), card('d', 'd-2', 'Done', 0)], nine + 30 * 60_000);
     expect(rows).toEqual([
-      { calendarId: 'd-1', name: 'Dr. Arjun Rao (synthetic)', waiting: 2, delayMinutes: 30, share: 1 },
-      { calendarId: 'd-2', name: 'Dr. S. Menon (synthetic)', waiting: 1, delayMinutes: 0, share: 0.5 },
+      { calendarId: 'd-1', name: 'Dr. Arjun Rao (synthetic)', waiting: 2, delayMinutes: 30 },
+      { calendarId: 'd-2', name: 'Dr. S. Menon (synthetic)', waiting: 1, delayMinutes: 0 },
     ]);
   });
 

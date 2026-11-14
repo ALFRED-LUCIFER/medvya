@@ -1,4 +1,4 @@
-import { Footprints, ListChecks, ReceiptText, UserPlus } from 'lucide-react';
+import { Footprints, ReceiptText, UserPlus } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 import { useI18n } from '@medvya/i18n';
 import { buttonVariants } from '@medvya/ui';
@@ -35,26 +35,29 @@ type Props = {
   steps: VisitSteps;
 };
 
-export function Consult({ card, online }: { card: BoardCard; online: boolean }) {
+export function Consult({ card, online, primary = true }: { card: BoardCard; online: boolean; primary?: boolean }) {
   const navigate = useNavigate();
   const consult = useStartConsultController(card.id, card.patientId, id => void navigate(`/consult/${id}`));
-  return <StartConsult {...consult} patientName={card.patientName} inConsult={card.state === 'InConsult'} online={online} />;
+  return <StartConsult {...consult} patientName={card.patientName} inConsult={card.state === 'InConsult'} online={online} primary={primary} />;
 }
 
 /** Composition only: the board controller for the active facility, fed to the presentational P-01 page. */
 export default function FrontDeskRoute({ facilityId, online, canMove, canCancel, registerPath, walkInPath, waitlistPath, billingPath, bookPath, canConsult: doctor, intakePath, steps }: Props) {
   const { t } = useI18n();
+  const navigate = useNavigate();
   const board = useBoardController(facilityId, online);
   const dismissal = useFollowUpDueController();
+  // One filled button per view: the desk's is Walk-in (or Register); a doctor's is the next patient's Start consultation.
   const register = registerPath || walkInPath ? <>
-    {walkInPath && <Link to={walkInPath} className={buttonVariants()}><Footprints aria-hidden />{t('walkIn.action')}</Link>}
-    {registerPath && <Link to={registerPath} className={buttonVariants({ variant: walkInPath ? 'outline' : 'default' })}><UserPlus aria-hidden />{t('nav.register')}</Link>}
+    {walkInPath && <Link to={walkInPath} className={buttonVariants({ variant: doctor ? 'outline' : 'default' })}><Footprints aria-hidden />{t('walkIn.action')}</Link>}
+    {/* Words only beside Walk-in: the board's header is one row at 1024 px (MDV-P1-095). */}
+    {registerPath && <Link to={registerPath} className={buttonVariants({ variant: walkInPath || doctor ? 'outline' : 'default' })}>{!walkInPath && <UserPlus aria-hidden />}{t('nav.register')}</Link>}
   </> : undefined;
   const payment = billingPath
     ? <Link to={billingPath} className={buttonVariants({ variant: 'outline', className: 'whitespace-normal' })}><ReceiptText aria-hidden />{t('board.action.takePayment')}</Link>
     : undefined;
-  const waitlist = waitlistPath ? <Link to={waitlistPath} className={buttonVariants({ variant: 'outline' })}><ListChecks aria-hidden />{t('waitlist.title')}</Link> : undefined;
-  const consultAction = doctor ? (card: BoardCard) => (canConsult(card.state) ? <Consult key={card.id} card={card} online={online} /> : null) : undefined;
+  const waitlist = waitlistPath ? <Link to={waitlistPath} className={buttonVariants({ variant: 'outline' })}>{t('waitlist.title')}</Link> : undefined;
+  const consultAction = doctor ? (card: BoardCard, primary: boolean) => (canConsult(card.state) ? <Consult key={card.id} card={card} online={online} primary={primary} /> : null) : undefined;
   const nurseStep = steps.nurse ? (card: BoardCard) => (intakePath
     ? <Link to={intakePath(card.id)} className={buttonVariants({ variant: 'outline', className: 'mt-1 min-h-11 whitespace-normal' })}
         aria-label={t('intake.queue.openFor', { name: card.patientName || t('board.unknownPatient') })}>{t('intake.queue.open')}</Link>
@@ -62,6 +65,6 @@ export default function FrontDeskRoute({ facilityId, online, canMove, canCancel,
   // MDV-P1-102: the doctor's follow-up on the Done card; booking and dismissing need booking access (the server checks again).
   const followUp = (card: BoardCard) => card.followUp && <FollowUpDueLine followUp={card.followUp} patientName={card.patientName || t('board.unknownPatient')} online={online}
     bookPath={bookPath && bookFollowUpPath(bookPath, card.patientId, card.followUp)} onDismiss={bookPath ? dismissal.onStart : null} />;
-  return <BoardPage {...board} steps={steps} canMove={canMove} canCancel={canCancel} registerAction={register} paymentAction={payment} overviewAction={waitlist} views={<FrontDeskViews boardPath="/front-desk" doctorsPath="/front-desk/overview" />} consultAction={consultAction} nurseStep={nurseStep}
+  return <BoardPage {...board} steps={steps} canMove={canMove} canCancel={canCancel} registerAction={register} paymentAction={payment} overviewAction={waitlist} views={<FrontDeskViews value="board" onValueChange={v => { if (v === 'doctors') void navigate('/front-desk/overview'); }} />} consultAction={consultAction} nurseStep={nurseStep}
     followUp={followUp} followUpDialog={<FollowUpDismissDialog {...dismissal} online={online} />} />;
 }

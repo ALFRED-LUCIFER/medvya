@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { Activity, CalendarCheck, FilePen, Pill, Siren, CircleAlert, CircleCheck, CircleHelp, ClipboardCheck, DoorOpen, ReceiptText, Syringe, UserCheck, type LucideIcon } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, Card, FrontDeskTag, PageContainer, PageHeader, PageMessage } from '@medvya/ui';
+import { Button, buttonVariants, Card, cn, FrontDeskTag, PageContainer, PageHeader, PageMessage } from '@medvya/ui';
 import type { BoardCard, BoardColumn, LiveStatus } from '../../front-desk/domain/board';
 import { canConsult } from '../../encounters/domain/encounter';
 import type { AllergyState } from '../../patient360/domain/chart';
@@ -91,12 +91,12 @@ function Escalated(p: Props) {
       <h2 id="today-escalated" className="inline-flex items-center gap-1.5 text-label text-danger-text"><Siren aria-hidden className="size-4" />{t('today.escalated.title')}</h2>
       <ul className="flex flex-col gap-2">
         {p.escalated.map(c => (
-          <li key={c.id} className="flex flex-wrap items-center justify-between gap-3">
+          <li key={c.id} className="relative flex flex-wrap items-center justify-between gap-3">
             <div className="flex min-w-0 flex-col gap-1.5">
-              <p className="text-subheading"><Token card={c} /><PatientLink {...p} card={c} /></p>
+              <p className="text-subheading"><Token card={c} /><PatientLink {...p} card={c} stretch /></p>
               <Chips {...p} card={c} />
             </div>
-            {canConsult(c.state) && <div className="[&_button]:min-w-40">{p.consultAction(c)}</div>}
+            {canConsult(c.state) && <div className="relative [&_button]:min-w-40">{p.consultAction(c)}</div>}
           </li>
         ))}
       </ul>
@@ -113,15 +113,15 @@ function Hero(p: Props & { card: BoardCard }) {
   const { t, formatTime } = useI18n();
   const c = p.card;
   return (
-    <section aria-labelledby="today-next" className="flex flex-col gap-3 rounded-xl border-2 border-action-600 bg-card p-4">
+    <section aria-labelledby="today-next" className="relative flex flex-col gap-3 rounded-xl border-2 border-action-600 bg-card p-4">
       <h2 id="today-next" className="text-[13px] font-bold text-action-600">{t(c.state === 'InConsult' ? 'today.hero.current' : 'today.hero.next')}</h2>
       <div>
-        <p className="text-xl font-extrabold"><Token card={c} /><PatientLink {...p} card={c} /></p>
+        <p className="text-xl font-extrabold"><Token card={c} /><PatientLink {...p} card={c} stretch /></p>
         <p className="text-sm text-muted-foreground">{formatTime(new Date(c.start), p.timeZone ?? undefined)}{' · '}{t(`reasonCategory.${c.reasonCategory}`)}</p>
       </div>
       <Chips {...p} card={c} />
       {/* Full width and the first thing on a phone, so the thumb reaches it. */}
-      <div className="[&_button]:w-full [&_button]:min-h-12">{canConsult(c.state) ? p.consultAction(c) : null}</div>
+      <div className="relative [&_button]:w-full [&_button]:min-h-12">{canConsult(c.state) ? p.consultAction(c) : null}</div>
     </section>
   );
 }
@@ -155,25 +155,30 @@ function Visit(p: Props & { card: BoardCard }) {
   const { t, formatTime } = useI18n();
   const c = p.card, age = ageOn(c.dateOfBirth, p.day ?? '');
   return (
-    <Card size="item" className="flex-row flex-wrap items-center justify-between gap-3">
+    <Card size="item" className="relative flex-row flex-wrap items-center justify-between gap-3">
       <div className="flex min-w-0 flex-col gap-1.5">
         <h3 className="text-sm font-bold">
           <span className="font-mono text-xs font-semibold text-muted-foreground">{formatTime(new Date(c.start), p.timeZone ?? undefined)}</span>{' '}
-          <Token card={c} /><PatientLink {...p} card={c} />{age !== null && <span className="font-normal text-muted-foreground">{' · '}{t('today.age', { years: age })}</span>}
+          <Token card={c} /><PatientLink {...p} card={c} stretch />{age !== null && <span className="font-normal text-muted-foreground">{' · '}{t('today.age', { years: age })}</span>}
         </h3>
         <p className="text-xs text-muted-foreground">{[t(`reasonCategory.${c.reasonCategory}`), p.scope === 'clinic' ? c.calendarName : ''].filter(Boolean).join(' · ')}</p>
         <Chips {...p} card={c} />
       </div>
-      {canConsult(c.state) && <div className="[&_button]:min-w-40">{p.consultAction(c)}</div>}
+      {canConsult(c.state) && <div className="relative [&_button]:min-w-40">{p.consultAction(c)}</div>}
     </Card>
   );
 }
 
-/** The patient's name opens Patient 360; the server still checks the care relationship when it opens. */
-function PatientLink(p: Props & { card: BoardCard }) {
+/**
+ * The patient's name opens Patient 360; the server still checks the care relationship when it opens.
+ * With `stretch` the link covers its row, so the whole row (its nearest positioned box) is the target, not the 19 px name (MDV-P1-078); the row's own button sits above it.
+ */
+function PatientLink(p: Props & { card: BoardCard; stretch?: boolean }) {
   const { t } = useI18n();
   const c = p.card, name = c.patientName || t('board.unknownPatient');
-  return c.patientId ? <Link to={p.chartPath(c.patientId)} className="underline-offset-2 hover:underline focus-visible:underline">{name}</Link> : <>{name}</>;
+  return c.patientId
+    ? <Link to={p.chartPath(c.patientId)} className={cn('underline-offset-2 hover:underline focus-visible:underline', p.stretch && 'after:absolute after:inset-0')}>{name}</Link>
+    : <>{name}</>;
 }
 
 // An allergy state is an icon and words, never colour alone; "not recorded" is never worded as "none".

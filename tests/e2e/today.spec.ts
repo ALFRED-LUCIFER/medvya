@@ -202,3 +202,27 @@ for (const locale of ['en', 'ar'])
         .map(v => `${v.id} (${v.nodes.length})`));
     expect(violations).toEqual([]);
   });
+
+// MDV-P1-078 (AC4): on a touch tablet the whole visit row is the target for the patient, not the 19 px name; the row's own button still wins.
+// The 44 px sizes are measured in touch-targets.spec.ts.
+for (const [w, h] of [[1024, 768], [768, 1024]] as const) {
+  test.describe(`touch ${w}x${h}`, () => {
+    test.use({ viewport: { width: w, height: h }, hasTouch: true });
+    test(`a tap anywhere on a visit row opens the chart, and its button stays its own (${w})`, async ({ page }) => {
+      await open(page);
+      const list = page.getByRole('region', { name: "Today's visits" });
+      const rows = list.getByRole('listitem');
+      await expect(rows).toHaveCount(3);
+      const deepak = rows.filter({ hasText: 'Deepak Nair' });
+      await expect(deepak).toContainText('Allergies not recorded'); // the chips have loaded, so the row no longer moves
+      // Meera's consult button sits above the stretched link, so it stays its own target.
+      const b = (await rows.filter({ hasText: 'Meera Iyer' }).getByRole('button').first().boundingBox())!;
+      expect(await page.evaluate(([x, y]) => document.elementFromPoint(x!, y!)?.closest('button') !== null, [b.x + b.width / 2, b.y + b.height / 2])).toBe(true);
+      // Tap Deepak's row away from the name (near its bottom edge): the stretched link takes it.
+      await deepak.scrollIntoViewIfNeeded();
+      const box = (await deepak.boundingBox())!;
+      await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height - 6);
+      await expect(page).toHaveURL(/\/patients\/p-a2$/);
+    });
+  });
+}

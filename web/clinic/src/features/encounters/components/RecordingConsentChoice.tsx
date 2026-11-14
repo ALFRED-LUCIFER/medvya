@@ -1,4 +1,5 @@
 import { useI18n } from '@medvya/i18n';
+import { ChoiceRow } from '@medvya/ui';
 import { recordingAvailable, recordingConsents, type RecordingConsent } from '../domain/note';
 
 type Props = { value: RecordingConsent | null; readOnly: boolean; onChange: (value: RecordingConsent) => void };
@@ -19,10 +20,9 @@ export default function RecordingConsentChoice({ value, readOnly, onChange }: Pr
       {value === null && <p className="text-sm text-muted-foreground">{t('recordingConsent.notRecorded')}</p>}
       <div className="flex flex-wrap gap-x-5 gap-y-1">
         {offered.map(c => (
-          <label key={c} className="inline-flex min-h-11 items-center gap-2">
-            <input type="radio" name="recording-consent" value={c} checked={value === c} onChange={() => onChange(c)} className="size-4 accent-brand-700" />
+          <ChoiceRow key={c} type="radio" name="recording-consent" value={c} checked={value === c} onChange={() => onChange(c)}>
             {t(`recordingConsent.${c}`)}
-          </label>
+          </ChoiceRow>
         ))}
       </div>
     </fieldset>

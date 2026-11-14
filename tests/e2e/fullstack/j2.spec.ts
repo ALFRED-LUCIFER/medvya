@@ -85,7 +85,7 @@ journey('J2', {
     // MDV-P2-009: the doctor types the note; it autosaves on the server and is still there after a reload.
     const note = page.getByRole('region', { name: 'Consultation note' });
     await note.getByLabel('Chief complaint').fill('Increased thirst for two weeks (synthetic)');
-    await expect(note.getByRole('status').filter({ hasText: /^Saved \d\d:\d\d$/ })).toBeVisible(); // the one-page view has a second status (the chart panel)
+    await expect(page.getByRole('status').filter({ hasText: /^Saved \d\d:\d\d$/ })).toBeVisible(); // the one-page view has a second status (the chart panel)
     await page.reload();
     await expect(note.getByLabel('Chief complaint')).toHaveValue('Increased thirst for two weeks (synthetic)');
 
@@ -117,7 +117,7 @@ journey('J2', {
     // MDV-AUDIT-1092: no recording consent step before recording exists. MDV audit P0-2: Sign stays locked until allergies are
     // recorded (done above, before End consultation).
     await expect(page.getByRole('button', { name: 'Sign note' })).toBeEnabled();
-    await expect(note.getByRole('status').filter({ hasText: /^Saved \d\d:\d\d$/ })).toBeVisible(); // the one-page view has a second status (the chart panel)
+    await expect(page.getByRole('status').filter({ hasText: /^Saved \d\d:\d\d$/ })).toBeVisible(); // the one-page view has a second status (the chart panel)
     await expect(page.getByRole('button', { name: 'Sign note' })).toHaveAccessibleDescription('Everything reviewed. Ready to sign.');
     await page.getByRole('button', { name: 'Sign note' }).click();
     const dialog = page.getByRole('dialog', { name: `Sign note for ${meera}?` });
@@ -479,7 +479,7 @@ journey('J2', {
     expect(stored).not.toMatch(/diabetes|metformin/i);
     expect(stored).toMatch(/\[\]\]$/); // no IndexedDB database at all
     await note.getByRole('textbox', { name: /^Chief complaint/ }).fill('Review of sugars (synthetic)');
-    await expect(note.getByRole('status').filter({ hasText: /^Saved \d\d:\d\d$/ })).toBeVisible();
+    await expect(page.getByRole('status').filter({ hasText: /^Saved \d\d:\d\d$/ })).toBeVisible();
     // Step 6's authorised metformin is on Meera's chart, so this visit's medicines need their reconciliation (MDV-1087); there is no consent step (MDV-AUDIT-1092).
     await expect(sign).toBeDisabled();
     await expect(sign).toHaveAccessibleDescription('1 item still needs your review before signing');

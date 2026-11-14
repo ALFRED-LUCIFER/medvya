@@ -23,7 +23,8 @@ public static class AccessLogEndpoints
 {
     const int DefaultPage = 50, MaxPage = 200, MaxExport = 10_000;
 
-    public sealed record Filters(Guid? ActorUserId, string? Action, DateTimeOffset? From, DateTimeOffset? To, string? After, int? Limit, bool? PatientRecords);
+    /// <param name="Chart">The default view (MDV-P2-050): charts opened or changed, without routine list reads (<see cref="AuditQuery.ChartOnly"/>).</param>
+    public sealed record Filters(Guid? ActorUserId, string? Action, DateTimeOffset? From, DateTimeOffset? To, string? After, int? Limit, bool? PatientRecords, bool? Chart = null);
     public sealed record ExportRequest(Guid? ActorUserId, Guid? PatientId, string? Action, DateTimeOffset? From, DateTimeOffset? To, bool? PatientRecords = null);
 
     sealed record Row(Guid Id, DateTimeOffset OccurredAt, Guid? ActorUserId, string? ActorName, string? Role, string? Location, string Action, string ResourceType,
@@ -54,7 +55,7 @@ public static class AccessLogEndpoints
     static async Task<IResult> List(Guid? patientId, Filters f, ClaimsPrincipal user, ICurrentFacility facility, IServiceProvider sp, CancellationToken ct)
     {
         var limit = Math.Clamp(f.Limit ?? DefaultPage, 1, MaxPage);
-        var page = await QueryAsync(sp, new AuditQuery(f.ActorUserId, patientId, Clean(f.Action), f.From, f.To, f.After, limit) { FacilityId = await ScopeOf(sp, facility, ct), PatientRecordsOnly = f.PatientRecords == true }, ct);
+        var page = await QueryAsync(sp, new AuditQuery(f.ActorUserId, patientId, Clean(f.Action), f.From, f.To, f.After, limit) { FacilityId = await ScopeOf(sp, facility, ct), PatientRecordsOnly = f.PatientRecords == true, ChartOnly = f.Chart == true }, ct);
         if (page is null) return Results.ValidationProblem(new Dictionary<string, string[]> { ["after"] = ["invalid"] });
         var rows = await Enrich(sp, page.Items, withPatientName: patientId is not null, ct);
         return Results.Ok(new { items = rows, next = page.Next, actions = page.Actions });

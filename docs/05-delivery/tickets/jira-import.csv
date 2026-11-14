@@ -1715,6 +1715,21 @@ Deliberately NOT in this ticket: (1) A user setting for density. (2) Palette or 
 * Given registration at 1440 px, when the Identity step opens, then at least four fields share a row and the last field is above the fold
 * Given AGENTS.md section 4 and DESIGN.md, when read, then they state 36 px with a mouse, 44 px on touch and never under 24 px
 * Given English and Arabic, when axe runs (including target-size), then there is no violation"
+MDV-P2-063,To do,Story,"Registration uses the width and keeps Back, Save draft and Continue in the bottom action bar",MDV-P1-E12,High,phase-P2 registration ui epic-ux-programme track-design wave-d3,1.5,2027-01-18,2027-01-22,R2 · Consult,P1-05,,"MDV-P1-082, MDV-P2-062",80,Medium,"Programme: MDV-P1-E12. Owner request of 14 Nov 2026 after using registration on Azure dev.
+
+Persona and route: /patients/new, Full and Quick · receptionist.
+Findings: Measured on Azure dev, 14 Nov 2026, at 1920 by 873: in Full registration the only action, Continue, is at 1,044 px, below the fold, so the receptionist scrolls on every step. Quick's Register patient happens to fit. The form is held to the 1,152 px reading width with a 300 px side panel, so the right of a wide screen is empty. Only the consultation uses the library StickyActionBar (MDV-P1-082, MDV-P1-092).
+Proposed UX behaviour: Registration uses the page width (as the design: steps list at the start, the form filling the middle, the preview and rules panel at the end), with fields auto-fitting at a 200 px minimum (MDV-P2-062). Its commit actions move into StickyActionBar, last in the page flow: the step position at the start (Step 1 of 6 · Identity), then Back (from step 2), Save draft where the flow offers it, and Continue or Register patient as the one filled button at the end. Quick uses the same footer with Register patient. The footer reserves its space, never covers a field (focus scrolls clear) and un-pins at 400 % zoom, as the component already does. No field, rule, wording or validation changes; the duplicate block is unchanged.
+Components and tokens affected: StickyActionBar (existing), PageContainer width.
+Front end and back end split: Front end only.
+Clinical sign-off: Not required.
+Effort and regression risk: S · Low.
+Deliberately NOT in this ticket: (1) The footer on other forms (nurse intake, settings, booking): one screen per ticket after this proves out. (2) Autosave.","* Given Full registration at 1440 by 900 and 1024 by 768, when any step renders, then Continue (or Register patient) is visible without scrolling
+* Given Quick registration, when it renders, then Register patient is in the same footer
+* Given 1920 px, when the Identity step renders, then the form and panels span the page width and no column wider than 400 px is left empty
+* Given every field, when it is reached with Tab, then it is fully visible and not under the footer
+* Given 400 % zoom, when the page scrolls, then the footer scrolls with it
+* Given English and Arabic, when axe runs, then there is no violation and the footer mirrors"
 MDV-P3-001,To do,Spike,Spike: Azure AI Speech and Azure OpenAI in-region capability check and ADR for speech/LLM providers,MDV-P3-E06,Highest,phase-P3 ai spike adr,2,2027-01-18,2027-01-22,R3 · Scribe,"P3-07, P3-03",,MDV-P0-003,70,Medium,"In the launch region confirm: batch transcription with diarisation and language identification for en-IN, hi-IN, ta-IN (and ar-AE for UAE), Azure OpenAI chat model with JSON-schema output, data residency/processing terms. Run 10 synthetic recordings through the pipeline and measure WER, diarisation error and latency. Record ADR-007 (speech/LLM providers, models, versions, regions, fallback).","* ADR-007 accepted with model names/versions, regions, quotas and fallback provider abstraction.
 * Measured latency supports the ≤ 60 s p50 draft target or the gap is quantified with a plan.
 * Language/diarisation quality per language is recorded on the synthetic set.

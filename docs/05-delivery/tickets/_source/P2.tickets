@@ -1693,3 +1693,40 @@ tests:
 - packages/ui controls tests read the tokens; tests/e2e size checks use a shared helper that expects 36 px with a mouse and 44 px under touch emulation; one coarse-pointer project or test per area.
 notes:
 - Regression risk: medium.
+
+=== MDV-P2-063
+title: Registration uses the width and keeps Back, Save draft and Continue in the bottom action bar
+type: Story
+epic: MDV-P1-E12
+prd: P1-05
+screens:
+priority: SHOULD
+roles: Receptionist, Practice admin, Owner
+labels: registration, ui, epic: ux programme, track: design, wave: D3
+estimate: 1.5
+weeks: 13
+depends: MDV-P1-082, MDV-P2-062
+confidence: 80 | The footer component exists and is tested on the consultation; this is layout and wiring on one screen plus its tests.
+sources: docs/product-ux-audit/concepts/medvya-workspace-concept.html (the commit footer); docs/02-design/source/Medvya Patient Registration.dc.html (Back, Save draft, Continue; steps list at the start, fields auto-fit)
+desc:
+Programme: MDV-P1-E12. Owner request of 14 Nov 2026 after using registration on Azure dev.
+
+Persona and route: /patients/new, Full and Quick · receptionist.
+Findings: Measured on Azure dev, 14 Nov 2026, at 1920 by 873: in Full registration the only action, Continue, is at 1,044 px, below the fold, so the receptionist scrolls on every step. Quick's Register patient happens to fit. The form is held to the 1,152 px reading width with a 300 px side panel, so the right of a wide screen is empty. Only the consultation uses the library StickyActionBar (MDV-P1-082, MDV-P1-092).
+Proposed UX behaviour: Registration uses the page width (as the design: steps list at the start, the form filling the middle, the preview and rules panel at the end), with fields auto-fitting at a 200 px minimum (MDV-P2-062). Its commit actions move into StickyActionBar, last in the page flow: the step position at the start (Step 1 of 6 · Identity), then Back (from step 2), Save draft where the flow offers it, and Continue or Register patient as the one filled button at the end. Quick uses the same footer with Register patient. The footer reserves its space, never covers a field (focus scrolls clear) and un-pins at 400 % zoom, as the component already does. No field, rule, wording or validation changes; the duplicate block is unchanged.
+Components and tokens affected: StickyActionBar (existing), PageContainer width.
+Front end and back end split: Front end only.
+Clinical sign-off: Not required.
+Effort and regression risk: S · Low.
+Deliberately NOT in this ticket: (1) The footer on other forms (nurse intake, settings, booking): one screen per ticket after this proves out. (2) Autosave.
+ac:
+- Given Full registration at 1440 by 900 and 1024 by 768, when any step renders, then Continue (or Register patient) is visible without scrolling
+- Given Quick registration, when it renders, then Register patient is in the same footer
+- Given 1920 px, when the Identity step renders, then the form and panels span the page width and no column wider than 400 px is left empty
+- Given every field, when it is reached with Tab, then it is fully visible and not under the footer
+- Given 400 % zoom, when the page scrolls, then the footer scrolls with it
+- Given English and Arabic, when axe runs, then there is no violation and the footer mirrors
+tests:
+- tests/e2e/registration.spec.ts: footer action in the viewport per step at 1440 and 1024; width at 1920; tab-through check; ar.
+notes:
+- Regression risk: low.

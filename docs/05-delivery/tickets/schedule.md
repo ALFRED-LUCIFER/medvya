@@ -307,7 +307,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P2-053](P2-doctor-workspace/MDV-P2-053.md) | Clinic today for the owner: five counts the system can stand behind and a needs-attention list | P2 | wk 12–12 | 68% |
 | [MDV-P2-059](P2-doctor-workspace/MDV-P2-059.md) | Adopt PageHeader, Card and Section, PageMessage and EmptyState across the clinic app and the platform console | P2 | wk 12–13 | 75% |
 
-## Week 13 · 18 Jan 2027 – 22 Jan 2027 · load 50.3 dev-days ⚠ over capacity
+## Week 13 · 18 Jan 2027 – 22 Jan 2027 · load 51.8 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -337,6 +337,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P2-059](P2-doctor-workspace/MDV-P2-059.md) | Adopt PageHeader, Card and Section, PageMessage and EmptyState across the clinic app and the platform console | P2 | wk 12–13 | 75% |
 | [MDV-P2-060](P2-doctor-workspace/MDV-P2-060.md) | Adopt Chip, Tag, Banner and SegmentedControl in features: one chip vocabulary, one view switch | P2 | wk 13–14 | 75% |
 | [MDV-P2-062](P2-doctor-workspace/MDV-P2-062.md) | Density by pointer, as in the workspace concept: 36 px controls and 40 px rows with a mouse, 44 and 48 on touch; 14 px text; underline tabs; denser registration | P2 | wk 13–13 | 70% |
+| [MDV-P2-063](P2-doctor-workspace/MDV-P2-063.md) | Registration uses the width and keeps Back, Save draft and Continue in the bottom action bar | P2 | wk 13–13 | 80% |
 | [MDV-P3-001](P3-ai-scribe/MDV-P3-001.md) | Spike: Azure AI Speech and Azure OpenAI in-region capability check and ADR for speech/LLM providers | P3 | wk 13–13 | 70% |
 | [MDV-P3-002](P3-ai-scribe/MDV-P3-002.md) | Consent templates and recording policy administration (H-09) | P3 | wk 13–13 | 82% |
 | [MDV-P3-003](P3-ai-scribe/MDV-P3-003.md) | Per-encounter recording consent with device selection; decline goes straight to manual note (A-02, E-04) | P3 | wk 13–14 | 86% |

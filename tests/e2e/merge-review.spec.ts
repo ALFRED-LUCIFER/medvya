@@ -105,6 +105,32 @@ for (const locale of ['en', 'ar'])
       expect(await axe(page)).toEqual([]);
     });
 
+// MDV-P2-054 AC5: at 375 px each field is a stacked block, its name first and bold, then each record's value under that record's name,
+// so a mobile number or MRN never breaks across lines and nothing scrolls sideways.
+test.describe('at 375 px', () => {
+  test.use({ viewport: { width: 375, height: 812 } });
+  for (const [locale, mobile, kept, merged] of [['en', 'Mobile', 'Kept record', 'Record merged into it'], ['ar', 'الجوال', 'السجل المحتفظ به', 'السجل المدموج فيه']])
+    test(`the records are compared field by field, every value labelled with its record, and nothing scrolls sideways (${locale})`, async ({ page }) => {
+      await clinicWith(page, locale);
+      await page.goto(`/patients/directory/merge/${requestId}`);
+      const table = page.getByRole('region', { name: locale === 'en' ? 'Records side by side' : 'السجلان جنبًا إلى جنب' }).filter({ has: page.getByRole('table') }).last();
+      const row = table.getByRole('row', { name: new RegExp(mobile) });
+      const name = row.getByRole('rowheader');
+      await expect(name).toHaveText(mobile);
+      expect(await name.evaluate(e => Number(getComputedStyle(e).fontWeight))).toBeGreaterThanOrEqual(700);
+      for (const [record, cell] of [[kept, row.getByRole('cell').first()], [merged, row.getByRole('cell').last()]] as const) {
+        await expect(cell.getByText(record, { exact: true })).toBeVisible();
+        const value = cell.getByText('+919000000301', { exact: true });
+        await value.scrollIntoViewIfNeeded();
+        await expect(value).toBeInViewport();
+        expect((await value.boundingBox())!.height).toBeLessThan(30); // one line, not broken mid-number
+      }
+      expect(await table.evaluate(e => e.scrollWidth - e.clientWidth)).toBeLessThanOrEqual(0);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+      expect(await axe(page)).toEqual([]);
+    });
+});
+
 // MDV-P1-017: "Request merge review" on a record. Pick the other record with front-desk search, ask, land on the new review.
 const otherId = '5e1d0001-0017-4000-8000-0000000000a2';
 async function recordWithRequestSection(page: Page, locale = 'en') {

@@ -34,10 +34,11 @@ for (const s of screens)
     expect(Object.entries(sizes).filter(([size]) => !tokenSizes.includes(size))).toEqual([]);
   });
 
-// AC3: at 1920 no paragraph is wider than about 72 characters and the page content is at most 1,600 px, in English and Arabic.
+// AC3: at 1920 no paragraph is wider than about 72 characters and the content fills the width between the sidebar and the gutter
+// (owner ruling of 14 Nov 2026, DESIGN.md Screen layout standard), in English and Arabic.
 for (const locale of ['en', 'ar'])
   for (const name of ['my day', 'patient record', 'settings profile'])
-    test(`${locale} ${name} at 1920 keeps paragraphs to about 72 characters and the page to 1,600 px, and passes axe`, async ({ page }) => {
+    test(`${locale} ${name} at 1920 keeps paragraphs to about 72 characters and the content full width, and passes axe`, async ({ page }) => {
       await page.setViewportSize({ width: 1920, height: 1080 });
       await byName(name).open(page, locale);
       const widest = await page.evaluate(() => {
@@ -54,8 +55,11 @@ for (const locale of ['en', 'ar'])
         return max;
       });
       expect(widest.ch, widest.text).toBeLessThanOrEqual(72.5);
-      for (const box of await page.locator('[data-slot=page-container]').evaluateAll(els => els.map(e => e.getBoundingClientRect().width)))
-        expect(box).toBeLessThanOrEqual(1600);
+      const main = await page.locator('main').evaluate(el => {
+        const r = el.getBoundingClientRect(), cs = getComputedStyle(el);
+        return r.width - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      });
+      expect((await page.locator('[data-slot=page-container]').first().boundingBox())!.width).toBeGreaterThanOrEqual(main - 1);
       expect(await axe(page)).toEqual([]);
     });
 

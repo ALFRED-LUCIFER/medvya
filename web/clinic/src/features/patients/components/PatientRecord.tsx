@@ -56,7 +56,7 @@ export default function PatientRecord(props: Props) {
 
   if (!patient)
     return (
-      <PageContainer width="reading">
+      <PageContainer>
         {back}
         {live}
         {/* The title is the page's one h1; the message is not a live region, as the status line above already announces the change. */}
@@ -82,7 +82,7 @@ export default function PatientRecord(props: Props) {
   const full = (scheme: string) => props.revealed?.identifiers.find(i => i.scheme === scheme)?.value;
   const hasNumbers = p.identifiers.length > 0 || !!p.payer?.memberNumberLastFour;
   return (
-    <PageContainer width="reading">
+    <PageContainer>
       {back}
       {live}
       {/* The desk variant (MDV-P1-092): identity only, whatever is passed; no allergy, diagnosis, medicine or vitals at the desk. */}

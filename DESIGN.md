@@ -26,8 +26,8 @@ How to read it:
 | Page gutter | 16 / 24 / 32 px at phone / tablet / 1600 and up |
 | Page header | One 44 px row: title 20/28, secondary text, actions at the end; 12 px gap below |
 | Fluid page maximum | 1,600 px |
-| Reading maximum | 1,152 px; paragraphs, descriptions and hints stop at about 72 characters everywhere (`p` in the base styles) |
-| Form maximum | 768 px for a one-decision form (walk-in, leave). Settings forms use the fluid page and auto-fit their fields, as registration does |
+| Reading maximum | 1,152 px; body text lines about 72 characters |
+| Form maximum | 768 px |
 | Side panel | 320 px; 360 px for the consultation chart panel |
 
 Breakpoints: 360, 768, **1024**, 1280, 1600. 1024 is the named tier for two-pane layouts. The 360 px `sm:` step is not used for column changes: no `sm:grid-cols-*`. Tokens: MDV-P1-079 (#1175). Applied to screens: MDV-P2-057 (#1216).
@@ -193,7 +193,7 @@ footer 56, part of the layout: Saved 10:42 · N to finish · Preview prescriptio
 
 **Tables.** Always the library Table, with a label. Numbers right-aligned with tabular numerals. The identifying cell is bold; nothing else. Sort on the columns people sort by (name, time, wait). Paging over 50 rows. Under 768 px a table becomes stacked rows; it never scrolls sideways with hidden columns that carry dose or identity. Row actions: one visible, the rest in a menu. In a compact table the visible one only opens a form and is 32 px with a mouse (44 px on a coarse pointer), so the row stays 36 px; an action that acts at once or ends access (Offboard, Revoke, Remove) is a 44 px menu item and asks to confirm where it cannot be undone.
 
-**Forms.** One column on a phone; above that, fields auto-fit at a 200 px minimum across the available width, up to the 1,600 px page maximum (registration, MDV-P2-063; settings, MDV-P2-057). Label above the field. One convention per form: "required" in words when most fields are optional, "optional" in words when most are required. Units inside or beside the field. Errors say what is wrong and what to do, beside the field and in a summary that takes focus after a failed submit. Clinical notes autosave with a visible SaveStatus; settings and registration use an explicit Save. Information entered once is not asked again in the same process: the nurse's complaint prefills the doctor's note (MDV-P1-104, #1200).
+**Forms.** One column under 768 px, two at most above. Label above the field. One convention per form: "required" in words when most fields are optional, "optional" in words when most are required. Units inside or beside the field. Errors say what is wrong and what to do, beside the field and in a summary that takes focus after a failed submit. Clinical notes autosave with a visible SaveStatus; settings and registration use an explicit Save. Information entered once is not asked again in the same process: the nurse's complaint prefills the doctor's note (MDV-P1-104, #1200).
 
 ## Pinned chrome
 

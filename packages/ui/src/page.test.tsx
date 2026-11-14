@@ -6,9 +6,9 @@ import { PageContainer, PageHeader } from './index';
 afterEach(cleanup);
 
 describe('PageContainer', () => {
-  it('is fluid by default, up to the 1,600 px page maximum', () => {
+  it('is fluid by default and has no width cap', () => {
     render(<PageContainer data-testid="c">x</PageContainer>);
-    expect(screen.getByTestId('c').className).toContain('max-w-page');
+    expect(screen.getByTestId('c').className).toContain('max-w-none');
   });
   it.each([['form', 'max-w-form'], ['reading', 'max-w-reading']] as const)('caps the %s width', (width, cls) => {
     render(<PageContainer width={width} data-testid="c">x</PageContainer>);

@@ -3,8 +3,8 @@ import { admin, axe, openScreen, reception, screens as deskScreens, type Persona
 
 // UX-01 (issue #1113): every page sits in a PageContainer of one of three named widths and has one PageHeader size.
 // Measured, not pixel-compared: a screenshot baseline would break on every font or OS change, while these numbers are what the audit found wrong.
-const limit = { form: 768, reading: 1152, fluid: 1600 }; // max-w-form, max-w-reading, max-w-page (MDV-P2-057)
-const screens: { name: string; path: string; as: Persona; width: keyof typeof limit }[] = [
+const limit = { form: 768, reading: 1152 }; // max-w-form, max-w-reading
+const screens: { name: string; path: string; as: Persona; width: 'fluid' | keyof typeof limit }[] = [
   { name: 'board', path: '/front-desk', as: reception, width: 'fluid' },
   { name: 'walk-in', path: '/front-desk/walk-in', as: reception, width: 'form' },
   { name: 'settings', path: '/settings', as: admin, width: 'fluid' },
@@ -22,8 +22,8 @@ for (const { w, h } of [{ w: 1920, h: 1080 }, { w: 1366, h: 768 }]) {
       const container = page.locator('[data-slot=page-container]').first();
       await expect(container).toHaveAttribute('data-width', s.width);
       const box = (await container.boundingBox())!;
-      if (s.width === 'fluid') expect(box.width).toBeGreaterThanOrEqual(Math.min(main, limit.fluid) - 1);
-      expect(box.width).toBeLessThanOrEqual(limit[s.width] + 1);
+      if (s.width === 'fluid') expect(box.width).toBeGreaterThanOrEqual(main - 1);
+      else expect(box.width).toBeLessThanOrEqual(limit[s.width] + 1);
       await expect(page.locator('main h1').first()).toHaveCSS('font-size', '20px');
     });
   }

@@ -68,3 +68,29 @@ for (const locale of ['en', 'ar'])
         .map(v => `${v.id} (${v.nodes.length})`));
     expect(violations).toEqual([]);
   });
+
+// MDV-P2-054 AC5: at 375 px each session is a stacked block, the device first and bold, the times under their column's name, nothing scrolling sideways.
+test.describe('at 375 px', () => {
+  test.use({ viewport: { width: 375, height: 812 } });
+  for (const [locale, label, signedIn, lastActive] of [
+    ['en', 'Devices where you are signed in', 'Signed in', 'Last active'], ['ar', 'الأجهزة التي سجّلت الدخول عليها', 'وقت الدخول', 'آخر نشاط']])
+    test(`sessions are stacked with the device first and every time labelled, and nothing scrolls sideways (${locale})`, async ({ page }) => {
+      await open(page, locale);
+      const table = page.getByRole('region', { name: label });
+      const row = table.getByRole('row', { name: /Edge on Windows/ });
+      const device = row.getByRole('rowheader');
+      await expect(device).toBeInViewport();
+      expect(await device.evaluate(e => Number(getComputedStyle(e).fontWeight))).toBeGreaterThanOrEqual(700);
+      for (const column of [signedIn, lastActive]) await expect(row.getByRole('cell').getByText(column, { exact: true })).toBeVisible();
+      const end = row.getByRole('button', { name: /Edge on Windows/ });
+      await end.scrollIntoViewIfNeeded();
+      await expect(end).toBeInViewport();
+      expect((await end.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+      expect(await table.evaluate(e => e.scrollWidth - e.clientWidth)).toBeLessThanOrEqual(0);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+      await page.addScriptTag({ path: axePath });
+      expect(await page.evaluate(async () =>
+        (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations
+          .map(v => `${v.id} (${v.nodes.length})`))).toEqual([]);
+    });
+});

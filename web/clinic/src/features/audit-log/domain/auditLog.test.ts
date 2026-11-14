@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { catalogs, loadCatalog } from '@medvya/i18n';
-import { actionKey, all, defaultFilters, exportBody, listQuery, patientRecords, rangeOf } from './auditLog';
+import { serverAuditActions } from './auditActions.node';
+import { actionKey, all, chart, defaultFilters, exportBody, listQuery, patientRecords, rangeOf } from './auditLog';
 
 describe('action names (MDV-P1-052)', () => {
   it('names a known action in every language and shows an unknown code as it is', async () => {
@@ -8,6 +9,15 @@ describe('action names (MDV-P1-052)', () => {
     for (const code of ['appointment.walk_in', 'front_desk.board.watch', 'invitation.revoke', 'patient.identifiers.reveal'])
       for (const locale of ['en', 'hi', 'ar'] as const) expect(catalogs[locale]![actionKey(code)!], `${locale} ${code}`).toBeTruthy();
     expect(actionKey('something.new')).toBeNull();
+  });
+
+  // MDV-P2-050 AC2: a new action the server writes without a name in en, hi and ar fails here, so no row or filter shows a developer code.
+  it('names every action code the server source writes, in every language', async () => {
+    await loadCatalog('hi'); await loadCatalog('ar');
+    const codes = serverAuditActions(new URL('../../../../../../src', import.meta.url).pathname);
+    expect(codes.length).toBeGreaterThan(150); // the scan still finds the codes (a broken pattern would pass with none)
+    const unnamed = codes.flatMap(code => (['en', 'hi', 'ar'] as const).filter(l => !catalogs[l]?.[`audit.actionName.${code}` as keyof typeof catalogs.en]).map(l => `${l} ${code}`));
+    expect(unnamed).toEqual([]);
   });
 });
 
@@ -29,12 +39,13 @@ describe('access log filters', () => {
       .toEqual({ from: '2026-11-01T04:00:00.000Z', to: '2026-11-02T05:00:00.000Z' });
   });
 
-  it('starts on patient-record events, in the list and the export (MDV audit UX-13)', () => {
+  it('opens on charts opened or changed; the export holds every row whatever the view (MDV-P2-050)', () => {
     const f = { ...defaultFilters(), from: '', to: '' };
-    expect(f.action).toBe(patientRecords);
-    expect(listQuery(f, null)).toBe('patientRecords=true');
-    expect(exportBody(f)).toMatchObject({ action: null, patientRecords: true });
-    expect(exportBody({ ...f, action: all })).toMatchObject({ action: null, patientRecords: false });
+    expect(f.action).toBe(chart);
+    expect(listQuery(f, null)).toBe('chart=true');
+    expect(listQuery({ ...f, action: patientRecords }, null)).toBe('patientRecords=true');
+    for (const action of [chart, patientRecords, all]) expect(exportBody({ ...f, action })).toMatchObject({ action: null, patientRecords: false });
+    expect(exportBody({ ...f, action: 'note.sign' })).toMatchObject({ action: 'note.sign' }); // a chosen action still narrows it
   });
 
   it('sends only the filters that were set, and never a name', () => {

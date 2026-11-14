@@ -18,6 +18,7 @@ public sealed class AuditTrail(AuditDbContext db) : IAuditTrail
             .Where(e => (query.ActorUserId == null || e.ActorUserId == query.ActorUserId)
                 && (query.PatientId == null || e.PatientId == query.PatientId)
                 && (!query.PatientRecordsOnly || e.PatientId != null)
+                && (!query.ChartOnly || (e.PatientId != null && !AuditQuery.RoutineReads.Contains(e.Action)))
                 && (query.Action == null || e.Action == query.Action));
         if (query.After is not null)
         {

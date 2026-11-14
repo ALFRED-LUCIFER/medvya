@@ -4,7 +4,7 @@ import { Button, Field, Input, Select, SelectContent, SelectItem, SelectTrigger,
 import { Section } from '../../settings/components/Section';
 import { fieldError } from '../../settings/components/fieldStyles';
 import { PatientPicker, type PatientSearchView } from '../../schedule/components/BookingPanel';
-import { actionKey, all, patientRecords, type AuditFilters, type AuditRow } from '../domain/auditLog';
+import { actionKey, all, chart, patientRecords, type AuditFilters, type AuditRow } from '../domain/auditLog';
 
 type Props = {
   filters: AuditFilters;
@@ -27,7 +27,7 @@ type Props = {
 /** Practice access log (F-12): who did what to which record, when, why, and whether it was allowed. Outcome is always written out, never colour alone. */
 export default function AuditLogPanel(p: Props) {
   const { t, formatDate, formatTime } = useI18n();
-  const actionName = (code: string) => { const key = actionKey(code); return key ? t(key) : code; };
+  const actionName = (code: string) => t(actionKey(code) ?? 'audit.actionUnknown');
   if (p.state === 'forbidden') return <p role="alert" className={fieldError}>{t('audit.forbidden')}</p>;
   const zone = p.filters.zone;
   return (
@@ -47,6 +47,7 @@ export default function AuditLogPanel(p: Props) {
             <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
           </Field>
           <SelectContent>
+            <SelectItem value={chart}>{t('audit.chartView')}</SelectItem>
             <SelectItem value={patientRecords}>{t('audit.patientRecords')}</SelectItem>
             <SelectItem value={all}>{t('audit.anyAction')}</SelectItem>
             {p.actions.map(a => <SelectItem key={a} value={a}>{actionName(a)}</SelectItem>)}
@@ -71,7 +72,7 @@ export default function AuditLogPanel(p: Props) {
 
       <div className="flex flex-wrap items-center gap-3">
         <Button type="button" variant="outline" loading={p.exporting} onClick={p.onExport}><Download aria-hidden className="size-4" />{t('audit.export')}</Button>
-        <span className="text-sm text-muted-foreground">{t('audit.exportNote')}</span>
+        <span className="text-sm text-muted-foreground">{t('audit.exportNote')} {t('audit.exportAll')}</span>
         {p.exportFailed && <p role="alert" className={fieldError}>{t('audit.exportFailed')}</p>}
       </div>
 

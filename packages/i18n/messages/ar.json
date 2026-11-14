@@ -5157,5 +5157,9 @@
   "audit.chartView": "فُتح ملف أو تغيّر",
   "audit.actionUnknown": "نشاط آخر مسجّل",
   "audit.exportAll": "يضم التصدير كل صف للموظف والمريض والإجراء والتواريخ المختارة، أياً كان العرض.",
+  "audit.filters": "عوامل التصفية",
+  "audit.showing": "المعروض: {filters}",
+  "audit.dateRange": "من {from} إلى {to}",
+  "audit.anyDate": "أي تاريخ",
   "audit.actionName.appointment.token_slip.read": "طُبعت قسيمة الرقم"
 }

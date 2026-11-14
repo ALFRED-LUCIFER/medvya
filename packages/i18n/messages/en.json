@@ -5160,5 +5160,9 @@
   "audit.chartView": "Opened or changed a chart",
   "audit.actionUnknown": "Other recorded activity",
   "audit.exportAll": "The export holds every row for the staff member, patient, action and dates chosen, whatever the view.",
+  "audit.filters": "Filters",
+  "audit.showing": "Showing: {filters}",
+  "audit.dateRange": "{from} to {to}",
+  "audit.anyDate": "any date",
   "audit.actionName.appointment.token_slip.read": "Token slip printed"
 }

@@ -5119,5 +5119,9 @@
   "audit.chartView": "चार्ट खोला या बदला गया",
   "audit.actionUnknown": "अन्य दर्ज गतिविधि",
   "audit.exportAll": "निर्यात में चुने गए स्टाफ़, मरीज़, कार्रवाई और तारीख़ों की हर पंक्ति होती है, चाहे कोई भी दृश्य चुना हो।",
+  "audit.filters": "फ़िल्टर",
+  "audit.showing": "दिखाया जा रहा है: {filters}",
+  "audit.dateRange": "{from} से {to} तक",
+  "audit.anyDate": "कोई भी तारीख़",
   "audit.actionName.appointment.token_slip.read": "टोकन पर्ची छापी गई"
 }

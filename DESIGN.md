@@ -68,6 +68,7 @@ Two densities (ruling 2). Density is chosen by task. A write is never compact.
 |---|---|---|
 | Control height | 44 px | 36 px |
 | Table row | 48 px | 36 px |
+| Cell side padding | 12 px | 8 px |
 | Body text | 14/20 | 14/20, never smaller |
 | Typed clinical text | 16/24 | not allowed |
 

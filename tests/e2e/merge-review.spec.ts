@@ -109,7 +109,7 @@ for (const locale of ['en', 'ar'])
 // so a mobile number or MRN never breaks across lines and nothing scrolls sideways.
 test.describe('at 375 px', () => {
   test.use({ viewport: { width: 375, height: 812 } });
-  for (const [locale, mobile, kept, merged] of [['en', 'Mobile', 'Kept record', 'Record merged into it'], ['ar', 'الجوال', 'السجل المحتفظ به', 'السجل المدموج فيه']])
+  for (const [locale, mobile, kept, merged] of [['en', 'Mobile', 'Kept record', 'Record merged into it'], ['ar', 'الجوال', 'السجل المحتفظ به', 'السجل المدموج فيه']] as const)
     test(`the records are compared field by field, every value labelled with its record, and nothing scrolls sideways (${locale})`, async ({ page }) => {
       await clinicWith(page, locale);
       await page.goto(`/patients/directory/merge/${requestId}`);

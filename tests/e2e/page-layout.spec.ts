@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { admin, openScreen, reception, screens as deskScreens, type Persona } from './support/desk';
+import { admin, axe, openScreen, reception, screens as deskScreens, type Persona } from './support/desk';
 
 // UX-01 (issue #1113): every page sits in a PageContainer of one of three named widths and has one PageHeader size.
 // Measured, not pixel-compared: a screenshot baseline would break on every font or OS change, while these numbers are what the audit found wrong.
@@ -39,7 +39,7 @@ for (const locale of ['en', 'ar']) {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.route('**/v1/waitlist?*', r => r.fulfill({ json: { facilityId: 'f-1', timeZone: 'Asia/Kolkata', now: '2026-10-19T05:02:00Z', entries: [] } }));
     const tops = new Map<string, number>();
-    for (const s of [...deskScreens.filter(s => !waiting.includes(s.name)), { name: 'waitlist', path: '/front-desk/waitlist', as: reception }]) {
+    for (const s of [...deskScreens.filter(s => !waiting.includes(s.name)), { name: 'waitlist', path: '/front-desk/waitlist', as: reception }, { name: 'more', path: '/more', as: reception }]) {
       await openScreen(page, s, locale);
       await expect(page.locator('main h1'), s.name).toHaveCount(1);
       const row = page.locator('main [data-slot=page-header-row]');
@@ -50,5 +50,16 @@ for (const locale of ['en', 'ar']) {
       tops.set(s.name, box.y);
     }
     expect(new Set(tops.values()).size, JSON.stringify(Object.fromEntries(tops))).toBe(1);
+  });
+}
+
+// The phone's More page: its account and menu cards are the library Card, with one h1 and no axe violation (MDV-P2-059 AC6).
+for (const locale of ['en', 'ar']) {
+  test(`the ${locale} More page at 375 px has one title and passes axe`, async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 760 });
+    await openScreen(page, { path: '/more', as: reception }, locale);
+    await expect(page.locator('main h1')).toHaveCount(1);
+    await expect(page.locator('main [data-slot=card]').first()).toBeVisible();
+    expect(await axe(page)).toEqual([]);
   });
 }

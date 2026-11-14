@@ -72,9 +72,7 @@
     "web/clinic/src/features/patients/components/PatientRecord.tsx": 6,
     "web/clinic/src/features/patients/components/PatientsMessage.tsx": 1,
     "web/clinic/src/features/problems/components/ProblemsPage.tsx": 2,
-    "web/clinic/src/features/reconciliation/components/ReconciliationPage.tsx": 2,
-    "web/clinic/src/features/settings/components/SettingsPage.tsx": 1,
-    "web/clinic/src/features/shell/components/MorePage.tsx": 2
+    "web/clinic/src/features/reconciliation/components/ReconciliationPage.tsx": 2
   },
   "localMessage": {
     "web/clinic/src/features/encounters/components/ConsultPage.tsx": 1,

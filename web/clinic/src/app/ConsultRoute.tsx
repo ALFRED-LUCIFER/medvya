@@ -32,6 +32,8 @@ import { useLetterController, useReferralsController } from '../features/referra
 import SlipPage from '../features/orders/components/SlipPage';
 import { useOrdersController, useSlipController } from '../features/orders/hooks/useOrdersController';
 import { useNoteController } from '../features/encounters/hooks/useNoteController';
+import AssessmentDiagnoses from '../features/problems/components/AssessmentDiagnoses';
+import { useProblemsController } from '../features/problems/hooks/useProblemsController';
 import ConsultEntry from '../features/nurse-intake/components/ConsultEntry';
 import { useIntakeController } from '../features/nurse-intake/hooks/useIntakeController';
 import { useNoteTemplatesController } from '../features/encounters/hooks/useNoteTemplatesController';
@@ -74,7 +76,8 @@ function Consult({ encounterId, boardPath, online, canOrder, canReconcile, canSi
       footer={consult.view === 'page' && !draftOnPhone && <ConsultFooter {...note} finish={!ended && !phone && <EndConsultation ending={consult.ending} onEnd={consult.onEnd} />} />}>
       {draftOnPhone ? phoneGate
         : consult.view === 'page' ? <ConsultStudio {...note} panel={consult.panel} onPanel={consult.onPanel} chart={consult.chart} plan={phone ? null : plan} entry={entry(false)}
-          prescription={!phone && patient && canOrder && <Prescription encounterId={encounterId} ended={ended} patient={patient} />} />
+          prescription={!phone && patient && canOrder && <Prescription encounterId={encounterId} ended={ended} patient={patient} />}
+          diagnoses={!phone && canReconcile && <Diagnoses encounterId={encounterId} online={online} />} />
         : <>{entry(true)}<NoteEditor {...note} /></>}
       <NoteHistory {...useAddendumController(encounterId, canSign)} timeZone={consult.banner?.timeZone} printPath={`/consult/${encounterId}/note/print`} />
       <NoteTemplateChoice {...useNoteTemplatesController()} />
@@ -109,6 +112,11 @@ function Plan({ encounterId, ended, online, canOrder, canReconcile }: {
 
 function Entry({ appointmentId, online, onChanged, titled }: { appointmentId: string; online: boolean; onChanged: () => void; titled: boolean }) {
   return <ConsultEntry {...useIntakeController(appointmentId, () => {}, onChanged)} online={online} titled={titled} />;
+}
+
+/** This consultation's coded diagnoses in Assessment (MDV-P1-094): the problems page's controller and add form, with no route change. */
+function Diagnoses({ encounterId, online }: { encounterId: string; online: boolean }) {
+  return <AssessmentDiagnoses {...useProblemsController(encounterId)} online={online} problemsPath={`/consult/${encounterId}/problems`} />;
 }
 
 function Medicines({ encounterId, online }: { encounterId: string; online: boolean }) {

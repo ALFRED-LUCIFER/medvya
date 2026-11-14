@@ -52,7 +52,7 @@ export default function ChartPanel(p: ChartPanelProps) {
     </Sheet>
   );
   return (
-    <aside aria-label={t('studio.panel.label')} className="flex w-full max-w-panel-chart flex-col gap-3 rounded-xl border bg-card p-3 lg:sticky lg:top-[calc(var(--patient-strip-bottom,0px)+4rem)] [@media(max-height:480px)]:static">
+    <aside aria-label={t('studio.panel.label')} className="flex w-full max-w-panel-chart flex-col gap-3 rounded-xl border bg-card p-3 wide:sticky wide:top-[calc(var(--patient-strip-bottom,0px)+4rem)] [@media(max-height:480px)]:static">
       {tabs}
     </aside>
   );

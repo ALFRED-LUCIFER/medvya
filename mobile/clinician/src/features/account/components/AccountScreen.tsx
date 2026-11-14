@@ -4,7 +4,7 @@ import { theme } from '@medvya/tokens';
 import { I18nManager, StyleSheet, View } from 'react-native';
 import type { Facility, Staff } from '../../session/domain/session';
 
-type Props = { staff: Staff; facility: Facility; biometric: boolean; locale: Locale; version: string; onLock: () => void; onSignOut: () => void; onBack: () => void };
+type Props = { staff: Staff; facility: Facility; biometric: boolean; unlockMethod: string; locale: Locale; version: string; onLock: () => void; onSignOut: () => void; onBack: () => void };
 
 export function AccountScreen(vm: Props) {
   const { t } = useI18n();
@@ -32,7 +32,7 @@ export function AccountScreen(vm: Props) {
 
       <Section title={t('mobile.account.security')}>
         <Card style={styles.list}>
-          <View style={row(0)}><ListRow title={t('mobile.account.unlock')} subtitle={t(vm.biometric ? 'mobile.account.biometricOn' : 'mobile.account.biometricOff')}
+          <View style={row(0)}><ListRow title={t('mobile.account.unlock')} subtitle={t(vm.biometric ? 'mobile.account.biometricOn' : 'mobile.account.biometricOff', { method: vm.unlockMethod })}
             leading={<Icon name="face" />} /></View>
           <View style={row(1)}><ListRow title={t('mobile.account.autoLock')} subtitle={t('mobile.account.autoLockLine')} leading={<Icon name="timer" />} /></View>
           <View style={row(2)}><ListRow title={t('mobile.account.lockNow')} leading={<Icon name="lock-outline" />} onPress={vm.onLock} /></View>

@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import type { UseFormReturn } from 'react-hook-form';
 import { TriangleAlert } from 'lucide-react';
 import { useI18n, type MessageKey } from '@medvya/i18n';
-import { Button, buttonVariants, Label, Textarea, PageContainer, PatientBanner } from '@medvya/ui';
+import { Button, buttonVariants, Card, Label, Textarea, PageContainer, PageHeader, PatientBanner } from '@medvya/ui';
 import { bannerAllergyState } from '../../patient360/domain/chart';
 import AllergiesSection from './AllergiesSection';
 import MedicinesSection from './MedicinesSection';
@@ -40,7 +40,12 @@ export default function IntakePage(p: Props) {
   const { t } = useI18n();
   if (p.loading) return <p role="status">{t('intake.loading')}</p>;
   if (p.refused || p.notFound || p.failed || !p.screen)
-    return <Message title={t(p.refused ? 'intake.refused' : p.notFound ? 'intake.notFound' : 'intake.loadFailed')} queuePath={p.queuePath} />;
+    return (
+      <PageContainer width="form" role="alert">
+        <PageHeader title={t(p.refused ? 'intake.refused' : p.notFound ? 'intake.notFound' : 'intake.loadFailed')}
+          actions={<Link to={p.queuePath} className={buttonVariants({ variant: 'outline' })}>{t('intake.back')}</Link>} />
+      </PageContainer>
+    );
   const { intake, patient, timeZone } = p.screen;
   const withNurse = intake.state === 'WithNurse';
   const readOnly = !withNurse;
@@ -69,7 +74,7 @@ export default function IntakePage(p: Props) {
       {intake.escalated && <p role="status" className="inline-flex items-center gap-1.5 font-bold"><TriangleAlert aria-hidden className="size-4" />{t('intake.escalated')}</p>}
 
       {withNurse && (
-        <div className="flex flex-col gap-3 rounded-xl border bg-card p-4">
+        <Card>
           <div className="flex flex-wrap items-center gap-3">
             <Button variant="outline" aria-expanded={p.escalating} onClick={p.onToggleEscalate}>{t('intake.escalate')}</Button>
             <Button variant="default" className="whitespace-normal" loading={p.handingOff} disabled={blocked || !p.online} aria-describedby={blocked ? 'intake-handoff-why' : undefined} onClick={p.onHandOff}>
@@ -87,7 +92,7 @@ export default function IntakePage(p: Props) {
               <Button type="submit" className="self-start" loading={p.sendingEscalation} disabled={!p.online}>{t('intake.escalate.send')}</Button>
             </form>
           )}
-        </div>
+        </Card>
       )}
       {readOnly && <Link to={p.queuePath} className={buttonVariants({ variant: 'outline', className: 'self-start' })}>{t('intake.back')}</Link>}
     </PageContainer>
@@ -105,15 +110,5 @@ function Identity({ patient, intake }: { patient: IntakeScreen['patient']; intak
       }} />
       <p className="text-sm text-muted-foreground">{t('intake.identity.check')}</p>
     </>
-  );
-}
-
-function Message({ title, queuePath }: { title: string; queuePath: string }) {
-  const { t } = useI18n();
-  return (
-    <div role="alert" className="flex flex-col items-start gap-3 rounded-xl border bg-card p-6">
-      <h1 className="text-lg font-extrabold">{title}</h1>
-      <Link to={queuePath} className={buttonVariants({ variant: 'outline' })}>{t('intake.back')}</Link>
-    </div>
   );
 }

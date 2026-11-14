@@ -62,6 +62,6 @@ it('offers the unlock this phone has, with a Not now that leaves it off (MDV-P5-
   await signIn('arjun.rao@example.com', '123456');
   await fireEvent.press(await screen.findByRole('button', { name: /Adyar/ }));
   expect(await screen.findByText('Use Touch ID?')).toBeOnTheScreen(); // jest-expo runs as iOS; the mock phone has a fingerprint reader
-  await fireEvent.press(screen.getByRole('button', { name: 'Not now' }));
+  await fireEvent.press(await screen.findByRole('button', { name: 'Not now' })); // shown once the phone reports enrolled biometrics
   expect(await screen.findByTestId('biometric')).toHaveTextContent('off');
 });

@@ -1,9 +1,9 @@
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { useI18n } from '@medvya/i18n';
-import { Button, ChoiceRow } from '@medvya/ui';
+import { Button, ChoiceRow, StickyActionBar } from '@medvya/ui';
 import { queueOrders, type QueueRule } from '../domain/settings';
-import { fieldError } from './fieldStyles';
+import { cardBar, fieldError } from './fieldStyles';
 import { Section } from './Section';
 
 type Props = {
@@ -34,11 +34,12 @@ export default function QueueRulePanel(p: Props) {
           {t('settings.queue.bookedFirst')}
         </ChoiceRow>
         <p className="text-sm text-muted-foreground">{t('settings.queue.escalation')}</p>
-        <div className="flex flex-wrap items-center gap-3">
-          <Button type="submit" loading={p.saving}>{t('settings.save')}</Button>
+        <StickyActionBar className={cardBar} status={<>
           {p.saved && <p role="status">{t('settings.saved')}</p>}
           {p.saveFailed && <p role="alert" className={fieldError}>{t('settings.saveFailed')}</p>}
-        </div>
+        </>}>
+          <Button type="submit" loading={p.saving}>{t('settings.save')}</Button>
+        </StickyActionBar>
       </form>
     </Section>
   );

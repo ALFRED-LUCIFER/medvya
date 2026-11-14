@@ -1,9 +1,9 @@
 import { Lock } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Switch } from '@medvya/ui';
+import { Button, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, StickyActionBar, Switch } from '@medvya/ui';
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
-import { fieldError, fieldGrid } from '../../settings/components/fieldStyles';
+import { cardBar, fieldError, fieldGrid } from '../../settings/components/fieldStyles';
 import { Section } from '../../settings/components/Section';
 import type { Capability } from '../../session/domain/session';
 import { addableRows, assignableRoles, type CustomRole, type RoleCatalogue, type RoleForm } from '../domain/staff';
@@ -75,11 +75,10 @@ export default function CustomRolesPanel(p: Props) {
             ))}
             <p className="flex items-center gap-2 text-sm text-muted-foreground"><Lock aria-hidden className="size-4" />{t('staff.roles.locked')}</p>
           </fieldset>
-          {p.saveError && <p role="alert" className={fieldError}>{t(`staff.roles.error.${p.saveError}`)}</p>}
-          <div className="flex flex-wrap gap-2">
-            <Button type="submit" loading={p.saving}>{t('settings.save')}</Button>
+          <StickyActionBar className={cardBar} status={p.saveError && <p role="alert" className={fieldError}>{t(`staff.roles.error.${p.saveError}`)}</p>}>
             <Button type="button" variant="outline" onClick={p.onClose}>{t('settings.cancel')}</Button>
-          </div>
+            <Button type="submit" loading={p.saving}>{t('settings.save')}</Button>
+          </StickyActionBar>
         </form>
       )}
     </Section>

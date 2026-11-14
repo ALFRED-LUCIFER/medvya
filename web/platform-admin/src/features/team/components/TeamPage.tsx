@@ -1,10 +1,10 @@
 import { useId } from 'react';
 import { Copy, FileCheck, KeyRound, UserPlus, UserX } from 'lucide-react';
 import { useI18n, type MessageKey } from '@medvya/i18n';
-import { Button, Card, ErrorSummary, Field, FieldMarks, Input, PageContainer, PageHeader, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState } from '@medvya/ui';
+import { Button, Card, ErrorSummary, Field, FieldMarks, Input, PageContainer, PageHeader, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState, StickyActionBar } from '@medvya/ui';
 import type { FormEventHandler } from 'react';
 import { Controller, type UseFormReturn } from 'react-hook-form';
-import ReasonPanel from '../../shell/components/ReasonPanel';
+import ReasonPanel, { ReasonBar } from '../../shell/components/ReasonPanel';
 import { keyState, roles, teamColumns, type InviteForm, type PendingAction, type ReasonForm, type ShownLink, type Team } from '../domain/team';
 
 type Props = {
@@ -31,10 +31,7 @@ export default function TeamPage({ vm }: Props) {
 
   return (
     <PageContainer>
-      <PageHeader title={t('platform.team.title')} description={t('platform.team.lead')} actions={<>
-        <Button variant="outline" onClick={() => vm.onStartAction({ kind: 'review' })}><FileCheck aria-hidden />{t('platform.team.startReview')}</Button>
-        <Button onClick={vm.onStartInvite}><UserPlus aria-hidden />{t('platform.team.invite')}</Button>
-      </>} />
+      <PageHeader title={t('platform.team.title')} description={t('platform.team.lead')} />
 
       {vm.team && (
         <p role="status" className={vm.reviewDue ? 'font-semibold text-danger-700' : 'text-sm text-muted-foreground'}>
@@ -56,7 +53,7 @@ export default function TeamPage({ vm }: Props) {
 
       {vm.inviting && (
         <Card title={t('platform.team.inviteTitle')}>
-          <form onSubmit={vm.onInvite} noValidate className="grid gap-3 md:grid-cols-2">
+          <form id="team-invite" onSubmit={vm.onInvite} noValidate className="grid gap-3 md:grid-cols-2">
             <ErrorSummary title={t('field.errorSummary')} focusKey={vm.inviteForm.formState.submitCount} errors={inviteErrors} className="md:col-span-2" />
             {/* Most answers are required, so only the optional end date is marked, in words. */}
             <FieldMarks mark="optional">
@@ -81,11 +78,6 @@ export default function TeamPage({ vm }: Props) {
                 <Input {...vm.inviteForm.register('reason')} />
               </Field>
             </FieldMarks>
-            {vm.inviteFailed && <p role="alert" className="text-sm font-semibold text-danger-700 md:col-span-2">{t('platform.error.failed')}</p>}
-            <div className="flex flex-wrap gap-2 md:col-span-2">
-              <Button type="submit" loading={vm.inviteBusy}>{t('platform.team.sendInvite')}</Button>
-              <Button type="button" variant="outline" onClick={vm.onCancelInvite}>{t('platform.action.cancel')}</Button>
-            </div>
           </form>
         </Card>
       )}
@@ -94,12 +86,7 @@ export default function TeamPage({ vm }: Props) {
         <ReasonPanel
           title={vm.pending.kind === 'review' ? t('platform.team.reviewTitle') : t(vm.pending.kind === 'recover' ? 'platform.team.recoverTitle' : 'platform.team.removeTitle', { name: vm.pending.name })}
           form={vm.reasonForm}
-          confirmLabel={t(vm.pending.kind === 'review' ? 'platform.team.reviewConfirm' : vm.pending.kind === 'recover' ? 'platform.team.recoverConfirm' : 'platform.team.removeConfirm')}
-          destructive={vm.pending.kind !== 'review'}
-          busy={vm.actionBusy}
-          problem={vm.actionRefused ? t('platform.team.refused') : vm.actionFailed ? t('platform.error.failed') : null}
-          onConfirm={vm.onConfirmAction}
-          onCancel={vm.onCancelAction}>
+          onConfirm={vm.onConfirmAction}>
           <p className="text-sm">{t(vm.pending.kind === 'review' ? 'platform.team.reviewBody' : vm.pending.kind === 'recover' ? 'platform.team.recoverBody' : 'platform.team.removeBody')}</p>
         </ReasonPanel>
       )}
@@ -134,6 +121,26 @@ export default function TeamPage({ vm }: Props) {
           </TableBody>
         </Table>
       </TableState>
+      {/* The screen's own actions, in the bottom bar (DESIGN.md Screen layout standard, MDV-P2-065). */}
+      {vm.pending ? (
+        <ReasonBar
+          confirmLabel={t(vm.pending.kind === 'review' ? 'platform.team.reviewConfirm' : vm.pending.kind === 'recover' ? 'platform.team.recoverConfirm' : 'platform.team.removeConfirm')}
+          destructive={vm.pending.kind !== 'review'}
+          busy={vm.actionBusy}
+          problem={vm.actionRefused ? t('platform.team.refused') : vm.actionFailed ? t('platform.error.failed') : null}
+          onCancel={vm.onCancelAction} />
+      ) : vm.inviting ? (
+        // Keyed: a reused button would turn into the submit mid-click and send the empty form (the click's default action runs after React re-renders).
+        <StickyActionBar key="invite" status={vm.inviteFailed && <p role="alert" className="text-sm font-semibold text-danger-700">{t('platform.error.failed')}</p>}>
+          <Button type="button" variant="outline" onClick={vm.onCancelInvite}>{t('platform.action.cancel')}</Button>
+          <Button type="submit" form="team-invite" loading={vm.inviteBusy}>{t('platform.team.sendInvite')}</Button>
+        </StickyActionBar>
+      ) : (
+        <StickyActionBar key="actions">
+          <Button variant="outline" onClick={() => vm.onStartAction({ kind: 'review' })}><FileCheck aria-hidden />{t('platform.team.startReview')}</Button>
+          <Button onClick={vm.onStartInvite}><UserPlus aria-hidden />{t('platform.team.invite')}</Button>
+        </StickyActionBar>
+      )}
     </PageContainer>
   );
 }

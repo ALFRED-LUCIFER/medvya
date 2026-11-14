@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 import { ltr, useI18n } from '@medvya/i18n';
-import { Button, Card, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea } from '@medvya/ui';
+import { Button, Card, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, StickyActionBar, Textarea } from '@medvya/ui';
 import { CircleAlert, CircleCheck, CircleHelp, Clock, CircleX } from 'lucide-react';
-import { describedBy } from '../../settings/components/fieldStyles';
+import { cardBar, describedBy } from '../../settings/components/fieldStyles';
 import { answerers, answers, bandState, openDoses, type ChildHealth, type DoseDraft, type DoseState, type MilestoneAnswer, type MilestoneAnswerer, type MilestoneKey, type Problem } from '../domain/childHealth';
 
 type Props = {
@@ -60,8 +60,9 @@ export default function ChildHealthCard(p: Props) {
             );
           })}
         </ul>
-        {p.canRecord && <DoseForm {...p} view={v} />}
         {p.problem && <p role="alert" className="font-bold text-danger-700">{t(`childHealth.error.${p.problem}`)}</p>}
+        {/* Last in the card, so its bottom bar sits on the card's foot. */}
+        {p.canRecord && <DoseForm {...p} view={v} />}
       </Card>
       <Card title={v.milestones ? t('childHealth.milestonesFor', { band: t(`childHealth.milestoneBand.${v.milestones.key}`) }) : t('childHealth.milestones')}>
         {!v.milestones ? <p className="text-muted-foreground">{t('childHealth.milestones.none')}</p> : (
@@ -157,7 +158,7 @@ function DoseForm(p: Props & { view: ChildHealth }) {
           </div>
         )}
       </div>
-      <div><Button type="submit" loading={p.recording} disabled={!p.online}>{t('childHealth.record.submit')}</Button></div>
+      <StickyActionBar className={cardBar}><Button type="submit" loading={p.recording} disabled={!p.online}>{t('childHealth.record.submit')}</Button></StickyActionBar>
     </form>
   );
 }

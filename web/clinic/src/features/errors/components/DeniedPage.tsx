@@ -5,7 +5,7 @@ import { Button, PageContainer, PageHeader, PageMessage } from '@medvya/ui';
 export default function DeniedPage({ onHome }: { onHome: () => void }) {
   const { t } = useI18n();
   return (
-    <PageContainer width="form">
+    <PageContainer>
       <PageHeader title={t('denied.title')} />
       <PageMessage kind="denied" action={<Button onClick={onHome}>{t('state.notFound.cta')}</Button>}>{t('denied.body')}</PageMessage>
     </PageContainer>

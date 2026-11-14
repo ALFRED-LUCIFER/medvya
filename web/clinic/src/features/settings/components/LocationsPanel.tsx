@@ -1,10 +1,10 @@
 import { useI18n, type MessageKey } from '@medvya/i18n';
-import { Button, ErrorSummary, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea } from '@medvya/ui';
+import { Button, ErrorSummary, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, StickyActionBar, Textarea } from '@medvya/ui';
 import { timeZones } from '../domain/settings';
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import type { AddLocationForm, CalendarTemplate, LocationChoice, ResourceForm } from '../domain/settings';
-import { fieldError, fieldGrid } from './fieldStyles';
+import { cardBar, fieldError, fieldGrid } from './fieldStyles';
 import { LocationSelect } from './LocationSelect';
 import { Section } from './Section';
 
@@ -87,12 +87,13 @@ export default function LocationsPanel(p: Props) {
               {p.certificateName && <p role="status" className="col-span-full">{t('settings.locations.certificateChosen', { name: p.certificateName })}</p>}
             </>
           )}
-          <div className="flex flex-wrap items-center gap-3 col-span-full" aria-live="polite">
-            <Button type="submit" loading={p.saving}>{editing ? t('settings.save') : t('settings.locations.addButton')}</Button>
-            {editing && <Button type="button" variant="outline" onClick={() => p.onEdit(null)}>{t('settings.cancel')}</Button>}
+          <StickyActionBar className={`${cardBar} col-span-full`} aria-live="polite" status={<>
             {p.saveProblem && <span role="alert" className={fieldError}>{t(p.saveProblem)}</span>}
             {p.added && <span role="status">{t('settings.locations.added', { name: p.added })}</span>}
-          </div>
+          </>}>
+            {editing && <Button type="button" variant="outline" onClick={() => p.onEdit(null)}>{t('settings.cancel')}</Button>}
+            <Button type="submit" loading={p.saving}>{editing ? t('settings.save') : t('settings.locations.addButton')}</Button>
+          </StickyActionBar>
         </form>
       </Section>
       <Section title={t('settings.rooms.title')} intro={t('settings.rooms.intro')}>

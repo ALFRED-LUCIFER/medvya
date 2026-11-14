@@ -4,7 +4,7 @@ import { PageContainer, PageHeader } from '@medvya/ui';
 /** One heading and one sentence: placeholder screens, empty navigation and loading. The h1 is the page's PageHeader; `standalone` adds the page landmark. */
 export default function ShellMessage({ title, body, standalone = false, busy = false, heading = 'h1' }: { title: string; body?: string; standalone?: boolean; busy?: boolean; heading?: 'h1' | 'h2' }) {
   const content = (
-    <PageContainer width="form" role={busy ? 'status' : undefined}>
+    <PageContainer role={busy ? 'status' : undefined}>
       {heading === 'h1' ? <PageHeader title={title} description={body} /> : (
         <div className="flex flex-col gap-1">
           <h2 className="text-heading">{title}</h2>

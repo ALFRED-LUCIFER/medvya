@@ -13,7 +13,7 @@ const blurbs = { approvals: 'platform.overview.approvals', team: 'platform.overv
 export default function OverviewPage({ displayName, role, items }: { displayName: string; role: PlatformRole; items: NavItem[] }) {
   const { t } = useI18n();
   return (
-    <PageContainer width="reading">
+    <PageContainer>
       <PageHeader title={t('platform.overview.title')} description={t('platform.overview.welcome', { name: displayName, role: t(`platform.role.${role}`) })} />
       <ul className="grid gap-3 md:grid-cols-2">
         {items.flatMap(i => (i.id === 'overview' ? [] : [{ ...i, blurb: blurbs[i.id] }])).map(i => (

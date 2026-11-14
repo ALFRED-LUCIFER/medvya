@@ -2,9 +2,9 @@ import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { Link } from 'react-router';
 import { ltr, useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, Field, Input, Textarea } from '@medvya/ui';
+import { Button, buttonVariants, Field, Input, StickyActionBar, Textarea } from '@medvya/ui';
 import { CircleAlert, CircleCheck, Lightbulb } from 'lucide-react';
-import { fieldError } from '../../settings/components/fieldStyles';
+import { cardBar, fieldError } from '../../settings/components/fieldStyles';
 import { Section } from '../../settings/components/Section';
 import { planHeading } from '../../encounters/domain/encounter';
 import { geriatricFields, geriLines, type GeriError, type GeriatricAssessment, type GeriatricForm, type MedicineReview } from '../domain/olderAdult';
@@ -75,14 +75,14 @@ function AssessmentForm(p: Props) {
         <Textarea rows={2} {...p.form.register('nutritionNote')} />
       </Field>
       <p className="text-sm text-muted-foreground">{t('olderAdult.newRow')}</p>
-      <div aria-live="polite">
-        {p.saveFailed && <p role="alert" className={fieldError}>{t('olderAdult.saveFailed')}</p>}
-        {p.saveForbidden && <p role="alert" className={fieldError}>{t('olderAdult.saveForbidden')}</p>}
-      </div>
-      <div className="flex flex-wrap gap-3">
-        <Button type="submit" loading={p.saving}>{t('olderAdult.save')}</Button>
+      <StickyActionBar className={cardBar} status={
+        <div aria-live="polite">
+          {p.saveFailed && <p role="alert" className={fieldError}>{t('olderAdult.saveFailed')}</p>}
+          {p.saveForbidden && <p role="alert" className={fieldError}>{t('olderAdult.saveForbidden')}</p>}
+        </div>}>
         <Button type="button" variant="outline" onClick={p.onCancel}>{t('olderAdult.cancel')}</Button>
-      </div>
+        <Button type="submit" loading={p.saving}>{t('olderAdult.save')}</Button>
+      </StickyActionBar>
     </form>
   );
 }

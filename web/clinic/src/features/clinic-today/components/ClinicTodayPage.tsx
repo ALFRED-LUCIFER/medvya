@@ -16,7 +16,7 @@ type Props = {
 export default function ClinicTodayPage(p: Props) {
   const { t, formatTime } = useI18n();
   return (
-    <PageContainer width="reading">
+    <PageContainer>
       <PageHeader title={t('clinicToday.title')}
         description={p.today && t('clinicToday.updated', { time: formatTime(new Date(p.today.now), p.today.timeZone) })} />
       <Body {...p} />

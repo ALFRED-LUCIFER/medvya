@@ -39,7 +39,7 @@ export default function WaitlistPage(p: Props) {
   const { t, formatTime, formatDate, formatDay } = useI18n();
   const back = <Link to={p.boardPath} className={cn(buttonVariants({ variant: 'ghost' }), 'px-2')}><ArrowLeft className="rtl:rotate-180" aria-hidden />{t('walkIn.back')}</Link>;
   if (p.forbidden)
-    return <PageContainer width="reading"><PageHeader title={t('waitlist.title')} back={back} /><PageMessage kind="denied" title={t('err.403')}>{t('waitlist.forbidden')}</PageMessage></PageContainer>;
+    return <PageContainer><PageHeader title={t('waitlist.title')} back={back} /><PageMessage kind="denied" title={t('err.403')}>{t('waitlist.forbidden')}</PageMessage></PageContainer>;
   const zone = p.timeZone ?? 'UTC';
   const when = (start: string) => t('appointment.messages.at', { day: formatDate(new Date(start), zone), time: formatTime(new Date(start), zone) });
   const slot = (s: SlotMatch) => t('waitlist.slot', { when: when(s.start), doctor: s.calendarName });
@@ -49,7 +49,7 @@ export default function WaitlistPage(p: Props) {
 
   return (
     // One screen (MDV-P2-064): from 1024 px the list and the form sit side by side, each scrolling inside itself; Add is in the bottom bar.
-    <PageContainer width="reading" fit className="gap-5">
+    <PageContainer fit className="gap-5">
       <PageHeader title={t('waitlist.title')} description={t('waitlist.intro')} back={back} />
 
       <div aria-live="polite">

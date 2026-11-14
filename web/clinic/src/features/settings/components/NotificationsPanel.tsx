@@ -1,7 +1,7 @@
 import type { FormEventHandler } from 'react';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 import { useI18n } from '@medvya/i18n';
-import { Button, ErrorSummary, Field, Input, Switch } from '@medvya/ui';
+import { Button, ErrorSummary, Field, Input, StickyActionBar, Switch } from '@medvya/ui';
 import { channelToggles, messageToggles, previewGroups, type NotificationPrefsForm, type TemplatePreview } from '../domain/notifications';
 import { fieldError } from './fieldStyles';
 import { Section } from './Section';
@@ -92,11 +92,13 @@ export default function NotificationsPanel(p: Props) {
           </div>
         </Section>
 
-        <div className="flex flex-wrap items-center gap-3" aria-live="polite">
-          <Button type="submit" loading={p.saving}>{t('settings.save')}</Button>
+        {/* The form spans three cards, so its bar pins under them, not in a card; the templates card follows it (md:mb-0). */}
+        <StickyActionBar className="rounded-lg md:mb-0" aria-live="polite" status={<>
           {p.saved && <span>{t('settings.saved')}</span>}
           {p.saveFailed && <span role="alert" className={fieldError}>{t('settings.saveFailed')}</span>}
-        </div>
+        </>}>
+          <Button type="submit" loading={p.saving}>{t('settings.save')}</Button>
+        </StickyActionBar>
       </form>
 
       <Section title={t('settings.notifications.templates')} intro={t('settings.notifications.templatesIntro')}>

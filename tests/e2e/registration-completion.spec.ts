@@ -101,7 +101,7 @@ const fillAddress = async (page: Page) => {
   await page.locator('#region').click();
   await page.getByRole('option').first().click();
   await page.locator('#postalCode').fill('600020');
-  await page.locator('form button[type=submit]').click();
+  await page.locator('[data-slot=sticky-action-bar] button[type=submit]').click(); // Save is in the bottom bar (MDV-P2-065)
 };
 for (const locale of ['en', 'ar'])
   test(`a save from a stale record says it was changed by someone else, reloads, and saves with the new version (${locale})`, async ({ page }) => {

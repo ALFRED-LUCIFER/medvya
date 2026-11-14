@@ -1,5 +1,7 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
+import { t } from './support/desk';
+import { commitVisible } from './support/oneScreen';
 import { targetPx } from './support/targets';
 
 // MDV-P5-040. CI has no console host: its endpoints are mocked with synthetic Medvya staff. The server rules (no access without a verified
@@ -173,3 +175,32 @@ for (const locale of ['en', 'ar'] as const) {
     }
   });
 }
+
+// MDV-P2-065 AC1 and AC3: the team and audit screens keep their actions in the bottom bar, in view at 1440x900 and 1024x768, and the open
+// form's Cancel and Confirm take the bar's place while it is open. English and Arabic pass axe.
+const barScreens = [
+  { path: '/team', action: 'platform.team.invite', confirm: 'platform.team.sendInvite' },
+  { path: '/audit', action: 'platform.audit.export', confirm: 'platform.audit.exportConfirm' },
+] as const;
+for (const locale of ['en', 'ar'])
+  for (const [width, height] of [[1440, 900], [1024, 768]] as const)
+    for (const s of barScreens)
+      test(`${locale} ${s.path} at ${width}x${height} has its actions in the bottom bar, in view`, async ({ page }) => {
+        await page.setViewportSize({ width, height });
+        await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
+        await page.route('**/v1/me', r => r.fulfill({ json: owner({ keyVerified: true, hasKey: true, canRegister: false }) }));
+        await page.route('**/v1/team', r => r.fulfill({ json: team }));
+        await page.route('**/v1/audit**', r => r.fulfill({ json: audit }));
+        const posts: string[] = [];
+        page.on('request', r => { if (r.method() === 'POST') posts.push(r.url()); });
+        await page.goto(s.path);
+        const bar = page.locator('[data-slot=sticky-action-bar]');
+        const action = bar.getByRole('button', { name: t(locale, s.action), exact: true });
+        await commitVisible(page, action);
+        await action.click();
+        await expect(bar).toHaveCount(1);
+        await expect(page.locator('[aria-invalid=true]')).toHaveCount(0); // opening the form does not submit it
+        expect(posts).toEqual([]);
+        await commitVisible(page, bar.getByRole('button', { name: t(locale, s.confirm) }));
+        expect(await axe(page)).toEqual([]);
+      });

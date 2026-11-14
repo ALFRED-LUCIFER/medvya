@@ -2,10 +2,10 @@ import type { FormEventHandler } from 'react';
 import { Controller, type FieldValues, type UseFormReturn } from 'react-hook-form';
 import { Info } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, ChoiceRow, ErrorSummary, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
+import { Button, ChoiceRow, ErrorSummary, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, StickyActionBar } from '@medvya/ui';
 import { doctorSteps, stepFields, type Authority, type FieldProblem, type DoctorForm, type DoctorStep, type LicenceForm } from '../domain/doctors';
 import type { Location } from '../domain/settings';
-import { fieldError, fieldGrid } from './fieldStyles';
+import { cardBar, fieldError, fieldGrid } from './fieldStyles';
 import { Section } from './Section';
 
 type Errors = Record<string, FieldProblem | undefined>;
@@ -201,17 +201,18 @@ export default function DoctorWizard(p: Props) {
             </div>
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-3" aria-live="polite">
+        <StickyActionBar className={cardBar} aria-live="polite" status={<>
+          {p.submitFailed && <span role="alert" className={fieldError}>{t('settings.saveFailed')}</span>}
+          {p.emailFailed && <span role="alert" className={fieldError}>{t('staff.error.email')}</span>}
+          {p.planFull && <span role="alert" className={fieldError}>{t('plan.full')}</span>}
+        </>}>
+          <Button type="button" variant="ghost" onClick={p.onClose}>{t('settings.cancel')}</Button>
           {p.stepIndex > 0 && <Button type="button" variant="outline" onClick={p.onBack}>{t('doctors.back')}</Button>}
           {/* Distinct keys: one button must never turn into the submit button under the click that moved to the last step. */}
           {p.lastStep
             ? <Button key="submit" type="submit" loading={p.submitting}>{t('doctors.add.submit')}</Button>
             : <Button key="next" type="button" onClick={p.onNext}>{t('doctors.next')}</Button>}
-          <Button type="button" variant="ghost" onClick={p.onClose}>{t('settings.cancel')}</Button>
-          {p.submitFailed && <span role="alert" className={fieldError}>{t('settings.saveFailed')}</span>}
-          {p.emailFailed && <span role="alert" className={fieldError}>{t('staff.error.email')}</span>}
-          {p.planFull && <span role="alert" className={fieldError}>{t('plan.full')}</span>}
-        </div>
+        </StickyActionBar>
       </form>
     </Section>
   );

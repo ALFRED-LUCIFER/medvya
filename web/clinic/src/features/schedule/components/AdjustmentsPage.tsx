@@ -2,7 +2,7 @@ import type { UseFormReturn } from 'react-hook-form';
 import { Link } from 'react-router';
 import { ArrowLeft, CircleAlert, CircleCheck } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, ChoiceRow, buttonVariants, Card, cn, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea, PageContainer, PageHeader } from '@medvya/ui';
+import { Button, ChoiceRow, buttonVariants, Card, cn, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea, PageContainer, PageHeader, StickyActionBar } from '@medvya/ui';
 import { adjustmentKinds, type AdjustmentForm, rebookActions, type AdjustmentError, type RebookAction, type SaveResult, type SavedAdjustment } from '../domain/adjustments';
 import { localDate } from '../domain/changes';
 import type { Appointment } from '../domain/schedule';
@@ -49,7 +49,7 @@ export default function AdjustmentsPage(p: Props) {
   const fieldError = (m: 'calendar' | 'range' | 'window' | 'tooLong') => t(`adjustment.error.${m}`);
 
   return (
-    <PageContainer width="form" className="gap-5">
+    <PageContainer className="gap-5">
       <PageHeader title={t('adjustment.title')} description={t('adjustment.intro')} back={
         <Link to={p.backPath} className={cn(buttonVariants({ variant: 'ghost' }), 'px-2')}>
           <ArrowLeft className="rtl:rotate-180" aria-hidden />{t('adjustment.back')}
@@ -64,7 +64,7 @@ export default function AdjustmentsPage(p: Props) {
       )}
 
       {p.manageable.length === 0 && !p.loading && <Card><p className="text-muted-foreground">{t('adjustment.viewOnly')}</p></Card>}
-      {p.manageable.length > 0 && <Card><form noValidate onSubmit={e => { void p.onSave(e); }} className="flex flex-col gap-5">
+      {p.manageable.length > 0 && <Card><form id="adjustment-form" noValidate onSubmit={e => { void p.onSave(e); }} className="flex flex-col gap-5">
         <div className="grid gap-4 md:grid-cols-2">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="adj-calendar">{t('adjustment.calendar')}</Label>
@@ -121,18 +121,6 @@ export default function AdjustmentsPage(p: Props) {
 
         {p.affected && p.affected.length > 0 && <Affected visits={p.affected} chosen={p.chosen} zone={zone} onChoose={p.onChoose} />}
 
-        <div aria-live="polite">
-          {p.error && (
-            <p role="alert" className="flex items-start gap-1.5 text-sm font-semibold text-danger-700">
-              <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />{t(`adjustment.error.${p.error}`)}
-            </p>
-          )}
-        </div>
-        {p.editingId && <p className="text-sm font-bold">{t('adjustment.editing')}</p>}
-        <div className="flex flex-wrap gap-2">
-          <Button type="submit" disabled={!p.canSave} loading={p.saving}>{t('adjustment.save')}</Button>
-          {p.editingId && <Button type="button" variant="outline" onClick={p.onCancelEdit}>{t('adjustment.cancelEdit')}</Button>}
-        </div>
       </form></Card>}
 
       <section aria-labelledby="adj-saved" className="flex flex-col gap-2">
@@ -168,6 +156,19 @@ export default function AdjustmentsPage(p: Props) {
           </ul>
         )}
       </section>
+      {p.manageable.length > 0 && (
+        <StickyActionBar status={<div aria-live="polite">
+          {p.error && (
+            <p role="alert" className="flex items-start gap-1.5 text-sm font-semibold text-danger-700">
+              <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />{t(`adjustment.error.${p.error}`)}
+            </p>
+          )}
+          {p.editingId && <p className="text-sm font-bold">{t('adjustment.editing')}</p>}
+        </div>}>
+          {p.editingId && <Button type="button" variant="outline" onClick={p.onCancelEdit}>{t('adjustment.cancelEdit')}</Button>}
+          <Button type="submit" form="adjustment-form" disabled={!p.canSave} loading={p.saving}>{t('adjustment.save')}</Button>
+        </StickyActionBar>
+      )}
     </PageContainer>
   );
 }

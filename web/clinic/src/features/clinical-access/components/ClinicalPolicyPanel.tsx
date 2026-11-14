@@ -1,8 +1,8 @@
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { useI18n } from '@medvya/i18n';
-import { Button, ChoiceRow } from '@medvya/ui';
-import { fieldError } from '../../settings/components/fieldStyles';
+import { Button, ChoiceRow, StickyActionBar } from '@medvya/ui';
+import { cardBar, fieldError } from '../../settings/components/fieldStyles';
 import { Section } from '../../settings/components/Section';
 import { clinicalPolicies, type ClinicalPolicyForm } from '../domain/clinicalAccess';
 
@@ -31,11 +31,12 @@ export default function ClinicalPolicyPanel(p: Props) {
           ))}
         </fieldset>
         <p className="text-sm text-muted-foreground">{t('clinicalAccess.policy.requestNote')}</p>
-        <div className="flex flex-wrap items-center gap-3">
-          <Button type="submit" loading={p.saving}>{t('settings.save')}</Button>
+        <StickyActionBar className={cardBar} status={<>
           {p.saved && <p role="status">{t('settings.saved')}</p>}
           {p.saveFailed && <p role="alert" className={fieldError}>{t('settings.saveFailed')}</p>}
-        </div>
+        </>}>
+          <Button type="submit" loading={p.saving}>{t('settings.save')}</Button>
+        </StickyActionBar>
       </form>
     </Section>
   );

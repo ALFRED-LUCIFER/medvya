@@ -49,10 +49,10 @@ Every screen in every Medvya web app (the clinic app, the platform console and a
 
 1. **Sidebar**: small and labelled (232 px from 1280 px, the 72 px labelled rail from 768 px, bottom tabs on phones). No fold toggle. Settings sits at its foot.
 2. **Top bar**: the shell's bar. Who and where, search, notifications, account.
-3. **Content takes the full width** between the sidebar and the gutter. Fields sit side by side in an auto-fit grid (200 px minimum), not in a narrow column. Only paragraphs are held to reading width.
+3. **Content takes the full width** between the sidebar and the gutter. Fields sit side by side in an auto-fit grid (200 px minimum), not in a narrow column. Only paragraphs are held to reading width. `PageContainer` is fluid by default; its `form` width is for print pages only (note print, token slip), and no page uses a reading-width cap (MDV-P2-065).
 4. **Bottom bar**: the library `StickyActionBar`, always sticky at the bottom of the screen and always visible. **Every button that acts on the screen lives in it**: OK, Save, Add, Create, Continue, Back, Confirm, Register, Sign, Send, Cancel. Status sits at its start, the actions at its end, and the one filled primary button is last. It stacks above all page content and below only dialogs, menus and toasts. A screen never ends with buttons after a long form.
 
-What stays where it is: navigation links, search, filters and view switches (in the header row); a table row's own action (on its row); an inline add inside a list (Add diagnosis under Assessment). A dialog or drawer follows the same rule inside itself: its actions are in its own footer, pinned at its bottom.
+What stays where it is: navigation links, search, filters and view switches (in the header row); a table row's own action (on its row); an inline add inside a list (Add diagnosis under Assessment). A dialog or drawer follows the same rule inside itself: its actions are in its own footer, pinned at its bottom. A form inside a card on a page without its own bottom bar (a settings panel, a chart card, the schedule's side panel) pins its bar at the card's foot (`cardBar`). A page has one bottom bar: while an inline reason or invite form is open, its Cancel and Confirm take the bar's place (the platform console).
 
 A new screen or a new app that does not follow this frame is not done. Review it against this section; the one-screen helpers in `tests/e2e/support/oneScreen.ts` (`commitVisible`, `fitsOneScreen`) prove it.
 

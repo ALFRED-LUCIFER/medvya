@@ -14,7 +14,7 @@ export default function MyDevicesPage(p: Props) {
   const when = (iso: string) => `${formatDate(new Date(iso), p.timeZone)} ${formatTime(new Date(iso), p.timeZone)}`;
   const state = p.loading ? 'loading' : p.failed ? 'error' : p.devices.length === 0 ? 'empty' : 'ready';
   return (
-    <PageContainer width="reading">
+    <PageContainer>
       <PageHeader title={t('myDevices.title')} />
       <p className="text-muted-foreground">{t('myDevices.intro')}</p>
       <div aria-live="polite" className="text-sm font-semibold text-success-700">{p.ended && !p.endFailed && t('myDevices.ended')}</div>

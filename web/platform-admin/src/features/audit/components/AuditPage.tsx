@@ -1,7 +1,7 @@
 import { Download } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, PageContainer, PageHeader, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState } from '@medvya/ui';
-import ReasonPanel from '../../shell/components/ReasonPanel';
+import { Button, PageContainer, PageHeader, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState, StickyActionBar } from '@medvya/ui';
+import ReasonPanel, { ReasonBar } from '../../shell/components/ReasonPanel';
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { actionKey, auditColumns, isKnownAction, type AuditEntry } from '../domain/audit';
@@ -21,11 +21,9 @@ export default function AuditPage({ vm }: Props) {
   const { t, formatDate, formatTime } = useI18n();
   return (
     <PageContainer>
-      <PageHeader title={t('platform.audit.title')} description={t('platform.audit.lead')}
-        actions={vm.canExport && <Button variant="outline" onClick={vm.onStartExport}><Download aria-hidden />{t('platform.audit.export')}</Button>} />
+      <PageHeader title={t('platform.audit.title')} description={t('platform.audit.lead')} />
       {vm.exporting && (
-        <ReasonPanel title={t('platform.audit.exportTitle')} form={vm.form} confirmLabel={t('platform.audit.exportConfirm')} busy={vm.exportBusy}
-          problem={vm.exportFailed ? t('platform.error.failed') : null} onConfirm={vm.onExport} onCancel={vm.onCancelExport}>
+        <ReasonPanel title={t('platform.audit.exportTitle')} form={vm.form} onConfirm={vm.onExport}>
           <p className="text-sm">{t('platform.audit.exportBody')}</p>
         </ReasonPanel>
       )}
@@ -48,6 +46,13 @@ export default function AuditPage({ vm }: Props) {
         </Table>
       </TableState>
       {vm.hasMore && <Button variant="outline" className="self-start" onClick={vm.onLoadMore} loading={vm.loadingMore}>{t('platform.audit.more')}</Button>}
+      {vm.exporting ? (
+        <ReasonBar confirmLabel={t('platform.audit.exportConfirm')} busy={vm.exportBusy} problem={vm.exportFailed ? t('platform.error.failed') : null} onCancel={vm.onCancelExport} />
+      ) : vm.canExport && (
+        <StickyActionBar>
+          <Button variant="outline" onClick={vm.onStartExport}><Download aria-hidden />{t('platform.audit.export')}</Button>
+        </StickyActionBar>
+      )}
     </PageContainer>
   );
 }

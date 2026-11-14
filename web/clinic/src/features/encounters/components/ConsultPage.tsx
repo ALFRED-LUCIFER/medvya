@@ -31,12 +31,12 @@ export default function ConsultPage(p: Props) {
   if (p.loading) return <p role="status">{t('consult.loading')}</p>;
   const back = <Link to={p.boardPath} className={buttonVariants({ variant: 'outline' })}>{t('consult.backToBoard')}</Link>;
   if (p.refusal) return (
-    <PageContainer width="form" role="alert">
+    <PageContainer role="alert">
       <PageHeader title={t('consult.refused.title')} actions={back} />
       <PageMessage kind="denied">{t(p.refusal.canRequest ? 'consult.refused.ask' : 'consult.refused.role')}</PageMessage>
     </PageContainer>
   );
-  if (p.notFound || p.failed || !p.banner) return <PageContainer width="form" role="alert"><PageHeader title={t(p.notFound ? 'consult.notFound' : 'consult.loadFailed')} actions={back} /></PageContainer>;
+  if (p.notFound || p.failed || !p.banner) return <PageContainer role="alert"><PageHeader title={t(p.notFound ? 'consult.notFound' : 'consult.loadFailed')} actions={back} /></PageContainer>;
   const { encounter } = p.banner;
   const ended = encounter.status === 'Ended';
   return (

@@ -16,7 +16,7 @@ type Props = {
 export default function MorePage({ displayName, role, facilityName, items, languageSwitcher, signingOut, canSwitchFacility, onSignOut, devicesPath }: Props) {
   const { t } = useI18n();
   return (
-    <PageContainer width="form" className="gap-5">
+    <PageContainer className="gap-5">
       <PageHeader title={t('nav.more')} />
       <Card className="gap-1">
         <p className="font-bold">{displayName}</p>

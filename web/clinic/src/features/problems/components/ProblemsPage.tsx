@@ -30,12 +30,12 @@ export default function ProblemsPage(p: Props) {
   if (p.loading) return <p role="status">{t('problems.loading')}</p>;
   const back = <Link to={p.boardPath} className={buttonVariants({ variant: 'outline' })}>{t('consult.backToBoard')}</Link>;
   if (p.refusal) return (
-    <PageContainer width="form" role="alert">
+    <PageContainer role="alert">
       <PageHeader title={t('consult.refused.title')} actions={back} />
       <PageMessage kind="denied">{t(p.refusal.canRequest ? 'consult.refused.ask' : 'consult.refused.role')}</PageMessage>
     </PageContainer>
   );
-  if (!p.view || p.notFound || p.failed) return <PageContainer width="form" role="alert"><PageHeader title={t(p.notFound ? 'consult.notFound' : 'problems.loadFailed')} actions={back} /></PageContainer>;
+  if (!p.view || p.notFound || p.failed) return <PageContainer role="alert"><PageHeader title={t(p.notFound ? 'consult.notFound' : 'problems.loadFailed')} actions={back} /></PageContainer>;
   const { view } = p;
   return (
     <PageContainer>

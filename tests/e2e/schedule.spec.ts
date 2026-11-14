@@ -888,7 +888,7 @@ test('reschedule picks a new slot, asks first, then moves; the old slot frees on
   const confirm = page.getByRole('group', { name: 'Move this appointment?' });
   await expect(confirm).toContainText('From Dr. Arjun Rao (synthetic), Mon, 19 Oct at 09:00 to Dr. Arjun Rao (synthetic), Mon, 19 Oct at 10:20.');
   expect(calls.changes).toEqual([]); // nothing moves before the desk confirms
-  await confirm.getByRole('button', { name: 'Move appointment' }).click();
+  await visitPanel(page).getByRole('button', { name: 'Move appointment' }).click(); // in the panel's bottom bar (MDV-P2-065)
   await expect(visitPanel(page)).toContainText('Moved. The old slot is free again.');
   expect(calls.changes).toEqual([{ url: expect.stringMatching(/\/v1\/appointments\/a-1\/reschedule$/), body: { calendarId: 'd-1', start: ist('2026-10-19', '10:20') } }]);
 });
@@ -925,12 +925,12 @@ test('dragging a visit onto an empty slot asks before moving it', async ({ page 
   await meera(page).dragTo(bookButton(page, '11:00'));
   await expect(confirm).toContainText('to Dr. Arjun Rao (synthetic), Mon, 19 Oct at 11:00.');
   expect(calls.changes).toEqual([]);
-  await confirm.getByRole('button', { name: 'Back' }).click(); // changed their mind: nothing sent
+  await visitPanel(page).getByRole('button', { name: 'Back' }).click(); // changed their mind: nothing sent
   await expect(confirm).toHaveCount(0);
   expect(calls.changes).toEqual([]);
 
   await meera(page).dragTo(bookButton(page, '11:20'));
-  await confirm.getByRole('button', { name: 'Move appointment' }).click();
+  await visitPanel(page).getByRole('button', { name: 'Move appointment' }).click(); // in the panel's bottom bar (MDV-P2-065)
   await expect(visitPanel(page)).toContainText('Moved. The old slot is free again.');
   expect(calls.changes.map(c => c.body)).toEqual([{ calendarId: 'd-1', start: ist('2026-10-19', '11:20') }]);
 });
@@ -1188,7 +1188,7 @@ for (const locale of ['en', 'ar'] as const)
 
     await meera(page).click();
     const visit = page.getByRole('complementary').first();
-    await visit.getByRole('button').nth(3).click(); // close, check in, reschedule, cancel
+    await visit.getByRole('button', { name: locale === 'ar' ? 'إلغاء الموعد' : 'Cancel appointment' }).click();
     await expect(visit.getByRole('button', { name: locale === 'ar' ? 'إلغاء هذه والتي بعدها' : 'Cancel this and following' })).toBeVisible();
     expect(await axe()).toEqual([]);
   });

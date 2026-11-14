@@ -49,7 +49,7 @@ export default function Patient360Page(p: Props) {
   const back = <Link to={p.backPath} className={buttonVariants({ variant: 'outline' })}>{t('patient360.back')}</Link>;
   if (p.refusal) {
     return (
-      <PageContainer width="form" role="alert">
+      <PageContainer role="alert">
         <PageHeader title={t('patient360.refused.title')} actions={back} />
         <div className="flex flex-col items-start gap-2">
           <RequestAccess refusal={p.refusal} roleMessage={t('patient360.refused.role')} reason={p.reason} asking={p.asking} askFailed={p.askFailed} onReason={p.onReason} onRequestAccess={p.onRequestAccess} />
@@ -57,7 +57,7 @@ export default function Patient360Page(p: Props) {
       </PageContainer>
     );
   }
-  if (p.notFound || p.failed || !p.data) return <PageContainer width="form" role="alert"><PageHeader title={t(p.notFound ? 'patient360.notFound' : 'patient360.loadFailed')} actions={back} /></PageContainer>;
+  if (p.notFound || p.failed || !p.data) return <PageContainer role="alert"><PageHeader title={t(p.notFound ? 'patient360.notFound' : 'patient360.loadFailed')} actions={back} /></PageContainer>;
   const { chart, treatmentConsent, timeZone, lifeStage, patient } = p.data;
   const Stage = stageIcon[lifeStage];
   const show = (s: Exclude<ChartSection, 'all'>) => showsSection(p.section, s);

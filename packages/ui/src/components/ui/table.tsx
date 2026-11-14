@@ -11,8 +11,12 @@ type SortDirection = "ascending" | "descending" | "none"
 // readers on a phone, and shows while a sort button in it has keyboard focus.
 const TableLayout = React.createContext({ compact: false, stacked: false })
 
+// Comfortable rows are at least 48 px, text-only ones too (DESIGN.md, Density); a stacked phone row is a block and keeps its own height.
+const comfortableRows = (stacked: boolean) => (stacked ? "md:[&>tr]:h-row" : "[&>tr]:h-row")
 // Compact rows are 36 px with a mouse and 48 px on any coarse pointer (DESIGN.md, Density). Stacked phone rows keep their own height.
 // A row's button is 32 px with a mouse, so with the row's rule the row stays 36 px, and 44 px on a coarse pointer; its cell has no padding.
+// Compact cells are 8 px from each side, not 12, so a wide reference table (the audit log's eight columns) stays on one line.
+const compactCells = "[&_td]:px-2 [&_th]:px-2"
 const compactRows =
   "[&>tr]:h-row-compact [&>tr>*]:h-auto [&>tr>*]:py-1.5 any-pointer-coarse:[&>tr]:h-row any-pointer-coarse:[&>tr>*]:py-3 " +
   "[&>tr>td:has(button)]:py-0 [&_button]:min-h-8 any-pointer-coarse:[&_button]:min-h-11"
@@ -48,7 +52,7 @@ function Table({
         <table
           data-slot="table"
           role={stacked ? "table" : undefined}
-          className={cn("w-full caption-bottom text-start text-sm", stacked && "max-md:block", className)}
+          className={cn("w-full caption-bottom text-start text-sm", layout.compact && compactCells, stacked && "max-md:block", className)}
           {...props}
         />
         {status !== undefined && <span role="status" className="sr-only">{status}</span>}
@@ -75,7 +79,7 @@ function TableBody({ className, ...props }: React.ComponentProps<"tbody">) {
     <tbody
       data-slot="table-body"
       role={stacked ? "rowgroup" : undefined}
-      className={cn("[&_tr:last-child]:border-0", compact && (stacked ? compactWideRows : compactRows), stacked && "max-md:block", className)}
+      className={cn("[&_tr:last-child]:border-0", compact ? (stacked ? compactWideRows : compactRows) : comfortableRows(stacked), stacked && "max-md:block", className)}
       {...props}
     />
   )

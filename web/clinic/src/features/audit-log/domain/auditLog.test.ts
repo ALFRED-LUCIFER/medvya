@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { catalogs, loadCatalog } from '@medvya/i18n';
 import { serverAuditActions } from './auditActions.node';
-import { actionKey, all, chart, defaultFilters, exportBody, listQuery, patientRecords, rangeOf } from './auditLog';
+import { sortRows } from '../../table/domain/tableSort';
+import { actionKey, all, auditSort, chart, defaultFilters, exportBody, listQuery, patientRecords, rangeOf, type AuditRow } from './auditLog';
 
 describe('action names (MDV-P1-052)', () => {
   it('names a known action in every language and shows an unknown code as it is', async () => {
@@ -53,5 +54,14 @@ describe('access log filters', () => {
     expect(listQuery({ ...base, actor: all }, null)).toBe('');
     expect(listQuery({ ...base, actor: 'u1', action: 'patient.read' }, 'c1')).toBe('actorUserId=u1&action=patient.read&after=c1');
     expect(exportBody({ ...base, patientId: 'p1' })).toMatchObject({ actorUserId: null, action: null, patientId: 'p1' });
+  });
+});
+
+describe('access log sort (MDV-P2-054)', () => {
+  it('orders by the instant, not the text, and puts a row without a name last', () => {
+    const r = (id: string, occurredAt: string, actorName: string | null) => ({ id, occurredAt, actorName }) as AuditRow;
+    const rows = [r('a', '2026-11-04T10:00:00Z', 'B'), r('b', '2026-11-04T11:00:00+05:30', null), r('c', '2026-11-04T04:00:00Z', 'A')];
+    expect(sortRows(rows, { key: 'time', direction: 'ascending' }, auditSort).map(x => x.id)).toEqual(['c', 'b', 'a']);
+    expect(sortRows(rows, { key: 'staff', direction: 'ascending' }, auditSort).map(x => x.id)).toEqual(['c', 'a', 'b']);
   });
 });

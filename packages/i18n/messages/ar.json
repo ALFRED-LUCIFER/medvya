@@ -5082,5 +5082,6 @@
   "audit.actionName.staff.role.change": "تغيّر دور موظف",
   "audit.chartView": "فُتح ملف أو تغيّر",
   "audit.actionUnknown": "نشاط آخر مسجّل",
-  "audit.exportAll": "يضم التصدير كل صف للموظف والمريض والإجراء والتواريخ المختارة، أياً كان العرض."
+  "audit.exportAll": "يضم التصدير كل صف للموظف والمريض والإجراء والتواريخ المختارة، أياً كان العرض.",
+  "audit.actionName.appointment.token_slip.read": "طُبعت قسيمة الرقم"
 }

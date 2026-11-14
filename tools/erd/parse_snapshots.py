@@ -3,7 +3,7 @@ import re
 from pathlib import Path
 
 ENTITY = re.compile(r'^ {12}modelBuilder\.Entity\("([^"]+)", b =>', re.M)
-PROP = re.compile(r'b\.Property<([^>]+)>\("(\w+)"\)((?:\s*\.[^;]*?)?);', re.S)
+PROP = re.compile(r'b\.(?:Property|PrimitiveCollection)<([^>]+)>\("(\w+)"\)((?:\s*\.[^;]*?)?);', re.S)
 OWNS = re.compile(r'b\.OwnsMany\("[^"]+", "(\w+)", b1 =>(.*?)\n {20}\}\);', re.S)
 FK = re.compile(r'b\.HasOne\("([^"]+)",[^)]*\)\s*\.With(?:Many|One)\([^)]*\)\s*\.HasForeignKey\((?:"[^"]+", )?"(\w+)"\)', re.S)
 KEY = re.compile(r'b\.HasKey\(([^)]*)\)')

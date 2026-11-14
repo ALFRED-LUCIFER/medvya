@@ -2,12 +2,6 @@ using Medvya.Encounters.Domain;
 
 namespace Medvya.Encounters.Application;
 
-/// <summary>The tenant flag that turns the nurse step on: intake endpoints exist, and a visit leaves the nurse only by the nurse's handoff.</summary>
-public static class IntakeFlag
-{
-    public const string Key = "clinical.nurse-intake";
-}
-
 public sealed record VitalReading(VitalKind? Kind, decimal? Value);
 
 /// <summary>The nurse's save: the chief complaint in the patient's words and the readings taken so far. A blank stays blank (unknown, never guessed).</summary>

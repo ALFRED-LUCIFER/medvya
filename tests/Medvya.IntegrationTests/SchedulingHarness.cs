@@ -166,8 +166,8 @@ internal sealed class SchedulingHarness(PostgresFixture sql)
     public async Task StepsAsync(bool nurse, bool billing)
     {
         var flags = Get<Medvya.Tenancy.Application.IFeatureFlags>(Admin);
-        await flags.SetAsync(VisitStepFlags.Nurse, nurse, "clinical-team", "Nurse intake (synthetic test)");
-        await flags.SetAsync(VisitStepFlags.Billing, billing, "practice", "Billing (synthetic test)");
+        await flags.SetAsync(Medvya.Tenancy.Domain.Features.NurseIntake, nurse, "clinical-team", "Nurse intake (synthetic test)");
+        await flags.SetAsync(Medvya.Tenancy.Domain.Features.Billing, billing, "practice", "Billing (synthetic test)");
     }
 
     /// <summary>"No known allergies" on the chart: signing a note and authorising a prescription refuse an unrecorded allergy state (MDV audit P0-2).</summary>

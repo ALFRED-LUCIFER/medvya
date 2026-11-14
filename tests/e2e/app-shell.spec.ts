@@ -42,9 +42,9 @@ test('receptionist sees only Practice items and lands on the front desk', async 
   // Name and role are in the account menu (MDV-P1-093), not the sidebar.
   await page.getByRole('button', { name: 'Signed in as A. Joseph' }).click();
   await expect(page.getByRole('menu')).toContainText('Receptionist');
-  // A clinical address is not a route for this role.
+  // A clinical address is not a route for this role: the page says so (MDV-P1-096), not "Page not found".
   await page.goto('/patients');
-  await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Screen not available' })).toBeVisible();
 });
 
 test('doctor sees Clinical and Practice items; flag-off items are not rendered', async ({ page }) => {
@@ -161,6 +161,50 @@ for (const [name, width] of [['wide', 1440], ['desktop', 1366], ['laptop', 1024]
           .map(v => `${v.id} (${v.nodes.length})`));
       expect(violations).toEqual([]);
     });
+
+// MDV-P1-096: a screen the role may not open says so, with the start page; an address that does not exist stays "Page not found".
+for (const locale of ['en', 'ar'])
+  test(`a refused screen says the role does not include it, offers the start page, names nothing, and passes axe (${locale})`, async ({ page }) => {
+    await signInAs(page, receptionist, locale);
+    const [title, body, home] = locale === 'en'
+      ? ['Screen not available', 'Your role does not include this screen.', 'Go to my start page']
+      : ['الشاشة غير متاحة', 'دورك لا يشمل هذه الشاشة.', 'الانتقال إلى صفحتي الرئيسية'];
+    for (const path of ['/today', '/settings', '/consult/e-7', '/consult/e-7/medicines', '/patients/p-1']) {
+      await page.goto(path);
+      await expect(page.getByRole('main').getByRole('heading', { level: 1 })).toHaveText(title);
+      await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
+      await expect(page.getByRole('main')).toContainText(body);
+      await expect(page.getByText(/not found|غير موجودة/i)).toHaveCount(0);
+      // Only the address typed and the fixed words: no patient, MRN or clinical word is shown or added to the address.
+      expect(new URL(page.url()).pathname).toBe(path);
+      expect(await page.getByRole('main').textContent()).not.toMatch(/Meera|MRN|allerg|prescri|diagnos/i);
+    }
+    await page.addScriptTag({ path: axePath });
+    const violations = await page.evaluate(async () =>
+      (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations
+        .map(v => `${v.id} (${v.nodes.length})`));
+    expect(violations).toEqual([]);
+    await page.getByRole('button', { name: home }).click();
+    await expect(page).toHaveURL('/front-desk');
+  });
+
+test('a nurse opening a consultation sees the one refused message and no red error lines', async ({ page }) => {
+  await signInAs(page, nurse);
+  let asked = 0;
+  await page.route('**/v1/encounters/**', r => { asked++; return r.fulfill({ status: 403 }); });
+  await page.goto('/consult/e-7');
+  await expect(page.getByRole('heading', { name: 'Screen not available' })).toBeVisible();
+  await expect(page.getByRole('main').getByRole('alert')).toHaveCount(0);
+  expect(asked).toBe(0); // the screen is not opened, so nothing is fetched to fail
+});
+
+test('an address that does not exist, or a switched-off screen, still says Page not found', async ({ page }) => {
+  await signInAs(page, doctor);
+  for (const path of ['/no-such-page', '/messages', '/consult/e-7/nothing']) {
+    await page.goto(path);
+    await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible();
+  }
+});
 
 // MDV-P1-093: one account menu, a 48 px top bar and a labelled rail.
 const practiceAdmin = {

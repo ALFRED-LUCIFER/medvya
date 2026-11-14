@@ -63,6 +63,18 @@ export function homeItem(visible: NavItem[], active: Active): NavItem | undefine
  */
 export const patientDirectory = { path: '/patients/directory', capability: 'RegisterBookPatients', access: ['Read', 'Full'] } as const satisfies Guard & { path: string };
 
+/**
+ * For an address no route of this membership matched: true when the app has that screen but this role may not open it, so the page
+ * says so instead of "Page not found" (MDV-P1-096). A switched-off or unknown address stays "not found". UX only; the API enforces.
+ */
+export function refusedAddress(path: string, active: Active): boolean {
+  const under = (p: string) => path === p || path.startsWith(`${p}/`);
+  // A consultation needs the full chart, like its note API.
+  if (under('/consult')) return active?.capabilities.Patient360Chart !== 'Full';
+  if (under(patientDirectory.path)) return !allows(active, patientDirectory);
+  return navItems.some(i => under(i.path) && (!i.flag || !!active?.flags.includes(i.flag)) && !allows(active, i));
+}
+
 const tabPriority: readonly NavId[] = ['today', 'patients', 'inbox', 'messages', 'frontDesk', 'schedule', 'register', 'nurse'];
 
 /** Mobile bottom bar: up to four of the visible items (design order Today · Patients · Inbox · Messages), then "More". */

@@ -5067,6 +5067,8 @@
   "audit.actionName.rx.share.read": "पर्चा साझा करना देखा गया",
   "audit.actionName.rx.update": "पर्चे की पंक्ति बदली गई",
   "audit.actionName.rx.verify": "क्यूआर कोड से पर्चे की जाँच",
+  "audit.actionName.rx.discard": "ड्राफ़्ट पर्चा रद्द किया गया",
+  "audit.actionName.rx.pending": "अधिकृत करने के लिए पर्चों की सूची देखी गई",
   "audit.actionName.session.refresh.replay": "दोबारा इस्तेमाल हुआ साइन-इन टोकन अस्वीकार",
   "audit.actionName.settings.clinical_access.update": "क्लिनिकल पहुँच नीति बदली गई",
   "audit.actionName.settings.doctor.licence.update": "डॉक्टर का लाइसेंस बदला गया",

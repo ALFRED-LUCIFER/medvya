@@ -5098,6 +5098,8 @@
   "audit.actionName.rx.share.read": "عُرضت مشاركة الوصفة",
   "audit.actionName.rx.update": "تغيّر سطر في الوصفة",
   "audit.actionName.rx.verify": "فُحصت الوصفة برمز QR",
+  "audit.actionName.rx.discard": "أُلغيت مسودة وصفة",
+  "audit.actionName.rx.pending": "عُرضت قائمة الوصفات المنتظرة للاعتماد",
   "audit.actionName.session.refresh.replay": "رُفض رمز دخول أُعيد استخدامه",
   "audit.actionName.settings.clinical_access.update": "تغيّرت سياسة الوصول السريري",
   "audit.actionName.settings.doctor.licence.update": "تغيّر ترخيص الطبيب",

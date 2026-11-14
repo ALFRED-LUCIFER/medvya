@@ -179,6 +179,7 @@ for (const locale of ['en', 'ar'])
       await openToday(page, { locale });
       if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+      await expect(page.getByRole('table')).toBeVisible(); // the loaded page: axe on the loading state tests nothing
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true); // nothing scrolls sideways
       await page.addScriptTag({ path: axePath });
       const violations = await page.evaluate(async () =>

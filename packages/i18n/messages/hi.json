@@ -5171,6 +5171,7 @@
   "clinicToday.action.list": "सूची खोलें",
   "clinicToday.action.waitingRoom": "प्रतीक्षा कक्ष खोलें",
   "clinicToday.doctors": "डॉक्टर के अनुसार नोट और पर्चे",
+  "clinicToday.doctorsTable": "डॉक्टर के अनुसार नोट और पर्चे, तालिका",
   "clinicToday.doctorsEmpty": "इस स्थान पर अभी कोई डॉक्टर नहीं है।",
   "clinicToday.col.doctor": "डॉक्टर",
   "clinicToday.col.notes": "हस्ताक्षर के लिए नोट",

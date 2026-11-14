@@ -5212,6 +5212,7 @@
   "clinicToday.action.list": "Open list",
   "clinicToday.action.waitingRoom": "Open waiting room",
   "clinicToday.doctors": "Notes and prescriptions by doctor",
+  "clinicToday.doctorsTable": "Notes and prescriptions by doctor, table",
   "clinicToday.doctorsEmpty": "No doctors at this location yet.",
   "clinicToday.col.doctor": "Doctor",
   "clinicToday.col.notes": "Notes to sign",

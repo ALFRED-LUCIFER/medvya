@@ -53,7 +53,7 @@ function Body(p: Props) {
       </Card>
       <Card title={t('clinicToday.doctors')}>
         {d.doctors.length === 0 ? <EmptyState>{t('clinicToday.doctorsEmpty')}</EmptyState> : (
-          <Table label={t('clinicToday.doctors')} stacked>
+          <Table label={t('clinicToday.doctorsTable')} stacked>
             <TableHeader>
               <TableRow>
                 <TableHead>{t('clinicToday.col.doctor')}</TableHead>

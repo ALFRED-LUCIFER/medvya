@@ -5209,6 +5209,7 @@
   "clinicToday.action.list": "افتح القائمة",
   "clinicToday.action.waitingRoom": "افتح غرفة الانتظار",
   "clinicToday.doctors": "الملاحظات والوصفات حسب الطبيب",
+  "clinicToday.doctorsTable": "الملاحظات والوصفات حسب الطبيب، جدول",
   "clinicToday.doctorsEmpty": "لا يوجد أطباء في هذا الموقع بعد.",
   "clinicToday.col.doctor": "الطبيب",
   "clinicToday.col.notes": "ملاحظات للتوقيع",

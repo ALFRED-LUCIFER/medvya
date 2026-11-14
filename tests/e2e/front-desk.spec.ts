@@ -107,6 +107,9 @@ test('shows today\'s visits by status with nonclinical tags, in facility time', 
   await expect(meera).toContainText('Registration incomplete');
   await expect(cardOf(page, 'Farhan Qureshi (synthetic)')).toContainText('Waiting 12 min');
   await expect(cardOf(page, 'Farhan Qureshi (synthetic)')).toContainText('Token A-07 · 1 ahead'); // what the queue TV shows instead of the name; ahead: MDV-P1-103
+  // MDV-P2-060: board tags are the library Tag, a tone beside icon and words.
+  await expect(meera.getByText('Registration incomplete', { exact: true })).toHaveAttribute('data-tone', 'warning');
+  await expect(cardOf(page, 'Farhan Qureshi (synthetic)').getByText('Waiting 12 min', { exact: true })).toHaveAttribute('data-slot', 'tag');
   // Each column's action, as designed. Nurse intake is off here, so a checked-in patient goes straight to the doctor (MDV audit UX-05).
   // A waiting card also has its menu (MDV-P1-100).
   await expect(cardOf(page, 'Farhan Qureshi (synthetic)').getByRole('button')).toHaveText(['Ready for doctor', 'More']);

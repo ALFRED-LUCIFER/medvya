@@ -32,6 +32,7 @@ test('the doctor finds a code by words, adds it as provisional, and resolves ano
   await page.getByRole('option', { name: 'Provisional · not confirmed' }).click();
   await page.getByRole('button', { name: 'Add problem' }).click();
   await expect(table.getByRole('row', { name: /Angina/ })).toContainText('Provisional · not confirmed');
+  await expect(table.getByRole('row', { name: /Angina/ }).getByText('Provisional · not confirmed', { exact: true })).toHaveAttribute('data-slot', 'tag'); // MDV-P2-060
   expect(calls.adds).toEqual([{ code: 'I20.9', description: null, verification: 'Provisional', onsetOn: null }]);
 
   // Neither a code nor words: said before anything is sent.

@@ -8,7 +8,7 @@ import {
 import { statuses, type Status, type WebGlyph } from '@medvya/tokens/status';
 import { useI18n, type MessageKey } from '@medvya/i18n';
 import { Button } from '#components/ui/button';
-import { Chip } from '#components/ui/chip';
+import { Chip, type Tone } from '#components/ui/chip';
 import { Tag } from '#components/ui/tag';
 
 // Every clinical state is icon + words + colour, never colour alone (Foundations §01).
@@ -77,20 +77,20 @@ export const scheduleLooks = {
   needsRebooking: { label: 'schedule.state.NeedsRebooking', icon: CalendarClock, bg: 'var(--color-warning-bg)', fg: 'var(--color-warning-text)', border: '1px dashed var(--color-warning-border)' },
 } satisfies Record<string, Look>;
 
-// Reception board (P-01): nonclinical tags on visit cards. The reason is only ever its category.
+// Reception board (P-01): nonclinical tags on visit cards, each a library tone (MDV-P2-060). The reason is only ever its category.
 export const frontDeskLooks = {
-  reason: { label: 'board.tag.reason', icon: TagIcon, bg: 'var(--color-neutral-bg)', fg: 'var(--color-neutral-text)' },
-  incomplete: { label: 'board.tag.incomplete', icon: TriangleAlert, bg: 'var(--color-warning-bg)', fg: 'var(--color-warning-text)' },
-  messageFailed: { label: 'board.tag.messageFailed', icon: MessageSquareWarning, bg: 'var(--color-danger-25)', fg: 'var(--color-danger-text)', border: '1px solid var(--color-danger-border)' }, // a message to the patient failed (MDV-P1-034)
-  walkIn: { label: 'board.tag.walkIn', icon: Footprints, bg: 'var(--color-info-bg)', fg: 'var(--color-info-text)' }, // "Walk-in" (MDV-P1-025)
-  waiting: { label: 'board.waiting', icon: Hourglass, bg: 'var(--color-white)', fg: 'var(--color-warning-text)' },
-  room: { label: 'board.room', icon: DoorOpen, bg: 'var(--color-brand-bg)', fg: 'var(--color-brand-text)' },
-  token: { label: 'board.token', icon: Ticket, bg: 'var(--color-info-bg)', fg: 'var(--color-info-text)' },
-  updated: { label: 'board.tag.updated', icon: RefreshCcwDot, bg: 'var(--color-brand-bg)', fg: 'var(--color-brand-text)' }, // changed elsewhere, for 5 s (MDV-P2-056)
-  live: { label: 'board.live.live', icon: Radio, bg: 'var(--color-success-bg)', fg: okOnTint },
-  connecting: { label: 'board.live.connecting', icon: RefreshCw, bg: 'var(--color-neutral-bg)', fg: 'var(--color-neutral-text)' },
-  paused: { label: 'board.live.paused', icon: WifiOff, bg: 'var(--color-warning-bg)', fg: 'var(--color-warning-text)' },
-} satisfies Record<string, Look>;
+  reason: { label: 'board.tag.reason', icon: TagIcon, tone: 'neutral' },
+  incomplete: { label: 'board.tag.incomplete', icon: TriangleAlert, tone: 'warning' },
+  messageFailed: { label: 'board.tag.messageFailed', icon: MessageSquareWarning, tone: 'danger' }, // a message to the patient failed (MDV-P1-034)
+  walkIn: { label: 'board.tag.walkIn', icon: Footprints, tone: 'info' }, // "Walk-in" (MDV-P1-025)
+  waiting: { label: 'board.waiting', icon: Hourglass, tone: 'warning' },
+  room: { label: 'board.room', icon: DoorOpen, tone: 'brand' },
+  token: { label: 'board.token', icon: Ticket, tone: 'info' },
+  updated: { label: 'board.tag.updated', icon: RefreshCcwDot, tone: 'brand' }, // changed elsewhere, for 5 s (MDV-P2-056)
+  live: { label: 'board.live.live', icon: Radio, tone: 'success' },
+  connecting: { label: 'board.live.connecting', icon: RefreshCw, tone: 'neutral' },
+  paused: { label: 'board.live.paused', icon: WifiOff, tone: 'warning' },
+} satisfies Record<string, { label: MessageKey; icon: LucideIcon; tone: Exclude<Tone, 'ai'> }>;
 
 const paint = (look: Look): CSSProperties => ({ backgroundColor: look.bg, color: look.fg, border: look.border });
 
@@ -109,8 +109,7 @@ function Pill({ look, text, children }: { look: Look; text?: string; children?: 
 export function FrontDeskTag({ kind, text }: { kind: keyof typeof frontDeskLooks; text?: string }) {
   const { t } = useI18n();
   const look = frontDeskLooks[kind];
-  return <Tag tone="neutral" size="sm" label={text ?? t(look.label)} icon={look.icon} style={paint(look)}
-    className="items-start border-0 py-1 text-xs font-bold leading-tight [&>svg]:mt-px" />;
+  return <Tag tone={look.tone} size="sm" label={text ?? t(look.label)} icon={look.icon} className="items-start [&>svg]:mt-px" />;
 }
 
 // Thin wrappers over Chip and Tag (MDV-P1-083). The look tables and these classes keep today's looks exactly until the features move to tones.

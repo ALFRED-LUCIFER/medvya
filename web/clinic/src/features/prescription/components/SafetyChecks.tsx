@@ -2,7 +2,7 @@ import { useId, type FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { CircleAlert, CircleCheck, CircleHelp, ShieldCheck, TriangleAlert, type LucideIcon } from 'lucide-react';
 import { useI18n, type MessageKey } from '@medvya/i18n';
-import { Button, ClinicalAlert, Field, Input } from '@medvya/ui';
+import { Button, Chip, ClinicalAlert, Field, Input, type Tone } from '@medvya/ui';
 import { fieldError } from '../../settings/components/fieldStyles';
 import { amountOf, kgOf, lookOf, mlOf, type LineSafety, type RxChecks, type SafetyAlert, type WeightDose } from '../domain/checks';
 
@@ -67,13 +67,15 @@ function alertText(t: T, a: SafetyAlert, { weightDoses: doses, allergies }: RxCh
   }
 }
 
-const chipIcon: Record<LineSafety, LucideIcon> = { severe: CircleAlert, moderate: TriangleAlert, overridden: CircleCheck, notChecked: CircleHelp, clear: ShieldCheck };
+const chipLook: Record<LineSafety, { icon: LucideIcon; tone: Exclude<Tone, 'ai'> }> = {
+  severe: { icon: CircleAlert, tone: 'danger' }, moderate: { icon: TriangleAlert, tone: 'warning' }, overridden: { icon: CircleCheck, tone: 'neutral' },
+  notChecked: { icon: CircleHelp, tone: 'warning' }, clear: { icon: ShieldCheck, tone: 'success' },
+};
 
-/** The per-line safety chip: icon and words, never colour alone. */
+/** The per-line safety chip, the library Chip (MDV-P2-060): icon and words, never colour alone. */
 export function SafetyChip({ state }: { state: LineSafety }) {
   const { t } = useI18n();
-  const Icon = chipIcon[state];
-  return <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-bold"><Icon aria-hidden className="size-3.5" />{t(`rx.check.chip.${state}`)}</span>;
+  return <Chip size="sm" {...chipLook[state]} label={t(`rx.check.chip.${state}`)} />;
 }
 
 /**

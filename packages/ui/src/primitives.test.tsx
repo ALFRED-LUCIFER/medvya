@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   alertLooks, ClinicalAlert, provenanceLooks, ProvenanceTag,
-  RecordingPill, recordingLooks, scheduleLooks, frontDeskLooks, StatusChip, statusLooks, SystemState, systemStates, type Look,
+  FrontDeskTag, frontDeskLooks, RecordingPill, recordingLooks, scheduleLooks, StatusChip, statusLooks, SystemState, systemStates, type Look,
 } from './primitives';
 import { Button } from './components/ui/button';
 import { Input } from './components/ui/input';
@@ -32,7 +32,7 @@ function contrast(a: string, b: string) {
   return (hi + 0.05) / (lo + 0.05);
 }
 
-const allLooks: [string, Look][] = [statusLooks, provenanceLooks, alertLooks, recordingLooks, scheduleLooks, frontDeskLooks].flatMap(o => Object.entries(o));
+const allLooks: [string, Look][] = [statusLooks, provenanceLooks, alertLooks, recordingLooks, scheduleLooks].flatMap(o => Object.entries(o));
 
 describe('clinical primitives', () => {
   it('meets WCAG AA text contrast (4.5:1) for every state', () => {
@@ -100,6 +100,17 @@ describe('clinical primitives', () => {
     }
     expect(container.textContent).toContain('REC 04:12');
     expect(container.textContent).toContain('AI draft · not reviewed');
+  });
+
+  it('renders every reception-board tag as the library Tag with its tone, an icon and words (MDV-P2-060)', () => {
+    const { container } = ui(<>{Object.keys(frontDeskLooks).map(k => <FrontDeskTag key={k} kind={k as keyof typeof frontDeskLooks} />)}</>);
+    const tags = [...container.querySelectorAll('[data-slot=tag]')];
+    expect(tags.map(e => e.getAttribute('data-tone'))).toEqual(Object.values(frontDeskLooks).map(l => l.tone));
+    for (const tag of tags) {
+      expect(tag.textContent?.trim().length).toBeGreaterThan(0);
+      expect(tag.querySelector('svg')).not.toBeNull();
+      expect(tag.getAttribute('style')).toBeNull(); // the tone's classes, no inline colour
+    }
   });
 
   it('renders translated, right-to-left text in Arabic', async () => {

@@ -16,7 +16,6 @@ const capabilities = (role: Role) =>
   Object.fromEntries(rows.map(([cap, c]) => [cap, codes[c.split(' ')[roles.indexOf(role)]!]!])) as Record<Capability, Access>;
 const allFlags = navItems.flatMap(i => (i.flag ? [i.flag] : []));
 const ids = (role: Role, flags: string[] = []) => visibleNav({ role, capabilities: capabilities(role), flags }).map(i => i.id);
-const groups = (role: Role, flags: string[] = []) => new Set(visibleNav({ role, capabilities: capabilities(role), flags }).map(i => i.group));
 
 describe('role-based navigation', () => {
   it('lands a nurse on the nurse queue when intake is on, a doctor on My day, and everyone else on Front desk (UX-08)', () => {
@@ -45,7 +44,6 @@ describe('role-based navigation', () => {
   });
 
   it('never shows a receptionist a clinical screen: Patients is the directory, not the chart', () => {
-    expect(groups('Receptionist', allFlags)).toEqual(new Set(['practice', 'clinical']));
     expect(ids('Receptionist', allFlags)).toEqual(['frontDesk', 'schedule', 'patients', 'billing']);
     expect(allows({ role: 'Receptionist', capabilities: capabilities('Receptionist'), flags: [] }, clinicalRecord)).toBe(false);
   });

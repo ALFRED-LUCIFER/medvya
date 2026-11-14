@@ -282,7 +282,7 @@ test('empty, no access, failure and offline each say so', async ({ page, context
   await page.goto('/front-desk');
   await expect(page.getByRole('status').filter({ hasText: 'Loading Front desk' })).toBeVisible();
   await context.setOffline(true);
-  await expect(page.getByRole('alert').filter({ hasText: 'The board loads when you reconnect.' })).toBeVisible();
+  await expect(page.getByRole('alert').filter({ hasText: 'Front desk loads when you reconnect.' })).toBeVisible();
   await context.setOffline(false);
   await page.unrouteAll({ behavior: 'ignoreErrors' });
 });

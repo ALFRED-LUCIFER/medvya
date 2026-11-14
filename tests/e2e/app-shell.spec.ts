@@ -157,7 +157,7 @@ test('keyboard: skip link is first, visible on focus and moves focus to main', a
   await signInAs(page, receptionist);
   await page.goto('/front-desk');
   // goto resolves on load, but the shell renders only after /v1/me/context answers; a Tab during loading lands nowhere.
-  await expect(page.getByRole('main').getByRole('heading', { name: /^Front desk/ })).toBeVisible(); // the P-01 board (MDV-P1-028)
+  await expect(page.getByRole('main').getByRole('heading', { level: 1, name: /^Front desk/ })).toBeVisible(); // the P-01 board (MDV-P1-028)
   await page.keyboard.press('Tab');
   const skip = page.getByRole('link', { name: 'Skip to main content' });
   await expect(skip).toBeFocused();
@@ -313,7 +313,7 @@ for (const [roleName, context] of [['doctor', doctor], ['receptionist', receptio
 test('the account menu opens and closes by keyboard and gives focus back to the avatar; the skip link stays first', async ({ page }) => {
   await signInAs(page, receptionist);
   await page.goto('/front-desk');
-  const board = page.getByRole('main').getByRole('heading', { name: /^Front desk/ }); // the shell has rendered: a Tab before it lands nowhere
+  const board = page.getByRole('main').getByRole('heading', { level: 1, name: /^Front desk/ }); // the shell has rendered: a Tab before it lands nowhere
   await expect(board).toBeVisible();
   const avatar = page.getByRole('button', { name: 'Signed in as A. Joseph' });
   await avatar.focus();

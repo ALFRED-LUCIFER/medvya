@@ -60,6 +60,8 @@ Renames land in one batch, before the first training session or after the first 
 
 ## 4 · Density
 
+> Amended 14 Nov 2026 by MDV-P2-062: comfortable is 36 px controls and 40 px rows with a mouse, 44 px and 48 px on a coarse pointer, as in the workspace concept. DESIGN.md (Density) is the current rule.
+
 | | Comfortable (default) | Compact (explicit, per table) |
 |---|---|---|
 | Control height | 44 px | 36 px |

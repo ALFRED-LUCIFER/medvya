@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
+import { targetPx } from './support/targets';
 
 // MDV-P2-006: documents (E-03). CI has no API or Blob: endpoints are mocked in the shapes the server sends. The scan gate, the five-minute link
 // that fetches the exact original, the front desk's refusal, immutability and the audit rows are covered by DocumentTests on PostgreSQL and Azurite.
@@ -144,12 +145,12 @@ test('several camera pages are combined into one PDF', async ({ page }) => {
 
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 for (const locale of ['en', 'ar'])
-  test(`axe finds no violations with the viewer open (${locale}); 44 px targets`, async ({ page }) => {
+  test(`axe finds no violations with the viewer open (${locale}); control-size targets`, async ({ page }) => {
     await open(page, { locale });
     await page.getByRole('button', { name: /^(Open|فتح)/ }).click();
     await expect(page.getByRole('region', { name: locale === 'ar' ? 'عارض المستندات' : 'Document viewer' })).toBeVisible();
     if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
-    for (const b of await page.getByRole('main').getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    for (const b of await page.getByRole('main').getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
     await page.addScriptTag({ path: axePath });
     const violations = await page.evaluate(async () =>
       (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations.map(v => `${v.id} (${v.nodes.length})`));

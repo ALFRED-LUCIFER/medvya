@@ -25,7 +25,7 @@ test('a formulary medicine gets a dose that autosaves and reads in the chosen pr
   await rx.getByRole('button', { name: 'Add Metformin 500 mg Tablet' }).click();
   expect(calls.added).toEqual([{ formularyItemId: 'fi-metformin' }]);
   const metformin = card(page, 'Metformin');
-  await expect(metformin).toContainText('Added by you');
+  await expect(metformin.getByText('Added by you', { exact: true })).toHaveAttribute('data-slot', 'tag'); // the library Tag (MDV-P2-060)
   await expect(metformin).toContainText('Fill in the dose to build the instruction.');
 
   await metformin.getByLabel('Dose').fill('1');
@@ -110,8 +110,9 @@ test('a severe allergy alert is in words with its evidence and needs a reason; w
   const alert = checks.getByRole('list', { name: 'Safety alerts' }).getByRole('alert');
   await expect(alert).toContainText('Severe · Allergy: Penicillin · verified. Amoxicillin: penicillin class.');
   await expect(checks).toContainText('Severe alerts without a reason: 1.');
-  await expect(card(page, 'Amoxicillin')).toContainText('Safety: severe alert');
-  await expect(card(page, 'Herbal tonic X')).toContainText('Safety: not fully checked');
+  // MDV-P2-060: the library Chip, its tone beside the words (never colour alone).
+  await expect(card(page, 'Amoxicillin').getByText('Safety: severe alert', { exact: true })).toHaveAttribute('data-tone', 'danger');
+  await expect(card(page, 'Herbal tonic X').getByText('Safety: not fully checked', { exact: true })).toHaveAttribute('data-slot', 'chip');
   await expect(checks).toContainText('Herbal tonic X: typed as free text, so not checked for allergies, interactions or dose.');
 
   await checks.getByRole('button', { name: 'Give a reason to go ahead' }).click();

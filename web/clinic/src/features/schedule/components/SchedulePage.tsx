@@ -134,7 +134,8 @@ export default function SchedulePage(props: Props) {
         {/* Only an open booking or visit is a drawer on a tablet; the hint and the "booked" note sit above the schedule, as on phones. */}
         {props.panel && onClosePanel && <div aria-hidden className="fixed inset-0 z-30 hidden bg-black/40 md:max-lg:block print:hidden" onClick={onClosePanel} />}
         {/* Below 1280 px the "select an empty slot" hint is not shown: the free slots say Tap to book (MDV-P1-097). */}
-        {props.panel && <div ref={panelRef} {...(drawer && { role: 'dialog', 'aria-modal': true, 'aria-label': t('schedule.drawer') })} className={cn('scroll-mt-20 max-lg:order-first max-lg:has-[[data-hint]]:hidden lg:sticky lg:top-20 lg:max-h-[calc(100dvh-6rem)] lg:overflow-y-auto print:hidden',
+        {/* Beside the schedule its height is what is left under the toolbar, as the day grid's, so its bottom bar is on screen unscrolled (MDV-P2-064). */}
+        {props.panel && <div ref={panelRef} {...(drawer && { role: 'dialog', 'aria-modal': true, 'aria-label': t('schedule.drawer') })} className={cn('scroll-mt-20 max-lg:order-first max-lg:has-[[data-hint]]:hidden lg:sticky lg:top-20 lg:max-h-[calc(100dvh-15rem)] lg:overflow-y-auto print:hidden',
           onClosePanel && 'md:max-lg:fixed md:max-lg:inset-y-0 md:max-lg:end-0 md:max-lg:z-30 md:max-lg:w-96 md:max-lg:overflow-y-auto md:max-lg:bg-background md:max-lg:p-3 md:max-lg:shadow-xl')}
           // Escape closes the drawer, not the side column on a wide screen; a portalled menu inside (a Select) is not in this element and closes itself.
           onKeyDown={e => { if (e.key === 'Escape' && drawer && e.currentTarget.contains(e.target as Node)) onClosePanel(); }}>

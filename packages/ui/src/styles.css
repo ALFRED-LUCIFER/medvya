@@ -21,6 +21,8 @@
 
 @layer base {
   html { background: var(--color-background); color: var(--color-foreground); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+  /* Body text is 14/20 (workspace concept, MDV-P2-062); on body, not html, so rem-based spacing keeps its 16 px root. */
+  body { font-size: var(--text-body); line-height: var(--text-body--line-height); }
   * { border-color: var(--color-border); }
   /* Handoff: visible 2px focus ring on every interactive element. */
   :focus-visible { outline: 2px solid var(--color-ring); outline-offset: 2px; }

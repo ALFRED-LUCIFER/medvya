@@ -150,7 +150,7 @@ export default function App({ locale, onLocaleChange }: Props) {
         <Route path="/choose-facility" element={shell.session.memberships.length > 1 ? picker : <Navigate to={from ?? '/'} replace />} />
         <Route element={
           <AppShell banner={strip} displayName={account.displayName} onSignOut={account.onSignOut} onLocaleChange={onLocaleChange} onMyDevices={() => navigate(devicesPath)}
-            onChangeFacility={account.canSwitchFacility ? () => navigate('/choose-facility') : undefined} navCollapsed={shell.navCollapsed} onToggleNav={shell.toggleNav}
+            onChangeFacility={account.canSwitchFacility ? () => navigate('/choose-facility') : undefined}
             role={active.role} facilityName={active.facilityName} items={shell.items} tabs={shell.tabs} searchPath={searchPath}
             globalSearch={searchPath && clinical
               ? <GlobalSearchRoute startVisitPath={walkInPath} bookPath={pathOf('schedule')} registerPath={registerPath} /> : undefined}

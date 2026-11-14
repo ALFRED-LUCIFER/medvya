@@ -2,7 +2,7 @@ import { Link } from 'react-router';
 import type { UseFormReturn } from 'react-hook-form';
 import { ArrowLeft, CalendarClock, CircleAlert, CircleCheck, Clock, Send } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, ChoiceRow, buttonVariants, Card, cn, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, PageContainer, PageHeader, PageMessage } from '@medvya/ui';
+import { Button, ChoiceRow, buttonVariants, Card, cn, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, PageContainer, PageHeader, PageMessage, StickyActionBar } from '@medvya/ui';
 import { PatientPicker, type PatientSearchView } from '../../schedule/components/BookingPanel';
 import { reasonCategories, visitTypes, type PatientMatch } from '../../schedule/domain/booking';
 import { termsPath } from '../../settings/domain/settings';
@@ -48,7 +48,8 @@ export default function WaitlistPage(p: Props) {
   const toggleDay = (d: DayName) => setValue('days', days.includes(d) ? days.filter(x => x !== d) : [...days, d], { shouldDirty: true });
 
   return (
-    <PageContainer width="reading" className="gap-5">
+    // One screen (MDV-P2-064): from 1024 px the list and the form sit side by side, each scrolling inside itself; Add is in the bottom bar.
+    <PageContainer width="reading" fit className="gap-5">
       <PageHeader title={t('waitlist.title')} description={t('waitlist.intro')} back={back} />
 
       <div aria-live="polite">
@@ -68,105 +69,107 @@ export default function WaitlistPage(p: Props) {
         )}
       </div>
 
-      <section aria-labelledby="waitlist-list" className="flex flex-col gap-3">
-        <h2 id="waitlist-list" className="text-lg font-bold">{t('waitlist.list')}</h2>
-        {p.loading && <p className="text-muted-foreground">{t('patients.loading')}</p>}
-        {p.failedToLoad && <p role="alert" className="font-bold text-destructive">{t('waitlist.loadFailed')}</p>}
-        {!p.loading && !p.failedToLoad && p.entries.length === 0 && <p className="text-muted-foreground">{t('waitlist.empty')}</p>}
-        <ul className="flex flex-col gap-3">
-          {p.entries.map(e => {
-            const busy = p.pendingId === e.id;
-            return (
-              <li key={e.id} data-testid="waitlist-entry"><Card size="item">
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <p className="font-bold">{t('waitlist.patient', { name: e.patientName, mrn: e.mrn })}</p>
-                  {/* State in words and an icon, never colour alone. */}
-                  <p className="inline-flex items-center gap-1.5 text-sm font-bold">
-                    {e.state === 'Offered' ? <Send className="size-4" aria-hidden /> : <Clock className="size-4" aria-hidden />}
-                    {t(`waitlist.state.${e.state}`)}
+      <div className="grid gap-5 wide:min-h-0 wide:flex-1 wide:grid-cols-2">
+        <section aria-labelledby="waitlist-list" className="flex flex-col gap-3 wide:min-h-0 wide:overflow-y-auto">
+          <h2 id="waitlist-list" className="text-lg font-bold">{t('waitlist.list')}</h2>
+          {p.loading && <p className="text-muted-foreground">{t('patients.loading')}</p>}
+          {p.failedToLoad && <p role="alert" className="font-bold text-destructive">{t('waitlist.loadFailed')}</p>}
+          {!p.loading && !p.failedToLoad && p.entries.length === 0 && <p className="text-muted-foreground">{t('waitlist.empty')}</p>}
+          <ul className="flex flex-col gap-3">
+            {p.entries.map(e => {
+              const busy = p.pendingId === e.id;
+              return (
+                <li key={e.id} data-testid="waitlist-entry"><Card size="item">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <p className="font-bold">{t('waitlist.patient', { name: e.patientName, mrn: e.mrn })}</p>
+                    {/* State in words and an icon, never colour alone. */}
+                    <p className="inline-flex items-center gap-1.5 text-sm font-bold">
+                      {e.state === 'Offered' ? <Send className="size-4" aria-hidden /> : <Clock className="size-4" aria-hidden />}
+                      {t(`waitlist.state.${e.state}`)}
+                    </p>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {[e.calendarName ?? t('waitlist.anyDoctor'), t(`visitType.${e.visitType}`),
+                      e.days.length ? weekDays.filter(d => e.days.includes(d)).map(d => t(`waitlist.day.${d}`)).join(', ') : t('waitlist.anyDay'),
+                      e.from || e.until ? t('waitlist.window', { from: e.from?.slice(0, 5) ?? '…', until: e.until?.slice(0, 5) ?? '…' }) : t('waitlist.anyTime')].join(' · ')}
                   </p>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {[e.calendarName ?? t('waitlist.anyDoctor'), t(`visitType.${e.visitType}`),
-                    e.days.length ? weekDays.filter(d => e.days.includes(d)).map(d => t(`waitlist.day.${d}`)).join(', ') : t('waitlist.anyDay'),
-                    e.from || e.until ? t('waitlist.window', { from: e.from?.slice(0, 5) ?? '…', until: e.until?.slice(0, 5) ?? '…' }) : t('waitlist.anyTime')].join(' · ')}
-                </p>
-                {e.dueOn && <p className="inline-flex items-center gap-1.5 text-sm font-semibold"><CalendarClock className="size-4" aria-hidden />{t('waitlist.followUp', { day: formatDay(e.dueOn) })}</p>}
-                <p className="text-xs text-muted-foreground">{t('waitlist.requested', { when: when(e.requestedAt) })}</p>
-                {e.offered && e.offerExpiresAt && <p className="text-sm font-semibold">{t('waitlist.heldUntil', { slot: slot(e.offered), until: formatTime(new Date(e.offerExpiresAt), zone) })}</p>}
-                {e.state === 'Waiting' && !e.match && <p className="text-sm text-muted-foreground">{t('waitlist.noMatch')}</p>}
-                <div className="flex flex-wrap gap-2">
-                  {offerable(e) && <Button type="button" loading={busy} onClick={() => p.onOffer(e)}><Send aria-hidden />{t('waitlist.offer', { when: when(e.match!.start) })}</Button>}
-                  {e.state === 'Offered' && <>
-                    <Button type="button" loading={busy} onClick={() => p.onAccept(e)}><CircleCheck aria-hidden />{t('waitlist.accept')}</Button>
-                    <Button type="button" variant="outline" disabled={busy} onClick={() => p.onDecline(e)}>{t('waitlist.decline')}</Button>
-                  </>}
-                  <Button type="button" variant="ghost" disabled={busy} onClick={() => p.onRemove(e)}>{t('waitlist.remove')}</Button>
-                </div>
-                {offerable(e) && <p className="text-xs text-muted-foreground">{slot(e.match!)}</p>}
-              </Card></li>
-            );
-          })}
-        </ul>
-      </section>
+                  {e.dueOn && <p className="inline-flex items-center gap-1.5 text-sm font-semibold"><CalendarClock className="size-4" aria-hidden />{t('waitlist.followUp', { day: formatDay(e.dueOn) })}</p>}
+                  <p className="text-xs text-muted-foreground">{t('waitlist.requested', { when: when(e.requestedAt) })}</p>
+                  {e.offered && e.offerExpiresAt && <p className="text-sm font-semibold">{t('waitlist.heldUntil', { slot: slot(e.offered), until: formatTime(new Date(e.offerExpiresAt), zone) })}</p>}
+                  {e.state === 'Waiting' && !e.match && <p className="text-sm text-muted-foreground">{t('waitlist.noMatch')}</p>}
+                  <div className="flex flex-wrap gap-2">
+                    {offerable(e) && <Button type="button" loading={busy} onClick={() => p.onOffer(e)}><Send aria-hidden />{t('waitlist.offer', { when: when(e.match!.start) })}</Button>}
+                    {e.state === 'Offered' && <>
+                      <Button type="button" loading={busy} onClick={() => p.onAccept(e)}><CircleCheck aria-hidden />{t('waitlist.accept')}</Button>
+                      <Button type="button" variant="outline" disabled={busy} onClick={() => p.onDecline(e)}>{t('waitlist.decline')}</Button>
+                    </>}
+                    <Button type="button" variant="ghost" disabled={busy} onClick={() => p.onRemove(e)}>{t('waitlist.remove')}</Button>
+                  </div>
+                  {offerable(e) && <p className="text-xs text-muted-foreground">{slot(e.match!)}</p>}
+                </Card></li>
+              );
+            })}
+          </ul>
+        </section>
 
-      <Card><form noValidate onSubmit={e => { e.preventDefault(); p.onAdd(); }} className="flex flex-col gap-4" aria-labelledby="waitlist-add">
-        <h2 id="waitlist-add" className="text-lg font-bold">{t('waitlist.add')}</h2>
-        <PatientPicker search={p.patientSearch} chosen={p.patientId} registerPath={null} invalid={false} />
-        {p.patient?.loading && <p className="text-sm text-muted-foreground">{t('patients.loading')}</p>}
-        {p.patient?.match && <p className="font-bold" role="status">{t('walkIn.patient', { name: p.patient.match.fullName, mrn: p.patient.match.mrn })}</p>}
+        <Card className="wide:min-h-0 wide:overflow-y-auto"><form id="waitlist-form" noValidate onSubmit={e => { e.preventDefault(); p.onAdd(); }} className="flex flex-col gap-4" aria-labelledby="waitlist-add">
+          <h2 id="waitlist-add" className="text-lg font-bold">{t('waitlist.add')}</h2>
+          <PatientPicker search={p.patientSearch} chosen={p.patientId} registerPath={null} invalid={false} />
+          {p.patient?.loading && <p className="text-sm text-muted-foreground">{t('patients.loading')}</p>}
+          {p.patient?.match && <p className="font-bold" role="status">{t('walkIn.patient', { name: p.patient.match.fullName, mrn: p.patient.match.mrn })}</p>}
 
-        <div className="grid gap-4 md:grid-cols-3">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="waitlist-doctor">{t('walkIn.doctor')}</Label>
-            <Select value={watch('calendarId') || anyDoctor} onValueChange={v => setValue('calendarId', v === anyDoctor ? '' : v)}>
-              <SelectTrigger id="waitlist-doctor" className="w-full"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value={anyDoctor}>{t('waitlist.anyDoctor')}</SelectItem>
-                {p.doctors.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="waitlist-doctor">{t('walkIn.doctor')}</Label>
+              <Select value={watch('calendarId') || anyDoctor} onValueChange={v => setValue('calendarId', v === anyDoctor ? '' : v)}>
+                <SelectTrigger id="waitlist-doctor" className="w-full"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={anyDoctor}>{t('waitlist.anyDoctor')}</SelectItem>
+                  {p.doctors.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="waitlist-type">{t('booking.visitType')}</Label>
+              <Select value={watch('visitType')} onValueChange={v => setValue('visitType', v as WaitlistForm['visitType'])}>
+                <SelectTrigger id="waitlist-type" className="w-full"><SelectValue /></SelectTrigger>
+                <SelectContent>{visitTypes.map(v => <SelectItem key={v} value={v}>{t(`visitType.${v}`)}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="waitlist-reason">{t('booking.reasonCategory')}</Label>
+              <Select value={watch('reasonCategory')} onValueChange={v => setValue('reasonCategory', v as WaitlistForm['reasonCategory'])}>
+                <SelectTrigger id="waitlist-reason" className="w-full"><SelectValue /></SelectTrigger>
+                <SelectContent>{reasonCategories.map(r => <SelectItem key={r} value={r}>{t(`reasonCategory.${r}`)}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
           </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="waitlist-type">{t('booking.visitType')}</Label>
-            <Select value={watch('visitType')} onValueChange={v => setValue('visitType', v as WaitlistForm['visitType'])}>
-              <SelectTrigger id="waitlist-type" className="w-full"><SelectValue /></SelectTrigger>
-              <SelectContent>{visitTypes.map(v => <SelectItem key={v} value={v}>{t(`visitType.${v}`)}</SelectItem>)}</SelectContent>
-            </Select>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="waitlist-reason">{t('booking.reasonCategory')}</Label>
-            <Select value={watch('reasonCategory')} onValueChange={v => setValue('reasonCategory', v as WaitlistForm['reasonCategory'])}>
-              <SelectTrigger id="waitlist-reason" className="w-full"><SelectValue /></SelectTrigger>
-              <SelectContent>{reasonCategories.map(r => <SelectItem key={r} value={r}>{t(`reasonCategory.${r}`)}</SelectItem>)}</SelectContent>
-            </Select>
-          </div>
-        </div>
 
-        <fieldset className="flex flex-col gap-1.5">
-          <legend className="mb-1.5 text-sm font-medium">{t('waitlist.days')}</legend>
-          <div className="flex flex-wrap gap-2">
-            {weekDays.map(d => (
-              <ChoiceRow key={d} className="inline-flex gap-2 rounded-md border px-3 text-sm has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring" type="checkbox" checked={days.includes(d)} onChange={() => toggleDay(d)}>{t(`waitlist.day.${d}`)}
-              </ChoiceRow>
-            ))}
-          </div>
-          <p className="text-xs text-muted-foreground">{t('waitlist.daysHint')}</p>
-        </fieldset>
+          <fieldset className="flex flex-col gap-1.5">
+            <legend className="mb-1.5 text-sm font-medium">{t('waitlist.days')}</legend>
+            <div className="flex flex-wrap gap-2">
+              {weekDays.map(d => (
+                <ChoiceRow key={d} className="inline-flex gap-2 rounded-md border px-3 text-sm has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring" type="checkbox" checked={days.includes(d)} onChange={() => toggleDay(d)}>{t(`waitlist.day.${d}`)}
+                </ChoiceRow>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">{t('waitlist.daysHint')}</p>
+          </fieldset>
 
-        <div className="flex flex-wrap gap-4">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="waitlist-from">{t('waitlist.from')}</Label>
-            <Input id="waitlist-from" type="time" step={300} dir="ltr" className="w-32" {...register('from')} />
+          <div className="flex flex-wrap gap-4">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="waitlist-from">{t('waitlist.from')}</Label>
+              <Input id="waitlist-from" type="time" step={300} dir="ltr" className="w-32" {...register('from')} />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="waitlist-until">{t('waitlist.until')}</Label>
+              <Input id="waitlist-until" type="time" step={300} dir="ltr" className="w-32" aria-invalid={!!errors.until} aria-describedby={errors.until ? 'waitlist-until-error' : undefined} {...register('until')} />
+              {errors.until && <p id="waitlist-until-error" className="text-sm font-bold text-destructive">{t('waitlist.error.before_from')}</p>}
+            </div>
           </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="waitlist-until">{t('waitlist.until')}</Label>
-            <Input id="waitlist-until" type="time" step={300} dir="ltr" className="w-32" aria-invalid={!!errors.until} aria-describedby={errors.until ? 'waitlist-until-error' : undefined} {...register('until')} />
-            {errors.until && <p id="waitlist-until-error" className="text-sm font-bold text-destructive">{t('waitlist.error.before_from')}</p>}
-          </div>
-        </div>
-        <Button type="submit" className="self-start" disabled={!p.canAdd} loading={p.adding}>{t('waitlist.addSubmit')}</Button>
-      </form></Card>
+        </form></Card>
+      </div>
+      <StickyActionBar><Button type="submit" form="waitlist-form" disabled={!p.canAdd} loading={p.adding}>{t('waitlist.addSubmit')}</Button></StickyActionBar>
     </PageContainer>
   );
 }

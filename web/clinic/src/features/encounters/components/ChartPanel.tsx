@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { ArrowDown, ArrowUp, PanelRight } from 'lucide-react';
 import { ltr, useI18n } from '@medvya/i18n';
-import { AllergyBlock, Button, Sheet, SheetContent, SheetTitle, Tabs, TabsContent, TabsList, TabsTrigger } from '@medvya/ui';
+import { AllergyBlock, Button, Card, Sheet, SheetContent, SheetTitle, Tabs, TabsContent, TabsList, TabsTrigger } from '@medvya/ui';
 import { bannerAllergyState, resultRows, type Patient360 } from '../../patient360/domain/chart';
 import type { ChecklistItem } from '../domain/checklist';
 import type { StudioPanel } from '../domain/encounter';
@@ -20,7 +20,6 @@ export type ChartPanelProps = {
   | { variant: 'drawer'; open: boolean; onOpenChange: (open: boolean) => void }
 );
 
-const tab = 'min-h-11 flex-1 font-bold text-foreground underline-offset-8 data-[state=active]:underline';
 
 /**
  * The consultation chart panel (MDV-P1-094, blueprint section 8): Assist, Chart, Past visits and Checklist beside the note, or in a drawer
@@ -31,11 +30,11 @@ export default function ChartPanel(p: ChartPanelProps) {
   const done = p.checklist.filter(c => c.state !== 'todo').length;
   const tabs = (
     <Tabs value={p.panel} onValueChange={v => p.onPanel(v as StudioPanel)}>
-      <TabsList className="h-auto w-full gap-1 rounded-xl border bg-card p-1">
-        {p.assist && <TabsTrigger value="assist" className={tab}>{t('studio.panel.assist')}</TabsTrigger>}
-        <TabsTrigger value="chart" className={tab}>{t('studio.panel.chart')}</TabsTrigger>
-        <TabsTrigger value="past" className={tab}>{t('studio.panel.past')}</TabsTrigger>
-        {p.checklist.length > 0 && <TabsTrigger value="check" className={tab}>{t('studio.panel.check', { done, total: p.checklist.length })}</TabsTrigger>}
+      <TabsList>
+        {p.assist && <TabsTrigger value="assist">{t('studio.panel.assist')}</TabsTrigger>}
+        <TabsTrigger value="chart">{t('studio.panel.chart')}</TabsTrigger>
+        <TabsTrigger value="past">{t('studio.panel.past')}</TabsTrigger>
+        {p.checklist.length > 0 && <TabsTrigger value="check">{t('studio.panel.check', { done, total: p.checklist.length })}</TabsTrigger>}
       </TabsList>
       {p.assist && <TabsContent value="assist">{p.assist}</TabsContent>}
       <TabsContent value="chart"><ChartView {...p.chart} timeZone={p.timeZone} /></TabsContent>
@@ -53,8 +52,9 @@ export default function ChartPanel(p: ChartPanelProps) {
   );
   return (
     // Capped to the space between the section bar (4rem) and the footer with its gap (5rem): it scrolls inside, never under pinned chrome.
-    <aside aria-label={t('studio.panel.label')} className="flex w-full max-w-panel-chart flex-col gap-3 rounded-xl border bg-card p-3 wide:sticky wide:top-[calc(var(--patient-strip-bottom,0px)+4rem)] wide:max-h-[calc(100dvh-var(--patient-strip-bottom,0px)-9rem)] wide:overflow-y-auto [@media(max-height:480px)]:static">
-      {tabs}
+    // The aside sticks and caps the height; the Card inside it scrolls, so its border stays in view.
+    <aside aria-label={t('studio.panel.label')} className="flex w-full max-w-panel-chart flex-col wide:sticky wide:top-[calc(var(--patient-strip-bottom,0px)+4rem)] wide:max-h-[calc(100dvh-var(--patient-strip-bottom,0px)-9rem)] [@media(max-height:480px)]:static">
+      <Card size="item" className="min-h-0 wide:overflow-y-auto">{tabs}</Card>
     </aside>
   );
 }

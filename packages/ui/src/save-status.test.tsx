@@ -47,11 +47,11 @@ describe('cn', () => {
 });
 
 describe('StickyActionBar (MDV-P1-082)', () => {
-  it('is a footer in the flow: status at the start, actions at the end, 56 px reserved, un-pins on a short viewport', async () => {
+  it('is a footer in the flow: status at the start, actions at the end, 56 px reserved, above the phone tabs, un-pins on a short viewport', async () => {
     const { container } = render(<main><StickyActionBar status={<SaveStatus status={{ state: 'saving' }} />}><button>Review and sign</button></StickyActionBar></main>);
     const bar = container.querySelector('footer')!;
     const cls = bar.className.split(/\s+/);
-    expect(cls).toEqual(expect.arrayContaining(['sticky', 'bottom-0', 'min-h-14', '[@media(max-height:480px)]:static']));
+    expect(cls).toEqual(expect.arrayContaining(['sticky', 'bottom-[var(--shell-bottom,0px)]', 'min-h-14', '[@media(max-height:480px)]:static']));
     expect(cls).not.toContain('fixed');
     expect(bar.firstElementChild!.textContent).toBe('Saving…');
     expect(bar.lastElementChild!.textContent).toBe('Review and sign');

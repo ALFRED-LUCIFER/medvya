@@ -40,7 +40,7 @@ type Props = {
 export default function DoctorTodayPage(p: Props) {
   const { t, formatDay } = useI18n();
   return (
-    <PageContainer width="fluid">
+    <PageContainer width="fluid" fit>
       {/* The title is fixed and the day is secondary text that arrives without moving the row (MDV-P2-059 AC2); no eyebrow repeating the menu item. */}
       <PageHeader title={t('nav.today')} meta={p.day && formatDay(p.day)}
         actions={!p.forbidden && <p role="status" className="inline-flex min-h-9 items-center"><FrontDeskTag kind={p.live} /></p>}>
@@ -48,29 +48,38 @@ export default function DoctorTodayPage(p: Props) {
         <SegmentedControl label={t('today.scope')} value={p.scope} onValueChange={p.onScope} options={(['mine', 'clinic'] as const).map(s => ({ value: s, label: t(`today.scope.${s}`) }))} />
       </PageHeader>
       {p.escalationsFailed && <p role="alert" className="text-sm font-semibold text-danger-700">{t('today.escalation.error')}</p>}
-      <Body {...p} />
-      <PendingNotes {...p} />
-      <PendingPrescriptions {...p} />
+      <Body {...p} pending={<><PendingNotes {...p} /><PendingPrescriptions {...p} /></>} />
     </PageContainer>
   );
 }
 
-function Body(p: Props) {
+/** The day, then the unsigned notes and prescriptions (`pending`). */
+function Body(p: Props & { pending: ReactNode }) {
   const { t } = useI18n();
-  if (p.forbidden) return <PageMessage kind="denied" title={t('err.403')}>{t('board.forbidden.body')}</PageMessage>;
-  if (p.offline) return <PageMessage kind="error" title={t('state.offline.title')}>{t('board.offline')}</PageMessage>;
-  if (p.failed) return <PageMessage kind="error" title={t('board.error.title')} action={<Button onClick={p.onRetry}>{t('schedule.retry')}</Button>}>{t('board.error.body')}</PageMessage>;
-  if (p.loading || !p.day) return <PageMessage kind="busy">{t('board.loading')}</PageMessage>;
-  if (p.visits.length === 0) return <PageMessage kind="empty" title={t('today.empty.title')}>{t(p.scope === 'mine' ? 'today.empty.mine' : 'today.empty.clinic')}</PageMessage>;
+  const message = p.forbidden ? <PageMessage kind="denied" title={t('err.403')}>{t('board.forbidden.body')}</PageMessage>
+    : p.offline ? <PageMessage kind="error" title={t('state.offline.title')}>{t('board.offline')}</PageMessage>
+    : p.failed ? <PageMessage kind="error" title={t('board.error.title')} action={<Button onClick={p.onRetry}>{t('schedule.retry')}</Button>}>{t('board.error.body')}</PageMessage>
+    : p.loading || !p.day ? <PageMessage kind="busy">{t('board.loading')}</PageMessage>
+    : p.visits.length === 0 ? <PageMessage kind="empty" title={t('today.empty.title')}>{t(p.scope === 'mine' ? 'today.empty.mine' : 'today.empty.clinic')}</PageMessage>
+    : null;
+  if (message) return <>{message}{p.pending}</>;
+  // One screen (MDV-P2-064): from 1024 px the escalations and the next patient stay in view on the start side, the unsigned notes under them,
+  // and the day's visits beside them; each column scrolls inside itself. The reading order stays escalations, next patient, visits, notes.
+  // -m-1 p-1 on each scrolling box: room for the focus ring.
   return (
-    <>
-      {p.escalated.length > 0 && <Escalated {...p} />}
-      {p.next && <Hero {...p} card={p.next} />}
-      <section aria-labelledby="today-list" className="flex flex-col gap-2">
+    <div className="flex flex-col gap-4 wide:grid wide:min-h-0 wide:flex-1 wide:grid-cols-2 wide:grid-rows-[auto_minmax(0,1fr)]">
+      {(p.escalated.length > 0 || p.next) && (
+        <div className="flex flex-col gap-4 wide:col-start-1 wide:row-start-1">
+          {p.escalated.length > 0 && <Escalated {...p} />}
+          {p.next && <Hero {...p} card={p.next} />}
+        </div>
+      )}
+      <section aria-labelledby="today-list" className="flex flex-col gap-2 wide:col-start-2 wide:row-span-2 wide:row-start-1 wide:min-h-0">
         <h2 id="today-list" className="text-[15px] font-extrabold">{t('today.list')}</h2>
-        <ul className="flex flex-col gap-2">{p.visits.map(v => <li key={v.id}><Visit {...p} card={v} /></li>)}</ul>
+        <ul className="-m-1 flex flex-col gap-2 p-1 wide:min-h-0 wide:overflow-y-auto">{p.visits.map(v => <li key={v.id}><Visit {...p} card={v} /></li>)}</ul>
       </section>
-    </>
+      <div className="-m-1 flex flex-col gap-4 p-1 empty:hidden wide:col-start-1 wide:row-start-2 wide:min-h-0 wide:overflow-y-auto">{p.pending}</div>
+    </div>
   );
 }
 

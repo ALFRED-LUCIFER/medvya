@@ -2,6 +2,7 @@ import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
 import { authorised, line, mockPrescription } from './support/prescription';
 import { mockSharedLink, mockShares } from './support/share';
+import { targetPx } from './support/targets';
 
 // MDV-P2-020 (E-10): the authorised prescription is shared by secure link to the patient or a named pharmacy, and the pharmacy dispatch is recorded;
 // the public link page opens the PDF only with the code sent to the patient's registered mobile. CI has no API: endpoints are mocked in the server's
@@ -83,7 +84,7 @@ for (const locale of ['en', 'ar'])
     const share = page.getByRole('region', { name: locale === 'ar' ? 'المشاركة مع المريض أو صيدلية' : 'Share with the patient or a pharmacy' });
     await share.getByRole('button', { name: locale === 'ar' ? 'إرسال رابط آمن' : 'Send secure link' }).click();
     await expect(share.getByRole('status')).toBeVisible();
-    for (const target of await share.locator('button').all()) expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    for (const target of await share.locator('button').all()) expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
     expect(await axeViolations(page)).toEqual([]);
 
     await mockSharedLink(page);

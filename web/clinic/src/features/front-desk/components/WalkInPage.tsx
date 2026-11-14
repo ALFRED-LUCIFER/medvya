@@ -1,7 +1,7 @@
 import { Link } from 'react-router';
 import { ArrowLeft, CircleAlert, CircleCheck, Printer, UserPlus } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, Card, cn, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, PageContainer, PageHeader, PageMessage } from '@medvya/ui';
+import { Button, buttonVariants, Card, cn, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, PageContainer, PageHeader, PageMessage, StickyActionBar } from '@medvya/ui';
 import { PatientPicker, type PatientSearchView } from '../../schedule/components/BookingPanel';
 import { reasonCategories, visitTypes, type PatientMatch } from '../../schedule/domain/booking';
 import { termsPath } from '../../settings/domain/settings';
@@ -67,7 +67,7 @@ export default function WalkInPage(p: Props) {
     <PageContainer width="form" className="gap-5">
       <PageHeader back={back} title={t('walkIn.title')} description={t('walkIn.intro')} />
       <Card>
-        <form noValidate onSubmit={e => { e.preventDefault(); p.onConfirm(); }} className="flex flex-col gap-5">
+        <form id="walk-in-form" noValidate onSubmit={e => { e.preventDefault(); p.onConfirm(); }} className="flex flex-col gap-5">
           <PatientPicker search={p.patientSearch} chosen={p.patientId} registerPath={null} invalid={false} />
           <div className="flex flex-col gap-1">
             {p.patient?.loading && <p className="text-sm text-muted-foreground">{t('patients.loading')}</p>}
@@ -116,13 +116,12 @@ export default function WalkInPage(p: Props) {
               </div>
             )}
           </div>
-          {/* Disabled until a patient is chosen, and says so in words beside it (MDV-P2-058). */}
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <Button type="submit" disabled={!p.canConfirm} loading={p.saving} aria-describedby={p.patientId ? undefined : 'walk-in-confirm-reason'}>{t('walkIn.confirm')}</Button>
-            {!p.patientId && <p id="walk-in-confirm-reason" className="text-body text-muted-foreground">{t('walkIn.confirmReason')}</p>}
-          </div>
         </form>
       </Card>
+      {/* The bottom bar (MDV-P2-064). Disabled until a patient is chosen, and says so in words beside it (MDV-P2-058). */}
+      <StickyActionBar status={!p.patientId && <p id="walk-in-confirm-reason" className="text-body text-muted-foreground">{t('walkIn.confirmReason')}</p>}>
+        <Button type="submit" form="walk-in-form" disabled={!p.canConfirm} loading={p.saving} aria-describedby={p.patientId ? undefined : 'walk-in-confirm-reason'}>{t('walkIn.confirm')}</Button>
+      </StickyActionBar>
     </PageContainer>
   );
 }

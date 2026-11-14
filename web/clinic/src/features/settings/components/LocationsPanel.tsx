@@ -56,7 +56,7 @@ export default function LocationsPanel(p: Props) {
                 <span className="font-bold">{l.name}</span>
                 <span className="text-sm text-muted-foreground">{[l.address, l.timeZone].filter(Boolean).join(' · ')}</span>
               </span>
-              <Button type="button" variant="outline" className="min-w-11" aria-label={t('settings.locations.editNamed', { name: l.name })} onClick={() => p.onEdit(l.id)}>{t('settings.edit')}</Button>
+              <Button type="button" variant="outline" className="min-w-control" aria-label={t('settings.locations.editNamed', { name: l.name })} onClick={() => p.onEdit(l.id)}>{t('settings.edit')}</Button>
             </li>
           ))}
         </ul>

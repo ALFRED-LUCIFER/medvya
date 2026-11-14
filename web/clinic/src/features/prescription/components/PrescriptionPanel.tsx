@@ -3,7 +3,7 @@ import type { UseFormReturn } from 'react-hook-form';
 import { Link } from 'react-router';
 import { CircleAlert, CircleSlash, TrendingDown, CircleX, FilePen, History, Plus, Printer, ShieldCheck, Trash2, UserRound } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, ClinicalAlert, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@medvya/ui';
+import { Button, buttonVariants, ClinicalAlert, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tag } from '@medvya/ui';
 import { authoriseTarget, isCurrent, type AuthoriseProblem, type RxAuthorisationState } from '../domain/authorisation';
 import type { StepUpReturn } from '../../encounters/domain/stepUp';
 import { describedBy, fieldError } from '../../settings/components/fieldStyles';
@@ -249,8 +249,8 @@ function Authorise(p: Props) {
 
 function SourceChip({ line }: { line: RxLine }) {
   const { t } = useI18n();
-  const Icon = sourceIcon[line.source];
-  return <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-bold"><Icon aria-hidden className="size-3.5" />{t(`rx.source.${line.source}`)}</span>;
+  // Where the line came from is a source, so the library Tag (MDV-P2-060).
+  return <Tag tone="neutral" size="sm" icon={sourceIcon[line.source]} label={t(`rx.source.${line.source}`)} />;
 }
 
 function Sig({ line, language }: { line: RxLine; language: PrintLanguage }) {

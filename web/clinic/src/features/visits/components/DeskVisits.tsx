@@ -19,7 +19,7 @@ export default function DeskVisits(p: Props) {
             {p.visits.map(v => {
               const at = new Date(v.start);
               return (
-                <li key={v.appointmentId} className="flex min-h-11 flex-wrap items-center justify-between gap-x-4 py-1">
+                <li key={v.appointmentId} className="flex min-h-control flex-wrap items-center justify-between gap-x-4 py-1">
                   <time dateTime={v.start} className="font-bold">{`${formatDate(at, p.timeZone)} ${formatTime(at, p.timeZone)}`}</time>
                   <span className="text-sm font-bold">{t(`schedule.state.${v.state}`)}</span>
                 </li>

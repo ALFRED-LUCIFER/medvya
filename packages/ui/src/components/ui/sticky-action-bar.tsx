@@ -30,7 +30,8 @@ function StickyActionBar({ status, className, children, ...props }: React.Compon
       ref={ref}
       data-slot="sticky-action-bar"
       className={cn(
-        "sticky bottom-0 z-10 flex min-h-14 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t bg-background px-4 py-1.5 [@media(max-height:480px)]:static",
+        // Pinned above the phone's bottom tabs, whose height the app shell sets as --shell-bottom (MDV-P2-064).
+        "sticky bottom-[var(--shell-bottom,0px)] z-10 flex min-h-14 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t bg-background px-4 py-1.5 [@media(max-height:480px)]:static",
         className,
       )}
       {...props}

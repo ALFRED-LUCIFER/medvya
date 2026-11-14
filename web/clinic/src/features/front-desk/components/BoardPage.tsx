@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import type { UseFormReturn } from 'react-hook-form';
 import { CalendarClock, Ellipsis, EyeOff, Printer, Undo2 } from 'lucide-react';
 import { useI18n, type MessageKey } from '@medvya/i18n';
-import { Button, buttonVariants, cn, Dialog, DialogContent, DialogDescription, DialogTitle, FrontDeskTag, PageContainer, PageHeader, SegmentedControl, Skeleton, SkeletonGroup, statusIcons } from '@medvya/ui';
+import { Button, buttonVariants, cn, Card, Dialog, DialogContent, DialogDescription, DialogTitle, EmptyState, FilterChip, FrontDeskTag, PageContainer, PageHeader, PageMessage, SegmentedControl, Skeleton, SkeletonGroup, statusIcons } from '@medvya/ui';
 import { isDeviceZone, type CancelForm } from '../../schedule/domain/changes';
 import CancelReasonFields from '../../schedule/components/CancelReasonFields';
 import QueueTable from './QueueTable';
@@ -199,24 +199,14 @@ function Workload({ rows }: { rows: Props['workload'] }) {
   );
 }
 
-function Message({ title, body, action, busy = false }: { title: string; body?: string; action?: { label: string; run: () => void }; busy?: boolean }) {
-  return (
-    <div role={busy ? 'status' : 'alert'} className="flex max-w-[560px] flex-col items-start gap-2 rounded-xl border bg-card p-6">
-      <h2 className="text-lg font-extrabold">{title}</h2>
-      {body && <p className="text-muted-foreground">{body}</p>}
-      {action && <Button variant="default" className="mt-2" onClick={action.run}>{action.label}</Button>}
-    </div>
-  );
-}
-
 function Body(props: Props) {
   const { t } = useI18n();
   const { board, forbidden, offline, failed, loading } = props;
-  if (forbidden) return <Message title={t('err.403')} body={t('board.forbidden.body')} />;
-  if (offline) return <Message title={t('state.offline.title')} body={t('board.offline')} />;
-  if (failed) return <Message title={t('board.error.title')} body={t('board.error.body')} action={{ label: t('schedule.retry'), run: props.onRetry }} />;
+  if (forbidden) return <PageMessage kind="denied" title={t('err.403')}>{t('board.forbidden.body')}</PageMessage>;
+  if (offline) return <PageMessage kind="error" title={t('state.offline.title')}>{t('board.offline')}</PageMessage>;
+  if (failed) return <PageMessage kind="error" title={t('board.error.title')} action={<Button onClick={props.onRetry}>{t('schedule.retry')}</Button>}>{t('board.error.body')}</PageMessage>;
   if (loading || !board) return <BoardSkeleton {...props} />;
-  if (board.cards.length === 0) return <Message title={t('board.empty.title')} body={t('board.empty.body')} />;
+  if (board.cards.length === 0) return <EmptyState title={t('board.empty.title')}>{t('board.empty.body')}</EmptyState>;
   if (props.list) return <List {...props} board={board} />;
   const shown = visibleColumns(props.steps, props.columns);
   const phone = props.phoneColumn && shown.includes(props.phoneColumn) ? props.phoneColumn : (shown.find(c => props.columns[c].length > 0) ?? shown[0]!);
@@ -296,19 +286,13 @@ function List(props: Props & { board: Board }) {
   return (
     <>
       <div role="group" aria-label={t('board.list.filters')} className="flex flex-wrap gap-2">
-        {statuses.map(c => {
-          const Icon = statusIcons[c];
-          return (
-            <Button key={c} variant={listFilter === c ? 'selected' : 'outline'} aria-pressed={listFilter === c} onClick={() => onListFilter(c)}>
-              <Icon aria-hidden />{t('board.statusTab', { column: t(`board.column.${c}`), count: columns[c].length })}
-            </Button>
-          );
-        })}
+        {statuses.map(c => <FilterChip key={c} on={listFilter === c} icon={statusIcons[c]} onClick={() => onListFilter(c)}
+          label={t('board.statusTab', { column: t(`board.column.${c}`), count: columns[c].length })} />)}
       </div>
       {groups.map(({ state, rows }) => state === 'Done' ? (
         // Folded unless Done is the pressed count; the key opens it afresh when the filter changes.
         <details key={`${state}-${listFilter}`} open={listFilter === 'Done'} className="flex flex-col gap-2">
-          <summary className="flex min-h-11 cursor-pointer items-center">{heading(state)}</summary>
+          <summary className="flex min-h-control cursor-pointer items-center">{heading(state)}</summary>
           {rowsOf(state, rows)}
         </details>
       ) : (
@@ -356,14 +340,14 @@ function Column(props: Props & { state: BoardColumn; board: Board; hiddenOnPhone
       </h2>
       {empty ? <p className="px-1 text-caption text-muted-foreground md:hidden">{t('board.column.none')}</p> : (
         <ul className="flex flex-col gap-2">
-          {cards.map(card => <li key={card.id}><Card card={card} {...props} /></li>)}
+          {cards.map(card => <li key={card.id}><VisitCard card={card} {...props} /></li>)}
         </ul>
       )}
     </section>
   );
 }
 
-function Card(props: Props & { card: BoardCard; board: Board; primary: string | null }) {
+function VisitCard(props: Props & { card: BoardCard; board: Board; primary: string | null }) {
   const { card, primary, board, now, updated, workload, failedVisitIds, canMove, canCancel, online, confirmingId, failure, paymentAction, consultAction, followUp, onStartEnd } = props;
   const i18n = useI18n(), { t, formatTime } = i18n;
   const state = card.state as BoardColumn;
@@ -378,7 +362,8 @@ function Card(props: Props & { card: BoardCard; board: Board; primary: string | 
 
   return (
     // Changed elsewhere: the Updated tag in words, and where motion is allowed the background fades from the brand tint to white. Nothing moves.
-    <article aria-labelledby={nameId} className={cn('flex min-w-0 flex-col gap-1.5 rounded-lg border bg-card p-3', changed && 'motion-safe:animate-updated')}>
+    // The article names the visit (specs and screen readers find it by the patient); the item Card inside is the surface.
+    <article aria-labelledby={nameId} className="min-w-0"><Card size="item" className={cn('gap-1.5', changed && 'motion-safe:animate-updated')}>
       <div className="flex justify-between gap-1.5">
         <h3 id={nameId} className="min-w-0 break-words text-label">{card.patientName || t('board.unknownPatient')}</h3>
         <span className="shrink-0 font-mono text-caption text-muted-foreground tabular-nums">{formatTime(new Date(card.start), board.timeZone)}</span>
@@ -418,7 +403,7 @@ function Card(props: Props & { card: BoardCard; board: Board; primary: string | 
         </Button>
       )}
       {error && <p role="alert" className="text-xs font-bold text-danger-700">{t(`board.error.${error}`)}</p>}
-    </article>
+    </Card></article>
   );
 }
 

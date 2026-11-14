@@ -1,9 +1,9 @@
 import type { UseFormReturn } from 'react-hook-form';
-import { CircleAlert, CircleCheck, CircleHelp, Package, Pill, Plus } from 'lucide-react';
+import { Package, Pill, Plus } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, ClinicalAlert, Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger, Field, Input } from '@medvya/ui';
+import { AllergyBlock, Button, ClinicalAlert, Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger, Field, Input } from '@medvya/ui';
 import { fieldError } from '../../settings/components/fieldStyles';
-import { allergyStatusOf, bannerAllergies } from '../../patient360/domain/chart';
+import { bannerAllergyState } from '../../patient360/domain/chart';
 import type { AllergyState, Allergy } from '../../patient360/domain/chart';
 import type { SexAtBirth } from '../../patients/domain/directory';
 import { howLong, howOften, whenTaken, type Choice } from '../domain/addMedicine';
@@ -52,16 +52,12 @@ export default function AddMedicinePanel(p: Props) {
 
 function Patient({ patient }: { patient: AddMedicinePatient }) {
   const { t } = useI18n();
-  const allergies = bannerAllergies({ allergyState: patient.allergies.state, allergies: patient.allergies.allergies });
   return (
     <section aria-label={t('rx.addMed.patient')} className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border bg-muted/40 p-3 text-sm">
       <strong>{patient.fullName}</strong>
       <span>{t('consult.banner.ageSex', { age: patient.ageYears, sex: t(`patients.sex.${patient.sexAtBirth}`) })}</span>
-      <span className="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 font-bold">
-        {allergies === null ? <><CircleHelp aria-hidden className="size-4" />{t('consult.banner.allergiesNotRecorded')}</>
-          : allergies.length === 0 ? <><CircleCheck aria-hidden className="size-4" />{t('banner.noAllergies')}</>
-          : <><CircleAlert aria-hidden className="size-4" />{t('consult.banner.allergies', { list: allergies.map(a => `${a.name} (${t(`patient360.allergyStatus.${allergyStatusOf[a.status]}`)})`).join(', ') })}</>}
-      </span>
+      {/* The one allergy look (MDV-P1-081), as the patient strip words it (MDV-P2-060 AC4). */}
+      <AllergyBlock allergy={bannerAllergyState({ allergyState: patient.allergies.state, allergies: patient.allergies.allergies }, s => t(`patient360.allergyStatus.${s}`))} />
     </section>
   );
 }

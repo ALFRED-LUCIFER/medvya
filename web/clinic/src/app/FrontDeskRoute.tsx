@@ -73,7 +73,7 @@ function Board({ facilityId, online, canMove, canCancel, registerPath, walkInPat
   const waitlist = waitlistPath ? <Link to={waitlistPath} className={buttonVariants({ variant: 'outline' })}>{t('waitlist.title')}</Link> : undefined;
   const consultAction = doctor ? (card: BoardCard, primary: boolean) => (canConsult(card.state) ? <Consult key={card.id} card={card} online={online} primary={primary} /> : null) : undefined;
   const nurseStep = steps.nurse ? (card: BoardCard) => (intakePath
-    ? <Link to={intakePath(card.id)} className={buttonVariants({ variant: 'outline', className: 'mt-1 min-h-11 whitespace-normal' })}
+    ? <Link to={intakePath(card.id)} className={buttonVariants({ variant: 'outline', className: 'mt-1 min-h-control whitespace-normal' })}
         aria-label={t('intake.queue.openFor', { name: card.patientName || t('board.unknownPatient') })}>{t('intake.queue.open')}</Link>
     : null) : undefined;
   // MDV-P1-102: the doctor's follow-up on the Done card; booking and dismissing need booking access (the server checks again).

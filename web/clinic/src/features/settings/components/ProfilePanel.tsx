@@ -1,9 +1,9 @@
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, ErrorSummary, Field, Input, Label, Textarea } from '@medvya/ui';
+import { Button, buttonVariants, ErrorSummary, Field, Input, Label, StickyActionBar, Textarea } from '@medvya/ui';
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import type { ProfileForm } from '../domain/settings';
-import { fieldError } from './fieldStyles';
+import { cardBar, fieldError } from './fieldStyles';
 import { Section } from './Section';
 
 type Props = {
@@ -75,8 +75,7 @@ export default function ProfilePanel(p: Props) {
           <Field id="profile-email" label={t('settings.profile.email')} error={error('profile-email')}>
             <Input type="email" dir="ltr" autoComplete="email" {...p.form.register('email')} />
           </Field>
-          <div className="flex flex-wrap items-center gap-3 sm:col-span-2" aria-live="polite">
-            <Button type="submit" loading={p.saving}>{t('settings.save')}</Button>
+          <StickyActionBar className={`${cardBar} sm:col-span-2`} aria-live="polite" status={<>
             {p.saved && <span>{t('settings.saved')}</span>}
             {p.changed && (
               <span role="alert" className={fieldError}>
@@ -84,7 +83,9 @@ export default function ProfilePanel(p: Props) {
               </span>
             )}
             {p.saveFailed && !p.nameHasLink && <span role="alert" className={fieldError}>{t('settings.saveFailed')}</span>}
-          </div>
+          </>}>
+            <Button type="submit" loading={p.saving}>{t('settings.save')}</Button>
+          </StickyActionBar>
         </form>
       </Section>
       <Section title={t('settings.logo.title')} intro={t('settings.logo.intro')}>

@@ -185,9 +185,10 @@ export const theme = {
     "gutter": 16,
     "gutterMd": 24,
     "gutterXl": 32,
-    "control": 44,
+    "control": 36,
+    "controlSm": 30,
     "controlCompact": 36,
-    "row": 48,
+    "row": 40,
     "rowCompact": 36
   },
   "container": {
@@ -245,5 +246,10 @@ export const theme = {
       "bg": "#f1f5f8",
       "border": "#76899c"
     }
+  },
+  "coarse": {
+    "spacingControl": 44,
+    "spacingControlSm": 44,
+    "spacingRow": 48
   }
 } as const;

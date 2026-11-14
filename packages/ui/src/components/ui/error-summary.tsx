@@ -42,7 +42,7 @@ function ErrorSummary({ title, errors, focusKey, className, ...props }: ErrorSum
           <li key={e.id}>
             <a
               href={`#${e.id}`}
-              className="inline-flex min-h-11 items-center text-label underline underline-offset-2"
+              className="inline-flex min-h-control items-center text-label underline underline-offset-2"
               onClick={ev => { ev.preventDefault(); document.getElementById(e.id)?.focus() }}
             >
               {"label" in e ? t("field.errorItem", { field: e.label, error: e.message }) : e.message}

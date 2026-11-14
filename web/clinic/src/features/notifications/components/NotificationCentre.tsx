@@ -63,7 +63,7 @@ export default function NotificationCentre(props: Props) {
             <ul className="flex flex-col gap-2">
               {list.items.map(n => (
                 <li key={n.id} className="rounded-lg border">
-                  <Link to={targets[n.kind]} className="flex min-h-11 items-start gap-2 p-2.5 text-sm" onClick={() => { if (!n.read) props.onMarkRead(n.id); close(); }}>
+                  <Link to={targets[n.kind]} className="flex min-h-control items-start gap-2 p-2.5 text-sm" onClick={() => { if (!n.read) props.onMarkRead(n.id); close(); }}>
                     <MessageSquareWarning aria-hidden className="mt-0.5 size-4 shrink-0" />
                     <span className="flex min-w-0 flex-col gap-0.5">
                       <span className={n.read ? 'font-semibold' : 'font-extrabold'}>{words(t, n)}</span>

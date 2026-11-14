@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { ltr, useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, PatientBanner, ProvenanceTag, Skeleton, SkeletonGroup, Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@medvya/ui';
+import { AllergyBlock, buttonVariants, Card, FilterChip, PageContainer, PageHeader, PatientBanner, ProvenanceTag, Skeleton, SkeletonGroup, Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@medvya/ui';
 import { Armchair, ArrowDown, ArrowUp, Baby, CircleAlert, CircleCheck, CircleHelp, Droplet, HeartPulse, Languages, User, Users } from 'lucide-react';
 import RequestAccess from '../../clinical-access/components/RequestAccess';
 import type { AccessReason } from '../../clinical-access/domain/clinicalAccess';
@@ -46,20 +46,26 @@ export default function Patient360Page(p: Props) {
       <Skeleton className="h-64 rounded-xl" />
     </SkeletonGroup>
   );
+  const back = <Link to={p.backPath} className={buttonVariants({ variant: 'outline' })}>{t('patient360.back')}</Link>;
   if (p.refusal) {
     return (
-      <Message title={t('patient360.refused.title')} backPath={p.backPath}
-        body={<RequestAccess refusal={p.refusal} roleMessage={t('patient360.refused.role')} reason={p.reason} asking={p.asking} askFailed={p.askFailed} onReason={p.onReason} onRequestAccess={p.onRequestAccess} />} />
+      <PageContainer width="form" role="alert">
+        <PageHeader title={t('patient360.refused.title')} actions={back} />
+        <div className="flex flex-col items-start gap-2">
+          <RequestAccess refusal={p.refusal} roleMessage={t('patient360.refused.role')} reason={p.reason} asking={p.asking} askFailed={p.askFailed} onReason={p.onReason} onRequestAccess={p.onRequestAccess} />
+        </div>
+      </PageContainer>
     );
   }
-  if (p.notFound || p.failed || !p.data) return <Message title={t(p.notFound ? 'patient360.notFound' : 'patient360.loadFailed')} backPath={p.backPath} />;
+  if (p.notFound || p.failed || !p.data) return <PageContainer width="form" role="alert"><PageHeader title={t(p.notFound ? 'patient360.notFound' : 'patient360.loadFailed')} actions={back} /></PageContainer>;
   const { chart, treatmentConsent, timeZone, lifeStage, patient } = p.data;
   const Stage = stageIcon[lifeStage];
   const show = (s: Exclude<ChartSection, 'all'>) => showsSection(p.section, s);
   const others = otherVitals(chart.lastVitals);
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="sr-only">{t('patient360.title')}</h1>
+      {/* The banner is what the doctor reads first; the page's h1 stays for screen readers (MDV-P1-092). */}
+      <PageHeader className="sr-only" title={t('patient360.title')} />
       <ChartBanner data={p.data} />
       {/* Banner details (MDV-P2-032): blood group, language and care team only when recorded; nothing is guessed. Alerts are the results out of range. */}
       <ul aria-label={t('patient360.bannerDetails')} className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
@@ -83,10 +89,8 @@ export default function Patient360Page(p: Props) {
         <Link to={p.backPath} className={buttonVariants({ variant: 'outline' })}>{t('patient360.back')}</Link>
       </div>
       <div role="group" aria-label={t('patient360.section.label')} className="sticky top-0 z-10 flex flex-wrap gap-2 bg-background py-1">
-        {chartSections.map(s => (
-          <Button key={s} variant={s === p.section ? 'selected' : 'outline'} aria-pressed={s === p.section} onClick={() => p.onSection(s)}>
-            {t(s === 'stage' ? `patient360.section.stage.${lifeStage}` : `patient360.section.${s}`)}
-          </Button>))}
+        {chartSections.map(s => <FilterChip key={s} on={s === p.section} onClick={() => p.onSection(s)}
+          label={t(s === 'stage' ? `patient360.section.stage.${lifeStage}` : `patient360.section.${s}`)} />)}
       </div>
       {show('trends') && (
         <section aria-label={t('patient360.vitals')} className="flex flex-col gap-3">
@@ -103,17 +107,17 @@ export default function Patient360Page(p: Props) {
         <div className="flex min-w-0 flex-col gap-4">
           {show('summary') && (
             <div className="grid gap-4 md:grid-cols-2">
-              <Card title={t('patient360.allergies')} wide>
-                {chart.allergyState === 'Listed'
-                  ? <List>{chart.allergies.map((a, i) => (
-                      <Item key={i} source={a.source}>
-                        <strong>{a.substance}</strong>
-                        <span>{[a.reaction, t(`patient360.allergyStatus.${a.status}`)].filter(Boolean).join(' · ')}</span>
-                      </Item>))}</List>
-                  : <p className="inline-flex items-center gap-1.5 font-bold">{t(chart.allergyState === 'NoKnownAllergies' ? 'banner.noAllergies' : 'banner.allergiesNotRecorded')}</p>}
+              <Card title={t('patient360.allergies')} className="md:col-span-2">
+                {/* The one allergy look first (MDV-P2-060 AC4); AllergyBlock carries words only, so each allergy's reaction, status and source follow. */}
+                <div><AllergyBlock allergy={bannerAllergyState(chart, s => t(`patient360.allergyStatus.${s}`))} /></div>
+                {chart.allergyState === 'Listed' && <List>{chart.allergies.map((a, i) => (
+                  <Item key={i} source={a.source}>
+                    <strong>{a.substance}</strong>
+                    <span>{[a.reaction, t(`patient360.allergyStatus.${a.status}`)].filter(Boolean).join(' · ')}</span>
+                  </Item>))}</List>}
               </Card>
               <Card title={t('patient360.problems')}>
-                {chart.problems.length === 0 ? <Empty text={t('patient360.problems.empty')} />
+                {chart.problems.length === 0 ? <p className="text-muted-foreground">{t('patient360.problems.empty')}</p>
                   : <List>{chart.problems.map((x, i) => (
                       <Item key={i} source={x.source}>
                         <strong>{x.description}</strong>
@@ -125,7 +129,7 @@ export default function Patient360Page(p: Props) {
               </Card>
               <Card title={t('patient360.medicines')}>
                 {p.addMedicine}
-                {chart.medicines.length === 0 ? <Empty text={t('patient360.medicines.empty')} />
+                {chart.medicines.length === 0 ? <p className="text-muted-foreground">{t('patient360.medicines.empty')}</p>
                   : <List>{chart.medicines.map((m, i) => (
                       <Item key={i} source={m.source}>
                         <strong>{m.name}</strong>
@@ -138,7 +142,7 @@ export default function Patient360Page(p: Props) {
           {/* Visits sit right under the summary (UX-09): the most used part of the chart is not at the bottom. */}
           {show('timeline') && p.timeline}
           {show('stage') && (p.stageModule ?? (
-            <Card title={t(`patient360.section.stage.${lifeStage}`)}><Empty text={t('patient360.stage.empty')} /></Card>
+            <Card title={t(`patient360.section.stage.${lifeStage}`)}><p className="text-muted-foreground">{t('patient360.stage.empty')}</p></Card>
           ))}
           {show('trends') && <Results chart={chart} zone={timeZone} />}
           {show('history') && p.history}
@@ -161,17 +165,7 @@ export function ChartBanner({ data: { patient, chart } }: { data: Patient360 }) 
   );
 }
 
-function Card({ title, wide, children }: { title: string; wide?: boolean; children: ReactNode }) {
-  return (
-    <section aria-label={title} className={`flex flex-col gap-2 rounded-xl border bg-card p-4 ${wide ? 'md:col-span-2' : ''}`}>
-      <h2 className="text-base font-extrabold">{title}</h2>
-      {children}
-    </section>
-  );
-}
-
 const List = ({ children }: { children: ReactNode }) => <ul className="flex flex-col gap-2">{children}</ul>;
-const Empty = ({ text }: { text: string }) => <p className="text-muted-foreground">{text}</p>;
 
 /** A chart fact with its source tag: no value is shown without one. */
 /** Where a prescribed medicine came from (MDV-1087): its visit and, for a role that prints prescriptions, the printed prescription. */
@@ -231,17 +225,17 @@ function Spark({ label, points, second }: { label: string; points: Pts; second?:
 function Tile({ tile: { key, reading: r }, zone }: { tile: VitalTile; zone: string }) {
   const { t, formatDate } = useI18n();
   const name = t(`patient360.tile.${key}`);
-  if (!r) return <li className="flex flex-col gap-1 rounded-xl border bg-card p-3"><strong>{name}</strong><span className="text-muted-foreground">{t('patient360.tile.none')}</span></li>;
+  if (!r) return <li><Card size="item" className="h-full gap-1"><strong>{name}</strong><span className="text-muted-foreground">{t('patient360.tile.none')}</span></Card></li>;
   const value = ltr(`${r.value} ${r.unit}`), date = formatDate(new Date(r.takenAt), zone);
   return (
-    <li className="flex flex-col gap-1 rounded-xl border bg-card p-3">
+    <li><Card size="item" className="h-full gap-1">
       <strong>{name}</strong>
       <span className="text-lg font-extrabold">{value}</span>
       <Spark label={t('patient360.trend.alt', { name, value, date, count: r.count })} points={r.points} second={r.second} />
       {r.flags.map(f => <Flag key={f.code} flag={f.flag} text={`${r.flags.length > 1 ? `${t(`patient360.code.${f.code}`)}: ` : ''}${t(`patient360.flag.${f.flag}`, { range: ltr(`${f.range} ${r.unit}`) })}`} />)}
       <span className="text-sm text-muted-foreground">{t('patient360.trend.latest', { date })}</span>
       <ProvenanceTag source={provenanceOf[r.source]} />
-    </li>
+    </Card></li>
   );
 }
 
@@ -249,13 +243,13 @@ function Tile({ tile: { key, reading: r }, zone }: { tile: VitalTile; zone: stri
 function BmiTile({ bmi, zone }: { bmi: Bmi | null; zone: string }) {
   const { t, formatDate } = useI18n();
   return (
-    <li className="flex flex-col gap-1 rounded-xl border bg-card p-3">
+    <li><Card size="item" className="h-full gap-1">
       <strong>{t('patient360.tile.Bmi')}</strong>
       {bmi ? <>
         <span className="text-lg font-extrabold">{ltr(String(bmi.value))}</span>
         <span className="text-sm text-muted-foreground">{t(`patient360.bmi.older.${bmi.olderCode}`, { date: formatDate(new Date(bmi.olderAt), zone) })}</span>
       </> : <span className="text-muted-foreground">{t('patient360.tile.none')}</span>}
-    </li>
+    </Card></li>
   );
 }
 
@@ -265,7 +259,7 @@ function Results({ chart, zone }: { chart: Patient360['chart']; zone: string }) 
   const rows = resultRows(chart);
   return (
     <Card title={t('patient360.labs')}>
-      {rows.length === 0 ? <Empty text={t('patient360.labs.empty')} /> : <>
+      {rows.length === 0 ? <p className="text-muted-foreground">{t('patient360.labs.empty')}</p> : <>
         <Table label={t('patient360.labs.table')}>
           <TableCaption className="sr-only">{t('patient360.labs')}</TableCaption>
           <TableHeader>
@@ -302,15 +296,4 @@ function Results({ chart, zone }: { chart: Patient360['chart']; zone: string }) 
 function DateText({ iso, zone }: { iso: string; zone: string }) {
   const { formatDate } = useI18n();
   return <time dateTime={iso}>{formatDate(new Date(iso), zone)}</time>;
-}
-
-function Message({ title, body, backPath }: { title: string; body?: ReactNode; backPath: string }) {
-  const { t } = useI18n();
-  return (
-    <div role="alert" className="flex flex-col items-start gap-3 rounded-xl border bg-card p-6">
-      <h1 className="text-lg font-extrabold">{title}</h1>
-      {body && <div className="flex flex-col items-start gap-2">{body}</div>}
-      <Link to={backPath} className={buttonVariants({ variant: 'outline' })}>{t('patient360.back')}</Link>
-    </div>
-  );
 }

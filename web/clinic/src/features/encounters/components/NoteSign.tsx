@@ -1,7 +1,8 @@
 import { useRef } from 'react';
 import { CircleAlert, CircleCheck, Circle } from 'lucide-react';
 import { ltr, useI18n, type MessageKey } from '@medvya/i18n';
-import { Button, Dialog, DialogContent, DialogDescription, DialogTitle } from '@medvya/ui';
+import { AllergyBlock, Button, Dialog, DialogContent, DialogDescription, DialogTitle } from '@medvya/ui';
+import { bannerAllergyState } from '../../patient360/domain/chart';
 import { checklistKey, type ChecklistItem } from '../domain/checklist';
 import { sectionLabelKey, withTitle, type NoteSignature, type SignFailure, type SignPatient } from '../domain/note';
 import type { StepUpReturn } from '../domain/stepUp';
@@ -41,6 +42,7 @@ export function SignNote(p: Props) {
           onCloseAutoFocus={e => { if (p.problem?.kind === 'blank') return; e.preventDefault(); signRef.current?.focus(); }}>
           <DialogTitle>{t('noteSign.confirm.title', { name: p.patient?.name ?? '' })}</DialogTitle>
           {p.patient && <p className="font-bold">{t('noteSign.confirm.patient', { mrn: ltr(p.patient.mrn), dob: formatCalendarDate(p.patient.dateOfBirth) })}</p>}
+          {p.patient && <div><AllergyBlock allergy={bannerAllergyState({ allergyState: p.patient.allergies.state, allergies: p.patient.allergies.allergies }, s => t(`patient360.allergyStatus.${s}`))} /></div>}
           <DialogDescription>{t('noteSign.confirm.body')}</DialogDescription>
           <p className="text-sm text-muted-foreground">{t('noteSign.confirm.stepUp')}</p>
           <div className="flex flex-wrap gap-3">

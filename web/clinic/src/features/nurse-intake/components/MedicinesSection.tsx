@@ -2,7 +2,7 @@ import type { FormEventHandler } from 'react';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 import { CircleHelp } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, Input, Label, Switch } from '@medvya/ui';
+import { Button, Card, Input, Label, Switch } from '@medvya/ui';
 import type { MedicineForm, MedicineView } from '../domain/intake';
 
 type Props = { medicines: MedicineView[]; form: UseFormReturn<MedicineForm>; readOnly: boolean; online: boolean; adding: boolean; onAdd: FormEventHandler<HTMLFormElement> };
@@ -15,8 +15,7 @@ export default function MedicinesSection(p: Props) {
   const { t } = useI18n();
   const { errors } = p.form.formState;
   return (
-    <section aria-labelledby="intake-medicines" className="flex flex-col gap-3 rounded-xl border bg-card p-4">
-      <h2 id="intake-medicines" className="text-lg font-extrabold">{t('intake.medicine.title')}</h2>
+    <Card title={t('intake.medicine.title')}>
       {p.medicines.length === 0 ? <p className="text-muted-foreground">{t('intake.medicine.none')}</p> : (
         <ul className="flex flex-col gap-2">
           {p.medicines.map(m => (
@@ -45,15 +44,15 @@ export default function MedicinesSection(p: Props) {
               <Input id="medicine-frequency" autoComplete="off" maxLength={50} {...p.form.register('frequency')} />
             </div>
           </div>
-          <div className="flex min-h-11 items-center gap-3">
+          <div className="flex min-h-control items-center gap-3">
             <Controller control={p.form.control} name="needsClarification" render={({ field }) => (
               <Switch id="medicine-clarify" checked={field.value} onCheckedChange={field.onChange} />
             )} />
-            <Label htmlFor="medicine-clarify" className="min-h-11 flex-1">{t('intake.medicine.needsClarification')}</Label>
+            <Label htmlFor="medicine-clarify" className="min-h-control flex-1">{t('intake.medicine.needsClarification')}</Label>
           </div>
           <Button type="submit" className="self-start" loading={p.adding} disabled={!p.online}>{t('intake.medicine.add')}</Button>
         </form>
       )}
-    </section>
+    </Card>
   );
 }

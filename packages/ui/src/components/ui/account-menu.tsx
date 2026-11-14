@@ -25,7 +25,7 @@ function AccountMenu({ name, roleLabel, onLocaleChange, onMyDevices, onChangeFac
   return (
     <DropdownMenu dir={dir}>
       <DropdownMenuTrigger
-        className="grid size-11 shrink-0 place-items-center rounded-full bg-brand-700 text-label text-white hover:bg-brand-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        className="grid size-control shrink-0 place-items-center rounded-full bg-brand-700 text-label text-white hover:bg-brand-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
         {/* Named by content, not aria-label, so the visible initials are not a label/name mismatch (WCAG 2.5.3). */}
         <span aria-hidden>{initials(name)}</span>

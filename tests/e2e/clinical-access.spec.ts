@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
+import { targetPx } from './support/targets';
 
 // MDV-P2-024: the owner's access-request queue and the clinic policy in Settings -> Staff, and the bell's pointer to them. CI has no API:
 // the endpoints are mocked in the shapes the server sends; who may decide, the expiry, the own-request rule and the audit rows are covered by
@@ -171,7 +172,7 @@ test('the bell points the owner at the request', async ({ page }) => {
 
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 for (const locale of ['en', 'ar'])
-  test(`axe finds no violations on access requests and the policy (${locale}); 44 px targets`, async ({ page }) => {
+  test(`axe finds no violations on access requests and the policy (${locale}); control-size targets`, async ({ page }) => {
     await open(page, { locale });
     const queue = page.getByRole('region', { name: locale === 'ar' ? 'طلبات الوصول' : 'Access requests' });
     await expect(queue.getByRole('listitem')).toHaveCount(2);
@@ -179,7 +180,7 @@ for (const locale of ['en', 'ar'])
       await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
       await expect(queue.getByRole('combobox').first()).toHaveText('يوم واحد');
     }
-    for (const b of await queue.getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    for (const b of await queue.getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
     await page.addScriptTag({ path: axePath });
     const violations = await page.evaluate(async () =>
       (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations
@@ -188,12 +189,12 @@ for (const locale of ['en', 'ar'])
   });
 
 for (const locale of ['en', 'ar'])
-  test(`axe finds no violations on the queue order (${locale}); 44 px targets`, async ({ page }) => {
+  test(`axe finds no violations on the queue order (${locale}); control-size targets`, async ({ page }) => {
     await open(page, { locale, path: '/settings?tab=queue' });
     const queue = page.getByRole('region', { name: locale === 'ar' ? 'ترتيب الدور' : 'Queue order' });
     await expect(queue.getByRole('radio')).toHaveCount(3);
     if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
-    for (const b of await queue.getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    for (const b of await queue.getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
     await page.addScriptTag({ path: axePath });
     const violations = await page.evaluate(async () =>
       (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations

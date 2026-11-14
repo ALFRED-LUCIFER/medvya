@@ -1,6 +1,6 @@
 import { Link } from 'react-router';
 import { ltr, useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, Card, EmptyState, PageContainer, PageHeader, PageMessage, ProvenanceTag, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@medvya/ui';
+import { Button, buttonVariants, Card, EmptyState, FilterChip, PageContainer, PageHeader, PageMessage, ProvenanceTag, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@medvya/ui';
 import type { ChartSource, ClinicalRefusal, Patient360 } from '../../patient360/domain/chart';
 import { pathOf, provenanceOf, sparkBox } from '../../patient360/domain/chart';
 import { ChartBanner, PrescribedLinks } from '../../patient360/components/Patient360Page';
@@ -33,8 +33,9 @@ export default function TimelinePage(p: Props) {
       {header}
       {p.patient && <ChartBanner data={p.patient} />}
       <Filters {...p} />
-      <div className="grid gap-4 lg:grid-cols-[3fr_2fr]">
-        <Card aria-label={t('timeline.list')}>
+      {/* Beside the trends the history scrolls inside its own card, under the record's tabs, title, strip and filters (MDV-P2-064), as the day grid. */}
+      <div className="grid items-start gap-4 lg:grid-cols-[3fr_2fr]">
+        <Card aria-label={t('timeline.list')} className="lg:max-h-[calc(100dvh-22rem)] lg:overflow-y-auto">
           {p.loading ? <PageMessage kind="busy">{t('timeline.loading')}</PageMessage>
             : p.entries.length === 0 ? <EmptyState action={hasFilters(p.filters) && <Button variant="outline" onClick={p.onClear}>{t('timeline.clear')}</Button>}>
               {t(hasFilters(p.filters) ? 'timeline.empty.filtered' : 'timeline.empty')}
@@ -57,11 +58,8 @@ function Filters(p: Props) {
   const all = p.filters.kinds.length === 0;
   return (
     <section aria-label={t('timeline.filters')} className="flex flex-wrap items-center gap-2">
-      <Button variant={all ? 'selected' : 'outline'} aria-pressed={all} onClick={p.onAllKinds}>{t('timeline.kind.All')}</Button>
-      {timelineKinds.map(k => {
-        const on = p.filters.kinds.includes(k);
-        return <Button key={k} variant={on ? 'selected' : 'outline'} aria-pressed={on} onClick={() => p.onKind(k)}>{t(`timeline.kind.${k}`)}</Button>;
-      })}
+      <FilterChip on={all} onClick={p.onAllKinds} label={t('timeline.kind.All')} />
+      {timelineKinds.map(k => <FilterChip key={k} on={p.filters.kinds.includes(k)} onClick={() => p.onKind(k)} label={t(`timeline.kind.${k}`)} />)}
       <Select value={p.filters.source ?? 'all'} onValueChange={v => p.onSource(v === 'all' ? null : (v as ChartSource))}>
         <SelectTrigger className="w-56" aria-label={t('timeline.source')}><SelectValue /></SelectTrigger>
         <SelectContent>

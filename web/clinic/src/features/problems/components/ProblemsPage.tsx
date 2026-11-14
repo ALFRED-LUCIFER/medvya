@@ -1,13 +1,13 @@
 import type { FormEventHandler } from 'react';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 import { Link } from 'react-router';
-import { CircleCheck, CircleHelp, MessageCircle } from 'lucide-react';
+import { CircleCheck, CircleHelp, MessageCircle, type LucideIcon } from 'lucide-react';
 import { ltr, useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState } from '@medvya/ui';
+import { Button, buttonVariants, Card, Field, PageContainer, PageHeader, PageMessage, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead, TableHeader, StickyActionBar, TableRow, TableState, Tag, type Tone } from '@medvya/ui';
 import type { ClinicalRefusal } from '../../clinical-access/domain/clinicalAccess';
 import type { EncounterBanner } from '../../encounters/domain/encounter';
 import PatientStrip from '../../encounters/components/PatientStrip';
-import ProblemAddForm from './ProblemAddForm';
+import ProblemAddForm, { ProblemAddSubmit } from './ProblemAddForm';
 import { statuses, verificationKey, verifications, type AddDraft, type CodeSet, type DiagnosisCode, type EditDraft, type Problem, type ProblemList, type ProblemRow } from '../domain/problems';
 
 type Props = {
@@ -23,18 +23,24 @@ type Props = {
  * Problems with ICD-10 codes and verification states (E-07, MDV-P2-010). Each state is written in words with its own icon; a provisional
  * problem also has a dashed outline, so it never reads as a confirmed diagnosis. Search is by code or words; a code is never guessed.
  */
+const addFormId = 'problems-add';
+
 export default function ProblemsPage(p: Props) {
   const { t } = useI18n();
   if (p.loading) return <p role="status">{t('problems.loading')}</p>;
-  if (p.refusal) return <Message title={t('consult.refused.title')} body={t(p.refusal.canRequest ? 'consult.refused.ask' : 'consult.refused.role')} boardPath={p.boardPath} />;
-  if (!p.view || p.notFound || p.failed) return <Message title={t(p.notFound ? 'consult.notFound' : 'problems.loadFailed')} boardPath={p.boardPath} />;
+  const back = <Link to={p.boardPath} className={buttonVariants({ variant: 'outline' })}>{t('consult.backToBoard')}</Link>;
+  if (p.refusal) return (
+    <PageContainer width="form" role="alert">
+      <PageHeader title={t('consult.refused.title')} actions={back} />
+      <PageMessage kind="denied">{t(p.refusal.canRequest ? 'consult.refused.ask' : 'consult.refused.role')}</PageMessage>
+    </PageContainer>
+  );
+  if (!p.view || p.notFound || p.failed) return <PageContainer width="form" role="alert"><PageHeader title={t(p.notFound ? 'consult.notFound' : 'problems.loadFailed')} actions={back} /></PageContainer>;
   const { view } = p;
   return (
     <div className="flex flex-col gap-4">
       {p.banner && <PatientStrip banner={p.banner} headingLevel={1} />}
-      <section aria-labelledby="problems-title" className="flex flex-col gap-3 rounded-xl border bg-card p-4">
-        <h2 id="problems-title" className="text-lg font-extrabold">{t('problems.title')}</h2>
-        {p.codeSet && <p className="text-sm text-muted-foreground">{t('problems.codeSet', { system: p.codeSet.system, version: p.codeSet.version })}</p>}
+      <Card title={t('problems.title')} intro={p.codeSet && t('problems.codeSet', { system: p.codeSet.system, version: p.codeSet.version })}>
         <TableState state={view.rows.length === 0 ? 'empty' : 'ready'} messages={{ loading: t('problems.loading'), error: t('problems.loadFailed'), empty: t('problems.empty') }}>
           <Table label={t('problems.tableLabel')} className="min-w-[760px]">
             <TableHeader>
@@ -54,20 +60,26 @@ export default function ProblemsPage(p: Props) {
             </TableBody>
           </Table>
         </TableState>
-        {view.locked ? <p role="status" className="font-bold">{t('problems.locked')}</p> : <ProblemAddForm {...p} />}
+        {view.locked ? <p role="status" className="font-bold">{t('problems.locked')}</p> : <ProblemAddForm {...p} formId={addFormId} />}
         {p.problem && <p role="alert" className="font-bold text-danger-700">{t(`problems.error.${p.problem}`)}</p>}
-        <div><Link to={p.consultPath} className={buttonVariants({ variant: 'outline' })}>{t('problems.backToConsult')}</Link></div>
-      </section>
+      </Card>
+      {/* The bottom bar (MDV-P2-064): Add problem submits the form above. */}
+      <StickyActionBar>
+        {!view.locked && <ProblemAddSubmit formId={addFormId} adding={p.adding} online={p.online} />}
+        <Link to={p.consultPath} className={buttonVariants({ variant: 'outline' })}>{t('problems.backToConsult')}</Link>
+      </StickyActionBar>
     </div>
   );
 }
 
-/** The state in words with its own icon, never colour alone; provisional also gets a dashed outline. */
+const verificationLooks = {
+  Verified: { icon: CircleCheck, tone: 'success' }, PatientReported: { icon: MessageCircle, tone: 'neutral' }, Provisional: { icon: CircleHelp, tone: 'warning' },
+} as const satisfies Record<ProblemRow['verification'], { icon: LucideIcon; tone: Exclude<Tone, 'ai'> }>;
+
+/** The state as the library Tag (MDV-P2-060): words with its own icon, never colour alone; provisional keeps its dashed outline. */
 function VerificationTag({ row }: { row: ProblemRow }) {
   const { t } = useI18n();
-  const Icon = row.verification === 'Verified' ? CircleCheck : row.verification === 'Provisional' ? CircleHelp : MessageCircle;
-  const dashed = row.verification === 'Provisional' ? 'rounded-md border border-dashed border-foreground px-2 py-0.5' : '';
-  return <span className={`inline-flex items-center gap-1.5 font-semibold ${dashed}`}><Icon aria-hidden className="size-4 shrink-0" />{t(`problems.verification.${verificationKey(row)}`)}</span>;
+  return <Tag {...verificationLooks[row.verification]} label={t(`problems.verification.${verificationKey(row)}`)} className={row.verification === 'Provisional' ? 'border-dashed' : undefined} />;
 }
 
 function EditRow(p: Props & { row: ProblemRow }) {
@@ -106,16 +118,5 @@ function EditRow(p: Props & { row: ProblemRow }) {
         </form>
       </TableCell>
     </TableRow>
-  );
-}
-
-function Message({ title, body, boardPath }: { title: string; body?: string; boardPath: string }) {
-  const { t } = useI18n();
-  return (
-    <div role="alert" className="flex flex-col items-start gap-3 rounded-xl border bg-card p-6">
-      <h1 className="text-lg font-extrabold">{title}</h1>
-      {body && <p>{body}</p>}
-      <Link to={boardPath} className={buttonVariants({ variant: 'outline' })}>{t('consult.backToBoard')}</Link>
-    </div>
   );
 }

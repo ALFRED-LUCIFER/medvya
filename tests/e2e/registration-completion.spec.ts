@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page, type Request } from '@playwright/test';
+import { targetPx } from './support/targets';
 
 // MDV-P1-015: the completion task for a quick-registered patient, from the record page. CI has no API: /v1/me/context and
 // /v1/patients/* are mocked with the synthetic cast; the facility scope and audit are covered by PatientEndpointTests.
@@ -148,9 +149,9 @@ for (const locale of ['en', 'hi', 'ar'])
         await expect(page.locator('main h1')).toBeVisible();
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
         // One pass in the page: a locator list measured one by one goes stale (and hangs) if the page re-renders in between.
-        const small = await page.locator('main button, main a, main input').evaluateAll(els => els
-          .filter(e => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden' && e.getBoundingClientRect().height < 44)
-          .map(e => `${e.tagName.toLowerCase()} "${(e.textContent || e.getAttribute('aria-label') || '').trim().slice(0, 30)}" ${Math.round(e.getBoundingClientRect().height)}px`));
+        const small = await page.locator('main button, main a, main input').evaluateAll((els, min) => els
+          .filter(e => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden' && e.getBoundingClientRect().height < min)
+          .map(e => `${e.tagName.toLowerCase()} "${(e.textContent || e.getAttribute('aria-label') || '').trim().slice(0, 30)}" ${Math.round(e.getBoundingClientRect().height)}px`), await targetPx(page));
         expect(small).toEqual([]);
         await page.addScriptTag({ path: axePath });
         const violations = await page.evaluate(async () =>

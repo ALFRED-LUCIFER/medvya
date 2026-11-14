@@ -277,23 +277,17 @@ for (const [roleName, context] of Object.entries(roles)) {
   });
 }
 
-test('at 1440 px the sidebar shows until the user folds it; the labelled rail is kept on reload', async ({ page }) => {
+test('Practice settings sits at the foot of the menu, with no fold toggle, in the sidebar and the rail (design: Medvya Web)', async ({ page }) => {
   await signInAs(page, doctor);
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/today');
-  await expect(sidebar(page).getByRole('link', { name: 'My day' })).toBeVisible();
-  expect((await sidebar(page).boundingBox())!.width).toBe(232);
-  await page.getByRole('button', { name: 'Collapse menu' }).click();
-  expect((await sidebar(page).boundingBox())!.width).toBe(72);
-  await expect(sidebar(page).getByRole('link', { name: 'My day' })).toBeVisible(); // labelled, never icon-only
-  await page.reload();
-  await expect(page.getByRole('button', { name: 'Expand menu' })).toBeVisible();
-  expect((await sidebar(page).boundingBox())!.width).toBe(72);
-  await page.getByRole('button', { name: 'Expand menu' }).click();
-  expect((await sidebar(page).boundingBox())!.width).toBe(232);
-  // Below 1280 there is no choice to make: the rail, and no toggle.
-  await page.setViewportSize({ width: 1024, height: 768 });
-  await expect(page.getByRole('button', { name: /Collapse menu|Expand menu/ })).toHaveCount(0);
+  for (const width of [1440, 1024]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/today');
+    const nav = page.getByRole('navigation').first();
+    const settings = (await nav.getByRole('link', { name: 'Practice settings' }).boundingBox())!;
+    const box = (await nav.boundingBox())!;
+    expect(box.y + box.height - (settings.y + settings.height)).toBeLessThan(40); // pinned near the bottom, not after Clinic today
+    await expect(page.getByRole('button', { name: /Collapse menu|Expand menu/ })).toHaveCount(0);
+  }
 });
 
 for (const [roleName, context] of [['doctor', doctor], ['receptionist', receptionist]] as const)

@@ -4,7 +4,7 @@ import { Loader2 } from "lucide-react"
 import { Slot } from "radix-ui"
 import { cn } from "#lib/utils"
 
-// Medvya buttons (Handoff §1): 44px minimum target, bold label, disabled shows a grey fill rather than opacity.
+// Medvya buttons (Handoff §1): the control token (36 px with a mouse, 44 px on touch), bold label, disabled shows a grey fill rather than opacity.
 // Focus uses the global 2px ring from styles.css. Named transition properties, never outline or shadow: the ring is at full colour on the first frame (MDV-P2-056).
 const buttonVariants = cva(
   "inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-bold whitespace-nowrap transition-[color,background-color,border-color] duration-fast ease-out disabled:pointer-events-none disabled:bg-disabled disabled:text-ink-400 disabled:border-transparent [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
@@ -21,9 +21,9 @@ const buttonVariants = cva(
         link: "text-action-600 underline-offset-4 hover:underline",
       },
       size: {
-        default: "min-h-11 px-4 has-[>svg]:px-3",
-        sm: "min-h-11 px-3 text-[13px]", // smaller text and padding, never a smaller target (MDV-P1-078)
-        icon: "size-11",
+        default: "min-h-control px-4 has-[>svg]:px-3",
+        sm: "min-h-control-sm px-2.5 text-[13px]", // 30 px with a mouse, 44 px on touch (MDV-P2-062)
+        icon: "size-control",
       },
     },
     defaultVariants: { variant: "default", size: "default" },

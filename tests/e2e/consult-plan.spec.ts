@@ -2,6 +2,7 @@ import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
 import { mockNote } from './support/note';
 import { line, mockPrescription, type RxLine } from './support/prescription';
+import { targetPx } from './support/targets';
 
 // MDV-P2-043: the Plan section of the one-page consultation. CI has no API: the note, reconciliation, prescription, orders, advice, follow-up and
 // referrals are mocked in the shapes the server sends. The rules (taper steps and end date, the order toggle that never takes out an ordered test,
@@ -151,12 +152,12 @@ test('"Plan change" from the older adult medicine review lands on the Plan with 
 });
 
 for (const locale of ['en', 'ar'])
-  test(`axe finds no violations in the plan (${locale}); right to left in Arabic; targets are 44 px`, async ({ page }) => {
+  test(`axe finds no violations in the plan (${locale}); right to left in Arabic; control-size targets`, async ({ page }) => {
     await open(page, locale);
     const ar = locale === 'ar';
     await expect(plan(page).getByRole('button', { name: ar ? 'تخفيض تدريجي' : 'Taper' }).first()).toBeVisible();
     if (ar) await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
     await plan(page).getByRole('button', { name: ar ? 'تخفيض تدريجي' : 'Taper' }).first().click(); // the taper form open too
-    for (const target of await plan(page).locator('button:not([role=switch]):not([role=combobox]), a, input, textarea').all()) expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    for (const target of await plan(page).locator('button:not([role=switch]):not([role=combobox]), a, input, textarea').all()) expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
     expect(await axe(page)).toEqual([]);
   });

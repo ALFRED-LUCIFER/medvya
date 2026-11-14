@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
+import { rowPx } from './support/targets';
 
 // MDV-P2-014 (F-13): the practice searches the country list, sees each class and what it prints, adds its own medicine and builds an
 // order set. CI has no API, so the endpoints are mocked in the shapes the server sends (FormularyItemView, OrderSetView).
@@ -212,7 +213,7 @@ test.describe('on a coarse pointer', () => {
     await open(page);
     await expect(page.getByRole('row', { name: /Paracetamol/ })).toBeVisible();
     expect(await page.evaluate(() => matchMedia('(any-pointer: coarse)').matches)).toBe(true);
-    for (const h of await rowHeights(page)) expect(h).toBeGreaterThanOrEqual(48);
+    for (const h of await rowHeights(page)) expect(h).toBeGreaterThanOrEqual(await rowPx(page));
   });
 });
 

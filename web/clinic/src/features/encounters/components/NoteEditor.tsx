@@ -1,5 +1,6 @@
 import type { UseFormRegisterReturn } from 'react-hook-form';
 import { useI18n } from '@medvya/i18n';
+import { Card } from '@medvya/ui';
 import type { ChecklistItem } from '../domain/checklist';
 import type { NoteSignature, NoteTemplate, RecordingConsent, SavePhase, SignPatient } from '../domain/note';
 import type { StepUpReturn } from '../domain/stepUp';
@@ -40,12 +41,9 @@ export default function NoteEditor(p: NoteEditorProps) {
   if (p.loading) return <p role="status">{t('noteEditor.loading')}</p>;
   if (p.loadFailed || !p.template || !p.templateKey) return <p role="alert" className="font-bold text-danger-700">{t(p.forbidden ? 'noteEditor.forbidden' : 'noteEditor.loadFailed')}</p>;
   return (
-    <section aria-labelledby="note-title" className="flex flex-col gap-4 rounded-xl border bg-card p-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 id="note-title" className="text-lg font-extrabold">{t('noteEditor.title')}</h2>
-        <TemplatePicker templateKey={p.templateKey} choices={p.choices} readOnly={p.readOnly} pendingSwitch={p.pendingSwitch} suggested={p.suggested}
-          onRequestSwitch={p.onRequestSwitch} onCancelSwitch={p.onCancelSwitch} onConfirmSwitch={p.onConfirmSwitch} />
-      </div>
+    <Card className="gap-4" title={t('noteEditor.title')} actions={
+      <TemplatePicker templateKey={p.templateKey} choices={p.choices} readOnly={p.readOnly} pendingSwitch={p.pendingSwitch} suggested={p.suggested}
+        onRequestSwitch={p.onRequestSwitch} onCancelSwitch={p.onCancelSwitch} onConfirmSwitch={p.onConfirmSwitch} />}>
       <RecordingConsentChoice value={p.consent} readOnly={p.readOnly} onChange={p.onConsent} />
       {!p.readOnly && <p className="text-sm text-muted-foreground">{t('noteEditor.manualBanner')}</p>}
       <SignedBanner signed={p.readOnly} versionNo={p.signature?.versionNo ?? 1} />
@@ -63,6 +61,6 @@ export default function NoteEditor(p: NoteEditorProps) {
             onRequest={p.onRequestSign} onCancel={p.onCancelSign} onConfirm={p.onConfirmSign} resume={p.signResume} />
         </>
       )}
-    </section>
+    </Card>
   );
 }

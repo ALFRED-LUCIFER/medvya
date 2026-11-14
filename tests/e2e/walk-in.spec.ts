@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page, type Request } from '@playwright/test';
+import { targetPx } from './support/targets';
 
 // MDV-P1-025 walk-in: quick registration (or search) → walk-in → checked in, card tagged Walk-in. CI has no API: the session,
 // patients, schedule and appointment endpoints are mocked with the synthetic cast in the server's shapes; no double booking,
@@ -157,7 +158,7 @@ for (const [locale, column] of [['en', 'The patient now waits in the Ready for d
     await desk(page, { locale, checkedInState: 'ReadyForDoctor' });
     await page.goto(`/front-desk/walk-in?patient=${patientId}`);
     await expect(page.locator('main [role=status]').first()).toBeVisible(); // the patient lookup has answered
-    await page.locator('form button[type=submit]').click();
+    await page.locator('main button[type=submit]').click();
     const done = page.locator('main [role=status]').filter({ has: page.locator('h1') });
     await expect(done).toContainText(column);
     await expect(done).not.toContainText(locale === 'en' ? 'Checked in column' : 'تم تسجيل الوصول»');
@@ -197,7 +198,7 @@ for (const locale of ['en', 'hi', 'ar'])
       expect(await page.evaluate(() => document.documentElement.dir)).toBe(locale === 'ar' ? 'rtl' : 'ltr');
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       for (const b of await page.locator('main button, main a, main input').all())
-        if (await b.isVisible()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+        if (await b.isVisible()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
       await page.addScriptTag({ path: axePath });
       const violations = await page.evaluate(async () =>
         (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations
@@ -210,7 +211,7 @@ for (const [locale, message] of [['en', /Check-in is paused: the practice has no
   test(`a walk-in refused for unaccepted terms names Settings → Terms, not a broken button, axe clean (${locale})`, async ({ page }) => {
     await desk(page, { locale, walkInAnswer: () => ({ status: 403, json: { title: 'Terms not accepted', code: 'terms_not_accepted' } }) });
     await page.goto(`/front-desk/walk-in?patient=${patientId}`);
-    await page.locator('form button[type=submit]').click();
+    await page.locator('main button[type=submit]').click();
     const alert = page.getByRole('alert').filter({ hasText: message });
     await expect(alert).toBeVisible();
     await expect(alert.getByRole('link')).toHaveAttribute('href', '/settings?tab=terms');

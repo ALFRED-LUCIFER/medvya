@@ -1,7 +1,7 @@
 import { useI18n } from '@medvya/i18n';
-import { Button, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Switch } from '@medvya/ui';
+import { Button, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, StickyActionBar, Switch } from '@medvya/ui';
 import { slotLengths, weekdays, type CalendarTemplate, type HoursRow, type LocationChoice, type SessionRow, type Weekday } from '../domain/settings';
-import { fieldError } from './fieldStyles';
+import { cardBar, fieldError } from './fieldStyles';
 import { LocationSelect } from './LocationSelect';
 import { Section } from './Section';
 
@@ -66,7 +66,7 @@ export default function HoursPanel({ choice, hours, schedules }: Props) {
               const bad = hours.problems.includes(r.weekday);
               return (
                 <li key={r.weekday} className="flex flex-wrap items-center gap-3 p-3">
-                  <label className="flex min-h-11 w-48 items-center gap-3 font-bold">
+                  <label className="flex min-h-control w-48 items-center gap-3 font-bold">
                     <Switch checked={r.open} onCheckedChange={on => hours.onToggle(r.weekday, on)} />
                     <span>{t(`settings.weekday.${r.weekday}`)}</span>
                     <span className="text-sm font-normal text-muted-foreground">{t(r.open ? 'settings.hours.open' : 'settings.hours.closed')}</span>
@@ -84,11 +84,12 @@ export default function HoursPanel({ choice, hours, schedules }: Props) {
             })}
           </ul>
         )}
-        <div className="flex flex-wrap items-center gap-3" aria-live="polite">
-          <Button type="button" loading={hours.saving} disabled={!hours.dirty || hours.problems.length > 0} onClick={hours.onSave}>{t('settings.save')}</Button>
+        <StickyActionBar className={cardBar} aria-live="polite" status={<>
           {hours.saved && <span>{t('settings.saved')}</span>}
           {hours.saveFailed && <span role="alert" className={fieldError}>{t('settings.saveFailed')}</span>}
-        </div>
+        </>}>
+          <Button type="button" loading={hours.saving} disabled={!hours.dirty || hours.problems.length > 0} onClick={hours.onSave}>{t('settings.save')}</Button>
+        </StickyActionBar>
       </Section>
       <Section title={t('settings.schedules.title')} intro={t('settings.schedules.intro')}>
         {schedules.loading ? <p role="status">{t('settings.loading')}</p> : schedules.loadFailed ? <p role="alert" className={fieldError}>{t('settings.loadFailed')}</p>
@@ -126,19 +127,21 @@ export default function HoursPanel({ choice, hours, schedules }: Props) {
               ))}
             </ul>
             {schedules.problem && <p role="alert" className={fieldError}>{t(`settings.schedules.error.${schedules.problem}`)}</p>}
-            <div className="flex flex-wrap items-center gap-3" aria-live="polite">
-              <Button type="button" variant="outline" onClick={schedules.onAddSession}>{t('settings.schedules.addSession')}</Button>
-              <Button type="button" loading={schedules.saving} disabled={!schedules.dirty || !!schedules.problem} onClick={schedules.onSave}>{t('settings.save')}</Button>
-              {/* With visits left outside the hours, the warning below already opens with "Saved." */}
-              {schedules.saved && schedules.outside.length === 0 && <span role="status" className="font-bold">{t('settings.saved')}</span>}
-              {schedules.saveFailed && <span role="alert" className={fieldError}>{t('settings.saveFailed')}</span>}
-            </div>
+            {/* Above the bottom bar, which stays the card's last row. */}
             {schedules.outside.length > 0 && (
               <div role="status" className="flex flex-col gap-1 rounded-lg border border-warning-700 p-3">
                 <p className="font-bold">{t('settings.schedules.outside', { count: schedules.outside.length })}</p>
                 <p className="text-sm">{schedules.outside.map(a => a.reference).join(', ')}</p>
               </div>
             )}
+            <StickyActionBar className={cardBar} aria-live="polite" status={<>
+              {/* With visits left outside the hours, the warning below already opens with "Saved." */}
+              {schedules.saved && schedules.outside.length === 0 && <span role="status" className="font-bold">{t('settings.saved')}</span>}
+              {schedules.saveFailed && <span role="alert" className={fieldError}>{t('settings.saveFailed')}</span>}
+            </>}>
+              <Button type="button" variant="outline" onClick={schedules.onAddSession}>{t('settings.schedules.addSession')}</Button>
+              <Button type="button" loading={schedules.saving} disabled={!schedules.dirty || !!schedules.problem} onClick={schedules.onSave}>{t('settings.save')}</Button>
+            </StickyActionBar>
           </>
         )}
       </Section>

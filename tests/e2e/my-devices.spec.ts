@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
+import { targetPx } from './support/targets';
 
 // MDV-P0-012: "My devices". CI has no API: the endpoints are mocked in the shapes the server sends; ending a session, its audit and
 // "effective on the next request" are covered by the SessionControl integration tests on PostgreSQL.
@@ -57,11 +58,11 @@ test('every staff role reaches it from the account menu', async ({ page }) => {
 
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 for (const locale of ['en', 'ar'])
-  test(`axe finds no violations on My devices (${locale}); 44 px targets`, async ({ page }) => {
+  test(`axe finds no violations on My devices (${locale}); control-size targets`, async ({ page }) => {
     await open(page, locale);
     await expect(page.getByRole('heading', { name: locale === 'ar' ? 'أجهزتي' : 'My devices' })).toBeVisible();
     if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
-    for (const b of await page.getByRole('table').getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    for (const b of await page.getByRole('table').getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
     await page.addScriptTag({ path: axePath });
     const violations = await page.evaluate(async () =>
       (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations
@@ -85,7 +86,7 @@ test.describe('at 375 px', () => {
       const end = row.getByRole('button', { name: /Edge on Windows/ });
       await end.scrollIntoViewIfNeeded();
       await expect(end).toBeInViewport();
-      expect((await end.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+      expect((await end.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
       expect(await table.evaluate(e => e.scrollWidth - e.clientWidth)).toBeLessThanOrEqual(0);
       expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
       await page.addScriptTag({ path: axePath });

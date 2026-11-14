@@ -10,6 +10,9 @@ export default defineConfig({
   use: { baseURL: 'http://localhost:4173', trace: 'retain-on-failure', reducedMotion: 'reduce' },
   projects: [
     { name: 'chromium', testIgnore: ['fullstack/**', /-performance\.spec\.ts/], use: { ...devices['Desktop Chrome'] } },
+    // MDV-P2-062: targets are 36 px with a mouse and 44 px on touch. Every "control-size targets" test runs again with touch, so each area
+    // proves both sizes (support/targets.ts picks the size from any-pointer: coarse).
+    { name: 'touch', grep: /control-size/, testIgnore: ['fullstack/**', /-performance\.spec\.ts/], use: { ...devices['Desktop Chrome'], hasTouch: true } },
     // Time budgets run alone, after every other spec has finished: measured beside 250 parallel specs they test the runner, not the page.
     // One at a time too: two budgets measured side by side share the CPU and the throttled link (MDV audit UX-12 added the second one).
     { name: 'performance', testMatch: /-performance\.spec\.ts/, dependencies: ['chromium'], workers: 1, use: { ...devices['Desktop Chrome'] } },

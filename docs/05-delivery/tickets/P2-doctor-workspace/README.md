@@ -8,9 +8,9 @@
 **Day one:** Open Doctor Today, see the patient chart, record vitals, write and sign a note, and print a prescription, without AI.  
 **Goal:** A doctor completes a full visit, from chart to signed note and prescription, in Medvya. This is also the fallback that AI must never break.
 
-**Tickets:** 61 · **Estimate:** 136.75 dev-days vs **35 working days** in the window (OVER by 101.75 days: needs scope trade-off or overlap) · **Average confidence:** 79%
+**Tickets:** 64 · **Estimate:** 145.25 dev-days vs **35 working days** in the window (OVER by 110.25 days: needs scope trade-off or overlap) · **Average confidence:** 78%
 
-**Status:** To do 61
+**Status:** To do 64
 
 ## Epics
 
@@ -65,6 +65,9 @@
 | [MDV-P2-055](MDV-P2-055.md) | To do | Settings sub-navigation and small copy and state fixes: walk-in column name, Terms status, nurse-intake switch, organisation page | Story | SHOULD | P1-02 | F-08 | 2 | 13–13 | 18 Jan → 22 Jan 2027 | 78% Medium |
 | [MDV-P2-057](MDV-P2-057.md) | To do | Apply the type and width tokens: stray font sizes removed, body weight 500, page maximum 1,600 px, reading width, no sm:grid-cols | Task | SHOULD | P0-07 | — | 3 | 13–13 | 18 Jan → 22 Jan 2027 | 70% Medium |
 | [MDV-P2-060](MDV-P2-060.md) | To do | Adopt Chip, Tag, Banner and SegmentedControl in features: one chip vocabulary, one view switch | Task | SHOULD | P0-07 | — | 2.5 | 13–14 | 18 Jan → 29 Jan 2027 | 75% Medium |
+| [MDV-P2-062](MDV-P2-062.md) | To do | Density by pointer, as in the workspace concept: 36 px controls and 40 px rows with a mouse, 44 and 48 on touch; 14 px text; underline tabs; denser registration | Story | SHOULD | P0-07 | — | 3 | 13–13 | 18 Jan → 22 Jan 2027 | 70% Medium |
+| [MDV-P2-063](MDV-P2-063.md) | To do | Registration uses the width and keeps Back, Save draft and Continue in the bottom action bar | Story | SHOULD | P1-05 | — | 1.5 | 13–13 | 18 Jan → 22 Jan 2027 | 80% Medium |
+| [MDV-P2-064](MDV-P2-064.md) | To do | One screen per task: top bar, content that fits, bottom bar; long lists scroll inside their panel, never the page | Story | SHOULD | P0-07 | — | 4 | 13–13 | 18 Jan → 22 Jan 2027 | 65% Medium |
 | [MDV-P2-019](MDV-P2-019.md) | To do | Referrals out and in with status (E-09) | Story | MUST | P2-06 | E-09 | 2 | 14–14 | 25 Jan → 29 Jan 2027 | 80% Medium |
 | [MDV-P2-020](MDV-P2-020.md) | To do | Share Rx with patient/pharmacy (e-Rx PDF/link) and pharmacy dispatch record (E-10) | Story | MUST | P2-06 | E-10 | 1.5 | 14–14 | 25 Jan → 29 Jan 2027 | 70% Medium |
 | [MDV-P2-026](MDV-P2-026.md) | To do | Doctor and nurse training (30 min each) and R2 materials | Chore | MUST | P2-03, P2-05 | — | 1 | 14–14 | 25 Jan → 29 Jan 2027 | 88% High |

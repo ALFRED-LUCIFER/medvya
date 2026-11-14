@@ -4312,6 +4312,7 @@
   "rx.auth.print": "Print prescription",
   "rx.auth.reauth": "Confirm your identity to authorise. What you entered stays here.",
   "rx.auth.confirm": "Confirm identity",
+  "stepUp.confirmed": "Identity confirmed. Press {action}.",
   "rx.auth.error.unresolved_alerts": "A severe alert has no reason yet. Give one in the safety checks, then authorise.",
   "rx.auth.error.nothing_to_authorise": "There is nothing to authorise yet. Add a medicine first.",
   "rx.auth.error.no_instructions": "Every included medicine needs an instruction. Fill in its dose first.",

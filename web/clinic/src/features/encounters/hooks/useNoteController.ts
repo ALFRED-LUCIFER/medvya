@@ -11,6 +11,7 @@ import type { EncounterBanner } from '../domain/encounter';
 import { autosaveDelayMs, saveRetryDelayMs, defaultTargetSection, insertAt, inTemplateOrder, phraseKey, vitalNameKey, type NoteView, type PreviousNote, type VerifiedVital, missingRequired, noteFormSchema, signFailure, switchChoices, switchTemplate, type NoteForm, type NoteSections, type NoteTemplate, type RecordingConsent, type SavePhase, type SignFailure } from '../domain/note';
 import { fetchNote, fetchNoteAfterLeaving, fetchNoteCatalog, fetchPrefill, fetchPrevious, markLeftWithSave, saveNote, signNote, startReauth } from '../services/noteApi';
 import { createAutosaver } from '../services/noteAutosaver';
+import { useStepUpReturn } from './useStepUpReturn';
 import { complaintMark, complaintSection, complaintToPrefill, type ComplaintSource, type IntakeComplaint } from '../domain/complaint';
 import { forSave, unfinishedFindings } from '../domain/structured';
 
@@ -38,6 +39,7 @@ export function useNoteController(encounterId: string, canSign: boolean, timeZon
   const [confirming, setConfirming] = useState(false);
   const [signing, setSigning] = useState(false);
   const [signProblem, setSignProblem] = useState<SignFailure | { kind: 'unsaved' } | { kind: 'finding' } | null>(null);
+  const signResume = useStepUpReturn('sign');
   const keyRef = useRef<string | null>(null);
   // Verified prefill, quick phrases and earlier-note snippets (MDV-P2-009): read for a draft only, and only ever added by a button the doctor presses.
   const isDraft = !!held && held.status === 'Draft';
@@ -149,7 +151,7 @@ export function useNoteController(encounterId: string, canSign: boolean, timeZon
       else if (failure.kind === 'blank' && template) { failure.sections = inTemplateOrder(template, failure.sections); form.setFocus(`sections.${failure.sections[0]!}`); }
       setSignProblem(failure.kind === 'signed' || failure.kind === 'stale' ? null : failure);
       if (failure.kind === 'reauth') {
-        try { await startReauth(); } catch { setSignProblem({ kind: 'failed' }); }
+        try { await startReauth('sign'); } catch { setSignProblem({ kind: 'failed' }); }
       }
     } finally {
       setConfirming(false);
@@ -208,7 +210,7 @@ export function useNoteController(encounterId: string, canSign: boolean, timeZon
     canSign: canSign && !!held && held.status === 'Draft',
     signature: held?.signature ?? null,
     signAsName: held?.signAsName ?? null,
-    confirming, signing, signProblem,
+    confirming, signing, signProblem, signResume,
     onRequestSign: requestSign,
     onCancelSign: () => setConfirming(false),
     onConfirmSign: () => void confirmSign(),

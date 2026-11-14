@@ -2,6 +2,7 @@ import { apiFetch } from '../../api/services/apiClient';
 import { ApiError, csrf, post, send } from '../../schedule/services/scheduleApi';
 import type { AddendumForm, NoteCatalog, NoteDraft, NoteView, PreviousNote, VerifiedVital } from '../domain/note';
 import type { IntakeComplaint } from '../domain/complaint';
+import { returnPath, type ResumeAction } from '../domain/stepUp';
 
 const put = <T>(url: string, body: unknown, keepalive = false) =>
   send<T>(url, { method: 'PUT', headers: { 'X-Medvya-Csrf': '1', 'Content-Type': 'application/json' }, body: JSON.stringify(body), keepalive });
@@ -64,8 +65,8 @@ export async function downloadNotePdf(encounterId: string): Promise<void> {
 
 export const printPage = () => window.print();
 
-/** Step-up before signing: the provider asks again, then returns to this consult path (an opaque id, never patient data). */
-export async function startReauth() {
-  const { location } = await post<{ location: string }>('/bff/reauth', { returnUrl: window.location.pathname });
+/** Step-up before signing: the provider asks again, then returns to this consult path (an opaque id, never patient data) and the action's word (MDV-P2-047). */
+export async function startReauth(resume?: ResumeAction) {
+  const { location } = await post<{ location: string }>('/bff/reauth', { returnUrl: returnPath(window.location.pathname, resume) });
   window.location.assign(location);
 }

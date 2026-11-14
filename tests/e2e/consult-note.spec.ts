@@ -297,11 +297,16 @@ test('sign: reauth_required sends the doctor to confirm identity, the draft surv
   await note(page).getByRole('button', { name: 'Sign note' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Sign as Dr Asha Raman (synthetic)' }).click();
   await expect(page.getByText('Confirm your identity', { exact: true })).toBeVisible(); // the provider's stub page
-  expect(mock.reauths).toEqual([{ returnUrl: '/consult/e-1' }]); // the opaque consult path only
+  expect(mock.reauths).toEqual([{ returnUrl: '/consult/e-1?resume=sign' }]); // the opaque consult path and one fixed word (MDV-P2-047)
   expect(mock.signs).toHaveLength(1);
   expect(mock.note.sections.plan).toBe('Rest and fluids (unsaved when Sign was pressed)'); // saved before the redirect
-  await page.goto('/consult/e-1'); // the provider returns here
+  await page.goto('/consult/e-1?resume=sign'); // the provider returns here
   await expect(note(page).getByLabel('Plan')).toHaveValue('Rest and fluids (unsaved when Sign was pressed)'); // reloaded from the server
+  // MDV-P2-047: Sign is in view and focused and the status says what to press; signing still waits for the press.
+  await expect(note(page).getByRole('button', { name: 'Sign note' })).toBeFocused();
+  await expect(note(page).getByRole('button', { name: 'Sign note' })).toBeInViewport();
+  await expect(note(page).getByRole('status').filter({ hasText: 'Identity confirmed. Press Sign note.' })).toBeVisible();
+  expect(mock.signs).toHaveLength(1);
   await note(page).getByRole('button', { name: 'Sign note' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Sign as Dr Asha Raman (synthetic)' }).click();
   await expect(note(page)).toContainText('version 1');

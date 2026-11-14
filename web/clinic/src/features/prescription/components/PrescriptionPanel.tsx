@@ -5,6 +5,7 @@ import { CircleAlert, CircleSlash, TrendingDown, CircleX, FilePen, History, Plus
 import { useI18n } from '@medvya/i18n';
 import { Button, buttonVariants, ClinicalAlert, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@medvya/ui';
 import { authoriseTarget, isCurrent, type AuthoriseProblem, type RxAuthorisationState } from '../domain/authorisation';
+import type { StepUpReturn } from '../../encounters/domain/stepUp';
 import { describedBy, fieldError } from '../../settings/components/fieldStyles';
 import { Section } from '../../settings/components/Section';
 import { lineSafety } from '../domain/checks';
@@ -51,6 +52,8 @@ type Props = SafetyProps & {
   discardFailed: boolean;
   onDiscarding: (open: boolean) => void;
   onDiscard: FormEventHandler<HTMLFormElement>;
+  /** Back from the step-up (MDV-P2-047): focus on this section's button and a status line. */
+  resume: StepUpReturn;
   printPath: string;
   /** The Add medicine panel (MDV-P2-039), opened from here while the consultation is open. */
   addMedicine?: ReactNode;
@@ -179,25 +182,29 @@ function Authorise(p: Props) {
   const locked = !(state?.editable ?? !p.ended);
   const cancellation = state?.authorised?.cancellation;
   const reasonError = p.cancelForm.formState.errors.reason;
+  const { focus: resumeFocus, confirmed } = p.resume;
+  const focus = state ? resumeFocus : undefined; // not before the authorisation is known: which button shows depends on it
+  const label = current ? t('rx.auth.cancel') : t(cancellation ? 'rx.auth.reissue' : state?.authorised ? 'rx.auth.again' : 'rx.auth.authorise');
   return (
     <div className="flex flex-col gap-2 border-t pt-4">
       <p className="text-sm">{t('rx.auth.separate')}</p>
       {(p.checks?.unresolved ?? 0) > 0 && <p className="text-sm font-bold">{t('rx.auth.unresolved')}</p>}
       {cancellation && <p className="text-sm">{t('rx.auth.cancelledReason', { reason: cancellation.reason })}</p>}
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         {!current && !locked && (
-          <Button id={authoriseTarget} loading={p.authorising} disabled={p.busy} onClick={p.onAuthorise}>
-            <ShieldCheck aria-hidden className="size-4" />{t(cancellation ? 'rx.auth.reissue' : state?.authorised ? 'rx.auth.again' : 'rx.auth.authorise')}
+          <Button id={authoriseTarget} ref={focus} loading={p.authorising} disabled={p.busy} onClick={p.onAuthorise}>
+            <ShieldCheck aria-hidden className="size-4" />{label}
           </Button>
         )}
         {current && <Link to={p.printPath} className={buttonVariants({ variant: 'outline' })}><Printer aria-hidden className="size-4" />{t('rx.auth.print')}</Link>}
         {current && !p.cancelling && (
-          <Button variant="outline" onClick={() => p.onCancelling(true)}><CircleX aria-hidden className="size-4" />{t('rx.auth.cancel')}</Button>
+          <Button ref={focus} variant="outline" onClick={() => p.onCancelling(true)}><CircleX aria-hidden className="size-4" />{label}</Button>
         )}
         {/* MDV-P1-090: an ended visit's unfinished draft can be discarded here as well as from End consultation. */}
         {p.ended && !current && !locked && !p.discarding && (
           <Button variant="outline" onClick={() => p.onDiscarding(true)}><Trash2 aria-hidden className="size-4" />{t('rx.discard.confirm')}</Button>
         )}
+        {confirmed && <p role="status" className="font-bold">{t('stepUp.confirmed', { action: label })}</p>}
       </div>
       {p.ended && !current && !locked && p.discarding && (
         <form noValidate onSubmit={p.onDiscard} className="flex flex-col gap-2">

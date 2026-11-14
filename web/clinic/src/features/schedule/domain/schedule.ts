@@ -1,3 +1,5 @@
+import { localDate } from './changes';
+
 // GET /v1/schedule (src/Modules/Scheduling/Medvya.Scheduling.Application/IScheduleService.cs). Instants are UTC ISO strings;
 // they are shown in the facility's IANA zone (`timeZone`), never the device's.
 export type CalendarKind = 'Doctor' | 'Resource';
@@ -91,6 +93,28 @@ export function layoutDay(day: ScheduleDay): DayLayout {
         ...c.unavailable.map(u => ({ kind: 'unavailable' as const, ...u, ...place(u) })),
       ]),
     })),
+  };
+}
+
+/**
+ * Today's day view opens at now (MDV-P1-097): the rows before the current slot row fold away, every block moving up by the cut, and
+ * `earlier` counts the visits folded with them. Null when there is nothing to fold: another day, or before the first row. Another day
+ * already opens at its first working hour, since the server starts the frame there.
+ */
+export function foldPast(day: DayLayout, now: number): { day: DayLayout; earlier: number } | null {
+  const mark = day.marks.findLast(m => Date.parse(m.at) <= now);
+  if (!mark || mark.top <= 0 || localDate(new Date(now).toISOString(), day.timeZone) !== day.date) return null;
+  const at = Date.parse(mark.at), cut = mark.top;
+  // Compared as instants, not pixels, so rounding never leaves a sliver of a folded block.
+  const folded = (i: ColumnItem) => Date.parse(i.end) <= at;
+  return {
+    earlier: day.columns.reduce((n, c) => n + c.items.filter(i => i.kind === 'appointment' && folded(i)).length, 0),
+    day: {
+      ...day, height: day.height - cut,
+      marks: day.marks.filter(m => m.top >= cut).map(m => ({ ...m, top: m.top - cut })),
+      // A block running across the cut (a visit in progress, a break) stays, cut at the top.
+      columns: day.columns.map(c => ({ ...c, items: c.items.filter(i => !folded(i)).map(i => ({ ...i, top: Math.max(0, i.top - cut), height: Math.min(i.height, i.top + i.height - cut) })) })),
+    },
   };
 }
 

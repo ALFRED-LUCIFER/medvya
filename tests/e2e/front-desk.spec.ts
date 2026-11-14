@@ -730,6 +730,25 @@ for (const locale of ['en', 'ar'])
     expect(await axeViolations(page)).toEqual([]);
   });
 
+// Founder decision, 15 Nov 2026: the patient gets a small physical token. The slip prints on an 80 mm receipt page, as one page.
+// Mutation check: drop the receiptPage style from TokenSlipPrintPage.tsx and the page is A4 (595 pt wide), so this fails.
+test('the token slip prints as one 80 mm receipt with the token and no patient details', async ({ page }) => {
+  await page.route('**/v1/appointments/*/token-slip', r => r.fulfill({ json: slip }));
+  await page.route('**/v1/me/context', r => r.fulfill({ json: reception }));
+  await page.goto('/front-desk/token/a2');
+  await expect(page.getByRole('article', { name: /A-07/ })).toBeVisible();
+  const pdf = (await page.pdf({ preferCSSPageSize: true, printBackground: true })).toString('latin1');
+  const boxes = [...pdf.matchAll(/\/MediaBox\s*\[\s*0 0 ([\d.]+) ([\d.]+)\s*\]/g)].map(m => [Number(m[1]), Number(m[2])]);
+  expect(boxes).toHaveLength(1); // one page
+  expect(boxes[0]![0]).toBeCloseTo(80 / 25.4 * 72, 0); // 80 mm wide (226.8 pt)
+  expect(boxes[0]![1]).toBeCloseTo(120 / 25.4 * 72, 0);
+  await page.emulateMedia({ media: 'print' });
+  await expect(page.getByRole('button', { name: 'Print', exact: true })).toBeHidden(); // only the slip is on the paper
+  const paper = page.getByRole('article', { name: /A-07/ });
+  for (const leak of ['Farhan', 'Qureshi', '+91']) await expect(paper).not.toContainText(leak);
+  expect((await paper.boundingBox())!.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+});
+
 test('a void token (the visit was cancelled or the patient left) is refused by the server and says so', async ({ page }) => {
   await page.route('**/v1/appointments/*/token-slip', r => r.fulfill({ status: 409, json: { title: 'Visit cannot make this move', code: 'token_void' } }));
   await page.route('**/v1/me/context', r => r.fulfill({ json: reception }));

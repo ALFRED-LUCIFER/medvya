@@ -214,6 +214,8 @@ public sealed class RxFinishTests(PostgresFixture sql) : IClassFixture<PostgresF
         using (var note = await Client(h.Doctor).PutAsJsonAsync(U($"/v1/encounters/{encounter}/note"),
             new { baseVersion = 0, sections = new { chiefComplaint = "Thirst (synthetic)", assessment = "Synthetic review", plan = "Rest" }, recordingConsent = "Declined" }))
             Assert.True(note.IsSuccessStatusCode, await note.Content.ReadAsStringAsync());
+        // Signing needs identity confirmed with the patient (MDV-P1-109).
+        using (var confirmed = await Client(h.Doctor).PostAsync(U($"/v1/encounters/{encounter}/identity-confirmation"), null)) Assert.True(confirmed.IsSuccessStatusCode);
         using (var sign = await Client(h.Doctor, 0).PostAsJsonAsync(U($"/v1/encounters/{encounter}/note/sign"), new { baseVersion = 1 }))
             Assert.True(sign.IsSuccessStatusCode, await sign.Content.ReadAsStringAsync());
         Assert.Empty(await AuditAsync("rx.authorise")); // signing authorised nothing

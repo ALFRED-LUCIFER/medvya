@@ -3302,3 +3302,45 @@ tests:
 notes:
 - Regression risk: none.
 - Listed in docs/05-delivery/session-handoff.md section 8 (Needs a person).
+
+=== MDV-P1-109
+title: The server refuses to sign a consultation note until the doctor has confirmed identity with the patient
+type: Story
+epic: MDV-P1-E12
+prd: P2-05
+screens: E-06
+priority: MUST
+roles: Doctor
+labels: signing, encounters, safety, clinical-safety, security, epic: ux programme, track: safety, wave: S3
+estimate: 1
+weeks: 5
+depends: MDV-P1-091
+confidence: 85 | The stored confirmation already exists (MDV-P1-091) and the checklist already blocks signing on it; this adds the same rule on the server.
+sources: docs/product-ux-audit/07-debate-and-arbitration.md (ruling 3, guarantee 7); src/Modules/Encounters/Medvya.Encounters.Infrastructure/ConsultNoteService.cs (SignAsync); web/clinic/src/features/encounters/domain/checklist.ts
+desc:
+Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Track S (safety, trust and handoff behaviour), wave S3. No audit backlog id: an open finding from the MDV-P1-091 review, decided by the owner on 14 Nov 2026.
+
+Persona and route: Sign note on /consult/:id (and from Today after the consultation ended) · doctor.
+Findings and reviewers: MDV-P1-091 stores "Confirmed with the patient" (IdentityConfirmedAt, set once, never cleared), and the signing checklist blocks Sign until it is there. The sign endpoint does not check it, so any other client or a direct call can sign a note whose identity was never confirmed.
+Rationale: Authorisation and safety rules are enforced on the server (AGENTS.md 1.3). A rule that lives only in the browser is not a control.
+Proposed UX behaviour: Signing a consultation note whose encounter has no stored identity confirmation is refused with 409 and a plain reason key (identity not confirmed with the patient). Nothing is signed, no signed version is written and the audit records the refused attempt without patient data. The web app already prevents this through the checklist, so a doctor using it sees no change; if the server refuses anyway (for example a stale page), the note page shows the reason and the confirm action. Addenda to an already signed note are not affected.
+Prototype and blueprint reference: None.
+Components and tokens affected: ConsultNoteService.SignAsync and its endpoint; the note controller's error mapping. No new component.
+Front end and back end split: Back end; a small front-end error mapping.
+Prerequisites and blocked by: MDV-P1-091 (done). Touches the same sign path as MDV-P2-049 (print snapshot at signing); whichever merges second rebases.
+Clinical sign-off: Not required: it enforces on the server a rule the pilot doctor's checklist already applies.
+Effort and regression risk: S · Low. Fixtures and journeys that sign notes must confirm identity first.
+Deliberately NOT in this ticket: (1) Any change to how identity is confirmed. (2) Notes signed without the patient present (for example a result review) are not a feature today; if one is added it needs its own decision. (3) Addenda.
+ac:
+- Given a draft note on an encounter with no identity confirmation, when the sign endpoint is called directly by the treating doctor, then it answers 409 with the identity reason, the note stays a draft and no signed version exists
+- Given the same note after the doctor confirms identity, when it is signed, then it signs as today
+- Given a refused sign, when the audit and the logs are read, then the attempt is recorded with the encounter id and no patient name, date of birth or note text
+- Given the integration test of the refusal, when the server check is removed, then the test fails (mutation check)
+- Given the web app with a stale page that skipped the checklist, when the server refuses, then the note page says identity is not confirmed and offers the confirm action, in English and Arabic, axe clean
+- Given a signed note, when an addendum is signed, then the identity rule does not apply
+tests:
+- Integration (real PostgreSQL): sign refused without confirmation (409, still draft, no signed version, audit row); allowed after confirmation; addendum unaffected; tenant isolation unchanged.
+- Playwright J2 sign step stays green; a mocked 409 shows the reason and the confirm action, axe en and ar.
+notes:
+- Owner decision 14 Nov 2026: yes, the server refuses (epic #1170 open finding).
+- Regression risk: low.

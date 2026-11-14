@@ -35,7 +35,7 @@ export default function OlderAdultCards(p: Props) {
               <p className="text-sm text-muted-foreground">
                 {t(p.latest.author ? 'olderAdult.updatedBy' : 'olderAdult.updated', { date: formatDate(new Date(p.latest.assessedAt), p.timeZone), author: p.latest.author ?? '' })}
               </p>
-              <ul className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+              <ul className="grid gap-x-6 gap-y-3 md:grid-cols-2">
                 {geriLines(p.latest).map(l => (
                   <li key={l.key} className="flex items-start gap-2">
                     {l.level === 'alert' ? <CircleAlert aria-hidden className="mt-0.5 size-4 shrink-0 text-danger-700" />
@@ -64,7 +64,7 @@ function AssessmentForm(p: Props) {
   const message = (code?: string) => code && t(`olderAdult.error.${code as GeriError}`);
   return (
     <form noValidate onSubmit={p.onSubmit} aria-label={t('olderAdult.form')} className="flex flex-col gap-4 border-t pt-4">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {geriatricFields.map(f => (
           <Field key={f} id={`geri-${f}`} label={t(`olderAdult.field.${f}`)} error={message(errors[f]?.message)}>
             <Input inputMode={f === 'timedUpAndGoSeconds' ? 'decimal' : 'numeric'} dir="ltr" autoComplete="off" {...p.form.register(f)} />

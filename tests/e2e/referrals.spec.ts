@@ -2,6 +2,8 @@ import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
 import { mockOrders } from './support/orders';
 import { openPart } from './support/disclosure';
+import { t } from './support/desk';
+import { expectStacked } from './support/stacked';
 
 // MDV-P2-019 (E-09): the doctor refers a patient from the consultation, chooses what the letter carries, sends it by a channel (an emailed letter
 // needs the patient's consent), moves it on with a document as evidence, and files a received letter. CI has no API: endpoints are mocked in the
@@ -157,3 +159,19 @@ for (const locale of ['en', 'ar'])
       expect(violations, path).toEqual([]);
     }
   });
+
+// MDV-P2-054 AC5: at 375 px both referral tables are stacked: the provider first and bold, each value under its column's name.
+test.describe('at 375 px', () => {
+  test.use({ viewport: { width: 375, height: 812 } });
+  for (const locale of ['en', 'ar'])
+    test(`the referral tables are stacked with every field labelled and nothing scrolling sideways (${locale})`, async ({ page }) => {
+      const { referrals } = await open(page, { locale });
+      referrals.push({ id: 'r-1', patientId: 'p-1', direction: 'Out', provider: 'Dr. S. Menon (synthetic)', urgency: 'Routine', reason: 'x', sections: ['Medicines'], state: 'Sent', channel: 'Print', sentAt: '2026-10-19T04:55:00Z', open: true, letterDocumentId: null, history: [] });
+      await page.goto('/consult/e-1');
+      await openPart(page, locale === 'ar' ? 'الإحالات' : 'Referrals');
+      const col = (c: string) => t(locale, `referrals.col.${c}`);
+      await expectStacked(page, page.getByRole('region', { name: t(locale, 'referrals.tableLabel') }), [col('urgency'), col('state'), col('channel')]);
+      await page.goto('/patients/p-1');
+      await expectStacked(page, page.getByRole('region', { name: t(locale, 'referrals.open.tableLabel') }), [col('urgency'), col('state')]);
+    });
+});

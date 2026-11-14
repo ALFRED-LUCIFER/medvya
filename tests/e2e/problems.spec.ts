@@ -1,6 +1,8 @@
 import { createRequire } from 'node:module';
 import { expect, test } from '@playwright/test';
 import { mockProblems } from './support/problems';
+import { t } from './support/desk';
+import { expectStacked } from './support/stacked';
 import { targetPx } from './support/targets';
 
 // MDV-P2-010 (E-07): the doctor codes diagnoses with ICD-10 by code or words, with a verification state; a provisional one is shown apart in
@@ -83,3 +85,15 @@ for (const locale of ['en', 'ar'] as const) {
     expect(small).toEqual([]);
   });
 }
+
+// MDV-P2-054 AC5: at 375 px each problem is a stacked block: its name first and bold, every other field under its column's name.
+test.describe('at 375 px', () => {
+  test.use({ viewport: { width: 375, height: 812 } });
+  for (const locale of ['en', 'ar'] as const)
+    test(`the problem list is stacked with every field labelled and nothing scrolling sideways (${locale})`, async ({ page }) => {
+      await mockProblems(page, locale);
+      await page.goto('/consult/e-1/problems');
+      await page.getByRole('table').waitFor();
+      await expectStacked(page, page.getByRole('region', { name: t(locale, 'problems.tableLabel') }), ['code', 'verification', 'onset', 'status'].map(c => t(locale, `problems.col.${c}`)));
+    });
+});

@@ -42,13 +42,13 @@ export default function NotificationCentre(props: Props) {
       <Button ref={bell} variant="ghost" size="icon" className="relative" aria-expanded={open} aria-haspopup="dialog" aria-controls="notification-panel"
         aria-label={unread > 0 ? t('notifications.openUnread', { count: unread }) : t('shell.notifications')} onClick={props.onToggle}>
         <Bell className="size-5" aria-hidden />
-        {unread > 0 && <span aria-hidden className="absolute -end-0.5 -top-0.5 grid min-w-5 place-items-center rounded-full bg-danger-700 px-1 text-[11px] font-extrabold text-white">{badgeText(unread)}</span>}
+        {unread > 0 && <span aria-hidden className="absolute -end-0.5 -top-0.5 grid min-w-5 place-items-center rounded-full bg-danger-700 px-1 text-caption font-extrabold text-white">{badgeText(unread)}</span>}
       </Button>
       {open && (
         <div id="notification-panel" ref={panel} role="dialog" aria-label={t('shell.notifications')} tabIndex={-1}
           className="absolute end-0 top-full z-20 mt-2 flex max-h-[70vh] w-[min(22rem,calc(100vw-2rem))] flex-col gap-2 overflow-y-auto rounded-lg border bg-popover p-3 text-popover-foreground shadow-popover focus:outline-none">
           <div className="flex items-center justify-between gap-2">
-            <h2 className="text-[15px] font-extrabold">{t('shell.notifications')}</h2>
+            <h2 className="text-subheading">{t('shell.notifications')}</h2>
             <Button variant="outline" disabled={unread === 0 || props.marking || !props.online} onClick={props.onMarkAllRead}>{t('notifications.markAllRead')}</Button>
           </div>
           {props.loading && <p role="status" className="text-sm text-muted-foreground">{t('notifications.loading')}</p>}

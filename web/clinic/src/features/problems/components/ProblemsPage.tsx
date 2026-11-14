@@ -8,7 +8,7 @@ import type { ClinicalRefusal } from '../../clinical-access/domain/clinicalAcces
 import type { EncounterBanner } from '../../encounters/domain/encounter';
 import PatientStrip from '../../encounters/components/PatientStrip';
 import ProblemAddForm, { ProblemAddSubmit } from './ProblemAddForm';
-import { statuses, verificationKey, verifications, type AddDraft, type CodeSet, type DiagnosisCode, type EditDraft, type Problem, type ProblemList, type ProblemRow } from '../domain/problems';
+import { problemColumns, statuses, verificationKey, verifications, type AddDraft, type CodeSet, type DiagnosisCode, type EditDraft, type Problem, type ProblemList, type ProblemRow } from '../domain/problems';
 
 type Props = {
   view: ProblemList | null; banner: EncounterBanner | null; codeSet: CodeSet | null; loading: boolean; notFound: boolean; refusal: ClinicalRefusal | null; failed: boolean;
@@ -42,18 +42,18 @@ export default function ProblemsPage(p: Props) {
       {p.banner && <PatientStrip banner={p.banner} headingLevel={1} />}
       <Card title={t('problems.title')} intro={p.codeSet && t('problems.codeSet', { system: p.codeSet.system, version: p.codeSet.version })}>
         <TableState state={view.rows.length === 0 ? 'empty' : 'ready'} messages={{ loading: t('problems.loading'), error: t('problems.loadFailed'), empty: t('problems.empty') }}>
-          <Table label={t('problems.tableLabel')} className="min-w-[760px]">
+          <Table label={t('problems.tableLabel')} stacked className="md:min-w-[760px]">
             <TableHeader>
-              <TableRow>{(['problem', 'code', 'verification', 'onset', 'status', 'action'] as const).map(c => <TableHead key={c} scope="col">{t(`problems.col.${c}`)}</TableHead>)}</TableRow>
+              <TableRow>{problemColumns.map(c => <TableHead key={c} scope="col">{t(`problems.col.${c}`)}</TableHead>)}</TableRow>
             </TableHeader>
             <TableBody>
               {view.rows.map(r => p.editing === r.id ? <EditRow key={r.id} row={r} {...p} /> : (
                 <TableRow key={r.id}>
-                  <TableCell className="font-bold">{r.description}</TableCell>
-                  <TableCell>{r.code ? <span>{ltr(r.code)}<span className="block text-sm text-muted-foreground">{ltr(`${r.codeSystem} ${r.codeSystemVersion}`)}</span></span> : <span className="text-muted-foreground">{t('problems.uncoded')}</span>}</TableCell>
-                  <TableCell><VerificationTag row={r} /></TableCell>
-                  <TableCell>{r.onsetOn ? ltr(r.onsetOn) : <span className="text-muted-foreground">{t('problems.onsetBlank')}</span>}</TableCell>
-                  <TableCell>{t(`problems.status.${r.status}`)}</TableCell>
+                  <TableHead scope="row" className="whitespace-normal">{r.description}</TableHead>
+                  <TableCell label={t('problems.col.code')}>{r.code ? <span>{ltr(r.code)}<span className="block text-sm text-muted-foreground">{ltr(`${r.codeSystem} ${r.codeSystemVersion}`)}</span></span> : <span className="text-muted-foreground">{t('problems.uncoded')}</span>}</TableCell>
+                  <TableCell label={t('problems.col.verification')}><VerificationTag row={r} /></TableCell>
+                  <TableCell label={t('problems.col.onset')}>{r.onsetOn ? ltr(r.onsetOn) : <span className="text-muted-foreground">{t('problems.onsetBlank')}</span>}</TableCell>
+                  <TableCell label={t('problems.col.status')}>{t(`problems.status.${r.status}`)}</TableCell>
                   <TableCell>{!view.locked && <Button type="button" variant="outline" size="sm" disabled={!p.online} aria-label={t('problems.editFor', { name: r.description })} onClick={() => p.onEdit(r)}>{t('problems.edit')}</Button>}</TableCell>
                 </TableRow>
               ))}
@@ -87,10 +87,10 @@ function EditRow(p: Props & { row: ProblemRow }) {
   const { row } = p;
   return (
     <TableRow>
-      <TableCell colSpan={6}>
+      <TableCell colSpan={problemColumns.length}>
         <form noValidate onSubmit={p.onSaveEdit} aria-label={t('problems.editFor', { name: row.description })} className="flex flex-col gap-3">
           <p className="font-bold">{row.code ? `${row.code} · ${row.description}` : row.description}</p>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-3">
             <Controller control={p.editForm.control} name="verification" render={({ field }) => (
               <Select value={field.value} onValueChange={field.onChange}>
                 <Field id={`edit-verification-${row.id}`} label={t('problems.col.verification')}>

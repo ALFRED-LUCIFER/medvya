@@ -1,46 +1,7 @@
 {
-  "arbitraryFontSize": {
-    "web/clinic/src/features/front-desk/components/BoardPage.tsx": 2,
-    "web/clinic/src/features/notifications/components/NotificationCentre.tsx": 2,
-    "web/clinic/src/features/schedule/components/BookingPanel.tsx": 1,
-    "web/clinic/src/features/session/components/AuthFrame.tsx": 5,
-    "web/clinic/src/features/session/components/FacilityPicker.tsx": 1,
-    "web/clinic/src/features/shell/components/AppShell.tsx": 1,
-    "web/clinic/src/features/today/components/DoctorTodayPage.tsx": 4,
-    "web/platform-admin/src/features/shell/components/ConsoleShell.tsx": 2
-  },
   "rawHexLibrary": {},
   "rawHexApps": {
     "web/clinic/src/features/documents/components/DocumentsPage.tsx": 1,
     "web/platform-admin/src/features/approvals/components/DocumentViewer.tsx": 1
-  },
-  "smGridCols": {
-    "web/clinic/src/features/child-health/components/ChildHealthCard.tsx": 1,
-    "web/clinic/src/features/child-health/components/GrowthCard.tsx": 1,
-    "web/clinic/src/features/encounters/components/NoteParts.tsx": 1,
-    "web/clinic/src/features/formulary/components/FormularyPanel.tsx": 1,
-    "web/clinic/src/features/nurse-intake/components/AllergiesSection.tsx": 1,
-    "web/clinic/src/features/nurse-intake/components/MedicinesSection.tsx": 1,
-    "web/clinic/src/features/nurse-intake/components/VitalsForm.tsx": 1,
-    "web/clinic/src/features/onboarding/components/OrganisationRequestPage.tsx": 1,
-    "web/clinic/src/features/orders/components/OrdersPanel.tsx": 1,
-    "web/clinic/src/features/patient360/components/OlderAdultCards.tsx": 2,
-    "web/clinic/src/features/patient360/components/PregnancyCard.tsx": 2,
-    "web/clinic/src/features/patients/components/PatientRecord.tsx": 1,
-    "web/clinic/src/features/pilot-metrics/components/PilotMetricsPanel.tsx": 1,
-    "web/clinic/src/features/problems/components/ProblemAddForm.tsx": 1,
-    "web/clinic/src/features/problems/components/ProblemsPage.tsx": 1,
-    "web/clinic/src/features/referrals/components/ReferralsPanel.tsx": 3,
-    "web/clinic/src/features/registration/components/Registration.tsx": 1,
-    "web/clinic/src/features/settings/components/DataPanel.tsx": 1,
-    "web/clinic/src/features/settings/components/DoctorWizard.tsx": 1,
-    "web/clinic/src/features/settings/components/DoctorsPanel.tsx": 1,
-    "web/clinic/src/features/settings/components/LocationsPanel.tsx": 1,
-    "web/clinic/src/features/settings/components/ProfilePanel.tsx": 1,
-    "web/clinic/src/features/staff/components/CustomRolesPanel.tsx": 1,
-    "web/clinic/src/features/staff/components/StaffPanel.tsx": 1,
-    "web/platform-admin/src/features/approvals/components/ApprovalDetail.tsx": 1,
-    "web/platform-admin/src/features/overview/components/OverviewPage.tsx": 1,
-    "web/platform-admin/src/features/team/components/TeamPage.tsx": 1
   }
 }

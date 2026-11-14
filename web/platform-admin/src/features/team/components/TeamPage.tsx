@@ -56,8 +56,8 @@ export default function TeamPage({ vm }: Props) {
 
       {vm.inviting && (
         <Card title={t('platform.team.inviteTitle')}>
-          <form onSubmit={vm.onInvite} noValidate className="grid gap-3 sm:grid-cols-2">
-            <ErrorSummary title={t('field.errorSummary')} focusKey={vm.inviteForm.formState.submitCount} errors={inviteErrors} className="sm:col-span-2" />
+          <form onSubmit={vm.onInvite} noValidate className="grid gap-3 md:grid-cols-2">
+            <ErrorSummary title={t('field.errorSummary')} focusKey={vm.inviteForm.formState.submitCount} errors={inviteErrors} className="md:col-span-2" />
             {/* Most answers are required, so only the optional end date is marked, in words. */}
             <FieldMarks mark="optional">
               <Field id={ids.name} label={t('platform.team.name')} required error={errorText(e.displayName?.message)}>
@@ -77,12 +77,12 @@ export default function TeamPage({ vm }: Props) {
               <Field id={ids.ends} label={t('platform.team.accessEnds')} hint={t('platform.team.accessEndsHint')} error={errorText(e.accessEndsOn?.message)}>
                 <Input type="date" {...vm.inviteForm.register('accessEndsOn')} />
               </Field>
-              <Field id={`${ids.name}-reason`} label={t('platform.reason.label')} required hint={t('platform.reason.hint')} error={errorText(e.reason?.message)} className="sm:col-span-2">
+              <Field id={`${ids.name}-reason`} label={t('platform.reason.label')} required hint={t('platform.reason.hint')} error={errorText(e.reason?.message)} className="md:col-span-2">
                 <Input {...vm.inviteForm.register('reason')} />
               </Field>
             </FieldMarks>
-            {vm.inviteFailed && <p role="alert" className="text-sm font-semibold text-danger-700 sm:col-span-2">{t('platform.error.failed')}</p>}
-            <div className="flex flex-wrap gap-2 sm:col-span-2">
+            {vm.inviteFailed && <p role="alert" className="text-sm font-semibold text-danger-700 md:col-span-2">{t('platform.error.failed')}</p>}
+            <div className="flex flex-wrap gap-2 md:col-span-2">
               <Button type="submit" loading={vm.inviteBusy}>{t('platform.team.sendInvite')}</Button>
               <Button type="button" variant="outline" onClick={vm.onCancelInvite}>{t('platform.action.cancel')}</Button>
             </div>

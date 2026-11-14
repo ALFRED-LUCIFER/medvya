@@ -45,7 +45,7 @@ export default function ReferralsPanel(p: Props) {
     <div className="flex flex-col gap-4">
       <Section id={referralsHeading} title={t('referrals.title')} intro={t('referrals.intro')}>
         <TableState state={tableState} messages={{ loading: t('referrals.loading'), error: t('referrals.loadFailed'), empty: t('referrals.empty') }}>
-          <Table label={t('referrals.tableLabel')} className="min-w-[640px]">
+          <Table label={t('referrals.tableLabel')} stacked className="md:min-w-[640px]">
             <TableHeader>
               <TableRow>{referralColumns.map(c => <TableHead key={c} scope="col">{c === 'actions' ? <span className="sr-only">{t('referrals.col.actions')}</span> : t(`referrals.col.${c}`)}</TableHead>)}</TableRow>
             </TableHeader>
@@ -55,9 +55,9 @@ export default function ReferralsPanel(p: Props) {
                 return (
                   <TableRow key={r.id}>
                     <TableHead scope="row">{r.provider}<span className="block text-sm font-normal text-muted-foreground">{t(`referrals.direction.${r.direction}`)}</span></TableHead>
-                    <TableCell>{t(`referrals.urgency.${r.urgency}`)}</TableCell>
-                    <TableCell><span className="inline-flex items-center gap-1.5 font-bold"><Icon aria-hidden className="size-4 shrink-0" />{t(`referrals.state.${r.state}`)}</span></TableCell>
-                    <TableCell>{r.channel ? `${t(`referrals.channel.${r.channel}`)}${r.sentAt ? `, ${formatDate(new Date(r.sentAt))}` : ''}` : ''}</TableCell>
+                    <TableCell label={t('referrals.col.urgency')}>{t(`referrals.urgency.${r.urgency}`)}</TableCell>
+                    <TableCell label={t('referrals.col.state')}><span className="inline-flex items-center gap-1.5 font-bold"><Icon aria-hidden className="size-4 shrink-0" />{t(`referrals.state.${r.state}`)}</span></TableCell>
+                    <TableCell label={r.channel ? t('referrals.col.channel') : undefined}>{r.channel ? `${t(`referrals.channel.${r.channel}`)}${r.sentAt ? `, ${formatDate(new Date(r.sentAt))}` : ''}` : ''}</TableCell>
                     <TableCell>
                       {r.open && !p.ended && <Button type="button" variant="outline" aria-label={t('referrals.manageNamed', { name: r.provider })} onClick={() => p.onSelect(r.id)}>{t('referrals.manage')}</Button>}
                     </TableCell>
@@ -93,7 +93,7 @@ export default function ReferralsPanel(p: Props) {
             </div>
           )}
           {nextStates(p.selected.state).length > 0 && p.selected.state !== 'Draft' && (
-            <form noValidate onSubmit={p.onAdvance} className="grid gap-4 sm:grid-cols-2">
+            <form noValidate onSubmit={p.onAdvance} className="grid gap-4 md:grid-cols-2">
               <Controller control={p.advanceForm.control} name="state" render={({ field }) => (
                 <Select value={nextStates(p.selected!.state).includes(field.value) ? field.value : nextStates(p.selected!.state)[0]} onValueChange={field.onChange}>
                   <Field id="ref-state" label={t('referrals.field.state')}>
@@ -112,7 +112,7 @@ export default function ReferralsPanel(p: Props) {
                   </Select>
                 )} />
               )}
-              <Field id="ref-note" label={t('referrals.field.note')} className="sm:col-span-2">
+              <Field id="ref-note" label={t('referrals.field.note')} className="md:col-span-2">
                 <Input autoComplete="off" maxLength={200} {...p.advanceForm.register('note')} />
               </Field>
               <Button type="submit" variant="outline" className="self-start" disabled={p.busy}>{t('referrals.update')}</Button>
@@ -125,7 +125,7 @@ export default function ReferralsPanel(p: Props) {
       {!p.ended && (
         <>
           <Section title={t('referrals.add.title')}>
-            <form noValidate onSubmit={p.onCreate} className="grid gap-4 sm:grid-cols-2">
+            <form noValidate onSubmit={p.onCreate} className="grid gap-4 md:grid-cols-2">
               <Field id="ref-provider" label={t('referrals.field.provider')} error={problem(p.createForm.formState.errors.provider)}>
                 <Input autoComplete="off" {...p.createForm.register('provider')} />
               </Field>
@@ -137,10 +137,10 @@ export default function ReferralsPanel(p: Props) {
                   <SelectContent>{urgencies.map(u => <SelectItem key={u} value={u}>{t(`referrals.urgency.${u}`)}</SelectItem>)}</SelectContent>
                 </Select>
               )} />
-              <Field id="ref-reason" label={t('referrals.field.reason')} error={problem(p.createForm.formState.errors.reason)} className="sm:col-span-2">
+              <Field id="ref-reason" label={t('referrals.field.reason')} error={problem(p.createForm.formState.errors.reason)} className="md:col-span-2">
                 <Textarea rows={3} maxLength={500} {...p.createForm.register('reason')} />
               </Field>
-              <fieldset className="flex flex-col gap-2 sm:col-span-2">
+              <fieldset className="flex flex-col gap-2 md:col-span-2">
                 <legend className="mb-1 font-bold">{t('referrals.field.sections')}</legend>
                 <p className="text-sm text-muted-foreground">{t('referrals.field.sections.hint')}</p>
                 {sectionNames.map(s => (
@@ -154,7 +154,7 @@ export default function ReferralsPanel(p: Props) {
           </Section>
 
           <Section title={t('referrals.in.title')} intro={t('referrals.in.intro')}>
-            <form noValidate onSubmit={p.onFileIn} className="grid gap-4 sm:grid-cols-2">
+            <form noValidate onSubmit={p.onFileIn} className="grid gap-4 md:grid-cols-2">
               <Field id="refin-provider" label={t('referrals.in.provider')} error={problem(p.fileForm.formState.errors.provider)}>
                 <Input autoComplete="off" {...p.fileForm.register('provider')} />
               </Field>
@@ -166,7 +166,7 @@ export default function ReferralsPanel(p: Props) {
                   <SelectContent>{p.documents.map(d => <SelectItem key={d.id} value={d.id}>{`${t(`documents.type.${d.type}`)}, ${d.documentDate}`}</SelectItem>)}</SelectContent>
                 </Select>
               )} />
-              <Field id="refin-reason" label={t('referrals.in.reason')} className="sm:col-span-2">
+              <Field id="refin-reason" label={t('referrals.in.reason')} className="md:col-span-2">
                 <Input autoComplete="off" maxLength={500} {...p.fileForm.register('reason')} />
               </Field>
               <Button type="submit" variant="outline" className="self-start" disabled={p.busy}>{t('referrals.in.submit')}</Button>

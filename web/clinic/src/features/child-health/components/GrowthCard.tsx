@@ -5,7 +5,7 @@ import { Button, Card, Input, Label, Select, SelectContent, SelectItem, SelectTr
 import { CircleAlert, TrendingDown, TrendingUp } from 'lucide-react';
 import { describedBy } from '../../settings/components/fieldStyles';
 import {
-  centileWord, growthBox, growthChart, indicators, latestOf, positions, type Growth, type GrowthAlert, type GrowthDraft, type GrowthIndicator, type GrowthProblem, type GrowthSeries,
+  centileWord, growthBox, growthChart, growthColumns, indicators, latestOf, positions, type Growth, type GrowthAlert, type GrowthDraft, type GrowthIndicator, type GrowthProblem, type GrowthSeries,
 } from '../domain/growth';
 
 type Props = {
@@ -106,23 +106,20 @@ function Measurements({ view }: { view: Growth }) {
   if (view.measurements.length === 0) return <p className="text-muted-foreground">{t('childHealth.growth.none')}</p>;
   const n = (x: number | null) => (x === null ? '' : formatNumber(x));
   return (
-    <Table label={t('childHealth.growth.table')}>
+    <Table label={t('childHealth.growth.table')} stacked>
       <TableCaption className="sr-only">{t('childHealth.growth.table')}</TableCaption>
       <TableHeader>
         <TableRow>
-          <TableHead scope="col">{t('childHealth.growth.col.date')}</TableHead>
-          <TableHead scope="col">{t('childHealth.growth.col.weight')}</TableHead>
-          <TableHead scope="col">{t('childHealth.growth.col.length')}</TableHead>
-          <TableHead scope="col">{t('childHealth.growth.col.head')}</TableHead>
+          {growthColumns.map(c => <TableHead key={c} scope="col">{t(`childHealth.growth.col.${c}`)}</TableHead>)}
         </TableRow>
       </TableHeader>
       <TableBody>
         {[...view.measurements].reverse().map(m => (
           <TableRow key={m.takenOn}>
-            <TableCell><time dateTime={m.takenOn}>{formatCalendarDate(m.takenOn)}</time></TableCell>
-            <TableCell>{n(m.weightKg)}</TableCell>
-            <TableCell>{m.lengthCm !== null && <>{n(m.lengthCm)}{' · '}{t(m.position ? `childHealth.growth.position.${m.position}` : 'childHealth.growth.position.unstated')}</>}</TableCell>
-            <TableCell>{n(m.headCm)}</TableCell>
+            <TableHead scope="row"><time dateTime={m.takenOn}>{formatCalendarDate(m.takenOn)}</time></TableHead>
+            <TableCell label={m.weightKg === null ? undefined : t('childHealth.growth.col.weight')}>{n(m.weightKg)}</TableCell>
+            <TableCell label={m.lengthCm === null ? undefined : t('childHealth.growth.col.length')}>{m.lengthCm !== null && <>{n(m.lengthCm)}{' · '}{t(m.position ? `childHealth.growth.position.${m.position}` : 'childHealth.growth.position.unstated')}</>}</TableCell>
+            <TableCell label={m.headCm === null ? undefined : t('childHealth.growth.col.head')}>{n(m.headCm)}</TableCell>
           </TableRow>
         ))}
       </TableBody>
@@ -144,7 +141,7 @@ function GrowthForm(p: Props) {
   return (
     <form noValidate onSubmit={e => { e.preventDefault(); p.onRecord(); }} className="flex flex-col gap-3 border-t pt-3" aria-labelledby="growth-form-title">
       <h3 id="growth-form-title" className="font-extrabold">{t('childHealth.growth.form.title')}</h3>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 md:grid-cols-2">
         <div className="flex flex-col gap-1">
           <Label htmlFor="growth-on">{t('childHealth.growth.form.takenOn')}</Label>
           <Input id="growth-on" type="date" {...describedBy('growth-on', !!errors.takenOn, false)} {...p.form.register('takenOn')} />

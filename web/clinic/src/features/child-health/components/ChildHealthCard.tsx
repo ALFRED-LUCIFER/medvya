@@ -114,7 +114,7 @@ function DoseForm(p: Props & { view: ChildHealth }) {
   return (
     <form noValidate onSubmit={e => { e.preventDefault(); p.onRecord(); }} className="flex flex-col gap-3 border-t pt-3" aria-labelledby="dose-form-title">
       <h3 id="dose-form-title" className="font-extrabold">{t('childHealth.record')}</h3>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 md:grid-cols-2">
         <div className="flex flex-col gap-1">
           <Label htmlFor="dose-pick">{t('childHealth.record.dose')}</Label>
           <Controller control={p.form.control} name="dose" render={({ field }) => (
@@ -144,13 +144,13 @@ function DoseForm(p: Props & { view: ChildHealth }) {
             <Label htmlFor="dose-batch">{t('childHealth.record.batch')}</Label>
             <Input id="dose-batch" autoComplete="off" maxLength={50} {...p.form.register('batch')} />
           </div>
-          <div className="flex flex-col gap-1 sm:col-span-2">
+          <div className="flex flex-col gap-1 md:col-span-2">
             <Label htmlFor="dose-given-by">{t('childHealth.record.givenBy')}</Label>
             <Input id="dose-given-by" autoComplete="off" maxLength={100} {...describedBy('dose-given-by', false, true)} {...p.form.register('givenBy')} />
             <p id="dose-given-by-hint" className="text-sm text-muted-foreground">{t('childHealth.record.givenByHint')}</p>
           </div>
         </> : (
-          <div className="flex flex-col gap-1 sm:col-span-2">
+          <div className="flex flex-col gap-1 md:col-span-2">
             <Label htmlFor="dose-reason">{t('childHealth.record.reason')}</Label>
             <Textarea id="dose-reason" maxLength={500} {...describedBy('dose-reason', !!errors.reason, false)} {...p.form.register('reason')} />
             {errors.reason && <p id="dose-reason-error" className="text-sm font-bold text-danger-700">{t('childHealth.record.reasonRequired')}</p>}

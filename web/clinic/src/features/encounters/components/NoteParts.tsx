@@ -66,7 +66,7 @@ export function StructuredField({ section, text, readOnly, onChange, heading }: 
     <div role="group" aria-labelledby={`note-${section.id}`} className="flex flex-col gap-2">
       {title}
       <p className="text-sm text-muted-foreground">{t(exam ? 'structured.examHint' : 'structured.rosHint')}</p>
-      <ul className={exam ? 'flex flex-col gap-3' : 'grid gap-2 sm:grid-cols-2'}>
+      <ul className={exam ? 'flex flex-col gap-3' : 'grid gap-2 md:grid-cols-2'}>
         {(section.items ?? []).map(item => {
           const a = answers[item];
           const label = `note-${section.id}-${item}`;

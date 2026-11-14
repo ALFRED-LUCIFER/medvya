@@ -122,7 +122,7 @@ export default function Registration(p: Props) {
           at the end from 1600 px (under the form below it), so a wide screen is used; fields auto-fit inside the form. */}
       <div className={cn('grid items-start gap-5', step ? 'wide:grid-cols-[13rem_minmax(0,1fr)] xl:grid-cols-[13rem_minmax(0,1fr)_300px] wide:[&>aside]:col-start-2 xl:[&>aside]:col-start-3' : 'xl:grid-cols-[minmax(0,1fr)_300px]')}>
         {step && (
-          <ol aria-label={t('registration.steps.label')} className="grid grid-cols-2 gap-2 sm:grid-cols-3 wide:grid-cols-1 wide:gap-1">
+          <ol aria-label={t('registration.steps.label')} className="grid grid-cols-2 gap-2 md:grid-cols-3 wide:grid-cols-1 wide:gap-1">
             {steps.map((s, i) => {
               const current = s === step;
               const done = i < steps.indexOf(step);

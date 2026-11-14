@@ -53,7 +53,7 @@ export default function RxSharePanel(p: Props) {
       {p.problem && <p role="alert" className={`flex items-center gap-2 ${fieldError}`}><CircleAlert aria-hidden className="size-4" />{t(`rxShare.error.${p.problem}`)}</p>}
 
       <TableState state={state} messages={{ loading: t('rxShare.loading'), error: t('rxShare.loadFailed'), empty: t('rxShare.empty') }}>
-        <Table label={t('rxShare.tableLabel')}>
+        <Table label={t('rxShare.tableLabel')} stacked>
           <TableHeader>
             <TableRow>{shareColumns.map(c => <TableHead key={c} scope="col">{c === 'actions' ? <span className="sr-only">{t('rxShare.col.actions')}</span> : t(`rxShare.col.${c}`)}</TableHead>)}</TableRow>
           </TableHeader>
@@ -64,8 +64,8 @@ export default function RxSharePanel(p: Props) {
               return (
                 <TableRow key={s.id}>
                   <TableHead scope="row">{name}<span className="block text-sm font-normal text-muted-foreground">{t('rxShare.version', { version: s.versionNo })}</span></TableHead>
-                  <TableCell>{when(s.sharedAt)}<span className="block text-sm text-muted-foreground">{t('rxShare.expires', { when: when(s.expiresAt) })}</span></TableCell>
-                  <TableCell>
+                  <TableCell label={t('rxShare.col.sharedAt')}>{when(s.sharedAt)}<span className="block text-sm text-muted-foreground">{t('rxShare.expires', { when: when(s.expiresAt) })}</span></TableCell>
+                  <TableCell label={s.replaced || s.dispatch ? t('rxShare.col.state') : undefined}>
                     {s.replaced && <span className="flex items-center gap-1.5 font-bold"><CircleAlert aria-hidden className="size-4 shrink-0" />{t('rxShare.replaced')}</span>}
                     {s.dispatch && Icon && <span className="flex items-center gap-1.5 font-bold"><Icon aria-hidden className="size-4 shrink-0" />{t(`rxShare.dispatch.${s.dispatch.state}`)}</span>}
                     {s.dispatch?.dispensedAt && <span className="block text-sm">{t('rxShare.dispensedAt', { when: when(s.dispatch.dispensedAt) })}{s.dispatch.pharmacyRef && ` · ${s.dispatch.pharmacyRef}`}</span>}

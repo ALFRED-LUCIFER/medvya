@@ -99,7 +99,7 @@ export default function PrescriptionPanel(p: Props) {
       {status && <p role="status">{status}</p>}
 
       {prescribed.length > 0 && (
-        <Table label={t('rx.listLabel')} className="min-w-[1000px]">
+        <Table label={t('rx.listLabel')} stacked className="md:min-w-[1000px]">
           <TableHeader>
             <TableRow>
               <TableHead scope="col">{t('rx.col.medicine')}</TableHead>
@@ -274,14 +274,14 @@ function Line({ line, ended, busy, language, checks, authorisation, draftOf, sav
   const fieldId = (f: SigField) => `rx-${id}-${f}`;
   // One row per medicine: each control is named by its column header, and a wrong value is said under it.
   const text = (f: 'dose' | 'durationDays' | 'quantity' | 'instructions') => (
-    <TableCell key={f} className="align-top">
+    <TableCell key={f} label={t(`rx.field.${f}`)} className="align-top">
       <Input id={fieldId(f)} aria-label={t(`rx.field.${f}`)} className={`${f === 'instructions' ? 'min-w-48' : 'w-20'}`} autoComplete="off" inputMode={f === 'dose' ? 'decimal' : f === 'instructions' ? undefined : 'numeric'} disabled={locked} value={draft[f]}
         {...describedBy(fieldId(f), invalid.includes(f))} onChange={e => onField(line, f, e.target.value)} />
       {invalid.includes(f) && <p id={`${fieldId(f)}-error`} role="alert" className={`${fieldError} mt-1 max-w-48`}>{t(`rx.invalid.${f}`)}</p>}
     </TableCell>
   );
   const pick = (f: 'doseUnit' | 'route' | 'frequency' | 'timing', options: { value: string; label: string }[]) => (
-    <TableCell key={f} className="align-top">
+    <TableCell key={f} label={t(`rx.field.${f}`)} className="align-top">
       <Select value={draft[f] || none} disabled={locked} onValueChange={v => onField(line, f, v === none ? '' : v)}>
         <SelectTrigger id={fieldId(f)} aria-label={t(`rx.field.${f}`)} className="w-32"><SelectValue /></SelectTrigger>
         <SelectContent>

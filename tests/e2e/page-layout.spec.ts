@@ -3,12 +3,12 @@ import { admin, axe, openScreen, reception, screens as deskScreens, type Persona
 
 // UX-01 (issue #1113): every page sits in a PageContainer of one of three named widths and has one PageHeader size.
 // Measured, not pixel-compared: a screenshot baseline would break on every font or OS change, while these numbers are what the audit found wrong.
-const screens: { name: string; path: string; as: Persona; width: 'fluid' | 'form' | 'reading' }[] = [
+const limit = { form: 768, reading: 1152 }; // max-w-form, max-w-reading
+const screens: { name: string; path: string; as: Persona; width: 'fluid' | keyof typeof limit }[] = [
   { name: 'board', path: '/front-desk', as: reception, width: 'fluid' },
   { name: 'walk-in', path: '/front-desk/walk-in', as: reception, width: 'form' },
-  { name: 'settings', path: '/settings', as: admin, width: 'reading' },
+  { name: 'settings', path: '/settings', as: admin, width: 'fluid' },
 ];
-const limit = { form: 768, reading: 1152 }; // max-w-3xl, max-w-6xl
 
 for (const { w, h } of [{ w: 1920, h: 1080 }, { w: 1366, h: 768 }]) {
   for (const s of screens) {

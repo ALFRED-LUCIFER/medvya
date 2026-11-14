@@ -3,7 +3,7 @@ import { useI18n } from '@medvya/i18n';
 import { Button, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Switch } from '@medvya/ui';
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
-import { fieldError } from '../../settings/components/fieldStyles';
+import { fieldError, fieldGrid } from '../../settings/components/fieldStyles';
 import { Section } from '../../settings/components/Section';
 import type { Capability } from '../../session/domain/session';
 import { addableRows, assignableRoles, type CustomRole, type RoleCatalogue, type RoleForm } from '../domain/staff';
@@ -49,7 +49,7 @@ export default function CustomRolesPanel(p: Props) {
       {!p.editing && <Button type="button" variant="outline" className="self-start" onClick={() => p.onOpen('new')}>{t('staff.roles.add')}</Button>}
       {p.editing && (
         <form noValidate onSubmit={p.onSubmit} className="flex flex-col gap-4">
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className={fieldGrid}>
             <Field id="role-name" label={t('staff.roles.name')} error={errors.name && t('settings.error.required')}>
               <Input autoComplete="off" maxLength={60} {...p.form.register('name')} />
             </Field>

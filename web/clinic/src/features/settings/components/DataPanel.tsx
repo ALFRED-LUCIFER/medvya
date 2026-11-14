@@ -17,7 +17,7 @@ export default function DataPanel({ country, accessLogPath }: Props) {
     <div className="flex flex-col gap-4">
       <Section title={t('settings.data.residency')} intro={t('site.trust.residency.body')}>
         {country && (
-          <dl className="grid gap-2 sm:grid-cols-[max-content_1fr] sm:gap-x-6">
+          <dl className="grid gap-2 md:grid-cols-[max-content_1fr] md:gap-x-6">
             <dt className="font-bold">{t('settings.data.country')}</dt>
             <dd>{t(`settings.data.country.${country}`)}</dd>
             <dt className="font-bold">{t('settings.data.region')}</dt>

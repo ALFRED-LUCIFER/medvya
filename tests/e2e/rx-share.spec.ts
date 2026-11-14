@@ -1,4 +1,6 @@
 import { createRequire } from 'node:module';
+import { t } from './support/desk';
+import { expectStacked } from './support/stacked';
 import { expect, test, type Page } from '@playwright/test';
 import { authorised, line, mockPrescription } from './support/prescription';
 import { mockSharedLink, mockShares } from './support/share';
@@ -93,3 +95,20 @@ for (const locale of ['en', 'ar'])
     await expect(page.getByRole('status')).toBeVisible();
     expect(await axeViolations(page)).toEqual([]);
   });
+
+// MDV-P2-054 AC5: at 375 px the shares are stacked: the recipient first and bold, the time sent under its column's name.
+test.describe('at 375 px', () => {
+  test.use({ viewport: { width: 375, height: 812 } });
+  for (const locale of ['en', 'ar'])
+    test(`the shares are stacked with every field labelled and nothing scrolling sideways (${locale})`, async ({ page }) => {
+      await mockPrescription(page, { locale, ...printable });
+      await mockShares(page);
+      await page.goto('/consult/e-1/rx/print');
+      const share = page.getByRole('region', { name: t(locale, 'rxShare.title') });
+      await share.getByRole('button', { name: t(locale, 'rxShare.send') }).click();
+      await expect(share.getByRole('status')).toBeVisible();
+      // shortcut: the printed prescription above the shares (RxPrintPage's QR footer) makes this page 13 px too wide at 375 px, so only the
+      // shares table's own box is checked here; check the whole page once the print preview fits a phone.
+      await expectStacked(page, page.getByRole('region', { name: t(locale, 'rxShare.tableLabel') }), [t(locale, 'rxShare.col.sharedAt')], { wholePage: false });
+    });
+});

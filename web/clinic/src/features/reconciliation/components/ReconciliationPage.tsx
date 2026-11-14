@@ -7,7 +7,7 @@ import { Button, buttonVariants, Card, Input, Label, PageContainer, PageHeader, 
 import type { ClinicalRefusal } from '../../clinical-access/domain/clinicalAccess';
 import type { EncounterBanner } from '../../encounters/domain/encounter';
 import PatientStrip from '../../encounters/components/PatientStrip';
-import { canConfirm, disagreeing, type DecisionKind, type Draft, type MedicineRow, type MedicineSide, type Problem, type Reconciliation } from '../domain/reconciliation';
+import { canConfirm, disagreeing, reconcileColumns, type DecisionKind, type Draft, type MedicineRow, type MedicineSide, type Problem, type Reconciliation } from '../domain/reconciliation';
 
 /** What deciding one row needs: the shared draft form (reason, new dose, a taper's steps) and its handlers. The Plan (MDV-P2-043) reuses it. */
 export type DecisionProps = {
@@ -45,19 +45,19 @@ export default function ReconciliationPage(p: Props) {
       <Card title={t('reconcile.title')} intro={t('reconcile.intro')}>
         <p role="status" className="font-bold">{t('reconcile.summary', { decided: view.decided, total: view.total, disagree: view.disagree })}</p>
         <TableState state={view.rows.length === 0 ? 'empty' : 'ready'} messages={{ loading: t('reconcile.loading'), error: t('reconcile.loadFailed'), empty: t('reconcile.empty') }}>
-          <Table label={t('reconcile.tableLabel')} className="min-w-[900px]">
+          <Table label={t('reconcile.tableLabel')} stacked className="md:min-w-[900px]">
             <TableHeader>
-              <TableRow>{(['medicine', 'chart', 'patient', 'other', 'conflict', 'decision'] as const).map(c => <TableHead key={c} scope="col">{t(`reconcile.col.${c}`)}</TableHead>)}</TableRow>
+              <TableRow>{reconcileColumns.map(c => <TableHead key={c} scope="col">{t(`reconcile.col.${c}`)}</TableHead>)}</TableRow>
             </TableHeader>
             <TableBody>
               {view.rows.map(r => (
                 <TableRow key={r.key}>
-                  <TableCell className="font-bold">{r.name}</TableCell>
-                  <TableCell><SideText side={r.chart} /></TableCell>
-                  <TableCell><SideText side={r.patient} /></TableCell>
-                  <TableCell><SideText side={r.other} /></TableCell>
-                  <TableCell><ConflictText row={r} /></TableCell>
-                  <TableCell className="min-w-64"><DecisionCell row={r} {...p} locked={confirmed} /></TableCell>
+                  <TableHead scope="row" className="whitespace-normal">{r.name}</TableHead>
+                  <TableCell label={t('reconcile.col.chart')}><SideText side={r.chart} /></TableCell>
+                  <TableCell label={t('reconcile.col.patient')}><SideText side={r.patient} /></TableCell>
+                  <TableCell label={t('reconcile.col.other')}><SideText side={r.other} /></TableCell>
+                  <TableCell label={t('reconcile.col.conflict')}><ConflictText row={r} /></TableCell>
+                  <TableCell label={t('reconcile.col.decision')} className="md:min-w-64"><DecisionCell row={r} {...p} locked={confirmed} /></TableCell>
                 </TableRow>
               ))}
             </TableBody>

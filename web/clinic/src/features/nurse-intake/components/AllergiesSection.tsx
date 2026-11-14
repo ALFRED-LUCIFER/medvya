@@ -52,7 +52,7 @@ export default function AllergiesSection(p: Props) {
       )}
       {!p.readOnly && (
         <form noValidate onSubmit={p.onAdd} className="flex flex-col gap-3 border-t pt-3" aria-label={t('intake.allergy.add')}>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 md:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="allergy-substance" className="font-bold">{t('intake.allergy.substance')}</Label>
               <Input id="allergy-substance" autoComplete="off" maxLength={100} aria-invalid={!!errors.substance || !!refused('substance')} {...p.form.register('substance')} />

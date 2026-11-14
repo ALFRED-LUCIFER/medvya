@@ -92,7 +92,7 @@ export default function AppShell({ displayName, role, facilityName, items, tabs,
 
       <div className="flex min-w-0 flex-col">
         <header data-pinned="top" className="sticky top-0 z-10 flex h-(--shell-top) items-center gap-3 border-b bg-card px-4 md:px-6 print:hidden">
-          <p className="min-w-0 flex-1 truncate font-bold">{facilityName}</p>
+          <p className="min-w-0 max-w-none flex-1 truncate font-bold">{facilityName}</p>
           {globalSearch ?? (searchPath && (
             <Link to={searchPath} className={cn(buttonVariants({ variant: 'outline' }), 'max-sm:size-control max-sm:px-0')}>
               <Search aria-hidden /><span className="max-sm:sr-only">{t('patients.search.open')}</span>
@@ -115,7 +115,7 @@ export default function AppShell({ displayName, role, facilityName, items, tabs,
         {[...tabs.map(i => ({ key: i.id, to: i.path, Icon: navIcons[i.id], label: t(`nav.${i.id}`) })), { key: 'more', to: '/more', Icon: Menu, label: t('nav.more') }]
           .map(({ key, to, Icon, label }) => (
             <NavLink key={key} to={to} end
-              className={({ isActive }) => cn('flex min-h-12 flex-col items-center justify-center gap-1 px-1 text-center text-[11px] leading-tight font-bold',
+              className={({ isActive }) => cn('flex min-h-12 flex-col items-center justify-center gap-1 px-1 text-center text-caption leading-tight font-bold',
                 isActive ? 'text-primary' : 'text-muted-foreground')}>
               <Icon className="size-6" aria-hidden />
               {label}

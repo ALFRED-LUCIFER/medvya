@@ -168,7 +168,7 @@ export function SystemState({ state, onAction, facility = '' }: { state: keyof t
   return (
     <div role={state === 'offline' ? 'status' : 'alert'} className="flex max-w-[420px] flex-col items-start gap-2.5 rounded-xl border bg-card p-6">
       <Icon className="size-7" style={{ color: s.color }} aria-hidden />
-      <h1 className="text-[17px] font-extrabold">{t(s.title)}</h1>
+      <h1 className="text-heading font-extrabold">{t(s.title)}</h1>
       <p className="text-sm text-muted-foreground">{t(s.body, { facility })}</p>
       <Button variant="default" onClick={onAction} className="mt-2">{t(s.cta)}</Button>
     </div>

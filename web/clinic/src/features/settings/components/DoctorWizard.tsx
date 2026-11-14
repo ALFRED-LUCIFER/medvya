@@ -5,7 +5,7 @@ import { useI18n } from '@medvya/i18n';
 import { Button, ChoiceRow, ErrorSummary, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
 import { doctorSteps, stepFields, type Authority, type FieldProblem, type DoctorForm, type DoctorStep, type LicenceForm } from '../domain/doctors';
 import type { Location } from '../domain/settings';
-import { fieldError } from './fieldStyles';
+import { fieldError, fieldGrid } from './fieldStyles';
 import { Section } from './Section';
 
 type Errors = Record<string, FieldProblem | undefined>;
@@ -49,7 +49,7 @@ export function StepErrorSummary({ errors, fields, prefix, currency, focusKey }:
     const message = error(name), at = labels[name];
     return message && at ? [{ id: at[0], label: at[1], message }] : [];
   });
-  return <ErrorSummary title={t('field.errorSummary')} focusKey={focusKey} errors={list} className="sm:col-span-2" />;
+  return <ErrorSummary title={t('field.errorSummary')} focusKey={focusKey} errors={list} className="col-span-full" />;
 }
 
 /** Authority, number, category, expiry, certificate file name and the owner's attestation: the licence step, also used to renew a licence. */
@@ -77,10 +77,10 @@ export function LicenceFields<T extends FieldValues>({ form, errors, authorities
       <Field id={l.expiresOn![0]} label={l.expiresOn![1]} required error={error('expiresOn')}>
         <Input type="date" dir="ltr" {...f.register('expiresOn')} />
       </Field>
-      <Field id={l.certificateName![0]} label={l.certificateName![1]} hint={t('doctors.licence.certificateHint')} error={error('certificateName')} className="sm:col-span-2">
+      <Field id={l.certificateName![0]} label={l.certificateName![1]} hint={t('doctors.licence.certificateHint')} error={error('certificateName')} className="md:col-span-2">
         <Input autoComplete="off" {...f.register('certificateName')} />
       </Field>
-      <div className="flex flex-col gap-2 sm:col-span-2">
+      <div className="flex flex-col gap-2 col-span-full">
         <ChoiceRow className="items-start gap-3 text-sm font-semibold [&>input]:mt-1" id={l.attested![0]} type="checkbox" aria-invalid={errors.attested ? true : undefined}
             aria-describedby={errors.attested ? `${l.attested![0]}-error` : undefined} {...f.register('attested')}>
           {t('doctors.licence.attest')}
@@ -127,7 +127,7 @@ export default function DoctorWizard(p: Props) {
     <Section title={t('doctors.add.title')} intro={t('doctors.add.intro')}>
       <p aria-live="polite" className="font-bold">{t('doctors.add.progress', { n: p.stepIndex + 1, total: doctorSteps.length, title })}</p>
       <form noValidate onSubmit={p.onSubmit} className="flex flex-col gap-4">
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className={fieldGrid}>
           <StepErrorSummary errors={p.fieldErrors} fields={stepFields[p.step]} prefix="d" currency={p.currency} focusKey={p.errorFocusKey} />
           {p.step === 'details' && (
             <>
@@ -143,13 +143,13 @@ export default function DoctorWizard(p: Props) {
               <Field id={l.qualifications![0]} label={l.qualifications![1]} error={error('qualifications')}>
                 <Input autoComplete="off" {...register('qualifications')} />
               </Field>
-              <Field id={l.languages![0]} label={l.languages![1]} error={error('languages')} className="sm:col-span-2">
+              <Field id={l.languages![0]} label={l.languages![1]} error={error('languages')} className="md:col-span-2">
                 <Input autoComplete="off" {...register('languages')} />
               </Field>
             </>
           )}
           {p.step === 'licence' && <LicenceFields form={p.form} errors={p.fieldErrors} authorities={p.authorities} prefix="d" />}
-          {p.step === 'schedule' && <p className="sm:col-span-2">{t('doctors.schedule.body')}</p>}
+          {p.step === 'schedule' && <p className="col-span-full">{t('doctors.schedule.body')}</p>}
           {p.step === 'fees' && (
             <>
               <Field id={l.newVisitFee![0]} label={l.newVisitFee![1]} required hint={t('doctors.fees.hint')} error={error('newVisitFee')}>
@@ -175,7 +175,7 @@ export default function DoctorWizard(p: Props) {
               )} />
               {p.locations.length > 1 && (
                 <Controller control={control} name="alsoFacilityIds" render={({ field }) => (
-                  <fieldset className="flex flex-col gap-2 sm:col-span-2">
+                  <fieldset className="flex flex-col gap-2 col-span-full">
                     <legend className="mb-1 font-bold">{t('staff.alsoAt')}</legend>
                     {p.locations.filter(l => l.id !== watch('facilityId')).map(l => (
                       <ChoiceRow key={l.id} className="gap-3 rounded-lg border p-3 has-[:checked]:border-primary has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/50" type="checkbox" checked={field.value.includes(l.id)}
@@ -190,7 +190,7 @@ export default function DoctorWizard(p: Props) {
             </>
           )}
           {p.step === 'signature' && (
-            <div className="flex flex-col gap-3 sm:col-span-2">
+            <div className="flex flex-col gap-3 col-span-full">
               <p role="note" className="flex items-start gap-2 rounded-md border bg-muted p-3 text-sm font-semibold">
                 <Info className="mt-0.5 size-4 shrink-0" aria-hidden />{t('doctors.signature.notice')}
               </p>

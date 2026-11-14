@@ -2,6 +2,8 @@ import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
 import { mockOrders } from './support/orders';
 import { openPart } from './support/disclosure';
+import { t } from './support/desk';
+import { expectStacked } from './support/stacked';
 
 // MDV-P2-018 (E-05): the doctor composes investigation orders as drafts, switches one off, places the rest on purpose, and prints the slip.
 // CI has no API: endpoints are mocked in the shapes the server sends. Drafts-until-placed, one audit row per call, no ordering by anything
@@ -142,3 +144,19 @@ for (const locale of ['en', 'ar'])
       expect(violations, path).toEqual([]);
     }
   });
+
+// MDV-P2-054 AC5: at 375 px the orders are stacked: the test first and bold, type, instructions, state and the include switch under their names.
+test.describe('at 375 px', () => {
+  test.use({ viewport: { width: 375, height: 812 } });
+  for (const locale of ['en', 'ar'])
+    test(`the orders are stacked with every field labelled and nothing scrolling sideways (${locale})`, async ({ page }) => {
+      await mockOrders(page, { locale });
+      await page.goto('/consult/e-1');
+      await openPart(page, t(locale, 'orders.title'));
+      await page.getByLabel(t(locale, 'orders.field.name'), { exact: true }).fill('HbA1c');
+      await page.getByLabel(t(locale, 'orders.field.note')).fill('fasting 10 h');
+      await page.getByRole('button', { name: t(locale, 'orders.add') }).click();
+      const col = (c: string) => t(locale, `orders.col.${c}`);
+      await expectStacked(page, page.getByRole('region', { name: t(locale, 'orders.tableLabel') }), [col('kind'), col('note'), col('state'), col('include')]);
+    });
+});

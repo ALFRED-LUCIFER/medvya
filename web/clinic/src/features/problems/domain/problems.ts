@@ -69,3 +69,6 @@ export function problemOf(code: string | undefined): Problem {
   if (code === 'onsetOn:future') return 'future';
   return 'failed';
 }
+
+/** Problem list columns; the label of each is the i18n key `problems.col.<key>`. The list is short and server-ordered, so no sort or paging. */
+export const problemColumns = ['problem', 'code', 'verification', 'onset', 'status', 'action'] as const;

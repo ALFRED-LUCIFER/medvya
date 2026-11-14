@@ -160,7 +160,7 @@ export default function BookingPanel(p: Props) {
         <div>
           <h2 className="text-lg font-extrabold">{t('booking.title')}</h2>
           <p className="text-sm">{t('booking.when', { name: p.choice.calendarName, from: time(p.choice.start), to: end ? time(end) : '…' })}</p>
-          <p role="status" className="mt-1 flex items-center gap-1.5 text-[13px] text-muted-foreground">
+          <p role="status" className="mt-1 flex items-center gap-1.5 text-body text-muted-foreground">
             <Hourglass aria-hidden className="size-4" />
             {p.holding ? t('booking.holding') : p.hold ? t('booking.heldUntil', { time: time(p.hold.expiresAt) }) : ''}
           </p>

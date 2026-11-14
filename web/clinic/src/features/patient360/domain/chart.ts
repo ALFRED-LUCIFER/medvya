@@ -153,3 +153,6 @@ export const pathOf = (pts: Pt[]) => pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${
 
 export { refusalOf };
 export type { ClinicalRefusal };
+
+/** Results table columns before the source; the label of each is the i18n key `patient360.labs.<key>`. One row per test, so no sort or paging. */
+export const labColumns = ['test', 'latest', 'range', 'trend', 'flag'] as const;

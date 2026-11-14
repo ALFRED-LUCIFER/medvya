@@ -121,10 +121,10 @@ export default function OrganisationRequestPage(p: Props) {
       </fieldset>
 
       {r.type === 'Hospital' && (
-        <form noValidate onSubmit={p.onContact} className="grid gap-4 sm:grid-cols-2">
+        <form noValidate onSubmit={p.onContact} className="grid gap-4 md:grid-cols-2">
           <fieldset className="contents" disabled={!p.editable}>
-            <legend className="mb-1 text-lg font-bold sm:col-span-2">{t('orgRequest.it.legend')}</legend>
-            <ErrorSummary title={t('field.errorSummary')} focusKey={p.form.formState.submitCount} className="sm:col-span-2" errors={contactErrors} />
+            <legend className="mb-1 text-lg font-bold md:col-span-2">{t('orgRequest.it.legend')}</legend>
+            <ErrorSummary title={t('field.errorSummary')} focusKey={p.form.formState.submitCount} className="md:col-span-2" errors={contactErrors} />
             {/* Both are required, so neither carries a mark (FieldMarks "optional"). */}
             <FieldMarks mark="optional">
               <Field id="it-name" label={t('orgRequest.it.name')} required error={nameError}>
@@ -134,7 +134,7 @@ export default function OrganisationRequestPage(p: Props) {
                 <Input type="email" dir="ltr" autoComplete="off" {...p.form.register('email')} />
               </Field>
             </FieldMarks>
-            <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
+            <div className="flex flex-wrap items-center gap-3 md:col-span-2">
               <Button type="submit" variant="outline" loading={p.savingContact}>{t('orgRequest.it.save')}</Button>
               {p.contactSaved && <span role="status" className="flex items-center gap-1.5 text-sm font-semibold"><CircleCheck className="size-4" aria-hidden />{t('orgRequest.it.saved')}</span>}
               {p.contactFailed && <span role="alert" className={error}>{t('orgRequest.error.failed')}</span>}

@@ -4,7 +4,7 @@ import { Button, ChoiceRow, DropdownMenu, DropdownMenuContent, DropdownMenuItem,
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
-import { cardBar, fieldError } from '../../settings/components/fieldStyles';
+import { cardBar, fieldError, fieldGrid } from '../../settings/components/fieldStyles';
 import type { Location } from '../../settings/domain/settings';
 import { Section } from '../../settings/components/Section';
 import type { TableView } from '../../table/domain/tableSort';
@@ -280,7 +280,7 @@ export default function StaffPanel(p: Props) {
               </fieldset>
             )}
             {p.step === 'scope' && (
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className={fieldGrid}>
                 <Field id="staff-email" label={t('staff.email')} error={errors.email && t('settings.error.email')}>
                   <Input type="email" autoComplete="off" {...p.form.register('email')} />
                 </Field>
@@ -291,7 +291,7 @@ export default function StaffPanel(p: Props) {
                   <SelectContent>{p.locations.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}</SelectContent>
                 </Select>
                 {p.locations.length > 1 && (
-                  <fieldset className="flex flex-col gap-2 sm:col-span-2">
+                  <fieldset className="flex flex-col gap-2 col-span-full">
                     <legend className="mb-1 font-bold">{t('staff.alsoAt')}</legend>
                     {p.locations.filter(l => l.id !== p.form.watch('facilityId')).map(l => {
                       const also = p.form.watch('alsoFacilityIds');

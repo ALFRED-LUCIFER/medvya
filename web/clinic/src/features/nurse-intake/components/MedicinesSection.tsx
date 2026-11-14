@@ -29,7 +29,7 @@ export default function MedicinesSection(p: Props) {
       )}
       {!p.readOnly && (
         <form noValidate onSubmit={p.onAdd} className="flex flex-col gap-3 border-t pt-3" aria-label={t('intake.medicine.add')}>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-3">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="medicine-name" className="font-bold">{t('intake.medicine.name')}</Label>
               <Input id="medicine-name" autoComplete="off" maxLength={100} aria-invalid={!!errors.name} {...p.form.register('name')} />

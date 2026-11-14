@@ -76,7 +76,7 @@ test('the banner shows the allergy with icon and text, and every fact carries it
   await expect(page.getByRole('img', { name: /Blood pressure: latest .?124\/80 mmHg.? on .*3 readings/ })).toBeVisible(); // the vitals tile's trend
   await expect(page.getByRole('region', { name: 'Last vitals', exact: true }).getByRole('listitem').filter({ hasText: 'Oxygen saturation' })).toContainText('Not recorded');
   await expect(page.getByRole('region', { name: 'Chronic care' })).toContainText('Nothing for this life stage is recorded yet.');
-  await expect(page.getByText('To start a consultation, use the visit on the board.')).toBeVisible();
+  await expect(page.getByText('To start a consultation, use the visit on Front desk.')).toBeVisible();
 });
 
 test('MDV-P2-031: a reading outside its range is flagged in words with the range, and BMI names the older measure', async ({ page }) => {
@@ -229,6 +229,26 @@ test('MDV-P2-033: the timeline and documents open from the chart', async ({ page
   await expect(page).toHaveURL(/\/patients\/p-1\/docs$/);
 });
 
+test('MDV-P2-051 AC3: a doctor opens one Patient record on Summary, with Details, Timeline and Documents as its tabs', async ({ page }) => {
+  await page.route('**/v1/patients/search**', r => r.fulfill({ json: { matchedOn: 'Name', page: 1, pageSize: 20, total: 1, items: [
+    { id: 'p-1', initials: 'MI', fullName: 'Meera Iyer (synthetic)', ageYears: 54, ageEstimated: false, sexAtBirth: 'Female', mrnTail: '0001', mobileTail: '0101', status: 'Complete', dateOfBirth: '1972-03-12', lastVisitOn: null, duplicate: null }] } }));
+  await open(page, { path: '/patients' }); // the menu's address opens the directory
+  await expect(page).toHaveURL('/patients/directory');
+  await page.getByRole('link', { name: /Meera Iyer \(synthetic\), 54 y/ }).click();
+  await expect(page).toHaveURL('/patients/p-1');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Patient record');
+  const tabs = page.getByRole('group', { name: 'Patient record' }).getByRole('link');
+  await expect(tabs).toHaveText(['Summary', 'Details', 'Timeline', 'Documents']);
+  await expect(tabs.first()).toHaveAttribute('aria-current', 'page');
+  await tabs.getByText('Timeline').click();
+  await expect(page).toHaveURL('/patients/p-1/timeline');
+  await expect(page.getByRole('group', { name: 'Patient record' }).getByRole('link', { name: 'Timeline' })).toHaveAttribute('aria-current', 'page');
+  await tabs.getByText('Documents').click();
+  await expect(page).toHaveURL('/patients/p-1/docs');
+  await tabs.getByText('Summary').click();
+  await expect(page).toHaveURL('/patients/p-1');
+});
+
 test('MDV-1088: the chart lists past visits with doctor, diagnosis, medicines and tests, and a row opens the signed note and its prescription', async ({ page }) => {
   await open(page, { rx: 'Sign' });
   const block = page.getByRole('region', { name: 'Visits', exact: true });
@@ -295,7 +315,7 @@ for (const [locale, button] of [['en', 'Start consultation with Meera Iyer (synt
     const start = page.getByRole('button', { name: button });
     await expect(start).toBeVisible();
     expect((await start.boundingBox())!.height).toBeGreaterThanOrEqual(44);
-    await expect(page.getByText('To start a consultation, use the visit on the board.')).toHaveCount(0);
+    await expect(page.getByText('To start a consultation, use the visit on Front desk.')).toHaveCount(0);
     await page.addScriptTag({ path: axePath });
     const violations = await page.evaluate(async () =>
       (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations.map(v => `${v.id} (${v.nodes.length})`));

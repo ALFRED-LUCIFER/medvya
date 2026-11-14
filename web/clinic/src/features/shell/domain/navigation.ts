@@ -3,9 +3,10 @@ import { seeAccess, type Access, type ActiveMembership, type Capability } from '
 export type NavGroup = 'clinical' | 'practice' | 'assistant' | 'admin';
 export type NavId =
   | 'today' | 'patients' | 'messages' | 'video' | 'referrals' | 'inbox' | 'carePlans'
-  | 'frontDesk' | 'schedule' | 'register' | 'nurse' | 'billing' | 'devices' | 'settings';
+  | 'frontDesk' | 'schedule' | 'nurse' | 'billing' | 'devices' | 'settings';
 
 export type NavItem = {
+  /** The group only colours the bar beside the current item; the menu is one list in the role's order (blueprint section 3). */
   id: NavId; path: string; group: NavGroup;
   /** Required capability and the access levels that count (default: any level that can see). */
   capability: Capability; access?: readonly Access[];
@@ -17,9 +18,10 @@ export type NavItem = {
 
 // Clinician App sidebar (docs/02-design/source/Medvya Clinician App) and the role sitemap (docs/02-design/sitemap-and-permissions.md).
 export const navItems: readonly NavItem[] = [
-  // Today is the doctor's own screen (MDV-P2-002); roles without Patient 360 at Full still see the day's board there.
-  { id: 'today', path: '/today', group: 'clinical', capability: 'Patient360Chart', phase: 1 },
-  { id: 'patients', path: '/patients', group: 'clinical', capability: 'Patient360Chart', phase: 1 },
+  // My day (address /today) is the doctor's own screen (MDV-P2-002), never the board: only Patient 360 at Full (MDV-P2-051).
+  { id: 'today', path: '/today', group: 'clinical', capability: 'Patient360Chart', access: ['Full'], phase: 1 },
+  // Patients opens the directory, so it follows the directory's API rule: Register / book patients at Read or Full.
+  { id: 'patients', path: '/patients', group: 'clinical', capability: 'RegisterBookPatients', access: ['Read', 'Full'], phase: 1 },
   { id: 'messages', path: '/messages', group: 'clinical', capability: 'CareTasksPatientContact', flag: 'care.messages', phase: 4 },
   { id: 'video', path: '/video', group: 'clinical', capability: 'ClinicalNotes', flag: 'clinical.video', phase: 8 },
   { id: 'referrals', path: '/referrals', group: 'clinical', capability: 'ClinicalNotes', flag: 'clinical.referrals', phase: 2 },
@@ -27,14 +29,11 @@ export const navItems: readonly NavItem[] = [
   { id: 'carePlans', path: '/care', group: 'clinical', capability: 'CareTasksPatientContact', flag: 'care.plans', phase: 4 },
   { id: 'frontDesk', path: '/front-desk', group: 'practice', capability: 'CheckInQueue', phase: 1 },
   { id: 'schedule', path: '/schedule', group: 'practice', capability: 'RegisterBookPatients', phase: 1 },
-  { id: 'register', path: '/patients/new', group: 'practice', capability: 'RegisterBookPatients', access: ['Full'], phase: 1 },
   { id: 'nurse', path: '/nurse', group: 'practice', capability: 'VitalsAllergiesEntry', flag: 'clinical.nurse-intake', phase: 2 },
   { id: 'billing', path: '/billing', group: 'practice', capability: 'InvoicesPayments', flag: 'billing.invoices', phase: 4 },
   { id: 'devices', path: '/devices', group: 'assistant', capability: 'DevicePairingFleet', flag: 'assistant.devices', phase: 3 },
   { id: 'settings', path: '/settings', group: 'admin', capability: 'StaffRolesIntegrations', phase: 1 },
 ];
-
-export const navGroups: readonly NavGroup[] = ['clinical', 'practice', 'assistant', 'admin'];
 
 type Guard = Pick<NavItem, 'capability' | 'access' | 'flag'>;
 type Active = Pick<ActiveMembership, 'role' | 'capabilities' | 'flags'> | null;
@@ -47,15 +46,33 @@ export function allows(active: Active, guard: Guard): boolean {
   return (guard.access ?? seeAccess).includes(level) && (!guard.flag || active.flags.includes(guard.flag));
 }
 
-/** Items this membership may see. Hiding is UX only; the API enforces. */
-export const visibleNav = (active: Active): NavItem[] => navItems.filter(i => allows(active, i));
+/** Menu order per role (blueprint section 3); every other item follows in the order of navItems. */
+const leads: Record<'doctor' | 'nurse' | 'desk', readonly NavId[]> = {
+  doctor: ['today', 'patients', 'schedule', 'frontDesk'],
+  nurse: ['nurse', 'patients'],
+  desk: ['frontDesk', 'schedule', 'patients'],
+};
 
-/** Where the start address lands: a nurse (vitals at Full, no full chart, no booking) on the nurse queue when it is on; everyone else on the first screen (UX-08). */
-export function homeItem(visible: NavItem[], active: Active): NavItem | undefined {
+/**
+ * Items this membership may see, in its role's order; the first is where the start address lands. A doctor (My day) starts on My day;
+ * a nurse (vitals at Full, no full chart, no booking) on the nurse queue when intake is on (UX-08); everyone else on Front desk.
+ * Hiding is UX only; the API enforces.
+ */
+export function visibleNav(active: Active): NavItem[] {
+  const items = navItems.filter(i => allows(active, i));
   const c = active?.capabilities;
-  const intake = c?.VitalsAllergiesEntry === 'Full' && c.Patient360Chart !== 'Full' && c.RegisterBookPatients !== 'Full';
-  return (intake && visible.find(i => i.id === 'nurse')) || visible[0];
+  const nurse = c?.VitalsAllergiesEntry === 'Full' && c.Patient360Chart !== 'Full' && c.RegisterBookPatients !== 'Full';
+  const has = (id: NavId) => items.some(i => i.id === id);
+  const lead = leads[has('today') ? 'doctor' : nurse && has('nurse') ? 'nurse' : 'desk'];
+  const rank = (i: NavItem) => (lead.includes(i.id) ? lead.indexOf(i.id) : lead.length);
+  return items.sort((a, b) => rank(a) - rank(b)); // stable: the rest keep navItems order, Settings last
 }
+
+/** Register patient (P-02): a button on Front desk and Patients and a search action, not a menu item (MDV-P2-051). */
+export const registerPatient = { path: '/patients/new', capability: 'RegisterBookPatients', access: ['Full'] } as const satisfies Guard & { path: string };
+
+/** The clinical record (Summary, Timeline): any level of Patient 360 a clinician works at; break-glass is not everyday access. */
+export const clinicalRecord = { capability: 'Patient360Chart', access: ['Read', 'Limited', 'Full', 'Sign'] } as const satisfies Guard;
 
 /**
  * Patient directory and search (MDV-P1-018), opened from the header search, not the sidebar, so every role that may look patients
@@ -72,11 +89,10 @@ export function refusedAddress(path: string, active: Active): boolean {
   // A consultation needs the full chart, like its note API.
   if (under('/consult')) return active?.capabilities.Patient360Chart !== 'Full';
   if (under(patientDirectory.path)) return !allows(active, patientDirectory);
+  // A patient's Summary and Timeline (/patients/:id) need the clinical record; Patients itself and Register patient are routes of their own.
+  if (path.startsWith('/patients/') && !under(registerPatient.path)) return !allows(active, clinicalRecord);
   return navItems.some(i => under(i.path) && (!i.flag || !!active?.flags.includes(i.flag)) && !allows(active, i));
 }
 
-const tabPriority: readonly NavId[] = ['today', 'patients', 'inbox', 'messages', 'frontDesk', 'schedule', 'register', 'nurse'];
-
-/** Mobile bottom bar: up to four of the visible items (design order Today · Patients · Inbox · Messages), then "More". */
-export const mobileTabs = (visible: NavItem[]): NavItem[] =>
-  tabPriority.flatMap(id => visible.filter(i => i.id === id)).slice(0, 4);
+/** Mobile bottom bar: the first four items of the role's menu, then "More". */
+export const mobileTabs = (visible: NavItem[]): NavItem[] => visible.slice(0, 4);

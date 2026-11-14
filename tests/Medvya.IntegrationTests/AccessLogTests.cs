@@ -111,6 +111,28 @@ public sealed class AccessLogTests(PostgresFixture sql) : IClassFixture<Postgres
         Assert.DoesNotContain("schedule.template.read", csv, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// MDV-P2-050: the log opens on charts opened or changed; the routine reads a list writes per patient and page views stay behind All activity,
+    /// and the export holds them all. Mutation check: drop the ChartOnly filter in AuditTrail and the first assertion fails.
+    /// </summary>
+    [Fact]
+    public async Task TheChartViewLeavesOutRoutineListReadsAndTheExportKeepsEveryRow()
+    {
+        await Seed(h.Tenant, "patient.chart.read", h.Patient, h.Doctor, Noon.AddMinutes(-9));
+        await Seed(h.Tenant, "note.sign", h.Patient, h.Doctor, Noon.AddMinutes(-8));
+        await Seed(h.Tenant, "patient.chart.allergy-flag", h.Patient, h.Doctor, Noon.AddMinutes(-7)); // one per patient on Today
+        await Seed(h.Tenant, "schedule.template.read", null, h.Admin, Noon.AddMinutes(-6));
+        using var client = Client(Role.PracticeAdmin);
+        static List<string?> Actions(JsonElement page) => [.. page.GetProperty("items").EnumerateArray().Select(i => i.GetProperty("action").GetString())];
+
+        Assert.Equal(["note.sign", "patient.chart.read"], Actions(await client.GetFromJsonAsync<JsonElement>("/v1/audit/access-log?chart=true")));
+        Assert.Equal(4, Actions(await client.GetFromJsonAsync<JsonElement>("/v1/audit/access-log")).Count(a => a != "audit.read"));
+        using var export = await client.PostAsJsonAsync("/v1/audit/access-log/export", new { });
+        var csv = await export.Content.ReadAsStringAsync();
+        foreach (var action in new[] { "patient.chart.read", "note.sign", "patient.chart.allergy-flag", "schedule.template.read" })
+            Assert.Contains(action, csv, StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData(Role.Receptionist)]
     [InlineData(Role.Nurse)]

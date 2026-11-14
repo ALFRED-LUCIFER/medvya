@@ -91,6 +91,7 @@ export default function BoardPage(props: Props) {
   // The facility's zone is said only when this device is elsewhere; times are always the facility's.
   const zone = board && !isDeviceZone(board.timeZone) ? t('schedule.facilityTime', { zone: board.timeZone }) : null;
   return (
+    // A minmax(0, 1fr) track keeps the board's width out of the page's minimum width, so only the board scrolls sideways.
     <PageContainer width="fluid" className="gap-2">
       {/* One 44 px row (MDV-P1-095): title and short date, the view switch, the live mark, then the actions. */}
       <PageHeader title={board ? t('board.title', { day: formatShortDay(board.date) }) : t('board.titleOnly')} meta={zone}

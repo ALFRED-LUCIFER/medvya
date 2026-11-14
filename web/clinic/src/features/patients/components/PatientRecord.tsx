@@ -26,8 +26,6 @@ type Props = {
   completePath: string | null;
   /** Book, Check in and Edit details: each null when this role may not (Register / book at Full; Check-in & queue at Full too for check-in). */
   actions: { bookPath: string | null; checkInPath: string | null; editPath: string | null };
-  /** The patient's documents (MDV-P2-006); null when this role may not use them (the desk uploads and lists, Register / book and Check-in at Full). */
-  documentsPath: string | null;
   /** Merges this record took part in (MDV-P1-017); empty for most records. */
   merges: MergeHistoryEntry[];
   /** Current consents and the change action (MDV-P1-019). Changing needs Register / book at Full, as the server checks. */
@@ -110,8 +108,6 @@ export default function PatientRecord(props: Props) {
           {props.actions.editPath && <Link to={props.actions.editPath} className={buttonVariants({ variant: 'outline' })}>{t('patients.record.edit')}</Link>}
         </div>
       )}
-
-      {props.documentsPath && <Link to={props.documentsPath} className={buttonVariants({ variant: 'outline', className: 'self-start' })}>{t('documents.title')}</Link>}
 
       {p.status === 'Incomplete' && props.completePath && (
         // The desk's completion task (MDV-P1-015): what quick registration left out, closed once address and payer exist.

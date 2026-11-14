@@ -1087,7 +1087,7 @@ depends: MDV-P1-039
 confidence: 88 | Deliverables explicit.
 sources: PRD v2 P1 delivery package 2–3
 desc:
-30-minute reception training (register quick/full, duplicates, book/reschedule/cancel/no-show, walk-in, check-in, board, TV, reminders, what reception cannot see). One-page desk card per country (A4, en + local language). Support channel (WhatsApp/phone) with a named contact and hours; escalation path for security/privacy incidents.
+30-minute reception training, in the screen names of MDV-P2-051 (register quick/full from the Register patient button, duplicates, book/reschedule/cancel/no-show, walk-in, check-in, Front desk with its By status and By doctor views, Patients and the Patient record's Details, TV, reminders, what reception cannot see). One-page desk card per country (A4, en + local language). Support channel (WhatsApp/phone) with a named contact and hours; escalation path for security/privacy incidents.
 ac:
 - Training delivered to every receptionist at both clinics, attendance recorded.
 - During training at the pilot, a trained receptionist quick-registers and checks in a walk-in in under 60 seconds, timed and recorded (moved from MDV-P1-025).
@@ -2978,7 +2978,7 @@ notes:
 - Regression risk: medium.
 
 === MDV-P1-101
-title: Patient picker rows show date of birth and last visit, and mark possible duplicates
+title: Patient picker rows show last visit and mark possible duplicates (no date of birth)
 type: Story
 epic: MDV-P1-E12
 prd: P1-05, P2-01
@@ -2996,16 +2996,16 @@ Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the
 Persona and route: Walk-in, booking and waitlist pickers; header search · receptionist, doctor.
 Findings and reviewers: F-08 · reviewer A-05.
 Rationale: Two Deepak Nair, 47 y, Male rows differed only in the last four MRN digits; a hurried person picks the first, which was the duplicate. Visits, vitals and allergies then split across two charts.
-Proposed UX behaviour: Every result row, on two lines: name, age and sex, date of birth, masked MRN, masked phone, last visit date. A record with an open merge request shows the words Possible duplicate; the older record sorts first and is marked Main record. Rows are comfortable height (never compact) and the whole row is the target. The doctor's header search shows the same fields in place of initials only, within what the role may already search. Show full numbers stays a logged reveal.
+Proposed UX behaviour: Every result row, on two lines: name, age and sex, masked MRN, masked phone, last visit date. No date of birth in any search result, picker or the directory list (validation-plan decision 15, 14 Nov 2026: the desk screen is shared); identity is confirmed with the patient at check-in. A record with an open merge request shows the words Possible duplicate; the older record sorts first and is marked Main record. Rows are comfortable height (never compact) and the whole row is the target. The doctor's header search shows the same fields in place of initials only, within what the role may already search. Show full numbers stays a logged reveal.
 Prototype and blueprint reference: docs/product-ux-audit/concepts/medvya-workspace-concept.html, receptionist view: type 90000 (audit note 8); screenshots docs/product-ux-audit/concepts/screenshots/desk-1440-phone-lookup.png and desk-1440-confirm-dob.png.
 Components and tokens affected: The shared picker row; Tag for Possible duplicate and Main record. No new component.
 Front end and back end split: Front end; back end adds last visit and the merge flag to the search results the role may already see.
 Prerequisites and blocked by: None in code. Privacy decision: date of birth in a list the desk already may search.
-Clinical sign-off: Decision required before merge: question 15 of the validation plan (owner and receptionist), recorded on the issue.
+Clinical sign-off: Question 15 of the validation plan, recorded on the issue on 14 Nov 2026: no date of birth in search results at the desk.
 Effort and regression risk: M · Low. Search authorisation and masking must not widen.
 Deliberately NOT in this ticket: (1) One find-or-check-in box (a new flow; not before the pilot). (2) Unmasking MRN or phone. (3) Merge itself.
 ac:
-- Given two patients with the same name, age and sex, when the picker lists them, then the rows differ in at least two shown fields (date of birth, last visit or the duplicate mark)
+- Given two patients with the same name, age and sex, when the picker lists them, then the rows differ in at least two shown fields (MRN ending, last visit or the duplicate mark) and show no date of birth
 - Given a record with an open merge request, when it is listed, then it reads Possible duplicate and the older record is first and reads Main record
 - Given a search, when the address bar, logs and telemetry are read, then they hold no name, phone digits or date of birth
 - Given Show full numbers, when it is used, then an audit row is written as today
@@ -3013,7 +3013,7 @@ ac:
 - Given a touch device, when rows are measured, then each is at least 48 px tall and the whole row is the target; axe finds no violation in English or Arabic
 tests:
 - Integration: search result shape per role, tenant isolation.
-- Playwright (tests/e2e/patients.spec.ts, global-search.spec.ts; J3 step 2): search 0102 → two rows with different dates of birth or a duplicate mark.
+- Playwright (tests/e2e/patients.spec.ts, global-search.spec.ts; J3 step 2): search 0102 → two rows with different MRN endings, last visits or a duplicate mark, and no date of birth.
 - Walk-in click count unchanged.
 notes:
 - Regression risk: low.
@@ -3302,3 +3302,45 @@ tests:
 notes:
 - Regression risk: none.
 - Listed in docs/05-delivery/session-handoff.md section 8 (Needs a person).
+
+=== MDV-P1-109
+title: The server refuses to sign a consultation note until the doctor has confirmed identity with the patient
+type: Story
+epic: MDV-P1-E12
+prd: P2-05
+screens: E-06
+priority: MUST
+roles: Doctor
+labels: signing, encounters, safety, clinical-safety, security, epic: ux programme, track: safety, wave: S3
+estimate: 1
+weeks: 5
+depends: MDV-P1-091
+confidence: 85 | The stored confirmation already exists (MDV-P1-091) and the checklist already blocks signing on it; this adds the same rule on the server.
+sources: docs/product-ux-audit/07-debate-and-arbitration.md (ruling 3, guarantee 7); src/Modules/Encounters/Medvya.Encounters.Infrastructure/ConsultNoteService.cs (SignAsync); web/clinic/src/features/encounters/domain/checklist.ts
+desc:
+Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Track S (safety, trust and handoff behaviour), wave S3. No audit backlog id: an open finding from the MDV-P1-091 review, decided by the owner on 14 Nov 2026.
+
+Persona and route: Sign note on /consult/:id (and from Today after the consultation ended) · doctor.
+Findings and reviewers: MDV-P1-091 stores "Confirmed with the patient" (IdentityConfirmedAt, set once, never cleared), and the signing checklist blocks Sign until it is there. The sign endpoint does not check it, so any other client or a direct call can sign a note whose identity was never confirmed.
+Rationale: Authorisation and safety rules are enforced on the server (AGENTS.md 1.3). A rule that lives only in the browser is not a control.
+Proposed UX behaviour: Signing a consultation note whose encounter has no stored identity confirmation is refused with 409 and a plain reason key (identity not confirmed with the patient). Nothing is signed, no signed version is written and the audit records the refused attempt without patient data. The web app already prevents this through the checklist, so a doctor using it sees no change; if the server refuses anyway (for example a stale page), the note page shows the reason and the confirm action. Addenda to an already signed note are not affected.
+Prototype and blueprint reference: None.
+Components and tokens affected: ConsultNoteService.SignAsync and its endpoint; the note controller's error mapping. No new component.
+Front end and back end split: Back end; a small front-end error mapping.
+Prerequisites and blocked by: MDV-P1-091 (done). Touches the same sign path as MDV-P2-049 (print snapshot at signing); whichever merges second rebases.
+Clinical sign-off: Not required: it enforces on the server a rule the pilot doctor's checklist already applies.
+Effort and regression risk: S · Low. Fixtures and journeys that sign notes must confirm identity first.
+Deliberately NOT in this ticket: (1) Any change to how identity is confirmed. (2) Notes signed without the patient present (for example a result review) are not a feature today; if one is added it needs its own decision. (3) Addenda.
+ac:
+- Given a draft note on an encounter with no identity confirmation, when the sign endpoint is called directly by the treating doctor, then it answers 409 with the identity reason, the note stays a draft and no signed version exists
+- Given the same note after the doctor confirms identity, when it is signed, then it signs as today
+- Given a refused sign, when the audit and the logs are read, then the attempt is recorded with the encounter id and no patient name, date of birth or note text
+- Given the integration test of the refusal, when the server check is removed, then the test fails (mutation check)
+- Given the web app with a stale page that skipped the checklist, when the server refuses, then the note page says identity is not confirmed and offers the confirm action, in English and Arabic, axe clean
+- Given a signed note, when an addendum is signed, then the identity rule does not apply
+tests:
+- Integration (real PostgreSQL): sign refused without confirmation (409, still draft, no signed version, audit row); allowed after confirmation; addendum unaffected; tenant isolation unchanged.
+- Playwright J2 sign step stays green; a mocked 409 shows the reason and the confirm action, axe en and ar.
+notes:
+- Owner decision 14 Nov 2026: yes, the server refuses (epic #1170 open finding).
+- Regression risk: low.

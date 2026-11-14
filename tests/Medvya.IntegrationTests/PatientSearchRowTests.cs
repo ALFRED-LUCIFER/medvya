@@ -13,14 +13,15 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Medvya.IntegrationTests;
 
 /// <summary>
-/// MDV-P1-101 over HTTP on real PostgreSQL: a search row also carries the date of birth, the day of the last attended visit and the duplicate mark,
-/// and nothing else. Who may search is unchanged, another organisation's visits and merge requests never show, and no clinical text travels.
+/// MDV-P1-101 over HTTP on real PostgreSQL: a search row also carries the day of the last attended visit and the duplicate mark, and nothing else:
+/// never the date of birth (a search list is read at a shared desk, validation-plan decision 15). Who may search is unchanged, another organisation's
+/// visits and merge requests never show, and no clinical text travels.
 /// Synthetic data only.
 /// </summary>
 public sealed class PatientSearchRowTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IAsyncLifetime
 {
     static readonly string[] DeskFields =
-        ["ageEstimated", "ageYears", "dateOfBirth", "duplicate", "fullName", "id", "initials", "lastVisitOn", "mobileTail", "mrnTail", "sexAtBirth", "status"];
+        ["ageEstimated", "ageYears", "duplicate", "fullName", "id", "initials", "lastVisitOn", "mobileTail", "mrnTail", "sexAtBirth", "status"];
     const string ClinicalReason = "Synthetic: chest tightness on stairs";
 
     readonly SchedulingHarness h = new(sql);
@@ -131,6 +132,8 @@ public sealed class PatientSearchRowTests(PostgresFixture sql) : IClassFixture<P
             Assert.Matches(@"^\d{4}-\d{2}-\d{2}$", Text(rows[0], "lastVisitOn")!);
             foreach (var leak in new[] { "chest", "stairs", "ChronicReview", "FollowUp", "reason", "+91", "9000000201", "000010", "000011" })
                 Assert.DoesNotContain(leak, json, StringComparison.OrdinalIgnoreCase);
+            // No date of birth under any name (decision 15): neither the recorded date nor the one estimated from a stated age.
+            foreach (var born in new[] { "dateOfBirth", "1979-02-01", "1979-06-15" }) Assert.DoesNotContain(born, json, StringComparison.OrdinalIgnoreCase);
         }
     }
 
@@ -140,16 +143,16 @@ public sealed class PatientSearchRowTests(PostgresFixture sql) : IClassFixture<P
         var rows = Items((await Post(h.Reception, "/v1/patients/search", "farhan")).Json);
         Assert.Equal([main, duplicate], rows.Select(r => r.GetProperty("id").GetGuid()));
         Assert.Equal(rows[0].GetProperty("ageYears").GetInt32(), rows[1].GetProperty("ageYears").GetInt32());
-        Assert.Equal(("MainRecord", "1979-02-01", "2026-10-19"), (Text(rows[0], "duplicate"), Text(rows[0], "dateOfBirth"), Text(rows[0], "lastVisitOn")));
-        // A date estimated from a stated age is not shown as a date of birth; a patient who never attended has no last visit.
-        Assert.Equal(("PossibleDuplicate", null, null), (Text(rows[1], "duplicate"), Text(rows[1], "dateOfBirth"), Text(rows[1], "lastVisitOn")));
+        Assert.Equal(("MainRecord", "2026-10-19"), (Text(rows[0], "duplicate"), Text(rows[0], "lastVisitOn")));
+        // A patient who never attended has no last visit.
+        Assert.Equal(("PossibleDuplicate", null), (Text(rows[1], "duplicate"), Text(rows[1], "lastVisitOn")));
     }
 
     [Fact]
     public async Task AClosedRequestMarksNothingAndABookedOrMissedVisitIsNotALastVisit()
     {
         var row = Assert.Single(Items((await Post(h.Reception, "/v1/patients/search", "meera")).Json));
-        Assert.Equal((null, null, "1972-03-12"), (Text(row, "duplicate"), Text(row, "lastVisitOn"), Text(row, "dateOfBirth")));
+        Assert.Equal((null, null), (Text(row, "duplicate"), Text(row, "lastVisitOn")));
     }
 
     [Fact]
@@ -171,8 +174,8 @@ public sealed class PatientSearchRowTests(PostgresFixture sql) : IClassFixture<P
         Assert.Equal([main, duplicate], rows.Select(r => r.GetProperty("id").GetGuid()));
         foreach (var row in rows)
             Assert.Equal(DeskFields.Where(f => f != "status").Append("access").Order(StringComparer.Ordinal), row.EnumerateObject().Select(p => p.Name).Order(StringComparer.Ordinal));
-        Assert.Equal(("MainRecord", "1979-02-01", "2026-10-19"), (Text(rows[0], "duplicate"), Text(rows[0], "dateOfBirth"), Text(rows[0], "lastVisitOn")));
-        foreach (var leak in new[] { "chest", "ChronicReview", "+91", "9000000201", "000010" }) Assert.DoesNotContain(leak, json, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(("MainRecord", "2026-10-19"), (Text(rows[0], "duplicate"), Text(rows[0], "lastVisitOn")));
+        foreach (var leak in new[] { "chest", "ChronicReview", "+91", "9000000201", "000010", "dateOfBirth", "1979-02-01" }) Assert.DoesNotContain(leak, json, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(HttpStatusCode.Forbidden, (await Post(h.HospitalIt, "/v1/patients/lookup", "farhan")).Status);
     }
 }

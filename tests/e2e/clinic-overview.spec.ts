@@ -51,8 +51,8 @@ async function open(page: Page, { as = reception, locale = 'en' } = {}) {
 
 test('lists each doctor working today with visits per state, delay and next patients, and the waiting room', async ({ page }) => {
   await open(page);
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Reception board');
-  await expect(page.getByRole('group', { name: 'Board views' }).getByRole('button', { name: 'By doctor' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Front desk');
+  await expect(page.getByRole('group', { name: 'Front desk views' }).getByRole('button', { name: 'By doctor' })).toHaveAttribute('aria-pressed', 'true');
   const rao = page.getByRole('article', { name: 'Dr. Arjun Rao (synthetic)' });
   await expect(rao).toContainText('Running 30 min late');
   await expect(rao.getByRole('list', { name: 'Visits by status' })).toContainText('Booked 1');
@@ -102,7 +102,7 @@ test('the board shows each doctor\'s workload and switches to the by-doctor view
   await expect(panel).toContainText('Dr. Arjun Rao (synthetic)');
   await expect(panel).toContainText('2 waiting · Running 30 min late');
   await expect(panel).toContainText('1 waiting · On time');
-  await page.getByRole('group', { name: 'Board views' }).getByRole('button', { name: 'By doctor' }).click();
+  await page.getByRole('group', { name: 'Front desk views' }).getByRole('button', { name: 'By doctor' }).click();
   await expect(page).toHaveURL(/\/front-desk\/overview$/);
 });
 

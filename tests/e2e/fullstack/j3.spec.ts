@@ -18,7 +18,7 @@ journey('J3', {
     await walkIn(page, patient, rao);
     await expect(page.getByText(/^Token /)).toContainText(/[A-Z]-\d+/);
     await expectNoAxeViolations(page);
-    await page.getByRole('link', { name: 'Back to the board' }).first().click();
+    await page.getByRole('link', { name: 'Back to Front desk' }).first().click();
     const card = page.getByRole('region', { name: /^Ready for doctor/ }).getByRole('article', { name: patient.name }); // nurse intake is off (the default): check-in goes straight to Ready for doctor (#1104)
     await expect(card.getByText('Walk-in', { exact: true })).toBeVisible();
     await expect(card.getByText(/^Token [A-Z]-\d+$/)).toBeVisible();
@@ -124,7 +124,7 @@ journey('J3', {
       await nurse.getByRole('button', { name: 'Confirm: no known allergies' }).click();
       await nurse.getByRole('button', { name: 'Hand off · Ready for doctor' }).click();
       await expect(nurse).toHaveURL(/\/nurse$/);
-      await expect(nurse.getByRole('heading', { name: 'Nurse intake queue' })).toBeVisible(); // the shared database holds other patients with the nurse
+      await expect(nurse.getByRole('heading', { name: 'Nurse queue' })).toBeVisible(); // the shared database holds other patients with the nurse
       await expect(nurse.getByRole('article', { name: patient.name })).toHaveCount(0); // this one has left the queue
       await nurse.close();
 
@@ -173,7 +173,7 @@ journey('J3', {
     await signIn(page, joseph);
     await walkIn(page, patient, rao);
     await page.goto(board);
-    await page.getByRole('group', { name: 'Board views' }).getByRole('button', { name: 'By doctor' }).click();
+    await page.getByRole('group', { name: 'Front desk views' }).getByRole('button', { name: 'By doctor' }).click();
     await expect(page).toHaveURL(/\/front-desk\/overview$/);
     const waiting = page.getByRole('region', { name: /^Waiting room/ }).getByRole('row').filter({ hasText: patient.name });
     await expect(waiting).toContainText(/Dr\. Arjun Rao/);

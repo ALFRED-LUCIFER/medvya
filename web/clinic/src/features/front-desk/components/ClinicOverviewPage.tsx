@@ -38,7 +38,7 @@ export default function ClinicOverviewPage(props: Props) {
   const { t } = useI18n();
   return (
     <PageContainer width="fluid">
-      <PageHeader eyebrow={t('nav.frontDesk')} title={t('board.titleOnly')}
+      <PageHeader title={t('board.titleOnly')}
         description={props.overview && <span className="text-[13px]">{t('schedule.facilityTime', { zone: props.overview.timeZone })}</span>}
         actions={<>
           {!props.forbidden && <p role="status" className="inline-flex min-h-9 items-center"><FrontDeskTag kind={props.live} /></p>}
@@ -65,8 +65,8 @@ function Body(props: Props) {
   const { overview } = props;
   if (props.forbidden) return <Message title={t('err.403')} body={t('board.forbidden.body')} />;
   if (props.offline) return <Message title={t('state.offline.title')} body={t('board.offline')} />;
-  if (props.failed) return <Message title={t('overview.error.title')} body={t('board.error.body')} action={{ label: t('schedule.retry'), run: props.onRetry }} />;
-  if (props.loading || !overview) return <Message busy title={t('overview.loading')} />;
+  if (props.failed) return <Message title={t('board.error.title')} body={t('board.error.body')} action={{ label: t('schedule.retry'), run: props.onRetry }} />;
+  if (props.loading || !overview) return <Message busy title={t('board.loading')} />;
   if (overview.doctors.length === 0) return <Message title={t('overview.empty.title')} body={t('overview.empty.body')} />;
   const now = Date.parse(overview.now);
   return (

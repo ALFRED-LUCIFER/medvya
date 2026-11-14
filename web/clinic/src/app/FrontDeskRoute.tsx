@@ -17,7 +17,7 @@ type Props = {
   facilityId: string; online: boolean; canMove: boolean;
   /** May cancel a visit from the board's card menu: full "Register / book patients" (the server checks again). */
   canCancel: boolean;
-  /** Register patient, when this role may register (from the navigation). */
+  /** Register patient, when this role may register: a button here and on Patients, not a menu item (MDV-P2-051). */
   registerPath: string | null;
   /** Walk-in (MDV-P1-025), when this role may book and check in. */
   walkInPath: string | null;

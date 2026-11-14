@@ -86,7 +86,7 @@ test('a new walk-in is quick-registered and checked in within a minute, then wai
   await expect(page.getByText('Choose a patient first.')).toBeHidden();
   await page.getByRole('button', { name: 'Check in now' }).click(); // click 5: a new walk-in is still 5 clicks (limit 6), none added
   await expect(page.getByRole('heading', { name: 'Arjun Nair (synthetic) is checked in' })).toBeVisible();
-  await expect(page.getByText('Walk-in with Dr. Arjun Rao (synthetic) at 10:40. The patient now waits in the Checked in column of the board.')).toBeVisible();
+  await expect(page.getByText('Walk-in with Dr. Arjun Rao (synthetic) at 10:40. The patient now waits in the Checked in column on Front desk.')).toBeVisible();
   await expect(page.getByText('Token A-02')).toBeVisible(); // MDV-P1-052: the token is on the success screen, not only on the board
   // MDV-P2-046: printing the slip is offered, not required; the 5 clicks above are measured without it.
   await expect(page.getByRole('link', { name: 'Print slip' })).toHaveAttribute('href', '/front-desk/token/a-9');
@@ -100,7 +100,7 @@ test('a new walk-in is quick-registered and checked in within a minute, then wai
   // Timed from opening Walk-in, through quick registration, to the check-in: not from coming back with the patient chosen.
   expect((calls.checkIns[0]!.postDataJSON() as { elapsedMs: number }).elapsedMs).toBeGreaterThanOrEqual(registered - opened);
 
-  await page.getByRole('link', { name: 'Back to the board' }).first().click();
+  await page.getByRole('link', { name: 'Back to Front desk' }).first().click();
   const checkedIn = page.getByRole('region', { name: /Checked in/ });
   await expect(checkedIn.getByText('Walk-in', { exact: true })).toBeVisible();
   await expect(checkedIn.getByText('Waiting 12 min')).toBeVisible();
@@ -152,7 +152,7 @@ test('with no free slot today the desk chooses a doctor and the patient is queue
 });
 
 // MDV-P2-055 AC1: with nurse intake off the server's check-in lands the card in Ready for doctor; the message names that column.
-for (const [locale, column] of [['en', 'The patient now waits in the Ready for doctor column of the board.'], ['ar', 'ينتظر المريض الآن في عمود «جاهز للطبيب» على اللوحة.']] as const)
+for (const [locale, column] of [['en', 'The patient now waits in the Ready for doctor column on Front desk.'], ['ar', 'ينتظر المريض الآن في عمود «جاهز للطبيب» في الاستقبال.']] as const)
   test(`with nurse intake off the success message names Ready for doctor, the column the card is really in, axe clean (${locale})`, async ({ page }) => {
     await desk(page, { locale, checkedInState: 'ReadyForDoctor' });
     await page.goto(`/front-desk/walk-in?patient=${patientId}`);

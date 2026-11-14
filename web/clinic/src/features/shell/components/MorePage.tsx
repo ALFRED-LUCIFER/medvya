@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, PageContainer, PageHeader } from '@medvya/ui';
+import { Button, buttonVariants, Card, PageContainer, PageHeader } from '@medvya/ui';
 import type { Role } from '../../session/domain/session';
 import type { NavGroup, NavItem } from '../domain/navigation';
 import { navIcons } from './navIcons';
@@ -18,27 +18,29 @@ export default function MorePage({ displayName, role, facilityName, groups, lang
   return (
     <PageContainer width="form" className="gap-5">
       <PageHeader title={t('nav.more')} />
-      <div className="rounded-xl border bg-card p-4">
+      <Card className="gap-1">
         <p className="font-bold">{displayName}</p>
         <p className="text-sm text-muted-foreground">{t('shell.roleAtFacility', { role: t(`role.${role}`), facility: facilityName })}</p>
-      </div>
+      </Card>
       {canSwitchFacility && <Link to="/choose-facility" className={buttonVariants({ variant: 'outline', className: 'min-h-12' })}>{t('session.switchFacility')}</Link>}
       <Link to={devicesPath} className={buttonVariants({ variant: 'outline', className: 'min-h-12' })}>{t('myDevices.link')}</Link>
       {groups.map(g => (
         <section key={g.group} className="flex flex-col gap-1">
           <h2 className="text-xs font-bold tracking-[.09em] text-muted-foreground uppercase">{t(`nav.group.${g.group}`)}</h2>
-          <ul className="flex flex-col divide-y rounded-xl border bg-card">
-            {g.items.map(item => {
-              const Icon = navIcons[item.id];
-              return (
-                <li key={item.id}>
-                  <Link to={item.path} className="flex min-h-12 items-center gap-3 px-4 font-semibold">
-                    <Icon className="size-5 text-muted-foreground" aria-hidden />{t(`nav.${item.id}`)}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+          <Card className="gap-0 p-0">
+            <ul className="flex flex-col divide-y">
+              {g.items.map(item => {
+                const Icon = navIcons[item.id];
+                return (
+                  <li key={item.id}>
+                    <Link to={item.path} className="flex min-h-12 items-center gap-3 px-4 font-semibold">
+                      <Icon className="size-5 text-muted-foreground" aria-hidden />{t(`nav.${item.id}`)}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </Card>
         </section>
       ))}
       {languageSwitcher}

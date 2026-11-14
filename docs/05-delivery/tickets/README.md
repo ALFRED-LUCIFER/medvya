@@ -5,7 +5,7 @@
 
 Jira-style tickets for every PRD v2 phase (P0–P8). The source of truth is `docs/05-delivery/tickets/_source/*.tickets`. Run `python3 -I tools/tickets/build.py` to regenerate the ticket files, [schedule.md](schedule.md), [jira-import.csv](jira-import.csv) and [coverage-report.md](coverage-report.md).
 
-**356 tickets** in 53 epics · **853.75 dev-days** estimated · confidence: High 100 · Medium 195 · Low 61 · coverage: ✅ every requirement, screen, exit criterion, NFR, package item and dependency is ticketed
+**365 tickets** in 53 epics · **862.75 dev-days** estimated · confidence: High 100 · Medium 204 · Low 61 · coverage: ✅ every requirement, screen, exit criterion, NFR, package item and dependency is ticketed
 
 Conventions, Definition of Ready/Done and the confidence scale: [docs/05-delivery](../README.md).
 
@@ -16,14 +16,14 @@ Conventions, Definition of Ready/Done and the confidence scale: [docs/05-deliver
 | P2 Doctor workspace and EMR core | [P2-doctor-workspace](P2-doctor-workspace/README.md) | 21 Dec 2026 → 05 Feb 2027 | 61 | 0 | 0 | 136.75 | 35 | 79% |
 | P3 AI-drafted notes under clinician review | [P3-ai-scribe](P3-ai-scribe/README.md) | 18 Jan 2027 → 12 Mar 2027 | 27 | 0 | 0 | 57.5 | 40 | 80% |
 | P4 Billing, care follow-up and patient portal | [P4-clinic-operations](P4-clinic-operations/README.md) | 15 Feb 2027 → 23 Apr 2027 | 34 | 1 | 0 | 75.5 | 50 | 78% |
-| P5 Commercial launch v1.0 | [P5-commercial-launch](P5-commercial-launch/README.md) | 05 Apr 2027 → 04 Jun 2027 | 54 | 0 | 0 | 161.5 | 45 | 65% |
+| P5 Commercial launch v1.0 | [P5-commercial-launch](P5-commercial-launch/README.md) | 05 Apr 2027 → 04 Jun 2027 | 63 | 0 | 0 | 170.5 | 45 | 66% |
 | P6 Wearable capture and advanced AI | [P6-clip-advanced-ai](P6-clip-advanced-ai/README.md) | 07 Jun 2027 → 13 Aug 2027 | 10 | 0 | 0 | 32 | 50 | 59% |
 | P7 Hospital enterprise and integrations | [P7-hospital-enterprise](P7-hospital-enterprise/README.md) | 28 Jun 2027 → 17 Dec 2027 | 13 | 0 | 0 | 48 | 125 | 66% |
 | P8 Scale and specialty features | [P8-scale-specialty](P8-scale-specialty/README.md) | 18 Oct 2027 → 14 Jan 2028 | 7 | 0 | 0 | 33 | 65 | 56% |
 
 ## Capacity check (read this before committing to dates)
 
-PRD v2 plans **v1.0 GA in week 32** for one full-time developer with AI help, about **160 working days**. The P0–P5 tickets add up to **740.75 ideal dev-days**, roughly **4.6×** that capacity. Phase overlap does not create capacity for a single developer. Before scope freeze, choose one or more of: add a second developer (or a part-time contractor for infra, security and print layouts); cut SHOULD items from P1–P5 (public site, doctor discovery, dictation, voice assistant, clinic messages); launch one country only (ADR-002), which removes the UAE pack from the critical path; or move the GA date. Weeks over capacity are flagged ⚠ in [schedule.md](schedule.md). Estimates are ideal days and should be recalibrated against actual velocity after P0.
+PRD v2 plans **v1.0 GA in week 32** for one full-time developer with AI help, about **160 working days**. The P0–P5 tickets add up to **749.75 ideal dev-days**, roughly **4.7×** that capacity. Phase overlap does not create capacity for a single developer. Before scope freeze, choose one or more of: add a second developer (or a part-time contractor for infra, security and print layouts); cut SHOULD items from P1–P5 (public site, doctor discovery, dictation, voice assistant, clinic messages); launch one country only (ADR-002), which removes the UAE pack from the critical path; or move the GA date. Weeks over capacity are flagged ⚠ in [schedule.md](schedule.md). Estimates are ideal days and should be recalibrated against actual velocity after P0.
 
 
 ## Lowest-confidence tickets (resolve these first)

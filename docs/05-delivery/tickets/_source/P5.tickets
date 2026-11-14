@@ -1226,3 +1226,279 @@ tests:
 notes:
 - Regression risk: medium.
 - MDV-P5-023 (dark and high contrast) gains a dependency on the tone-token ticket in the same change to the ticket source.
+
+=== MDV-P5-055
+title: Native rows and tabs give screen readers the flag's words, not icon glyphs; each Mark reviewed names its result
+type: Story
+epic: MDV-P1-E12
+prd: P5-10
+screens: X-01
+priority: SHOULD
+roles: Doctor
+labels: mobile, a11y, safety, epic: ux programme, track: safety, wave: S3
+estimate: 1
+weeks: 10
+depends: MDV-P5-053
+confidence: 75 | Found on a simulator with synthetic data; the remedy is small and local.
+sources: docs/product-ux-audit/13-mobile-simulator-audit.md (M-01, M-02, M-10)
+desc:
+Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Created from the mobile simulator audit of MDV-P5-053, findings M-01, M-02, M-10.
+
+Findings and evidence: docs/product-ux-audit/13-mobile-simulator-audit.md, findings M-01, M-02, M-10, with screenshots of synthetic cast data in docs/product-ux-audit/evidence/mobile-simulator.
+Components affected: packages/ui-native ListRow, Icon and the tab bar; the clinician Inbox. No new component.
+Prerequisites and blocked by: MDV-P5-053. Not in the pilot flow: the pilot runs on the web app.
+Clinical sign-off: Not required.
+Deliberately NOT in this ticket: real data in the apps (MDV-P5-033) and store builds.
+ac:
+- Given a patient row with an allergy or critical flag, when a screen reader reads it, then its accessible name includes the flag's words
+- Given any tab, banner or row with an icon, when the accessibility tree is read on Android and iOS, then no accessible name contains an icon glyph
+- Given two results in the Inbox, when their buttons are read, then each Mark reviewed names its patient and result
+- Given the change, when the ui-native tests run, then a test fails if the flag is dropped from the row's label (mutation check)
+tests:
+- ui-native or app unit tests for the changed behaviour; a simulator check recorded on the PR with synthetic data only.
+notes:
+- Regression risk: low.
+
+=== MDV-P5-056
+title: Arabic lays out right to left in both Expo apps
+type: Story
+epic: MDV-P1-E12
+prd: P5-10
+screens: X-01
+priority: SHOULD
+roles: Doctor, Patient
+labels: mobile, i18n, rtl, a11y, epic: ux programme, track: safety, wave: S3
+estimate: 1
+weeks: 10
+depends: MDV-P5-053
+confidence: 75 | Found on a simulator with synthetic data; the remedy is small and local.
+sources: docs/product-ux-audit/13-mobile-simulator-audit.md (M-03)
+desc:
+Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Created from the mobile simulator audit of MDV-P5-053, findings M-03.
+
+Findings and evidence: docs/product-ux-audit/13-mobile-simulator-audit.md, findings M-03, with screenshots of synthetic cast data in docs/product-ux-audit/evidence/mobile-simulator.
+Components affected: both apps' app.json (expo-localization supportsRTL) and the start-up locale handling. No new component.
+Prerequisites and blocked by: MDV-P5-053. Not in the pilot flow: the pilot runs on the web app.
+Clinical sign-off: Not required.
+Deliberately NOT in this ticket: real data in the apps (MDV-P5-033) and store builds.
+ac:
+- Given the device in Arabic, when either app opens, then it lays out right to left after at most one reload, in Expo Go and in a development build
+- Given the device in English or Hindi, when either app opens, then it lays out left to right
+- Given the change, when the PR is opened, then it holds screenshots of both apps in Arabic and English
+tests:
+- ui-native or app unit tests for the changed behaviour; a simulator check recorded on the PR with synthetic data only.
+notes:
+- Regression risk: low.
+
+=== MDV-P5-057
+title: One status icon map shared by web and native; allergy has its own icon and says Allergy
+type: Story
+epic: MDV-P1-E12
+prd: P5-10
+screens: X-01
+priority: SHOULD
+roles: Doctor, Patient
+labels: mobile, design-system, a11y, safety, epic: ux programme, track: safety, wave: S3
+estimate: 1
+weeks: 10
+depends: MDV-P5-053
+confidence: 75 | Found on a simulator with synthetic data; the remedy is small and local.
+sources: docs/product-ux-audit/13-mobile-simulator-audit.md (M-04, C-21)
+desc:
+Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Created from the mobile simulator audit of MDV-P5-053, findings M-04, C-21.
+
+Findings and evidence: docs/product-ux-audit/13-mobile-simulator-audit.md, findings M-04, C-21, with screenshots of synthetic cast data in docs/product-ux-audit/evidence/mobile-simulator.
+Components affected: packages/tokens (one map), packages/ui and packages/ui-native status chips. No new component.
+Prerequisites and blocked by: MDV-P5-053. Not in the pilot flow: the pilot runs on the web app.
+Clinical sign-off: Not required.
+Deliberately NOT in this ticket: real data in the apps (MDV-P5-033) and store builds.
+ac:
+- Given a status, when it is shown on web and on native, then both use the same glyph and words from one map in packages/tokens
+- Given an allergy, when its chip is shown on native, then it reads Allergy: <substance> with a glyph not used for medicines
+- Given any status, when shown, then it is never conveyed by colour alone (icon and words)
+tests:
+- ui-native or app unit tests for the changed behaviour; a simulator check recorded on the PR with synthetic data only.
+notes:
+- Regression risk: low.
+
+=== MDV-P5-058
+title: Disabled mobile actions say why on screen; the message field is disabled when sending is
+type: Story
+epic: MDV-P1-E12
+prd: P5-10
+screens: X-01
+priority: COULD
+roles: Doctor, Patient
+labels: mobile, a11y, epic: ux programme, track: safety, wave: S3
+estimate: 1
+weeks: 10
+depends: MDV-P5-053
+confidence: 75 | Found on a simulator with synthetic data; the remedy is small and local.
+sources: docs/product-ux-audit/13-mobile-simulator-audit.md (M-05, M-09)
+desc:
+Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Created from the mobile simulator audit of MDV-P5-053, findings M-05, M-09.
+
+Findings and evidence: docs/product-ux-audit/13-mobile-simulator-audit.md, findings M-05, M-09, with screenshots of synthetic cast data in docs/product-ux-audit/evidence/mobile-simulator.
+Components affected: packages/ui-native Button disabled state; the patient Messages composer. No new component.
+Prerequisites and blocked by: MDV-P5-053. Not in the pilot flow: the pilot runs on the web app.
+Clinical sign-off: Not required.
+Deliberately NOT in this ticket: real data in the apps (MDV-P5-033) and store builds.
+ac:
+- Given a disabled action, when it is shown, then its reason is visible as text under it, not only in the accessibility hint
+- Given a disabled button, when contrast is computed, then its label meets 4.5:1 with colours from tokens, not opacity
+- Given sending is not available, when Messages opens, then the field cannot take text that would be lost
+tests:
+- ui-native or app unit tests for the changed behaviour; a simulator check recorded on the PR with synthetic data only.
+notes:
+- Regression risk: low.
+
+=== MDV-P5-059
+title: Biometric wording per platform, with a Not now on the offer
+type: Story
+epic: MDV-P1-E12
+prd: P5-10
+screens: X-01
+priority: COULD
+roles: Doctor, Patient
+labels: mobile, i18n, epic: ux programme, track: safety, wave: S3
+estimate: 1
+weeks: 10
+depends: MDV-P5-053
+confidence: 75 | Found on a simulator with synthetic data; the remedy is small and local.
+sources: docs/product-ux-audit/13-mobile-simulator-audit.md (M-06)
+desc:
+Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Created from the mobile simulator audit of MDV-P5-053, findings M-06.
+
+Findings and evidence: docs/product-ux-audit/13-mobile-simulator-audit.md, findings M-06, with screenshots of synthetic cast data in docs/product-ux-audit/evidence/mobile-simulator.
+Components affected: the sign-in biometric offer, Account, Profile and Welcome strings in en, hi and ar. No new component.
+Prerequisites and blocked by: MDV-P5-053. Not in the pilot flow: the pilot runs on the web app.
+Clinical sign-off: Not required.
+Deliberately NOT in this ticket: real data in the apps (MDV-P5-033) and store builds.
+ac:
+- Given Android, when any screen mentions biometrics, then it never says Face ID
+- Given iOS, when the device has Face ID or Touch ID, then the matching word is used
+- Given the biometric offer after sign-in, when it shows, then it has a Not now that leaves biometrics off
+tests:
+- ui-native or app unit tests for the changed behaviour; a simulator check recorded on the PR with synthetic data only.
+notes:
+- Regression risk: low.
+
+=== MDV-P5-060
+title: Mobile footer actions stay above the keyboard
+type: Story
+epic: MDV-P1-E12
+prd: P5-10
+screens: X-01
+priority: COULD
+roles: Doctor, Patient
+labels: mobile, a11y, epic: ux programme, track: safety, wave: S3
+estimate: 1
+weeks: 10
+depends: MDV-P5-053
+confidence: 75 | Found on a simulator with synthetic data; the remedy is small and local.
+sources: docs/product-ux-audit/13-mobile-simulator-audit.md (M-07)
+desc:
+Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Created from the mobile simulator audit of MDV-P5-053, findings M-07.
+
+Findings and evidence: docs/product-ux-audit/13-mobile-simulator-audit.md, findings M-07, with screenshots of synthetic cast data in docs/product-ux-audit/evidence/mobile-simulator.
+Components affected: packages/ui-native Screen footer. No new component.
+Prerequisites and blocked by: MDV-P5-053. Not in the pilot flow: the pilot runs on the web app.
+Clinical sign-off: Not required.
+Deliberately NOT in this ticket: real data in the apps (MDV-P5-033) and store builds.
+ac:
+- Given the keyboard is up on clinician sign-in or the patient's mobile number, when the screen is shown, then the primary button is visible without closing the keyboard
+tests:
+- ui-native or app unit tests for the changed behaviour; a simulator check recorded on the PR with synthetic data only.
+notes:
+- Regression risk: low.
+
+=== MDV-P5-061
+title: Patient choices on Profile: honest wording until they can be changed in the app
+type: Story
+epic: MDV-P1-E12
+prd: P5-10
+screens: X-01
+priority: SHOULD
+roles: Patient
+labels: mobile, consent, epic: ux programme, track: safety, wave: S3
+estimate: 1
+weeks: 10
+depends: MDV-P5-053
+confidence: 75 | Found on a simulator with synthetic data; the remedy is small and local.
+sources: docs/product-ux-audit/13-mobile-simulator-audit.md (M-08)
+desc:
+Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Created from the mobile simulator audit of MDV-P5-053, findings M-08.
+
+Findings and evidence: docs/product-ux-audit/13-mobile-simulator-audit.md, findings M-08, with screenshots of synthetic cast data in docs/product-ux-audit/evidence/mobile-simulator.
+Components affected: the patient Profile Your choices section. No new component.
+Prerequisites and blocked by: MDV-P5-053. Not in the pilot flow: the pilot runs on the web app.
+Clinical sign-off: Not required.
+Deliberately NOT in this ticket: real data in the apps (MDV-P5-033) and store builds.
+ac:
+- Given Profile, when Your choices is shown and no control exists, then it says how to change them (ask the clinic) and never Change any time
+- Given a choice that has a control, when shown, then Change any time may appear
+- Given the new wording, when it ships, then the privacy reviewer has agreed it (recorded on the issue)
+tests:
+- ui-native or app unit tests for the changed behaviour; a simulator check recorded on the PR with synthetic data only.
+notes:
+- Regression risk: low.
+
+=== MDV-P5-062
+title: Development cast dates relative to today in both mobile apps
+type: Task
+epic: MDV-P1-E12
+prd: P5-10
+screens: X-01
+priority: COULD
+roles: Developer
+labels: mobile, dev-data, epic: ux programme, track: safety, wave: S3
+estimate: 1
+weeks: 10
+depends: MDV-P5-053
+confidence: 75 | Found on a simulator with synthetic data; the remedy is small and local.
+sources: docs/product-ux-audit/13-mobile-simulator-audit.md (M-11)
+desc:
+Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Created from the mobile simulator audit of MDV-P5-053, findings M-11.
+
+Findings and evidence: docs/product-ux-audit/13-mobile-simulator-audit.md, findings M-11, with screenshots of synthetic cast data in docs/product-ux-audit/evidence/mobile-simulator.
+Components affected: mobile/*/src/dev/cast.ts. No new component.
+Prerequisites and blocked by: MDV-P5-053. Not in the pilot flow: the pilot runs on the web app.
+Clinical sign-off: Not required.
+Deliberately NOT in this ticket: real data in the apps (MDV-P5-033) and store builds.
+ac:
+- Given any day, when the development cast loads, then upcoming items are in the future and past items in the past
+- Given the cast, when pnpm check:synthetic runs, then it still passes
+tests:
+- ui-native or app unit tests for the changed behaviour; a simulator check recorded on the PR with synthetic data only.
+notes:
+- Regression risk: low.
+
+=== MDV-P5-063
+title: Patient tab names match their screens; mobile icons scale with font size
+type: Story
+epic: MDV-P1-E12
+prd: P5-10
+screens: X-01
+priority: COULD
+roles: Patient
+labels: mobile, a11y, epic: ux programme, track: safety, wave: S3
+estimate: 1
+weeks: 10
+depends: MDV-P5-053
+confidence: 75 | Found on a simulator with synthetic data; the remedy is small and local.
+sources: docs/product-ux-audit/13-mobile-simulator-audit.md (M-12)
+desc:
+Programme: MDV-P1-E12 · UX programme: safe, cohesive clinic workspace (from the Nov 2026 product UX audit). Created from the mobile simulator audit of MDV-P5-053, findings M-12.
+
+Findings and evidence: docs/product-ux-audit/13-mobile-simulator-audit.md, findings M-12, with screenshots of synthetic cast data in docs/product-ux-audit/evidence/mobile-simulator.
+Components affected: the patient tab bar and screen titles; packages/ui-native Icon. No new component.
+Prerequisites and blocked by: MDV-P5-053. Not in the pilot flow: the pilot runs on the web app.
+Clinical sign-off: Not required.
+Deliberately NOT in this ticket: real data in the apps (MDV-P5-033) and store builds.
+ac:
+- Given the Book tab, when it opens, then the screen title matches the tab's name and no two tabs open screens of the same name
+- Given 200 % system font, when a chip or button is shown, then its icon grows with the text up to a cap
+tests:
+- ui-native or app unit tests for the changed behaviour; a simulator check recorded on the PR with synthetic data only.
+notes:
+- Regression risk: low.

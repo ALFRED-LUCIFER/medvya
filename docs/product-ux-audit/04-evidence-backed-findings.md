@@ -470,6 +470,8 @@ All three reviewers rate this a pilot blocker for prescribing. The pilot doctor 
 | Depends on | Dependency change · Confidence: high · Validation owner: engineering |
 | From | Lead arbiter, C-20, C-21 |
 
+Follow-up (14 Nov, MDV-P5-053): the error did not reproduce on a clean install, and the simulator audit is in [13-mobile-simulator-audit.md](13-mobile-simulator-audit.md).
+
 ### F-35 · The schedule's day view fills with slots that have passed
 
 | | |

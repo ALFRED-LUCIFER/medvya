@@ -18,7 +18,7 @@ export function Button({ label, onPress, variant = 'primary', icon, disabled, bu
   const fg = { primary: theme.color.card, secondary: theme.color.ink900, ghost: solid, inverse: solid }[variant];
   const look = {
     primary: { backgroundColor: solid },
-    secondary: { backgroundColor: theme.color.card, borderWidth: 1, borderColor: theme.color.line },
+    secondary: { backgroundColor: theme.color.card, borderWidth: 1, borderColor: theme.color.input },
     ghost: { backgroundColor: 'transparent' },
     inverse: { backgroundColor: theme.color.card },
   }[variant];
@@ -61,7 +61,7 @@ export function TextField({ label, error, hint, style, ...input }: FieldProps) {
       <TextInput
         accessibilityLabel={label}
         accessibilityHint={error ?? hint}
-        placeholderTextColor={theme.color.ink400}
+        placeholderTextColor={theme.color.ink600}
         selectionColor={solid}
         style={[styles.input, { minHeight: Math.max(target, 52), fontSize: body + 1 }, error ? { borderColor: theme.color.danger700 } : null, style]}
         {...input}
@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
   button: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, paddingHorizontal: 20 },
   off: { opacity: 0.45 },
   pressed: { opacity: 0.8 },
-  iconButton: { alignItems: 'center', justifyContent: 'center', borderRadius: 12, borderWidth: 1, borderColor: theme.color.line, backgroundColor: theme.color.card },
+  iconButton: { alignItems: 'center', justifyContent: 'center', borderRadius: 12, borderWidth: 1, borderColor: theme.color.input, backgroundColor: theme.color.card },
   badge: { position: 'absolute', top: -4, end: -4, minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 5, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.color.danger700 },
   field: { gap: 6 },
   input: { borderWidth: 1, borderColor: theme.color.input, borderRadius: 12, paddingHorizontal: 14, color: theme.color.ink900, backgroundColor: theme.color.card },

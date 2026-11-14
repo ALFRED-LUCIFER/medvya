@@ -8,9 +8,9 @@
 **Day one:** Switch from the old system without closing, with history migrated, insurance checked at the desk and a paid subscription.  
 **Goal:** Everything a clinic owner needs to say yes: their data moved, no downtime, regulator-ready, learnable in one shift, and no lock-in.
 
-**Tickets:** 54 · **Estimate:** 161.5 dev-days vs **45 working days** in the window (OVER by 116.5 days: needs scope trade-off or overlap) · **Average confidence:** 65%
+**Tickets:** 63 · **Estimate:** 170.5 dev-days vs **45 working days** in the window (OVER by 125.5 days: needs scope trade-off or overlap) · **Average confidence:** 66%
 
-**Status:** To do 54
+**Status:** To do 63
 
 ## Epics
 
@@ -31,6 +31,15 @@
 | Key | Status | Title | Type | Prio | PRD | Screens | Est | Weeks | Dates | Confidence |
 |---|---|---|---|---|---|---|---|---|---|---|
 | [MDV-P5-053](MDV-P5-053.md) | To do | Fix the Expo bundling error, then run the same UX audit on the mobile apps in a simulator | Task | COULD | P5-10 | X-01 | 1.5 | 9–9 | 21 Dec → 25 Dec 2026 | 70% Medium |
+| [MDV-P5-055](MDV-P5-055.md) | To do | Native rows and tabs give screen readers the flag's words, not icon glyphs; each Mark reviewed names its result | Story | SHOULD | P5-10 | X-01 | 1 | 10–10 | 28 Dec → 01 Jan 2027 | 75% Medium |
+| [MDV-P5-056](MDV-P5-056.md) | To do | Arabic lays out right to left in both Expo apps | Story | SHOULD | P5-10 | X-01 | 1 | 10–10 | 28 Dec → 01 Jan 2027 | 75% Medium |
+| [MDV-P5-057](MDV-P5-057.md) | To do | One status icon map shared by web and native; allergy has its own icon and says Allergy | Story | SHOULD | P5-10 | X-01 | 1 | 10–10 | 28 Dec → 01 Jan 2027 | 75% Medium |
+| [MDV-P5-058](MDV-P5-058.md) | To do | Disabled mobile actions say why on screen; the message field is disabled when sending is | Story | COULD | P5-10 | X-01 | 1 | 10–10 | 28 Dec → 01 Jan 2027 | 75% Medium |
+| [MDV-P5-059](MDV-P5-059.md) | To do | Biometric wording per platform, with a Not now on the offer | Story | COULD | P5-10 | X-01 | 1 | 10–10 | 28 Dec → 01 Jan 2027 | 75% Medium |
+| [MDV-P5-060](MDV-P5-060.md) | To do | Mobile footer actions stay above the keyboard | Story | COULD | P5-10 | X-01 | 1 | 10–10 | 28 Dec → 01 Jan 2027 | 75% Medium |
+| [MDV-P5-061](MDV-P5-061.md) | To do | Patient choices on Profile: honest wording until they can be changed in the app | Story | SHOULD | P5-10 | X-01 | 1 | 10–10 | 28 Dec → 01 Jan 2027 | 75% Medium |
+| [MDV-P5-062](MDV-P5-062.md) | To do | Development cast dates relative to today in both mobile apps | Task | COULD | P5-10 | X-01 | 1 | 10–10 | 28 Dec → 01 Jan 2027 | 75% Medium |
+| [MDV-P5-063](MDV-P5-063.md) | To do | Patient tab names match their screens; mobile icons scale with font size | Story | COULD | P5-10 | X-01 | 1 | 10–10 | 28 Dec → 01 Jan 2027 | 75% Medium |
 | [MDV-P5-001](MDV-P5-001.md) | To do | Design the 11 new P5 screens (N-04 … N-14) before build | Spike | MUST | P5-01, P5-02, P5-04, P5-05, P5-06, P5-07, P5-08, P5-09 | N-04, N-05, N-06, N-07, N-08, N-09, N-10, N-11, N-12, N-13, N-14 | 4 | 22–24 | 22 Mar → 09 Apr 2027 | 60% Low |
 | [MDV-P5-002](MDV-P5-002.md) | To do | Migration: read-only source connection via self-hosted integration runtime (Oracle, SQL Server, MySQL, CSV/Excel) (N-04) | Story | MUST | P5-01 | N-04 | 3 | 24–25 | 05 Apr → 16 Apr 2027 | 65% Medium |
 | [MDV-P5-054](MDV-P5-054.md) | To do | Later: date and time pickers and a combobox in the app language; dark and high contrast only after the tone tokens | Story | COULD | P5-10 | X-02 | 4 | 24–24 | 05 Apr → 09 Apr 2027 | 55% Low |

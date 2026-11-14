@@ -15,11 +15,11 @@ function Switch({ className, ...props }: React.ComponentProps<typeof SwitchPrimi
     >
       <span
         data-slot="switch-track"
-        className="inline-flex h-[1.15rem] w-8 items-center rounded-full border border-transparent shadow-xs transition-colors group-disabled/switch:opacity-50 group-data-[state=checked]/switch:bg-primary group-data-[state=unchecked]/switch:bg-input dark:group-data-[state=unchecked]/switch:bg-input/80"
+        className="inline-flex h-[1.15rem] w-8 items-center rounded-full border border-transparent shadow-xs transition-[background-color] duration-fast ease-out group-disabled/switch:opacity-50 group-data-[state=checked]/switch:bg-primary group-data-[state=unchecked]/switch:bg-input dark:group-data-[state=unchecked]/switch:bg-input/80"
       >
         <SwitchPrimitive.Thumb
           data-slot="switch-thumb"
-          className="pointer-events-none block size-4 rounded-full bg-background ring-0 transition-transform data-[state=checked]:translate-x-[calc(100%-2px)] rtl:data-[state=checked]:-translate-x-[calc(100%-2px)] data-[state=unchecked]:translate-x-0 dark:data-[state=checked]:bg-primary-foreground dark:data-[state=unchecked]:bg-foreground"
+          className="pointer-events-none block size-4 rounded-full bg-background ring-0 transition-transform duration-fast ease-out data-[state=checked]:translate-x-[calc(100%-2px)] rtl:data-[state=checked]:-translate-x-[calc(100%-2px)] data-[state=unchecked]:translate-x-0 dark:data-[state=checked]:bg-primary-foreground dark:data-[state=unchecked]:bg-foreground"
         />
       </span>
     </SwitchPrimitive.Root>

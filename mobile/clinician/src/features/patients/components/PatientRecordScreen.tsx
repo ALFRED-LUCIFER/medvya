@@ -1,6 +1,7 @@
 import { ltr, useI18n, type MessageKey } from '@medvya/i18n';
 import { Avatar, Banner, Card, Chip, Icon, IconButton, ListRow, Loading, Screen, Section, Stat, StateMessage, Text } from '@medvya/ui-native';
 import { theme } from '@medvya/tokens';
+import { statuses } from '@medvya/tokens/status';
 import { I18nManager, StyleSheet, View } from 'react-native';
 import type { PatientRecord } from '../domain/patients';
 
@@ -35,7 +36,7 @@ export function PatientRecordScreen(vm: Props) {
       {r.allergies.length > 0
         ? r.allergies.map(a => (
             <View key={a.substance} style={styles.allergy} accessible accessibilityRole="alert">
-              <Icon name="medication" color={theme.color.danger700} />
+              <Icon name={statuses.allergy.native} color={theme.color.danger700} />
               <Text variant="label" tone={theme.color.danger700} style={styles.flex}>
                 {t('mobile.record.allergy', { substance: a.substance, reaction: a.reaction })}
               </Text>
@@ -55,9 +56,9 @@ export function PatientRecordScreen(vm: Props) {
           <Card style={styles.list}>
             {r.sinceLastVisit.length === 0 ? <Text variant="caption">{t('mobile.record.nothingNew')}</Text> : r.sinceLastVisit.map((f, i) => (
               <View key={f.text} style={i > 0 && styles.divider}>
-                <ListRow title={f.text} trailing={f.status === 'verified'
-                  ? <Chip label={t('mobile.record.verified')} tone="success" icon="verified" />
-                  : <Chip label={t('mobile.record.aiUnreviewed')} tone="ai" icon="auto-awesome" />} />
+                <ListRow title={f.text} chips={[f.status === 'verified'
+                  ? { label: t('mobile.record.verified'), tone: 'success', icon: 'verified' }
+                  : { label: t('mobile.record.aiUnreviewed'), tone: 'ai', icon: 'auto-awesome' }]} />
               </View>
             ))}
           </Card>

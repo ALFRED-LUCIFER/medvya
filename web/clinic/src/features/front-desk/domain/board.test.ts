@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { loadCatalog, makeI18n } from '@medvya/i18n';
-import { aheadWords, canReprint, canUndo, endKinds, inToday, groupByColumn, needsRebooking, minutesSince, ageYears, moveError, nextConsultId, nextState, serverNow, visibleColumns, walkInError, type BoardCard } from './board';
+import { ageYears, aheadWords, canReprint, canUndo, echoMs, endKinds, groupByColumn, inToday, isFrontDeskView, isOthersChange, listGroups, minutesSince, moveError, needsRebooking, nextConsultId, nextState, serverNow, updatedMs, visibleColumns, walkInError, withUpdated, type BoardCard } from './board';
 
 describe('walk-in (MDV-P1-025)', () => {
   it('tells "no free slot" (choose a doctor to queue with) and "busy" from other failures', () => {
@@ -139,5 +139,62 @@ describe('how many are ahead (MDV-P1-103, decision 10)', () => {
     await loadCatalog('ar');
     expect([0, 1, 2].map(n => aheadWords(makeI18n('en', 'IN'), n))).toEqual(['Next in line', '1 ahead', '2 ahead']);
     expect([0, 1, 2, 3].map(n => aheadWords(makeI18n('ar', 'AE'), n))).toEqual(['التالي في الدور', 'قبله مريض واحد', 'قبله مريضان', 'قبله 3 مرضى']);
+  });
+});
+
+describe('Updated mark (MDV-P2-056)', () => {
+  it('marks the visits the live connection reported for 5 seconds and keeps earlier marks only while they last', () => {
+    const at = 1_000_000;
+    const first = withUpdated({}, ['a2'], at);
+    expect(first).toEqual({ a2: at + updatedMs });
+    // 3 s later a3 changes: a2 keeps its own end, a3 gets 5 s from now.
+    expect(withUpdated(first, ['a3'], at + 3_000)).toEqual({ a2: at + updatedMs, a3: at + 3_000 + updatedMs });
+    // A fetch with nothing heard after a2's 5 s drops it.
+    expect(withUpdated(first, [], at + updatedMs)).toEqual({});
+  });
+
+  it('a message about a visit this desk is changing, or changed within 5 seconds, is its own change coming back', () => {
+    const at = 1_000_000;
+    const mine = new Map([['a1', Number.POSITIVE_INFINITY], ['a2', at + echoMs]]);
+    expect(isOthersChange(mine, 'a1', at + 60_000)).toBe(false); // still in flight
+    expect(isOthersChange(mine, 'a2', at + echoMs - 1)).toBe(false);
+    expect(isOthersChange(mine, 'a2', at + echoMs)).toBe(true); // later: someone else moved it again
+    expect(isOthersChange(mine, 'a3', at)).toBe(true);
+  });
+});
+
+describe('the list view (MDV-P2-052)', () => {
+  const at = (m: number) => new Date(Date.parse('2026-10-19T03:00:00Z') + m * 60_000).toISOString();
+  const off = { nurse: false, billing: false };
+  // 20 booked and 6 waiting, as the ticket's example; one done.
+  const cards = [
+    ...Array.from({ length: 20 }, (_, i) => card(`b${i}`, 'Booked', at(60 + i * 10))),
+    ...Array.from({ length: 6 }, (_, i) => ({ ...card(`w${i}`, 'ReadyForDoctor', at(i)), queuePlace: 6 - i })), // the queue rule reverses arrival
+    card('d', 'Done', at(0)),
+  ];
+
+  it('puts the waiting group first, booked after the visits in progress and done last; empty groups are left out', () => {
+    const { statuses, groups } = listGroups(off, groupByColumn(cards), null);
+    expect(statuses).toEqual(['CheckedIn', 'ReadyForDoctor', 'InConsult', 'Booked', 'Done']); // steps that are off have no filter
+    expect(groups.map(g => [g.state, g.rows.length])).toEqual([['ReadyForDoctor', 6], ['Booked', 20], ['Done', 1]]);
+    expect(listGroups({ nurse: true, billing: true }, groupByColumn([]), null).statuses).toEqual(['CheckedIn', 'ReadyForDoctor', 'WithNurse', 'InConsult', 'Billing', 'Booked', 'Done']);
+  });
+
+  it('keeps the board\'s order within a group, the clinic\'s queue rule the display follows, and names the doctor', () => {
+    const columns = groupByColumn(cards);
+    const [waiting] = listGroups(off, columns, null).groups;
+    expect(waiting!.rows.map(r => r.id)).toEqual(columns.ReadyForDoctor.map(c => c.id));
+    expect(waiting!.rows.map(r => r.id)).toEqual(['w5', 'w4', 'w3', 'w2', 'w1', 'w0']);
+    expect(waiting!.rows[0]!.doctor).toBe('Dr. Arjun Rao (synthetic)');
+  });
+
+  it('shows only the pressed status, even when it has no visits', () => {
+    expect(listGroups(off, groupByColumn(cards), 'Booked').groups.map(g => g.state)).toEqual(['Booked']);
+    expect(listGroups(off, groupByColumn(cards), 'InConsult').groups).toEqual([{ state: 'InConsult', rows: [] }]);
+  });
+
+  it('knows its three views and nothing else', () => {
+    expect(['board', 'doctors', 'list'].map(isFrontDeskView)).toEqual([true, true, true]);
+    expect([null, '', 'Board', 'grid'].map(isFrontDeskView)).toEqual([false, false, false, false]);
   });
 });

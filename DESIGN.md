@@ -68,6 +68,7 @@ Two densities (ruling 2). Density is chosen by task. A write is never compact.
 |---|---|---|
 | Control height | 44 px | 36 px |
 | Table row | 48 px | 36 px |
+| Cell side padding | 12 px | 8 px |
 | Body text | 14/20 | 14/20, never smaller |
 | Typed clinical text | 16/24 | not allowed |
 
@@ -116,6 +117,7 @@ The palette does not change. A tone layer gives each meaning one colour pair on 
 | neutral | Everything else | |
 
 - Status is never colour alone: label always, icon where it helps.
+- One status map for every app: `packages/tokens/src/status.ts` gives each shared status its words, tone and glyph (Lucide on web, the same shape in Material on native). Web reads it through `statusIcons` in `@medvya/ui`; the Expo apps import it directly. Allergy has its own shield glyph, never the medicine or critical one (MDV-P5-057).
 - **One primary (filled) button per view:** the single next action for the signed-in user.
 - No raw hex colours in components.
 - Text contrast at least 4.5:1; large text and control borders at least 3:1.
@@ -141,9 +143,10 @@ A feature composes library components and does not style its own copy of a patte
 | Card, Section, PageMessage, EmptyState | Title, intro, actions; busy, error, empty, denied | MDV-P1-086 (#1182) |
 | SegmentedControl | The one view switch | MDV-P1-086 (#1182) |
 | SplitLayout, Sheet | Main and side pane; the side becomes a drawer under 1024 | MDV-P1-086 (#1182) |
+| Skeleton, SkeletonGroup | Placeholder blocks in the final layout: shown after 200 ms, opacity pulse, static under reduced motion; the group says Loading once | MDV-P2-056 (#1215) |
 | ConfirmDialog on End consultation | "Authorise now, discard, or end anyway" | MDV-P1-090 (#1186), clinical sign-off |
 
-Later: Combobox; date and time pickers in the app language; Skeleton; dark and high-contrast themes.
+Later: Combobox; date and time pickers in the app language; dark and high-contrast themes.
 
 **States.** Every interactive component defines: default, hover (pointer only), focus-visible (2 px ring, 2 px offset, at full colour at once), pressed or selected, disabled (grey fill, not opacity), loading (label kept, `aria-busy`), invalid (danger border and message), read-only.
 

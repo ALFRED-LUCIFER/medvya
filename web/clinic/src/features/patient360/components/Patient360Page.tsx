@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { ltr, useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, PatientBanner, ProvenanceTag, Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@medvya/ui';
+import { Button, buttonVariants, PatientBanner, ProvenanceTag, Skeleton, SkeletonGroup, Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@medvya/ui';
 import { Armchair, ArrowDown, ArrowUp, Baby, CircleAlert, CircleCheck, CircleHelp, Droplet, HeartPulse, Languages, User, Users } from 'lucide-react';
 import RequestAccess from '../../clinical-access/components/RequestAccess';
 import type { AccessReason } from '../../clinical-access/domain/clinicalAccess';
@@ -37,7 +37,15 @@ const stageIcon = { Adult: User, Child: Baby, Pregnancy: HeartPulse, OlderAdult:
  */
 export default function Patient360Page(p: Props) {
   const { t } = useI18n();
-  if (p.loading) return <p role="status">{t('patient360.loading')}</p>;
+  // The chart's layout while it loads (MDV-P2-056): banner, section buttons, then the first cards.
+  if (p.loading) return (
+    <SkeletonGroup label={t('patient360.loading')} className="flex flex-col gap-4">
+      <Skeleton className="h-24 rounded-xl" />
+      <Skeleton className="h-11" />
+      <Skeleton className="h-40 rounded-xl" />
+      <Skeleton className="h-64 rounded-xl" />
+    </SkeletonGroup>
+  );
   if (p.refusal) {
     return (
       <Message title={t('patient360.refused.title')} backPath={p.backPath}

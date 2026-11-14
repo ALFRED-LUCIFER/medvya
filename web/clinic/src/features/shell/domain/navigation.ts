@@ -3,7 +3,7 @@ import { seeAccess, type Access, type ActiveMembership, type Capability } from '
 export type NavGroup = 'clinical' | 'practice' | 'assistant' | 'admin';
 export type NavId =
   | 'today' | 'patients' | 'messages' | 'video' | 'referrals' | 'inbox' | 'carePlans'
-  | 'frontDesk' | 'schedule' | 'nurse' | 'billing' | 'devices' | 'settings';
+  | 'frontDesk' | 'schedule' | 'nurse' | 'billing' | 'devices' | 'clinicToday' | 'settings';
 
 export type NavItem = {
   /** The group only colours the bar beside the current item; the menu is one list in the role's order (blueprint section 3). */
@@ -32,6 +32,8 @@ export const navItems: readonly NavItem[] = [
   { id: 'nurse', path: '/nurse', group: 'practice', capability: 'VitalsAllergiesEntry', flag: 'clinical.nurse-intake', phase: 2 },
   { id: 'billing', path: '/billing', group: 'practice', capability: 'InvoicesPayments', flag: 'billing.invoices', phase: 4 },
   { id: 'devices', path: '/devices', group: 'assistant', capability: 'DevicePairingFleet', flag: 'assistant.devices', phase: 3 },
+  // The owner's Clinic today (MDV-P2-053): its API needs practice configuration, as Settings.
+  { id: 'clinicToday', path: '/clinic-today', group: 'admin', capability: 'StaffRolesIntegrations', access: ['Config'], phase: 1 },
   { id: 'settings', path: '/settings', group: 'admin', capability: 'StaffRolesIntegrations', phase: 1 },
 ];
 

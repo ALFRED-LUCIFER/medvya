@@ -6,6 +6,19 @@
 @import "tw-animate-css";
 @import "@medvya/tokens/tokens.css";
 
+/*
+ * The two long motions of DESIGN.md's Motion table (MDV-P2-056); everything else uses duration-fast and ease-out.
+ * Both are colour or opacity only, nothing moves, and the reduced-motion rule below stops both.
+ */
+@theme {
+  /* A board card changed elsewhere: its background fades from the brand tint to its own white. */
+  --animate-updated: updated 1200ms var(--ease-out);
+  /* A skeleton block: opacity 1 → 0.6 → 1. */
+  --animate-skeleton: skeleton 1200ms ease-in-out infinite;
+  @keyframes updated { from { background-color: var(--color-brand-50); } }
+  @keyframes skeleton { 50% { opacity: 0.6; } }
+}
+
 @layer base {
   html { background: var(--color-background); color: var(--color-foreground); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
   * { border-color: var(--color-border); }

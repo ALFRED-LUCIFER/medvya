@@ -4,5 +4,5 @@ import { Consult } from './FrontDeskRoute';
 
 /** Composition only: the doctor's My day (D-01, MDV-P2-002) for the active facility; "Start consultation" is the board's. */
 export default function TodayRoute({ facilityId, online, userId }: { facilityId: string; online: boolean; userId: string }) {
-  return <DoctorTodayPage {...useTodayController(facilityId, online, userId)} chartPath={id => `/patients/${id}`} consultPath={id => `/consult/${id}`} consultAction={card => <Consult key={card.id} card={card} online={online} />} />;
+  return <DoctorTodayPage {...useTodayController(facilityId, online, userId)} chartPath={id => `/patients/${id}`} consultPath={id => `/consult/${id}`} consultAction={(card, primary) => <Consult key={card.id} card={card} online={online} primary={primary} />} />;
 }

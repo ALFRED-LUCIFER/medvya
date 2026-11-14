@@ -102,6 +102,9 @@ public sealed record PreviousNote(Guid EncounterId, DateTimeOffset SignedAt, str
 /// </summary>
 public sealed record PendingNote(Guid EncounterId, Guid PatientId, DateTimeOffset StartedAt, bool Drafted, bool NoteSigned, bool OpenPastDay);
 
+/// <summary>One clinician's notes to sign at a facility (MDV-P2-053, the owner's Clinic today): how many, and how many from before the facility's today.</summary>
+public sealed record NotesToSign(Guid ClinicianId, int Count, int BeforeToday);
+
 /// <summary>
 /// Consult notes (MDV-P2-009). Clinical access to the encounter's patient at its facility for Patient 360 at Full (role, care relationship,
 /// facility), and one audit event with the patient and no note text. Null: no such encounter in this tenant.
@@ -165,4 +168,11 @@ public interface IConsultNotes
     Task<(IReadOnlyList<PendingNote> Notes, bool More)> PendingAsync(Guid facilityId, CancellationToken cancellationToken = default);
 
     public const int MaxPending = 50;
+
+    /// <summary>
+    /// Notes to sign per clinician at this facility (MDV-P2-053): the encounters each led with no signed note, the same rule as <see cref="PendingAsync"/>'s
+    /// notes to sign. Counts only, nothing about a patient. No access check of its own: the caller checks practice configuration first.
+    /// shortcut: counts every unsigned note, also of a patient the clinician may no longer treat (My day leaves those out); per-patient checks if the two ever differ in a pilot.
+    /// </summary>
+    Task<IReadOnlyList<NotesToSign>> NotesToSignAsync(Guid facilityId, CancellationToken cancellationToken = default);
 }

@@ -7,7 +7,7 @@
     "web/clinic/src/features/session/components/AuthFrame.tsx": 5,
     "web/clinic/src/features/session/components/FacilityPicker.tsx": 1,
     "web/clinic/src/features/shell/components/AppShell.tsx": 1,
-    "web/clinic/src/features/today/components/DoctorTodayPage.tsx": 8,
+    "web/clinic/src/features/today/components/DoctorTodayPage.tsx": 4,
     "web/platform-admin/src/features/shell/components/ConsoleShell.tsx": 2
   },
   "rawHexLibrary": {},
@@ -16,7 +16,6 @@
     "web/platform-admin/src/features/approvals/components/DocumentViewer.tsx": 1
   },
   "smGridCols": {
-    "web/clinic/src/features/audit-log/components/AuditLogPanel.tsx": 1,
     "web/clinic/src/features/child-health/components/ChildHealthCard.tsx": 1,
     "web/clinic/src/features/child-health/components/GrowthCard.tsx": 1,
     "web/clinic/src/features/encounters/components/NoteParts.tsx": 1,

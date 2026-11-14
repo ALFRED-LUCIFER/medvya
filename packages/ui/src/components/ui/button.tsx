@@ -5,9 +5,9 @@ import { Slot } from "radix-ui"
 import { cn } from "#lib/utils"
 
 // Medvya buttons (Handoff §1): 44px minimum target, bold label, disabled shows a grey fill rather than opacity.
-// Focus uses the global 2px ring from styles.css.
+// Focus uses the global 2px ring from styles.css. Named transition properties, never outline or shadow: the ring is at full colour on the first frame (MDV-P2-056).
 const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-bold whitespace-nowrap transition-colors disabled:pointer-events-none disabled:bg-disabled disabled:text-ink-400 disabled:border-transparent [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-bold whitespace-nowrap transition-[color,background-color,border-color] duration-fast ease-out disabled:pointer-events-none disabled:bg-disabled disabled:text-ink-400 disabled:border-transparent [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {

@@ -30,11 +30,11 @@ describe('role-based navigation', () => {
 
   // Blueprint section 3 (MDV-P2-051): each role's menu, in its order. Register patient is a button, never a menu item.
   it('orders each role\'s menu as the blueprint\'s role table', () => {
-    expect(ids('SoloDoctor')).toEqual(['today', 'patients', 'schedule', 'frontDesk', 'settings']);
+    expect(ids('SoloDoctor')).toEqual(['today', 'patients', 'schedule', 'frontDesk', 'clinicToday', 'settings']);
     expect(ids('HospitalDoctor')).toEqual(['today', 'patients', 'schedule', 'frontDesk']); // owner-only Settings
     expect(ids('Receptionist')).toEqual(['frontDesk', 'schedule', 'patients']);
     expect(ids('Nurse', ['clinical.nurse-intake'])).toEqual(['nurse', 'patients', 'frontDesk', 'schedule']);
-    expect(ids('PracticeAdmin')).toEqual(['frontDesk', 'schedule', 'patients', 'settings']);
+    expect(ids('PracticeAdmin')).toEqual(['frontDesk', 'schedule', 'patients', 'clinicToday', 'settings']);
     // Every other item follows the named ones, Settings last.
     expect(ids('SoloDoctor', allFlags).slice(0, 4)).toEqual(['today', 'patients', 'schedule', 'frontDesk']);
     expect(ids('SoloDoctor', allFlags).at(-1)).toBe('settings');

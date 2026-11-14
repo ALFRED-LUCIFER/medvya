@@ -52,6 +52,12 @@ for (const locale of ['en', 'ar'] as const) {
       if (locale === 'en') expect(side.x).toBeGreaterThan(main.x + main.width - 1);
       else expect(side.x + side.width).toBeLessThan(main.x + 1);
 
+      // MDV-P2-056: the Skeleton's blocks show after 200 ms; the group says Loading once, in this language.
+      const skeleton = page.getByTestId('skeleton');
+      await expect(skeleton.locator('[data-slot=skeleton][data-shown]')).toHaveCount(2);
+      await expect(skeleton).toHaveRole('status');
+      if (locale === 'ar') await expect(skeleton).not.toContainText('Loading Front desk…');
+
       expect(await axe(page)).toEqual([]);
     });
 

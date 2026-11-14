@@ -1,20 +1,24 @@
 import { Footprints, ReceiptText, UserPlus } from 'lucide-react';
-import { Link, useNavigate } from 'react-router';
+import { Link, Navigate, useNavigate } from 'react-router';
 import { useI18n } from '@medvya/i18n';
 import { buttonVariants } from '@medvya/ui';
 import StartConsult from '../features/encounters/components/StartConsult';
 import { canConsult } from '../features/encounters/domain/encounter';
 import { useStartConsultController } from '../features/encounters/hooks/useStartConsultController';
-import type { BoardCard, VisitSteps } from '../features/front-desk/domain/board';
+import type { BoardCard, FrontDeskView, VisitSteps } from '../features/front-desk/domain/board';
 import BoardPage from '../features/front-desk/components/BoardPage';
 import FrontDeskViews from '../features/front-desk/components/FrontDeskViews';
 import { useBoardController } from '../features/front-desk/hooks/useBoardController';
+import { useOfflineNote } from '../features/connectivity/hooks/useOfflineNote';
+import { useFrontDeskViewController } from '../features/front-desk/hooks/useFrontDeskViewController';
 import { FollowUpDismissDialog, FollowUpDueLine } from '../features/front-desk/components/FollowUpDue';
 import { bookFollowUpPath } from '../features/front-desk/domain/followUpDue';
 import { useFollowUpDueController } from '../features/front-desk/hooks/useFollowUpDueController';
 
 type Props = {
   facilityId: string; online: boolean; canMove: boolean;
+  /** Whose last view choice opens (MDV-P2-052). */
+  userId: string;
   /** May cancel a visit from the board's card menu: full "Register / book patients" (the server checks again). */
   canCancel: boolean;
   /** Register patient, when this role may register: a button here and on Patients, not a menu item (MDV-P2-051). */
@@ -41,11 +45,21 @@ export function Consult({ card, online, primary = true }: { card: BoardCard; onl
   return <StartConsult {...consult} patientName={card.patientName} inConsult={card.state === 'InConsult'} online={online} primary={primary} />;
 }
 
-/** Composition only: the board controller for the active facility, fed to the presentational P-01 page. */
-export default function FrontDeskRoute({ facilityId, online, canMove, canCancel, registerPath, walkInPath, waitlistPath, billingPath, bookPath, canConsult: doctor, intakePath, steps }: Props) {
-  const { t } = useI18n();
+/** Composition only: this user's last front desk view (MDV-P2-052); By doctor has its own address. */
+export default function FrontDeskRoute(props: Props) {
+  const desk = useFrontDeskViewController(props.userId);
+  if (desk.view === 'doctors') return <Navigate to="/front-desk/overview" replace />;
+  return <Board {...props} list={desk.view === 'list'} onView={desk.onView} />;
+}
+
+/** The board controller for the active facility, fed to the presentational P-01 page, as columns or as one list. */
+function Board({ facilityId, online, canMove, canCancel, registerPath, walkInPath, waitlistPath, billingPath, bookPath, canConsult: doctor, intakePath, steps, list, onView }: Props & { list: boolean; onView: (view: FrontDeskView) => void }) {
+  const { t, formatTime } = useI18n();
   const navigate = useNavigate();
   const board = useBoardController(facilityId, online);
+  // Offline, the strip says when the board last updated, in facility time (MDV-P2-056).
+  const shown = board.board;
+  useOfflineNote(!online && shown ? t('offline.strip.board', { time: formatTime(new Date(shown.now), shown.timeZone) }) : null);
   const dismissal = useFollowUpDueController();
   // One filled button per view: the desk's is Walk-in (or Register); a doctor's is the next patient's Start consultation.
   const register = registerPath || walkInPath ? <>
@@ -65,6 +79,6 @@ export default function FrontDeskRoute({ facilityId, online, canMove, canCancel,
   // MDV-P1-102: the doctor's follow-up on the Done card; booking and dismissing need booking access (the server checks again).
   const followUp = (card: BoardCard) => card.followUp && <FollowUpDueLine followUp={card.followUp} patientName={card.patientName || t('board.unknownPatient')} online={online}
     bookPath={bookPath && bookFollowUpPath(bookPath, card.patientId, card.followUp)} onDismiss={bookPath ? dismissal.onStart : null} />;
-  return <BoardPage {...board} steps={steps} canMove={canMove} canCancel={canCancel} registerAction={register} paymentAction={payment} overviewAction={waitlist} views={<FrontDeskViews value="board" onValueChange={v => { if (v === 'doctors') void navigate('/front-desk/overview'); }} />} consultAction={consultAction} nurseStep={nurseStep}
+  return <BoardPage {...board} steps={steps} canMove={canMove} canCancel={canCancel} registerAction={register} paymentAction={payment} overviewAction={waitlist} list={list} views={<FrontDeskViews value={list ? 'list' : 'board'} onValueChange={v => { onView(v); if (v === 'doctors') void navigate('/front-desk/overview'); }} />} consultAction={consultAction} nurseStep={nurseStep}
     followUp={followUp} followUpDialog={<FollowUpDismissDialog {...dismissal} online={online} />} />;
 }

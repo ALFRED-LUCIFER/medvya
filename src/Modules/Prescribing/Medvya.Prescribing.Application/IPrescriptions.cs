@@ -185,6 +185,13 @@ public interface IPrescriptions
 
     public const int MaxPending = 50;
 
+    /// <summary>
+    /// Prescriptions to authorise per doctor at <paramref name="facilityId"/> (MDV-P2-053, the owner's Clinic today): the same rule as <see cref="PendingAsync"/>, keyed
+    /// by the doctor who led the consultation. Counts only. No access check of its own: the caller checks practice configuration first.
+    /// shortcut: counts also a prescription whose patient the doctor may no longer treat (My day leaves it out); per-patient checks if the two ever differ in a pilot.
+    /// </summary>
+    Task<IReadOnlyDictionary<Guid, int>> ToAuthoriseAsync(Guid facilityId, CancellationToken cancellationToken = default);
+
     /// <summary>The consultation's advice for the patient (MDV-P2-043); audited as rx.advice.read.</summary>
     Task<RxAdviceView?> AdviceAsync(Guid encounterId, CancellationToken cancellationToken = default);
 

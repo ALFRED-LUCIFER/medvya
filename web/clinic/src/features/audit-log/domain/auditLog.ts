@@ -99,3 +99,23 @@ export const exportBody = (f: AuditFilters) => ({
 });
 
 export const browserZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+/** Column definitions are data; the label of each is the i18n key `audit.col.<key>`. Time identifies the row (MDV-P2-054). */
+export const auditColumns = [
+  { key: 'time', sortable: true },
+  { key: 'staff', sortable: true },
+  { key: 'role', sortable: false },
+  { key: 'location', sortable: false },
+  { key: 'action', sortable: false },
+  { key: 'patient', sortable: false },
+  { key: 'purpose', sortable: false },
+  { key: 'outcome', sortable: false },
+] as const;
+
+// shortcut: sorts the rows loaded so far (the server sends newest first, 50 at a time, and "Load more" adds older ones); sort on the
+// server if an auditor needs a whole range in another order.
+export const auditSort = {
+  time: (r: AuditRow) => Date.parse(r.occurredAt),
+  staff: (r: AuditRow) => r.actorName,
+};
+export type AuditSortColumn = keyof typeof auditSort;

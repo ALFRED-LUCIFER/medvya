@@ -5,7 +5,7 @@ import { renderApp } from './render';
 
 it('shows the next visit in the clinic time zone and a tappable emergency line', async () => {
   const onCallEmergency = jest.fn();
-  await renderApp(<HomeScreen session={{ person: cast.people[0]!, phone: '+919000000101', clinic: cast.clinic }} home={cast.home}
+  await renderApp(<HomeScreen session={{ person: cast.people[0]!, phone: '+919000000101', clinic: cast.clinic }} home={{ ...cast.home, nextVisit: { ...cast.home.nextVisit!, at: '2027-01-02T03:50:00Z' } }}
     loading={false} error={null} refreshing={false} onRefresh={() => {}} emergency="108" onCallEmergency={onCallEmergency}
     onCallClinic={() => {}} onDirections={() => {}} />);
   expect(screen.getByText('02 Jan 2027 · 09:20')).toBeOnTheScreen(); // 03:50 UTC is 09:20 in Chennai

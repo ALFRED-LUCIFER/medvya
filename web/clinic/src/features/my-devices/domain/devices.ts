@@ -7,3 +7,6 @@ export const canEnd = (s: Pick<DeviceSession, 'current'>) => !s.current;
 /** This device first, then the most recently active. */
 export const orderDevices = (list: DeviceSession[]) =>
   [...list].sort((a, b) => Number(b.current) - Number(a.current) || b.lastSeenAt.localeCompare(a.lastSeenAt));
+
+/** Table columns; the label of each is the i18n key `myDevices.col.<key>`. The list is short and ordered above, so no sort or paging. */
+export const deviceColumns = ['device', 'signedIn', 'lastActive'] as const;

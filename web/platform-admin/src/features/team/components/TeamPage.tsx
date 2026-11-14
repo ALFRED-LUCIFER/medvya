@@ -5,7 +5,7 @@ import { Button, Card, ErrorSummary, Field, FieldMarks, Input, PageContainer, Pa
 import type { FormEventHandler } from 'react';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 import ReasonPanel from '../../shell/components/ReasonPanel';
-import { keyState, roles, type InviteForm, type PendingAction, type ReasonForm, type ShownLink, type Team } from '../domain/team';
+import { keyState, roles, teamColumns, type InviteForm, type PendingAction, type ReasonForm, type ShownLink, type Team } from '../domain/team';
 
 type Props = {
   vm: {
@@ -105,25 +105,22 @@ export default function TeamPage({ vm }: Props) {
       )}
 
       <TableState state={vm.state} messages={{ loading: t('platform.state.loading'), error: t(vm.forbidden ? 'platform.state.forbidden' : 'platform.state.error'), empty: '' }}>
-        <Table label={t('platform.team.title')}>
+        {/* Stacked under 768 px with the person first, so nothing scrolls sideways on a phone (MDV-P2-054). */}
+        <Table label={t('platform.team.title')} stacked>
           <TableHeader>
             <TableRow>
-              <TableHead>{t('platform.team.person')}</TableHead>
-              <TableHead>{t('platform.team.role')}</TableHead>
-              <TableHead>{t('platform.team.key')}</TableHead>
-              <TableHead>{t('platform.team.lastActive')}</TableHead>
-              <TableHead>{t('platform.team.accessEnds')}</TableHead>
-              <TableHead><span className="sr-only">{t('platform.team.actions')}</span></TableHead>
+              {teamColumns.map(c => <TableHead key={c} scope="col">{t(c)}</TableHead>)}
+              <TableHead scope="col"><span className="sr-only">{t('platform.team.actions')}</span></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {vm.team?.members.map(m => (
               <TableRow key={m.id}>
-                <TableCell><p className="font-semibold">{m.displayName}</p><p dir="ltr" className="text-sm text-muted-foreground">{m.email}</p></TableCell>
-                <TableCell>{t(`platform.role.${m.role}`)}</TableCell>
-                <TableCell>{t(`platform.team.keyState.${keyState(m)}`)}</TableCell>
-                <TableCell>{m.lastActiveAt ? when(m.lastActiveAt) : t('platform.team.never')}</TableCell>
-                <TableCell>{m.accessEndsOn ? formatCalendarDate(m.accessEndsOn) : t('platform.team.untilRemoved')}</TableCell>
+                <TableHead scope="row" className="font-normal"><p className="font-semibold">{m.displayName}</p><p dir="ltr" className="text-sm break-all text-muted-foreground">{m.email}</p></TableHead>
+                <TableCell label={t('platform.team.role')}>{t(`platform.role.${m.role}`)}</TableCell>
+                <TableCell label={t('platform.team.key')}>{t(`platform.team.keyState.${keyState(m)}`)}</TableCell>
+                <TableCell label={t('platform.team.lastActive')}>{m.lastActiveAt ? when(m.lastActiveAt) : t('platform.team.never')}</TableCell>
+                <TableCell label={t('platform.team.accessEnds')}>{m.accessEndsOn ? formatCalendarDate(m.accessEndsOn) : t('platform.team.untilRemoved')}</TableCell>
                 <TableCell>
                   <div className="flex flex-wrap gap-2">
                     <Button variant="outline" aria-label={t('platform.team.recoverFor', { name: m.displayName })}

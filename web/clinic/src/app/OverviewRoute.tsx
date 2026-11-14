@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router';
 import ClinicOverviewPage from '../features/front-desk/components/ClinicOverviewPage';
 import FrontDeskViews from '../features/front-desk/components/FrontDeskViews';
+import { useFrontDeskViewController } from '../features/front-desk/hooks/useFrontDeskViewController';
 import { useOverviewController } from '../features/front-desk/hooks/useOverviewController';
 import { useQueueTableController } from '../features/front-desk/hooks/useQueueTableController';
 
@@ -10,7 +11,8 @@ type Props = { facilityId: string; online: boolean; canMove: boolean; userId: st
 export default function OverviewRoute({ facilityId, online, canMove, userId, boardPath }: Props) {
   const navigate = useNavigate();
   const overview = useOverviewController(facilityId, online, userId);
+  const desk = useFrontDeskViewController(userId);
   const names = new Map(overview.overview?.doctors.map(d => [d.calendarId, d.name]));
   const waiting = useQueueTableController((overview.overview?.waiting ?? []).map(w => ({ ...w, doctor: names.get(w.calendarId) ?? '' })));
-  return <ClinicOverviewPage {...overview} canMove={canMove} waiting={waiting} views={<FrontDeskViews value="doctors" onValueChange={v => { if (v === 'board') void navigate(boardPath); }} />} />;
+  return <ClinicOverviewPage {...overview} canMove={canMove} waiting={waiting} views={<FrontDeskViews value="doctors" onValueChange={v => { desk.onView(v); if (v !== 'doctors') void navigate(boardPath); }} />} />;
 }

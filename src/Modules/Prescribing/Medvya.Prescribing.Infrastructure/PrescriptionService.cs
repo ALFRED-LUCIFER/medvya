@@ -252,17 +252,8 @@ public sealed class PrescriptionService(
     public async Task<(IReadOnlyList<RxPending> Items, bool More)> PendingAsync(Guid facilityId, CancellationToken cancellationToken = default)
     {
         var me = Me;
-        // Consultations here with an included line, not discarded, and no authorisation since the last line change; the exact check follows per row.
-        // shortcut: a draft made only of reconciliation stops (no prescribe line) is not listed; add the stops here if pilot doctors leave such drafts.
-        var candidates = await db.PrescriptionItems.AsNoTracking()
-            .Where(i => i.FacilityId == facilityId && !db.PrescriptionDiscards.Any(d => d.EncounterId == i.EncounterId))
-            .GroupBy(i => i.EncounterId)
-            .Select(g => new { EncounterId = g.Key, Included = g.Sum(i => i.Included ? 1 : 0), Changed = g.Max(i => i.UpdatedAt) })
-            .Where(g => g.Included > 0 && !db.AuthorisedPrescriptions.Any(p => p.EncounterId == g.EncounterId && p.AuthorisedAt >= g.Changed))
-            .Select(g => g.EncounterId).ToListAsync(cancellationToken);
-        // Scoped to the doctor who led the consultation, once it ended (an open one is still being worked on).
-        var ended = (await encounters.FindManyAsync(candidates, cancellationToken))
-            .Where(e => e.LeadClinicianId == me && e.Status == EncounterStatus.Ended).OrderBy(e => e.EndedAt).ThenBy(e => e.Id).ToList();
+        // Scoped to the doctor who led the consultation.
+        var ended = (await EndedUnauthorisedAsync(facilityId, cancellationToken)).Where(e => e.LeadClinicianId == me).OrderBy(e => e.EndedAt).ThenBy(e => e.Id).ToList();
         var patientNames = await patients.SummariesAsync([.. ended.Take(IPrescriptions.MaxPending).Select(e => e.PatientId).Distinct()], cancellationToken);
         List<RxPending> pending = [];
         foreach (var encounter in ended.Take(IPrescriptions.MaxPending))
@@ -283,6 +274,31 @@ public sealed class PrescriptionService(
                 (await DraftAsync(encounter.Id, cancellationToken)).Count(l => !l.Discontinue)));
         }
         return (pending, ended.Count > IPrescriptions.MaxPending);
+    }
+
+    public async Task<IReadOnlyDictionary<Guid, int>> ToAuthoriseAsync(Guid facilityId, CancellationToken cancellationToken = default)
+    {
+        var counts = new Dictionary<Guid, int>();
+        foreach (var encounter in await EndedUnauthorisedAsync(facilityId, cancellationToken))
+            if (await UnfinishedAsync(encounter.Id, await LatestAsync(encounter.Id, cancellationToken), cancellationToken))
+                counts[encounter.LeadClinicianId] = counts.GetValueOrDefault(encounter.LeadClinicianId) + 1;
+        return counts;
+    }
+
+    /// <summary>
+    /// Ended consultations here with an included line, not discarded, and no authorisation since the last line change (an open one is still being worked on);
+    /// the exact check (<see cref="UnfinishedAsync"/>) follows per row.
+    /// shortcut: a draft made only of reconciliation stops (no prescribe line) is not listed; add the stops here if pilot doctors leave such drafts.
+    /// </summary>
+    async Task<IEnumerable<EncounterView>> EndedUnauthorisedAsync(Guid facilityId, CancellationToken cancellationToken)
+    {
+        var candidates = await db.PrescriptionItems.AsNoTracking()
+            .Where(i => i.FacilityId == facilityId && !db.PrescriptionDiscards.Any(d => d.EncounterId == i.EncounterId))
+            .GroupBy(i => i.EncounterId)
+            .Select(g => new { EncounterId = g.Key, Included = g.Sum(i => i.Included ? 1 : 0), Changed = g.Max(i => i.UpdatedAt) })
+            .Where(g => g.Included > 0 && !db.AuthorisedPrescriptions.Any(p => p.EncounterId == g.EncounterId && p.AuthorisedAt >= g.Changed))
+            .Select(g => g.EncounterId).ToListAsync(cancellationToken);
+        return (await encounters.FindManyAsync(candidates, cancellationToken)).Where(e => e.Status == EncounterStatus.Ended);
     }
 
     /// <summary>A draft with lines that is not authorised, or changed since its latest authorisation. A cancelled, unchanged version was the doctor's choice.</summary>

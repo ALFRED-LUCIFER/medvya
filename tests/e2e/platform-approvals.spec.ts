@@ -154,3 +154,28 @@ test('the queue and a request read in Arabic, right to left, axe clean', async (
   await expect(page.getByRole('heading', { name: 'الموافقة على هذه المنظمة' })).toBeVisible();
   expect(await axe(page)).toEqual([]);
 });
+
+// MDV-P2-054 AC5: on a phone the queue, the documents and the history are stacked: each row is a block that starts with the organisation,
+// the document or the time, every other field sits under its column's name, and nothing scrolls sideways.
+const stacked = {
+  en: [['List of requests', 'Rao Clinic (synthetic)', ['State', 'Waiting']], ['List of documents', 'Clinic registration certificate', ['Automatic check']], ['Decision history', '2026', ['Decision', 'Who', 'Reason']]],
+  ar: [['قائمة الطلبات', 'Rao Clinic (synthetic)', ['الحالة', 'الانتظار']], ['قائمة المستندات', 'شهادة تسجيل العيادة', ['الفحص التلقائي']], ['سجل القرارات', '2026', ['القرار', 'من', 'السبب']]],
+} as const;
+for (const locale of ['en', 'ar'] as const) {
+  test(`at 375 px the ${locale} approvals tables are stacked and labelled, and nothing scrolls sideways`, async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 740 });
+    await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
+    await mock(page, 'Reviewer');
+    await page.goto('/approvals/o-done');
+    await expect(page.getByRole('heading', { name: 'Menon Clinic (synthetic)' })).toBeVisible();
+    for (const [label, first, fields] of stacked[locale]) {
+      const region = page.getByRole('region', { name: label });
+      await expect(region.getByRole('rowheader').first()).toContainText(first);
+      const row = region.getByRole('row').nth(1);
+      for (const name of fields) await expect(row.getByRole('cell').getByText(name, { exact: true })).toBeVisible(); // the column's name above its value
+      expect(await region.evaluate(e => e.scrollWidth - e.clientWidth), label).toBeLessThanOrEqual(0);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+    expect(await axe(page)).toEqual([]);
+  });
+}

@@ -1,7 +1,8 @@
 import * as React from "react"
-import { CircleAlert, CircleCheck, CircleHelp, Check, TriangleAlert } from "lucide-react"
+import { CircleAlert, CircleCheck, CircleHelp, Check } from "lucide-react"
 import { ltr, useI18n } from "@medvya/i18n"
 import { cn, scrollContainer } from "#lib/utils"
+import { statusIcons } from "../../primitives"
 import { Button } from "#components/ui/button"
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "#components/ui/dialog"
 
@@ -37,11 +38,13 @@ export const allergiesInWords = 2
 
 const maskMrn = (mrn: string) => `•••• ${mrn.slice(-4)}`
 
+const AllergyIcon = statusIcons.allergy
+
 function AllergyWords({ allergy }: { allergy: BannerAllergy }) {
   const { t } = useI18n()
   return (
     <span data-slot="allergy" className="inline-flex max-w-full items-center gap-1.5 rounded-sm bg-danger-text px-2 py-1 text-label text-white">
-      <TriangleAlert aria-hidden className="size-4 shrink-0" />
+      <AllergyIcon aria-hidden className="size-4 shrink-0" />
       <span className="min-w-0 break-words">
         {allergy.reaction
           ? t("patientBanner.allergyReaction", { substance: allergy.substance, reaction: allergy.reaction })

@@ -10,7 +10,7 @@ type Props = {
   emailForm: UseFormReturn<EmailForm>; codeForm: UseFormReturn<CodeForm>;
   onSubmitEmail: () => void; onSubmitCode: () => void; onBack: () => void;
   facilities: Facility[]; facilitiesLoading: boolean; onChooseFacility: (f: Facility) => void;
-  biometricAvailable: boolean; onEnableBiometric: () => void; onSkipBiometric: () => void;
+  biometricAvailable: boolean; unlockMethod: string; onEnableBiometric: () => void; onSkipBiometric: () => void;
 };
 
 function Brandmark() {
@@ -84,13 +84,13 @@ export function SignInScreen(vm: Props) {
 
   return (
     <Screen footer={<>
-      {vm.biometricAvailable ? <Button label={t('mobile.signIn.biometricOn')} onPress={vm.onEnableBiometric} /> : null}
+      {vm.biometricAvailable ? <Button label={t('mobile.signIn.biometricOn', { method: vm.unlockMethod })} onPress={vm.onEnableBiometric} /> : null}
       <Button label={vm.biometricAvailable ? t('mobile.signIn.notNow') : t('mobile.signIn.continue')} variant={vm.biometricAvailable ? 'ghost' : 'primary'} onPress={vm.onSkipBiometric} />
     </>}>
       <View style={styles.centered}>
         <Emblem icon="face" size={88} />
-        <Text variant="title" accessibilityRole="header" style={styles.center}>{t('mobile.signIn.biometricTitle')}</Text>
-        <Text style={styles.center}>{t(vm.biometricAvailable ? 'mobile.signIn.biometricBody' : 'mobile.signIn.biometricNone')}</Text>
+        <Text variant="title" accessibilityRole="header" style={styles.center}>{t('mobile.signIn.biometricTitle', { method: vm.unlockMethod })}</Text>
+        <Text style={styles.center}>{t(vm.biometricAvailable ? 'mobile.signIn.biometricBody' : 'mobile.signIn.biometricNone', { method: vm.unlockMethod })}</Text>
       </View>
     </Screen>
   );

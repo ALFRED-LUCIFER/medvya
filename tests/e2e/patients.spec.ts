@@ -157,8 +157,36 @@ test('at 1024 x 768 the first patient row starts at or above 300 px', async ({ p
   expect(search.height).toBe(44);
   const first = page.getByRole('main').getByRole('table').getByRole('row').nth(1);
   expect((await first.boundingBox())!.y).toBeLessThanOrEqual(300);
-  await expect(first.getByRole('cell').nth(2)).toHaveText('··4482');
-  await expect(first.getByRole('cell').nth(3)).toHaveText('··0101');
+  // Visible text: the stacked phone layout's column name is in the cell but hidden from 768 px up.
+  await expect(first.getByRole('cell').nth(2)).toHaveText('··4482', { useInnerText: true });
+  await expect(first.getByRole('cell').nth(3)).toHaveText('··0101', { useInnerText: true });
+});
+
+// MDV-P2-054 AC5: at 375 px each row is a stacked block, the patient first and bold, every field under its column's name, nothing scrolling sideways.
+test.describe('at 375 px', () => {
+  test.use({ viewport: { width: 375, height: 812 } });
+  for (const locale of ['en', 'ar'])
+    test(`directory rows are stacked with the patient first and every field labelled, and nothing scrolls sideways (${locale})`, async ({ page }) => {
+      await deskWith(page, found, locale);
+      await page.goto('/patients/directory');
+      const table = page.getByRole('region', { name: t(locale, 'patients.tableLabel') });
+      const meeraRow = table.getByRole('row', { name: /Meera Iyer/ });
+      const name = meeraRow.getByRole('rowheader').getByText('Meera Iyer (synthetic)', { exact: true });
+      await expect(name).toBeInViewport();
+      expect(await name.evaluate(e => Number(getComputedStyle(e).fontWeight))).toBeGreaterThanOrEqual(700);
+      // Nothing that identifies the patient is cut off: the name, age, sex, MRN and phone endings show inside the screen width, each under its column's name.
+      for (const [column, value] of [['age', locale === 'en' ? '54 y' : null], ['sex', null], ['mrn', '··4482'], ['phone', '··0101'], ['lastVisit', null]] as const) {
+        const cell = meeraRow.getByRole('cell').filter({ hasText: t(locale, `patients.col.${column}`) });
+        await expect(cell.getByText(t(locale, `patients.col.${column}`), { exact: true })).toBeVisible();
+        if (value) await expect(cell).toContainText(value);
+        const box = (await cell.boundingBox())!;
+        expect(box.x).toBeGreaterThanOrEqual(0);
+        expect(box.x + box.width).toBeLessThanOrEqual(375);
+      }
+      expect(await table.evaluate(e => e.scrollWidth - e.clientWidth)).toBeLessThanOrEqual(0);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+      expect(await axe(page)).toEqual([]);
+    });
 });
 
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');

@@ -19,6 +19,7 @@ export { PatientBanner, AllergyBlock, bannerFields, allergiesInWords, type Aller
 export { Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TablePagination, TableRow, TableState, type SortDirection } from '#components/ui/table';
 export { Card, Section, type CardProps } from '#components/ui/card';
 export { PageMessage, EmptyState, type PageMessageProps } from '#components/ui/page-message';
+export { Skeleton, SkeletonGroup, skeletonDelayMs } from '#components/ui/skeleton';
 export { SegmentedControl, type SegmentedControlProps } from '#components/ui/segmented-control';
 export { Sheet, SheetTrigger, SheetContent, SheetTitle, SheetDescription } from '#components/ui/sheet';
 export { SplitLayout, useWide } from '#components/ui/split-layout';

@@ -1,6 +1,9 @@
 using Medvya.Audit.Api;
 using Medvya.Audit.Application;
 using Medvya.BuildingBlocks.Domain;
+using Medvya.Encounters.Application;
+using Medvya.Patients.Application;
+using Medvya.Prescribing.Application;
 using Medvya.Scheduling.Application;
 using Medvya.Tenancy.Api;
 using Medvya.Tenancy.Domain;
@@ -18,6 +21,13 @@ namespace Medvya.Scheduling.Api;
 /// </summary>
 public static class SchedulingEndpoints
 {
+    /// <summary>The owner's Clinic today (MDV-P2-053): counts and staff names only, never a patient.</summary>
+    public sealed record ClinicTodayView(DateTimeOffset Now, string TimeZone, int Booked, int ToArrive, int ArrivedWalkIn, int ArrivedBooked, int Waiting, int? LongestWaitMinutes,
+        int IncompleteRegistrations, IReadOnlyList<ClinicTodayDoctor> Doctors);
+
+    /// <summary>One doctor's notes to sign (and how many from before today) and prescriptions to authorise. Name null: no calendar at this facility any more.</summary>
+    public sealed record ClinicTodayDoctor(Guid Id, string? Name, int NotesToSign, int NotesBeforeToday, int ToAuthorise);
+
     public static IEndpointRouteBuilder MapSchedulingEndpoints(this IEndpointRouteBuilder app)
     {
         var schedule = app.MapGroup("/v1/schedule").RequireAuthorization();
@@ -173,6 +183,22 @@ public static class SchedulingEndpoints
         frontDesk.MapGet("/overview", (Guid? facilityId, [FromServices] IFrontDeskService service, CancellationToken ct) =>
                 service.GetOverviewAsync(facilityId ?? Guid.Empty, ct))
             .AuditedWithErrors("front_desk.overview.read", "appointment");
+        // The owner's Clinic today (MDV-P2-053): the board's counts first, which checks practice configuration at the facility; then the doctors' pending work and the
+        // incomplete registrations, counted by their own modules.
+        frontDesk.MapGet("/clinic-today", async (Guid? facilityId, [FromServices] IFrontDeskService service, [FromServices] IConsultNotes notes, [FromServices] IPrescriptions prescriptions,
+                [FromServices] IPatientRegistry patients, CancellationToken ct) =>
+            {
+                var today = await service.GetClinicTodayAsync(facilityId ?? Guid.Empty, ct);
+                var toSign = (await notes.NotesToSignAsync(facilityId!.Value, ct)).ToDictionary(n => n.ClinicianId);
+                var toAuthorise = await prescriptions.ToAuthoriseAsync(facilityId.Value, ct);
+                var names = today.Doctors.ToDictionary(d => d.Id, d => d.Name);
+                var doctors = names.Keys.Union(toSign.Keys).Union(toAuthorise.Keys)
+                    .Select(id => new ClinicTodayDoctor(id, names.GetValueOrDefault(id), toSign.GetValueOrDefault(id)?.Count ?? 0, toSign.GetValueOrDefault(id)?.BeforeToday ?? 0, toAuthorise.GetValueOrDefault(id)))
+                    .OrderBy(d => d.Name is null).ThenBy(d => d.Name, StringComparer.CurrentCulture).ThenBy(d => d.Id).ToList();
+                return new ClinicTodayView(today.Now, today.TimeZone, today.Booked, today.ToArrive, today.ArrivedWalkIn, today.ArrivedBooked, today.Waiting, today.LongestWaitMinutes,
+                    await patients.IncompleteCountAsync(ct), doctors);
+            })
+            .AuditedWithErrors("clinic_today.read", SchedulingAudit.MetricsResource, SchedulingAudit.Operations);
         // Live board updates (MDV-P1-029): ids and states only. The hub checks facility and capability on connect and on every call.
         app.MapHub<BoardHub>(BoardHub.Path)
             .RequireCapability(Capability.CheckInQueue, Access.Read, Access.Full)

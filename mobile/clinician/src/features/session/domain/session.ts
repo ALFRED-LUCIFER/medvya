@@ -19,3 +19,10 @@ export const tabsFor = (role: Role): TabKey[] => (role === 'doctor' ? ['today', 
 export const LOCK_AFTER_MS = 15 * 60 * 1000;
 /** The app locks once it has been in the background for 15 minutes (MDV-P5-034). */
 export const shouldLock = (backgroundedAt: number | null, now: number) => backgroundedAt !== null && now - backgroundedAt >= LOCK_AFTER_MS;
+
+/** The words for the phone's unlock (MDV-P5-059): Face ID and Touch ID are Apple names, so Android never shows them. */
+export type UnlockMethod = 'faceId' | 'touchId' | 'ios' | 'android';
+export function unlockMethod(os: string, has: { face: boolean; finger: boolean }): UnlockMethod {
+  if (os !== 'ios') return 'android';
+  return has.face ? 'faceId' : has.finger ? 'touchId' : 'ios';
+}

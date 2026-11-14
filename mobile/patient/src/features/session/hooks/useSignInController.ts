@@ -7,11 +7,13 @@ import { errorKey } from '../../api/domain/errors';
 import { codeForm, maskPhone, phoneForm, toE164, type Clinic, type CodeForm, type Person, type PhoneForm, type SignInStep } from '../domain/session';
 import { biometricsAvailable, requestCode, unlockWithBiometrics, verifyCode } from '../services/session';
 import { useSession } from './session';
+import { useUnlockMethod } from './useUnlockMethod';
 
-/** Patient onboarding and sign-in (MDV-P5-036): welcome, mobile number, SMS code, who is this for, then Face ID. */
+/** Patient onboarding and sign-in (MDV-P5-036): welcome, mobile number, SMS code, who is this for, then the phone's unlock. */
 export function useSignInController() {
   const { t, country } = useI18n();
   const { begin } = useSession();
+  const unlockMethod = useUnlockMethod();
   const [step, setStep] = useState<SignInStep>('welcome');
   const [page, setPage] = useState(0);
   const [phone, setPhone] = useState('');
@@ -52,6 +54,7 @@ export function useSignInController() {
     people: found?.people ?? [],
     onChoosePerson: (p: Person) => { setPerson(p); setStep('biometric'); },
     biometricAvailable: canBiometric.data ?? false,
+    unlockMethod,
     onEnableBiometric: () => enable.mutate(),
     onSkipBiometric: () => finish(false),
     error: failure ? errorKey(failure) : null,

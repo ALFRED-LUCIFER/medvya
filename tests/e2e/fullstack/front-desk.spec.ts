@@ -87,6 +87,19 @@ test('front desk: register, book, check in, see the board, cancel', async ({ pag
     await expect(page.getByRole('region', { name: /^Ready for doctor/ }).getByRole('article', { name: patient.name })).toBeVisible();
   });
 
+  await test.step('the List view (MDV-P2-052) shows the patient under Ready for doctor and opens again after a reload; By status brings the board back', async () => {
+    const views = page.getByRole('group', { name: 'Front desk views' });
+    await views.getByRole('button', { name: 'List' }).click();
+    const ready = page.getByRole('region', { name: 'Ready for doctor', exact: true });
+    await expect(ready.getByRole('rowheader', { name: patient.name })).toBeVisible();
+    await expectNoAxeViolations(page);
+    await page.reload(); // this receptionist's last choice is her default
+    await expect(views.getByRole('button', { name: 'List' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(ready.getByRole('rowheader', { name: patient.name })).toBeVisible();
+    await views.getByRole('button', { name: 'By status' }).click();
+    await expect(page.getByRole('region', { name: /^Ready for doctor/ }).getByRole('article', { name: patient.name })).toBeVisible();
+  });
+
   await test.step('book a second visit and cancel it with a reason; the slot is free again', async () => {
     await page.getByRole('link', { name: 'Schedule' }).first().click();
     const slots = rao(page).getByRole('button', { name: /^Book / });

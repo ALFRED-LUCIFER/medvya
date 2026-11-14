@@ -17,7 +17,7 @@ export default function TabsLayout() {
   const { count } = useInboxController();
   const tab = (key: TabKey) => ({
     title: t(`mobile.staff.tab.${key}`),
-    tabBarIcon: ({ color }: { color: ColorValue }) => <Icon name={icons[key]} color={typeof color === 'string' ? color : undefined} />,
+    tabBarIcon: ({ color }: { color: ColorValue }) => <Icon name={icons[key]} fixed color={typeof color === 'string' ? color : undefined} />,
   });
   return (
     <Tabs screenOptions={{ headerShown: false, tabBarActiveTintColor: theme.color.brand700, tabBarInactiveTintColor: theme.color.ink600, tabBarLabelStyle: { fontWeight: '600' } }}>

@@ -10,7 +10,7 @@ type Props = {
   phoneForm: UseFormReturn<PhoneForm>; codeForm: UseFormReturn<CodeForm>; maskedPhone: string;
   onSubmitPhone: () => void; onSubmitCode: () => void; onResend: () => void; onBack: () => void; busy: boolean;
   people: Person[]; onChoosePerson: (p: Person) => void;
-  biometricAvailable: boolean; onEnableBiometric: () => void; onSkipBiometric: () => void; error: string | null;
+  biometricAvailable: boolean; unlockMethod: string; onEnableBiometric: () => void; onSkipBiometric: () => void; error: string | null;
 };
 
 const pages: { icon: IconName; title: MessageKey; body: MessageKey }[] = [
@@ -20,7 +20,7 @@ const pages: { icon: IconName; title: MessageKey; body: MessageKey }[] = [
 ];
 
 /** Three onboarding pages, one at a time (Next and Skip), so it works the same on iOS, Android and in RTL. */
-function Welcome({ page, onPage, onStart }: Pick<Props, 'page' | 'onPage' | 'onStart'>) {
+function Welcome({ page, onPage, onStart, unlockMethod }: Pick<Props, 'page' | 'onPage' | 'onStart' | 'unlockMethod'>) {
   const { t } = useI18n();
   const last = page === pages.length - 1;
   const p = pages[page] ?? pages[0]!;
@@ -36,7 +36,7 @@ function Welcome({ page, onPage, onStart }: Pick<Props, 'page' | 'onPage' | 'onS
       <View style={styles.page}>
         <View style={styles.mark}>{page === 0 ? <Avatar initials={t('mobile.monogram')} solid size={72} /> : <Emblem icon={p.icon} size={72} />}</View>
         <Text variant="display" accessibilityRole="header">{t(p.title)}</Text>
-        <Text>{t(p.body)}</Text>
+        <Text>{t(p.body, { method: unlockMethod })}</Text>
         {page === 0 ? (
           <View style={styles.chips}>
             <Chip label={t('mobile.patient.tab.book')} icon="event" tone="brand" />
@@ -54,7 +54,7 @@ export function SignInScreen(vm: Props) {
   const { t } = useI18n();
   const error = vm.error ? <Banner tone="danger" icon="error-outline" text={t(vm.error as MessageKey)} /> : null;
 
-  if (vm.step === 'welcome') return <Welcome page={vm.page} onPage={vm.onPage} onStart={vm.onStart} />;
+  if (vm.step === 'welcome') return <Welcome page={vm.page} onPage={vm.onPage} onStart={vm.onStart} unlockMethod={vm.unlockMethod} />;
 
   if (vm.step === 'phone') return (
     <Screen footer={<Button label={t('mobile.patientSignIn.sendCode')} onPress={vm.onSubmitPhone} busy={vm.busy} />}>
@@ -115,13 +115,13 @@ export function SignInScreen(vm: Props) {
 
   return (
     <Screen footer={<>
-      {vm.biometricAvailable ? <Button label={t('mobile.signIn.biometricOn')} onPress={vm.onEnableBiometric} /> : null}
+      {vm.biometricAvailable ? <Button label={t('mobile.signIn.biometricOn', { method: vm.unlockMethod })} onPress={vm.onEnableBiometric} /> : null}
       <Button label={vm.biometricAvailable ? t('mobile.signIn.notNow') : t('mobile.signIn.continue')} variant={vm.biometricAvailable ? 'ghost' : 'primary'} onPress={vm.onSkipBiometric} />
     </>}>
       <View style={styles.centered}>
         <Emblem icon="face" size={88} />
-        <Text variant="title" accessibilityRole="header" style={styles.center}>{t('mobile.signIn.biometricTitle')}</Text>
-        <Text style={styles.center}>{t(vm.biometricAvailable ? 'mobile.patientSignIn.biometricBody' : 'mobile.patientSignIn.biometricNone')}</Text>
+        <Text variant="title" accessibilityRole="header" style={styles.center}>{t('mobile.signIn.biometricTitle', { method: vm.unlockMethod })}</Text>
+        <Text style={styles.center}>{t(vm.biometricAvailable ? 'mobile.patientSignIn.biometricBody' : 'mobile.patientSignIn.biometricNone', { method: vm.unlockMethod })}</Text>
       </View>
     </Screen>
   );

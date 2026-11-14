@@ -26,7 +26,7 @@ export function InboxScreen(vm: Props) {
                 <Text variant="label" style={styles.flex}>{t('mobile.inbox.resultLine', { patient: r.patient, test: r.test, value: r.value })}</Text>
               </View>
               <Chip label={t(r.severity === 'critical' ? 'mobile.inbox.critical' : 'mobile.inbox.abnormal')} tone={r.severity === 'critical' ? 'danger' : 'warning'} />
-              <Button label={t('mobile.inbox.markReviewed')} variant="secondary" disabled hint={t('mobile.common.comingSoon')} />
+              <Button label={t('mobile.inbox.markReviewed')} accessibilityLabel={t('mobile.inbox.markReviewedFor', { patient: r.patient, test: r.test })} variant="secondary" disabled hint={t('mobile.common.comingSoon')} />
             </Card>
           ))}
         </Section>

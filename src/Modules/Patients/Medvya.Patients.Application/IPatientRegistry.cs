@@ -160,6 +160,12 @@ public interface IPatientRegistry
     Task<PatientSearchResult> SearchAsync(PatientSearch search, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// How many of the organisation's patients have an incomplete registration (MDV-P2-053, the owner's Clinic today): the directory's Incomplete filter, as a count.
+    /// No access check of its own: the caller checks practice configuration first.
+    /// </summary>
+    Task<int> IncompleteCountAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Adds the missing address, payer and/or emergency contact to a patient of the current facility; the registration becomes
     /// Complete (closing the desk's completion task) once all three exist. Null when there is no such patient at this facility (also another facility's
     /// patient): nothing is changed or audited, and the endpoint answers 404.

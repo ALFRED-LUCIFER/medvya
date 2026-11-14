@@ -34,3 +34,10 @@ export const maskPhone = (e164: string) => `${e164.startsWith(mobile.AE.prefix) 
 export const LOCK_AFTER_MS = 15 * 60 * 1000;
 // shortcut: same lock rule as the staff app, duplicated; both move to packages/auth-client with native tokens (MDV-P5-033).
 export const shouldLock = (backgroundedAt: number | null, now: number) => backgroundedAt !== null && now - backgroundedAt >= LOCK_AFTER_MS;
+
+/** The words for the phone's unlock (MDV-P5-059): Face ID and Touch ID are Apple names, so Android never shows them. */
+export type UnlockMethod = 'faceId' | 'touchId' | 'ios' | 'android';
+export function unlockMethod(os: string, has: { face: boolean; finger: boolean }): UnlockMethod {
+  if (os !== 'ios') return 'android';
+  return has.face ? 'faceId' : has.finger ? 'touchId' : 'ios';
+}

@@ -76,6 +76,7 @@ for (const locale of ['en', 'ar'])
     await expect.poll(() => urls.at(-1)).toContain('chart=true');
     await expect(page.getByRole('cell', { name: /[a-z]+\.[a-z]/ })).toHaveCount(0);
     expect(await axe(page)).toEqual([]);
+    await page.getByRole('button', { name: locale === 'en' ? 'Filters' : 'عوامل التصفية' }).click(); // folded by default (MDV-P2-054)
     await page.getByRole('combobox', { name: locale === 'en' ? 'Action' : 'الإجراء', exact: true }).click();
     await expect(page.getByRole('option', { name: /[a-z_]+\.[a-z_-]+/ })).toHaveCount(0); // the filter's options too
     if (locale === 'ar') return;
@@ -95,6 +96,7 @@ test('choosing a patient asks the per-patient route', async ({ page }) => {
     return r.fulfill({ json: logPage([row({ patientName: 'Meera Iyer (synthetic)' })]) });
   });
   await page.goto('/settings?tab=audit');
+  await page.getByRole('button', { name: 'Filters' }).click();
   await page.getByPlaceholder('Name, MRN, phone or ID').fill('Meera');
   await page.getByRole('button', { name: 'Search', exact: true }).click();
   await page.getByRole('button', { name: /Meera Iyer/ }).click();
@@ -132,4 +134,83 @@ test.describe('in a browser on another zone', () => {
     await page.goto('/settings?tab=audit');
     await expect(page.getByRole('region', { name: 'Access log' }).locator('time')).toHaveText('11 Nov 2026 00:36'); // 00:36 on 11 Nov in Chennai
   });
+});
+
+// MDV-P2-054: a compact table (36 px rows with a mouse, 48 px on a coarse pointer), sorted by time or staff from the keyboard with the order
+// announced, paged over 50 rows, stacked with labelled fields under 768 px. Dr. Arjun Rao is the cast name (docs/00-overview/personas.md).
+const many = (n: number) => Array.from({ length: n }, (_, i) =>
+  row({ id: `m${i}`, actorName: 'Dr. Arjun Rao', occurredAt: new Date(Date.UTC(2026, 10, 4, 10) - i * 60_000).toISOString() }));
+const table = (page: Page, locale = 'en') => page.getByRole('region', { name: locale === 'en' ? 'Access log' : 'سجل الوصول', exact: true });
+
+test('at 1440 x 900 with a mouse the table starts in the first 300 px and shows at least 15 rows of 36 px', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await setUp(page);
+  await page.route('**/v1/audit/access-log**', r => r.fulfill({ json: logPage(many(50), 'c1') }));
+  await page.goto('/settings?tab=audit');
+  await expect(page.getByText('Showing: Opened or changed a chart · Everyone · ')).toBeVisible(); // the folded filters, in words
+  const box = (await table(page).boundingBox())!;
+  expect(box.y).toBeLessThanOrEqual(300);
+  const rows = table(page).getByRole('row');
+  expect(Math.round((await rows.nth(1).boundingBox())!.height)).toBe(36);
+  let visible = 0;
+  for (const r of (await rows.all()).slice(1)) if (((await r.boundingBox())?.y ?? 900) + 36 <= 900) visible++;
+  expect(visible).toBeGreaterThanOrEqual(15);
+  expect(await table(page).evaluate(e => e.scrollWidth - e.clientWidth)).toBe(0);
+  expect(await axe(page)).toEqual([]);
+});
+
+for (const locale of ['en', 'ar'])
+  test(`Load more opens the page it loaded, the log is paged by 50, and a keyboard sort is announced (${locale})`, async ({ page }) => {
+    await setUp(page, locale);
+    const all = many(60); // the server sends 50 at a time
+    await page.route('**/v1/audit/access-log**', r => r.fulfill({ json: r.request().url().includes('after=c1') ? logPage(all.slice(50)) : logPage(all.slice(0, 50), 'c1') }));
+    await page.goto('/settings?tab=audit');
+    const t = table(page, locale);
+    await expect(t.getByRole('rowheader')).toHaveCount(50);
+    await page.getByRole('button', { name: locale === 'en' ? 'Load more' : 'عرض المزيد' }).click();
+    await expect(t.getByRole('rowheader')).toHaveCount(10); // page 2 of 2: the ten it loaded
+    await expect(page.getByRole('button', { name: locale === 'en' ? 'Load more' : 'عرض المزيد' })).toHaveCount(0); // nothing older
+    const pager = page.getByRole('navigation', { name: locale === 'en' ? 'Pages' : 'الصفحات' });
+    await pager.getByRole('button').first().click();
+    await expect(t.getByRole('rowheader')).toHaveCount(50);
+    await pager.getByRole('button').last().click();
+    const time = t.getByRole('columnheader').first();
+    await time.getByRole('button').press('Enter');
+    await expect(time).toHaveAttribute('aria-sort', 'ascending');
+    if (locale === 'en') await expect(t.getByRole('status')).toHaveText('Sorted by Time, ascending');
+    else await expect(t.getByRole('status')).not.toBeEmpty();
+    await expect(t.getByRole('rowheader')).toHaveCount(50); // a sort goes back to page 1
+    await expect(t.getByRole('rowheader').first().locator('time')).toHaveAttribute('datetime', all.at(-1)!.occurredAt); // oldest loaded first
+    expect(await axe(page)).toEqual([]);
+  });
+
+test.describe('on a coarse pointer', () => {
+  test.use({ hasTouch: true, isMobile: true, viewport: { width: 1024, height: 768 } });
+  test('the compact audit table ignores its density: rows are 48 px', async ({ page }) => {
+    await setUp(page);
+    await page.route('**/v1/audit/access-log**', r => r.fulfill({ json: logPage(many(3)) }));
+    await page.goto('/settings?tab=audit');
+    expect(await page.evaluate(() => matchMedia('(any-pointer: coarse)').matches)).toBe(true);
+    const r = table(page).getByRole('row').nth(1);
+    await expect(r).toBeVisible();
+    expect(Math.round((await r.boundingBox())!.height)).toBeGreaterThanOrEqual(48);
+  });
+});
+
+test.describe('at 375 px', () => {
+  test.use({ viewport: { width: 375, height: 812 } });
+  for (const locale of ['en', 'ar'])
+    test(`audit rows are stacked with the time first and every field labelled, and nothing scrolls sideways (${locale})`, async ({ page }) => {
+      await setUp(page, locale);
+      await page.route('**/v1/audit/access-log**', r => r.fulfill({ json: logPage([row({}), row({ id: 'e2', outcome: 'Denied' })]) }));
+      await page.goto('/settings?tab=audit');
+      const t = table(page, locale);
+      await expect(t.getByRole('rowheader').first()).toBeInViewport();
+      const cells = t.getByRole('row').nth(1).getByRole('cell');
+      await expect(cells.first().getByText(locale === 'en' ? 'Staff' : 'الموظف', { exact: true })).toBeVisible(); // the column's name above its value
+      await expect(cells.last().getByText(locale === 'en' ? 'Outcome' : 'النتيجة', { exact: true })).toBeVisible();
+      expect(await t.evaluate(e => e.scrollWidth - e.clientWidth)).toBeLessThanOrEqual(0);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+      expect(await axe(page)).toEqual([]);
+    });
 });

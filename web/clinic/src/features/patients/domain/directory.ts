@@ -78,6 +78,9 @@ export type RevealedIdentifiers = { identifiers: { scheme: IdentifierScheme; val
 
 export const directoryFilters: readonly DirectoryFilter[] = ['All', 'Incomplete', 'Recent'];
 
+/** A filter named in the address (?filter=Incomplete, from Clinic today, MDV-P2-053); anything else is All. A list value, never patient data. */
+export const asFilter = (value: string | null): DirectoryFilter => directoryFilters.find(f => f === value) ?? 'All';
+
 /** Error codes the server sends for an unreadable search (CountryRules.ParseSearch); anything else is a generic failure. */
 export const searchErrorCodes = ['full_number_required', 'too_short', 'too_long'] as const;
 export type SearchErrorCode = (typeof searchErrorCodes)[number];

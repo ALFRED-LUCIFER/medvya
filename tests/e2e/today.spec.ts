@@ -111,6 +111,26 @@ test('each visit shows its allergy state in words and links to the chart; a pati
   await expect(page).toHaveURL(/\/patients\/p-a1$/);
 });
 
+// MDV-P2-060 AC1, AC2, AC5: a row's states are the library Chip, the scope switch is the library SegmentedControl with its selection exposed,
+// and the first viewport holds at most one filled (primary) button: the next patient's.
+test('a row\'s states are library chips, the scope switch exposes its selection, and one filled button shows', async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await open(page);
+  const hero = page.getByRole('region', { name: 'Next patient' });
+  for (const words of ['Allergies listed', 'Abnormal vitals today']) await expect(hero.getByText(words, { exact: true })).toHaveAttribute('data-slot', 'chip');
+  await expect(hero.locator('[data-slot="chip"]').first()).toBeVisible();
+  expect(await hero.locator('[data-slot="chip"]').count()).toBeGreaterThanOrEqual(3);
+  const scope = page.getByRole('group', { name: 'Whose visits' });
+  await expect(scope).toHaveAttribute('data-slot', 'segmented-control');
+  await expect(scope.locator('[aria-pressed="true"]')).toHaveText('My patients');
+  const filled = await page.locator('button[data-variant="default"], a[data-variant="default"]').evaluateAll(els => els.filter(e => {
+    const r = e.getBoundingClientRect();
+    return r.width > 0 && r.bottom > 0 && r.top < window.innerHeight;
+  }).length);
+  expect(filled).toBeLessThanOrEqual(1);
+  await expect(hero.getByRole('button', { name: 'Start consultation with Meera Iyer (synthetic)' })).toHaveAttribute('data-variant', 'default');
+});
+
 // MDV-P1-103 AC1, AC3: at 1024 by 768 the escalated visit is in the first viewport, above Next patient, with its reason in words and an
 // icon; the doctor's day lists the waiting patients in the server's queue order (escalation first), each arrived row with its token and,
 // in words, how many are ahead of it in this doctor's queue (decision 10).

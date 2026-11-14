@@ -26,7 +26,10 @@ export class ApiError extends Error {
 export const csrf = { 'X-Medvya-Csrf': '1' };
 
 export async function send<T>(url: string, init: RequestInit = {}): Promise<T> {
-  const res = await apiFetch(url, { credentials: 'same-origin', ...init });
+  return answer<T>(await apiFetch(url, { credentials: 'same-origin', ...init }));
+}
+
+async function answer<T>(res: Response): Promise<T> {
   if (!res.ok) {
     const body = (await res.json().catch(() => null)) as { code?: string; errors?: Record<string, string[]> } | null;
     // A rejected field (400 problem details) is reported as "field:code" so a screen can name what was wrong.
@@ -41,9 +44,18 @@ export const post = <T>(url: string, body: unknown, key?: string) =>
   send<T>(url, { method: 'POST', headers: { ...csrf, 'Content-Type': 'application/json', ...(key ? { 'Idempotency-Key': key } : {}) }, body: JSON.stringify(body) });
 
 /** The facility's day view; without a date the server picks today in the facility's time zone. Ids and dates only in the URL. */
-export function fetchScheduleDay(facilityId: string, date: string | null): Promise<ScheduleDay> {
-  const query = new URLSearchParams({ facilityId, ...(date ? { date } : {}) });
-  return send(`/v1/schedule?${query}`);
+export async function fetchScheduleDay(facilityId: string, date: string | null): Promise<ScheduleDay> {
+  const url = `/v1/schedule?${new URLSearchParams({ facilityId, ...(date ? { date } : {}) })}`;
+  // public/prefetch.js may have started this read while the bundle downloaded (MDV-P1-110): taken once, only for the same URL, and a
+  // 5xx is read again with the shared client's retries.
+  const pending = window.medvyaSchedule;
+  window.medvyaSchedule = undefined;
+  const early = await pending;
+  return early?.url === url && early.res.status < 500 ? answer(early.res) : send(url);
+}
+
+declare global {
+  interface Window { medvyaSchedule?: Promise<{ url: string; res: Response } | undefined> }
 }
 
 /** Monday to Sunday of one doctor or resource around the date (this week when null). */

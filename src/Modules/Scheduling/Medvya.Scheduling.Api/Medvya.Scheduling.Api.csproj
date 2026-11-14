@@ -6,6 +6,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Medvya.Scheduling.Application\Medvya.Scheduling.Application.csproj" />
+    <!-- The owner's Clinic today (MDV-P2-053) adds the doctors' notes and prescriptions and the incomplete registrations to the board's counts. -->
+    <ProjectReference Include="..\..\Encounters\Medvya.Encounters.Application\Medvya.Encounters.Application.csproj" />
+    <ProjectReference Include="..\..\Prescribing\Medvya.Prescribing.Application\Medvya.Prescribing.Application.csproj" />
+    <ProjectReference Include="..\..\Patients\Medvya.Patients.Application\Medvya.Patients.Application.csproj" />
     <ProjectReference Include="..\..\Audit\Medvya.Audit.Api\Medvya.Audit.Api.csproj" />
     <ProjectReference Include="..\..\Tenancy\Medvya.Tenancy.Api\Medvya.Tenancy.Api.csproj" />
   </ItemGroup>

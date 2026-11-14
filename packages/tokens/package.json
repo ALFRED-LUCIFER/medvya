@@ -18,6 +18,7 @@
   },
   "exports": {
     ".": "./src/theme.ts",
+    "./status": "./src/status.ts",
     "./tokens.css": "./src/tokens.css"
   }
 }

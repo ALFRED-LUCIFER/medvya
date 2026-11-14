@@ -244,8 +244,7 @@ public sealed class ConsultNoteService(
     {
         var me = user.UserId ?? throw new InvalidOperationException("No user.");
         // The facility's day started at its local midnight: a consultation still open from before then was never ended (MDV audit UX-11).
-        var zone = TimeZoneInfo.FindSystemTimeZoneById((await facilities.FindAsync(facilityId, cancellationToken) ?? throw new InvalidOperationException("Session facility not in this tenant.")).TimeZone);
-        var dayStart = new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(ScheduleRules.LocalDate(clock.GetUtcNow(), zone).ToDateTime(TimeOnly.MinValue), zone), TimeSpan.Zero);
+        var dayStart = await DayStartAsync(facilityId, cancellationToken);
         var open = await db.Encounters.AsNoTracking()
             .Where(e => e.LeadClinicianId == me && e.FacilityId == facilityId
                 && (!db.ConsultNotes.Any(n => n.EncounterId == e.Id && n.Status == NoteStatus.Signed) || (e.Status == EncounterStatus.Active && e.StartedAt < dayStart)))
@@ -273,6 +272,22 @@ public sealed class ConsultNoteService(
                 row.Encounter.Status == EncounterStatus.Active && row.Encounter.StartedAt < dayStart));
         }
         return (pending, open.Count > IConsultNotes.MaxPending);
+    }
+
+    public async Task<IReadOnlyList<NotesToSign>> NotesToSignAsync(Guid facilityId, CancellationToken cancellationToken = default)
+    {
+        var dayStart = await DayStartAsync(facilityId, cancellationToken);
+        return await db.Encounters.AsNoTracking()
+            .Where(e => e.FacilityId == facilityId && !db.ConsultNotes.Any(n => n.EncounterId == e.Id && n.Status == NoteStatus.Signed))
+            .GroupBy(e => e.LeadClinicianId)
+            .Select(g => new NotesToSign(g.Key, g.Count(), g.Count(e => e.StartedAt < dayStart)))
+            .ToListAsync(cancellationToken);
+    }
+
+    async Task<DateTimeOffset> DayStartAsync(Guid facilityId, CancellationToken cancellationToken)
+    {
+        var zone = TimeZoneInfo.FindSystemTimeZoneById((await facilities.FindAsync(facilityId, cancellationToken) ?? throw new InvalidOperationException("Session facility not in this tenant.")).TimeZone);
+        return new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(ScheduleRules.LocalDate(clock.GetUtcNow(), zone).ToDateTime(TimeOnly.MinValue), zone), TimeSpan.Zero);
     }
 
     async Task<NoteView> ViewAsync(ConsultNote note, CancellationToken cancellationToken, IReadOnlyList<SignedNoteVersion>? known = null)

@@ -39,6 +39,23 @@ export type Board = { facilityId: string; timeZone: string; date: string; now: s
 /** Real-time connection to the board hub (MDV-P1-029): live, or paused (offline, dropped, refused) while the board refreshes on a timer. */
 export type LiveStatus = 'connecting' | 'live' | 'paused';
 
+/** The board hub's message (BoardHub.BoardChanged): which visit changed and to what state, never patient data. */
+export type BoardChange = { appointmentId: string; state: string };
+
+/** A card changed elsewhere says Updated this long (MDV-P2-056, DESIGN.md Motion). */
+export const updatedMs = 5_000;
+/** After this desk changes a visit, the hub's message about it is that change coming back, not someone else's, for this long. */
+export const echoMs = 5_000;
+/** Visit id → until when (device ms) its card says Updated. */
+export type UpdatedMarks = Record<string, number>;
+
+/** The marks still showing at `now`, plus `heard`: the visits the live connection reported changed since the last fetch, for updatedMs. */
+export const withUpdated = (marks: UpdatedMarks, heard: readonly string[], now: number): UpdatedMarks =>
+  Object.fromEntries([...Object.entries(marks).filter(([, until]) => until > now), ...heard.map(id => [id, now + updatedMs] as const)]);
+
+/** Someone else's change: not a visit this desk is changing, or changed less than echoMs ago (`mine`: id → until when). */
+export const isOthersChange = (mine: ReadonlyMap<string, number>, id: string, now: number) => !((mine.get(id) ?? 0) > now);
+
 /** Wait before reconnect attempt `attempt` (0, 1, …): 0.5 s doubling to at most 30 s, forever, since a desk board stays open all day. */
 export const retryDelay = (attempt: number) => Math.min(30_000, 500 * 2 ** attempt);
 
@@ -60,6 +77,27 @@ export const visibleColumns = (steps: VisitSteps, columns: Record<BoardColumn, B
   boardColumns.filter(c => hasStep(c, steps) || columns[c].length > 0);
 
 export const isBoardColumn = (state: AppointmentState): state is BoardColumn => (boardColumns as readonly string[]).includes(state);
+
+/** The desk's three views (MDV-P2-052): By status (the board, the default), By doctor and List. Each receptionist's last choice opens next time. */
+export const frontDeskViews = ['board', 'doctors', 'list'] as const;
+export type FrontDeskView = (typeof frontDeskViews)[number];
+export const isFrontDeskView = (value: unknown): value is FrontDeskView => (frontDeskViews as readonly unknown[]).includes(value);
+
+/** The list's groups, who needs the desk first (MDV-P2-052): waiting, with the nurse, in consult, billing, then booked, then done. */
+const listOrder = ['CheckedIn', 'ReadyForDoctor', 'WithNurse', 'InConsult', 'Billing', 'Booked', 'Done'] as const satisfies readonly BoardColumn[];
+export type ListRow = BoardCard & { doctor: string };
+
+/**
+ * The list view: its status filters (the board's visible columns, in list order) and the groups to show, only `filter`'s when one is
+ * pressed, otherwise every group with visits. Each group keeps groupByColumn's order, the clinic's queue rule, so it matches the queue display.
+ */
+export function listGroups(steps: VisitSteps, columns: Record<BoardColumn, BoardCard[]>, filter: BoardColumn | null) {
+  const shown = visibleColumns(steps, columns);
+  const statuses = listOrder.filter(c => shown.includes(c));
+  const groups = statuses.filter(c => (filter ? c === filter : columns[c].length > 0))
+    .map(state => ({ state, rows: columns[state].map((card): ListRow => ({ ...card, doctor: card.calendarName })) }));
+  return { statuses, groups };
+}
 
 /**
  * The server's queue order (MDV-P1-103), shared by the doctor's day, the board and the queue display; a card without a place goes after.

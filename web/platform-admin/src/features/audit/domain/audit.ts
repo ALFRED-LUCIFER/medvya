@@ -31,3 +31,6 @@ export const isKnownAction = (a: string): a is KnownAction => a in actionKeys;
 export const actionKey = (a: KnownAction) => actionKeys[a];
 
 export const pageSize = 50;
+
+/** Column definitions are data: each is its heading's i18n key. The time identifies a row (MDV-P2-054). */
+export const auditColumns = ['platform.audit.when', 'platform.audit.what', 'platform.audit.who', 'platform.audit.reason'] as const;

@@ -26,7 +26,7 @@ function SegmentedControl<V extends string>({ label, options, value, onValueChan
           aria-pressed={v === value}
           onClick={() => onValueChange(v)}
           className={cn(
-            "inline-flex h-control items-center justify-center gap-2 rounded-md border border-transparent px-3 text-label text-muted-foreground transition-colors duration-fast ease-out",
+            "inline-flex h-control items-center justify-center gap-2 rounded-md border border-transparent px-3 text-label text-muted-foreground transition-[color,background-color,border-color] duration-fast ease-out",
             "hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
             "aria-pressed:border-border aria-pressed:bg-card aria-pressed:text-foreground"
           )}

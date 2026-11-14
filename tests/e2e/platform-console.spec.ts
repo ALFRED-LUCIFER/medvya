@@ -146,3 +146,29 @@ for (const locale of ['en', 'ar']) {
     expect([...tops]).toHaveLength(1);
   });
 }
+
+// MDV-P2-054 AC5: on a phone the team and audit tables are stacked: each row is a block that starts with who or when, every other field
+// sits under its column's name, and nothing scrolls sideways.
+const stackedTables = [
+  { path: '/team', label: { en: 'Medvya team access', ar: 'وصول فريق Medvya' }, first: 'Ops Admin (synthetic)', fields: { en: ['Role', 'Access ends'], ar: ['الدور', 'ينتهي الوصول'] } },
+  { path: '/audit', label: { en: 'Platform audit log', ar: 'سجل تدقيق المنصة' }, first: '2026', fields: { en: ['What', 'Reason'], ar: ['ماذا', 'السبب'] } },
+] as const;
+for (const locale of ['en', 'ar'] as const) {
+  test(`at 375 px the ${locale} team and audit tables are stacked and labelled, and nothing scrolls sideways`, async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 740 });
+    await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
+    await page.route('**/v1/me', r => r.fulfill({ json: owner({ keyVerified: true, hasKey: true, canRegister: false }) }));
+    await page.route('**/v1/team', r => r.fulfill({ json: team }));
+    await page.route('**/v1/audit**', r => r.fulfill({ json: audit }));
+    for (const t of stackedTables) {
+      await page.goto(t.path);
+      const region = page.getByRole('region', { name: t.label[locale] });
+      await expect(region.getByRole('rowheader').first()).toContainText(t.first);
+      const row = region.getByRole('row').nth(1);
+      for (const name of t.fields[locale]) await expect(row.getByRole('cell').getByText(name, { exact: true })).toBeVisible(); // the column's name above its value
+      expect(await region.evaluate(e => e.scrollWidth - e.clientWidth), t.path).toBeLessThanOrEqual(0);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), t.path).toBeLessThanOrEqual(0);
+      expect(await axe(page), t.path).toEqual([]);
+    }
+  });
+}

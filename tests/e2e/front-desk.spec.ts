@@ -431,8 +431,11 @@ for (const locale of ['en', 'ar'])
     await expect(cardOf(page, 'Meera Iyer (synthetic)').getByRole('link')).toHaveCount(0); // booked: no token yet, nothing to reprint
     await cardOf(page, 'Farhan Qureshi (synthetic)').getByRole('link', { name: locale === 'en' ? 'Reprint token A-07' : /A-07/ }).click();
     await expect(page).toHaveURL(/\/front-desk\/token\/a2$/);
+    // The slip is named by its token; the board's cards (named by patient) may still be on screen for a moment while the page loads.
+    const paper = page.getByRole('article', { name: /A-07/ });
+    await expect(paper).toBeVisible();
+    await expect(page.getByRole('article')).toHaveCount(1);
     await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
-    const paper = page.getByRole('article');
     await expect(paper).toContainText('A-07');
     await expect(paper).toContainText('Iyer Family Clinic · Adyar');
     await expect(paper).toContainText('Dr. Arjun Rao (synthetic)');

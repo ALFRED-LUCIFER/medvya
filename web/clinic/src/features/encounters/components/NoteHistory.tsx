@@ -2,7 +2,7 @@ import { useEffect, useRef, type Ref } from 'react';
 import { Link } from 'react-router';
 import type { UseFormRegister } from 'react-hook-form';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, Input, Label, Textarea } from '@medvya/ui';
+import { Button, buttonVariants, Card, Input, Label, Textarea } from '@medvya/ui';
 import { maxReasonLength, maxSectionLength, type AddendumFailure, type AddendumForm, type NoteAddendum, type NoteSignature } from '../domain/note';
 
 type Props = {
@@ -30,8 +30,7 @@ export default function NoteHistory(p: Props) {
   if (!p.signed || !p.signature) return null;
   const text = p.register('text');
   return (
-    <section aria-labelledby="note-history" className="flex flex-col gap-4 rounded-xl border bg-card p-4">
-      <h2 id="note-history" className="text-lg font-extrabold">{t('noteHistory.title')}</h2>
+    <Card className="gap-4" title={t('noteHistory.title')}>
       <Versions lastRef={lastRef} signature={p.signature} addenda={p.addenda} timeZone={p.timeZone} />
       <p className="text-sm text-muted-foreground">{t('notePrint.corrections')}</p>
       <div className="flex flex-wrap gap-3">
@@ -62,7 +61,7 @@ export default function NoteHistory(p: Props) {
           </div>
         </form>
       )}
-    </section>
+    </Card>
   );
 }
 

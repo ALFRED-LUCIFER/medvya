@@ -2,7 +2,7 @@ import type { FormEventHandler } from 'react';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 import { CircleCheck, CircleHelp } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
+import { Button, Card, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
 import { allergyStatuses, newAllergyStatuses, type AllergyForm, type AllergyStatus, type AllergyView } from '../domain/intake';
 
 type Props = {
@@ -24,8 +24,7 @@ export default function AllergiesSection(p: Props) {
   const { errors } = p.form.formState;
   const refused = (field: string) => (p.invalid?.field === field ? p.invalid.code : null);
   return (
-    <section aria-labelledby="intake-allergies" className="flex flex-col gap-3 rounded-xl border bg-card p-4">
-      <h2 id="intake-allergies" className="text-lg font-extrabold">{t('intake.allergy.title')}</h2>
+    <Card title={t('intake.allergy.title')}>
       {p.allergies.length === 0 ? (
         p.noKnownConfirmed
           ? <p role="status" className="inline-flex items-center gap-1.5 font-bold"><CircleCheck aria-hidden className="size-4" />{t('intake.allergy.noneConfirmed')}</p>
@@ -76,6 +75,6 @@ export default function AllergiesSection(p: Props) {
           <Button type="submit" className="self-start" loading={p.adding} disabled={!p.online}>{t('intake.allergy.add')}</Button>
         </form>
       )}
-    </section>
+    </Card>
   );
 }

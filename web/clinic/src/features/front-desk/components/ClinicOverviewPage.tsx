@@ -2,7 +2,8 @@ import type { FormEventHandler, ReactNode } from 'react';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 import { ArrowLeftRight, Clock, Stethoscope, Users } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, FrontDeskTag, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, PageContainer, PageHeader } from '@medvya/ui';
+import { Button, Card, EmptyState, FrontDeskTag, Label, PageMessage, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, PageContainer, PageHeader, cn } from '@medvya/ui';
+import { isDeviceZone } from '../../schedule/domain/changes';
 import type { LiveStatus, MoveError } from '../domain/board';
 import type { QueueRow, QueueTableView } from '../domain/queueTable';
 import QueueTable from './QueueTable';
@@ -36,38 +37,28 @@ type Props = {
 /** D-04 Clinic overview: every doctor working today (visits per state, delay, next patients) and the shared waiting room. */
 export default function ClinicOverviewPage(props: Props) {
   const { t } = useI18n();
+  // As on the board (MDV-P1-095): one header row with the view switch, and the facility's zone only when this device is elsewhere.
+  const zone = props.overview && !isDeviceZone(props.overview.timeZone) ? t('schedule.facilityTime', { zone: props.overview.timeZone }) : null;
   return (
     <PageContainer width="fluid">
-      <PageHeader title={t('board.titleOnly')}
-        description={props.overview && <span className="text-[13px]">{t('schedule.facilityTime', { zone: props.overview.timeZone })}</span>}
+      <PageHeader title={t('board.titleOnly')} meta={zone}
         actions={<>
+          {props.views}
           {!props.forbidden && <p role="status" className="inline-flex min-h-9 items-center"><FrontDeskTag kind={props.live} /></p>}
-        </>}>
-        {props.views}
-      </PageHeader>
+        </>} />
       <Body {...props} />
     </PageContainer>
-  );
-}
-
-function Message({ title, body, action, busy = false }: { title: string; body?: string; action?: { label: string; run: () => void }; busy?: boolean }) {
-  return (
-    <div role={busy ? 'status' : 'alert'} className="flex max-w-[560px] flex-col items-start gap-2 rounded-xl border bg-card p-6">
-      <h2 className="text-lg font-extrabold">{title}</h2>
-      {body && <p className="text-muted-foreground">{body}</p>}
-      {action && <Button variant="default" className="mt-2" onClick={action.run}>{action.label}</Button>}
-    </div>
   );
 }
 
 function Body(props: Props) {
   const { t } = useI18n();
   const { overview } = props;
-  if (props.forbidden) return <Message title={t('err.403')} body={t('board.forbidden.body')} />;
-  if (props.offline) return <Message title={t('state.offline.title')} body={t('board.offline')} />;
-  if (props.failed) return <Message title={t('board.error.title')} body={t('board.error.body')} action={{ label: t('schedule.retry'), run: props.onRetry }} />;
-  if (props.loading || !overview) return <Message busy title={t('board.loading')} />;
-  if (overview.doctors.length === 0) return <Message title={t('overview.empty.title')} body={t('overview.empty.body')} />;
+  if (props.forbidden) return <PageMessage kind="denied" title={t('err.403')}>{t('board.forbidden.body')}</PageMessage>;
+  if (props.offline) return <PageMessage kind="error" title={t('state.offline.title')}>{t('board.offline')}</PageMessage>;
+  if (props.failed) return <PageMessage kind="error" title={t('board.error.title')} action={<Button onClick={props.onRetry}>{t('schedule.retry')}</Button>}>{t('board.error.body')}</PageMessage>;
+  if (props.loading || !overview) return <PageMessage kind="busy">{t('board.loading')}</PageMessage>;
+  if (overview.doctors.length === 0) return <EmptyState title={t('overview.empty.title')}>{t('overview.empty.body')}</EmptyState>;
   const now = Date.parse(overview.now);
   return (
     <>
@@ -97,7 +88,7 @@ function Doctor({ doctor, timeZone, mine = false }: { doctor: DoctorLoad; timeZo
   // The doctor's own card stands alone under the page title, so its headings sit one level higher than the list cards' (#894).
   const [Title, Sub] = mine ? (['h2', 'h3'] as const) : (['h3', 'h4'] as const);
   return (
-    <article aria-labelledby={id} className={`flex h-full flex-col gap-2 rounded-xl border bg-card p-4 ${mine ? 'border-action-600' : ''}`}>
+    <article aria-labelledby={id} className="h-full"><Card className={cn('h-full gap-2', mine && 'border-action-600')}>
       <Title id={id} className="font-extrabold">{mine ? t('overview.mine', { name: doctor.name }) : doctor.name}</Title>
       <p className="flex items-center gap-1.5 text-sm font-bold">
         <Clock aria-hidden className="size-4" />{doctor.delayMinutes > 0 ? t('overview.late', { minutes: doctor.delayMinutes }) : t('overview.onTime')}
@@ -118,7 +109,7 @@ function Doctor({ doctor, timeZone, mine = false }: { doctor: DoctorLoad; timeZo
           ))}
         </ol>
       )}
-    </article>
+    </Card></article>
   );
 }
 

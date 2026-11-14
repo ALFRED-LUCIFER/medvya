@@ -6,7 +6,8 @@ import { frontDeskViews, type FrontDeskView } from '../domain/board';
 export default function FrontDeskViews({ value, onValueChange }: { value: FrontDeskView; onValueChange: (view: FrontDeskView) => void }) {
   const { t } = useI18n();
   return (
-    <SegmentedControl label={t('frontDesk.views')} value={value} onValueChange={onValueChange}
+    // No track padding: the 44 px segments then keep the board's header one 44 px row (MDV-P2-059) without pushing the first card down.
+    <SegmentedControl label={t('frontDesk.views')} className="p-0" value={value} onValueChange={onValueChange}
       // Words only: the header row has to fit at 1024 px (MDV-P1-095).
       options={frontDeskViews.map(v => ({ value: v, label: t(`frontDesk.view.${v}`) }))} />
   );

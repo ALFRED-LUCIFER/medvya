@@ -307,7 +307,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P2-053](P2-doctor-workspace/MDV-P2-053.md) | Clinic today for the owner: five counts the system can stand behind and a needs-attention list | P2 | wk 12–12 | 68% |
 | [MDV-P2-059](P2-doctor-workspace/MDV-P2-059.md) | Adopt PageHeader, Card and Section, PageMessage and EmptyState across the clinic app and the platform console | P2 | wk 12–13 | 75% |
 
-## Week 13 · 18 Jan 2027 – 22 Jan 2027 · load 62.8 dev-days ⚠ over capacity
+## Week 13 · 18 Jan 2027 – 22 Jan 2027 · load 64.8 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -341,6 +341,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P2-064](P2-doctor-workspace/MDV-P2-064.md) | One screen per task: top bar, content that fits, bottom bar; long lists scroll inside their panel, never the page | P2 | wk 13–13 | 65% |
 | [MDV-P2-065](P2-doctor-workspace/MDV-P2-065.md) | Apply the screen layout standard everywhere: full-width content and every action in the sticky bottom bar, the platform console included | P2 | wk 13–13 | 70% |
 | [MDV-P2-066](P2-doctor-workspace/MDV-P2-066.md) | Papers from the patient record and the visit: one Print menu in the bottom bar (visit summary, record summary, current medicines, lab slip, prescription), one paper format | P2 | wk 13–13 | 65% |
+| [MDV-P2-067](P2-doctor-workspace/MDV-P2-067.md) | Consultation Notes: a Notes button in the bottom bar where the doctor types free notes about the visit, kept with the signed note | P2 | wk 13–13 | 75% |
 | [MDV-P3-001](P3-ai-scribe/MDV-P3-001.md) | Spike: Azure AI Speech and Azure OpenAI in-region capability check and ADR for speech/LLM providers | P3 | wk 13–13 | 70% |
 | [MDV-P3-002](P3-ai-scribe/MDV-P3-002.md) | Consent templates and recording policy administration (H-09) | P3 | wk 13–13 | 82% |
 | [MDV-P3-003](P3-ai-scribe/MDV-P3-003.md) | Per-encounter recording consent with device selection; decline goes straight to manual note (A-02, E-04) | P3 | wk 13–14 | 86% |

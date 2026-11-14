@@ -1,5 +1,5 @@
 // Medvya's own oxlint rules (jsPlugins): no height patch on a library control (MDV-P1-078); compact tables only where allowed (MDV-P2-054);
-// no local Field in a feature (MDV-P2-058).
+// no local Field in a feature (MDV-P2-058); no inline card and no local Message, Card or Empty in a feature (MDV-P2-059).
 const CONTROLS = new Set(['Input', 'SelectTrigger', 'Textarea', 'Button']);
 const PATCH = /(?<![\w:-])(?:min-)?h-11(?![\w-])/;
 
@@ -15,6 +15,10 @@ function strings(node, out = []) {
   }
   return out;
 }
+
+// The library component a feature uses instead of declaring its own (MDV-P2-059).
+const SURFACES = { Message: 'PageMessage', Card: 'Card (or Section inside a Card)', Empty: 'EmptyState' };
+const INLINE_CARD = /\bborder bg-card\b/;
 
 const attr = (node, name) => node.attributes.find(a => a.type === 'JSXAttribute' && a.name.name === name);
 
@@ -43,6 +47,29 @@ export default {
         return {
           FunctionDeclaration(node) { if (node.id?.name === 'Field') report(node.id); },
           VariableDeclarator(node) { if (node.id.type === 'Identifier' && node.id.name === 'Field') report(node.id); },
+        };
+      },
+    },
+    'no-local-surface': {
+      meta: { type: 'problem', docs: { description: 'A feature uses PageMessage, Card and EmptyState from @medvya/ui and never declares its own Message, Card or Empty.' } },
+      create(context) {
+        const check = id => {
+          if (id && Object.hasOwn(SURFACES, id.name))
+            context.report({ node: id, message: `Use ${SURFACES[id.name]} from @medvya/ui; a feature never builds its own ${id.name} (DESIGN.md, MDV-P2-059).` });
+        };
+        return {
+          FunctionDeclaration(node) { check(node.id); },
+          VariableDeclarator(node) { if (node.id.type === 'Identifier') check(node.id); },
+        };
+      },
+    },
+    'no-inline-card': {
+      meta: { type: 'problem', docs: { description: 'A card surface is Card or Section from @medvya/ui, never a hand-written "border bg-card".' } },
+      create(context) {
+        const report = node => context.report({ node, message: 'A card is Card or Section from @medvya/ui, not "border bg-card" by hand (DESIGN.md, MDV-P2-059). A control that only looks outlined uses buttonVariants({ variant: \'outline\' }).' });
+        return {
+          Literal(node) { if (typeof node.value === 'string' && INLINE_CARD.test(node.value)) report(node); },
+          TemplateElement(node) { if (INLINE_CARD.test(node.value.cooked ?? node.value.raw)) report(node); },
         };
       },
     },

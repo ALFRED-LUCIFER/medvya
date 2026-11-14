@@ -73,7 +73,7 @@ for (const locale of ['en', 'ar'])
 test.describe('at 375 px', () => {
   test.use({ viewport: { width: 375, height: 812 } });
   for (const [locale, label, signedIn, lastActive] of [
-    ['en', 'Devices where you are signed in', 'Signed in', 'Last active'], ['ar', 'الأجهزة التي سجّلت الدخول عليها', 'وقت الدخول', 'آخر نشاط']])
+    ['en', 'Devices where you are signed in', 'Signed in', 'Last active'], ['ar', 'الأجهزة التي سجّلت الدخول عليها', 'وقت الدخول', 'آخر نشاط']] as const)
     test(`sessions are stacked with the device first and every time labelled, and nothing scrolls sideways (${locale})`, async ({ page }) => {
       await open(page, locale);
       const table = page.getByRole('region', { name: label });

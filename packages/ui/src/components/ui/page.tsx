@@ -30,6 +30,8 @@ function PageContainer({
       data-width={width}
       data-fit={fit || undefined}
       className={cn("flex w-full min-w-0 flex-col gap-4", pageWidths[width],
+        // A page with a bottom bar is at least one screen tall from 768 px, so the bar (mt-auto) sits on the screen's bottom edge even when the page is short.
+        "md:has-[>[data-slot=sticky-action-bar]]:min-h-[calc(100dvh-var(--shell-top,0px)-3rem)]",
         fit && "wide:h-[calc(100dvh-var(--shell-top,0px)-3rem)] [@media(max-height:480px)]:h-auto", className)}
       {...props}
     />

@@ -60,7 +60,7 @@ export default function ConsoleShell({ displayName, role, items, languageSwitche
           </div>
         </div>
       </nav>
-      <div className="flex min-w-0 flex-col">
+      <div className="flex min-w-0 flex-col [--shell-top:var(--spacing-topbar)]">
         {/* 48 px, like the clinic's top bar: the page title row then starts at the same height on every console page (MDV-P2-059). */}
         <header className="flex min-h-12 flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b bg-card px-4 py-0.5">
           <p className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">

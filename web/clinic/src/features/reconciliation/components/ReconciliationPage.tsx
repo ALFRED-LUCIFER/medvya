@@ -40,7 +40,7 @@ export default function ReconciliationPage(p: Props) {
   const { view } = p;
   const confirmed = view.confirmedAt !== null;
   return (
-    <div className="flex flex-col gap-4">
+    <PageContainer>
       {p.banner && <PatientStrip banner={p.banner} headingLevel={1} />}
       <Card title={t('reconcile.title')} intro={t('reconcile.intro')}>
         <p role="status" className="font-bold">{t('reconcile.summary', { decided: view.decided, total: view.total, disagree: view.disagree })}</p>
@@ -72,7 +72,7 @@ export default function ReconciliationPage(p: Props) {
         {!confirmed && <Button loading={p.confirming} disabled={!canConfirm(view) || !p.online} aria-describedby="reconcile-confirm-note" onClick={p.onConfirm}>{t('reconcile.confirm')}</Button>}
         <Link to={p.consultPath} className={buttonVariants({ variant: 'outline' })}>{t('reconcile.backToConsult')}</Link>
       </StickyActionBar>
-    </div>
+    </PageContainer>
   );
 }
 

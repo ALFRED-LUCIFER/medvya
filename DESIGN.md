@@ -22,15 +22,39 @@ How to read it:
 |---|---|
 | Top bar | 48 px from 768 px up, 56 px on phones (MDV-P1-093, #1189) |
 | Navigation rail, 768 to 1279 | 72 px, icon with an 11 px label |
-| Sidebar, 1280 and up | 232 px, collapsible to the rail by the user |
+| Sidebar, 1280 and up | 232 px; no fold toggle. Settings is pinned at its foot, above the account |
 | Page gutter | 16 / 24 / 32 px at phone / tablet / 1600 and up |
 | Page header | One 44 px row: title 20/28, secondary text, actions at the end; 12 px gap below |
-| Fluid page maximum | 1,600 px |
-| Reading maximum | 1,152 px; body text lines about 72 characters |
-| Form maximum | 768 px |
+| Content width | The full width between the sidebar (or rail) and the page gutter. No page or form maximum |
+| Reading maximum | Paragraphs and help text only: lines of about 72 characters. Never a cap on a form, table or grid |
 | Side panel | 320 px; 360 px for the consultation chart panel |
 
 Breakpoints: 360, 768, **1024**, 1280, 1600. 1024 is the named tier for two-pane layouts. The 360 px `sm:` step is not used for column changes: no `sm:grid-cols-*`. Tokens: MDV-P1-079 (#1175). Applied to screens: MDV-P2-057 (#1216).
+
+### Screen layout standard (every app)
+
+Every screen in every Medvya web app (the clinic app, the platform console and any app or admin panel added later) has the same frame. Owner ruling, 14 Nov 2026.
+
+```
+┌──────────┬──────────────────────────────────────────────┐
+│          │ Top bar: who and where                        │
+│ Sidebar  ├──────────────────────────────────────────────┤
+│ (small,  │                                              │
+│ labelled;│ Content: the full width, fits one screen     │
+│ Settings │                                              │
+│ at foot) ├──────────────────────────────────────────────┤
+│          │ Bottom bar: status ·········· [Cancel] [Save]│
+└──────────┴──────────────────────────────────────────────┘
+```
+
+1. **Sidebar**: small and labelled (232 px from 1280 px, the 72 px labelled rail from 768 px, bottom tabs on phones). No fold toggle. Settings sits at its foot.
+2. **Top bar**: the shell's bar. Who and where, search, notifications, account.
+3. **Content takes the full width** between the sidebar and the gutter. Fields sit side by side in an auto-fit grid (200 px minimum), not in a narrow column. Only paragraphs are held to reading width.
+4. **Bottom bar**: the library `StickyActionBar`, always sticky at the bottom of the screen and always visible. **Every button that acts on the screen lives in it**: OK, Save, Add, Create, Continue, Back, Confirm, Register, Sign, Send, Cancel. Status sits at its start, the actions at its end, and the one filled primary button is last. It stacks above all page content and below only dialogs, menus and toasts. A screen never ends with buttons after a long form.
+
+What stays where it is: navigation links, search, filters and view switches (in the header row); a table row's own action (on its row); an inline add inside a list (Add diagnosis under Assessment). A dialog or drawer follows the same rule inside itself: its actions are in its own footer, pinned at its bottom.
+
+A new screen or a new app that does not follow this frame is not done. Review it against this section; the one-screen helpers in `tests/e2e/support/oneScreen.ts` (`commitVisible`, `fitsOneScreen`) prove it.
 
 ### One screen per task
 
@@ -51,7 +75,7 @@ Under 768 px pages scroll by design and the bottom bar pins above the bottom tab
 | Top bar | Clinic name, search icon, bell | Clinic, search field, bell, avatar | Same |
 | Patient search | Full-screen sheet | Ctrl+K dialog, opens instantly | Same |
 
-**The rail is labelled (ruling 8).** Labels sit under the icons in a 72 to 76 px rail. It is never icon-only. The full sidebar collapses to the rail only by the user's own choice.
+**The rail is labelled (ruling 8).** Labels sit under the icons in a 72 to 76 px rail. It is never icon-only. From 1280 px the sidebar is always the full labelled sidebar; there is no fold toggle (owner, 14 Nov 2026). Settings is pinned at the foot of the menu, as in the Medvya Web design.
 
 Account menu: name and role, language, my devices, change facility, sign out (last, separated).
 
@@ -193,7 +217,7 @@ footer 56, part of the layout: Saved 10:42 · N to finish · Preview prescriptio
 
 **Tables.** Always the library Table, with a label. Numbers right-aligned with tabular numerals. The identifying cell is bold; nothing else. Sort on the columns people sort by (name, time, wait). Paging over 50 rows. Under 768 px a table becomes stacked rows; it never scrolls sideways with hidden columns that carry dose or identity. Row actions: one visible, the rest in a menu. In a compact table the visible one only opens a form and is 32 px with a mouse (44 px on a coarse pointer), so the row stays 36 px; an action that acts at once or ends access (Offboard, Revoke, Remove) is a 44 px menu item and asks to confirm where it cannot be undone.
 
-**Forms.** One column under 768 px, two at most above. Label above the field. One convention per form: "required" in words when most fields are optional, "optional" in words when most are required. Units inside or beside the field. Errors say what is wrong and what to do, beside the field and in a summary that takes focus after a failed submit. Clinical notes autosave with a visible SaveStatus; settings and registration use an explicit Save. Information entered once is not asked again in the same process: the nurse's complaint prefills the doctor's note (MDV-P1-104, #1200).
+**Forms.** One column under 768 px; above that, fields sit side by side in an auto-fit grid (200 px minimum) across the full content width (see [Screen layout standard](#screen-layout-standard-every-app)). Save, Add, Cancel and the other actions are in the bottom bar, never at the end of the form. Label above the field. One convention per form: "required" in words when most fields are optional, "optional" in words when most are required. Units inside or beside the field. Errors say what is wrong and what to do, beside the field and in a summary that takes focus after a failed submit. Clinical notes autosave with a visible SaveStatus; settings and registration use an explicit Save. Information entered once is not asked again in the same process: the nurse's complaint prefills the doctor's note (MDV-P1-104, #1200).
 
 ## Pinned chrome
 
@@ -203,7 +227,7 @@ footer 56, part of the layout: Saved 10:42 · N to finish · Preview prescriptio
 | Patient strip | Consultation, its sub-pages, nurse intake, patient record | 56 px; two rows at most on a tablet |
 | Section anchors | Consultation | 44 px |
 | Table and column headers | Lists, the board | |
-| Action footer | Every task screen ([One screen per task](#one-screen-per-task)) | Part of the layout, never an overlay |
+| Bottom bar (action footer) | Every screen with an action, in every app ([Screen layout standard](#screen-layout-standard-every-app)) | Part of the layout, never an overlay; above page content, below dialogs, menus and toasts |
 
 - Together, pinned chrome takes at most 30 % of the viewport height.
 - Nothing focusable ever sits under it.

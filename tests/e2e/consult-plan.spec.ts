@@ -89,12 +89,18 @@ test('a chart medicine is tapered in steps from the plan; the taper is a line of
   await expect(rx).toContainText('Last dose on 01 Nov 2026.');
 });
 
-test('Add medicine opens the side panel from the plan', async ({ page }) => {
+// MDV-P1-094: medicines are added in the Prescription section, directly after Assessment; the plan no longer has its own Add medicine.
+test('Add medicine opens the side panel from the Prescription section after Assessment', async ({ page }) => {
   await open(page);
-  await plan(page).getByRole('button', { name: 'Add medicine' }).click();
+  await expect(plan(page).getByRole('button', { name: 'Add medicine' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: /^\d · Prescription$/ })).toBeVisible();
+  const headings = (await page.getByRole('heading', { level: 3 }).allTextContents()).filter(h => /^\d · /.test(h)); // the page's sections
+  expect(headings.findIndex(h => h.endsWith('Prescription'))).toBe(headings.findIndex(h => h.endsWith('Assessment')) + 1);
+  const add = page.getByRole('region', { name: 'Prescription', exact: true }).getByRole('button', { name: 'Add medicine' });
+  await add.click();
   await expect(page.getByRole('dialog', { name: 'Add medicine' })).toBeVisible();
   await page.keyboard.press('Escape');
-  await expect(plan(page).getByRole('button', { name: 'Add medicine' })).toBeFocused();
+  await expect(add).toBeFocused();
 });
 
 test('a test toggled on is one draft; off switches the draft off; on again re-includes it', async ({ page }) => {
@@ -141,7 +147,7 @@ test('Referral moves focus to the visit\'s referrals, where the letter is writte
 
 test('"Plan change" from the older adult medicine review lands on the Plan with focus', async ({ page }) => {
   await open(page, 'en', '/consult/e-1#studio-plan');
-  await expect(page.getByRole('heading', { name: /^6 · / })).toBeFocused();
+  await expect(page.getByRole('heading', { name: /^\d · Plan$/ })).toBeFocused();
 });
 
 for (const locale of ['en', 'ar'])

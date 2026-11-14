@@ -137,7 +137,7 @@ function SectionBar({ sections, ticks, title, chart }: { sections: readonly Anch
   };
   return (
     <nav aria-label={t('studio.nav')} data-pinned="top" className="flex items-center gap-2 sticky top-[var(--patient-strip-bottom,0px)] z-10 -mx-1 bg-background px-1 py-1 [@media(max-height:480px)]:static">
-      <ol className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto pb-1 wide:flex-wrap wide:overflow-visible">
+      <ol className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto pb-1 lg:flex-wrap lg:overflow-visible">
         {sections.map((id, i) => {
           const tick = id === 'prescription' || !ticks ? null : ticks[id];
           return (

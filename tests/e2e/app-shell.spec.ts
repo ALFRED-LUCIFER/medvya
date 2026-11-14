@@ -53,12 +53,12 @@ test('receptionist sees Front desk · Schedule · Patients and lands on Front de
   await expect(page.getByRole('heading', { name: 'Screen not available' })).toBeVisible();
 });
 
-test('doctor sees My day · Patients · Schedule · Front desk · Settings; flag-off items are not rendered (MDV-P2-051)', async ({ page }) => {
+test('doctor sees My day · Patients · Schedule · Front desk · Clinic today · Settings; flag-off items are not rendered (MDV-P2-051, MDV-P2-053)', async ({ page }) => {
   await signInAs(page, doctor);
   await page.goto('/');
   await expect(page).toHaveURL('/today');
   const nav = page.getByRole('navigation');
-  await expect(nav.getByRole('link')).toHaveText(['My day', 'Patients', 'Schedule', 'Front desk', 'Practice settings']);
+  await expect(nav.getByRole('link')).toHaveText(['My day', 'Patients', 'Schedule', 'Front desk', 'Clinic today', 'Practice settings']);
   await expect(nav.getByRole('link', { name: 'My day' })).toHaveAttribute('aria-current', 'page');
   // MDV-P2-002: the doctor's day is their own screen, never the board; the menu and the title say the same name.
   await expect(page.getByRole('main').getByRole('heading', { level: 1 })).toHaveText('My day');
@@ -149,7 +149,7 @@ for (const locale of ['en', 'ar']) {
     for (const link of await tabs.getByRole('link').all()) expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(48);
     await tabs.getByRole('link').last().click();
     await expect(page).toHaveURL('/more');
-    await expect(page.getByRole('main').getByRole('link')).toHaveCount(6); // the five menu items and My devices (MDV-P0-012)
+    await expect(page.getByRole('main').getByRole('link')).toHaveCount(7); // the six menu items (the owner's Clinic today, MDV-P2-053) and My devices (MDV-P0-012)
   });
 }
 

@@ -20,7 +20,8 @@ function Head({ title, intro, actions, level, id, focusable }: Slots & { level: 
   const H = level === 2 ? "h2" : "h3"
   return (
     <div className="flex flex-wrap items-start justify-between gap-3">
-      <div className="flex min-w-0 flex-col gap-1">
+      {/* Grows from 16 rem, so the actions stay at the end of the title row beside a long intro and wrap only when space runs out. */}
+      <div className="flex min-w-0 flex-1 basis-64 flex-col gap-1">
         {title && (
           <H id={id} tabIndex={focusable ? -1 : undefined}
             className={cn(level === 2 ? "text-heading" : "text-subheading", focusable && "scroll-mt-20 focus:outline-none focus-visible:outline-2 focus-visible:outline-ring")}>{title}</H>

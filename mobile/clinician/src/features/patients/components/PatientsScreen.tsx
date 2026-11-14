@@ -1,5 +1,5 @@
 import { useI18n, type MessageKey } from '@medvya/i18n';
-import { AppHeader, Avatar, Card, Chip, ListRow, Loading, Screen, StateMessage, TextField, type IconName, type Tone } from '@medvya/ui-native';
+import { AppHeader, Avatar, Card, ListRow, Loading, Screen, StateMessage, TextField, type IconName, type Tone } from '@medvya/ui-native';
 import { theme } from '@medvya/tokens';
 import { StyleSheet, View } from 'react-native';
 import type { Session } from '../../session/domain/session';
@@ -34,7 +34,7 @@ export function PatientsScreen(vm: Props) {
                   title={p.name}
                   subtitle={t('mobile.patients.line', { age: p.age, sex: t(`mobile.sex.${p.sex}`), last4: p.phoneLast4 })}
                   leading={<Avatar initials={p.initials} />}
-                  trailing={p.flag ? <Chip label={t(`mobile.patients.flag.${p.flag}`)} tone={patientFlagLook[p.flag].tone} icon={patientFlagLook[p.flag].icon} /> : undefined}
+                  chips={p.flag ? [{ label: t(`mobile.patients.flag.${p.flag}`), tone: patientFlagLook[p.flag].tone, icon: patientFlagLook[p.flag].icon }] : []}
                   onPress={() => vm.onOpenPatient(p.id)}
                 />
               </View>

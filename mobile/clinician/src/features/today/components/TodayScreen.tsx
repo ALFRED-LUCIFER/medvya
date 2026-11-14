@@ -60,10 +60,10 @@ export function TodayScreen(vm: Props) {
                 title={q.name}
                 subtitle={t('mobile.today.queueLine', { age: q.age, sex: t(`mobile.sex.${q.sex}`), note: q.note })}
                 leading={<Text variant="caption" style={styles.token}>{q.token}</Text>}
-                trailing={<View style={styles.trailing}>
-                  <Chip label={t(`mobile.queue.${q.status}`)} tone={statusTone[q.status]} />
-                  {q.viaApp ? <Chip label={t('mobile.today.viaApp')} tone="brand" icon="smartphone" /> : null}
-                </View>}
+                chips={[
+                  { label: t(`mobile.queue.${q.status}`), tone: statusTone[q.status] },
+                  ...(q.viaApp ? [{ label: t('mobile.today.viaApp'), tone: 'brand' as const, icon: 'smartphone' as const }] : []),
+                ]}
                 onPress={() => vm.onOpenPatient(q.patientId)}
               />
             </View>
@@ -83,5 +83,4 @@ const styles = StyleSheet.create({
   rowWrap: { paddingVertical: 2 },
   divider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.color.line },
   token: { width: 44, fontVariant: ['tabular-nums'], fontWeight: '700', color: theme.color.brand700, writingDirection: 'ltr' },
-  trailing: { alignItems: 'flex-end', gap: 4 },
 });

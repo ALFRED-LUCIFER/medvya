@@ -7,13 +7,14 @@ import { Text } from './text';
 
 export type IconName = ComponentProps<typeof MaterialIcons>['name'];
 export function Icon({ name, size = 22, color = theme.color.ink600 }: { name: IconName; size?: number; color?: string }) {
-  return <MaterialIcons name={name} size={size} color={color} accessible={false} />;
+  // Hidden on both platforms: accessible={false} alone still lets Android merge the glyph into a parent label (audit M-02).
+  return <MaterialIcons name={name} size={size} color={color} accessible={false} importantForAccessibility="no" accessibilityElementsHidden />;
 }
 
-type ButtonProps = { label: string; onPress?: () => void; variant?: 'primary' | 'secondary' | 'ghost' | 'inverse'; icon?: IconName; disabled?: boolean; busy?: boolean; hint?: string };
+type ButtonProps = { label: string; accessibilityLabel?: string; onPress?: () => void; variant?: 'primary' | 'secondary' | 'ghost' | 'inverse'; icon?: IconName; disabled?: boolean; busy?: boolean; hint?: string };
 
 /** One button for both apps. Disabled buttons stay readable and say why through `hint` (read by screen readers). */
-export function Button({ label, onPress, variant = 'primary', icon, disabled, busy, hint }: ButtonProps) {
+export function Button({ label, accessibilityLabel, onPress, variant = 'primary', icon, disabled, busy, hint }: ButtonProps) {
   const { solid, target } = useBrand();
   const fg = { primary: theme.color.card, secondary: theme.color.ink900, ghost: solid, inverse: solid }[variant];
   const look = {
@@ -26,7 +27,7 @@ export function Button({ label, onPress, variant = 'primary', icon, disabled, bu
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={label}
+      accessibilityLabel={accessibilityLabel ?? label}
       accessibilityHint={hint}
       accessibilityState={{ disabled: !!off, busy: !!busy }}
       disabled={off}

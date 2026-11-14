@@ -1,5 +1,5 @@
 import { locales, ltr, useI18n, type Locale, type MessageKey } from '@medvya/i18n';
-import { AppHeader, Avatar, Button, Card, Chip, Icon, ListRow, Loading, Screen, Section, StateMessage, Text } from '@medvya/ui-native';
+import { AppHeader, Avatar, Button, Card, Icon, ListRow, Loading, Screen, Section, StateMessage, Text } from '@medvya/ui-native';
 import { theme } from '@medvya/tokens';
 import { StyleSheet, View } from 'react-native';
 import type { Person, Session } from '../../session/domain/session';
@@ -46,7 +46,7 @@ export function ProfileScreen(vm: Props) {
             {vm.profile.choices.map((c, i) => (
               <View key={c.key} style={divider(i)}>
                 <ListRow title={t(`mobile.profile.choice.${c.key}`)} subtitle={c.detail || undefined}
-                  trailing={<Chip label={t(c.on ? 'mobile.profile.on' : 'mobile.profile.off')} tone={c.on ? 'success' : 'neutral'} icon={c.on ? 'check' : 'remove'} />} />
+                  chips={[{ label: t(c.on ? 'mobile.profile.on' : 'mobile.profile.off'), tone: c.on ? 'success' : 'neutral', icon: c.on ? 'check' : 'remove' }]} />
               </View>
             ))}
           </Card>

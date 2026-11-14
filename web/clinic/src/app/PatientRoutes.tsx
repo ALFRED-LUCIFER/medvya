@@ -73,10 +73,11 @@ type RegistrationLinks = { country: Country; scope: string; actorName: string; t
  */
 export function RegistrationRoute(links: RegistrationLinks) {
   const [params] = useSearchParams();
+  const navigate = useNavigate();
   const quick = params.get('mode') === 'quick';
   const slot = pickSlot(params);
   const withMode = (mode: string) => `?${new URLSearchParams([...(slot ?? []), ['mode', mode]])}`;
-  return <Registration {...useRegistrationController(links.country, quick, links.scope)} {...links} recordPath={recordPath} quickPath={withMode('quick')} fullPath={withMode('full')}
+  return <Registration {...useRegistrationController(links.country, quick, links.scope)} {...links} recordPath={recordPath} onMode={mode => void navigate(withMode(mode))}
     slot={slot?.toString() ?? null} />;
 }
 

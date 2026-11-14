@@ -6,19 +6,22 @@ import { requestAccess } from '../../clinical-access/services/clinicalAccessApi'
 import { patientDataGcTime } from '../../patients/hooks/usePatientDirectoryController';
 import { ApiError } from '../../schedule/services/scheduleApi';
 import { isShortcut, moveActive, searchableText, type LookupRow } from '../domain/lookup';
+import { focusInlinePanel, focusInlineSearch } from '../services/inlineSearch';
 import { lookupPatients } from '../services/lookupApi';
 
 /** Typing pauses this long before a search runs: every search is audited, so half-typed words are not searched. */
 const pauseMs = 400;
 
 /**
- * ⌘K / Ctrl+K patient search (MDV-P2-003, D-02) from any screen. Results are privacy-safe rows; the server says per row whether the chart
+ * ⌘K / Ctrl+K patient search (MDV-P2-003, D-02) from any screen: inline in the top bar with its results dropping down under it from 768 px
+ * (`panel`), the search dialog on a phone (`open`). Results are privacy-safe rows; the server says per row whether the chart
  * opens or access must be requested (care relationship, MDV-P2-024). Enter opens the highlighted chart; closing forgets the search.
  */
 export function useGlobalSearchController(recordPath: (patientId: string) => string) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [panel, setPanel] = useState(false);
   const [text, setText] = useState('');
   const [searched, setSearched] = useState<string | null>(null);
   const [active, setActive] = useState(-1);
@@ -29,7 +32,7 @@ export function useGlobalSearchController(recordPath: (patientId: string) => str
     const onKey = (e: globalThis.KeyboardEvent) => {
       if (!isShortcut(e)) return;
       e.preventDefault();
-      setOpen(o => !o);
+      if (!focusInlineSearch()) setOpen(o => !o);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -43,7 +46,7 @@ export function useGlobalSearchController(recordPath: (patientId: string) => str
   const query = useQuery({
     queryKey: ['global-search', searched],
     queryFn: ({ signal }) => lookupPatients(searched!, signal),
-    enabled: open && searched !== null,
+    enabled: (open || panel) && searched !== null,
     gcTime: patientDataGcTime,
     staleTime: Infinity, // an audited search is reused, not repeated
     retry: false,
@@ -55,6 +58,7 @@ export function useGlobalSearchController(recordPath: (patientId: string) => str
 
   const close = () => {
     setOpen(false);
+    setPanel(false);
     setText('');
     setSearched(null);
     setActive(-1);
@@ -72,6 +76,9 @@ export function useGlobalSearchController(recordPath: (patientId: string) => str
   return {
     open,
     onOpenChange: (o: boolean) => (o ? setOpen(true) : close()),
+    panel,
+    /** The inline box got focus (true), or its results were dismissed: Escape, a click outside, or focus leaving (false, forgets the search). */
+    onPanel: (o: boolean) => (o ? setPanel(true) : close()),
     text,
     onText: (t: string) => { setText(t); setActive(-1); },
     rows,
@@ -92,6 +99,8 @@ export function useGlobalSearchController(recordPath: (patientId: string) => str
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
         e.preventDefault();
         setActive(moveActive(active, e.key, rows.length));
+      } else if (e.key === 'Tab' && !e.shiftKey && panel && focusInlinePanel()) {
+        e.preventDefault();
       } else if (e.key === 'Enter' && current?.access === 'Open') {
         e.preventDefault();
         openChart(current);

@@ -292,6 +292,7 @@ test('Practice settings sits at the foot of the menu, with no fold toggle, in th
 
 for (const [roleName, context] of [['doctor', doctor], ['receptionist', receptionist]] as const)
   test(`at 1024 px the top bar is 48 px and holds clinic, search, bell and avatar only (${roleName})`, async ({ page }) => {
+    const inlineSearch = roleName === 'doctor'; // the patient search box (MDV-P2-003, inline from 768 px); the desk role gets a link to the directory
     await signInAs(page, context);
     await page.setViewportSize({ width: 1024, height: 768 });
     await page.goto('/');
@@ -299,7 +300,8 @@ for (const [roleName, context] of [['doctor', doctor], ['receptionist', receptio
     const bar = page.getByRole('banner');
     await expect(bar).toContainText('Iyer Family Clinic · Adyar');
     expect((await bar.boundingBox())!.height).toBe(48);
-    await expect(bar.getByRole('button').or(bar.getByRole('link'))).toHaveCount(3);
+    await expect(bar.getByRole('button').or(bar.getByRole('link'))).toHaveCount(inlineSearch ? 2 : 3);
+    await expect(bar.getByRole('combobox', { name: 'Search patients' })).toHaveCount(inlineSearch ? 1 : 0);
     await expect(bar.getByRole('button', { name: /^Signed in as / })).toBeVisible();
     await expect(bar.getByRole('button', { name: 'Sign out' })).toHaveCount(0);
   });

@@ -37,6 +37,9 @@ export const hasDpa = (d: Pick<Detail, 'documents'>) => d.documents.some(x => x.
 /** A hospital cannot be approved without its signed data processing agreement; the server refuses too (document.Dpa:required). */
 export const approveBlockedByDpa = (d: Pick<Detail, 'type' | 'documents'>) => d.type === 'Hospital' && !hasDpa(d);
 
+/** Approving needs every document of the request ticked as checked by the reviewer; the server refuses too (documents:unchecked) and records each tick. */
+export const uncheckedDocuments = (d: Pick<Detail, 'documents'>, checked: readonly string[]) => d.documents.some(x => !checked.includes(x.id));
+
 /** Actions that tell the applicant something they must act on or accept as final or as a pause: the reason is the message. */
 export const isDestructive = (a: Action) => a === 'reject' || a === 'suspend';
 
@@ -65,6 +68,6 @@ export const waitDays = (submittedAt: string | null, now: Date) =>
 
 export const decisionOf = (a: Action): OrgState => (a === 'approve' || a === 'reinstate' ? 'Approved' : a === 'request-changes' ? 'NeedsChanges' : a === 'reject' ? 'Rejected' : 'Suspended');
 
-/** Server codes the screen words: state:transition (somebody decided first) and document.Dpa:required. */
-export const errorKeyOf = (fields: Record<string, string[]>): 'state' | 'dpa' | null =>
-  fields.state?.includes('transition') ? 'state' : fields['document.Dpa']?.includes('required') ? 'dpa' : null;
+/** Server codes the screen words: state:transition (somebody decided first), document.Dpa:required and documents:unchecked. */
+export const errorKeyOf = (fields: Record<string, string[]>): 'state' | 'dpa' | 'unchecked' | null =>
+  fields.state?.includes('transition') ? 'state' : fields['document.Dpa']?.includes('required') ? 'dpa' : fields.documents?.includes('unchecked') ? 'unchecked' : null;

@@ -64,6 +64,95 @@ namespace Medvya.Platform.Infrastructure.Persistence.Migrations
                     b.ToTable("KeyLinks", "platform");
                 });
 
+            modelBuilder.Entity("Medvya.Platform.Domain.PlanPrice", b =>
+                {
+                    b.Property<Guid>("PlanVersionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Country")
+                        .HasMaxLength(2)
+                        .HasColumnType("character(2)")
+                        .IsFixedLength();
+
+                    b.Property<long?>("AssistMonthly")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character(3)")
+                        .IsFixedLength();
+
+                    b.Property<long?>("Monthly")
+                        .HasColumnType("bigint");
+
+                    b.Property<long?>("Yearly")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("PlanVersionId", "Country");
+
+                    b.ToTable("PlanPrices", "platform");
+                });
+
+            modelBuilder.Entity("Medvya.Platform.Domain.PlanVersion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("AssistVisitsPerDoctorMonth")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedByMemberId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Custom")
+                        .HasColumnType("boolean");
+
+                    b.Property<int?>("Doctors")
+                        .HasColumnType("integer");
+
+                    b.PrimitiveCollection<string[]>("Features")
+                        .IsRequired()
+                        .HasColumnType("text[]");
+
+                    b.Property<int?>("Locations")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("PerDoctor")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int?>("Staff")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TrialDays")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByMemberId");
+
+                    b.HasIndex("Code", "Version")
+                        .IsUnique();
+
+                    b.ToTable("PlanVersions", "platform");
+                });
+
             modelBuilder.Entity("Medvya.Platform.Domain.PlatformAuditEntry", b =>
                 {
                     b.Property<Guid>("Id")
@@ -248,6 +337,23 @@ namespace Medvya.Platform.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Medvya.Platform.Domain.PlanPrice", b =>
+                {
+                    b.HasOne("Medvya.Platform.Domain.PlanVersion", null)
+                        .WithMany("Prices")
+                        .HasForeignKey("PlanVersionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Medvya.Platform.Domain.PlanVersion", b =>
+                {
+                    b.HasOne("Medvya.Platform.Domain.PlatformMember", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByMemberId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
             modelBuilder.Entity("Medvya.Platform.Domain.PlatformSession", b =>
                 {
                     b.HasOne("Medvya.Platform.Domain.PlatformMember", null)
@@ -264,6 +370,11 @@ namespace Medvya.Platform.Infrastructure.Persistence.Migrations
                         .HasForeignKey("MemberId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Medvya.Platform.Domain.PlanVersion", b =>
+                {
+                    b.Navigation("Prices");
                 });
 #pragma warning restore 612, 618
         }

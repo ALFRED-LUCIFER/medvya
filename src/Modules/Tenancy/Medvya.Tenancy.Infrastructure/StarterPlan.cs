@@ -10,7 +10,8 @@ namespace Medvya.Tenancy.Infrastructure;
 /// Patients are never counted. A seat is held by an active or suspended member and by an invited member whose invitation is not revoked;
 /// offboarding or revoking frees it. A person is one seat however many locations they work at (a membership is per location, MDV-P1-071).
 /// </summary>
-// shortcut: one hard-coded plan; replaced by entitlements when MDV-P5-042 lands.
+// shortcut: one hard-coded plan; the console has versioned plans now (MDV-P5-042, ADR-019), but they reach the clinic database only with the
+// per-country write path of MDV-P5-041. Replace this with the organisation's plan entitlements then.
 static class StarterPlan
 {
     const int Doctors = 1, Staff = 2;

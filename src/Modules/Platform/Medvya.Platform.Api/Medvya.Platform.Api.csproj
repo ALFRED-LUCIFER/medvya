@@ -15,6 +15,8 @@
     <ProjectReference Include="..\Medvya.Platform.Application\Medvya.Platform.Application.csproj" />
     <!-- The contracts of the organisation review path (IOrganisationConsole); the host registers its implementation (ADR-014 note). -->
     <ProjectReference Include="..\..\Tenancy\Medvya.Tenancy.Application\Medvya.Tenancy.Application.csproj" />
+    <!-- The contracts of the shared medicine list (ISharedFormulary, MDV-P5-064); the host registers its implementation (ADR-014 note). -->
+    <ProjectReference Include="..\..\Prescribing\Medvya.Prescribing.Application\Medvya.Prescribing.Application.csproj" />
   </ItemGroup>
 
 </Project>

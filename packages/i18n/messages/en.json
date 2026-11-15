@@ -5371,6 +5371,7 @@
   "audit.actionName.settings.doctor.licence.update": "Doctor licence changed",
   "audit.actionName.settings.doctor.signature.delete": "Doctor signature removed",
   "audit.actionName.settings.doctor.signature.update": "Doctor signature changed",
+  "audit.actionName.settings.doctor.room.update": "Doctor room changed",
   "audit.actionName.settings.queue_rule.update": "Queue rule changed",
   "audit.actionName.staff.locations.add": "Staff added to a location",
   "audit.actionName.staff.role.change": "Staff member's role changed",

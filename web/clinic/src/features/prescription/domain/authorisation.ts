@@ -26,6 +26,8 @@ export type RxPrint = {
   authorisation: RxAuthorisation; clinic: string; timeZone: string; doctor: string; qualifications: string | null; licenceNumber: string; licenceAuthority: string;
   patient: { fullName: string; mrn: string; dateOfBirth: string; sexAtBirth: 'Female' | 'Male' | 'Other' };
   allergies: 'NotRecorded' | 'NoKnownAllergies' | 'Listed'; allergySubstances: string[]; lines: RxPrintLine[]; verifyUrl: string; qr: string[]; layoutVersion: number;
+  /** The location's address and the practice phone, under the clinic name (MDV-P1-111). */
+  clinicAddress?: string | null; clinicPhone?: string | null;
   advice: RxAdvice | null; patientAge: number; diagnoses: { description: string; provisional: boolean }[]; followUpOn: string | null;
 };
 /** The advice for the patient (MDV-P2-043). `inPatientLanguage` false: it prints in English with a note (no reviewed translation exists). */

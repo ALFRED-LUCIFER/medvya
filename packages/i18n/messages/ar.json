@@ -5368,6 +5368,7 @@
   "audit.actionName.settings.doctor.licence.update": "تغيّر ترخيص الطبيب",
   "audit.actionName.settings.doctor.signature.delete": "أُزيل توقيع الطبيب",
   "audit.actionName.settings.doctor.signature.update": "تغيّر توقيع الطبيب",
+  "audit.actionName.settings.doctor.room.update": "تغيّرت غرفة الطبيب",
   "audit.actionName.settings.queue_rule.update": "تغيّرت قاعدة الطابور",
   "audit.actionName.staff.locations.add": "أُضيف موظف إلى موقع",
   "audit.actionName.staff.role.change": "تغيّر دور موظف",

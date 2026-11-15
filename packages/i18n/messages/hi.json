@@ -5327,6 +5327,7 @@
   "audit.actionName.settings.doctor.licence.update": "डॉक्टर का लाइसेंस बदला गया",
   "audit.actionName.settings.doctor.signature.delete": "डॉक्टर के हस्ताक्षर हटाए गए",
   "audit.actionName.settings.doctor.signature.update": "डॉक्टर के हस्ताक्षर बदले गए",
+  "audit.actionName.settings.doctor.room.update": "डॉक्टर का कमरा बदला गया",
   "audit.actionName.settings.queue_rule.update": "कतार का नियम बदला गया",
   "audit.actionName.staff.locations.add": "स्टाफ़ को किसी स्थान पर जोड़ा गया",
   "audit.actionName.staff.role.change": "स्टाफ़ सदस्य की भूमिका बदली गई",

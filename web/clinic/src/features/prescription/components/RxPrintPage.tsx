@@ -72,8 +72,8 @@ export default function RxPrintPage(p: Props) {
   </>;
   return (
     <PaperPrintPage size={p.paper} label={v.clinic} toolbar={toolbar} after={after}>
-      {/* shortcut: the print data has no clinic logo, address or phone yet; the masthead shows them once RxPrint carries them (MDV-P1-111). */}
-      <Masthead clinic={v.clinic} doctor={{ name: v.doctor, lines: [v.qualifications, t('paper.regAuthority', { number: ltr(v.licenceNumber), authority: v.licenceAuthority })] }} />
+      {/* shortcut: the print data has no clinic logo yet (the server PDF prints it); add it to RxPrint if the browser print must carry it. */}
+      <Masthead clinic={v.clinic} address={[v.clinicAddress, v.clinicPhone].filter(Boolean).join(' · ') || null} doctor={{ name: v.doctor, lines: [v.qualifications, t('paper.regAuthority', { number: ltr(v.licenceNumber), authority: v.licenceAuthority })] }} />
       <Meta title={t('rxPrint.title')}><Mono>{v.authorisation.number}</Mono>{sep}{t('paper.rxMeta', { version: v.authorisation.versionNo, when, zone: v.timeZone })}</Meta>
       <Rows>
         <Row id="rx-patient" label={t('paper.row.patient')}>

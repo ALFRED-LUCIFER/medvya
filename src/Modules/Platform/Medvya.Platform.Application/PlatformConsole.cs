@@ -71,6 +71,12 @@ public interface IConsoleActions
     /// <summary>Appends an entry naming the signed-in member, the action, the organisation (null for Medvya-wide data) and the reason (null for a view).</summary>
     Task RecordAsync(string action, string resourceType, Guid resourceId, Guid? subjectTenantId, string? reason, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// The resources of an organisation for which the signed-in member has an <paramref name="action"/> entry at or after <paramref name="since"/>
+    /// (any time when null): for example the documents of a request this member opened since it was submitted.
+    /// </summary>
+    Task<IReadOnlySet<Guid>> RecordedAsync(string action, Guid subjectTenantId, DateTimeOffset? since, CancellationToken cancellationToken = default);
+
     /// <summary>Display names of console members, for a history that records them as actors. Unknown ids are left out.</summary>
     Task<IReadOnlyDictionary<Guid, string>> MemberNamesAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default);
 }

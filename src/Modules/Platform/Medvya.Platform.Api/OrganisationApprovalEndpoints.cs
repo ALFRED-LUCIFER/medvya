@@ -12,7 +12,7 @@ namespace Medvya.Platform.Api;
 /// </summary>
 public static class OrganisationApprovalEndpoints
 {
-    const string Action = "organisation";
+    const string Action = "organisation", DocumentView = "organisation.document.view";
 
     /// <summary>A decision: the reason, and for approve the ids of the documents the reviewer ticked as checked (all of the request's are needed).</summary>
     public sealed record DecisionBody(string? Reason, Guid[]? CheckedDocuments) : IReasoned;
@@ -43,7 +43,7 @@ public static class OrganisationApprovalEndpoints
             [FromServices] IConsoleActions actions, [FromServices] IPlatformCaller caller, CancellationToken ct) =>
         {
             if (await console.OpenDocumentAsync(tenantId, documentId, Operator(caller), ct) is not { } file) return Results.NotFound();
-            await actions.RecordAsync("organisation.document.view", Action, documentId, tenantId, null, ct);
+            await actions.RecordAsync(DocumentView, Action, documentId, tenantId, null, ct);
             http.Response.Headers.CacheControl = "no-store";
             http.Response.Headers.ContentDisposition = "inline";
             return Results.File(file.Content, file.ContentType);
@@ -57,14 +57,16 @@ public static class OrganisationApprovalEndpoints
             {
                 var reason = Medvya.Platform.Domain.PlatformReason.Valid(body.Reason)!; // the group's filter refused anything else
                 // MDV-P5-044: the reviewer ticks every document of the request as checked before approving; the ticks are recorded with the decision.
-                // shortcut: a tick is the reviewer's word, not proof of reading; each view is logged on its own, so an audit can compare. Require a logged
-                // view per ticked document if a review ever finds ticks without views.
+                // A document counts as checked only when this reviewer opened it since the request was submitted: the logged view is the record.
+                // shortcut: an opened document is not proof of reading; that stays the reviewer's word.
                 Guid[] checkedDocuments = [];
                 if (action == ReviewAction.Approve)
                 {
                     if (await console.DetailAsync(tenantId, Operator(caller), ct) is not { } request) return Results.NotFound();
                     checkedDocuments = [.. request.Documents.Select(d => d.Id)];
                     if (checkedDocuments.Except(body.CheckedDocuments ?? []).Any()) throw new SettingsValidationException([new("documents", "unchecked")]);
+                    if (checkedDocuments.Except(await actions.RecordedAsync(DocumentView, tenantId, request.SubmittedAt, ct)).Any())
+                        throw new SettingsValidationException([new("documents", "unopened")]);
                 }
                 if (await console.DecideAsync(tenantId, action, reason, Operator(caller), ct) is not { } email) return Results.NotFound();
                 // shortcut: the state change and this entry are in two databases (the review login and the console's), so they cannot share a transaction;

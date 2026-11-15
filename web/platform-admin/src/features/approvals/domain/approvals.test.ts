@@ -32,6 +32,7 @@ describe('the DPA rule', () => {
     expect(errorKeyOf({ 'document.Dpa': ['required'] })).toBe('dpa');
     expect(errorKeyOf({ state: ['transition'] })).toBe('state');
     expect(errorKeyOf({ documents: ['unchecked'] })).toBe('unchecked');
+    expect(errorKeyOf({ documents: ['unopened'] })).toBe('unopened');
     expect(errorKeyOf({ reason: ['required'] })).toBeNull();
   });
 });

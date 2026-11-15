@@ -95,16 +95,24 @@ public sealed class PlatformApprovalTests(PostgresFixture sql) : IClassFixture<P
         return await db.Tenants.Select(t => t.State).SingleAsync();
     }
 
-    /// <summary>A decision; an approve ticks every document of the request as checked unless <paramref name="checkedDocuments"/> says which.</summary>
+    /// <summary>A decision; an approve opens and ticks every document of the request as checked unless <paramref name="checkedDocuments"/> says which (those are not opened here).</summary>
     async Task<HttpResponseMessage> Decide(HttpClient c, Guid id, string route, string? reason = "Registration certificate and GSTIN checked", Guid[]? checkedDocuments = null)
     {
         if (route == "approve" && checkedDocuments is null)
+        {
             await using (var db = sql.Context(id)) checkedDocuments = [.. await db.OrganisationDocuments.Select(d => d.Id).ToListAsync()];
+            await Open(c, id, checkedDocuments);
+        }
         return await PlatformConsoleTests.Post(c, $"/v1/organisations/{id}/{route}", new { reason, checkedDocuments });
     }
 
-    /// <summary>The platform log without the per-document ticks, which <see cref="ApprovingNeedsEveryDocumentTickedAndRecordsEachTickWithTheDecision"/> covers.</summary>
-    async Task<List<PlatformAuditEntry>> Decisions(Guid id) => [.. (await PlatformAudit(id)).Where(a => a.Action != "organisation.document.checked")];
+    static async Task Open(HttpClient c, Guid id, IEnumerable<Guid> documents)
+    {
+        foreach (var d in documents) (await c.GetAsync(new Uri($"/v1/organisations/{id}/documents/{d}", UriKind.Relative))).Dispose(); // a console role without read access is refused later, by the decision
+    }
+
+    /// <summary>The platform log without the per-document views and ticks, which <see cref="ApprovingNeedsEveryDocumentTickedAndRecordsEachTickWithTheDecision"/> covers.</summary>
+    async Task<List<PlatformAuditEntry>> Decisions(Guid id) => [.. (await PlatformAudit(id)).Where(a => a.Action is not ("organisation.document.checked" or "organisation.document.view"))];
 
     async Task<List<Medvya.Platform.Domain.PlatformAuditEntry>> PlatformAudit(Guid id)
     {
@@ -172,7 +180,7 @@ public sealed class PlatformApprovalTests(PostgresFixture sql) : IClassFixture<P
             Assert.Equal(HttpStatusCode.BadRequest, (await Decide(c, id, route, reason)).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await Decide(c, id, "approve", new string('x', 501))).StatusCode);
         Assert.Equal(OrganisationState.Submitted, await State(id));
-        Assert.Empty(await PlatformAudit(id));
+        Assert.Empty(await Decisions(id));
         Assert.DoesNotContain(sent, m => m.To == "desk@review-clinic.example");
     }
 
@@ -185,7 +193,7 @@ public sealed class PlatformApprovalTests(PostgresFixture sql) : IClassFixture<P
         Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
         Assert.Equal("required", (await refused.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("errors").GetProperty("document.Dpa")[0].GetString());
         Assert.Equal(OrganisationState.Submitted, await State(id));
-        Assert.Empty(await PlatformAudit(id)); // a refused decision is not logged as done
+        Assert.Empty(await Decisions(id)); // a refused decision is not logged as done
 
         Assert.Equal(HttpStatusCode.OK, (await Decide(c, id, "request-changes", "The signed data processing agreement is missing")).StatusCode);
         Assert.Equal(OrganisationState.NeedsChanges, await State(id));
@@ -209,6 +217,27 @@ public sealed class PlatformApprovalTests(PostgresFixture sql) : IClassFixture<P
         Assert.Equal(HttpStatusCode.BadRequest, (await PlatformConsoleTests.Post(c, $"/v1/organisations/{id}/approve", new { reason = "Documents checked and in order" })).StatusCode);
         Assert.Equal(OrganisationState.Submitted, await State(id));
         Assert.Empty(await PlatformAudit(id));
+
+        // A document is checked only once this reviewer opened it, for this request. SAFETY mutation check: drop the "unopened" refusal in
+        // OrganisationApprovalEndpoints and the first approve below goes through; drop the member or the time condition in
+        // ConsoleActions.RecordedAsync and the colleague's or the earlier views count.
+        async Task Unopened()
+        {
+            var refused = await Decide(c, id, "approve", checkedDocuments: all);
+            Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
+            Assert.Equal("unopened", (await refused.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("errors").GetProperty("documents")[0].GetString());
+            Assert.Equal(OrganisationState.Submitted, await State(id));
+        }
+        await Unopened(); // every box ticked, nothing opened
+        using (var colleague = await Console(PlatformRole.Operations)) await Open(colleague, id, all);
+        await Unopened(); // a colleague's reading is not this reviewer's
+        await Open(c, id, all.Where(d => d != last));
+        await Unopened(); // one document of this request still unopened
+        await Open(c, id, [last]);
+        await using (var db = sql.Context(id)) // submitted again after the reviewer read it: the earlier views were of the earlier request
+            await db.OrganisationRequests.ExecuteUpdateAsync(s => s.SetProperty(r => r.SubmittedAt, DateTimeOffset.UtcNow));
+        await Unopened();
+        await Open(c, id, all);
 
         Assert.Equal(HttpStatusCode.OK, (await Decide(c, id, "approve", checkedDocuments: all)).StatusCode);
         Assert.Equal(OrganisationState.Approved, await State(id));

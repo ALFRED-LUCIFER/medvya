@@ -1743,6 +1743,8 @@
   "settings.logo.error.type": "Use a PNG or JPEG image.",
   "settings.logo.error.size": "The logo must be under 512 KB.",
   "settings.logo.error.failed": "The logo could not be saved. Nothing was changed; try again.",
+  "settings.logo.error.unknown": "We could not confirm whether the logo was saved. Check again, or upload it once more.",
+  "settings.logo.check": "Check again",
   "settings.locations.title": "Locations",
   "settings.locations.intro": "The sites where your practice sees patients. Each has its own hours, holidays and calendars.",
   "settings.locations.editNamed": "Edit {name}",

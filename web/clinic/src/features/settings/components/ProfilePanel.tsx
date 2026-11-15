@@ -24,7 +24,8 @@ type Props = {
   clinicName: string;
   uploading: boolean;
   removing: boolean;
-  logoError: 'type' | 'size' | 'failed' | null;
+  logoError: 'type' | 'size' | 'failed' | 'unknown' | null;
+  onCheckLogo: () => void;
   onLogo: (file: File | undefined) => void;
   onRemoveLogo: () => void;
 };
@@ -111,6 +112,7 @@ export default function ProfilePanel(p: Props) {
               </label>
             </span>
             {logoError && <p id="logo-file-error" role="alert" className="text-label text-danger-text">{logoError}</p>}
+            {p.logoError === 'unknown' && <Button type="button" variant="outline" className="w-fit" onClick={p.onCheckLogo}>{t('settings.logo.check')}</Button>}
           </div>
           {p.hasLogo && <Button type="button" variant="outline" loading={p.removing} onClick={p.onRemoveLogo}>{t('settings.logo.remove')}</Button>}
         </div>

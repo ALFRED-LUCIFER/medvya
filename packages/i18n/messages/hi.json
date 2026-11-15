@@ -1732,6 +1732,8 @@
   "settings.logo.error.type": "PNG या JPEG चित्र चुनें।",
   "settings.logo.error.size": "लोगो 512 KB से छोटा होना चाहिए।",
   "settings.logo.error.failed": "लोगो सहेजा नहीं जा सका। कुछ भी नहीं बदला; फिर कोशिश करें।",
+  "settings.logo.error.unknown": "हम पुष्टि नहीं कर सके कि लोगो सहेजा गया या नहीं। फिर से जाँचें, या इसे दोबारा अपलोड करें।",
+  "settings.logo.check": "फिर से जाँचें",
   "settings.locations.title": "स्थान",
   "settings.locations.intro": "वे जगहें जहाँ आपका क्लिनिक रोगियों को देखता है। हर स्थान के अपने समय, छुट्टियाँ और कैलेंडर होते हैं।",
   "settings.locations.editNamed": "{name} बदलें",

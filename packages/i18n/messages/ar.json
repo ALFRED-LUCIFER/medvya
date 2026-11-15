@@ -1742,6 +1742,8 @@
   "settings.logo.error.type": "استخدم صورة PNG أو JPEG.",
   "settings.logo.error.size": "يجب أن يقل حجم الشعار عن 512 كيلوبايت.",
   "settings.logo.error.failed": "تعذّر حفظ الشعار. لم يتغير شيء؛ حاول مرة أخرى.",
+  "settings.logo.error.unknown": "تعذّر التأكد من حفظ الشعار. تحقق مرة أخرى، أو ارفعه من جديد.",
+  "settings.logo.check": "تحقق مرة أخرى",
   "settings.locations.title": "المواقع",
   "settings.locations.intro": "الأماكن التي تستقبل فيها عيادتك المرضى. لكل موقع ساعاته وعطله وتقاويمه.",
   "settings.locations.editNamed": "تعديل {name}",

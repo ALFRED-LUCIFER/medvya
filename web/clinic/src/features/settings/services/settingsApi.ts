@@ -18,9 +18,30 @@ export async function fetchLogoLink(): Promise<LogoLink | null> {
     throw e;
   }
 }
-/** The body is the image itself; the server checks the file's real type and size. */
-export const uploadLogo = (file: File) => send<void>('/v1/settings/logo', { method: 'PUT', headers: { ...csrf, 'Content-Type': file.type }, body: file });
+/** The body is the image itself; the server checks the file's real type and size. An upload gets a minute, not the shared 15 seconds. */
+export const uploadLogo = (file: File) => send<void>('/v1/settings/logo', { method: 'PUT', headers: { ...csrf, 'Content-Type': file.type }, body: file, timeout: 60_000 } as RequestInit);
 export const removeLogo = () => send<void>('/v1/settings/logo', { method: 'DELETE', headers: csrf });
+
+/** The logo change could not be confirmed either way: its request failed and the profile could not be read again. */
+export class LogoUnconfirmedError extends Error {
+  constructor() { super('logo change unconfirmed'); }
+}
+
+/**
+ * A logo change whose request timed out or failed may still have been stored (#1365 F-066). The profile is read again: a new version means the
+ * change happened, and this resolves. It throws the first error when the profile did not move, and LogoUnconfirmedError when it cannot be read.
+ * A refusal (4xx) is the server's clear answer and is passed on as it is.
+ */
+export async function settleLogo(change: Promise<void>, versionBefore: number): Promise<void> {
+  try {
+    await change;
+  } catch (e) {
+    if (e instanceof ApiError && e.status < 500) throw e;
+    const after = await fetchProfile().catch(() => null);
+    if (!after) throw new LogoUnconfirmedError();
+    if (after.version === versionBefore) throw e;
+  }
+}
 
 export const fetchLocations = () => send<Location[]>('/v1/settings/locations');
 const toBase64 = (file: File) => new Promise<string>((resolve, reject) => {

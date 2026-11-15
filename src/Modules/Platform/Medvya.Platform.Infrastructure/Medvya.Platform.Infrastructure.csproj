@@ -6,6 +6,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The approved price list: version 1 of the plans is seeded from it (PlanSeed, ADR-019), so prices live in one file. -->
+    <EmbeddedResource Include="..\..\..\Host.Api\PublicSite\pricing.json" LogicalName="Medvya.Platform.pricing.json" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Fido2" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

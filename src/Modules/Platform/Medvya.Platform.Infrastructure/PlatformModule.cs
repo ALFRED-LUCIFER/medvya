@@ -51,6 +51,7 @@ public static class PlatformModule
             .AddScoped<IPlatformTeam, PlatformTeam>()
             .AddScoped<IPlatformAuditLog, PlatformAuditLog>()
             .AddScoped<IConsoleActions, ConsoleActions>()
+            .AddScoped<IPlatformPlans, PlatformPlans>()
             .AddScoped<IPlatformSignIn, PlatformSignIn>();
     }
 }

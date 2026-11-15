@@ -2,7 +2,7 @@ import { Ban, Check, Eye, MessageSquareWarning, Play, X } from 'lucide-react';
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { useI18n, type MessageKey } from '@medvya/i18n';
-import { Button, Card, EmptyState, StickyActionBar, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState } from '@medvya/ui';
+import { Button, Card, ChoiceRow, EmptyState, StickyActionBar, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState } from '@medvya/ui';
 import ReasonPanel, { ReasonBar } from '../../shell/components/ReasonPanel';
 import type { ReasonForm } from '../../team/domain/team';
 import { documentColumns, historyColumns, isDestructive, isDocumentKind, sizeLabel, taxCheck, type Action, type Detail, type DocumentView, type EmailPreview } from '../domain/approvals';
@@ -11,6 +11,7 @@ import DocumentViewer from './DocumentViewer';
 export type DetailVm = {
   selected: boolean; state: 'loading' | 'error' | 'ready'; notFound: boolean; detail: Detail | null;
   canDecide: boolean; allowed: readonly Action[]; blockedByDpa: boolean;
+  checked: readonly string[]; canTick: boolean; blockedByChecks: boolean; onCheck: (id: string, on: boolean) => void;
   pending: Action | null; form: UseFormReturn<ReasonForm>; busy: boolean; problem: string | null; sent: EmailPreview | null;
   onStart: (a: Action) => void; onCancel: () => void; onConfirm: FormEventHandler; onDismissSent: () => void;
   viewing: { doc: DocumentView; url: string; contentType: string; openedAt: Date } | null; viewerFailed: boolean; opening: string | null;
@@ -62,6 +63,7 @@ export default function ApprovalDetail({ vm, operator }: { vm: DetailVm; operato
           <TableHeader>
             <TableRow>
               {documentColumns.map(c => <TableHead key={c} scope="col">{t(c)}</TableHead>)}
+              {vm.canTick && <TableHead scope="col">{t('platform.approvals.docs.checked')}</TableHead>}
               <TableHead scope="col"><span className="sr-only">{t('platform.approvals.docs.open')}</span></TableHead>
             </TableRow>
           </TableHeader>
@@ -72,6 +74,12 @@ export default function ApprovalDetail({ vm, operator }: { vm: DetailVm; operato
                 <TableRow key={doc.id}>
                   <TableHead scope="row" className="font-semibold">{name}</TableHead>
                   <TableCell label={t('platform.approvals.docs.checks')}>{t('platform.approvals.check.format', { type: doc.contentType === 'application/pdf' ? 'PDF' : doc.contentType.replace('image/', '').toUpperCase(), size: sizeLabel(doc.sizeBytes) })}</TableCell>
+                  {vm.canTick && (
+                    <TableCell label={t('platform.approvals.docs.checked')}>
+                      <ChoiceRow type="checkbox" checked={vm.checked.includes(doc.id)} onChange={e => vm.onCheck(doc.id, e.target.checked)}
+                        aria-label={t('platform.approvals.docs.checkNamed', { name })}>{t('platform.approvals.docs.checked')}</ChoiceRow>
+                    </TableCell>
+                  )}
                   <TableCell>
                     <Button variant="outline" aria-label={t('platform.approvals.docs.openNamed', { name })} loading={vm.opening === doc.id} onClick={() => vm.onOpen(doc)}>
                       <Eye aria-hidden />{t('platform.approvals.docs.open')}
@@ -142,13 +150,14 @@ export function DecisionBar({ vm }: { vm: DetailVm }) {
     <StickyActionBar status={<>
       {status && <p className="text-sm text-muted-foreground">{status}</p>}
       {vm.canDecide && vm.allowed.includes('approve') && vm.blockedByDpa && <p id="approvals-dpa" className="text-sm font-semibold text-danger-700">{t('platform.approvals.error.dpa')}</p>}
+      {vm.canDecide && vm.allowed.includes('approve') && !vm.blockedByDpa && vm.blockedByChecks && <p id="approvals-checks" className="text-sm text-muted-foreground">{t('platform.approvals.error.unchecked')}</p>}
     </>}>
       {actions.map(a => {
         const Icon = icons[a];
-        const blocked = a === 'approve' && vm.blockedByDpa;
+        const blocked = a === 'approve' && (vm.blockedByDpa || vm.blockedByChecks);
         return (
           <Button key={a} variant={isDestructive(a) ? 'destructive' : isFilled(a) ? 'default' : 'outline'} disabled={blocked}
-            aria-describedby={blocked ? 'approvals-dpa' : undefined} onClick={() => vm.onStart(a)}>
+            aria-describedby={blocked ? (vm.blockedByDpa ? 'approvals-dpa' : 'approvals-checks') : undefined} onClick={() => vm.onStart(a)}>
             <Icon aria-hidden />{t(`platform.approvals.action.${a}` as MessageKey)}
           </Button>
         );

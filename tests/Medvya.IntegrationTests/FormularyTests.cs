@@ -314,8 +314,11 @@ public sealed class FormularyTests(PostgresFixture sql) : IClassFixture<Postgres
     [Fact]
     public void TheCountryRulesHoldTheClassesPrintRulesAndCodeShapes()
     {
-        Assert.Equal([RegulatoryClass.None, RegulatoryClass.ScheduleH, RegulatoryClass.ScheduleH1, RegulatoryClass.ScheduleX], FormularyRules.India.Classes().Order());
-        Assert.Equal([RegulatoryClass.None, RegulatoryClass.Controlled], FormularyRules.Uae.Classes().Order());
+        Assert.Equal([RegulatoryClass.None, RegulatoryClass.ScheduleH, RegulatoryClass.ScheduleH1, RegulatoryClass.ScheduleX, RegulatoryClass.NotVerified], FormularyRules.India.Classes().Order());
+        Assert.Equal([RegulatoryClass.None, RegulatoryClass.Controlled, RegulatoryClass.NotVerified], FormularyRules.Uae.Classes().Order());
+        // MDV-P5-064 SAFETY: a class nobody confirmed is never printed as an ordinary medicine, in either country.
+        Assert.Equal([FormularyRules.ClassNotVerified], FormularyRules.India.PrintRequirements(RegulatoryClass.NotVerified));
+        Assert.Equal([FormularyRules.ClassNotVerified], FormularyRules.Uae.PrintRequirements(RegulatoryClass.NotVerified));
         Assert.Equal(["warning_schedule_x", "pharmacist_keeps_copy", "duplicate_prescription"], FormularyRules.India.PrintRequirements(RegulatoryClass.ScheduleX));
         Assert.Empty(FormularyRules.Uae.PrintRequirements(RegulatoryClass.None));
         Assert.All(Enum.GetValues<RegulatoryClass>().Where(c => c != RegulatoryClass.None), c =>

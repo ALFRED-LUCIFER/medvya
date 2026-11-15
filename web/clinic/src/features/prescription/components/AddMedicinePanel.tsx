@@ -100,6 +100,8 @@ function Body(p: Props & { language: PrintLanguage }) {
                   onClick={() => p.onMedicine(r)}>
                   <span className="inline-flex items-center gap-2 font-bold"><Pill aria-hidden className="size-4" />{t('rx.addMed.result', { generic: r.generic, form: r.form })}</span>
                   {r.brands.length > 0 && <span className="text-xs">{t('rx.addMed.brands', { list: r.brands.join(', ') })}</span>}
+                  {/* MDV-P5-064: a class nobody confirmed is said in words before it is prescribed; the paper says it too. */}
+                  {r.regClass === 'NotVerified' && <span className="text-xs whitespace-normal">{t('rx.classNotVerified')}</span>}
                 </Button>
               </li>
             );

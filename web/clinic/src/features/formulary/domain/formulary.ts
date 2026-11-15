@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 // Mirrors src/Modules/Prescribing/Medvya.Prescribing.Application/IFormulary.cs (the server is the authority; these checks only save a round trip).
-export type RegulatoryClass = 'None' | 'ScheduleH' | 'ScheduleH1' | 'ScheduleX' | 'Controlled';
+export type RegulatoryClass = 'None' | 'ScheduleH' | 'ScheduleH1' | 'ScheduleX' | 'Controlled' | 'NotVerified';
 export type FormularyItem = {
   id: string;
   generic: string;
@@ -14,19 +14,24 @@ export type FormularyItem = {
   printRequirements: PrintRequirement[];
   atc: string | null;
   defaultSig: string | null;
-  source: 'Starter' | 'ClinicAdded';
+  /** Medvya: the Medvya team added it to the country's shared list (MDV-P5-064); Register: loaded from a national register. */
+  source: 'Starter' | 'ClinicAdded' | 'Medvya' | 'Register';
   active: boolean;
 };
-export type PrintRequirement = 'warning_schedule_h' | 'warning_schedule_h1' | 'warning_schedule_x' | 'warning_controlled' | 'pharmacist_keeps_copy' | 'duplicate_prescription';
+export type PrintRequirement = 'warning_schedule_h' | 'warning_schedule_h1' | 'warning_schedule_x' | 'warning_controlled' | 'pharmacist_keeps_copy' | 'duplicate_prescription'
+  | 'class_not_verified';
 export type OrderSet = { id: string; name: string; items: string[] };
 export type Country = 'IN' | 'AE' | null;
 
 export const forms = ['Tablet', 'Capsule', 'Syrup', 'Suspension', 'Injection', 'Cream', 'Ointment', 'Drops', 'Inhaler', 'Patch', 'Suppository', 'Powder', 'Solution'] as const;
 export type Form = (typeof forms)[number];
 
-/** The classes a country uses (the server refuses any other). Without a known country only the ordinary class is offered. */
+/**
+ * The classes a country uses (the server refuses any other). Without a known country only the ordinary class is offered. Not verified
+ * (MDV-P5-064): nobody has confirmed the class yet, and the prescription says so on paper.
+ */
 export const classesFor = (country: Country): RegulatoryClass[] =>
-  country === 'IN' ? ['None', 'ScheduleH', 'ScheduleH1', 'ScheduleX'] : country === 'AE' ? ['None', 'Controlled'] : ['None'];
+  country === 'IN' ? ['None', 'ScheduleH', 'ScheduleH1', 'ScheduleX', 'NotVerified'] : country === 'AE' ? ['None', 'Controlled', 'NotVerified'] : ['None'];
 
 /** Column definitions are data; the label for each is the i18n key `formulary.col.<key>`. */
 export const formularyColumns = ['generic', 'strength', 'form', 'brands', 'class', 'code', 'source'] as const;
@@ -35,7 +40,7 @@ export type FormularyColumn = (typeof formularyColumns)[number];
 /** The search answers with at most this many medicines (MaxLimit in FormularyService); a full answer says so and asks to narrow. */
 export const FORMULARY_LIMIT = 50;
 
-const regClasses = ['None', 'ScheduleH', 'ScheduleH1', 'ScheduleX', 'Controlled'] as const;
+const regClasses = ['None', 'ScheduleH', 'ScheduleH1', 'ScheduleX', 'Controlled', 'NotVerified'] as const;
 /** The columns people sort by: the name, the class from ordinary to strictest, and whether the clinic added it. */
 export const formularySort = {
   generic: (i: FormularyItem) => i.generic,

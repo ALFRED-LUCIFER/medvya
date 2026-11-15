@@ -25,6 +25,21 @@ public class PostgresDataSourcesTests
         Assert.Equal([PostgresDataSources.EntraScope], credential.Scopes);
     }
 
+    // ADR-014: the console holds several narrow logins, each signed in by its own identity; one credential for all would need one login holding every role.
+    [Fact]
+    public void ANamedIdentitySignsInItsOwnLoginAndNpgsqlNeverSeesTheKeyword()
+    {
+        const string login = "Host=psql-x.postgres.database.azure.com;Database=medvya;Username=id-review;SslMode=VerifyFull";
+        var (named, namedCredential) = PostgresDataSources.Credential($"{login};{PostgresDataSources.ManagedIdentityKeyword}=00000000-0000-0000-0000-000000000001");
+        Assert.IsType<Azure.Identity.ManagedIdentityCredential>(namedCredential);
+        var parsed = new NpgsqlConnectionStringBuilder(named); // an unknown keyword would throw here
+        Assert.Equal(("id-review", "medvya"), (parsed.Username, parsed.Database));
+
+        var (plain, plainCredential) = PostgresDataSources.Credential(login);
+        Assert.Equal(login, plain);
+        Assert.IsType<Azure.Identity.DefaultAzureCredential>(plainCredential);
+    }
+
     sealed class RecordingCredential : TokenCredential
     {
         public TaskCompletionSource Asked { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);

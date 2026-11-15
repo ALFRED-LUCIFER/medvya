@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm, type FieldErrors } from 'react-hook-form';
+import { useI18n } from '@medvya/i18n';
 import { ApiError } from '../../schedule/services/scheduleApi';
+import { planFullText, type PlanLimit } from '../../staff/domain/staff';
 import {
   doctorProblem, doctorSchema, doctorSteps, emptyDoctor, emptyLicence, errorTarget, fieldProblem, licenceSchema, signatureProblem, stepFields,
   type Doctor, type DoctorForm, type DoctorStep, type LicenceForm,
@@ -18,6 +20,7 @@ const codeOf = (e: FieldErrors<DoctorForm>[keyof DoctorForm]) => (e ? fieldProbl
 /** Doctors tab (F-09): the list, the Add doctor wizard, licence resubmission and the signature image. The server decides who may do what. */
 export function useDoctorsController(defaultFacilityId: string) {
   const queryClient = useQueryClient();
+  const i18n = useI18n();
   const list = useQuery({ queryKey: ['settings', 'doctors'], queryFn: fetchDoctors });
   // A new or changed doctor also changes the bookable calendars the Hours tab reads (cached for a minute, MDV audit UX-12).
   const refresh = () => void queryClient.invalidateQueries({ queryKey: ['settings'] });
@@ -112,7 +115,7 @@ export function useDoctorsController(defaultFacilityId: string) {
     onSubmit: form.handleSubmit(values => add.mutate(values)),
     submitting: add.isPending,
     submitFailed: add.isError && !(add.error instanceof ApiError && (add.error.status === 400 || add.error.code === emailFailed || add.error.code === planFull)),
-    planFull: add.error instanceof ApiError && add.error.code === planFull,
+    planFull: add.error instanceof ApiError && add.error.code === planFull ? planFullText(i18n, add.error.body as PlanLimit) : null,
     emailFailed: add.error instanceof ApiError && add.error.code === emailFailed,
     signature,
     signatureProblem: signatureProblemKind,

@@ -4,7 +4,9 @@
 // Rules: amounts are integer minor units (paise, fils) with the ISO currency, by country deployment (IN, AE). Only prices that are
 // approved go here; leave an amount out and the page shows no price for it. Plan names and features are copy in packages/i18n
 // (site.pricing.plan.<Code>.*).
-// Source: decision record "Approved 06 Nov 2026" in the Medvya Web design (docs/02-design/source), matching the Admin design's Plans.
+// Source: decision record "Approved 06 Nov 2026" in the Medvya Web design (docs/02-design/source), matching the Admin design's Plans (ADR-019).
+// Also the seed of version 1 of the console plans (Medvya.Platform PlanSeed, MDV-P5-042); after that the console's plan versions are the record.
+// shortcut: /pricing still reads this file, so a price saved in the console must be changed here too until /pricing reads the console (MDV-P5-050).
 {
   "Pricing": {
     "Version": "2026.11",

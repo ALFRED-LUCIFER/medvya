@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { RegulatoryClass } from '../../formulary/domain/formulary';
 
 // Mirrors src/Modules/Prescribing/Medvya.Prescribing.Application/IPrescriptions.cs and the dose builder's codes in Domain/Prescription.cs (Sig).
 // The server is the authority and writes the readable instruction; these checks only save a round trip.
@@ -15,7 +16,8 @@ export type RxLine = {
   dose: string | null; doseUnit: string | null; route: string | null; frequency: string | null; timing: string | null;
   durationDays: number | null; quantity: number | null; instructions: string | null; reason: string | null; sig: Record<string, string>;
 };
-export type Medicine = { id: string; generic: string; strength: string; form: string; brands: string[] };
+/** `regClass` NotVerified (MDV-P5-064): nobody has confirmed its schedule; the composer says so and the paper tells the pharmacist to check. */
+export type Medicine = { id: string; generic: string; strength: string; form: string; brands: string[]; regClass: RegulatoryClass };
 
 /** The dose builder as the screen edits it: every field text, blank meaning "not given". */
 export const sigFields = ['dose', 'doseUnit', 'route', 'frequency', 'timing', 'durationDays', 'quantity', 'instructions'] as const;

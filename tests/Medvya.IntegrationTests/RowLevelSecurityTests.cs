@@ -39,8 +39,10 @@ public class RowLevelSecurityTests(PostgresFixture sql) : IClassFixture<Postgres
             WHERE c.relkind = 'r' AND n.nspname NOT IN ('pg_catalog', 'information_schema', 'hangfire', 'public')
               AND (c.relname = 'Tenants' OR EXISTS (SELECT 1 FROM pg_attribute a WHERE a.attrelid = c.oid AND a.attname = 'TenantId' AND NOT a.attisdropped))
               AND (NOT c.relrowsecurity OR NOT c.relforcerowsecurity
-                   OR (SELECT string_agg(p.polcmd::text, '' ORDER BY p.polcmd) FROM pg_policy p WHERE p.polrelid = c.oid) IS DISTINCT FROM 'adrw')
+                   OR (SELECT string_agg(p.polcmd::text, '' ORDER BY p.polcmd) FROM pg_policy p WHERE p.polrelid = c.oid AND p.polroles = '{0}') IS DISTINCT FROM 'adrw')
             """);
+        // The tenant policies apply to every role (polroles {0}, PUBLIC). A policy for one narrow login only (medvya_formulary on the shared formulary rows,
+        // MDV-P5-064) comes on top of them and has its own tests (SharedFormularyTests).
         Assert.Equal(IdsOnly.Order(), unprotected.Order().ToArray()); // exactly the documented exceptions, nothing else
     }
 

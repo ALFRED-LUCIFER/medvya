@@ -23,7 +23,7 @@ public sealed class InvitationOptions
 }
 
 public sealed partial class Invitations(TenancyDbContext db, ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, IEmailSender mail, IOptions<InvitationOptions> options,
-    IStaffAccess access, ILogger<Invitations>? log = null)
+    IStaffAccess access, ILogger<Invitations>? log = null, StarterPlan? plan = null)
     : IInvitations
 {
     public async Task<IReadOnlyList<FacilityOption>> FacilitiesAsync(CancellationToken cancellationToken = default) =>
@@ -124,7 +124,7 @@ public sealed partial class Invitations(TenancyDbContext db, ICurrentTenant tena
         // A commit that fails after the email went out leaves a link that shows the expired state, which is harmless.
         var message = Email(email, clinic, membership.Role, facility, $"{baseUrl.TrimEnd('/')}/invite/{token}", invitation.ExpiresAt);
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
-        if (superseded is null) await StarterPlan.EnsureRoomAsync(db, tenantId, membership.Role, cancellationToken); // a resend adds no seat
+        if (superseded is null) await (plan ?? new()).EnsureRoomAsync(db, tenantId, membership.Role, cancellationToken); // a resend adds no seat
         await db.SaveChangesAsync(cancellationToken);
         if (emailLater)
         {

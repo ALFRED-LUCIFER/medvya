@@ -23,6 +23,10 @@ BEGIN
     IF to_regclass('platform."AuditEntries"') IS NOT NULL THEN
         REVOKE UPDATE, DELETE, TRUNCATE ON platform."AuditEntries" FROM medvya_platform;
     END IF;
+    -- Plan versions are append-only too (MDV-P5-042, ADR-019): an edit adds the next version; what a subscriber agreed to never changes.
+    IF to_regclass('platform."PlanVersions"') IS NOT NULL THEN
+        REVOKE UPDATE, DELETE, TRUNCATE ON platform."PlanVersions", platform."PlanPrices" FROM medvya_platform;
+    END IF;
 
     -- The chain trigger lists a tenant's first row in ledger."Chains"; ledger."Tables" stays read-only (roles.sql).
     IF to_regclass('ledger."Chains"') IS NOT NULL THEN
@@ -115,6 +119,21 @@ BEGIN
     IF to_regclass('ledger."Chains"') IS NOT NULL THEN
         GRANT SELECT ON ALL TABLES IN SCHEMA ledger TO medvya_review;
         GRANT INSERT ON ledger."Chains" TO medvya_review;
+    END IF;
+END $$;
+
+-- The platform console's medicine list (MDV-P5-064, ADR-014 note): the console host's fourth login, IN ROLE medvya_formulary alone. It reads and adds rows
+-- of prescribing.FormularyItems and updates only what a correction, a class or a deactivation changes (never the tenant, country, source or register
+-- columns), and has no right on any other table, schema-wide or by default. Row-level security binds it to the rows with no tenant, the country's shared
+-- list, even if the session sets a tenant (restrictive policy, migration SharedFormularyLogin): a clinic's own medicines stay out of reach. Granted from
+-- scratch on each run.
+REVOKE ALL ON ALL TABLES IN SCHEMA prescribing FROM medvya_formulary;
+GRANT USAGE ON SCHEMA prescribing TO medvya_formulary;
+DO $$
+BEGIN
+    IF to_regclass('prescribing."FormularyItems"') IS NOT NULL THEN
+        GRANT SELECT, INSERT ON prescribing."FormularyItems" TO medvya_formulary;
+        GRANT UPDATE ("Generic", "Strength", "Form", "Brands", "NationalCode", "RegClass", "Atc", "DefaultSig", "Active") ON prescribing."FormularyItems" TO medvya_formulary;
     END IF;
 END $$;
 

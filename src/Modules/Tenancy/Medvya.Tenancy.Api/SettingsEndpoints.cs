@@ -124,9 +124,9 @@ public static class SettingsEndpoints
         {
             return TooManyInvitations;
         }
-        catch (PlanLimitException)
+        catch (PlanLimitException e)
         {
-            return PlanLimit;
+            return PlanLimit(e);
         }
         catch (DbUpdateConcurrencyException)
         {
@@ -140,8 +140,9 @@ public static class SettingsEndpoints
     /// <summary>429 with a stable code when the practice has sent its hourly allowance of invitations (#886).</summary>
     public static IResult TooManyInvitations => Results.Problem(statusCode: StatusCodes.Status429TooManyRequests, title: "Too many invitations in the last hour.", extensions: new Dictionary<string, object?> { ["code"] = "invitation_limit" });
 
-    /// <summary>409 with a stable code when the plan has no free doctor or staff seat (MDV-P1-069).</summary>
-    public static IResult PlanLimit => Results.Problem(statusCode: StatusCodes.Status409Conflict, title: PlanLimitException.Text, extensions: new Dictionary<string, object?> { ["code"] = "plan_limit" });
+    /// <summary>409 with a stable code and the plan's limits when the plan has no free doctor or staff seat (MDV-P1-069).</summary>
+    public static IResult PlanLimit(PlanLimitException e) => Results.Problem(statusCode: StatusCodes.Status409Conflict, title: e.Message,
+        extensions: new Dictionary<string, object?> { ["code"] = "plan_limit", ["doctors"] = e.Doctors, ["staff"] = e.Staff });
 
     public static IResult EmailFailed => Results.Problem(statusCode: StatusCodes.Status502BadGateway, title: "The invitation email could not be sent.", extensions: new Dictionary<string, object?> { ["code"] = "email_failed" });
 }

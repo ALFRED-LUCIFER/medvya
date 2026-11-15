@@ -4,6 +4,8 @@ name: deploy-dev
 # The database is private (MDV-P0-038), so this runner never connects to it. Migrations run inside the VNet (MDV-P0-042): the runner
 # uploads db-migrate to Blob and starts the Container Apps job from infra/bicep/main.bicep, which applies infra/postgres/roles.sql as its
 # administrator identity, maps the app and migrator logins, then migrates as medvya_migrator. The app ships only after the job succeeds.
+# The platform console (Host.Platform with web/platform-admin, ADR-014) ships after the clinic app, to its own web app, once the
+# AZURE_CONSOLE_WEBAPP_NAME variable is set (docs/runbooks/platform-console-azure.md). The database job maps its logins too.
 # shortcut: no staging slot; the web app ships inside the API (/app/). Staging with a slot swap comes with production (MDV-P1-039).
 on:
   push:
@@ -23,7 +25,7 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 45 # up to 25 waiting for CI, then about 13 to deploy
+    timeout-minutes: 55 # up to 25 waiting for CI, then about 13 to deploy the clinic app and 5 the console
     environment: dev # the federated credential trusts this environment only
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -62,13 +64,18 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - run: pnpm install --frozen-lockfile && pnpm --filter clinic build
+      - run: pnpm install --frozen-lockfile && pnpm --filter clinic --filter platform-admin build
       # /health reports this version plus the commit (+sha), which the smoke test checks.
       # ReadyToRun (precompiled, needs the runtime id): a restart on the one-core B1 JITs less before the first requests answer (#912).
       # The build-time OpenAPI export is skipped: nothing serves it, PR CI checks it, and it fails on a runtime-specific publish off Linux x64.
       - run: dotnet publish src/Host.Api -c Release -r linux-x64 --self-contained false -p:PublishReadyToRun=true -p:OpenApiGenerateDocuments=false -o publish -p:Version="$VERSION"
       # The API serves the built web app under /app/ (same origin as the sign-in cookie).
       - run: mkdir -p publish/wwwroot/app && cp -R web/clinic/dist/. publish/wwwroot/app/
+      # The console host serves its built app at its root (static files, fallback to index.html).
+      - run: |
+          dotnet publish src/Host.Platform -c Release -r linux-x64 --self-contained false -p:PublishReadyToRun=true -o publish-platform -p:Version="$VERSION"
+          mkdir -p publish-platform/wwwroot && cp -R web/platform-admin/dist/. publish-platform/wwwroot/
+          test -f publish-platform/wwwroot/index.html
       # Self-contained, so the job's image needs no .NET.
       - run: |
           dotnet publish tools/db-migrate -c Release -r linux-x64 --self-contained -o db-migrate
@@ -118,3 +125,32 @@ jobs:
           # A challenge redirect proves the OpenID Connect settings load and the provider's metadata is reachable.
           location=$(curl -sS -o /dev/null -w '%{redirect_url}' "$base/bff/login")
           case "$location" in *"/oauth2/v2.0/authorize"*) echo "Smoke test passed: $got" ;; *) echo "::error::/bff/login did not redirect to the identity provider (got '$location')"; exit 1 ;; esac
+      - uses: azure/webapps-deploy@02a81bead70021f5284939794bcec79c271ab383 # v3.0.8
+        if: vars.AZURE_CONSOLE_WEBAPP_NAME != ''
+        with:
+          app-name: ${{ vars.AZURE_CONSOLE_WEBAPP_NAME }}
+          package: publish-platform
+      # The new build answers /health, serves the console shell, refuses an API call without a session (401, not a 500), and sign-on
+      # redirects to Entra with the https callback (forwarded protocol and OIDC settings loaded; the Key Vault secret is read only at the callback).
+      - name: Smoke test the console
+        if: vars.AZURE_CONSOLE_WEBAPP_NAME != ''
+        env:
+          RG: ${{ vars.AZURE_RESOURCE_GROUP }}
+          APP: ${{ vars.AZURE_CONSOLE_WEBAPP_NAME }}
+        run: |
+          host=$(az webapp show -g "$RG" -n "$APP" --query defaultHostName -o tsv)
+          base="https://$host"
+          expected="$VERSION+$GITHUB_SHA"
+          for _ in $(seq 1 30); do
+            got=$(curl -fsS "$base/health" | jq -r .version) && [ "$got" = "$expected" ] && break
+            sleep 10
+          done
+          [ "$got" = "$expected" ] || { echo "::error::console /health reports '$got', expected '$expected'"; exit 1; }
+          curl -fsS "$base/" | grep -q '<div id="root">' || { echo "::error::the console shell (index.html) is not served at /"; exit 1; }
+          code=$(curl -sS -o /dev/null -w '%{http_code}' "$base/v1/me")
+          [ "$code" = 401 ] || { echo "::error::/v1/me without a session answered $code, expected 401"; exit 1; }
+          location=$(curl -sS -o /dev/null -w '%{redirect_url}' "$base/bff/login")
+          case "$location" in
+            *"/oauth2/v2.0/authorize"*"redirect_uri=https%3A%2F%2F$host%2Fsignin-oidc"*) echo "Console smoke test passed: $got" ;;
+            *) echo "::error::/bff/login did not redirect to Entra with the https callback (got '$location')"; exit 1 ;;
+          esac

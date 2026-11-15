@@ -14,6 +14,9 @@ public static class OrganisationApprovalEndpoints
 {
     const string Action = "organisation";
 
+    /// <summary>A decision: the reason, and for approve the ids of the documents the reviewer ticked as checked (all of the request's are needed).</summary>
+    public sealed record DecisionBody(string? Reason, Guid[]? CheckedDocuments) : IReasoned;
+
     public static WebApplication MapOrganisationApprovals(this WebApplication app)
     {
         var read = app.MapGroup("/v1/organisations").RequireAuthorization(PlatformPolicies.OrganisationRead).AddEndpointFilter(PlatformEndpoints.MapErrors);
@@ -49,13 +52,24 @@ public static class OrganisationApprovalEndpoints
         var act = app.Actions("/v1/organisations").RequireAuthorization(PlatformPolicies.OrganisationDecide);
         foreach (var (route, action) in new[] { ("approve", ReviewAction.Approve), ("request-changes", ReviewAction.RequestChanges), ("reject", ReviewAction.Reject),
                      ("suspend", ReviewAction.Suspend), ("reinstate", ReviewAction.Reinstate) })
-            act.MapPost($"/{{tenantId:guid}}/{route}", async (Guid tenantId, [FromBody] PlatformEndpoints.ReasonBody body, [FromServices] IOrganisationConsole console,
+            act.MapPost($"/{{tenantId:guid}}/{route}", async (Guid tenantId, [FromBody] DecisionBody body, [FromServices] IOrganisationConsole console,
                 [FromServices] IConsoleActions actions, [FromServices] IPlatformCaller caller, CancellationToken ct) =>
             {
                 var reason = Medvya.Platform.Domain.PlatformReason.Valid(body.Reason)!; // the group's filter refused anything else
+                // MDV-P5-044: the reviewer ticks every document of the request as checked before approving; the ticks are recorded with the decision.
+                // shortcut: a tick is the reviewer's word, not proof of reading; each view is logged on its own, so an audit can compare. Require a logged
+                // view per ticked document if a review ever finds ticks without views.
+                Guid[] checkedDocuments = [];
+                if (action == ReviewAction.Approve)
+                {
+                    if (await console.DetailAsync(tenantId, Operator(caller), ct) is not { } request) return Results.NotFound();
+                    checkedDocuments = [.. request.Documents.Select(d => d.Id)];
+                    if (checkedDocuments.Except(body.CheckedDocuments ?? []).Any()) throw new SettingsValidationException([new("documents", "unchecked")]);
+                }
                 if (await console.DecideAsync(tenantId, action, reason, Operator(caller), ct) is not { } email) return Results.NotFound();
                 // shortcut: the state change and this entry are in two databases (the review login and the console's), so they cannot share a transaction;
                 // the organisation's own audit trail records the decision first. Add an outbox or a reconcile job if an entry here is ever missing.
+                foreach (var document in checkedDocuments) await actions.RecordAsync("organisation.document.checked", Action, document, tenantId, null, ct);
                 await actions.RecordAsync($"organisation.{route}", Action, tenantId, tenantId, reason, ct);
                 return Results.Ok(email);
             });

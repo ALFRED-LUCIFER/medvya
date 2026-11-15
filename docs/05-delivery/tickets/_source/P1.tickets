@@ -1744,7 +1744,7 @@ confidence: 80 | Decided 10 Nov 2026; one hard-coded plan until MDV-P5-042.
 sources: docs/adr/ADR-016-organisation-onboarding-and-approval.md
 desc:
 Context: what we decided and why. Subscriptions will have seats, but plans are built in P5. Until then every organisation gets one hard-coded starter plan so growth is bounded and the upgrade conversation exists: 1 doctor plus 2 other staff (any mix of nurse, receptionist, admin; the owner-doctor is the doctor), counted per organisation in total across all its locations (MDV-P1-070); a bigger chain needs a bigger plan (MDV-P5-042). Patients are not capped. Self-service upgrade comes with MDV-P5-042 and MDV-P5-016; the owner is responsible for what they choose then.
-What to build. One place (a small plan class with a shortcut: comment, hard-coded plan, replaced by entitlements when MDV-P5-042 lands) counts active and invited doctors and other staff per organisation (tenant), in total across its locations, never per location. Adding a doctor, adding staff and sending an invitation are refused server-side beyond the cap with the message "Your plan allows 1 doctor and 2 staff; contact Medvya to upgrade". The web shows the same message. Offboarded members and revoked invitations free their seat. A race of parallel invitations cannot exceed the cap.
+What to build. One place (a small plan class with a shortcut: comment, hard-coded plan, replaced by entitlements when MDV-P5-042 lands) counts active and invited doctors and other staff per organisation (tenant), in total across its locations, never per location. Adding a doctor, adding staff and sending an invitation are refused server-side beyond the cap with the message "Your plan allows 1 doctor and 2 staff; contact Medvya to upgrade". The web shows the same message. Offboarded members and revoked invitations free their seat. A race of parallel invitations cannot exceed the cap. Owner decision 15 Nov 2026: 1 and 2 stay the default, and an environment can set other numbers with the settings Plan:Doctors and Plan:Staff (dev: 3 and 5, for the pilot audit); the message and the web then state the configured numbers, and a wrong value stops the app at start-up.
 Touched: Medvya.Tenancy.Infrastructure/Doctors.cs, Invitations.cs, Medvya.Identity.Api/StaffEndpoints.cs, Medvya.Tenancy.Api settings endpoints, web/clinic staff and doctors features, i18n en, hi, ar.
 ac:
 - Given a clinic with its owner-doctor and 2 other staff, when the owner adds a third staff member or invites one, then the server refuses with "Your plan allows 1 doctor and 2 staff; contact Medvya to upgrade".
@@ -1753,6 +1753,7 @@ ac:
 - Given an organisation with several locations, when staff are added at different locations, then they count together against the one cap.
 - Given any number of patients, when patients are registered, then no cap applies.
 - Given parallel add or invite calls, when they race, then the cap still holds (integration test).
+- Given an environment that sets Plan:Doctors and Plan:Staff, when a clinic reaches those numbers, then the next doctor or staff member is refused and the message states those numbers; given a value that is not a whole number, or under 1 doctor or 0 staff, then the app does not start.
 tests:
 - Unit: cap counting by role.
 - Integration on real PostgreSQL: cap, seat release, 100 parallel invitations.

@@ -20,6 +20,9 @@ env:
   DB_ADMIN_OBJECT_ID: ${{ vars.AZURE_DB_ADMIN_OBJECT_ID }}
   OIDC_CLIENT_ID: ${{ vars.STAFF_SIGNIN_CLIENT_ID }}
   DEPLOY_PRINCIPAL_ID: ${{ vars.AZURE_DEPLOY_PRINCIPAL_ID }}
+  # Platform console (docs/runbooks/platform-console-azure.md): its app registration and first owner, both Entra ids (not secrets).
+  CONSOLE_CLIENT_ID: ${{ vars.CONSOLE_SIGNIN_CLIENT_ID }}
+  CONSOLE_OWNER_OBJECT_ID: ${{ vars.CONSOLE_OWNER_OBJECT_ID }}
 
 jobs:
   what-if:
@@ -44,7 +47,8 @@ jobs:
         run: |
           az deployment group what-if -g "$RG" -f infra/bicep/main.bicep --exclude-change-types NoChange Ignore \
             -p dbAdminObjectId="$DB_ADMIN_OBJECT_ID" dbAdminLogin="$DB_ADMIN_LOGIN" alertEmail="$ALERT_EMAIL" \
-               oidcClientId="$OIDC_CLIENT_ID" deployPrincipalId="$DEPLOY_PRINCIPAL_ID" ledgerDigestPolicyLocked=true # locked 13 Nov 2026
+               oidcClientId="$OIDC_CLIENT_ID" deployPrincipalId="$DEPLOY_PRINCIPAL_ID" ledgerDigestPolicyLocked=true \
+               consoleClientId="$CONSOLE_CLIENT_ID" consoleOwnerObjectId="$CONSOLE_OWNER_OBJECT_ID" # ledger digests locked 13 Nov 2026
 
   deploy:
     needs: what-if
@@ -65,4 +69,5 @@ jobs:
         run: |
           az deployment group create -g "$RG" -n "infra-dev-$GITHUB_RUN_NUMBER" -f infra/bicep/main.bicep -o none \
             -p dbAdminObjectId="$DB_ADMIN_OBJECT_ID" dbAdminLogin="$DB_ADMIN_LOGIN" alertEmail="$ALERT_EMAIL" \
-               oidcClientId="$OIDC_CLIENT_ID" deployPrincipalId="$DEPLOY_PRINCIPAL_ID" ledgerDigestPolicyLocked=true # locked 13 Nov 2026
+               oidcClientId="$OIDC_CLIENT_ID" deployPrincipalId="$DEPLOY_PRINCIPAL_ID" ledgerDigestPolicyLocked=true \
+               consoleClientId="$CONSOLE_CLIENT_ID" consoleOwnerObjectId="$CONSOLE_OWNER_OBJECT_ID" # ledger digests locked 13 Nov 2026

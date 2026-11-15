@@ -106,7 +106,7 @@ type Props = {
   submitting: boolean;
   submitFailed: boolean;
   emailFailed: boolean;
-  planFull: boolean;
+  planFull: string | null;
   signature: File | null;
   signatureProblem: 'type' | 'size' | null;
   onPickSignature: (file: File | undefined) => void;
@@ -204,7 +204,7 @@ export default function DoctorWizard(p: Props) {
         <StickyActionBar className={cardBar} aria-live="polite" status={<>
           {p.submitFailed && <span role="alert" className={fieldError}>{t('settings.saveFailed')}</span>}
           {p.emailFailed && <span role="alert" className={fieldError}>{t('staff.error.email')}</span>}
-          {p.planFull && <span role="alert" className={fieldError}>{t('plan.full')}</span>}
+          {p.planFull && <span role="alert" className={fieldError}>{p.planFull}</span>}
         </>}>
           <Button type="button" variant="ghost" onClick={p.onClose}>{t('settings.cancel')}</Button>
           {p.stepIndex > 0 && <Button type="button" variant="outline" onClick={p.onBack}>{t('doctors.back')}</Button>}

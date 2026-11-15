@@ -166,6 +166,19 @@ test('a search by brand offers the generic\'s row with the brand shown, and a pe
   await expect(p.getByRole('button', { name: 'Add to prescription' })).toBeDisabled();
 });
 
+// MDV-P5-064: a medicine whose class nobody confirmed says so before it is prescribed (the paper's line is proven in RxAuthorisationTests).
+test('a medicine whose class is not verified says so in the search results', async ({ page }) => {
+  const unverified = { ...medicine('fi-unv', 'Synthetic unverified', '5 mg', 'Tablet'), regClass: 'NotVerified', printRequirements: ['class_not_verified'] };
+  await mockPrescription(page, { formulary: [...formulary, unverified], checksOf });
+  await page.goto('/consult/e-1');
+  await page.getByRole('region', { name: 'Prescription' }).getByRole('button', { name: 'Add medicine' }).click();
+  const p = panel(page);
+  await p.getByLabel('Search medicine').fill('synthetic');
+  await expect(p.getByRole('list', { name: 'Medicines found' }).getByRole('button')).toContainText('Class not verified: the prescription tells the pharmacist to check it');
+  await p.getByLabel('Search medicine').fill('atorva');
+  await expect(p.getByText('Class not verified', { exact: false })).toHaveCount(0); // an ordinary row says nothing
+});
+
 for (const locale of ['en', 'ar'])
   test(`a name that matches nothing is answered with the closest formulary rows, with no axe violation (${locale})`, async ({ page }) => {
     const { calls } = await mockPrescription(page, { locale, formulary: withBrand, checksOf: brandChecksOf });

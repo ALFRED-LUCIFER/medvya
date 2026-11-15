@@ -22,6 +22,7 @@ namespace Medvya.IntegrationTests;
 /// <summary>
 /// MDV-P1-069 on real PostgreSQL through the real endpoints: the starter plan allows 1 doctor and 2 other staff per organisation,
 /// across its locations, refused server-side with one message. Patients are not counted; offboarding and revoking free a seat.
+/// An environment can set other numbers (Plan:Doctors, Plan:Staff); a wrong value stops the app at start-up.
 /// </summary>
 public sealed class PlanCapTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IAsyncLifetime, IDisposable
 {
@@ -50,16 +51,20 @@ public sealed class PlanCapTests(PostgresFixture sql) : IClassFixture<PostgresFi
             identity.Users.Add(new StaffUser { Id = admin, Issuer = "test-idp", Subject = admin.ToString(), DisplayName = "K. Lakshmi (synthetic)" });
             await identity.SaveChangesAsync();
         }
-        factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b
-            .UseSetting("ConnectionStrings:Medvya", sql.ConnectionString)
-            .UseSetting("Invitations:LinkBaseUrl", "https://clinic.test")
-            .ConfigureTestServices(s =>
-            {
-                s.AddSingleton<IEmailSender, Sink>();
-                s.AddAuthentication().AddScheme<AuthenticationSchemeOptions, HeaderAuth>(HeaderAuth.Name, null);
-                s.Configure<AuthenticationOptions>(o => o.DefaultScheme = HeaderAuth.Name);
-            }));
+        factory = Host();
     }
+
+    WebApplicationFactory<Program> Host(params (string Key, string Value)[] plan) => new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
+    {
+        b.UseSetting("ConnectionStrings:Medvya", sql.ConnectionString).UseSetting("Invitations:LinkBaseUrl", "https://clinic.test");
+        foreach (var (key, value) in plan) b.UseSetting(key, value);
+        b.ConfigureTestServices(s =>
+        {
+            s.AddSingleton<IEmailSender, Sink>();
+            s.AddAuthentication().AddScheme<AuthenticationSchemeOptions, HeaderAuth>(HeaderAuth.Name, null);
+            s.Configure<AuthenticationOptions>(o => o.DefaultScheme = HeaderAuth.Name);
+        });
+    });
 
     public Task DisposeAsync() => Task.CompletedTask;
     public void Dispose() => factory.Dispose();
@@ -71,9 +76,9 @@ public sealed class PlanCapTests(PostgresFixture sql) : IClassFixture<PostgresFi
         return id;
     }
 
-    HttpClient Client()
+    HttpClient Client(WebApplicationFactory<Program>? host = null)
     {
-        var client = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
+        var client = (host ?? factory).CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
         client.DefaultRequestHeaders.Add(HeaderAuth.User, admin.ToString());
         client.DefaultRequestHeaders.Add(StaffPolicies.TenantClaim, tenant.ToString());
         client.DefaultRequestHeaders.Add(HeaderAuth.Facility, facility.ToString());
@@ -83,17 +88,20 @@ public sealed class PlanCapTests(PostgresFixture sql) : IClassFixture<PostgresFi
     Task<HttpResponseMessage> AddStaff(HttpClient c, string email, Guid? at = null, string role = "Receptionist") =>
         c.PostAsJsonAsync("/v1/staff", new { email, role, facilityId = at ?? facility });
 
-    static async Task AssertRefused(HttpResponseMessage r)
+    static async Task AssertRefused(HttpResponseMessage r, string message = Message, int doctors = 1, int staff = 2)
     {
         Assert.Equal(HttpStatusCode.Conflict, r.StatusCode);
         var body = await r.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.Equal(Message, body.GetProperty("title").GetString());
+        Assert.Equal(message, body.GetProperty("title").GetString());
         Assert.Equal("plan_limit", body.GetProperty("code").GetString());
+        // The screen builds its sentence, in the reader's language, from these two numbers.
+        Assert.Equal(doctors, body.GetProperty("doctors").GetInt32());
+        Assert.Equal(staff, body.GetProperty("staff").GetInt32());
     }
 
-    static object Doctor(string email, Guid at) => new
+    static object Doctor(string email, Guid at, string licenceNumber = "84213") => new
     {
-        fullName = "Dr. Sana Khan (synthetic)", email, specialty = "Paediatrics", facilityId = at, authority = "TNMC", licenceNumber = "84213",
+        fullName = "Dr. Sana Khan (synthetic)", email, specialty = "Paediatrics", facilityId = at, authority = "TNMC", licenceNumber,
         category = "Permanent", attested = true, expiresOn = DateOnly.FromDateTime(DateTime.UtcNow).AddYears(5), newVisitFee = 50000, followUpFee = 30000,
     };
 
@@ -115,6 +123,32 @@ public sealed class PlanCapTests(PostgresFixture sql) : IClassFixture<PostgresFi
         using var c = Client();
         await AssertRefused(await c.PostAsJsonAsync("/v1/settings/doctors", Doctor("sana.khan@example.test", facility)));
         Assert.Equal(HttpStatusCode.Created, (await AddStaff(c, "desk1@example.test")).StatusCode); // staff seats are separate from the doctor seat
+    }
+
+    [Fact]
+    public async Task ConfiguredPlanAllowsItsNumbersAndRefusesTheNextWithThem()
+    {
+        const string message = "Your plan allows 3 doctors and 5 staff; contact Medvya to upgrade";
+        using var host = Host(("Plan:Doctors", "3"), ("Plan:Staff", "5"));
+        using var c = Client(host);
+        // The owner-doctor is the first doctor and the admin the first staff member.
+        Assert.True((await c.PostAsJsonAsync("/v1/settings/doctors", Doctor("doctor2@example.test", facility, "84214"))).IsSuccessStatusCode);
+        Assert.True((await c.PostAsJsonAsync("/v1/settings/doctors", Doctor("doctor3@example.test", facility, "84215"))).IsSuccessStatusCode);
+        await AssertRefused(await c.PostAsJsonAsync("/v1/settings/doctors", Doctor("doctor4@example.test", facility, "84216")), message, 3, 5);
+        for (var i = 2; i <= 5; i++) Assert.Equal(HttpStatusCode.Created, (await AddStaff(c, $"desk{i}@example.test")).StatusCode);
+        await AssertRefused(await AddStaff(c, "desk6@example.test"), message, 3, 5);
+        await AssertRefused(await c.PostAsJsonAsync("/v1/invitations", new { email = "nurse6@example.test", role = "Nurse", facilityId = facility }), message, 3, 5);
+    }
+
+    [Theory]
+    [InlineData("Plan:Doctors", "0")]
+    [InlineData("Plan:Doctors", "three")]
+    [InlineData("Plan:Staff", "-1")]
+    public void WrongPlanSettingStopsTheAppAtStartUpAndNamesTheSetting(string key, string value)
+    {
+        using var host = Host((key, value));
+        var e = Assert.ThrowsAny<Exception>(() => host.CreateClient());
+        Assert.Contains(key, e.ToString(), StringComparison.Ordinal);
     }
 
     [Fact]

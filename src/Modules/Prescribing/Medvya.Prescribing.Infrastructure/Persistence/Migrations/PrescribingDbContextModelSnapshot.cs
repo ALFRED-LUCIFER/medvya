@@ -232,6 +232,14 @@ namespace Medvya.Prescribing.Infrastructure.Persistence.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<string>("RegisterCode")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<string>("RegisterRelease")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
                     b.Property<string>("Source")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -248,6 +256,10 @@ namespace Medvya.Prescribing.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("Country", "Generic");
+
+                    b.HasIndex("Country", "RegisterCode")
+                        .IsUnique()
+                        .HasFilter("\"RegisterCode\" IS NOT NULL");
 
                     b.HasIndex("TenantId", "Country", "Generic", "Strength", "Form")
                         .IsUnique();

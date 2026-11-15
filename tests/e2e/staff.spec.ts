@@ -191,15 +191,15 @@ test('an offboarded person is brought back with a reason; a role above the admin
   await expect(page.getByRole('alert').filter({ hasText: 'access you do not have yourself' })).toBeVisible();
 });
 
-// MDV-P1-069 (J1 step 1, invite staff): a full starter plan is refused by the server and the screen says why, in both languages.
+// MDV-P1-069 (J1 step 1, invite staff): a full plan is refused by the server and the screen says why, with the plan's own numbers, in both languages.
 for (const [locale, text, add, role, email, next, send] of [
-  ['en', 'Your plan allows 1 doctor and 2 staff; contact Medvya to upgrade', 'Add staff member', /^Receptionist/, 'Work email', 'Next', 'Send invitation'],
-  ['ar', 'تتيح خطتك طبيبًا واحدًا وموظفَين اثنين؛ تواصل مع Medvya للترقية', 'إضافة موظف', /^موظف استقبال/, 'البريد الإلكتروني للعمل', 'التالي', 'إرسال الدعوة'],
+  ['en', 'Your plan allows 3 doctors and 5 staff; contact Medvya to upgrade', 'Add staff member', /^Receptionist/, 'Work email', 'Next', 'Send invitation'],
+  ['ar', 'تتيح خطتك 3 أطباء و5 موظفين؛ تواصل مع Medvya للترقية', 'إضافة موظف', /^موظف استقبال/, 'البريد الإلكتروني للعمل', 'التالي', 'إرسال الدعوة'],
 ] as const)
   test(`a full starter plan refuses another staff member and says so (${locale})`, async ({ page }) => {
     await setUp(page, locale);
     await page.route('**/v1/staff', r => r.request().method() === 'POST'
-      ? r.fulfill({ status: 409, contentType: 'application/problem+json', json: { title: 'Your plan allows 1 doctor and 2 staff; contact Medvya to upgrade', code: 'plan_limit' } })
+      ? r.fulfill({ status: 409, contentType: 'application/problem+json', json: { title: 'Your plan allows 3 doctors and 5 staff; contact Medvya to upgrade', code: 'plan_limit', doctors: 3, staff: 5 } })
       : r.fallback());
     await page.goto('/settings?tab=staff');
     await page.getByRole('button', { name: add }).click();

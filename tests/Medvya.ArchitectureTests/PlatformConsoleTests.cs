@@ -5,7 +5,8 @@ namespace Medvya.ArchitectureTests;
 
 /// <summary>
 /// MDV-P5-040: the platform console never shows patient records. Its host can load no clinic module except the reviewed organisation review path
-/// (ADR-014 note, MDV-P1-064: Tenancy's contracts and implementation and Audit's, which reference no patient-data module), so no patient type,
+/// (ADR-014 note, MDV-P1-064: Tenancy's contracts and implementation and Audit's, which reference no patient-data module) and the shared medicine
+/// list (MDV-P5-064: Prescribing's contracts, domain and its one-table SharedList project), so no patient type,
 /// DbContext or service can reach a console endpoint; its own domain holds no health or national-id field; and its database login has no right on any
 /// clinic schema (DatabaseRoleTests in the integration tests).
 /// </summary>
@@ -15,8 +16,11 @@ public class PlatformConsoleTests
 
     // The reviewed path: the organisation's request, documents and state (Tenancy) and the audit write of a decision (Audit). Not Tenancy.Api, which
     // pulls Identity and Scheduling, and not any other module. A new entry here is a review, like a new grant in infra/postgres/table-rights.sql.
+    // MDV-P5-064 (ADR-014 note): the shared medicine list, which holds no patient data: Prescribing's contracts and domain and the SharedList project
+    // (one table, its own narrow login). Not Prescribing.Infrastructure or Prescribing.Api, which reach patients, encounters and identity.
     static readonly string[] ReviewPath = ["Medvya.Tenancy.Application", "Medvya.Tenancy.Domain", "Medvya.Tenancy.Infrastructure",
-        "Medvya.Audit.Application", "Medvya.Audit.Domain", "Medvya.Audit.Infrastructure"];
+        "Medvya.Audit.Application", "Medvya.Audit.Domain", "Medvya.Audit.Infrastructure",
+        "Medvya.Prescribing.Application", "Medvya.Prescribing.Domain", "Medvya.Prescribing.SharedList"];
 
     internal static List<string> ClinicAssemblies(IEnumerable<string> names) =>
         [.. names.Where(n => !ReviewPath.Contains(n) && ClinicModules.Any(m => n.StartsWith($"Medvya.{m}.", StringComparison.Ordinal)))];
@@ -45,11 +49,16 @@ public class PlatformConsoleTests
         Assert.Equal(["Medvya.Tenancy.Api", "Medvya.Identity.Application", "Medvya.Scheduling.Application"],
             ClinicAssemblies(["Medvya.Tenancy.Infrastructure", "Medvya.Tenancy.Api", "Medvya.Audit.Infrastructure", "Medvya.Identity.Application", "Medvya.Scheduling.Application"]));
         Assert.Empty(ClinicAssemblies(["Medvya.Platform.Domain", "Medvya.BuildingBlocks.Security"]));
+        Assert.Equal(["Medvya.Prescribing.Infrastructure", "Medvya.Prescribing.Api"],
+            ClinicAssemblies(["Medvya.Prescribing.SharedList", "Medvya.Prescribing.Infrastructure", "Medvya.Prescribing.Api"]));
     }
 
-    // MDV-P1-064: what the queue and approval calls return (IOrganisationConsole) has no patient, health or national-id property, at any depth.
-    [Fact]
-    public void TheApprovalQueueReturnsNoPatientField()
+    // MDV-P1-064, MDV-P5-064: what the queue and approval calls (IOrganisationConsole) and the medicine list (ISharedFormulary) return has no patient,
+    // health or national-id property, at any depth.
+    [Theory]
+    [InlineData(typeof(Medvya.Tenancy.Application.IOrganisationConsole))]
+    [InlineData(typeof(Medvya.Prescribing.Application.ISharedFormulary))]
+    public void TheReviewedPathsReturnNoPatientField(Type service)
     {
         var seen = new HashSet<Type>();
         var names = new List<string>();
@@ -63,7 +72,7 @@ public class PlatformConsoleTests
                 Walk(p.PropertyType);
             }
         }
-        foreach (var m in typeof(Medvya.Tenancy.Application.IOrganisationConsole).GetMethods()) Walk(m.ReturnType);
+        foreach (var m in service.GetMethods()) Walk(m.ReturnType);
         Assert.NotEmpty(names);
         Assert.DoesNotContain(names, n => n.Contains("Patient", StringComparison.Ordinal) || n.Contains("NationalId", StringComparison.Ordinal)
             || n.Contains("Diagnosis", StringComparison.Ordinal) || n.Contains("Allerg", StringComparison.Ordinal) || n.Contains("Phone", StringComparison.Ordinal));

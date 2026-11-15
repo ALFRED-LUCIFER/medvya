@@ -206,9 +206,9 @@ public static class StaffEndpoints
         {
             return SettingsEndpoints.TooManyInvitations;
         }
-        catch (PlanLimitException)
+        catch (PlanLimitException e)
         {
-            return SettingsEndpoints.PlanLimit;
+            return SettingsEndpoints.PlanLimit(e);
         }
     }
 }

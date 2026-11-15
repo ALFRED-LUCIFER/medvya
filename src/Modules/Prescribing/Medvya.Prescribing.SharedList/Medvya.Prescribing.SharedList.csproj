@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The country's shared medicine list for the platform console (MDV-P5-064, ADR-014 note): one table, the rows with no tenant, on the narrow
+    login medvya_formulary. Kept apart from Medvya.Prescribing.Infrastructure, which references patient-data modules the console host must not load.
+    Migrations stay with PrescribingDbContext.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\Medvya.Prescribing.Application\Medvya.Prescribing.Application.csproj" />
+    <ProjectReference Include="..\Medvya.Prescribing.Domain\Medvya.Prescribing.Domain.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\Medvya.BuildingBlocks.Infrastructure\Medvya.BuildingBlocks.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+  </ItemGroup>
+
+</Project>

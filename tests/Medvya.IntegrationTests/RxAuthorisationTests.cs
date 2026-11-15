@@ -701,6 +701,43 @@ public sealed class RxAuthorisationTests(PostgresFixture sql, AzuriteFixture blo
         Assert.All(pages, p => Assert.True(p.InsideMargins));
     }
 
+    /// <summary>
+    /// #1365 F-067: once a paper has printed, the next one is ready well inside two seconds and reads neither image from storage again (a logo or a
+    /// signature is written once under a random key, so the bytes are kept by key). Mutation check: drop the kept copy in BlobLogoStore.ReadAsync
+    /// and the second PDF fails, because its images are gone from storage.
+    /// </summary>
+    [Fact]
+    public async Task AWarmPdfIsReadyWithinTwoSecondsAndReadsNoImageFromStorageAgain()
+    {
+        await PrescribeAsync("Metformin", Twice);
+        using (var ok = await AuthoriseAsync(h.Doctor)) Assert.Equal(HttpStatusCode.OK, ok.StatusCode);
+        var logos = new BlobLogoStore(blobs.ConnectionString);
+        var (logo, signature) = ($"{h.Tenant}/logo/{Guid.NewGuid()}", $"{h.Tenant}/signature/{Guid.NewGuid()}");
+        await logos.PutAsync(logo, TestImages.Png, "image/png");
+        await logos.PutAsync(signature, TestImages.Make(8, 2, SkiaSharp.SKEncodedImageFormat.Png), "image/png");
+        await using (var db = sql.Context(h.Tenant))
+        {
+            db.Profiles.Add(new PracticeProfile { Id = Guid.NewGuid(), TenantId = h.Tenant, LogoKey = logo, ChangedAt = h.Clock.GetUtcNow() });
+            var membership = await db.Memberships.SingleAsync(m => m.UserId == h.Doctor);
+            (await db.DoctorProfiles.SingleAsync(p => p.MembershipId == membership.Id)).SignatureKey = signature;
+            await db.SaveChangesAsync();
+        }
+        using (var cold = await PdfAsync()) Assert.Equal(HttpStatusCode.OK, cold.StatusCode); // start-up, fonts and both images: not timed
+
+        var container = new BlobContainerClient(blobs.ConnectionString, BlobLogoStore.Container);
+        foreach (var key in new[] { logo, signature }) await container.DeleteBlobAsync(key); // behind the app's back: a read from storage would now fail
+        foreach (var paper in new[] { PlainPdf.A4, PlainPdf.A5 })
+        {
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            using var warm = await PdfAsync(paper.Name);
+            var bytes = await warm.Content.ReadAsByteArrayAsync();
+            watch.Stop();
+            Assert.Equal(HttpStatusCode.OK, warm.StatusCode);
+            Assert.Equal(2, PdfPages.Read(bytes, paper.Margin).Sum(p => p.Images)); // the logo and the signature, from memory
+            Assert.True(watch.Elapsed < TimeSpan.FromSeconds(2), $"{paper.Name}: {watch.ElapsedMilliseconds} ms"); // measured locally: 50 to 200 ms
+        }
+    }
+
     // SAFETY mutation check: drop the glyph catch in PlainPdf.Write and the emoji gives 500, not 422.
     [Fact]
     public async Task ThePrintViewCarriesEveryPrintLanguageAndThePdfPrintsTamilButRefusesAnEmoji()

@@ -1,4 +1,3 @@
-using Azure.Identity;
 using Azure.Storage.Blobs;
 using Medvya.BuildingBlocks.Infrastructure;
 using Medvya.Encounters.Application;
@@ -56,7 +55,7 @@ public static class EncountersModule
     {
         if (configuration?["Storage:BlobEndpoint"] is { Length: > 0 } endpoint)
         {
-            var store = new BlobDocumentStore(new BlobServiceClient(new Uri(endpoint), new DefaultAzureCredential()), userDelegation: true, createContainers: false);
+            var store = new BlobDocumentStore(new BlobServiceClient(new Uri(endpoint), AzureCredentials.Shared), userDelegation: true, createContainers: false);
             services.TryAddSingleton<IDocumentStore>(store);
             services.TryAddSingleton<IMalwareScan>(new DefenderMalwareScan(store));
         }

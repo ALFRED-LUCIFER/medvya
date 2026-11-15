@@ -79,7 +79,7 @@ public sealed class PlatformApprovalTests(PostgresFixture sql) : IClassFixture<P
         db.OrganisationRequests.Add(new OrganisationRequest { TenantId = id, Type = type, SubmittedAt = DateTimeOffset.UtcNow, ItContactName = type == OrganisationType.Hospital ? "IT lead (synthetic)" : null, ItContactEmail = type == OrganisationType.Hospital ? "it@review-clinic.example" : null });
         foreach (var kind in OrganisationDocumentRules.Required(type, ownerIsDoctor: true).Where(k => withDpa || k != OrganisationDocumentRules.Dpa))
         {
-            var key = $"onboarding/{id}/{Guid.NewGuid()}";
+            var key = $"onboarding/{id}/{Guid.NewGuid()}"; // the layout before #1365: such rows keep their key and must still open
             files.Stored[key] = (Pdf, "application/pdf");
             var d = new OrganisationDocument { Id = Guid.CreateVersion7(), TenantId = id, Kind = kind, ContentType = "application/pdf", SizeBytes = Pdf.Length, BlobKey = key, UploadedAt = DateTimeOffset.UtcNow };
             db.OrganisationDocuments.Add(d);

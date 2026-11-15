@@ -139,7 +139,7 @@ public sealed class OrganisationRequestTests(PostgresFixture sql) : IClassFixtur
         await UploadAllAsync(owner, OrganisationType.Clinic);
         Assert.Equal(HttpStatusCode.OK, (await PutFile(owner, "OwnerId", Pdf)).StatusCode); // a new file replaces the old one
         Assert.Equal(4, files.Stored.Count);
-        Assert.All(files.Stored.Keys, k => Assert.StartsWith($"onboarding/{h.Tenant}/", k, StringComparison.Ordinal));
+        Assert.All(files.Stored.Keys, k => Assert.StartsWith($"{h.Tenant}/onboarding/", k, StringComparison.Ordinal));
         Assert.Equal(HttpStatusCode.NoContent, (await owner.PostAsync("/v1/organisation/request/submit", null)).StatusCode);
         Assert.Equal(OrganisationState.Submitted, await StateAsync());
 
@@ -389,7 +389,7 @@ public sealed class OrganisationRequestTests(PostgresFixture sql) : IClassFixtur
         var doc = items.Single(i => i.GetProperty("tenantId").GetGuid() == h.Tenant).GetProperty("documents")[0].GetProperty("id").GetGuid();
         Assert.Equal(HttpStatusCode.Forbidden, (await owner.GetAsync($"/v1/operations/organisations/{h.Tenant}/documents/{doc}")).StatusCode); // the applicant cannot use the review route
         var link = await ops.GetFromJsonAsync<JsonElement>($"/v1/operations/organisations/{h.Tenant}/documents/{doc}");
-        Assert.StartsWith($"https://blob.test/onboarding/{h.Tenant}/", link.GetProperty("url").GetString(), StringComparison.Ordinal);
+        Assert.StartsWith($"https://blob.test/{h.Tenant}/onboarding/", link.GetProperty("url").GetString(), StringComparison.Ordinal);
         Assert.Equal(HttpStatusCode.NotFound, (await ops.GetAsync($"/v1/operations/organisations/{h.Tenant}/documents/{Guid.NewGuid()}")).StatusCode);
         await using var audit = sql.Audit(h.Tenant);
         var viewed = await audit.Events.Where(e => e.Action == "organisation.document.view").SingleAsync();

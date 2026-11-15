@@ -19,6 +19,8 @@ Sources: PRD v2 §07/§07b (authoritative), Azure Architecture (stages, residenc
 | Budgets + cost alerts | Per environment and resource group from day one |
 | GitHub OIDC federation | One app identity per environment. **No stored cloud secrets** |
 
+**Blob containers and keys.** Every key starts with the organisation's tenant id and holds ids only, never a name. `practice-assets`: `{tenant}/logo/{id}`, `{tenant}/signature/{id}`, `{tenant}/location-certificate/{id}` and `{tenant}/onboarding/{id}` (onboarding documents written before #1365 keep their old `onboarding/{tenant}/{id}` key). `clinical-documents`: `{tenant}/rx/{id}` and `{tenant}/paper/{id}`; a patient document uploaded to the chart is still keyed by a bare random id (not tenant-first yet; its row holds the tenant). `documents-quarantine`: a file the malware scan flagged, under the same key it had in `clinical-documents`. `ledger-digests`: one platform-wide digest per day, `yyyy/MM/dd/HHmmss.json`, under a time-based immutability policy.
+
 **Environments:** Local (Docker Compose) → preview per PR (optional) → staging (synthetic data) → production per country. Production deploys only from tags. Create staging before the pilot. Shut dev down at night (Build Plan cost advice).
 
 **Regions:** India: Central India (DR South India). UAE: UAE North (DR UAE Central). Paired-region failover must not move data out of the country.

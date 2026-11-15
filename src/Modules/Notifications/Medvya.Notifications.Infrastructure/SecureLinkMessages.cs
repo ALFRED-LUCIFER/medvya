@@ -23,13 +23,13 @@ public sealed partial class SecureLinkMessages(
         if (contact is null || string.IsNullOrWhiteSpace(address)) throw new SecureLinkNotSentException("no_address");
         var facility = await FacilityAsync(facilityId, cancellationToken);
         var message = SecureLinkCatalog.Link(contact.PreferredLanguage, facility.Name, url, Local(expiresAt, facility.TimeZone));
-        await SendAsync(channel, contact.CountryCode, address, message, facility.Name, reference, cancellationToken);
+        await SendAsync(channel, contact.CountryCode, address, message, facility.Name, reference, Tenant, cancellationToken);
     }
 
     public async Task SendLinkToPharmacyAsync(string email, Guid facilityId, string url, DateTimeOffset expiresAt, CancellationToken cancellationToken = default)
     {
         var facility = await FacilityAsync(facilityId, cancellationToken);
-        await SendAsync(NotificationChannel.Email, "", email, SecureLinkCatalog.PharmacyLink(facility.Name, url, Local(expiresAt, facility.TimeZone)), facility.Name, Guid.Empty, cancellationToken);
+        await SendAsync(NotificationChannel.Email, "", email, SecureLinkCatalog.PharmacyLink(facility.Name, url, Local(expiresAt, facility.TimeZone)), facility.Name, Guid.Empty, Tenant, cancellationToken);
     }
 
     public async Task SendCodeAsync(Guid patientId, Guid facilityId, string code, Guid reference, CancellationToken cancellationToken = default)
@@ -37,17 +37,22 @@ public sealed partial class SecureLinkMessages(
         var contact = await contacts.FindAsync(patientId, cancellationToken);
         if (contact is null || string.IsNullOrWhiteSpace(contact.Mobile)) throw new SecureLinkNotSentException("no_address");
         var facility = await FacilityAsync(facilityId, cancellationToken);
-        await SendAsync(NotificationChannel.Sms, contact.CountryCode, contact.Mobile, SecureLinkCatalog.Code(contact.PreferredLanguage, code, facility.Name), facility.Name, reference, cancellationToken);
+        await SendAsync(NotificationChannel.Sms, contact.CountryCode, contact.Mobile, SecureLinkCatalog.Code(contact.PreferredLanguage, code, facility.Name), facility.Name, reference, Tenant, cancellationToken);
     }
+
+    public Task SendSignInCodeAsync(string mobile, string countryCode, string? languageTag, string code, Guid reference, CancellationToken cancellationToken = default) =>
+        SendAsync(NotificationChannel.Sms, countryCode, mobile, SecureLinkCatalog.SignInCode(languageTag, code), "", reference, null, cancellationToken);
+
+    Guid Tenant => tenant.TenantId ?? throw new InvalidOperationException("No tenant context.");
 
     async Task<FacilityInfo> FacilityAsync(Guid facilityId, CancellationToken ct) =>
         await facilities.FindAsync(facilityId, ct) ?? throw new InvalidOperationException("Facility not in this tenant.");
 
     static DateTimeOffset Local(DateTimeOffset at, string timeZone) => TimeZoneInfo.ConvertTime(at, TimeZoneInfo.FindSystemTimeZoneById(timeZone));
 
-    async Task SendAsync(NotificationChannel channel, string countryCode, string to, RenderedMessage message, string clinic, Guid reference, CancellationToken ct)
+    /// <param name="tenantId">Null outside a clinic (patient sign-in): the default sender, and the reference names no tenant.</param>
+    async Task SendAsync(NotificationChannel channel, string countryCode, string to, RenderedMessage message, string clinic, Guid reference, Guid? tenantId, CancellationToken ct)
     {
-        var tenantId = tenant.TenantId ?? throw new InvalidOperationException("No tenant context.");
         try
         {
             if (channel == NotificationChannel.Email)
@@ -58,10 +63,10 @@ public sealed partial class SecureLinkMessages(
             else
             {
                 var o = options.Value.Sms;
-                var sender = o.Senders.GetValueOrDefault(tenantId) ?? o.DefaultSender;
+                var sender = (tenantId is { } t ? o.Senders.GetValueOrDefault(t) : null) ?? o.DefaultSender;
                 var templateId = o.DltTemplateIds.GetValueOrDefault(message.TemplateKey);
                 if (string.IsNullOrWhiteSpace(sender) || (countryCode == "IN" && string.IsNullOrWhiteSpace(templateId))) throw new SecureLinkNotSentException("send_failed");
-                await sms.SendAsync(new SmsMessage(to, sender, templateId, message.Body, NotificationReference.Make(tenantId, reference)), ct);
+                await sms.SendAsync(new SmsMessage(to, sender, templateId, message.Body, NotificationReference.Make(tenantId ?? Guid.Empty, reference)), ct);
             }
         }
         catch (Exception e) when (e is not (OperationCanceledException or SecureLinkNotSentException))

@@ -4,7 +4,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { errorKey } from '../../api/domain/errors';
-import { codeForm, maskPhone, phoneForm, toE164, type Clinic, type CodeForm, type Person, type PhoneForm, type SignInStep } from '../domain/session';
+import { codeForm, maskPhone, phoneForm, SignInLockedError, toE164, type Clinic, type CodeForm, type Person, type PhoneForm, type SignInStep } from '../domain/session';
 import { biometricsAvailable, requestCode, unlockWithBiometrics, verifyCode } from '../services/session';
 import { useSession } from './session';
 import { useUnlockMethod } from './useUnlockMethod';
@@ -58,5 +58,6 @@ export function useSignInController() {
     onEnableBiometric: () => enable.mutate(),
     onSkipBiometric: () => finish(false),
     error: failure ? errorKey(failure) : null,
+    lockedMinutes: failure instanceof SignInLockedError ? failure.minutes : null,
   };
 }

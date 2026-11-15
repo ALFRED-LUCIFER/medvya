@@ -55,8 +55,8 @@ public static class PlainPdf
     /// <summary>The meta row under the rule: the paper's title, then its number (when it has one) and the detail (version, date).</summary>
     public sealed record Meta(string Title, string? Number, string Detail);
 
-    /// <summary>A labelled row: the label hangs in the start margin, the value fills the column.</summary>
-    public sealed record Row(string Label, Action<IContainer> Value);
+    /// <summary>A labelled row: the label hangs in the start margin, the value's parts (one per numbered item, else one) fill the column.</summary>
+    public sealed record Row(string Label, params Action<IContainer>[] Parts);
 
     /// <summary>The signature box: the image (when uploaded) over a line, the name, then its lines (registration, when).</summary>
     public sealed record Signature(byte[]? Image, string Name, IReadOnlyList<string> Lines);
@@ -102,12 +102,13 @@ public static class PlainPdf
             });
             page.Content().Column(c =>
             {
+                var signAt = Math.Min(signAfter ?? rows.Count - 1, rows.Count - 1);
                 for (var i = 0; i < rows.Count; i++)
                 {
-                    c.Item().Element(e => Hang(e, paper, rows[i], first: false));
-                    if (i == signAfter) c.Item().AlignRight().Element(e => Sign(e, paper, sign));
+                    var (row, atFoot) = (rows[i], i == rows.Count - 1);
+                    c.Item().Element(e => Hang(e, paper, row, first: false, i == signAt ? sign : null, atFoot));
                 }
-                if (signAfter is null || signAfter >= rows.Count) c.Item().ExtendVertical().AlignBottom().AlignRight().Element(e => Sign(e, paper, sign));
+                if (rows.Count == 0) c.Item().ExtendVertical().AlignBottom().AlignRight().Element(e => Sign(e, paper, sign));
             });
             page.Footer().PaddingTop(paper.FootGap).Dynamic(new Foot(paper, footer));
         }));
@@ -142,12 +143,28 @@ public static class PlainPdf
         });
     });
 
-    static void Hang(IContainer e, Paper p, Row row, bool first) =>
-        (first ? e : e.BorderTop(0.5f).BorderColor(Line)).PaddingVertical(p.RowPad).Row(r =>
+    /// <summary>
+    /// One labelled row. With <paramref name="sign"/>, the signature box moves with the row's last part (its last item), never alone onto a page: a
+    /// signature-only page can be stapled to another paper. <paramref name="atFoot"/>: the box sits at the page foot, as the design's margin-top: auto.
+    /// </summary>
+    static void Hang(IContainer e, Paper p, Row row, bool first, Signature? sign = null, bool atFoot = false) =>
+        e.Element(x => sign is not null && row.Parts.Length == 1 ? x.PreventPageBreak() : x) // a one-part row moves whole with the box, label included
+        .Element(x => first ? x : x.BorderTop(0.5f).BorderColor(Line)).PaddingVertical(p.RowPad).Row(r =>
         {
             r.Spacing(p.Gap);
             r.ConstantItem(p.Label).PaddingTop(2.2f).Text(row.Label.ToUpperInvariant()).FontSize(6.8f).Bold().FontColor(Ink600).LetterSpacing(0.08f);
-            r.RelativeItem().Element(row.Value);
+            r.RelativeItem().Column(c =>
+            {
+                c.Spacing(p.ItemGap);
+                for (var i = 0; i < row.Parts.Length - 1; i++) c.Item().Element(row.Parts[i]);
+                var last = row.Parts[^1];
+                if (sign is null) c.Item().Element(last);
+                else c.Item().PreventPageBreak().Column(block =>
+                {
+                    block.Item().Element(last);
+                    (atFoot ? block.Item().ExtendVertical().AlignBottom() : block.Item()).AlignRight().Element(x => Sign(x, p, sign));
+                });
+            });
         });
 
     static void Sign(IContainer e, Paper p, Signature s) => e.PaddingTop(p.SignGap).Width(p.SignWidth).ShowEntire().Column(c =>
@@ -204,37 +221,32 @@ public static class PlainPdf
         });
 
     /// <summary>Numbered items: a teal number, the name with its detail in lighter type, the lines under it and each notice boxed under its own item.</summary>
-    public static Action<IContainer> Items(IReadOnlyList<Item> items, Paper paper) => e => e.Column(c =>
+    public static Action<IContainer>[] Items(IReadOnlyList<Item> items) => [.. items.Select((item, i) => (Action<IContainer>)(e =>
     {
-        c.Spacing(paper.ItemGap);
-        for (var i = 0; i < items.Count; i++)
+        var n = (i + 1).ToString(System.Globalization.CultureInfo.InvariantCulture);
+        e.ShowEntire().Row(r => // an item never splits across pages: its instruction stays with its name
         {
-            var item = items[i];
-            var n = (i + 1).ToString(System.Globalization.CultureInfo.InvariantCulture);
-            c.Item().ShowEntire().Row(r => // an item never splits across pages: its instruction stays with its name
+            r.ConstantItem(14).Text(n).ExtraBold().FontColor(Brand700);
+            r.RelativeItem().Column(body =>
             {
-                r.ConstantItem(14).Text(n).ExtraBold().FontColor(Brand700);
-                r.RelativeItem().Column(body =>
+                body.Item().Text(t =>
                 {
-                    body.Item().Text(t =>
-                    {
-                        t.Span(item.Name).FontSize(11).ExtraBold().LetterSpacing(0.01f);
-                        if (!string.IsNullOrEmpty(item.Detail)) t.Span($" {item.Detail}").FontSize(9.5f).SemiBold().FontColor(Ink700);
-                    });
-                    foreach (var line in item.Lines) body.Item().PaddingTop(1).Text(line);
-                    foreach (var box in item.Boxes)
-                        body.Item().PaddingTop(2.5f).Border(0.6f).BorderColor(Ink200).CornerRadius(2.5f).PaddingVertical(3.5f).PaddingHorizontal(6)
-                            .Text(t =>
-                            {
-                                t.DefaultTextStyle(x => x.FontSize(7.2f).LineHeight(1.35f).FontColor(Ink700));
-                                var cut = box.IndexOf(". ", StringComparison.Ordinal) + 1; // the first sentence (e.g. "Schedule H drug.") in bold
-                                if (cut > 0) t.Span(box[..cut]).Bold().FontColor(Ink900);
-                                t.Span(box[cut..]);
-                            });
+                    t.Span(item.Name).FontSize(11).ExtraBold().LetterSpacing(0.01f);
+                    if (!string.IsNullOrEmpty(item.Detail)) t.Span($" {item.Detail}").FontSize(9.5f).SemiBold().FontColor(Ink700);
                 });
+                foreach (var line in item.Lines) body.Item().PaddingTop(1).Text(line);
+                foreach (var box in item.Boxes)
+                    body.Item().PaddingTop(2.5f).Border(0.6f).BorderColor(Ink200).CornerRadius(2.5f).PaddingVertical(3.5f).PaddingHorizontal(6)
+                        .Text(t =>
+                        {
+                            t.DefaultTextStyle(x => x.FontSize(7.2f).LineHeight(1.35f).FontColor(Ink700));
+                            var cut = box.IndexOf(". ", StringComparison.Ordinal) + 1; // the first sentence (e.g. "Schedule H drug.") in bold
+                            if (cut > 0) t.Span(box[..cut]).Bold().FontColor(Ink900);
+                            t.Span(box[cut..]);
+                        });
             });
-        }
-    });
+        });
+    }))];
 
     /// <summary>The QR code as one SVG path of unit squares, so it prints as vectors at any size.</summary>
     static string Svg(IReadOnlyList<string> qr)

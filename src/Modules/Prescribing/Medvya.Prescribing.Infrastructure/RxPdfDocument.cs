@@ -51,7 +51,7 @@ public static class RxPdfDocument
             string.Join(' ', new[] { l.Strength, l.Form }.Where(x => !string.IsNullOrEmpty(x))),
             [l.Sig["en"], .. l.Reason is { } why ? [Text("rxPrint.reason", ("reason", why))] : Array.Empty<string>()], // a change or taper from the reconciliation
             [.. l.PrintRequirements.Select(r => Text($"rxPrint.requirement.{r}"))])).ToList();
-        if (medicines.Count > 0) rows.Add(new(Text("rxPrint.medicines"), PlainPdf.Items(medicines, paper)));
+        if (medicines.Count > 0) rows.Add(new(Text("rxPrint.medicines"), PlainPdf.Items(medicines)));
         var stops = v.Lines.Where(l => l.Discontinue).ToList();
         if (stops.Count > 0)
             rows.Add(new(Text("printFamily.label.stop"), PlainPdf.Pairs(stops.Select(l => (l.Medicine.ToUpperInvariant(),

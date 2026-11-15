@@ -127,7 +127,7 @@ public static class PaperPdfDocument
     {
         List<PlainPdf.Row> rows = [];
         if (s.Destination is { } lab) rows.Add(new(T("orders.slip.lab"), PlainPdf.Lines((lab, PlainPdf.Tone.Body))));
-        rows.Add(new(T("orders.slip.tests"), PlainPdf.Items([.. s.Orders.Select(o => new PlainPdf.Item(o.Name, T($"orders.kind.{o.Kind}"), o.Note is { } note ? [note] : [], []))], PlainPdf.A4)));
+        rows.Add(new(T("orders.slip.tests"), PlainPdf.Items([.. s.Orders.Select(o => new PlainPdf.Item(o.Name, T($"orders.kind.{o.Kind}"), o.Note is { } note ? [note] : [], []))])));
         rows.Add(new(T("printFamily.label.bring"), PlainPdf.Lines((T("orders.slip.notice"), PlainPdf.Tone.Strong))));
         return Write(T("orders.slip.title"), T("printFamily.checkPaper"), T("printFamily.orderedAt", ("when", PaperIssuer.When(s.OrderedAt, timeZone))), s.DoctorName,
             RxPdfDocument.Patient(s.Patient.FullName, s.Patient.SexAtBirth, s.Patient.Mrn, s.Patient.DateOfBirth, PaperIssuer.Age(s.OrderedAt, timeZone, s.Patient.DateOfBirth)), rows, paper);

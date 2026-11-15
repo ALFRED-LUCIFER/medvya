@@ -699,6 +699,8 @@ public sealed class RxAuthorisationTests(PostgresFixture sql, AzuriteFixture blo
         Assert.All(pages, p => Assert.Equal(p.Text.Contains("Authorised ", StringComparison.Ordinal) ? 2 : 1, p.Images)); // the meta row says "authorised", lower case
         Assert.Single(pages, p => p.Text.Contains("Authorised ", StringComparison.Ordinal));
         Assert.All(pages, p => Assert.True(p.InsideMargins));
+        // SAFETY mutation check: let the signature box break away from the last row in PlainPdf.Write and this fails (a signature-only page can be stapled to another paper).
+        Assert.Contains("Synthetic note 12", Assert.Single(pages, p => p.Text.Contains("Authorised ", StringComparison.Ordinal)).Text, StringComparison.Ordinal);
     }
 
     // SAFETY mutation check: drop the glyph catch in PlainPdf.Write and the emoji gives 500, not 422.

@@ -1,11 +1,15 @@
 import { CircleCheck, TriangleAlert } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, StickyActionBar } from '@medvya/ui';
+import { Button, Dialog, DialogContent, DialogDescription, DialogTitle, StickyActionBar } from '@medvya/ui';
 import type { TermsStatus } from '../domain/settings';
 import { cardBar, fieldError } from './fieldStyles';
 import { Section } from './Section';
 
-type Props = { terms: TermsStatus | null; loading: boolean; loadFailed: boolean; accepting: boolean; notOwner: boolean; acceptFailed: boolean; onAccept: () => void };
+type Props = {
+  terms: TermsStatus | null; loading: boolean; loadFailed: boolean; accepting: boolean; notOwner: boolean; acceptFailed: boolean;
+  /** The confirmation is open (#1365 F-038): the button asks, Confirm in the dialog accepts. */
+  confirming: boolean; onAsk: () => void; onCancel: () => void; onAccept: () => void;
+};
 
 /** Terms of Service and DPA (MDV-P1-019): the owner accepts once; while acceptance is required and missing, booking and messages are refused by the server. */
 export default function TermsPanel(p: Props) {
@@ -22,6 +26,9 @@ export default function TermsPanel(p: Props) {
         <h3 className="font-bold">{t('settings.terms.licenceTitle')}</h3>
         <p>{t('settings.terms.licenceClause')}</p>
       </div>
+      {/* shortcut: the full Terms of Service and DPA text is not published anywhere in the product yet (MDV-P1-044, counsel's review), so
+          there is nothing to link to; the page says so instead of implying it was read. Link the published documents here once they exist. */}
+      <p className="text-sm text-muted-foreground">{t('settings.terms.noText')}</p>
       {terms.accepted && terms.acceptedAt ? (
         <p role="status" className="flex items-center gap-2 font-bold"><CircleCheck aria-hidden className="size-5" />{t('settings.terms.accepted', { date: formatDate(new Date(terms.acceptedAt)) })}</p>
       ) : (
@@ -34,8 +41,18 @@ export default function TermsPanel(p: Props) {
             {p.notOwner && <p role="alert" className={fieldError}>{t('settings.terms.notOwner')}</p>}
             {p.acceptFailed && <p role="alert" className={fieldError}>{t('settings.terms.failed')}</p>}
           </>}>
-            <Button loading={p.accepting} onClick={p.onAccept}>{t('settings.terms.accept')}</Button>
+            <Button onClick={p.onAsk}>{t('settings.terms.accept')}</Button>
           </StickyActionBar>
+          <Dialog open={p.confirming} onOpenChange={open => { if (!open && !p.accepting) p.onCancel(); }}>
+            <DialogContent closeLabel={t('settings.terms.confirm.cancel')}>
+              <DialogTitle>{t('settings.terms.confirm.title')}</DialogTitle>
+              <DialogDescription>{t('settings.terms.confirm.body')} <bdi dir="ltr">{t('settings.terms.version', { version: terms.version })}</bdi></DialogDescription>
+              <div className="flex flex-wrap gap-3">
+                <Button loading={p.accepting} onClick={p.onAccept}>{t('settings.terms.confirm.confirm')}</Button>
+                <Button variant="outline" disabled={p.accepting} onClick={p.onCancel}>{t('settings.terms.confirm.cancel')}</Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </>
       )}
     </Section>

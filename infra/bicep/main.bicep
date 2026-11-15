@@ -51,12 +51,22 @@ param ledgerDigestRetentionDays int = env == 'prod' ? 3650 : 7
 param ledgerDigestPolicyLocked bool = false
 @description('Image of the database deploy job (migrations and roles inside the VNet). Pinned; the job downloads db-migrate from Blob.')
 param dbJobImage string = 'mcr.microsoft.com/azure-cli:2.92.0'
+@description('Platform console (ADR-014): application (client) id of its Entra app registration in the company tenant (infra/entra/console-app.sh). Not a secret.')
+@minLength(36)
+param consoleClientId string
+@description('Platform console: Entra object id of the first owner (Platform:BootstrapOwner). Used only while the console team is empty.')
+@minLength(36)
+param consoleOwnerObjectId string
+@description('Platform console: the company (workforce) tenant its sign-on uses. Defaults to this subscription\'s tenant.')
+param consoleTenantId string = tenant().tenantId
 
 var suffix = take(uniqueString(resourceGroup().id), 6)
 var name = 'medvya-${env}-${suffix}'
 // The app's own address; a site cannot reference its own property inside its own settings.
 var appName = 'app-${name}'
 var appHost = '${appName}.azurewebsites.net'
+var consoleName = 'console-${name}'
+var consoleHost = '${consoleName}.azurewebsites.net'
 var tags = { app: 'medvya', env: env, country: country, data: 'synthetic-only' }
 
 resource logs 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
@@ -282,6 +292,9 @@ resource nationalIdKey 'Microsoft.KeyVault/vaults/keys@2023-07-01' = {
   }
 }
 
+// "Key Vault Secrets User", given on single secrets only.
+var secretsUser = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')
+
 // "Key Vault Crypto User" on this one key, never on the vault.
 var cryptoUser = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '12338af0-0e69-4776-bea7-57ae8d297424')
 resource nationalIdKeyApp 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
@@ -487,8 +500,91 @@ resource app 'Microsoft.Web/sites@2023-12-01' = {
   }
 }
 
+// Platform console (MDV-P5-040, ADR-014): Host.Platform serving web/platform-admin, on the same plan and VNet. Company sign-on (OIDC) then the
+// member's own security key. Each database login is its own Entra identity: the system identity is the console's login (medvya_platform, no
+// clinic schema); consoleReviewDb is the narrow organisation-review login (medvya_review, MDV-P1-064). One identity in both would be one wider login.
+// shortcut: the console's medicine list (medvya_formulary, ConnectionStrings__Formulary, #1358) and feature releases (medvya_features,
+// ConnectionStrings__Features__IN, #1359) get an identity each like consoleReviewDb once their roles are on main; until then those pages fail closed.
+resource consoleReviewDb 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+  name: 'id-review-${name}'
+  location: location
+  tags: tags
+}
+
+// Written by infra/entra/console-app.sh before the first apply; the console reads it through a Key Vault reference.
+resource consoleSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' existing = {
+  parent: vault
+  name: 'platform-console-client-secret'
+}
+
+var consoleDb = 'Host=${postgres.outputs.fqdn};Database=${postgres.outputs.databaseName};SslMode=VerifyFull'
+var consoleIssuer = '${environment().authentication.loginEndpoint}${consoleTenantId}/v2.0'
+
+resource console 'Microsoft.Web/sites@2023-12-01' = {
+  name: consoleName
+  location: location
+  tags: tags
+  identity: { type: 'SystemAssigned, UserAssigned', userAssignedIdentities: { '${consoleReviewDb.id}': {} } }
+  properties: {
+    serverFarmId: plan.id
+    httpsOnly: true
+    virtualNetworkSubnetId: vnet.properties.subnets[1].id
+    siteConfig: {
+      linuxFxVersion: 'DOTNETCORE|10.0'
+      alwaysOn: true
+      minTlsVersion: '1.2'
+      ftpsState: 'Disabled'
+      healthCheckPath: '/health'
+      // No APPLICATIONINSIGHTS_CONNECTION_STRING: the console has no exporter yet (Host.Platform shortcut), and the platform agent would skip the scrubber.
+      // shortcut: email works with emailProvider=Acs (managed identity) only; with Smtp the console cannot read sendgrid-api-key. Grant it that secret if Smtp is used.
+      appSettings: concat(emailSettings, [
+        { name: 'ASPNETCORE_ENVIRONMENT', value: 'Staging' }
+        { name: 'Authentication__Oidc__Authority', value: consoleIssuer }
+        { name: 'Authentication__Oidc__ClientId', value: consoleClientId }
+        { name: 'Authentication__Oidc__ClientSecret', value: '@Microsoft.KeyVault(VaultName=${vault.name};SecretName=${consoleSecret.name})' }
+        // WebAuthn relying party: the console's own host. azurewebsites.net is a public suffix, so the RP id is the full host.
+        { name: 'Platform__RpId', value: consoleHost }
+        { name: 'Platform__Origins__0', value: 'https://${consoleHost}' }
+        // Entra puts the stable object id in "oid" and this issuer in "iss"; only this person, only while the team is empty.
+        { name: 'Platform__BootstrapOwner__Issuer', value: consoleIssuer }
+        { name: 'Platform__BootstrapOwner__Subject', value: consoleOwnerObjectId }
+        // No password: the system identity signs in as the console's login (its name is the app's name); the review login names its own identity.
+        { name: 'ConnectionStrings__Platform', value: '${consoleDb};Username=${consoleName}' }
+        { name: 'ConnectionStrings__Review', value: '${consoleDb};Username=${consoleReviewDb.name};Entra Client Id=${consoleReviewDb.properties.clientId}' }
+        // Organisation documents (practice-assets, read only) through a user-delegation link signed with the system identity.
+        { name: 'Storage__BlobEndpoint', value: storage.properties.primaryEndpoints.blob }
+      ])
+    }
+  }
+}
+
+resource consoleSecretRead 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: consoleSecret
+  name: guid(consoleSecret.id, console.id, secretsUser)
+  properties: { roleDefinitionId: secretsUser, principalId: console.identity.principalId, principalType: 'ServicePrincipal' }
+}
+
+resource consoleDocuments 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: practiceAssets
+  name: guid(practiceAssets.id, console.id, blobReader)
+  properties: { roleDefinitionId: blobReader, principalId: console.identity.principalId, principalType: 'ServicePrincipal' }
+}
+
+resource consoleDelegator 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: storage
+  name: guid(storage.id, console.id, blobDelegator)
+  properties: { roleDefinitionId: blobDelegator, principalId: console.identity.principalId, principalType: 'ServicePrincipal' }
+}
+
+// The approval decision emails (MDV-P1-064).
+resource consoleEmail 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: comms
+  name: guid(comms.id, console.id, emailOwner)
+  properties: { roleDefinitionId: emailOwner, principalId: console.identity.principalId, principalType: 'ServicePrincipal' }
+}
+
 // Database deploy job (MDV-P0-042). The server is private, so migrations run inside the VNet, never from a GitHub runner. Two identities:
-// dbAdmin is a second Entra administrator of the server (roles.sql, and the app and migrator logins); dbMigrator is a login IN ROLE
+// dbAdmin is a second Entra administrator of the server (roles.sql, and the app, console and migrator logins); dbMigrator is a login IN ROLE
 // medvya_migrator that runs the migrations. The deploy workflow uploads db-migrate to the deploy container and starts the job.
 resource dbAdmin 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: 'id-dbadmin-${name}'
@@ -528,6 +624,8 @@ db="Host=$PGHOST;SslMode=VerifyFull"
 AZURE_CLIENT_ID="$ADMIN_CLIENT_ID" ./Medvya.DbMigrate admin "$db;Database=$PGDATABASE;Username=$ADMIN_NAME"
 AZURE_CLIENT_ID="$ADMIN_CLIENT_ID" ./Medvya.DbMigrate entra "$db;Database=postgres;Username=$ADMIN_NAME" medvya_migrator "$MIGRATOR_NAME" "$MIGRATOR_OBJECT_ID"
 AZURE_CLIENT_ID="$ADMIN_CLIENT_ID" ./Medvya.DbMigrate entra "$db;Database=postgres;Username=$ADMIN_NAME" medvya_app "$APP_NAME" "$APP_OBJECT_ID"
+AZURE_CLIENT_ID="$ADMIN_CLIENT_ID" ./Medvya.DbMigrate entra "$db;Database=postgres;Username=$ADMIN_NAME" medvya_platform "$CONSOLE_NAME" "$CONSOLE_OBJECT_ID"
+AZURE_CLIENT_ID="$ADMIN_CLIENT_ID" ./Medvya.DbMigrate entra "$db;Database=postgres;Username=$ADMIN_NAME" medvya_review "$REVIEW_NAME" "$REVIEW_OBJECT_ID"
 AZURE_CLIENT_ID="$MIGRATOR_CLIENT_ID" ./Medvya.DbMigrate migrate "$db;Database=$PGDATABASE;Username=$MIGRATOR_NAME"
 '''
 
@@ -562,6 +660,10 @@ resource dbJob 'Microsoft.App/jobs@2024-03-01' = {
           { name: 'MIGRATOR_OBJECT_ID', value: dbMigrator.properties.principalId }
           { name: 'APP_NAME', value: appName }
           { name: 'APP_OBJECT_ID', value: app.identity.principalId }
+          { name: 'CONSOLE_NAME', value: consoleName }
+          { name: 'CONSOLE_OBJECT_ID', value: console.identity.principalId }
+          { name: 'REVIEW_NAME', value: consoleReviewDb.name }
+          { name: 'REVIEW_OBJECT_ID', value: consoleReviewDb.properties.principalId }
           { name: 'DOTNET_SYSTEM_GLOBALIZATION_INVARIANT', value: '1' }
         ]
       }]
@@ -603,3 +705,5 @@ output appPrincipalId string = app.identity.principalId
 output keyVault string = vault.name
 output storageAccount string = storage.name
 output dbJob string = dbJob.name
+output consoleName string = console.name
+output consoleHost string = console.properties.defaultHostName

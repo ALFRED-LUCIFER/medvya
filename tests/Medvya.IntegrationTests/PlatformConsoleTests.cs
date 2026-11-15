@@ -153,6 +153,18 @@ public sealed class PlatformConsoleTests(PostgresFixture sql) : IClassFixture<Po
         Assert.Contains("auth.signin", actions);
     }
 
+    // On App Service TLS ends in front of the host; without the forwarded protocol Entra gets an http redirect address and refuses every sign-on.
+    [Fact]
+    public async Task BehindAppServiceSignOnSendsTheHttpsRedirectAddress()
+    {
+        using var hosted = CreateFactory(sql, configure: b => b.UseSetting("WEBSITE_INSTANCE_ID", "synthetic-instance"));
+        using var client = hosted.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("http://localhost"), AllowAutoRedirect = false });
+        using var request = new HttpRequestMessage(HttpMethod.Get, new Uri("/bff/login", UriKind.Relative));
+        request.Headers.Add("X-Forwarded-Proto", "https");
+        var challenge = await client.SendAsync(request);
+        Assert.Contains("redirect_uri=https%3A%2F%2Flocalhost%2Fsignin-oidc", challenge.Headers.Location!.Query, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task ACompanyAccountThatIsNoMemberCannotSignOn()
     {

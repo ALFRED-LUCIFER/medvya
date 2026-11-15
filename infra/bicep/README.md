@@ -6,7 +6,7 @@
 
 1. The CI identity (`AZURE_CLIENT_ID`) gets **Owner** on `rg-medvya-dev-in`: the template creates role and policy assignments.
 2. Federated credential for the new environment: `az ad app federated-credential create --id <AZURE_CLIENT_ID> --parameters '{"name":"github-dev-infra","issuer":"https://token.actions.githubusercontent.com","subject":"repo:ALFRED-LUCIFER/medvya:environment:dev-infra","audiences":["api://AzureADTokenExchange"]}'`
-3. GitHub environment `dev-infra` with yourself as required reviewer, the same `AZURE_*` variables as `dev`, and on both environments the variables `AZURE_DB_ADMIN_OBJECT_ID`, `STAFF_SIGNIN_CLIENT_ID`, `AZURE_DEPLOY_PRINCIPAL_ID`. Repository secrets `ALERT_EMAIL` and `AZURE_DB_ADMIN_LOGIN`.
+3. GitHub environment `dev-infra` with yourself as required reviewer, the same `AZURE_*` variables as `dev`, and on both environments the variables `AZURE_DB_ADMIN_OBJECT_ID`, `STAFF_SIGNIN_CLIENT_ID`, `AZURE_DEPLOY_PRINCIPAL_ID`, `CONSOLE_SIGNIN_CLIENT_ID`, `CONSOLE_OWNER_OBJECT_ID`. Repository secrets `ALERT_EMAIL` and `AZURE_DB_ADMIN_LOGIN`.
 
 **Never grant by hand what the template grants.** An assignment made by hand has another name than the template's, so the next apply fails with "The role assignment already exists" (this happened on 9 Nov; deployments `medvya-dev-10` and `-11` failed until the hand-made ones were removed). Add it to the template and apply instead.
 
@@ -14,7 +14,7 @@ By hand, with the same parameters, the commands are:
 
 ```
 az group create -n rg-medvya-dev-in -l centralindia
-az deployment group what-if -g rg-medvya-dev-in -f infra/bicep/main.bicep -p dbAdminObjectId=<entra object id> dbAdminLogin=<upn> alertEmail=<email> oidcClientId=<app registration client id> deployPrincipalId=<object id of the deploy service principal>
+az deployment group what-if -g rg-medvya-dev-in -f infra/bicep/main.bicep -p dbAdminObjectId=<entra object id> dbAdminLogin=<upn> alertEmail=<email> oidcClientId=<app registration client id> deployPrincipalId=<object id of the deploy service principal> consoleClientId=<console app registration client id> consoleOwnerObjectId=<first console owner's object id>
 az deployment group create  -g rg-medvya-dev-in -f infra/bicep/main.bicep -p <same parameters>
 ```
 
@@ -59,6 +59,10 @@ After the lock, every deployment of that environment passes `ledgerDigestPolicyL
 ## Web app (MDV-P0-007)
 
 The API serves the built clinic app from `wwwroot/app` under `/app/` (the public site keeps `/`), so the strict session cookie needs no CORS. The deploy workflow builds `web/clinic` (Vite base `/app/`) and copies `dist` into the publish folder. Settings that point server-made links there: `Web__AppPath=/app/`, `Invitations__LinkBaseUrl`, `PublicSite__Deployments__SignUpUrls__IN`.
+
+## Platform console (MDV-P5-040, ADR-014)
+
+A second web app, `console-medvya-<env>-<suffix>`, runs `Host.Platform` with `web/platform-admin` on the same plan and VNet. Its system identity is the database login `IN ROLE medvya_platform`; the user-assigned identity `id-review-*` is the login `IN ROLE medvya_review`; the database job maps both. The template reads Key Vault secret `platform-console-client-secret` (an `existing` resource, so the secret must be in the vault before an apply) and needs the parameters `consoleClientId` and `consoleOwnerObjectId`. All of it is written by `infra/entra/console-app.sh` and the steps in `docs/runbooks/platform-console-azure.md`; do them before the next `infra-dev` run.
 
 ## Manual Entra settings (not in Bicep)
 

@@ -48,6 +48,27 @@ public class DatabaseRoleTests(PostgresFixture sql) : IClassFixture<PostgresFixt
         await Assert.ThrowsAsync<ArgumentException>(() => Medvya.DbMigrate.DatabaseMigrator.MapEntraPrincipalAsync(admin, "medvya_owner", "app-medvya-test", oid));
     }
 
+    // ADR-014: the console's two logins, each its own identity. A module role (a whole clinic schema) or the owner is never handed out.
+    [Theory]
+    [InlineData("medvya_platform", true)]
+    [InlineData("medvya_review", true)]
+    [InlineData("medvya_patients", false)]
+    [InlineData("medvya_owner", false)]
+    public async Task OnlyLoginRolesCanBeMappedToAnEntraIdentity(string role, bool allowed)
+    {
+        await using var admin = new NpgsqlConnection(sql.AdminConnectionString);
+        await admin.OpenAsync();
+        var login = $"id-console-{Guid.NewGuid():N}";
+        await new NpgsqlCommand($"""CREATE ROLE "{login}" LOGIN""", admin).ExecuteNonQueryAsync();
+        var map = () => Medvya.DbMigrate.DatabaseMigrator.MapEntraPrincipalAsync(admin, role, login, Guid.NewGuid());
+        if (allowed) await map();
+        else await Assert.ThrowsAsync<ArgumentException>(map);
+        await using var member = new NpgsqlCommand("SELECT pg_has_role(@l, @r, 'MEMBER')", admin);
+        member.Parameters.AddWithValue("l", login);
+        member.Parameters.AddWithValue("r", role);
+        Assert.Equal(allowed, await member.ExecuteScalarAsync());
+    }
+
     [Theory]
     [InlineData("CREATE TABLE tenancy.\"Injected\" (\"Id\" int)")]
     [InlineData("ALTER TABLE tenancy.\"Tenants\" ADD COLUMN \"Injected\" int")]

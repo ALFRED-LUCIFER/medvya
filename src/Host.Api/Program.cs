@@ -151,10 +151,10 @@ app.MapNativeSignIn();
 app.MapSchedulingEndpoints();
 app.MapNotifications();
 app.UseJobs();
-if (app.Services.GetService<IRecurringJobManager>() is { } recurring && app.Services.GetService<Medvya.Audit.Infrastructure.LedgerDigests>() is not null)
+if (app.Services.GetService<RecurringJobRegistration>() is { } recurring && app.Services.GetService<Medvya.Audit.Infrastructure.LedgerDigests>() is not null)
 {
-    recurring.AddOrUpdate<Medvya.Audit.Infrastructure.LedgerJobs>(Medvya.Audit.Infrastructure.LedgerJobs.PublishJobId, j => j.PublishAsync(CancellationToken.None), Cron.Daily(1));
-    recurring.AddOrUpdate<Medvya.Audit.Infrastructure.LedgerJobs>(Medvya.Audit.Infrastructure.LedgerJobs.VerifyJobId, j => j.VerifyAsync(CancellationToken.None), Cron.Daily(2));
+    recurring.Add(Medvya.Audit.Infrastructure.LedgerJobs.PublishJobId, m => m.AddOrUpdate<Medvya.Audit.Infrastructure.LedgerJobs>(Medvya.Audit.Infrastructure.LedgerJobs.PublishJobId, j => j.PublishAsync(CancellationToken.None), Cron.Daily(1)));
+    recurring.Add(Medvya.Audit.Infrastructure.LedgerJobs.VerifyJobId, m => m.AddOrUpdate<Medvya.Audit.Infrastructure.LedgerJobs>(Medvya.Audit.Infrastructure.LedgerJobs.VerifyJobId, j => j.VerifyAsync(CancellationToken.None), Cron.Daily(2)));
 }
 app.MapPublicSite();
 app.MapInvitations();

@@ -8,7 +8,7 @@ import type { CodeForm, EmailForm, Facility, NewPinForm, SignInStep } from '../d
 type Props = {
   step: SignInStep; email: string; busy: boolean; error: string | null;
   emailForm: UseFormReturn<EmailForm>; codeForm: UseFormReturn<CodeForm>; pinForm: UseFormReturn<NewPinForm>;
-  onSubmitEmail: () => void; onSubmitCode: () => void; onBack: () => void; onSubmitPin: () => void;
+  onBrowserSignIn: () => void; onSubmitEmail: () => void; onSubmitCode: () => void; onBack: () => void; onSubmitPin: () => void;
   facilities: Facility[]; facilitiesLoading: boolean; onChooseFacility: (f: Facility) => void;
   biometricAvailable: boolean; unlockMethod: string; onEnableBiometric: () => void; onSkipBiometric: () => void;
 };
@@ -29,6 +29,18 @@ function Brandmark() {
 export function SignInScreen(vm: Props) {
   const { t } = useI18n();
   const error = vm.error ? <Banner tone="danger" icon="error-outline" text={t(vm.error as MessageKey)} /> : null;
+
+  if (vm.step === 'browser') return (
+    <Screen footer={<Button label={t('mobile.signIn.verify')} onPress={vm.onBrowserSignIn} busy={vm.busy} />}>
+      <Brandmark />
+      <View style={styles.intro}>
+        <Text variant="display" accessibilityRole="header">{t('mobile.signIn.title')}</Text>
+        <Text>{t('mobile.signIn.browserIntro')}</Text>
+      </View>
+      {error}
+      <Text variant="caption" style={styles.legal}>{t('mobile.signIn.legal')}</Text>
+    </Screen>
+  );
 
   if (vm.step === 'email') return (
     <Screen footer={<Button label={t('mobile.signIn.continue')} onPress={vm.onSubmitEmail} busy={vm.busy} />}>
@@ -74,7 +86,7 @@ export function SignInScreen(vm: Props) {
       <Text variant="display" accessibilityRole="header">{t('mobile.signIn.facilityTitle')}</Text>
       {vm.facilitiesLoading ? <Loading label={t('mobile.common.loading')} /> : vm.facilities.map(f => (
         <View key={f.id} style={styles.option}>
-          <ListRow title={f.name} subtitle={t('mobile.signIn.facilityLine', { city: f.city, opens: f.opens, closes: f.closes })}
+          <ListRow title={f.name} subtitle={f.opens && f.closes ? t('mobile.signIn.facilityLine', { city: f.city, opens: f.opens, closes: f.closes }) : f.city}
             leading={<Icon name="storefront" color={theme.color.brand700} />} onPress={() => vm.onChooseFacility(f)} />
         </View>
       ))}

@@ -9,6 +9,7 @@ public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> option
     public DbSet<StaffUser> Users => Set<StaffUser>();
     public DbSet<StaffSession> Sessions => Set<StaffSession>();
     public DbSet<OnboardingDraft> OnboardingDrafts => Set<OnboardingDraft>();
+    public DbSet<SmsSignIn> SmsSignIns => Set<SmsSignIn>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder) =>
         Medvya.BuildingBlocks.Infrastructure.UtcDateTimeOffset.Apply(configurationBuilder);
@@ -42,5 +43,7 @@ public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> option
             e.Property(x => x.Country).HasMaxLength(2).IsFixedLength();
             e.HasOne<StaffUser>().WithOne().HasForeignKey<OnboardingDraft>(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
         });
+        // A mobile number's sign-in state, before anyone is known: no clinic, no row-level security. Every query names the number's hash.
+        modelBuilder.Entity<SmsSignIn>(e => e.HasKey(x => x.PhoneHash));
     }
 }

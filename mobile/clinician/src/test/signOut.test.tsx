@@ -11,9 +11,9 @@ function SignedInScreen() {
   return <Pressable accessibilityRole="button" onPress={signOut}><Text>{session.staff.name}</Text></Pressable>;
 }
 function Harness() {
-  const { session, begin } = useSession();
+  const { ready, session, begin } = useSession();
   const wasIn = useRef(false);
-  useEffect(() => { begin({ staff: cast.staff[0]!, facility: cast.facilities[0]! }, false); }, []); // once, on mount
+  useEffect(() => { if (ready) begin({ staff: cast.staff[0]!, facility: cast.facilities[0]! }, false); }, [ready]); // once, after the launch check
   if (session) wasIn.current = true;
   return <>{session ? null : <Text>signed out</Text>}{wasIn.current ? <SignedInScreen /> : null}</>;
 }

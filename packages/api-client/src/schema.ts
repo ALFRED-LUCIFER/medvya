@@ -4037,6 +4037,80 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/patient-sign-in/code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CodeRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/patient-sign-in/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["VerifyRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/onboarding": {
         parameters: {
             query?: never;
@@ -9475,6 +9549,11 @@ export interface components {
             date: string;
             name: null | string;
         };
+        CodeRequest: {
+            countryCode: null | string;
+            mobile: null | string;
+            language: null | string;
+        };
         CompletionRequest: {
             address?: null | components["schemas"]["PatientAddress"];
             payer?: null | components["schemas"]["PayerInput"];
@@ -10557,6 +10636,11 @@ export interface components {
             /** Format: int32 */
             quantity: null | number | string;
             instructions: null | string;
+        };
+        VerifyRequest: {
+            countryCode: null | string;
+            mobile: null | string;
+            code: null | string;
         };
         VerifyRx: {
             token: null | string;

@@ -236,7 +236,7 @@ export function ReviewStep({ country, values, ageInstead, onEdit }: { country: C
       number(country === 'IN' ? values.postalCode : values.makani), country === 'AE' ? number(values.poBox) : null] },
     { label: t('registration.review.family'), step: 'family', parts: [contact(values.ecName, values.ecRelationship, values.ecPhone),
       values.guardianName.trim() ? <>{t('registration.review.guardian')} {contact(values.guardianName, values.guardianRelationship, values.guardianPhone)}</> : null] },
-    { label: t('registration.review.consents'), step: 'consents', parts: [t('registration.consents.treatment.title'),
+    { label: t('registration.review.consents'), step: 'consents', parts: [values.consentTreatment ? t('registration.consents.treatment.title') : null,
       values.consentWhatsApp ? t('registration.consents.channel.whatsapp') : null, values.consentSms ? t('registration.consents.channel.sms') : null, values.consentEmail ? t('registration.consents.channel.email') : null,
       values.consentExchange ? t(country === 'IN' ? 'registration.consents.exchange.IN.title' : 'registration.consents.exchange.AE.pending') : null,
       values.consentPortal ? t('registration.consents.portal.title') : null, values.consentMarketing ? t('registration.consents.marketing.title') : null] },

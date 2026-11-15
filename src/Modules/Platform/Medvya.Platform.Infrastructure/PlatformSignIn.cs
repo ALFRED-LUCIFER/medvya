@@ -72,7 +72,10 @@ sealed class PlatformSignIn(PlatformDbContext db, IPlatformCaller caller, IFido2
             await db.SaveChangesAsync(cancellationToken);
         }
         var hasKey = await db.Keys.AnyAsync(k => k.MemberId == memberId && k.RevokedAt == null, cancellationToken);
-        return new SessionState(member.Id, member.DisplayName, member.Email, member.Role, session.KeyVerifiedAt is not null, hasKey, await MayRegisterAsync(session, member, cancellationToken));
+        var otherOwner = session.KeyVerifiedAt is null
+            && await db.Members.AnyAsync(m => m.Id != memberId && m.Role == PlatformRole.Owner && m.RemovedAt == null, cancellationToken);
+        return new SessionState(member.Id, member.DisplayName, member.Email, member.Role, session.KeyVerifiedAt is not null, hasKey,
+            await MayRegisterAsync(session, member, cancellationToken), otherOwner);
     }
 
     public async Task<string?> BeginKeyCheckAsync(Guid sessionId, CancellationToken cancellationToken = default)
@@ -150,14 +153,19 @@ sealed class PlatformSignIn(PlatformDbContext db, IPlatformCaller caller, IFido2
         return json;
     }
 
-    public async Task<bool> CompleteKeyRegistrationAsync(Guid sessionId, string responseJson, CancellationToken cancellationToken = default)
+    public async Task<KeyRegistration> CompleteKeyRegistrationAsync(Guid sessionId, string responseJson, CancellationToken cancellationToken = default)
     {
         var now = clock.GetUtcNow();
         var session = await LiveSessionAsync(sessionId, cancellationToken);
         var pending = Take(session, Registration);
         var member = session is null ? null : await db.Members.SingleAsync(m => m.Id == session.MemberId, cancellationToken);
-        if (session is null || member is null) return false;
-        if (pending is null || !await MayRegisterAsync(session, member, cancellationToken)) return await RefusedAsync(session, now, cancellationToken);
+        if (session is null || member is null) return KeyRegistration.Refused;
+        async Task<KeyRegistration> Refuse(KeyRegistration why)
+        {
+            await RefusedAsync(session, now, cancellationToken, why == KeyRegistration.SyncedPasskey ? "auth.key.refused.synced" : "auth.key.refused");
+            return why;
+        }
+        if (pending is null || !await MayRegisterAsync(session, member, cancellationToken)) return await Refuse(KeyRegistration.Refused);
         try
         {
             var response = JsonSerializer.Deserialize<AuthenticatorAttestationRawResponse>(responseJson) ?? throw new JsonException();
@@ -167,18 +175,18 @@ sealed class PlatformSignIn(PlatformDbContext db, IPlatformCaller caller, IFido2
                 OriginalOptions = CredentialCreateOptions.FromJson(pending),
                 IsCredentialIdUniqueToUserCallback = async (args, ct) => !await db.Keys.AnyAsync(k => k.CredentialId == args.CredentialId, ct),
             }, cancellationToken);
-            if (credential.IsBackupEligible) return await RefusedAsync(session, now, cancellationToken);
+            if (credential.IsBackupEligible) return await Refuse(KeyRegistration.SyncedPasskey);
             var key = new SecurityKey { MemberId = member.Id, CredentialId = credential.Id, PublicKey = credential.PublicKey, SignCount = credential.SignCount, CreatedAt = now, LastUsedAt = now };
             db.Keys.Add(key);
             if (session.KeyLinkId is { } linkId) (await db.Links.SingleAsync(l => l.Id == linkId, cancellationToken)).UsedAt = now;
             session.KeyVerifiedAt = now; // registering with user verification proves the key is in hand
             db.AuditEntries.Add(PlatformAudit.Entry(caller, now, "key.register", "security_key", key.Id, actor: member.Id));
             await db.SaveChangesAsync(cancellationToken);
-            return true;
+            return KeyRegistration.Registered;
         }
         catch (Exception e) when (e is Fido2VerificationException or JsonException or ArgumentException or FormatException)
         {
-            return await RefusedAsync(session, now, cancellationToken);
+            return await Refuse(KeyRegistration.Refused);
         }
     }
 
@@ -212,9 +220,9 @@ sealed class PlatformSignIn(PlatformDbContext db, IPlatformCaller caller, IFido2
         return p[kind.Length..];
     }
 
-    async Task<bool> RefusedAsync(PlatformSession session, DateTimeOffset now, CancellationToken cancellationToken)
+    async Task<bool> RefusedAsync(PlatformSession session, DateTimeOffset now, CancellationToken cancellationToken, string action = "auth.key.refused")
     {
-        db.AuditEntries.Add(PlatformAudit.Entry(caller, now, "auth.key.refused", "platform_session", session.Id, actor: session.MemberId));
+        db.AuditEntries.Add(PlatformAudit.Entry(caller, now, action, "platform_session", session.Id, actor: session.MemberId));
         await db.SaveChangesAsync(cancellationToken);
         return false;
     }

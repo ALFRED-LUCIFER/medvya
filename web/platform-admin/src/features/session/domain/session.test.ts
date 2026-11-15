@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { linkFrom, stageOf, type Me } from './session';
+import { keyProblemOf, linkFrom, stageOf, type Me } from './session';
 
-const me = (over: Partial<Me>): Me => ({ displayName: 'Ops Admin (synthetic)', email: 'ops.admin@medvya.example', role: 'Owner', keyVerified: false, hasKey: true, canRegister: false, ...over });
+const me = (over: Partial<Me>): Me => ({ displayName: 'Ops Admin (synthetic)', email: 'ops.admin@medvya.example', role: 'Owner', keyVerified: false, hasKey: true, canRegister: false, otherOwner: false, ...over });
+
+describe('keyProblemOf', () => {
+  it('tells a synced passkey from every other failure', () => {
+    expect(keyProblemOf({ key: ['synced'] })).toBe('synced');
+    expect(keyProblemOf({})).toBe('failed');
+    expect(keyProblemOf(null)).toBe('failed'); // a cancelled prompt never reached the server
+  });
+});
 
 describe('stageOf', () => {
   it('opens the console only once the key is verified', () => {

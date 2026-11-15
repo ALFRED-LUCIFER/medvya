@@ -77,8 +77,15 @@ public interface IConsoleActions
 
 public sealed record ConsoleSession(Guid MemberId, Guid SessionId);
 
-/// <summary><see cref="CanRegister"/>: this session may register a key (it signed on with a usable link, or it is the first owner's first key).</summary>
-public sealed record SessionState(Guid MemberId, string DisplayName, string Email, PlatformRole Role, bool KeyVerified, bool HasKey, bool CanRegister);
+/// <summary>
+/// <see cref="CanRegister"/>: this session may register a key (it signed on with a usable link, or it is the first owner's first key).
+/// <see cref="OtherOwner"/>: before the key step, whether another owner exists who could issue a one-hour link (the sign-in page only says
+/// "ask another owner" when there is one); false once the key is verified.
+/// </summary>
+public sealed record SessionState(Guid MemberId, string DisplayName, string Email, PlatformRole Role, bool KeyVerified, bool HasKey, bool CanRegister, bool OtherOwner);
+
+/// <summary>How registering a key ended. <see cref="SyncedPasskey"/>: the key itself was sound but can be copied to other devices, so it is refused.</summary>
+public enum KeyRegistration { Registered, Refused, SyncedPasskey }
 
 /// <summary>
 /// Console sign-in (MDV-P5-040): company sign-on starts a session that can only take the security-key step; a verified key (WebAuthn)
@@ -98,6 +105,7 @@ public interface IPlatformSignIn
     Task<bool> CompleteKeyCheckAsync(Guid sessionId, string responseJson, CancellationToken cancellationToken = default);
     /// <summary>Creation options, or null when this session may not register a key (see <see cref="SessionState.CanRegister"/>).</summary>
     Task<string?> BeginKeyRegistrationAsync(Guid sessionId, CancellationToken cancellationToken = default);
-    Task<bool> CompleteKeyRegistrationAsync(Guid sessionId, string responseJson, CancellationToken cancellationToken = default);
+    /// <summary>Every refusal is in the audit log, a synced passkey under its own action so the log says why.</summary>
+    Task<KeyRegistration> CompleteKeyRegistrationAsync(Guid sessionId, string responseJson, CancellationToken cancellationToken = default);
     Task SignOutAsync(Guid sessionId, CancellationToken cancellationToken = default);
 }

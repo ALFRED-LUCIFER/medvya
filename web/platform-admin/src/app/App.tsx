@@ -15,7 +15,7 @@ export default function App({ locale, onLocaleChange }: { locale: Locale; onLoca
   if (s.loading) return null;
   if (s.loadFailed) return <main className="grid min-h-screen place-items-center p-4"><p role="alert" className="font-semibold">{t('platform.state.error')}</p></main>;
   if (s.stage !== 'in' || !s.me)
-    return <SignInPage stage={s.stage === 'in' ? 'signedOut' : s.stage} me={s.me} hasLink={s.hasLink} signOnFailed={s.signOnFailed} keyFailed={s.keyFailed}
+    return <SignInPage stage={s.stage === 'in' ? 'signedOut' : s.stage} me={s.me} hasLink={s.hasLink} signOnFailed={s.signOnFailed} keyProblem={s.keyProblem}
       busy={s.busy} languageSwitcher={languages} onSignOn={s.onSignOn} onTouchKey={s.onTouchKey} onRegisterKey={s.onRegisterKey} onSignOut={s.onSignOut} />;
   const items = navFor(s.me.role);
   return (

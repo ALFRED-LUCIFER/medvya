@@ -292,8 +292,25 @@ public sealed class PlatformConsoleTests(PostgresFixture sql) : IClassFixture<Po
         using var browser = Browser();
         await SignOn(browser, "new", link);
         using var synced = new SoftSecurityKey(Origin) { BackupEligible = true };
-        Assert.Equal(HttpStatusCode.Unauthorized, await RegisterKey(browser, synced));
-        Assert.False((await Me(browser)).GetProperty("keyVerified").GetBoolean());
+        // F-028: still refused, now with the reason, so the page can say what to register instead; the refusal is in the audit log (F-037).
+        var options = await browser.PostAsync(new Uri("/bff/key/registration/options", UriKind.Relative), null);
+        var refused = await browser.PostAsync(new Uri("/bff/key/registration", UriKind.Relative),
+            new StringContent(synced.Create(await options.Content.ReadAsStringAsync()), Encoding.UTF8, "application/json"));
+        Assert.Equal(HttpStatusCode.Unauthorized, refused.StatusCode);
+        Assert.Equal("synced", (await refused.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("errors").GetProperty("key")[0].GetString());
+        var me = await Me(browser);
+        Assert.False(me.GetProperty("keyVerified").GetBoolean());
+        Assert.True(me.GetProperty("otherOwner").GetBoolean()); // the inviting owner could issue a new link
+        await using var db = Db();
+        Assert.False(await db.Keys.AnyAsync(k => k.CredentialId == synced.CredentialId));
+        var name = me.GetProperty("displayName").GetString();
+        Assert.Contains(await Audit(ownerBrowser), a => a.GetProperty("action").GetString() == "auth.key.refused.synced" && a.GetProperty("actor").GetString() == name);
+
+        // Any other refusal (here: an answer to a challenge that was never asked) says nothing more than before, and is logged as refused.
+        var other = await browser.PostAsync(new Uri("/bff/key/registration", UriKind.Relative), new StringContent("{}", Encoding.UTF8, "application/json"));
+        Assert.Equal(HttpStatusCode.Unauthorized, other.StatusCode);
+        Assert.Equal(0, other.Content.Headers.ContentLength ?? 0);
+        Assert.Contains(await Audit(ownerBrowser), a => a.GetProperty("action").GetString() == "auth.key.refused" && a.GetProperty("actor").GetString() == name);
     }
 
     // Check 4: another owner issues a one-hour link; the old key stops at once; the new key works; both steps are logged.
@@ -466,6 +483,8 @@ public sealed class PlatformBootstrapTests(PostgresFixture sql) : IClassFixture<
     {
         using var browser = PlatformConsoleTests.Browser(factory);
         Assert.Equal("/", (await PlatformConsoleTests.SignOn(browser, "platform-owner")).Headers.Location!.OriginalString);
+        // F-028: the first owner has nobody to ask for a link, and /v1/me says so before the key step.
+        Assert.False((await browser.GetFromJsonAsync<JsonElement>(new Uri("/v1/me", UriKind.Relative))).GetProperty("otherOwner").GetBoolean());
         using var key = new SoftSecurityKey(PlatformConsoleTests.Origin);
         Assert.Equal(HttpStatusCode.NoContent, await PlatformConsoleTests.RegisterKey(browser, key));
         Assert.Equal(HttpStatusCode.OK, (await browser.GetAsync(new Uri("/v1/team", UriKind.Relative))).StatusCode);

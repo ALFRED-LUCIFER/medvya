@@ -2,14 +2,14 @@ import type { ReactNode } from 'react';
 import { Building2, KeyRound, ShieldCheck } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
 import { Button, Card, PageHeader } from '@medvya/ui';
-import type { Me, Stage } from '../domain/session';
+import type { KeyProblem, Me, Stage } from '../domain/session';
 
 type Props = {
   stage: Exclude<Stage, 'in'>;
   me: Me | null;
   hasLink: boolean;
   signOnFailed: boolean;
-  keyFailed: boolean;
+  keyProblem: KeyProblem | null;
   busy: boolean;
   languageSwitcher: ReactNode;
   onSignOn: () => void;
@@ -19,7 +19,7 @@ type Props = {
 };
 
 /** Sign-in to the platform console (design: Medvya Admin, sign-in): company sign-on, then the security key. No passwords. */
-export default function SignInPage({ stage, me, hasLink, signOnFailed, keyFailed, busy, languageSwitcher, onSignOn, onTouchKey, onRegisterKey, onSignOut }: Props) {
+export default function SignInPage({ stage, me, hasLink, signOnFailed, keyProblem, busy, languageSwitcher, onSignOn, onTouchKey, onRegisterKey, onSignOut }: Props) {
   const { t } = useI18n();
   return (
     <main className="grid min-h-screen place-items-center bg-brand-950 p-4">
@@ -60,7 +60,13 @@ export default function SignInPage({ stage, me, hasLink, signOnFailed, keyFailed
               </>
             )}
             {stage === 'askOwner' && <p role="status" className="font-semibold">{t('platform.signIn.noKey')}</p>}
-            {keyFailed && <p role="alert" className="text-sm font-semibold text-danger-700">{t('platform.signIn.keyFailed')}</p>}
+            {/* Why, and what to use instead; "ask another owner" only when there is one (F-028). */}
+            {keyProblem && (
+              <p role="alert" className="text-sm font-semibold text-danger-700">
+                {t(keyProblem === 'synced' ? 'platform.signIn.keySynced' : stage === 'registerKey' ? 'platform.signIn.keyNotRegistered' : 'platform.signIn.keyFailed')}
+                {me.otherOwner && ` ${t('platform.signIn.askOwner')}`}
+              </p>
+            )}
             <Button variant="outline" onClick={onSignOut}>{t('platform.action.signOut')}</Button>
           </div>
         )}

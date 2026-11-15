@@ -9,6 +9,7 @@ const actionKeys = {
   'auth.signin': 'platform.audit.action.auth_signin',
   'auth.signout': 'platform.audit.action.auth_signout',
   'auth.key.refused': 'platform.audit.action.auth_key_refused',
+  'auth.key.refused.synced': 'platform.audit.action.auth_key_refused_synced',
   'key.register': 'platform.audit.action.key_register',
   'key.recovery.issue': 'platform.audit.action.key_recovery_issue',
   'team.bootstrap': 'platform.audit.action.team_bootstrap',

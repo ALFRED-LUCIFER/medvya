@@ -18,7 +18,7 @@ async function axe(page: Page) {
 }
 
 const b64 = (s: string) => Buffer.from(s).toString('base64url');
-const owner = (over: object) => ({ displayName: 'Ops Admin (synthetic)', email: 'ops.admin@medvya.example', role: 'Owner', keyVerified: false, hasKey: false, canRegister: true, ...over });
+const owner = (over: object) => ({ displayName: 'Ops Admin (synthetic)', email: 'ops.admin@medvya.example', role: 'Owner', keyVerified: false, hasKey: false, canRegister: true, otherOwner: false, ...over });
 const team = {
   lastAccessReviewAt: null, accessReviewDueAt: '2026-11-01T00:00:00Z',
   members: [{ id: 'm-1', displayName: 'Ops Admin (synthetic)', email: 'ops.admin@medvya.example', role: 'Owner', hasKey: true, joined: true, lastActiveAt: '2026-11-07T05:00:00Z', accessEndsOn: null }],
@@ -56,6 +56,34 @@ test('a link holder signs on, registers a security key in the browser, and only 
   expect(sent.type).toBe('public-key');
   expect(sent.response?.attestationObject).toBeTruthy(); // a real authenticator answer, not a stub
 });
+
+// F-028: a refused registration says why and what to use instead, and names another owner only when the team has one.
+const registrationOptions = {
+  rp: { id: 'localhost', name: 'Medvya Platform' }, user: { id: b64('member-1'), name: 'ops.admin@medvya.example', displayName: 'Ops Admin (synthetic)' },
+  challenge: b64('a-challenge-of-sixteen-plus-bytes'), pubKeyCredParams: [{ type: 'public-key', alg: -7 }], timeout: 60000, attestation: 'none',
+  authenticatorSelection: { authenticatorAttachment: 'cross-platform', residentKey: 'discouraged', userVerification: 'required' }, excludeCredentials: [],
+};
+for (const locale of ['en', 'ar'] as const)
+  test(`${locale}: a refused synced passkey says why and what to register instead; the first owner is not sent to another owner`, async ({ page }) => {
+    await virtualKey(page);
+    await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
+    let me = owner({});
+    let answer: object = { status: 401, json: { errors: { key: ['synced'] } } };
+    await page.route('**/v1/me', r => r.fulfill({ json: me }));
+    await page.route('**/bff/key/registration/options', r => r.fulfill({ json: registrationOptions }));
+    await page.route('**/bff/key/registration', r => r.fulfill(answer));
+    await page.goto('/');
+    await expect(page.getByText(t(locale, 'platform.signIn.register'))).toBeVisible(); // says which kind of key before the first try
+    await page.getByRole('button', { name: t(locale, 'platform.signIn.registerKey') }).click();
+    await expect(page.getByRole('alert')).toHaveText(t(locale, 'platform.signIn.keySynced'));
+    expect(await axe(page)).toEqual([]);
+
+    // Any other refusal, on a team that has another owner: what to try, and whom to ask.
+    me = owner({ otherOwner: true });
+    answer = { status: 401 };
+    await page.getByRole('button', { name: t(locale, 'platform.signIn.registerKey') }).click();
+    await expect(page.getByRole('alert')).toHaveText(`${t(locale, 'platform.signIn.keyNotRegistered')} ${t(locale, 'platform.signIn.askOwner')}`);
+  });
 
 test('signed out, the console offers company sign-on and explains lost-key recovery', async ({ page }) => {
   await page.route('**/v1/me', r => r.fulfill({ status: 401 }));

@@ -1747,6 +1747,8 @@
   "settings.profile.taxHint": "भारत में GSTIN, यूएई में TRN।",
   "settings.profile.phone": "फ़ोन",
   "settings.profile.email": "ईमेल",
+  "settings.profile.signatureLine": "छपे हुए पर्चों पर हस्ताक्षर की पंक्ति",
+  "settings.profile.signatureLineHint": "बंद होने पर पर्चों पर एक पंक्ति छपती है कि वे कंप्यूटर से बने हैं और उन पर हस्ताक्षर की ज़रूरत नहीं है।",
   "settings.logo.title": "लोगो",
   "settings.logo.intro": "पर्चों, इनवॉइस और रोगी पोर्टल पर दिखाया जाता है।",
   "settings.logo.alt": "{name} का लोगो",
@@ -5504,5 +5506,6 @@
   "printFamily.checkLetter": "जाँचें कि यह पत्र असली है",
   "printFamily.scanOrOpen": "कोड स्कैन करें या {url} खोलें",
   "printFamily.page": "पृष्ठ {page} / {pages}",
-  "printFamily.corrections": "सुधार हस्ताक्षरित परिशिष्ट के रूप में जोड़े जाते हैं।"
+  "printFamily.corrections": "सुधार हस्ताक्षरित परिशिष्ट के रूप में जोड़े जाते हैं।",
+  "printFamily.computerGenerated": "यह पर्चा कंप्यूटर से बना है और इस पर हस्ताक्षर की ज़रूरत नहीं है।"
 }

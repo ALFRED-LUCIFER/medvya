@@ -17,6 +17,7 @@ namespace Medvya.Prescribing.Infrastructure;
 /// shortcut: the PDF's instructions are English only (owner decision 11 Nov 2026: the pharmacist explains them); add a translator-reviewed
 /// patient-language line if pilot clinics ask for it.
 /// The clinic logo heads every page and the doctor's signature image sits in the signature box, when each was uploaded (Tenancy settings).
+/// Without an image, the box leaves space to sign by hand, or, when the practice turned its signature line off, says no signature is needed (#1365).
 /// shortcut: brand names are not printed, because the composer does not choose one (generic only); print "generic (brand)" once it does.
 /// </summary>
 public static class RxPdfDocument
@@ -64,7 +65,8 @@ public static class RxPdfDocument
         if (v.FollowUpOn is { } due)
             rows.Add(new(Text("printFamily.label.followUp"), PlainPdf.Lines((Text("printFamily.followUpOn", ("date", due.ToString("dd MMM yyyy", CultureInfo.InvariantCulture))), PlainPdf.Tone.Strong))));
 
-        var sign = new PlainPdf.Signature(images.Signature, v.Doctor, [Text("printFamily.regShort", ("number", v.LicenceNumber)), Text("printFamily.authorisedAt", ("when", when))]);
+        var sign = new PlainPdf.Signature(images.Signature, v.Doctor, [Text("printFamily.regShort", ("number", v.LicenceNumber)), Text("printFamily.authorisedAt", ("when", when))],
+            v.SignatureLine ? null : Text("printFamily.computerGenerated"));
         var footer = new PlainPdf.Footer(v.Qr, Text("printFamily.checkRx"), Text("printFamily.scanOrOpen", ("url", v.VerifyUrl)), null, v.Authorisation.Number,
             (page, pages) => Text("printFamily.page", ("page", page.ToString(CultureInfo.InvariantCulture)), ("pages", pages.ToString(CultureInfo.InvariantCulture))));
         return PlainPdf.Write(paper, mast, meta, patient, rows, sign, footer);

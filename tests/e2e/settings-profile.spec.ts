@@ -105,6 +105,26 @@ for (const locale of ['en', 'ar'])
     expect(violations).toEqual([]);
   });
 
+// #1365: the signature line on printed prescriptions is a switch in the profile, on until the owner turns it off; it saves with the profile.
+for (const locale of ['en', 'ar'])
+  test(`the signature line switch is on by default and saves off with the profile (${locale})`, async ({ page }) => {
+    const saved = await open(page, locale);
+    const name = locale === 'ar' ? 'سطر التوقيع على الوصفات المطبوعة' : 'Signature line on printed prescriptions';
+    const toggle = page.getByRole('switch', { name });
+    await expect(toggle).toBeChecked();
+    await expect(toggle).toHaveAccessibleDescription(locale === 'ar' ? /لا تحتاج إلى توقيع/ : /computer generated and do not need a signature/);
+    await toggle.click();
+    await expect(toggle).not.toBeChecked();
+    if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+    await page.addScriptTag({ path: axePath });
+    const violations = await page.evaluate(async () =>
+      (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations.map(v => `${v.id} (${v.nodes.length})`));
+    expect(violations).toEqual([]);
+    await page.locator('form button[type=submit]').first().click();
+    await expect.poll(() => saved.length).toBe(1);
+    expect(saved[0]).toMatchObject({ signatureLine: false, version: 3 });
+  });
+
 // MDV-P2-055 AC5: at 1024 px and wider a group's sections are a left sub-navigation (right in Arabic) in place of the second tab row; narrower,
 // the row stays. The five groups and every ?tab= address open the same section as before.
 const sections: Record<string, string> = {

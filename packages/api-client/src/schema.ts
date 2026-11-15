@@ -10310,6 +10310,8 @@ export interface components {
              * @default 0
              */
             version: number | string;
+            /** @default true */
+            signatureLine: boolean;
         };
         PushTokenRequest: {
             token: null | string;
@@ -10579,6 +10581,7 @@ export interface components {
             taxNumber?: null | string;
             phone?: null | string;
             email?: null | string;
+            signatureLine?: null | boolean;
             /** Format: uint32 */
             version?: null | number | string;
         };

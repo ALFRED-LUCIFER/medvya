@@ -21,6 +21,8 @@ public sealed class PracticeProfile
     [Classification(DataClass.Public)] public string? Email { get; set; }
     /// <summary>Random blob key of the logo (no names in paths); null without a logo.</summary>
     [Classification(DataClass.Internal)] public string? LogoKey { get; set; }
+    /// <summary>True: printed prescriptions leave space for a handwritten signature; false: they say they are computer generated and need none (#1365).</summary>
+    [Classification(DataClass.Internal)] public bool SignatureLine { get; set; } = true;
     [Classification(DataClass.Internal)] public Guid? ChangedBy { get; set; }
     [Classification(DataClass.Internal)] public DateTimeOffset ChangedAt { get; set; }
 }

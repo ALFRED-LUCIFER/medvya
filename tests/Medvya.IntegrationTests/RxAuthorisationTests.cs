@@ -751,6 +751,60 @@ public sealed class RxAuthorisationTests(PostgresFixture sql, AzuriteFixture blo
     }
 
     /// <summary>
+    /// #1365: the practice's signature-line setting is read when the paper renders. On (the default) leaves the space to sign by hand; off prints that
+    /// the prescription is computer generated in its place, on A4 and A5. A doctor's uploaded signature image still prints when it is off, without the line.
+    /// Mutation check: drop the line in PlainPdf's signature box and the off case fails.
+    /// </summary>
+    [Fact]
+    public async Task WithTheSignatureLineOffThePaperSaysItIsComputerGeneratedInPlaceOfTheSigningSpace()
+    {
+        await PrescribeAsync("Metformin", Twice);
+        using (var ok = await AuthoriseAsync(h.Doctor)) Assert.Equal(HttpStatusCode.OK, ok.StatusCode);
+        const string Line = "Thisprescriptioniscomputergeneratedanddoesnotneedasignature."; // spaces dropped: the line may wrap anywhere
+        async Task<(string Text, IReadOnlyList<PdfPages.Page> Pages)> ReadAsync(PlainPdf.Paper paper)
+        {
+            using var r = await PdfAsync(paper.Name);
+            Assert.Equal(HttpStatusCode.OK, r.StatusCode);
+            var pages = PdfPages.Read(await r.Content.ReadAsByteArrayAsync(), paper.Margin);
+            return (string.Concat(pages.Select(p => p.Text)).Replace(" ", "", StringComparison.Ordinal), pages);
+        }
+        Assert.DoesNotContain(Line, (await ReadAsync(PlainPdf.A4)).Text, StringComparison.Ordinal); // no profile yet: on
+
+        await using (var db = sql.Context(h.Tenant))
+        {
+            db.Profiles.Add(new PracticeProfile { Id = Guid.NewGuid(), TenantId = h.Tenant, SignatureLine = false, ChangedAt = h.Clock.GetUtcNow() });
+            await db.SaveChangesAsync();
+        }
+        foreach (var paper in new[] { PlainPdf.A4, PlainPdf.A5 })
+        {
+            var (text, pages) = await ReadAsync(paper);
+            Assert.Contains(Line, text, StringComparison.Ordinal);
+            Assert.Contains("Reg.84213Authorised", text, StringComparison.Ordinal); // the doctor's name and registration stay in the box
+            Assert.All(pages, p => Assert.True(p.InsideMargins, $"{paper.Name}: a line runs past the margin"));
+        }
+
+        await using (var db = sql.Context(h.Tenant))
+        {
+            (await db.Profiles.SingleAsync()).SignatureLine = true;
+            await db.SaveChangesAsync();
+        }
+        Assert.DoesNotContain(Line, (await ReadAsync(PlainPdf.A4)).Text, StringComparison.Ordinal);
+
+        var signature = $"{h.Tenant}/signature/{Guid.NewGuid()}";
+        await new BlobLogoStore(blobs.ConnectionString).PutAsync(signature, TestImages.Make(8, 2, SkiaSharp.SKEncodedImageFormat.Png), "image/png");
+        await using (var db = sql.Context(h.Tenant))
+        {
+            (await db.Profiles.SingleAsync()).SignatureLine = false;
+            var membership = await db.Memberships.SingleAsync(m => m.UserId == h.Doctor);
+            (await db.DoctorProfiles.SingleAsync(p => p.MembershipId == membership.Id)).SignatureKey = signature;
+            await db.SaveChangesAsync();
+        }
+        var signed = await ReadAsync(PlainPdf.A4);
+        Assert.DoesNotContain(Line, signed.Text, StringComparison.Ordinal);
+        Assert.Equal(1, signed.Pages.Sum(p => p.Images)); // the doctor's own signature, as today
+    }
+
+    /// <summary>
     /// #1365 F-067: once a paper has printed, the next one is ready well inside two seconds and reads neither image from storage again (a logo or a
     /// signature is written once under a random key, so the bytes are kept by key). Mutation check: drop the kept copy in BlobLogoStore.ReadAsync
     /// and the second PDF fails, because its images are gone from storage.

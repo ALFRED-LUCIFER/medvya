@@ -11714,6 +11714,10 @@
             ],
             "format": "uint32",
             "default": 0
+          },
+          "signatureLine": {
+            "type": "boolean",
+            "default": true
           }
         }
       },
@@ -12918,6 +12922,12 @@
             "type": [
               "null",
               "string"
+            ]
+          },
+          "signatureLine": {
+            "type": [
+              "null",
+              "boolean"
             ]
           },
           "version": {

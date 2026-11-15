@@ -116,6 +116,24 @@ const axeViolations = async (page: Page) => {
       .map(v => `${v.id} (${v.nodes.length})`));
 };
 
+// #1365: with the practice's signature line off (the server applies its setting to the print view), the signing space says the prescription is
+// computer generated and needs no signature, in the screen's language (Arabic right to left); on, the space stays blank to sign by hand.
+for (const locale of ['en', 'ar'])
+  test(`with the signature line off the paper says no signature is needed (${locale})`, async ({ page }) => {
+    await mockPrescription(page, { locale, lines: [metformin], authorisation: { authorised: authorised(), changed: false } });
+    const line = locale === 'ar' ? 'هذه الوصفة صادرة من الحاسوب ولا تحتاج إلى توقيع.' : 'This prescription is computer generated and does not need a signature.';
+    await page.goto('/consult/e-1/rx/print');
+    const paper = page.getByRole('article');
+    await expect(paper.getByText('Dr. Arjun Rao (synthetic)', { exact: true })).toHaveCount(2);
+    await expect(paper.getByText(line)).toHaveCount(0); // on by default: blank space to sign
+
+    await page.route('**/v1/encounters/e-1/prescription/print', r => r.fulfill({ json: { ...printView(), signatureLine: false } }));
+    await page.reload();
+    await expect(paper.getByText(line, { exact: true })).toBeVisible();
+    if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+    expect(await axeViolations(page)).toEqual([]);
+  });
+
 for (const locale of ['en', 'ar'])
   test(`axe finds no violations on the authorise step, the print preview at 200% zoom and the QR check (${locale})`, async ({ page }) => {
     await mockPrescription(page, { locale, lines: [metformin], reauthFirst: true });

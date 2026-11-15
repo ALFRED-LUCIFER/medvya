@@ -126,12 +126,12 @@ export function Warning({ children }: { children: ReactNode }) {
   return <p className="mt-[2.5pt] rounded-[2.5pt] border-[0.6pt] border-ink-200 px-[6pt] py-[3.5pt] text-[7.2pt] leading-[1.35] text-ink-700">{children}</p>;
 }
 
-/** The signature box at the content's end edge: the space and line to sign, the name, then the registration and time. */
-export function Signature({ name, lines }: { name: string; lines: (string | null | undefined)[] }) {
+/** The signature box at the content's end edge: the space and line to sign (or, when given, the line saying no signature is needed), the name, then the registration and time. */
+export function Signature({ name, lines, noSignatureNeeded }: { name: string; lines: (string | null | undefined)[]; noSignatureNeeded?: string }) {
   return (
     <div className="mt-auto flex justify-end pt-(--sign-pt) break-inside-avoid">
       <div className="w-(--sign-w) max-w-full">
-        <div className="h-[11mm]" />
+        {noSignatureNeeded ? <p className="flex min-h-[11mm] items-end pb-[3pt] text-[7.6pt] text-ink-700">{noSignatureNeeded}</p> : <div className="h-[11mm]" />}
         <div className="border-t-[0.7pt] border-ink-900 pt-[3pt]">
           <p className="font-extrabold">{name}</p>
           {lines.filter(Boolean).map(l => <p key={l} className="text-[7.6pt] text-ink-700">{l}</p>)}

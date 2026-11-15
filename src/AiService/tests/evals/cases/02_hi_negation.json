@@ -1,0 +1,121 @@
+{
+ "id": "02_hi_negation",
+ "slice": "hi",
+ "turns": [
+  {
+   "idx": 0,
+   "speaker_role": "doctor",
+   "locale": "hi-IN",
+   "original_text": "क्या आपको बुखार है?",
+   "english_text": "Do you have fever?"
+  },
+  {
+   "idx": 1,
+   "speaker_role": "patient",
+   "locale": "hi-IN",
+   "original_text": "नहीं, बुखार नहीं है, बस खांसी है।",
+   "english_text": "No, there is no fever, just a cough."
+  },
+  {
+   "idx": 2,
+   "speaker_role": "doctor",
+   "locale": "hi-IN",
+   "original_text": "पेनिसिलिन से कोई एलर्जी?",
+   "english_text": "Any allergy to penicillin?"
+  },
+  {
+   "idx": 3,
+   "speaker_role": "patient",
+   "locale": "hi-IN",
+   "original_text": "नहीं, पेनिसिलिन से एलर्जी नहीं है।",
+   "english_text": "No, no penicillin allergy."
+  }
+ ],
+ "asr_hypothesis": [
+  "क्या आपको बुखार है",
+  "नहीं बुखार नहीं है बस खांसी है",
+  "पेनिसिलिन से कोई एलर्जी",
+  "नहीं पेनिसिलिन से एलर्जी नहीं है"
+ ],
+ "model_output": {
+  "note": {
+   "chief_complaint": "",
+   "hpi": "",
+   "subjective": "",
+   "objective": "",
+   "assessment": "",
+   "plan": "",
+   "summary": "synthetic"
+  },
+  "missing_or_uncertain": [],
+  "facts": [
+   {
+    "category": "symptom",
+    "label": "fever",
+    "polarity": "present",
+    "body_site": null,
+    "value_numeric": null,
+    "value_unit": null,
+    "detail": null,
+    "confidence": 0.9,
+    "evidence": [
+     {
+      "segment_idx": 1,
+      "quote": "no fever"
+     }
+    ],
+    "medication": null
+   },
+   {
+    "category": "symptom",
+    "label": "cough",
+    "polarity": "present",
+    "body_site": null,
+    "value_numeric": null,
+    "value_unit": null,
+    "detail": null,
+    "confidence": 0.9,
+    "evidence": [
+     {
+      "segment_idx": 1,
+      "quote": "just a cough"
+     }
+    ],
+    "medication": null
+   },
+   {
+    "category": "allergy",
+    "label": "penicillin",
+    "polarity": "present",
+    "body_site": null,
+    "value_numeric": null,
+    "value_unit": null,
+    "detail": null,
+    "confidence": 0.9,
+    "evidence": [
+     {
+      "segment_idx": 3,
+      "quote": "no penicillin allergy"
+     }
+    ],
+    "medication": null
+   }
+  ]
+ },
+ "gold_facts": [
+  {
+   "category": "symptom",
+   "label": "fever",
+   "polarity": "absent"
+  },
+  {
+   "category": "symptom",
+   "label": "cough"
+  },
+  {
+   "category": "allergy",
+   "label": "penicillin",
+   "polarity": "absent"
+  }
+ ]
+}

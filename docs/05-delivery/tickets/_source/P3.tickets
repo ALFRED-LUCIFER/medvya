@@ -592,3 +592,71 @@ ac:
 - Kill switch per tenant verified before go-live.
 - R3 release notes include evaluation report and exclusions (clip, earpiece assistant, mixed Arabic/Hindi/Malayalam notes).
 - Playwright J1 (consent declined branch) and J2 (consent → sign) pass with a stubbed AI provider.
+
+=== MDV-P3-028
+title: Import the AI service (Python FastAPI, from HealthOps) into src/AiService with ADR-021 and its own CI job
+type: Task
+epic: MDV-P3-E03
+prd: P3-03, P3-07
+priority: MUST
+roles: Developer
+labels: ai, ai-notes, adr
+estimate: 2
+weeks: 13
+confidence: 90 | The HealthOps backend has 241 passing tests and live Azure runs; the import keeps its behaviour and only renames it.
+sources: docs/adr/ADR-021-ai-service.md; src/AiService/README.md; src/AiService/docs/reports/completion-2026-11-09.md
+desc:
+The owner decided (16 Nov 2026) that AI runs in a separate Python service, not a .NET worker. Bring the tested HealthOps scribe backend (FastAPI API, job worker, Alembic migrations, tests, evaluation harness, provider notes, decisions, threat model, runbook) into src/AiService as package medvya_ai. Record ADR-021 (supersedes the AI row of ADR-001). Add an ai-service CI job inside the required dotnet check: ruff, format, strict mypy, every test on real PostgreSQL 16, pip-audit. The HealthOps web app is not imported; Medvya builds its own screens (MDV-P3-029).
+ac:
+- ADR-021 records the decision, the development-only scope and the conditions before real patient data.
+- src/AiService passes ruff, the format check and strict mypy; all unit, integration (PostgreSQL 16) and evaluation-replay tests pass in CI.
+- In CI the integration tests fail, never skip, when the database is missing (shown failing without it).
+- pip-audit reports no known vulnerabilities in the locked runtime dependencies; Dependabot watches src/AiService.
+- No secret or real patient data is committed: .env.example lists names only, src/AiService/.env is ignored, check:synthetic and gitleaks pass.
+- README repository structure, the ADR index and ai-pipeline.md point to the service.
+
+=== MDV-P3-029
+title: ai-notes in Medvya: the Encounters module calls the AI service and puts the draft into the consult note for review
+type: Story
+epic: MDV-P3-E04
+prd: P3-04, P3-05
+screens: A-05
+priority: MUST
+roles: Doctor
+labels: ai, ai-notes
+estimate: 4
+weeks: 16-17
+depends: MDV-P3-028, MDV-P3-003
+confidence: 75 | The note already has RecordingConsent and UndecidedAi and the sign checklist blocks on them; the server-to-server identity and the upload path through Host.Api are new.
+sources: docs/adr/ADR-021-ai-service.md; src/AiService/README.md#api-prefix-apiv1; src/Modules/Encounters (ConsultNote.UndecidedAi)
+desc:
+Behind the tenant flag ai-notes: Encounters endpoints (capability, tenant, care relationship, recording consent) that open an AI session for an encounter (clinic id = tenant id, patient_ref = encounter id), pass consent, stream audio chunks, finish, and read the draft. Draft SOAP sections fill the consult note sections; each drafted field is listed in UndecidedAi until the doctor accepts or edits it, so signing stays blocked (MDV-P2-044). The browser never calls the AI service; the client is generated from Host.Api's OpenAPI document. web/clinic features/ai-notes: record, progress, review with the evidence quote per field (EN, HI, AR; axe clean). No raw audio in browser storage.
+ac:
+- With the flag off, no AI endpoint is reachable and the note works as today.
+- A draft never signs: every drafted field is undecided until the doctor accepts or edits it; sign is refused while any is undecided.
+- A user of another tenant, or without the care relationship, gets 403/404 on every AI endpoint (integration test against real PostgreSQL with the AI service on fake providers).
+- No transcript or note text appears in logs, URLs or telemetry on either side.
+- Playwright J2 consent-to-sign step passes with the AI service on fake providers; English and Arabic checked in a browser.
+
+=== MDV-P3-030
+title: AI service on Azure India dev and its pilot conditions (service identity, Key Vault key, allow-list telemetry, in-region Foundry)
+type: Task
+epic: MDV-P3-E06
+prd: P3-07
+covers: nfr:3
+priority: MUST
+roles: Developer, Security reviewer
+labels: ai, ai-notes, security, infra
+estimate: 3
+weeks: 17-18
+depends: MDV-P3-028, MDV-P3-001
+confidence: 70 | Needs portal evidence of a regional Foundry deployment in India and the security review's view on worker privileges.
+sources: docs/adr/ADR-021-ai-service.md#before-real-patient-data-the-pilot-gate-for-ai; src/AiService/docs/decisions/0003-processing-region-and-processors.md
+desc:
+Deploy the AI service image (API and worker) to the Azure India dev environment with no public ingress, its own medvya_ai database on the dev PostgreSQL server and its own blob container. Meet the ADR-021 conditions before real patient data: Medvya calls with a managed-identity token and the service trusts the asserted tenant and user only from it; AUTH_MODE=disabled is refused outside development; the data-key wrapping key comes from Key Vault; telemetry scrubbing becomes an allow-list; Speech and a Standard (regional) Foundry deployment run in India with evidence attached.
+ac:
+- The AI service answers only Medvya's API on the dev network; a request from anywhere else is refused.
+- A call without Medvya's service identity, or asserting a tenant without it, is refused (test).
+- The service refuses to start with AUTH_MODE=disabled outside development.
+- Portal or CLI evidence shows the Speech resource and a Standard Foundry deployment in an Indian region.
+- A synthetic consultation goes from record to draft on dev in ≤ 60 s p50 (MDV-P3-025 method).

@@ -1,5 +1,7 @@
 # ADR-001 · Stack: .NET 10 modular monolith, React/MUI, Azure SQL
 
+> The AI row is superseded by [ADR-021](ADR-021-ai-service.md): AI runs in a separate Python (FastAPI) service.
+
 - **Status:** Accepted 12 Nov 2026 (decider: founder), as amended by ADR-012. **Amended 6 Nov 2026:** the database is PostgreSQL, see [ADR-012](ADR-012-postgres.md); every "Azure SQL" statement below is superseded.
 - **Date:** 2026-10-20
 

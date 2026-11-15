@@ -28,6 +28,7 @@ jobs:
       backend: ${{ steps.f.outputs.backend }}
       web: ${{ steps.f.outputs.web }}
       e2e: ${{ steps.f.outputs.e2e }}
+      ai: ${{ steps.f.outputs.ai }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -42,7 +43,7 @@ jobs:
           # PR: HEAD is the merge commit, its first parent the base tip. Push to main: the commits the push added (squash merge = one).
           if [ "$EVENT" = "pull_request" ]; then base=HEAD^1; else base="$BEFORE"; fi
           if ! git cat-file -e "$base^{commit}" 2>/dev/null; then
-            echo "backend=true" >> "$GITHUB_OUTPUT"; echo "web=true" >> "$GITHUB_OUTPUT"; echo "e2e=true" >> "$GITHUB_OUTPUT"; exit 0   # no usable base: run everything
+            echo "backend=true" >> "$GITHUB_OUTPUT"; echo "web=true" >> "$GITHUB_OUTPUT"; echo "e2e=true" >> "$GITHUB_OUTPUT"; echo "ai=true" >> "$GITHUB_OUTPUT"; exit 0   # no usable base: run everything
           fi
           passed() { [ "$(gh api "repos/$GITHUB_REPOSITORY/commits/$1/check-runs?check_name=$2" --jq '.check_runs|sort_by(.started_at)|last|.conclusion')" = success ]; }
           if [ "$EVENT" = push ] && pr=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" --jq '.[0].number // empty') && [ -n "$pr" ] \
@@ -53,13 +54,16 @@ jobs:
             if [ "$(git rev-parse "$head^{tree}")" = "$(git rev-parse 'HEAD^{tree}')" ] && git merge-base --is-ancestor "$BEFORE" "$head" \
                && passed "$head" dotnet && passed "$head" web; then
               echo "Same tree as the head of PR #$pr ($head), which was up to date and green: nothing to run again"
-              echo "backend=false" >> "$GITHUB_OUTPUT"; echo "web=false" >> "$GITHUB_OUTPUT"; echo "e2e=false" >> "$GITHUB_OUTPUT"; exit 0
+              echo "backend=false" >> "$GITHUB_OUTPUT"; echo "web=false" >> "$GITHUB_OUTPUT"; echo "e2e=false" >> "$GITHUB_OUTPUT"; echo "ai=false" >> "$GITHUB_OUTPUT"; exit 0
             fi
           fi
           files=$(git diff --name-only "$base" HEAD)
           echo "$files"
           has() { echo "$files" | grep -Eq "$1" && echo true || echo false; }
           # infra/postgres only: the integration fixture applies roles.sql; Bicep and Entra scripts are not built or tested here.
+          # src/AiService is Python (ADR-021): it runs the ai-service job, not the .NET build.
+          ai=$(has '^(src/AiService/|\.github/)'); echo "ai=$ai" >> "$GITHUB_OUTPUT"
+          files=$(echo "$files" | grep -v '^src/AiService/' || true)
           echo "backend=$(has '^(src/|tests/Medvya\.|Directory\.|global\.json|Medvya\.sln|dotnet-tools\.json|infra/postgres/|tools/erd/|docs/03-architecture/erd\.md|packages/api-client/|\.github/)')" >> "$GITHUB_OUTPUT"
           echo "web=$(has '^(web/|mobile/|packages/|tests/e2e/|package\.json|pnpm-|tools/check-synthetic/|tools/check-ui-drift/|\.github/)')" >> "$GITHUB_OUTPUT"
           # The browser suite drives the web apps only; no web screen imports mobile/ (ADR-013), so a mobile-only change skips it (#1129).
@@ -123,9 +127,38 @@ jobs:
           [ -n "$filter" ] || { echo "::error::empty filter for shard $SHARD"; exit 1; }
           dotnet test "$PROJECT" --no-build --filter "$filter"
 
+  ai-service:
+    # The Python AI service (ADR-021): lint, strict types, every test on real PostgreSQL 16 (the Azure version), dependency audit.
+    needs: changes
+    if: needs.changes.outputs.ai == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: src/AiService
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: pipx install uv==0.11.8 # pinned on PyPI; uv installs the Python in .python-version
+      - run: uv sync --frozen
+      - run: uv run ruff check . && uv run ruff format --check . && uv run mypy
+      - name: PostgreSQL 16 with the app role (docker/01-roles.sh)
+        run: |
+          set -euo pipefail
+          pw=$(openssl rand -hex 16); app_pw=$(openssl rand -hex 16)
+          docker run -d --name ai-pg -p 127.0.0.1:5432:5432 -e POSTGRES_PASSWORD="$pw" -e MEDVYA_AI_APP_PASSWORD="$app_pw" \
+            -v "$PWD/docker:/docker-entrypoint-initdb.d:ro" postgres:16
+          for _ in $(seq 1 60); do docker exec ai-pg pg_isready -U postgres -d medvya_ai_test -h 127.0.0.1 >/dev/null 2>&1 && break; sleep 1; done
+          echo "MEDVYA_AI_TEST_DATABASE_URL=postgresql+asyncpg://medvya_ai_app:$app_pw@127.0.0.1:5432/medvya_ai_test" >> "$GITHUB_ENV"
+          echo "MEDVYA_AI_TEST_DATABASE_URL_MIGRATE=postgresql+asyncpg://postgres:$pw@127.0.0.1:5432/medvya_ai_test" >> "$GITHUB_ENV"
+      - run: uv run pytest -q -rs # CI is set: integration tests fail instead of skipping without the database
+      - name: Vulnerable Python packages
+        run: |
+          uv export --frozen --no-dev --no-emit-project -o "$RUNNER_TEMP/requirements.txt"
+          uvx --from 'pip-audit==2.9.0' pip-audit --strict --disable-pip --require-hashes -r "$RUNNER_TEMP/requirements.txt"
+
   dotnet:
-    # The required check name: passes only when the checks and every integration shard passed (a skipped backend change counts as pass).
-    needs: [changes, dotnet-checks, dotnet-integration]
+    # The required check name: passes only when the checks, every integration shard and the AI service passed (a skipped change counts as pass).
+    needs: [changes, dotnet-checks, dotnet-integration, ai-service]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -135,6 +168,7 @@ jobs:
           if [ "${{ needs.changes.outputs.backend }}" = true ]; then
             [ "${{ needs.dotnet-checks.result }}" = success ] && [ "${{ needs.dotnet-integration.result }}" = success ]
           fi
+          if [ "${{ needs.changes.outputs.ai }}" = true ]; then [ "${{ needs.ai-service.result }}" = success ]; fi
 
   web-checks:
     needs: changes

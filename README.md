@@ -59,7 +59,9 @@ medvya/
 │   ├── Modules/             # exist: Identity, Tenancy, Audit, Patients, Scheduling, Encounters, Prescribing, Billing, Notifications, Leads, Platform
 │   │                        # planned: Practice, Prescribing, Documents, Scribe, Care, Portal,
 │   │                        #   Insurance, Inventory, Laboratory, Migration, Devices, Integrations
-│   └── Workers/             # planned: Worker.Jobs, Worker.Ai, Worker.Integration (P3+; jobs run in Host today)
+│   ├── AiService/           # exists (ADR-021, MDV-P3-028): Python 3.13 FastAPI AI service + job worker (scribe pipeline);
+│   │                        #   own database medvya_ai, called only by Host.Api; see src/AiService/README.md
+│   └── Workers/             # planned: Worker.Jobs, Worker.Integration (P3+; jobs run in Host today; AI work is AiService)
 ├── web/
 │   ├── clinic/              # exists: clinic app with clinic-admin routes
 │   ├── platform-admin/      # exists (P5-040): Medvya team console: sign-in with a security key, team access, audit log
@@ -89,6 +91,7 @@ medvya/
 |---|---|
 | [docs/](docs/README.md) | Matches the target; holds the tickets (`docs/05-delivery/tickets/`) and the design sources (`docs/02-design/source/`) |
 | [src/](src) | Matches; Host.Api feature endpoints move into modules (P0-040 chunk 1) |
+| [src/AiService/](src/AiService/README.md) | Python AI service imported from HealthOps (ADR-021); development and synthetic data only until the ADR's pilot conditions are met |
 | [web/](web) · [packages/](packages) | Match; `tokens` and `api-client` added (P0-040 chunk 2) |
 | [tests/](tests) · [infra/](infra) · [tools/](tools) | Match; `infra/postgres` holds the roles script (MDV-P0-034); Azure scripts follow in MDV-P0-038 |
 

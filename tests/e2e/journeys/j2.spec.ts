@@ -145,9 +145,11 @@ journey('J2', {
     // Read-only content only (MDV audit UX-11): no section left "To do", the consent in words instead of radios.
     await expect(note.getByRole('navigation', { name: 'Note sections' })).not.toContainText('To do');
     await expect(note.getByRole('radio')).toHaveCount(0);
-    // E-06 print (MDV-P2-049): one h1 naming the clinic; vitals, the allergy and the diagnosis as at signing, each with its source.
+    // E-06 print (MDV-P2-049, MDV-P1-111): one h1 naming the clinic, the paper's title under the rule; vitals, the allergy and the diagnosis as at signing,
+    // each with its source.
     await page.getByRole('link', { name: 'Print view and PDF' }).click();
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(['Iyer Family Clinic · Adyar · Signed consultation note']);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(['Iyer Family Clinic · Adyar']);
+    await expect(page.getByRole('article', { name: 'Signed consultation note' })).toContainText('Signed consultation note');
     const kept = page.getByRole('region', { name: 'Recorded at signing' });
     await expect(kept).toContainText('Pulse 76 /min (Kavya Nair (synthetic), nurse intake, verified 19 Oct 2026 10:00)');
     await expect(kept).toContainText('Penicillin (Rash) · Patient reported · Patient reported');

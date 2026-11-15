@@ -72,13 +72,16 @@ public sealed partial class NotificationSender(
                     return;
                 }
             }
-            var message = MessageCatalog.Render(n.Kind, contact.PreferredLanguage, facility.Name, TimeZoneInfo.ConvertTime(n.AppointmentStart, zone));
+            var localStart = TimeZoneInfo.ConvertTime(n.AppointmentStart, zone);
+            var message = MessageCatalog.Render(n.Kind, contact.PreferredLanguage, facility.Name, localStart);
             var reference = NotificationReference.Make(n.TenantId, n.Id);
             if (n.Channel == NotificationChannel.Email)
             {
                 var sender = prefs.SenderFor(facility.Name); // the practice's name opens the subject on every provider (#213)
+                var logo = await facilities.LogoAsync(ct);
+                var html = EmailHtml.Render(MessageCatalog.Email(n.Kind, contact.PreferredLanguage, message, sender, facility.Name, localStart, facility.TimeZone, facility.Address, facility.Phone), logo is not null);
                 await email.SendAsync(new EmailMessage(address, $"{sender}: {message.Subject}", message.Body,
-                    new Dictionary<string, string> { ["X-SMTPAPI"] = $$$"""{"unique_args":{"ref":"{{{reference}}}"}}""" }, sender), ct);
+                    new Dictionary<string, string> { ["X-SMTPAPI"] = $$$"""{"unique_args":{"ref":"{{{reference}}}"}}""" }, sender, html, logo), ct);
             }
             else
                 await sms.SendAsync(SmsFor(n, contact.CountryCode, address, message, reference, o.Sms), ct);

@@ -1,5 +1,4 @@
 using System.Text.Json;
-using Medvya.BuildingBlocks.Infrastructure;
 
 namespace Medvya.Prescribing.Infrastructure;
 
@@ -17,10 +16,6 @@ static class PaperText
         values.Aggregate(Catalog.Value.GetValueOrDefault(key) ?? throw new KeyNotFoundException($"Message key '{key}' is not in en.json."),
             (text, v) => text.Replace("{" + v.Name + "}", v.Value, StringComparison.Ordinal));
 
-    /// <summary>The clinic's letterhead (#1365 F-068): name and logo, the address, and one line with the phone and the registration number that were entered.</summary>
-    public static PlainPdf.Letterhead Letterhead(string clinic, byte[]? logo, string? address, string? phone, string? registration)
-    {
-        var contact = string.Join(" · ", new[] { phone is null ? null : Get("rxPrint.phone", ("phone", phone)), registration is null ? null : Get("rxPrint.registration", ("number", registration)) }.Where(x => x is not null));
-        return new(clinic, logo, address, contact.Length == 0 ? null : contact);
-    }
+    /// <summary>The practice's registration number as the masthead words it (#1365 F-068); null when none was entered.</summary>
+    public static string? Registration(string? number) => string.IsNullOrWhiteSpace(number) ? null : Get("rxPrint.registration", ("number", number));
 }

@@ -3,7 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import type { MessageKey } from '@medvya/i18n';
-import { addLocationSchema, certificateErrorKey, certificateProblem, locationErrorKeys, emptyAddLocation, locationProblem, resourceSchema, type AddLocationForm, type ResourceForm } from '../domain/settings';
+import { addLocationSchema, certificateErrorKey, certificateProblem, locationErrorKeys, emptyAddLocation, locationProblem, resourceSchema, toLocationForm, type AddLocationForm, type ResourceForm } from '../domain/settings';
 import { ApiError } from '../../schedule/services/scheduleApi';
 import { addLocation, addResource, fetchTemplates, saveLocation } from '../services/settingsApi';
 import { useLocationChoice } from './useLocationChoice';
@@ -28,7 +28,7 @@ export function useLocationsController(defaultId: string, country: 'IN' | 'AE' |
   const reset = (values: AddLocationForm) => { form.reset(values); setCertificate(null); setCertificateError(null); };
   const save = useMutation({
     mutationFn: async (values: AddLocationForm) => {
-      if (editingId) return saveLocation(editingId, { name: values.name, address: values.address, timeZone: values.timeZone });
+      if (editingId) { const { taxNumber: _, ...location } = values; return saveLocation(editingId, location); }
       return addLocation(values, certificate!, country ?? '');
     },
     onSuccess: l => { setAdded(editingId ? null : l.name); setEditingId(null); reset(emptyAddLocation); refresh(); },
@@ -44,7 +44,7 @@ export function useLocationsController(defaultId: string, country: 'IN' | 'AE' |
     setEditingId(id);
     setAdded(null);
     const l = choice.locations.find(x => x.id === id);
-    reset(l ? { name: l.name, address: l.address ?? '', timeZone: l.timeZone, taxNumber: '' } : emptyAddLocation);
+    reset(l ? { ...toLocationForm(l), taxNumber: '' } : emptyAddLocation);
   };
 
   // Rooms and resources are scheduling calendars of the location.

@@ -10,4 +10,6 @@ export const resubmitLicence = (id: string, form: LicenceForm) =>
 /** The body is the image itself; the server checks the file's real type and size. */
 export const uploadSignature = (id: string, file: File) =>
   send<void>(`/v1/settings/doctors/${id}/signature`, { method: 'PUT', headers: { ...csrf, 'Content-Type': file.type }, body: file });
+export const saveDoctorRoom = (id: string, room: string) =>
+  send<Doctor>(`/v1/settings/doctors/${id}/room`, { method: 'PUT', headers: { ...csrf, 'Content-Type': 'application/json' }, body: JSON.stringify({ room: room.trim() || null }) });
 export const removeSignature = (id: string) => send<void>(`/v1/settings/doctors/${id}/signature`, { method: 'DELETE', headers: csrf });

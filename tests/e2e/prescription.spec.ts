@@ -212,6 +212,13 @@ for (const locale of ['en', 'ar'])
     await expect(page.getByRole('region', { name: locale === 'ar' ? 'فحوص السلامة' : 'Safety checks' })).toBeVisible();
     await page.getByRole('button', { name: locale === 'ar' ? 'اذكر سبب المتابعة' : 'Give a reason to go ahead' }).click(); // the reason form is checked too
     await page.locator('details:not(.group) > summary').click();
+    // MDV-P5-057: the allergy alert draws the status map's allergy glyph (ShieldAlert, packages/tokens/src/status.ts) beside the words; the
+    // duplicate keeps its severity glyph. Never colour alone, never the generic critical glyph.
+    const alerts = page.getByRole('list', { name: t(locale, 'rx.check.alerts') }).getByRole('listitem');
+    const allergy = alerts.filter({ hasText: t(locale, 'rx.check.alert.Allergy', { substance: 'Penicillin' }).split(' ·')[0] });
+    await expect(allergy).toHaveCount(1);
+    await expect(allergy.locator('svg')).toHaveClass(/\blucide-shield-alert\b/);
+    await expect(alerts.locator('svg.lucide-shield-alert')).toHaveCount(1);
     await page.addScriptTag({ path: axePath });
     const violations = await page.evaluate(async () =>
       (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations.map(v => `${v.id} (${v.nodes.length})`));

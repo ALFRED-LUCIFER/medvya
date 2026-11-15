@@ -2,12 +2,12 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError } from '../../schedule/services/scheduleApi';
 import { printPage } from '../../encounters/services/noteApi';
-import { pdfProblem, type SecondLanguage } from '../domain/authorisation';
+import { pdfProblem, type PaperSize, type SecondLanguage } from '../domain/authorisation';
 import { approveLayout, downloadRxPdf, fetchLayout, fetchRxPrint, verifyPaper, verifyRx } from '../services/prescriptionApi';
 
 /**
  * The printed prescription (MDV-P2-017): the authorised prescription from the server (a 409 means not authorised, changed or cancelled since), the second
- * print language, the server PDF on A4 or A5, and the doctor's own approval of the layout.
+ * print language, the paper the browser prints on (A4 or A5), the server PDF on A4 or A5, and the doctor's own approval of the layout.
  */
 export function useRxPrintController(encounterId: string) {
   const queryClient = useQueryClient();
@@ -15,6 +15,7 @@ export function useRxPrintController(encounterId: string) {
   const layout = useQuery({ queryKey: ['prescription-layout'], queryFn: fetchLayout, retry: false });
   const approve = useMutation({ mutationFn: approveLayout, onSuccess: l => queryClient.setQueryData(['prescription-layout'], l) });
   const [second, setSecond] = useState<SecondLanguage>('none');
+  const [paper, setPaper] = useState<PaperSize>('A4');
   const [downloading, setDownloading] = useState<'A4' | 'A5' | null>(null);
   const [problem, setProblem] = useState<'unsupported' | 'failed' | null>(null);
   const error = print.error instanceof ApiError ? print.error : null;
@@ -25,6 +26,7 @@ export function useRxPrintController(encounterId: string) {
     cancelled: error?.code === 'cancelled',
     failed: print.isError && error?.status !== 409,
     second, onSecond: setSecond,
+    paper, onPaper: setPaper,
     onPrint: printPage,
     downloading, pdfProblem: problem,
     onPdf: async (paper: 'A4' | 'A5') => {

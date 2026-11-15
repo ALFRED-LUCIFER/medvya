@@ -418,14 +418,15 @@ test('print view: the original then each addendum in order, with identifiers; th
   await history(page).getByRole('link', { name: 'Print view and PDF' }).click();
   await expect(page).toHaveURL(/\/consult\/e-1\/note\/print$/);
   const article = page.getByRole('article', { name: 'Signed consultation note' });
-  // MDV-P2-049: one h1 with the clinic, then the signer and the licence.
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(['Iyer Family Clinic · Adyar · Signed consultation note']);
-  await expect(article).toContainText(`${signer} · licence`);
-  await expect(article).toContainText('Tamil Nadu Medical Council 84213');
-  await expect(article).toContainText('Meera Iyer (synthetic)');
-  await expect(article).toContainText('000001');
-  await expect(article).toContainText('12 Mar 1972');
-  await expect(article.getByRole('heading', { level: 2 })).toHaveText(['Recorded at signing', 'Chief complaint', 'Assessment', 'Plan', 'Version history']);
+  // MDV-P2-049, MDV-P1-111: one h1 with the clinic, the paper's title under the rule, the signer and the licence at the end and under the signature.
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(['Iyer Family Clinic · Adyar']);
+  await expect(article).toContainText(/Signed consultation noteversion \d+ · signed 19 Oct 2026/);
+  await expect(article.getByText(/^Reg\. \W?Tamil Nadu Medical Council 84213\W?$/)).toHaveCount(2);
+  const patient = article.getByRole('region', { name: 'Patient' });
+  await expect(patient).toContainText('Meera Iyer (synthetic)');
+  await expect(patient).toContainText('000001');
+  await expect(patient).toContainText('12 Mar 1972');
+  await expect(article.getByRole('heading', { level: 2 })).toHaveText(['Patient', 'Recorded at signing', 'Chief complaint', 'Assessment', 'Plan', 'Addendum to version 1']);
   // AC1: vitals with who and when, the allergy in words with its status and source, the coded diagnosis, the medicine by its prescription.
   const kept = article.getByRole('region', { name: 'Recorded at signing' });
   await expect(kept.getByRole('heading', { level: 3 })).toHaveText(['Verified vitals for this visit', 'Allergies', 'Problems and diagnoses', 'Medicines']);
@@ -437,12 +438,14 @@ test('print view: the original then each addendum in order, with identifiers; th
   await expect(kept.getByRole('region', { name: 'Medicines' })).toContainText(/Metformin 500 mg · prescribed at this visit · Rx \u2066RX-1A2B3C4D\u2069/);
   // Q9 (founder, 14 Nov): no weight taken at this visit is said in words.
   await expect(kept.getByRole('region', { name: 'Verified vitals for this visit' })).toContainText('Weight: not recorded at this visit.');
-  const versions = article.getByRole('region', { name: 'Version history' });
-  await expect(versions.getByRole('listitem')).toHaveCount(2);
-  await expect(versions.getByRole('listitem').first()).toContainText(`signed by ${signer}`); // the same name as the banner and the sign button, not the account's
-  await expect(versions.getByRole('listitem').last()).toContainText(`signed by ${signer}`);
+  // The original is signed in the signature box; each addendum is its own labelled row, after the note.
+  await expect(article.getByText(signer, { exact: true })).toHaveCount(2); // the same name as the banner and the sign button, not the account's
+  await expect(article).toContainText(/Signed 19 Oct 2026/);
+  const addendum = article.getByRole('region', { name: 'Addendum to version 1' });
+  await expect(addendum).toContainText(`signed by ${signer}`);
+  await expect(addendum).toContainText('Dose typed wrongly');
+  await expect(addendum).toContainText('Synthetic: metformin 1000 mg');
   await expect(article).not.toContainText('Arjun');
-  await expect(versions.getByRole('listitem').last()).toContainText('Addendum to version 1');
   await expect(article).toContainText('Corrections are added as signed addenda.');
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Download PDF' }).click();

@@ -1,5 +1,6 @@
 import { onlineManager } from '@tanstack/react-query';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
+import * as SecureStore from 'expo-secure-store';
 import { useEffect } from 'react';
 import { Pressable, Text } from 'react-native';
 import { cast } from '../dev/cast';
@@ -7,7 +8,7 @@ import { readCopy, saveCopy, storeGeneration } from '../features/api/services/st
 import { LockScreen } from '../features/session/components/LockScreen';
 import { useSession } from '../features/session/hooks/session';
 import { useLockController } from '../features/session/hooks/useLockController';
-import { setPin } from '../features/session/services/session';
+import { countPinTry, pinTries, saveProfile, setPin, wipeDevice } from '../features/session/services/session';
 import { TodayScreen } from '../features/today/components/TodayScreen';
 import { useTodayController } from '../features/today/hooks/useTodayController';
 import { files, keychain } from './fakes';
@@ -19,7 +20,7 @@ jest.mock('expo-local-authentication', () => ({
   hasHardwareAsync: async () => true, isEnrolledAsync: async () => true, authenticateAsync: async () => ({ success: mockBiometricWorks }),
   supportedAuthenticationTypesAsync: async () => [1], AuthenticationType: { FINGERPRINT: 1, FACIAL_RECOGNITION: 2 },
 }));
-afterEach(() => { mockBiometricWorks = false; onlineManager.setOnline(true); });
+afterEach(async () => { mockBiometricWorks = false; onlineManager.setOnline(true); await wipeDevice(); });
 
 const doctor = { staff: cast.staff[0]!, facility: cast.facilities[0]! };
 const noop = () => {};
@@ -29,9 +30,13 @@ function Today() {
 function Lock() {
   return <LockScreen {...useLockController()} />;
 }
+function Launched() {
+  const { ready, session, locked } = useSession();
+  return !ready ? null : session && locked ? <Lock /> : <Text>{session ? 'unlocked' : 'signed out'}</Text>;
+}
 function App({ biometric = false }: { biometric?: boolean }) {
-  const { session, locked, begin, lock } = useSession();
-  useEffect(() => { begin(doctor, biometric); }, []); // once, on mount
+  const { ready, session, locked, begin, lock } = useSession();
+  useEffect(() => { if (ready) begin(doctor, biometric); }, [ready]); // once, after the launch check
   if (!session) return <Text>signed out</Text>;
   return locked ? <Lock /> : <><Pressable accessibilityRole="button" onPress={lock}><Text>Lock now</Text></Pressable><Today /></>;
 }
@@ -52,7 +57,7 @@ const enterPin = async (pin: string) => {
 it('leaves nothing of the previous user on the phone after Switch user', async () => {
   await signedInThenLocked();
   expect(files.size).toBe(1); // the encrypted copy
-  expect(keychain.size).toBe(2); // its key and the PIN check value
+  expect(keychain.size).toBe(3); // its key, the PIN check value and who is signed in
   await fireEvent.press(screen.getByRole('button', { name: 'Switch user' }));
   expect(await screen.findByText('signed out')).toBeOnTheScreen();
   await waitFor(() => { expect(files.size).toBe(0); expect(keychain.size).toBe(0); });
@@ -64,6 +69,17 @@ it('wipes at launch what a session closed without signing out left behind', asyn
   await saveCopy(`today:${doctor.facility.id}`, cast.today, storeGeneration());
   await renderApp(<Text>launched</Text>);
   await waitFor(() => { expect(files.size).toBe(0); expect(keychain.size).toBe(0); });
+});
+
+it('keeps a stored session at launch and opens it locked', async () => {
+  await setPin('246810');
+  await saveCopy(`today:${doctor.facility.id}`, cast.today, storeGeneration());
+  await saveProfile(doctor, false);
+  await renderApp(<Launched />);
+  expect(await screen.findByText('Signed in as Dr. Arjun Rao. Unlock to carry on.')).toBeOnTheScreen();
+  expect(files.size).toBe(1);
+  expect(keychain.size).toBe(3);
+  expect(await readCopy(`today:${doctor.facility.id}`)).not.toBeNull();
 });
 
 it('unlocks with the right PIN and counts down the wrong ones', async () => {
@@ -93,6 +109,56 @@ it('signs out and wipes the phone after five wrong PINs', async () => {
   await waitFor(() => { expect(files.size).toBe(0); expect(keychain.size).toBe(0); });
 });
 
+it('keeps counting wrong PINs across a relaunch, so force-quitting gives back no guesses', async () => {
+  await signedInThenLocked();
+  for (let i = 0; i < 4; i++) {
+    await enterPin('111111');
+    expect(await screen.findByText(`Wrong PIN. Tries left before this phone is cleared: ${4 - i}`)).toBeOnTheScreen();
+  }
+  await screen.unmount(); // force-quit, then the app opens again
+  await renderApp(<Launched />);
+  await enterPin('111111');
+  expect(await screen.findByText('signed out')).toBeOnTheScreen();
+  await waitFor(() => { expect(files.size).toBe(0); expect(keychain.size).toBe(0); }); // the try count goes with the rest
+});
+
+it('starts the count again after a right PIN or the fingerprint', async () => {
+  await signedInThenLocked(true);
+  await fireEvent.press(screen.getByRole('button', { name: 'Unlock' })); // the fingerprint fails: PIN offered
+  for (let i = 0; i < 4; i++) {
+    await enterPin('111111');
+    expect(await screen.findByText(`Wrong PIN. Tries left before this phone is cleared: ${4 - i}`)).toBeOnTheScreen();
+  }
+  await enterPin('246810');
+  expect(await screen.findByRole('button', { name: 'Lock now' })).toBeOnTheScreen();
+  expect(await pinTries()).toBe(0);
+  await countPinTry();
+  await fireEvent.press(screen.getByRole('button', { name: 'Lock now' }));
+  mockBiometricWorks = true;
+  await fireEvent.press(screen.getByRole('button', { name: 'Unlock' }));
+  expect(await screen.findByRole('button', { name: 'Lock now' })).toBeOnTheScreen();
+  expect(await pinTries()).toBe(0);
+});
+
+it('wipes the phone at launch when the failed-PIN limit was reached before the app closed', async () => {
+  await setPin('246810');
+  await saveCopy(`today:${doctor.facility.id}`, cast.today, storeGeneration());
+  await saveProfile(doctor, false);
+  for (let i = 0; i < 5; i++) await countPinTry(); // the fifth try was counted, then the app was killed mid-check
+  await renderApp(<Launched />);
+  expect(await screen.findByText('signed out')).toBeOnTheScreen();
+  await waitFor(() => { expect(files.size).toBe(0); expect(keychain.size).toBe(0); });
+});
+
+it('treats an unreadable failed-PIN count as the limit and wipes at launch', async () => {
+  await setPin('246810');
+  await saveProfile(doctor, false);
+  await SecureStore.setItemAsync('medvya.pin-tries', 'not-a-number');
+  await renderApp(<Launched />);
+  expect(await screen.findByText('signed out')).toBeOnTheScreen();
+  await waitFor(() => expect(keychain.size).toBe(0));
+});
+
 it('offers the PIN when the fingerprint does not unlock', async () => {
   await signedInThenLocked(true);
   expect(screen.queryByLabelText('App PIN')).toBeNull(); // fingerprint first
@@ -110,6 +176,13 @@ it('shows the last copy offline with a banner and no Start consultation', async 
   expect(screen.getByText('Allergy: Penicillin')).toBeOnTheScreen();
   expect(screen.queryByRole('button', { name: 'Start consultation' })).toBeNull();
   expect(screen.getByRole('button', { name: 'Open record' })).toBeOnTheScreen();
+});
+
+it('unlocks with the PIN while offline (the check is on the phone, so it never waits for the network)', async () => {
+  await signedInThenLocked();
+  await act(() => onlineManager.setOnline(false));
+  await enterPin('246810');
+  expect(await screen.findByRole('button', { name: 'Lock now' })).toBeOnTheScreen();
 });
 
 it('says so when offline with no copy on the phone', async () => {

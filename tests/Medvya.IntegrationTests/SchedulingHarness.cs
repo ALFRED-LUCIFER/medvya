@@ -129,6 +129,7 @@ internal sealed class SchedulingHarness(PostgresFixture sql)
         public Task SendLinkToPatientAsync(Guid patientId, Guid facilityId, Medvya.Notifications.Domain.NotificationChannel channel, string url, DateTimeOffset expiresAt, Guid reference, CancellationToken cancellationToken = default) => Refuse();
         public Task SendLinkToPharmacyAsync(string email, Guid facilityId, string url, DateTimeOffset expiresAt, CancellationToken cancellationToken = default) => Refuse();
         public Task SendCodeAsync(Guid patientId, Guid facilityId, string code, Guid reference, CancellationToken cancellationToken = default) => Refuse();
+        public Task SendSignInCodeAsync(string mobile, string countryCode, string? languageTag, string code, Guid reference, CancellationToken cancellationToken = default) => Refuse();
     }
 
     IServiceProvider Scope(Guid user, Guid? inTenant, IInterceptor? interceptor = null, Action<IServiceCollection>? configure = null)

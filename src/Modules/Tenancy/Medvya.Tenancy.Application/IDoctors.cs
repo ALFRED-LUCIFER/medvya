@@ -6,7 +6,7 @@ namespace Medvya.Tenancy.Application;
 public sealed record DoctorView(
     Guid Id, string FullName, string? Specialty, string? Qualifications, string? Languages, Guid FacilityId, string FacilityName, MembershipStatus Status,
     string Authority, string Number, string? Category, DateOnly? ExpiresOn, bool Expired, Guid? AttestedBy, string? AttestedByName, DateTimeOffset AttestedAt,
-    bool HasSignature, long NewVisitFee, long FollowUpFee, string Currency,
+    bool HasSignature, long NewVisitFee, long FollowUpFee, string Currency, string? Room = null,
     // True for the signed-in doctor's own row: only they set or replace their signature image.
     bool OwnSignature = false);
 
@@ -33,7 +33,11 @@ public sealed record AddDoctor
     public bool Attested { get; init; }
     public long? NewVisitFee { get; init; }
     public long? FollowUpFee { get; init; }
+    /// <summary>The doctor's room at <see cref="FacilityId"/> (MDV-P1-111); the other locations' rooms are set from the doctors list.</summary>
+    public string? Room { get; init; }
 }
+
+public sealed record DoctorRoom(string? Room);
 
 public sealed record ResubmitLicence
 {
@@ -73,4 +77,8 @@ public interface IDoctors
     Task<bool?> SetSignatureAsync(Guid doctorId, byte[] content, CancellationToken cancellationToken = default);
 
     Task<bool> RemoveSignatureAsync(Guid doctorId, CancellationToken cancellationToken = default);
+
+    /// <summary>Sets (or, blank, clears) the doctor's room at the doctor's location, audited. Null when there is no such doctor.</summary>
+    /// <exception cref="SettingsValidationException"/>
+    Task<DoctorView?> SetRoomAsync(Guid doctorId, string? room, CancellationToken cancellationToken = default);
 }

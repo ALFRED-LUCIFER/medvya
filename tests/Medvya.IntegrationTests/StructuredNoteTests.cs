@@ -107,7 +107,7 @@ public sealed class StructuredNoteTests(PostgresFixture sql) : IClassFixture<Pos
         using var pdf = await Client().PostAsync(U($"/v1/encounters/{encounter}/note/pdf"), null);
         Assert.True(pdf.IsSuccessStatusCode, await pdf.Content.ReadAsStringAsync());
         var text = string.Join('\n', PdfPages.Read(await pdf.Content.ReadAsByteArrayAsync(), PlainPdf.A4.Margin).Select(p => p.Text));
-        foreach (var line in new[] { "Review of systems", "Chest pain: No", "Tingling feet: Yes", "Examination by system", "Heart: Normal", "Feet: Abnormal. Reduced monofilament both soles", "Nervous system: Not examined" })
+        foreach (var line in new[] { "REVIEW OF SYSTEMS", "Chest pain: No", "Tingling feet: Yes", "EXAMINATION BY SYSTEM", "Heart: Normal", "Feet: Abnormal. Reduced monofilament both soles", "Nervous system: Not examined" })
             Assert.Contains(line, text, StringComparison.Ordinal);
         foreach (var blank in new[] { "Tiredness", "Lungs", "Abdomen", "{\"" })
             Assert.DoesNotContain(blank, text, StringComparison.Ordinal);
@@ -179,7 +179,7 @@ public sealed class StructuredNoteTests(PostgresFixture sql) : IClassFixture<Pos
         using var pdf = await Client().PostAsync(U($"/v1/encounters/{encounter}/note/pdf"), null);
         Assert.True(pdf.IsSuccessStatusCode, await pdf.Content.ReadAsStringAsync());
         var text = string.Join('\n', PdfPages.Read(await pdf.Content.ReadAsByteArrayAsync(), PlainPdf.A4.Margin).Select(p => p.Text));
-        foreach (var line in new[] { "Notes", "patient asks about fasting during the festival", "Recheck feet next visit." })
+        foreach (var line in new[] { "NOTES", "patient asks about fasting during the festival", "Recheck feet next visit." })
             Assert.Contains(line, text, StringComparison.Ordinal);
     }
 

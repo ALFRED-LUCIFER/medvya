@@ -15,7 +15,6 @@ using Medvya.Tenancy.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Options;
-using QRCoder;
 
 namespace Medvya.Prescribing.Infrastructure;
 
@@ -581,25 +580,14 @@ public sealed class PrescriptionService(
         var facts = await chart.FactsAsync(encounter.PatientId, cancellationToken);
         var allergies = facts.AllergyState switch { AllergyState.Listed => ChartAllergies.Listed, AllergyState.NoKnownAllergies => ChartAllergies.NoKnownAllergies, _ => ChartAllergies.NotRecorded };
         var plan = await encounters.PlanAsync(encounter.Id, cancellationToken);
-        var clinic = await facilities.LetterheadAsync(rx.FacilityId, cancellationToken);
         var url = $"{BaseUrl}/verify/rx/{RxVerifyToken.Token(rx.TenantId, rx.VerifyCode)}";
         return new RxPrintView(View(rx), facility.TenantName == facility.Name ? facility.Name : $"{facility.TenantName} · {facility.Name}", facility.TimeZone, doctor.FullName, doctor.Qualifications, doctor.LicenceNumber, doctor.LicenceAuthority,
             new SlipPatient(patient.FullName, patient.Mrn, patient.DateOfBirth, patient.SexAtBirth.ToString()), allergies,
             [.. facts.Allergies.Where(a => a.Status != AllergyStatus.NotAnAllergy && a.Substance is not null).Select(a => a.Substance!)],
-            [.. rx.Lines.Select(l => new RxPrintLine(l.Discontinue, l.Medicine, l.Strength, l.Form, l.Sig, l.PrintRequirements, l.Reason))], url, Qr(url), RxPdfDocument.LayoutVersion,
+            [.. rx.Lines.Select(l => new RxPrintLine(l.Discontinue, l.Medicine, l.Strength, l.Form, l.Sig, l.PrintRequirements, l.Reason))], url, QrRows.Of(url), RxPdfDocument.LayoutVersion,
             rx.Advice is null ? null : new RxAdviceView(rx.Advice, patient.PreferredLanguage, patient.PreferredLanguage is null or "en"),
             PaperIssuer.Age(rx.AuthorisedAt, facility.TimeZone, patient.DateOfBirth),
-            [.. plan.Diagnoses.Select(d => new RxDiagnosis(d.Description, d.Provisional))], plan.FollowUpOn,
-            DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(encounter.StartedAt, TimeZoneInfo.FindSystemTimeZoneById(facility.TimeZone)).DateTime),
-            clinic.Address, clinic.Phone, clinic.RegistrationNumber, doctor.SignatureOnFile);
-    }
-
-    /// <summary>The QR code's modules, row by row ('1' dark), with its quiet zone; error correction M survives a crease or a stamp.</summary>
-    internal static string[] Qr(string text)
-    {
-        using var generator = new QRCodeGenerator();
-        using var data = generator.CreateQrCode(text, QRCodeGenerator.ECCLevel.M);
-        return [.. data.ModuleMatrix.Select(row => string.Concat(row.Cast<bool>().Select(b => b ? '1' : '0')))];
+            [.. plan.Diagnoses.Select(d => new RxDiagnosis(d.Description, d.Provisional))], plan.FollowUpOn, facility.Address, facility.Phone, facility.Registration);
     }
 
     static RxAuthorisationView View(AuthorisedPrescription p, PrescriptionCancellation? c = null) => new(p.VersionNo, p.Number(), p.AuthorisedBy, p.AuthorisedAt, p.ContentHash,

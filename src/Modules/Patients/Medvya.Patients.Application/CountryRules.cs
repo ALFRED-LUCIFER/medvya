@@ -30,12 +30,18 @@ public abstract partial class CountryRules
     public static readonly CountryRules India = new IndiaRules();
     public static readonly CountryRules Uae = new UaeRules();
 
-    public static CountryRules For(string countryCode) => countryCode switch
+    public static CountryRules For(string countryCode) => Find(countryCode) ?? throw new PatientValidationException([new("countryCode", "unsupported")]);
+
+    static CountryRules? Find(string? countryCode) => countryCode switch
     {
         "IN" => India,
         "AE" => Uae,
-        _ => throw new PatientValidationException([new("countryCode", "unsupported")]),
+        _ => null,
     };
+
+    /// <summary>The E.164 form of a mobile number typed for the country, or null when the country or the number is not supported (patient sign-in, MDV-P5-033).</summary>
+    public static string? Mobile(string? countryCode, string? value) =>
+        value is null ? null : Find(countryCode)?.NormalizeMobile(PhoneSeparators().Replace(value, ""));
 
     const int MaxText = 200;
 

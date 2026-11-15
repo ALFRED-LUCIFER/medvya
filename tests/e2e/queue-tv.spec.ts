@@ -6,12 +6,13 @@ import { targetPx } from './support/targets';
 // MDV-P1-031: the waiting-room TV (P-05) and the staff "Queue displays" screen. CI has no API, so the endpoints are mocked in the
 // shapes the server sends (IQueueService.cs). The TV must make no request but its own: pairing, its queue and its hub.
 const token = `${'A'.repeat(40)}Synthetic_Display-Token1`; // 64 base64url characters, like a real display token
-const queue = (now: { token: string; room: string | null; doctor: string }[]) => ({
-  now, next: [{ token: 'A-08', waitMinutes: 10, doctor: 'Dr. Arjun Rao (synthetic)', ahead: 0 }, { token: 'B-03', waitMinutes: 15, doctor: 'Dr. Sana Khan (synthetic)', ahead: 0 },
+const queue = (now: { token: string; room: string | null; doctor: string; vitals?: boolean }[]) => ({
+  now, next: [{ token: 'A-08', waitMinutes: 10, doctor: 'Dr. Arjun Rao (synthetic)', ahead: 0, room: 'Room 3' }, { token: 'B-03', waitMinutes: 15, doctor: 'Dr. Sana Khan (synthetic)', ahead: 0 },
     // A-09 was reassigned: it keeps its letter, the display names its doctor and counts it in her queue, one patient behind B-03 (MDV-P1-103)
     { token: 'A-09', waitMinutes: 25, doctor: 'Dr. Sana Khan (synthetic)', ahead: 1 }],
 });
-const called = [{ token: 'A-07', room: 'Room 3', doctor: 'Dr. Arjun Rao (synthetic)' }];
+// MDV-P1-111: a token called to the vitals room says "Vitals" in place of the doctor; a waiting token shows the room it will go to.
+const called = [{ token: 'A-07', room: 'Room 3', doctor: 'Dr. Arjun Rao (synthetic)' }, { token: 'B-02', room: 'Room 1', doctor: 'Dr. Sana Khan (synthetic)', vitals: true }];
 
 async function openTv(page: Page, { locale = 'en', paired = true, link = true } = {}) {
   const calls = { pairs: [] as unknown[], reads: 0, requests: [] as string[] };
@@ -45,8 +46,8 @@ test('pairs from its link, then shows tokens, rooms, doctors and waits only', as
   const { calls } = await openTv(page);
   await expect(page.getByRole('heading', { name: 'Now calling' })).toBeVisible();
   const now = page.getByRole('region', { name: 'Now calling' }).getByRole('listitem');
-  await expect(now).toHaveText(/A-07\s*Room 3\s*Dr\. Arjun Rao \(synthetic\)/);
-  await expect(page.getByRole('region', { name: 'Next' }).getByRole('listitem')).toHaveText([/A-08\s*Dr. Arjun Rao \(synthetic\) · Next in line · ≈ 10 min/, /B-03\s*Dr. Sana Khan \(synthetic\) · Next in line · ≈ 15 min/,
+  await expect(now).toHaveText([/A-07\s*Room 3\s*Dr\. Arjun Rao \(synthetic\)/, /B-02\s*Room 1\s*Vitals/]);
+  await expect(page.getByRole('region', { name: 'Next' }).getByRole('listitem')).toHaveText([/A-08\s*Room 3\s*Dr. Arjun Rao \(synthetic\) · Next in line · ≈ 10 min/, /B-03\s*Dr. Sana Khan \(synthetic\) · Next in line · ≈ 15 min/,
     /A-09\s*Dr. Sana Khan \(synthetic\) · 1 ahead · ≈ 25 min/]); // the doctor per token and how many are ahead in that doctor's queue (MDV-P1-103)
   await expect(page.getByText('Emergency? Tell the front desk immediately.')).toBeVisible();
   await expect(page.getByRole('status').filter({ hasText: 'Live updates' })).toHaveText('Live updates');

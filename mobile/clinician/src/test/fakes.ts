@@ -4,7 +4,7 @@ type Statement = { run: (...p: unknown[]) => unknown; get: (...p: unknown[]) => 
 type NodeDb = { exec: (sql: string) => void; prepare: (sql: string) => Statement; close: () => void };
 const { DatabaseSync } = jest.requireActual<{ DatabaseSync: new (path: string) => NodeDb }>('node:sqlite');
 const node = jest.requireActual<{
-  createHash: (alg: string) => { update: (s: string) => { digest: (enc: 'hex') => string } };
+  createHash: (alg: string) => { update: (s: string) => { digest: (enc: 'hex' | 'base64') => string } };
   randomBytes: (n: number) => Uint8Array;
   randomUUID: () => string;
 }>('node:crypto');
@@ -43,7 +43,8 @@ export const sqlite = {
 
 export const crypto = {
   CryptoDigestAlgorithm: { SHA256: 'SHA-256' },
+  CryptoEncoding: { HEX: 'hex', BASE64: 'base64' },
   getRandomBytes: (n: number) => new Uint8Array(node.randomBytes(n)),
   randomUUID: () => node.randomUUID(),
-  digestStringAsync: async (_alg: string, data: string) => node.createHash('sha256').update(data).digest('hex'),
+  digestStringAsync: async (_alg: string, data: string, options?: { encoding?: 'hex' | 'base64' }) => node.createHash('sha256').update(data).digest(options?.encoding ?? 'hex'),
 };

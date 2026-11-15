@@ -646,7 +646,7 @@ public sealed class SignNoteTests(PostgresFixture sql) : IClassFixture<PostgresF
         Assert.Equal(PostgresErrorCodes.CheckViolation, (ex.InnerException as PostgresException)?.SqlState);
     }
 
-    // SAFETY mutation check: drop page.Header() from PlainPdf.Write and the per-page identifier checks fail.
+    // SAFETY mutation check: move the patient row out of page.Header() in PlainPdf.Write (into the content) and the per-page identifier checks fail.
     [Fact]
     public async Task ThePdfIsRenderedServerSideWithIdentifiersOnEveryPageAndStoredWithItsHash()
     {
@@ -658,7 +658,7 @@ public sealed class SignNoteTests(PostgresFixture sql) : IClassFixture<PostgresF
         await using (var tenancy = sql.Context(h.Tenant)) // #1365 F-068: the letterhead carries the location's own address, not the practice's, and the practice's phone
         {
             (await tenancy.Facilities.SingleAsync(f => f.Id == h.Facility)).Address = "7 Lake View Road (synthetic)";
-            tenancy.Profiles.Add(new PracticeProfile { Id = Guid.NewGuid(), TenantId = h.Tenant, Address = "Head office (synthetic)", Phone = "044 5550 0100", ChangedAt = DateTimeOffset.UtcNow });
+            tenancy.Profiles.Add(new PracticeProfile { Id = Guid.NewGuid(), TenantId = h.Tenant, Address = "Head office (synthetic)", Phone = "044 5550 0100", RegistrationNumber = "TN/CE/2026/00042", ChangedAt = DateTimeOffset.UtcNow });
             await tenancy.SaveChangesAsync();
         }
 
@@ -671,8 +671,8 @@ public sealed class SignNoteTests(PostgresFixture sql) : IClassFixture<PostgresF
 
         Assert.StartsWith("%PDF-", Encoding.ASCII.GetString(bytes, 0, 5), StringComparison.Ordinal);
         var pages = PdfPages.Read(bytes, PlainPdf.A4.Margin);
-        string[] markers = ["MRN 000001", "Date of birth 12 Mar 1972", "Meera Lakshmi Venkataraman Iyer (synthetic)", "Corrections are added as signed addenda.",
-            "7 Lake View Road (synthetic)", "Phone 044 5550 0100"];
+        string[] markers = ["MRN 000001", "Born 12 Mar 1972", "Meera Lakshmi Venkataraman Iyer (synthetic)", "Corrections are added as signed addenda.",
+            "7 Lake View Road (synthetic)", "044 5550 0100", "Registration no. TN/CE/2026/00042"];
         Assert.True(pages.Count >= 2, $"{pages.Count} page(s)");
         Assert.All(pages, page =>
         {

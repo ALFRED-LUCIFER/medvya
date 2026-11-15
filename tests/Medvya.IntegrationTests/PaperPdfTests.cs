@@ -118,8 +118,8 @@ public sealed partial class PaperPdfTests(PostgresFixture sql, AzuriteFixture bl
         {
             var pdf = await ReadAsync(r);
             (token, sha) = (pdf.Token, pdf.Sha);
-            foreach (var expected in new[] { "Adyar (synthetic)", "12 Beach Road (synthetic)", "Registration no. TN/CE/2026/00042", "Investigation slip", "MRN 000001", "Send to: Metro Diagnostics (synthetic)", "1. HbA1c (Lab)", "2. Lipid profile (Lab)",
-                         "Bring this slip to the lab.", "Ordered by Dr. Arjun Rao (synthetic)", "SHA-256 of this paper's content:" })
+            foreach (var expected in new[] { "Adyar (synthetic)", "12 Beach Road (synthetic)", "Registration no. TN/CE/2026/00042", "INVESTIGATION SLIP", "MRN 000001", "SEND TO", "Metro Diagnostics (synthetic)", "1 HbA1c Lab", "2 Lipid profile Lab",
+                         "Bring this slip to the lab.", "Dr. Arjun Rao (synthetic)", "Ordered ", "SHA-256 of this paper’s content:" }) // Manrope's contextual alternates print the apostrophe as ’
                 Assert.Contains(expected, pdf.Text, StringComparison.Ordinal);
             Assert.Contains("उपवास", pdf.Text, StringComparison.Ordinal); // the Hindi note prints shaped
             Assert.All(pdf.Pages, p => Assert.Contains("MRN 000001", p.Text, StringComparison.Ordinal)); // the patient on every page
@@ -167,10 +167,10 @@ public sealed partial class PaperPdfTests(PostgresFixture sql, AzuriteFixture bl
         {
             var pdf = await ReadAsync(r);
             (token, sha) = (pdf.Token, pdf.Sha);
-            foreach (var expected in new[] { "Referral letter", "To: Dr. S. Menon, Endocrinology (synthetic) · Urgent", "Reason for the referral", "Uncontrolled HbA1c (synthetic)",
-                         "Allergies", "This letter holds only what the doctor chose to share.", "From Dr. Arjun Rao (synthetic)" })
+            foreach (var expected in new[] { "REFERRAL LETTER", "TO", "Dr. S. Menon, Endocrinology (synthetic) · Urgent", "REASON", "Uncontrolled HbA1c (synthetic)",
+                         "ALLERGIES", "This letter holds only what the doctor chose to share.", "Dr. Arjun Rao (synthetic)" })
                 Assert.Contains(expected, pdf.Text, StringComparison.Ordinal);
-            Assert.DoesNotContain("Current medicines", pdf.Text, StringComparison.Ordinal); // a section not chosen is not read at all
+            Assert.DoesNotContain("CURRENT MEDICINES", pdf.Text, StringComparison.Ordinal); // a section not chosen is not read at all
         }
         var paper = await PaperAsync(sha);
         Assert.Equal((PaperKind.ReferralLetter, referral, 1), (paper.Kind, paper.SourceId, paper.Items));

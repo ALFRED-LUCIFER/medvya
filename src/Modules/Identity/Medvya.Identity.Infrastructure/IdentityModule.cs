@@ -14,7 +14,8 @@ public static class IdentityModule
             .AddDbContext<IdentityDbContext>(o => o.UseNpgsql(PostgresDataSources.For(connectionString)))
             .AddScoped<IStaffUsers, StaffUsers>()
             .AddScoped<IStaffSessions, StaffSessions>()
-            .AddScoped<IOnboardingDrafts, OnboardingDrafts>();
+            .AddScoped<IOnboardingDrafts, OnboardingDrafts>()
+            .AddScoped<IPatientSmsSignIn, PatientSmsSignIn>();
 }
 
 sealed class StaffUsers(IdentityDbContext db) : IStaffUsers

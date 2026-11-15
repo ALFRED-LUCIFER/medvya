@@ -220,9 +220,9 @@ public sealed class ConsultNoteService(
         var signers = await SignersAsync(encounter.FacilityId, [.. versions.Select(v => v.SignedBy).Distinct()], cancellationToken);
         var facility = await facilities.FindAsync(encounter.FacilityId, cancellationToken) ?? throw new InvalidOperationException("The encounter's facility was not found.");
         var images = await facilities.PrintImagesAsync(versions[0].SignedBy, encounter.FacilityId, cancellationToken);
-        var content = SignedNotePdfDocument.Render(patient, facility.Name, TimeZoneInfo.FindSystemTimeZoneById(facility.TimeZone),
-            NoteTemplates.Find(note.TemplateKey, note.TemplateVersion)!, [.. versions.Select(v => new SignedNotePdfDocument.Version(v, signers[v.SignedBy].Name, signers[v.SignedBy].Licence))],
-            images.Signature, images.Logo, await facilities.LetterheadAsync(encounter.FacilityId, cancellationToken));
+        var content = SignedNotePdfDocument.Render(patient, facility, NoteTemplates.Find(note.TemplateKey, note.TemplateVersion)!,
+            [.. versions.Select(v => new SignedNotePdfDocument.Version(v, signers[v.SignedBy].Name))], images,
+            await facilities.PrescriberAsync(versions[0].SignedBy, encounter.FacilityId, cancellationToken));
         var pdf = new SignedNotePdf
         {
             Id = Guid.CreateVersion7(), TenantId = TenantId, NoteId = note.Id, VersionNo = versions[^1].VersionNo, Content = content,

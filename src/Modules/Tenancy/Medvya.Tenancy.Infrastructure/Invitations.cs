@@ -23,7 +23,7 @@ public sealed class InvitationOptions
 }
 
 public sealed partial class Invitations(TenancyDbContext db, ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, IEmailSender mail, IOptions<InvitationOptions> options,
-    IStaffAccess access, ILogger<Invitations>? log = null, StarterPlan? plan = null)
+    IStaffAccess access, ILogger<Invitations>? log = null, StarterPlan? plan = null, ILogoStore? logos = null)
     : IInvitations
 {
     public async Task<IReadOnlyList<FacilityOption>> FacilitiesAsync(CancellationToken cancellationToken = default) =>
@@ -122,7 +122,8 @@ public sealed partial class Invitations(TenancyDbContext db, ICurrentTenant tena
         // Saved, emailed, audited and committed as one unit: a failed email or audit leaves no invitation behind. The audit row is written in this transaction, so a failed
         // audit write rolls the invitation back; the email goes first so a failed send leaves nothing behind.
         // A commit that fails after the email went out leaves a link that shows the expired state, which is harmless.
-        var message = Email(email, clinic, membership.Role, facility, $"{baseUrl.TrimEnd('/')}/invite/{token}", invitation.ExpiresAt);
+        var logo = logos is null ? null : await FacilityDirectory.Logo(db, logos, cancellationToken);
+        var message = Email(email, clinic, membership.Role, facility, $"{baseUrl.TrimEnd('/')}/invite/{token}", invitation.ExpiresAt, logo);
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
         if (superseded is null) await (plan ?? new()).EnsureRoomAsync(db, tenantId, membership.Role, cancellationToken); // a resend adds no seat
         await db.SaveChangesAsync(cancellationToken);
@@ -243,10 +244,13 @@ public sealed partial class Invitations(TenancyDbContext db, ICurrentTenant tena
 
     // shortcut: English-only email; send it in the invitee's language once notification templates are localised (MDV-P1-032).
     // No patient data: clinic, role, facility, link and expiry only.
-    static EmailMessage Email(string to, string clinic, Role role, Facility facility, string link, DateTimeOffset expires)
+    internal static EmailMessage Email(string to, string clinic, Role role, Facility facility, string link, DateTimeOffset expires, byte[]? logo)
     {
         var local = TimeZoneInfo.ConvertTime(expires, TimeZoneInfo.FindSystemTimeZoneById(facility.TimeZone));
         var date = local.ToString("d MMM yyyy, HH:mm", CultureInfo.InvariantCulture);
+        var html = EmailHtml.Render(new EmailView("en", clinic, "on Medvya", $"Join {clinic}", [$"You have been invited to join {clinic} on Medvya."],
+            [new("Role", RoleName(role)), new("Location", facility.Name), new("Expires", date, facility.TimeZone)], new("Accept the invitation", link),
+            ["The link works once. If you were not expecting this invitation, ignore this email."], [EmailHtml.MedvyaFooter]), logo is not null);
         return new EmailMessage(to, $"Invitation to join {clinic} on Medvya",
             $"""
             You have been invited to join {clinic} on Medvya as {RoleName(role)} at {facility.Name}.
@@ -254,7 +258,7 @@ public sealed partial class Invitations(TenancyDbContext db, ICurrentTenant tena
             Accept the invitation: {link}
 
             The link works once and expires on {date} ({facility.TimeZone}). If you were not expecting this invitation, ignore this email.
-            """);
+            """, Html: html, Logo: logo);
     }
 
     static string RoleName(Role role) => role switch

@@ -1,5 +1,6 @@
 using System.Diagnostics.Metrics;
 using System.Globalization;
+using Medvya.BuildingBlocks.Infrastructure;
 using Medvya.Patients.Application;
 using Medvya.Scheduling.Application;
 using Medvya.Scheduling.Domain;
@@ -90,7 +91,12 @@ public sealed partial class FrontDeskService(
             .Select(e => e.FromState).FirstOrDefaultAsync(cancellationToken);
         if (!VisitFlow.CanUndo(from, seen)) throw new VisitTransitionException("invalid_transition");
         var to = from!.Value;
-        var room = to < AppointmentState.InConsult ? null : visit.Room; // back in the queue: no longer called in to a room
+        var room = to switch
+        {
+            AppointmentState.WithNurse => (await context.FacilityAsync(visit.FacilityId, cancellationToken)).Facility.NurseRoom, // back with the nurse, in the vitals room
+            < AppointmentState.InConsult => null, // back in the queue: no longer called in to a room
+            _ => visit.Room,
+        };
 
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
         if (await db.Appointments.Where(a => a.Id == appointmentId && a.State == seen && a.ChangedAt == visit.ChangedAt)
@@ -258,7 +264,7 @@ public sealed partial class FrontDeskService(
             throw new VisitTransitionException("token_void");
         var token = await db.QueueTokens.AsNoTracking().Where(t => t.AppointmentId == appointmentId)
             .Select(t => new { t.Prefix, t.Number, t.IssuedAt, t.Date }).SingleOrDefaultAsync(cancellationToken) ?? throw new VisitTransitionException("no_token");
-        var (facility, _) = await context.FacilityAsync(visit.FacilityId, cancellationToken);
+        var (facility, zone) = await context.FacilityAsync(visit.FacilityId, cancellationToken);
         var doctor = (await context.CalendarsAsync(visit.FacilityId, cancellationToken)).FirstOrDefault(c => c.Id == visit.CalendarId)?.Name ?? "";
         // The doctor's queue of that day, as the queue display reads it: the visits holding the day's tokens at this facility.
         var queue = await (from t in db.QueueTokens.AsNoTracking()
@@ -266,8 +272,14 @@ public sealed partial class FrontDeskService(
                            where t.FacilityId == visit.FacilityId && t.Date == token.Date && a.CalendarId == visit.CalendarId
                            select a).ToListAsync(cancellationToken);
         var places = await ordering.PlacesAsync(queue, facility.Queue, cancellationToken);
+        // The doctor's room: where the patient was called in, else where the doctor sits today (never the vitals room the visit may be in).
+        var room = visit.State >= AppointmentState.InConsult && visit.Room is { } called ? called : await context.RoomAsync(visit, zone, context.Now, cancellationToken);
+        var vitals = (await context.StepsAsync(cancellationToken)).Nurse ? facility.NurseRoom : null;
+        var logo = await context.LogoAsync(cancellationToken);
+        var wifi = facility.Wifi is { } w ? new TokenSlipWifi(w.Network, w.Password, w.Daily, QrRows.Of(GuestWifiCode.Text(w.Network, w.Password))) : null;
         return new(facility.Name, QueueToken.Format(token.Prefix, token.Number), doctor, token.IssuedAt, facility.TimeZone,
-            places.TryGetValue(visit.Id, out var place) ? place - 1 : null);
+            places.TryGetValue(visit.Id, out var place) ? place - 1 : null, facility.Address, facility.Phone, room, vitals,
+            logo is null ? null : $"data:image/png;base64,{Convert.ToBase64String(logo)}", wifi);
     }
 
     public async Task<string> WatchGroupAsync(Guid facilityId, CancellationToken cancellationToken = default)
@@ -293,14 +305,21 @@ public sealed partial class FrontDeskService(
         if (visit.State == AppointmentState.WithNurse && to == AppointmentState.ReadyForDoctor)
             foreach (var gate in handoffGates)
                 if (!await gate.MayMoveOnAsync(visit.Id, cancellationToken)) throw new VisitTransitionException("intake_required");
-        var (_, zone) = await context.FacilityAsync(visit.FacilityId, cancellationToken);
+        var (facility, zone) = await context.FacilityAsync(visit.FacilityId, cancellationToken);
         var now = context.Now;
         if (to == AppointmentState.CheckedIn && ScheduleRules.LocalDate(visit.Start, zone) != ScheduleRules.LocalDate(now, zone))
             throw new VisitTransitionException("not_today");
 
         var (from, me) = (visit.State, context.UserId);
-        // Call-in takes the room of the doctor's session now (or at the visit's time) from the schedule template.
-        var room = to == AppointmentState.InConsult ? await context.RoomAsync(visit, zone, now, cancellationToken) : visit.Room;
+        // Call-in takes the room of the doctor's session now (or at the visit's time) from the schedule template; the nurse takes the
+        // location's vitals room (MDV-P1-111); back in the queue there is no room.
+        var room = to switch
+        {
+            AppointmentState.InConsult => await context.RoomAsync(visit, zone, now, cancellationToken),
+            AppointmentState.WithNurse => facility.NurseRoom,
+            < AppointmentState.InConsult => null,
+            _ => visit.Room,
+        };
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
         var changed = await db.Appointments.Where(a => a.Id == appointmentId && a.State == from)
             .ExecuteUpdateAsync(s => s.SetProperty(a => a.State, to).SetProperty(a => a.Room, room)

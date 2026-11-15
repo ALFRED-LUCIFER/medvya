@@ -77,3 +77,26 @@ for (const locale of ['en', 'ar'])
       (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations.map(v => `${v.id} (${v.nodes.length})`));
     expect(violations).toEqual([]);
   });
+
+// MDV-P1-111: editing a location sets where patients go for vitals and the guest Wi-Fi the token slip prints; axe clean in both languages.
+for (const locale of ['en', 'ar'])
+  test(`editing a location saves its vitals room and guest Wi-Fi, axe clean (${locale})`, async ({ page }) => {
+    let saved: Record<string, unknown> | null = null;
+    await page.route('**/v1/settings/locations/f-1', r => {
+      saved = r.request().postDataJSON() as Record<string, unknown>;
+      return r.fulfill({ json: { id: 'f-1', name: 'Adyar', address: null, timeZone: 'Asia/Kolkata', ...saved } });
+    });
+    await open(page, undefined, locale);
+    await page.getByRole('button', { name: locale === 'en' ? 'Edit Adyar' : /Adyar/ }).click();
+    await page.locator('#location-nurse-room').fill('Room 1');
+    await page.locator('#location-wifi-network').fill('IyerClinic-Guest');
+    await page.locator('#location-wifi-password').fill('mango-1511');
+    await page.getByRole('switch').click();
+    await page.addScriptTag({ path: axePath });
+    const violations = await page.evaluate(async () =>
+      (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations.map(v => `${v.id} (${v.nodes.length})`));
+    expect(violations).toEqual([]);
+    await page.getByRole('button', { name: locale === 'en' ? 'Save changes' : 'حفظ التغييرات', exact: true }).click();
+    await expect.poll(() => saved).toMatchObject({ name: 'Adyar', nurseRoom: 'Room 1', wifiNetwork: 'IyerClinic-Guest', wifiPassword: 'mango-1511', wifiDaily: true });
+    expect(saved).not.toHaveProperty('taxNumber'); // an edit sends no tax number
+  });

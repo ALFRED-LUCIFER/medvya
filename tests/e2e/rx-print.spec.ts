@@ -1,6 +1,6 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
-import { authorised, line, mockPrescription } from './support/prescription';
+import { authorised, line, mockPrescription, printView } from './support/prescription';
 import { targetPx } from './support/targets';
 
 // MDV-P2-017 (E-05, E-10): authorising is its own action after the checks (the server asks for the step-up first); only an authorised, unchanged
@@ -24,19 +24,21 @@ test('authorising asks for the step-up, then the prescription prints with the li
 
   const paper = page.getByRole('article');
   await expect(paper.getByRole('heading', { name: 'Iyer Family Clinic · Adyar' })).toBeVisible();
-  await expect(paper).toContainText('Dr. Arjun Rao (synthetic) · MBBS, MD (General Medicine)');
-  await expect(paper).toContainText(/Licence \W?84213\W? · Tamil Nadu Medical Council/); // the number is isolated left to right
-  await expect(paper).toContainText('000001');
-  // #1365 F-068: the letterhead, the visit date, the verify address as two lines, and no bare signature line without a signature image.
-  await expect(paper.getByText('12 Beach Road (synthetic)')).toContainText('Adyar, Chennai 600020');
-  await expect(paper).toContainText(/Phone \W?044 5550 0100\W? · Registration no\. \W?TN\/CE\/2026\/00042/);
-  await expect(paper).toContainText('Visit date: 19 Oct 2026');
-  await expect(paper.getByText('https://clinic.test/app/verify/rx/', { exact: true })).toBeVisible();
-  await expect(paper.getByText('synthetic-token', { exact: true })).toBeVisible();
-  await expect(paper).toContainText(/Signed electronically by Dr\. Arjun Rao \(synthetic\) on /);
-  await expect(paper).not.toContainText('Signature:');
-  await expect(paper).toContainText('Schedule H drug. Warning');
-  await expect(paper).toContainText('Stop: Atorvastatin');
+  // MDV-P1-111: the doctor block at the masthead's end, the registration repeated under the signature.
+  await expect(paper.getByText('MBBS, MD (General Medicine)', { exact: true })).toBeVisible();
+  await expect(paper.getByText(/^Reg\. \W?84213\W? · Tamil Nadu Medical Council$/)).toBeVisible(); // the number is isolated left to right
+  await expect(paper.getByText(/^Reg\. \W?84213\W?$/)).toBeVisible();
+  await expect(paper.getByText('Dr. Arjun Rao (synthetic)', { exact: true })).toHaveCount(2);
+  // #1365 F-068: the practice's registration number follows the address and phone under the clinic name.
+  await expect(paper.getByText(/^12 Beach Road \(synthetic\), Adyar, Chennai 600020 · 044 5550 0100 · Registration no\. \W?TN\/CE\/2026\/00042\W?$/)).toBeVisible();
+  await expect(paper.getByRole('region', { name: 'Patient' })).toContainText('000001');
+  // Medicines numbered, the generic name in capitals, the schedule warning in its box under its medicine.
+  const medicines = paper.getByRole('region', { name: 'Medicines' });
+  await expect(medicines.getByRole('listitem')).toHaveCount(1);
+  expect(await medicines.getByRole('listitem').innerText()).toMatch(/^1\s+METFORMIN 500 mg Tablet\s/);
+  await expect(medicines.getByRole('listitem')).toContainText('Schedule H drug. Warning');
+  await expect(paper.getByRole('region', { name: 'Stop' })).toContainText('Atorvastatin · Reason: Muscle pain (synthetic)');
+  await expect(paper.getByRole('region', { name: 'Allergy' })).toHaveText('AllergyAllergies: no known allergies');
   await expect(paper.getByRole('img', { name: 'QR code to check this prescription is valid' })).toBeVisible();
   await expect(paper.locator('[lang="ta"]')).toHaveCount(0); // English only until a second language is chosen
 
@@ -66,6 +68,24 @@ test('a draft changed since it was authorised must be authorised again before it
   await expect(rx.getByRole('link', { name: 'Print prescription' })).toHaveCount(0);
   await page.goto('/consult/e-1/rx/print'); // the server refuses it too
   await expect(page.getByRole('alert')).toContainText('Only an authorised prescription prints.');
+});
+
+// MDV-P1-111: a listed allergy is a red block with a shield and the word "Allergy", never colour alone; the browser prints on the chosen paper.
+test('a listed allergy prints in its block with the word Allergy, and the paper choice sets the printed page', async ({ page }) => {
+  await mockPrescription(page, { lines: [metformin], authorisation: { authorised: authorised(), changed: false } });
+  await page.route('**/v1/encounters/e-1/prescription/print', r => r.fulfill({ json: { ...printView(), allergies: 'Listed', allergySubstances: ['Penicillin', 'Sulfa drugs'] } }));
+  await page.goto('/consult/e-1/rx/print');
+  const allergy = page.getByRole('article').getByRole('region', { name: 'Allergy' });
+  await expect(allergy).toHaveText('AllergyAllergy: Penicillin, Sulfa drugs');
+  await expect(allergy.locator('svg[aria-hidden="true"]')).toHaveCount(1); // the shield, beside the word
+  const pageRule = () => page.evaluate(() => [...document.querySelectorAll('style')].map(s => s.textContent ?? '').find(c => c.includes('@page')) ?? '');
+  expect(await pageRule()).toContain('size: A4');
+  await page.getByRole('group', { name: 'Paper size' }).getByRole('button', { name: 'A5' }).click();
+  expect(await pageRule()).toContain('size: A5');
+  await expect(page.getByRole('article')).toHaveAttribute('data-paper', 'A5');
+  await page.emulateMedia({ media: 'print' });
+  await expect(page.getByRole('group', { name: 'Paper size' })).toBeHidden(); // only the paper prints
+  await expect(page.getByRole('region', { name: 'Your prescription layout' })).toBeHidden();
 });
 
 const verified = { status: 'Valid', number: 'RX-3F9A21C7', versionNo: 1, authorisedAt: '2026-10-19T04:50:00Z', timeZone: 'Asia/Kolkata', clinic: 'Iyer Family Clinic · Adyar', doctor: 'Dr. Arjun Rao (synthetic)', lines: 2, contentHash: 'a'.repeat(64) };
@@ -112,8 +132,8 @@ for (const locale of ['en', 'ar'])
     await rx.getByRole('link', { name: locale === 'ar' ? 'طباعة الوصفة' : 'Print prescription' }).click();
     await expect(page.getByRole('article')).toContainText('000001');
     await expect(page.getByRole('article')).not.toContainText('a'.repeat(64)); // the hash is on the QR page, not the patient's copy
-    if (locale === 'en') await expect(page.getByRole('article')).toContainText('Age 53');
-    if (locale === 'en') await expect(page.getByRole('article')).toContainText('Diagnosis: Type 2 diabetes (synthetic)');
+    if (locale === 'en') await expect(page.getByRole('article').getByRole('region', { name: 'Patient' })).toContainText('Female · 53 years');
+    if (locale === 'en') await expect(page.getByRole('article').getByRole('region', { name: 'Diagnosis' })).toHaveText('DiagnosisType 2 diabetes (synthetic)');
     await expect(page.getByRole('img', { name: locale === 'ar' ? 'رمز QR للتحقق من صلاحية هذه الوصفة' : 'QR code to check this prescription is valid' })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     for (const target of await page.locator('main button, main a').all()) expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));

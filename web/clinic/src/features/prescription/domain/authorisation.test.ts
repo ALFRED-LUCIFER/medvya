@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { authoriseProblem, isCurrent, pdfProblem, qrCells, unfinishedMedicines, verifyAddress, type RxAuthorisation } from './authorisation';
+import { authoriseProblem, isCurrent, pdfProblem, qrCells, unfinishedMedicines, type RxAuthorisation } from './authorisation';
 
 describe('prescription authorisation (MDV-P2-017)', () => {
   it('reads the server refusal as a problem the panel can word', () => {
@@ -21,11 +21,6 @@ describe('prescription authorisation (MDV-P2-017)', () => {
 
   it('draws only the dark modules of the QR code', () => {
     expect(qrCells(['010', '100'])).toEqual([[1, 0], [0, 1]]);
-  });
-
-  it('prints the verify address as the address and the code, two lines (#1365 F-068)', () => {
-    expect(verifyAddress('https://clinic.test/app/verify/rx/synthetic-token')).toEqual(['https://clinic.test/app/verify/rx/', 'synthetic-token']);
-    expect(verifyAddress('synthetic-token')).toEqual(['synthetic-token']);
   });
 
   it('tells a script the PDF cannot show from a failure', () => {

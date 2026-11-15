@@ -17,7 +17,8 @@ onlineManager.setEventListener(watchNetwork);
 
 /** Which screens exist depends on the session: signed out, locked, or in. Nothing behind the lock renders while locked. */
 function Routes() {
-  const { session, locked } = useSession();
+  const { ready, session, locked } = useSession();
+  if (!ready) return null; // the stored session is read first, so a signed-in phone opens on the lock screen, not sign-in
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Protected guard={!session}>

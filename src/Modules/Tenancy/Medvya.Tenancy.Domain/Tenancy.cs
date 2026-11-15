@@ -37,6 +37,14 @@ public sealed class Facility
     [Classification(DataClass.Internal)] public string? CertificateName { get; set; }
     /// <summary>Random private-Blob key of the registration certificate (no names in paths); null for the first location.</summary>
     [Classification(DataClass.Internal)] public string? CertificateKey { get; set; }
+    /// <summary>Where patients go for vitals and nurse intake, e.g. "Room 1" (MDV-P1-111). Names a place, never a person or patient.</summary>
+    [Classification(DataClass.Internal)] public string? NurseRoom { get; set; }
+    /// <summary>The guest Wi-Fi network printed on token slips; null leaves the slip's Wi-Fi stub out.</summary>
+    [Classification(DataClass.Internal)] public string? WifiNetwork { get; set; }
+    /// <summary>The guest Wi-Fi password, printed for patients; a guest network's password, never a staff or admin one.</summary>
+    [Classification(DataClass.Internal)] public string? WifiPassword { get; set; }
+    /// <summary>The desk changes the guest password every day: the slip says it is for today only.</summary>
+    [Classification(DataClass.Internal)] public bool WifiDaily { get; set; }
 }
 
 public enum MembershipStatus { Invited, Active, Suspended, Offboarded }

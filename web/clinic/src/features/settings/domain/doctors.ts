@@ -24,6 +24,8 @@ export type Doctor = {
   hasSignature: boolean;
   /** The signed-in doctor's own row: only they set or replace their signature image (the server refuses anyone else). */
   ownSignature: boolean;
+  /** The room this doctor sees patients in at this location (MDV-P1-111). */
+  room?: string | null;
 };
 export type DoctorList = {
   doctors: Doctor[];
@@ -31,7 +33,7 @@ export type DoctorList = {
   authorities: Authority[];
 };
 
-/** The wizard steps in order (F-09). Schedule only explains what happens next; it collects nothing. The signature image is the doctor's own to add, so it is not a step. */
+/** The wizard steps in order (F-09). Schedule asks for the doctor's room and explains that hours are set once the doctor accepts. The signature image is the doctor's own to add, so it is not a step. */
 export const doctorSteps = ['details', 'licence', 'schedule', 'fees', 'access'] as const;
 export type DoctorStep = (typeof doctorSteps)[number];
 
@@ -56,6 +58,8 @@ export const doctorSchema = licenceSchema.extend({
   languages: text(200),
   newVisitFee: money,
   followUpFee: money,
+  /** The doctor's room at the main location (MDV-P1-111). */
+  room: text(50),
   facilityId: z.string().min(1),
   /** Other locations the doctor also works at (MDV-P1-071). */
   alsoFacilityIds: z.array(z.string()),
@@ -64,7 +68,7 @@ export type DoctorForm = z.infer<typeof doctorSchema>;
 
 export const emptyLicence = { authority: '', number: '', category: '', expiresOn: '', certificateName: '', attested: false } as unknown as LicenceForm; // attested starts unticked: the owner must tick it
 export const emptyDoctor = (facilityId: string, fees: { newVisitFee: number; followUpFee: number } = { newVisitFee: 0, followUpFee: 0 }): DoctorForm => ({
-  ...emptyLicence, fullName: '', email: '', specialty: '', qualifications: '', languages: '', facilityId, alsoFacilityIds: [],
+  ...emptyLicence, fullName: '', email: '', specialty: '', qualifications: '', languages: '', room: '', facilityId, alsoFacilityIds: [],
   newVisitFee: String(fees.newVisitFee / 100), followUpFee: String(fees.followUpFee / 100),
 });
 
@@ -75,7 +79,7 @@ export const licenceFields = ['authority', 'number', 'category', 'expiresOn', 'c
 export const stepFields: Record<DoctorStep, (keyof DoctorForm)[]> = {
   details: ['fullName', 'email', 'specialty', 'qualifications', 'languages'],
   licence: [...licenceFields],
-  schedule: [],
+  schedule: ['room'],
   fees: ['newVisitFee', 'followUpFee'],
   access: ['facilityId', 'alsoFacilityIds'],
 };
@@ -88,7 +92,7 @@ const blank = (v: string) => (v === '' ? null : v);
 export const toAddBody = (f: DoctorForm) => ({
   fullName: f.fullName, email: f.email, specialty: f.specialty, qualifications: blank(f.qualifications), languages: blank(f.languages), facilityId: f.facilityId, alsoFacilityIds: f.alsoFacilityIds.filter(id => id !== f.facilityId),
   authority: f.authority, licenceNumber: f.number, category: f.category, expiresOn: f.expiresOn, certificateName: blank(f.certificateName), attested: f.attested,
-  newVisitFee: toMinor(f.newVisitFee), followUpFee: toMinor(f.followUpFee),
+  newVisitFee: toMinor(f.newVisitFee), followUpFee: toMinor(f.followUpFee), room: blank(f.room),
 });
 
 export const toLicenceBody = (f: LicenceForm) => ({ ...f, certificateName: blank(f.certificateName) });

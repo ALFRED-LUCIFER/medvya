@@ -442,8 +442,9 @@ public class PatientRegistryTests(PostgresFixture sql) : IClassFixture<PostgresF
         public Task<Medvya.Tenancy.Application.PrescriberInfo?> PrescriberAsync(Guid userId, Guid facilityId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<IReadOnlyDictionary<Guid, Medvya.Tenancy.Application.PrescriberInfo>> PrescribersAsync(Guid facilityId, IReadOnlyCollection<Guid> userIds, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<IReadOnlyDictionary<DateOnly, string>> ClosuresAsync(Guid facilityId, DateOnly first, DateOnly last, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<Medvya.Tenancy.Application.ClinicLetterhead> LetterheadAsync(Guid facilityId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<Medvya.Tenancy.Application.PrintImages> PrintImagesAsync(Guid userId, Guid facilityId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<string?> DoctorRoomAsync(Guid userId, Guid facilityId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<byte[]?> LogoAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
 
     sealed class ThrowingLog : IAuditLog

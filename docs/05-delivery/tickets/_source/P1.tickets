@@ -3379,3 +3379,40 @@ tests:
 - Playwright: schedule-performance.spec.ts under budget; schedule.spec.ts, J3 and the settings specs stay green.
 notes:
 - Measured locally: 2,390 to 2,440 ms before, 2,066 to 2,090 ms after (5 runs each).
+
+=== MDV-P1-111
+title: Print and email family: one layout for the token slip, prescription, slip, letter, note and emails; the doctor's room and the vitals room
+type: Story
+epic: MDV-P1-E12
+prd: P1-08
+screens: P-05, E-10, F-08
+priority: MUST
+roles: Receptionist, Doctor, Nurse, PracticeAdmin
+labels: print, front-desk, queue, email, settings, pilot, epic: ux programme
+estimate: 5
+weeks: 9
+depends: MDV-P2-046, MDV-P2-017, MDV-P2-013, MDV-P2-018, MDV-P2-019
+confidence: 75 | The layout is drawn (docs/02-design/print-family/index.html); the logo in email and the thermal QR need a real printer and mail clients to confirm.
+sources: docs/02-design/print-family/index.html (founder design, 15 Nov 2026)
+desc:
+Founder design of 15 Nov 2026: every paper and email a clinic sends uses one layout. The clinic logo and name lead, with address and phone; a teal rule sits under them; small labels hang in the start margin beside one calm column; the doctor's name, qualifications and registration sit top right; a signature box with the registration repeated; one footer with the verify QR code and page number.
+
+1. Token slip (80 mm thermal, black only): logo in black, clinic, address and phone; the token at the slip's full width; Doctor, Room, Queue ("3 ahead of you", bold), Issued; a tear-off stub with the location's guest Wi-Fi (join QR code, network, password, "today only" when the password changes daily). Nothing about the patient.
+2. Prescription A4 and A5, investigation slip, referral letter and signed note: the shared layout above. Allergy is a red block with a shield and the word "Allergy"; medicines numbered with the generic name in capitals; schedule warnings boxed under their medicine. RxPdfDocument.LayoutVersion rises to 4, so every doctor approves the new layout again.
+3. Emails: branded HTML (logo, labelled rows, one teal button where there is something to do) with the plain-text copy beside it. Patient emails still name only the clinic, date and time.
+4. Rooms: each doctor (or resource) has a room at each location, set in Settings > Hours; a session's own room still wins. Each location has a vitals (nurse) room, set in Settings > Locations. Call-in takes the doctor's room; moving to the nurse takes the vitals room; the board, the waiting-room TV and the token slip show it.
+Deliberately NOT in this ticket: automatic daily Wi-Fi password rotation on the router (the desk types the new password); a room picker from a list of rooms (free text, as sessions already are).
+ac:
+- Given a doctor with Room 2 set for a location, when the desk calls the patient in, then the board, TV and token slip show Room 2; a session's own room still wins
+- Given a location with vitals room "Room 1" and nurse intake on, when the patient moves to the nurse, then the board and TV show Room 1, and the token slip lists the vitals room
+- Given a location with guest Wi-Fi set, when the token slip prints, then the stub shows the network, password and a join QR code; without Wi-Fi the stub is left out
+- Given an authorised prescription, when its PDF is made on A4 or A5, then it follows the print family layout with the patient identifiers on every page, and the layout version is 4
+- Given an appointment reminder or a staff invitation, when it is sent, then the email has an HTML body in the family layout and the same plain-text body
+- Given the token slip and the papers, when checked in English and Arabic, then they read right to left in Arabic and axe is clean
+tests:
+- xUnit: Wi-Fi QR escaping; room choice (session, then template, then unchanged); HTML email escaping.
+- Integration (Testcontainers): call-in and nurse room; token slip room and Wi-Fi; PDF text on every page; email HTML body.
+- Playwright: token slip print view with room and Wi-Fi stub, English and Arabic, axe.
+notes:
+- Clinical sign-off needed before the pilot: the allergy block and the capitals change how the prescription reads (layout version 4).
+- Print the Wi-Fi QR code on the clinic's own thermal printer and scan it with two or three phones before going live.

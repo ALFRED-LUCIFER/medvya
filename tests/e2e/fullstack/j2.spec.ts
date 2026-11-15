@@ -217,7 +217,7 @@ journey('J2', {
       await rx.getByRole('button', { name: 'Authorise prescription' }).click();
       await expect(status).toHaveText(/^Authorised · version 1 · RX-[0-9A-F]{8}$/);
       await rx.getByRole('link', { name: 'Print prescription' }).click();
-      await expect(typed.getByText('Allergies: Penicillin, Sulfa')).toBeVisible();
+      await expect(typed.getByText('Allergy: Penicillin, Sulfa')).toBeVisible(); // the print family's allergy block (MDV-P1-111): the word, never colour alone
       await expect(typed.getByRole('listitem').filter({ hasText: 'Augmentin 625 Duo' })).toContainText('Reason: Tolerated co-amoxiclav before, patient confirms (synthetic)');
       await typed.goto(allergicPath);
       await typed.getByRole('button', { name: 'End consultation' }).click(); // one open consultation at a time
@@ -312,7 +312,8 @@ journey('J2', {
 
     await rx.getByRole('link', { name: 'Print prescription' }).click();
     await expect(page.getByText('Take 1 tablet by mouth twice a day.')).toBeVisible();
-    const paper = (await page.getByText(/^Check this prescription is valid/).textContent())!.match(/\/verify\/rx\/([A-Za-z0-9_-]+)/)![1]!;
+    await expect(page.getByText('Check this prescription is valid')).toBeVisible();
+    const paper = (await page.getByText(/\/verify\/rx\/[A-Za-z0-9_-]+/).first().textContent())!.match(/\/verify\/rx\/([A-Za-z0-9_-]+)/)![1]!; // the footer's verify link (MDV-P1-111)
     await expectVerified(page, paper, 'Valid prescription');
 
     await page.goto(consultPath);
@@ -556,7 +557,7 @@ journey('J2', {
     // MDV-P2-049: the print holds the allergy the nurse recorded at step 9, as kept with the signature, under one h1 naming the clinic.
     await page.getByRole('link', { name: 'Print view and PDF' }).click();
     await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('Signed consultation note');
+    await expect(page.getByRole('article')).toContainText('Signed consultation note'); // the paper's title under the rule; the h1 is the clinic (MDV-P1-111)
     await expect(page.getByRole('region', { name: 'Recorded at signing' }).getByRole('region', { name: 'Allergies' })).toContainText('Penicillin');
     await expectNoAxeViolations(page);
     await page.goto(studioPath);

@@ -28,6 +28,7 @@ function useLabels(prefix: string, currency = ''): Labels {
     newVisitFee: [`${prefix}-new-fee`, t('onboarding.field.newFee', { currency })],
     followUpFee: [`${prefix}-follow-fee`, t('onboarding.field.followUpFee', { currency })],
     facilityId: [`${prefix}-facility`, t('doctors.access.facility')],
+    room: [`${prefix}-room`, t('doctors.room.label')],
   };
 }
 
@@ -146,7 +147,14 @@ export default function DoctorWizard(p: Props) {
             </>
           )}
           {p.step === 'licence' && <LicenceFields form={p.form} errors={p.fieldErrors} authorities={p.authorities} prefix="d" />}
-          {p.step === 'schedule' && <p className="col-span-full">{t('doctors.schedule.body')}</p>}
+          {p.step === 'schedule' && (
+            <>
+              <Field id={l.room![0]} label={l.room![1]} hint={t('doctors.room.hint')} error={error('room')}>
+                <Input autoComplete="off" placeholder={t('settings.schedules.roomPlaceholder')} {...register('room')} />
+              </Field>
+              <p className="col-span-full">{t('doctors.schedule.body')}</p>
+            </>
+          )}
           {p.step === 'fees' && (
             <>
               <Field id={l.newVisitFee![0]} label={l.newVisitFee![1]} required hint={t('doctors.fees.hint')} error={error('newVisitFee')}>

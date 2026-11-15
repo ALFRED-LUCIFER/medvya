@@ -47,7 +47,7 @@ export default function QueueTvPage(props: Props) {
                       <Token value={n.token} className="text-[80px] leading-none" />
                       <span className="flex flex-col">
                         {n.room && <span className="text-[36px] font-extrabold">{n.room}</span>}
-                        <span className="text-[26px] text-tv-muted">{n.doctor}</span>
+                        <span className="text-[26px] text-tv-muted">{n.vitals ? t('queueTv.vitals') : n.doctor}</span>
                       </span>
                     </li>
                   ))}
@@ -59,9 +59,10 @@ export default function QueueTvPage(props: Props) {
               {tv.next.length === 0 ? <p className="text-[28px] text-tv-muted">{t('queueTv.empty.next')}</p> : (
                 <ul className="flex flex-col gap-3">
                   {tv.next.map(n => (
-                    <li key={n.token} className="flex items-center justify-between gap-6 rounded-xl bg-brand-950 px-6 py-3">
+                    <li key={n.token} className="flex flex-wrap items-center gap-x-8 gap-y-1 rounded-xl bg-brand-950 px-6 py-3">
                       <Token value={n.token} className="text-[48px] leading-tight" />
-                      <span className="text-[30px] text-tv-muted">{[n.doctor, aheadWords(i18n, n.ahead), t('queueTv.wait', { minutes: n.waitMinutes })].filter(Boolean).join(' · ')}</span>
+                      {n.room && <span className="text-[36px] font-extrabold">{n.room}</span>}
+                      <span className="ms-auto text-[30px] text-tv-muted">{[n.doctor, aheadWords(i18n, n.ahead), t('queueTv.wait', { minutes: n.waitMinutes })].filter(Boolean).join(' · ')}</span>
                     </li>
                   ))}
                 </ul>

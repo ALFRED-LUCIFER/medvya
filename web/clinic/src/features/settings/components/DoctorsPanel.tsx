@@ -39,6 +39,10 @@ type Props = Wizard & {
   busyId: string | null;
   onSignature: (id: string, file: File | undefined) => void;
   onRemoveSignature: (id: string) => void;
+  roomBusyId: string | null;
+  roomSavedId: string | null;
+  roomFailedId: string | null;
+  onRoom: (id: string, room: string) => void;
 };
 
 /** Who attested the licence and when, or that it has expired: words and an icon, never colour alone. Medvya does not check licences (ADR-016). */
@@ -114,6 +118,16 @@ function DoctorRow({ doctor: d, ...p }: Props & { doctor: Doctor }) {
           </div>
         </form>
       )}
+      {/* MDV-P1-111: the room at this location; the board, the waiting-room TV and the token slip show it. */}
+      <form noValidate className="flex flex-wrap items-end gap-3" aria-live="polite"
+        onSubmit={e => { e.preventDefault(); p.onRoom(d.id, String(new FormData(e.currentTarget).get('room') ?? '')); }}>
+        <Field id={`room-${d.id}`} label={t('doctors.room.at', { location: d.facilityName })} className="min-w-60">
+          <Input name="room" autoComplete="off" maxLength={50} defaultValue={d.room ?? ''} placeholder={t('settings.schedules.roomPlaceholder')} />
+        </Field>
+        <Button type="submit" variant="outline" loading={p.roomBusyId === d.id}>{t('doctors.room.save')}</Button>
+        {p.roomSavedId === d.id && <span role="status">{t('settings.saved')}</span>}
+        {p.roomFailedId === d.id && <span role="alert" className={fieldError}>{t('settings.saveFailed')}</span>}
+      </form>
       <div className="flex flex-col gap-2">
         <p className="font-bold">{d.hasSignature ? t('doctors.signature.has') : t('doctors.signature.none')}</p>
         <p className="text-sm text-muted-foreground">{t('doctors.signature.notice')}</p>

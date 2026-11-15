@@ -112,6 +112,16 @@ public sealed partial class InvitationTests(PostgresFixture sql) : IClassFixture
         return (id, LinkToken().Match(outbox.Sent[^1].Body).Groups[1].Value);
     }
 
+    [Fact]
+    public async Task TheInvitationEmailCarriesTheBrandedHtmlWithTheSameLink()
+    {
+        var (_, token) = await InviteReceptionist();
+        var mail = outbox.Sent[^1];
+        Assert.Contains($"href=\"https://clinic.test/invite/{token}\"", mail.Html, StringComparison.Ordinal);
+        Assert.Contains("Iyer Family Clinic (synthetic)", mail.Html, StringComparison.Ordinal);
+        Assert.Contains("Receptionist", mail.Html, StringComparison.Ordinal);
+    }
+
     [GeneratedRegex(@"https://clinic\.test/invite/([A-Za-z0-9_-]+)")]
     private static partial Regex LinkToken();
 

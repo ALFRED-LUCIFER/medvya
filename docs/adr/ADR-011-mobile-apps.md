@@ -41,7 +41,7 @@ Doctors want the queue, the patient summary and recording on their phone. Patien
 
 ## Deferred (founder, 7 Nov 2026: not now, before store release)
 
-- **Store and Expo account owner:** Apple and Google developer accounts under the company. Apple needs a D-U-N-S number, and the Expo organisation has to be created. This blocks EAS preview builds (MDV-P5-032) and TestFlight.
+- **Store and Expo account owner:** Apple and Google developer accounts under the company. Apple needs a D-U-N-S number, and the Expo organisation has to be created. This blocks EAS and TestFlight (MDV-P5-039). Preview builds no longer need it: CI builds an Android APK and an iOS simulator app without an account (owner decision 15 Nov 2026, MDV-P5-032).
 - **Verified https links:** Universal Links and App Links replace the custom schemes before store release. They need the production domain to host `apple-app-site-association` and `assetlinks.json` (MDV-P5-039).
 
 ## Consequences

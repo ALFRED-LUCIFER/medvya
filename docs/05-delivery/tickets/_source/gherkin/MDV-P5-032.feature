@@ -1,4 +1,4 @@
-Feature: Mobile foundation: `mobile/` Expo workspace, shared tokens and i18n, RTL, CI and EAS builds
+Feature: Mobile foundation: `mobile/` Expo workspace, shared tokens and i18n, RTL, CI and preview builds
   As developer, I want this delivered, so that the 6 Nov 2026 design works for a real practice.
 
   # chunk: Mobile foundation: `mobile/` Expo workspace, shared tokens and i18n, R
@@ -6,7 +6,7 @@ Feature: Mobile foundation: `mobile/` Expo workspace, shared tokens and i18n, RT
   Scenario: Check 1
     Given the workspace
     When CI runs
-    Then both apps type-check, lint, test and produce an EAS preview build
+    Then both apps type-check, lint, test and produce an installable preview build without an Expo or Apple account: an Android APK and an iOS simulator app, kept as CI artifacts
   @todo
   Scenario: Check 2
     Given Arabic is selected

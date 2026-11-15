@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using Host.Platform.Auth;
@@ -15,10 +16,11 @@ using Microsoft.EntityFrameworkCore;
 
 // The platform console host (MDV-P5-040, ADR-014): a separate app for the Medvya team. It reads only the control plane and signs in to the
 // database as medvya_platform, which has no right on any clinic schema.
-// shortcut: no telemetry exporter, forwarded-headers or data-protection key store yet; add them with the console's Azure app and
-// infrastructure (the Entra app registration and resources are people-and-Azure work, see docs/05-delivery/session-handoff.md).
+// shortcut: no telemetry exporter (the allowlist scrubber lives in Host.Api) and no data-protection key store beyond App Service's own
+// %HOME% folder (one instance); move the scrubber to a building block and add both before the console scales out or leaves dev.
 var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.ConfigureKestrel(k => { k.AddServerHeader = false; k.Limits.MaxRequestBodySize = 65_536; });
+builder.Services.AddClientAddress(builder.Configuration); // App Service ends TLS in front: sign-in must send Entra the https redirect address
 
 builder.AddConsoleAuthentication();
 builder.Services.AddAuthorizationBuilder().AddPlatformPolicies();
@@ -57,6 +59,7 @@ builder.Services.AddRateLimiter(o =>
 
 var app = builder.Build();
 
+app.UseForwardedHeaders(); // first, so every later step sees the client's address and protocol
 if (!app.Environment.IsDevelopment()) app.UseHsts();
 // "blob:" lets the approvals viewer show a document it fetched from this host in a frame (a PDF) and nothing from outside this origin.
 app.UseSecurityHeaders("blob:");
@@ -65,7 +68,8 @@ app.UseRateLimiter();
 app.UseStaticFiles();
 app.UseConsoleAuthentication();
 
-app.MapGet("/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous(); // public: deploy smoke tests
+var version = typeof(Program).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+app.MapGet("/health", () => Results.Ok(new { status = "ok", version })).AllowAnonymous(); // public: deploy smoke tests check the version
 app.MapConsoleSession();
 app.MapPlatformConsole();
 app.MapFallbackToFile("{*path:nonfile}", "index.html").AllowAnonymous();

@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Data.Common;
 using Azure.Core;
 using Azure.Identity;
 using Npgsql;
@@ -15,10 +16,25 @@ public static class PostgresDataSources
 {
     public const string EntraScope = "https://ossrdbms-aad.database.windows.net/.default";
 
+    /// <summary>
+    /// Not an Npgsql keyword (removed before Npgsql sees the string): the client id of the user-assigned managed identity whose token signs this
+    /// login in. One host can then hold several narrow logins, one identity each (the platform console, ADR-014); without it the default credential signs in.
+    /// </summary>
+    public const string ManagedIdentityKeyword = "Entra Client Id";
+
     static readonly ConcurrentDictionary<string, Lazy<NpgsqlDataSource>> Sources = new();
 
     public static NpgsqlDataSource For(string connectionString) =>
-        Sources.GetOrAdd(connectionString, cs => new(() => Create(cs, new DefaultAzureCredential()))).Value;
+        Sources.GetOrAdd(connectionString, cs => new(() => { var (npgsql, credential) = Credential(cs); return Create(npgsql, credential); })).Value;
+
+    /// <summary>The connection string Npgsql gets and the credential for its token: the named user-assigned identity, else the default credential.</summary>
+    public static (string ConnectionString, TokenCredential Credential) Credential(string connectionString)
+    {
+        var cs = new DbConnectionStringBuilder { ConnectionString = connectionString };
+        if (!cs.TryGetValue(ManagedIdentityKeyword, out var clientId)) return (connectionString, new DefaultAzureCredential());
+        cs.Remove(ManagedIdentityKeyword);
+        return (cs.ConnectionString, new ManagedIdentityCredential(ManagedIdentityId.FromUserAssignedClientId((string)clientId)));
+    }
 
     /// <summary>
     /// The tenant and user settings are session-scoped and rely on Npgsql resetting a connection (DISCARD ALL) when it goes back to the pool

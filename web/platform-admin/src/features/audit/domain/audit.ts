@@ -23,6 +23,7 @@ const actionKeys = {
   'organisation.reinstate': 'platform.audit.action.organisation_reinstate',
   'organisation.document.view': 'platform.audit.action.organisation_document_view',
   'plan.version.create': 'platform.audit.action.plan_version_create',
+  'organisation.document.checked': 'platform.audit.action.organisation_document_checked',
 } as const;
 export type KnownAction = keyof typeof actionKeys;
 export const knownActions = Object.keys(actionKeys) as KnownAction[];

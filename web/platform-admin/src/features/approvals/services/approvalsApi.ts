@@ -5,8 +5,9 @@ export const fetchQueue = (filter: Filter) => getJson<QueueItem[]>(`/v1/organisa
 
 export const fetchDetail = (tenantId: string) => getJson<Detail>(`/v1/organisations/${tenantId}`);
 
-export async function decide(tenantId: string, action: Action, reason: string): Promise<EmailPreview> {
-  return (await post(`/v1/organisations/${tenantId}/${action}`, { reason })).json() as Promise<EmailPreview>;
+/** For approve, `checkedDocuments` are the documents the reviewer ticked as checked; the server records each with the decision. */
+export async function decide(tenantId: string, action: Action, reason: string, checkedDocuments: readonly string[]): Promise<EmailPreview> {
+  return (await post(`/v1/organisations/${tenantId}/${action}`, action === 'approve' ? { reason, checkedDocuments } : { reason })).json() as Promise<EmailPreview>;
 }
 
 /** The document as bytes for the viewer, held in memory and shown from a blob URL. Nothing is saved or offered for download. */

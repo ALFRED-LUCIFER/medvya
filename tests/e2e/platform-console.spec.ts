@@ -24,6 +24,7 @@ const team = {
   members: [{ id: 'm-1', displayName: 'Ops Admin (synthetic)', email: 'ops.admin@medvya.example', role: 'Owner', hasKey: true, joined: true, lastActiveAt: '2026-11-07T05:00:00Z', accessEndsOn: null }],
 };
 const audit = [
+  { id: 'a3', occurredAt: '2026-11-07T05:02:00Z', action: 'organisation.document.view', resourceType: 'organisation', resourceId: 'd-2', subjectTenantId: 'o-clinic', actor: 'Ops Admin (synthetic)', actorEmail: 'ops.admin@medvya.example', reason: null, subjectName: 'Rao Clinic (synthetic)', detail: 'TaxRegistration' },
   { id: 'a2', occurredAt: '2026-11-07T05:01:00Z', action: 'team.invite', resourceType: 'platform_member', resourceId: 'm-2', subjectTenantId: null, actor: 'Ops Admin (synthetic)', actorEmail: 'ops.admin@medvya.example', reason: 'New licence reviewer joining' },
   { id: 'a1', occurredAt: '2026-11-07T05:00:00Z', action: 'auth.signin', resourceType: 'platform_session', resourceId: 's-1', subjectTenantId: null, actor: 'Ops Admin (synthetic)', reason: null },
 ];
@@ -130,6 +131,11 @@ test('the audit log reads in Arabic, right to left, with actions in words', asyn
   await expect(page.getByRole('heading', { name: 'سجل تدقيق المنصة' })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.dir)).toBe('rtl');
   await expect(page.getByRole('row', { name: /دُعي عضو في الفريق/ })).toContainText('New licence reviewer joining');
+  // F-037: an opened document says which organisation and which document; F-036: who, by name and address.
+  const opened = page.getByRole('row', { name: new RegExp(t('ar', 'platform.audit.action.organisation_document_view')) });
+  await expect(opened).toContainText('Rao Clinic (synthetic)');
+  await expect(opened).toContainText(t('ar', 'platform.approvals.doc.TaxRegistration'));
+  await expect(opened).toContainText('ops.admin@medvya.example');
   await expect(page.getByRole('cell', { name: /team\.|auth\./ })).toHaveCount(0);
   expect(await axe(page)).toEqual([]);
 });

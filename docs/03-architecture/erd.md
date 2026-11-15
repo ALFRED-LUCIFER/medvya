@@ -2884,7 +2884,7 @@ erDiagram
 | `KeyLinks` | 8 | Id |  |
 | `PlanPrices` | 6 | PlanVersionId, Country |  |
 | `PlanVersions` | 14 | Id |  |
-| `AuditEntries` | 10 | Id |  |
+| `AuditEntries` | 12 | Id |  |
 | `Members` | 11 | Id |  |
 | `Sessions` | 8 | Id |  |
 | `SecurityKeys` | 8 | Id |  |
@@ -2947,10 +2947,12 @@ erDiagram
 | `ActorMemberId` | guid | yes |  |
 | `ClientIp` | character varying(45) |  |  |
 | `CorrelationId` | character varying(64) |  |  |
+| `Detail` | character varying(64) |  |  |
 | `OccurredAt` | timestamptz |  |  |
 | `Reason` | character varying(500) |  |  |
 | `ResourceId` | guid | yes |  |
 | `ResourceType` | character varying(64) |  |  |
+| `SubjectName` | character varying(200) |  |  |
 | `SubjectTenantId` | guid | yes |  |
 
 </details>

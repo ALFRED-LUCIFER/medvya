@@ -30,7 +30,7 @@ public sealed class PlatformValidationException(IReadOnlyDictionary<string, stri
 public sealed record TeamMemberView(Guid Id, string DisplayName, string Email, PlatformRole Role, bool HasKey, bool Joined,
     DateTimeOffset? LastActiveAt, DateOnly? AccessEndsOn);
 
-/// <summary>The team and the quarterly access review: due 90 days after the last one, or now when there has been none.</summary>
+/// <summary>The team and the quarterly access review: due 90 days after the last one, or 90 days after the team's first member when there has been none.</summary>
 public sealed record TeamView(IReadOnlyList<TeamMemberView> Members, DateTimeOffset? LastAccessReviewAt, DateTimeOffset AccessReviewDueAt);
 
 /// <summary>A one-hour key link. <see cref="Token"/> exists only in this answer: the database keeps its hash.</summary>
@@ -52,7 +52,7 @@ public interface IPlatformTeam
 }
 
 public sealed record AuditEntryView(Guid Id, DateTimeOffset OccurredAt, string Action, string ResourceType, Guid? ResourceId, Guid? SubjectTenantId,
-    string? Actor, string? ActorEmail, string? Reason);
+    string? Actor, string? ActorEmail, string? Reason, string? SubjectName, string? Detail);
 
 public interface IPlatformAuditLog
 {
@@ -68,8 +68,13 @@ public interface IPlatformAuditLog
 /// </summary>
 public interface IConsoleActions
 {
-    /// <summary>Appends an entry naming the signed-in member, the action, the organisation (null for Medvya-wide data) and the reason (null for a view).</summary>
-    Task RecordAsync(string action, string resourceType, Guid resourceId, Guid? subjectTenantId, string? reason, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Appends an entry naming the signed-in member, the action, the organisation (null for Medvya-wide data) and the reason (null for a view).
+    /// <paramref name="subjectName"/> is the organisation's name and <paramref name="detail"/> a stable code for the part concerned (a document's kind),
+    /// so the log says which organisation and which document without another look-up.
+    /// </summary>
+    Task RecordAsync(string action, string resourceType, Guid resourceId, Guid? subjectTenantId, string? reason, string? subjectName = null, string? detail = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>Display names of console members, for a history that records them as actors. Unknown ids are left out.</summary>
     Task<IReadOnlyDictionary<Guid, string>> MemberNamesAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default);

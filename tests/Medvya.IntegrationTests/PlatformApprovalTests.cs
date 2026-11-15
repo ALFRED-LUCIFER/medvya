@@ -130,6 +130,7 @@ public sealed class PlatformApprovalTests(PostgresFixture sql) : IClassFixture<P
         var entry = Assert.Single(await Decisions(id));
         Assert.Equal("organisation.approve", entry.Action);
         Assert.Equal("Registration certificate and GSTIN checked", entry.Reason);
+        Assert.StartsWith("Review Clinic", entry.SubjectName, StringComparison.Ordinal); // F-037: the organisation by name
         Assert.NotNull(entry.ActorMemberId);
         Assert.Single(sent, m => m.To == "desk@review-clinic.example" && m.Subject.Contains("is approved", StringComparison.Ordinal));
     }
@@ -218,6 +219,7 @@ public sealed class PlatformApprovalTests(PostgresFixture sql) : IClassFixture<P
         Assert.Equal(all, ticks.Select(a => a.ResourceId!.Value).Order());
         var decision = Assert.Single(log, a => a.Action == "organisation.approve");
         Assert.All(ticks, a => Assert.Equal(decision.ActorMemberId, a.ActorMemberId));
+        Assert.Equal(OrganisationDocumentRules.Required(OrganisationType.Clinic, ownerIsDoctor: true).Order(), ticks.Select(a => a.Detail).Order()); // F-037: each tick names its document
         // Only approve asks for ticks; the other decisions do not record any.
         Assert.Equal(HttpStatusCode.OK, (await Decide(c, id, "suspend", "Complaint under review by Medvya")).StatusCode);
         Assert.Equal(all.Length, (await PlatformAudit(id)).Count(a => a.Action == "organisation.document.checked"));
@@ -314,7 +316,10 @@ public sealed class PlatformApprovalTests(PostgresFixture sql) : IClassFixture<P
             var viewed = Assert.Single(await audit.Events.Where(e => e.Action == "organisation.document.view").ToListAsync());
             Assert.Equal(doc, viewed.ResourceId);
         }
-        Assert.Equal("organisation.document.view", Assert.Single(await PlatformAudit(id)).Action);
+        // F-037: the platform entry says which organisation and which document, so the log reads without a look-up.
+        var entry = Assert.Single(await PlatformAudit(id));
+        Assert.Equal(("organisation.document.view", doc, OrganisationDocumentRules.MedicalCouncilRegistration), (entry.Action, entry.ResourceId, entry.Detail));
+        Assert.StartsWith("Review Clinic", entry.SubjectName, StringComparison.Ordinal);
         Assert.Equal(HttpStatusCode.NotFound, (await c.GetAsync(new Uri($"/v1/organisations/{id}/documents/{Guid.NewGuid()}", UriKind.Relative))).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await c.GetAsync(new Uri($"/v1/organisations/{Guid.NewGuid()}/documents/{doc}", UriKind.Relative))).StatusCode);
     }

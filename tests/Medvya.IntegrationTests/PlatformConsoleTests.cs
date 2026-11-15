@@ -430,10 +430,33 @@ public sealed class PlatformConsoleTests(PostgresFixture sql) : IClassFixture<Po
         Assert.Equal(HttpStatusCode.OK, export.StatusCode);
         Assert.Equal("text/csv", export.Content.Headers.ContentType!.MediaType);
         var csv = await export.Content.ReadAsStringAsync();
-        Assert.StartsWith("occurred_at,action,resource_type,resource_id,practice_id,actor,actor_email,reason", csv, StringComparison.Ordinal);
+        Assert.StartsWith("occurred_at,action,resource_type,resource_id,practice_id,practice,detail,actor,actor_email,reason\r\n", csv, StringComparison.Ordinal);
         Assert.Contains("\"'=HYPERLINK(\"\"x\"\") review\"", csv, StringComparison.Ordinal);
         Assert.Contains("\"audit.export\"", csv, StringComparison.Ordinal);
         Assert.Contains("\"Annual audit request\"", csv, StringComparison.Ordinal);
+    }
+
+    // F-037: an entry about an organisation's document carries the organisation's name and the document's kind, in the list and in the export.
+    [Fact]
+    public async Task TheLogNamesTheOrganisationAndTheDocumentOfAnEntry()
+    {
+        var (owner, key) = await Member(PlatformRole.Owner);
+        var (organisation, document) = (Guid.NewGuid(), Guid.NewGuid());
+        await using (var db = Db())
+        {
+            db.AuditEntries.Add(new PlatformAuditEntry
+            {
+                ActorMemberId = owner.Id, Action = "organisation.document.view", ResourceType = "organisation", ResourceId = document, SubjectTenantId = organisation,
+                SubjectName = "=Rao Clinic (synthetic)", Detail = "TaxRegistration", OccurredAt = DateTimeOffset.UtcNow,
+            });
+            await db.SaveChangesAsync();
+        }
+        using var browser = await SignedIn(owner, key);
+        var entry = Assert.Single(await Audit(browser), a => a.GetProperty("resourceId").ValueKind == JsonValueKind.String && a.GetProperty("resourceId").GetGuid() == document);
+        Assert.Equal(("=Rao Clinic (synthetic)", "TaxRegistration"), (entry.GetProperty("subjectName").GetString(), entry.GetProperty("detail").GetString()));
+        var csv = await (await Post(browser, "/v1/audit/export", new { reason = "Annual audit request" })).Content.ReadAsStringAsync();
+        // The name is the applicant's text: a cell a spreadsheet would run as a formula is defused like a reason.
+        Assert.Contains($"{document},{organisation},\"'=Rao Clinic (synthetic)\",\"TaxRegistration\",\"{owner.DisplayName}\"", csv, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -510,6 +533,46 @@ public sealed class PlatformBootstrapTests(PostgresFixture sql) : IClassFixture<
         Assert.Equal(("Asha Verma (synthetic)", "asha.verma@medvya.example", PlatformRole.Owner), (owner.DisplayName, owner.Email, owner.Role));
         var log = await scope.ServiceProvider.GetRequiredService<Medvya.Platform.Application.IPlatformAuditLog>().ListAsync(null, null, 100);
         Assert.All(log.Where(a => a.Action is "team.bootstrap" or "auth.signon"), a => Assert.Equal("Asha Verma (synthetic)", a.Actor));
+    }
+}
+
+/// <summary>
+/// The quarterly access review counts from the last review, or from the team's first member when there has been none: a team that is minutes
+/// old is not "due" (pilot audit #1365). A fresh database, so the first member and the reviews are the ones this test makes.
+/// </summary>
+public sealed class PlatformAccessReviewTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IDisposable
+{
+    readonly WebApplicationFactory<ConsoleProgram> factory = PlatformConsoleTests.CreateFactory(sql);
+
+    public void Dispose() => factory.Dispose();
+
+    [Fact]
+    public async Task TheAccessReviewIsDueNinetyDaysAfterTheFirstMemberThenAfterEachReview()
+    {
+        var joined = DateTimeOffset.UtcNow.AddDays(-30);
+        await using (var db = PlatformConsoleTests.Db(sql))
+        {
+            // The team's first member, since removed: the team is still thirty days old.
+            db.Members.Add(new PlatformMember { DisplayName = "First owner (synthetic)", Email = "first.owner@medvya.example", Role = PlatformRole.Owner, InvitedAt = joined, RemovedAt = DateTimeOffset.UtcNow });
+            await db.SaveChangesAsync();
+        }
+        var (owner, key) = await PlatformConsoleTests.Seed(sql, PlatformRole.Owner);
+        using var browser = await PlatformConsoleTests.SignedIn(factory, owner, key);
+        async Task<(DateTimeOffset? Last, DateTimeOffset Due)> Review()
+        {
+            var team = await browser.GetFromJsonAsync<JsonElement>(new Uri("/v1/team", UriKind.Relative));
+            var last = team.GetProperty("lastAccessReviewAt");
+            return (last.ValueKind == JsonValueKind.Null ? null : last.GetDateTimeOffset(), team.GetProperty("accessReviewDueAt").GetDateTimeOffset());
+        }
+
+        var (never, due) = await Review();
+        Assert.Null(never);
+        Assert.Equal(joined.AddDays(90), due, TimeSpan.FromSeconds(1)); // sixty days from now: not due on the day the team is read
+
+        Assert.Equal(HttpStatusCode.NoContent, (await PlatformConsoleTests.Post(browser, "/v1/team/access-review", new { reason = "Quarterly review of console access" })).StatusCode);
+        var (last, next) = await Review();
+        Assert.Equal(DateTimeOffset.UtcNow, last!.Value, TimeSpan.FromMinutes(1));
+        Assert.Equal(last.Value.AddDays(90), next, TimeSpan.FromSeconds(1));
     }
 }
 

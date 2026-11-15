@@ -98,7 +98,7 @@ public sealed class PlatformSession
 /// </summary>
 public sealed class PlatformAuditEntry
 {
-    public const int ReasonMin = 5, ReasonMax = 500;
+    public const int ReasonMin = 5, ReasonMax = 500, SubjectNameMax = 200, DetailMax = 64;
 
     [Classification(DataClass.Internal)] public Guid Id { get; init; } = Guid.CreateVersion7();
     [Classification(DataClass.Internal)] public Guid? ActorMemberId { get; init; }
@@ -107,6 +107,10 @@ public sealed class PlatformAuditEntry
     [Classification(DataClass.Internal)] public required string ResourceType { get; init; }
     [Classification(DataClass.Internal)] public Guid? ResourceId { get; init; }
     [Classification(DataClass.Internal)] public Guid? SubjectTenantId { get; init; }
+    /// <summary>The organisation's name when the entry was written, so the log reads without a look-up in the country's database. A business name.</summary>
+    [Classification(DataClass.Internal)] public string? SubjectName { get; init; }
+    /// <summary>Which part of the resource, as a stable code: for a document entry its kind ("TaxRegistration"). Never free text.</summary>
+    [Classification(DataClass.Internal)] public string? Detail { get; init; }
     /// <summary>Typed by a Medvya team member. The console never shows patient data, and the form asks for none.</summary>
     [Classification(DataClass.Internal)] public string? Reason { get; init; }
     [Classification(DataClass.Internal)] public DateTimeOffset OccurredAt { get; init; }

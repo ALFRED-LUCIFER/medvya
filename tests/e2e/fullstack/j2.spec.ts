@@ -17,11 +17,9 @@ let studioPath = '';
  * nurse's part when nurse intake is on; without it the desk marks the patient ready for the doctor. */
 /** Meera's chart from the patient search in the top bar. */
 async function openChart(page: Page) {
-  await page.getByRole('button', { name: 'Search patients' }).click();
-  const search = page.getByRole('dialog', { name: 'Search patients' });
-  const input = search.getByRole('combobox', { name: 'Name, MRN or phone' });
+  const input = page.getByRole('banner').getByRole('combobox', { name: 'Search patients' }); // inline in the top bar from 768 px (MDV-P2-003)
   await input.fill('Meera');
-  await expect(search.getByRole('option')).toHaveCount(1);
+  await expect(page.locator('#gs-inline-panel').getByRole('option')).toHaveCount(1);
   await input.press('ArrowDown');
   await input.press('Enter');
   await expect(page).toHaveURL(/\/app\/patients\/[0-9a-f-]{36}$/);

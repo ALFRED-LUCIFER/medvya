@@ -151,6 +151,8 @@ test('a quick registration by keyboard alone', async ({ page }) => {
   const sex = page.getByRole('radio');
   await tabTo(page, sex.first());
   while (!(await page.getByRole('radio', { name: 'Female', exact: true }).isChecked())) await page.keyboard.press('ArrowDown');
+  await tabTo(page, page.getByRole('switch', { name: 'Treatment' }));
+  await page.keyboard.press('Space'); // #1365 F-040: the consent is ticked by the desk, with the keyboard too
   await tabTo(page, page.getByRole('button', { name: 'Register patient' }));
   await page.keyboard.press('Enter');
   await expect(page.getByRole('heading', { name: 'Kavya Iyer is registered' })).toBeVisible();

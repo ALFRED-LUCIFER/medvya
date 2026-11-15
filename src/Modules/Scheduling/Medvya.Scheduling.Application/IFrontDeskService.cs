@@ -91,6 +91,12 @@ public sealed record ClinicToday(DateTimeOffset Now, string TimeZone, int Booked
 public sealed record StaffName(Guid Id, string Name);
 
 /// <summary>
+/// The caller's own day at another location of the organisation (#1365 F-061): how many of their patients wait there and how many visits they
+/// have there today. Counts only: no patient, visit or staff detail crosses a location.
+/// </summary>
+public sealed record ElsewhereCount(Guid FacilityId, int Waiting, int Today);
+
+/// <summary>
 /// How late a doctor is running, in whole minutes: the later of how late the current consultation started and how long the
 /// earliest waiting patient is past their appointment time; 0 when on time.
 /// shortcut: from the board's states and times only; learn per-doctor consultation lengths when visit timings exist (P2).
@@ -142,6 +148,13 @@ public interface IFrontDeskService
 
     /// <exception cref="SchedulingAccessDeniedException">May not configure the facility (owner, practice admin).</exception>
     Task<ClinicToday> GetClinicTodayAsync(Guid facilityId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The caller's own visits today at the organisation's other locations where they hold an active membership with board access, one row per
+    /// location that has any; never another doctor's visits, never a location the caller does not work at.
+    /// </summary>
+    /// <exception cref="SchedulingAccessDeniedException">No board access at this facility.</exception>
+    Task<IReadOnlyList<ElsewhereCount>> GetElsewhereAsync(Guid facilityId, CancellationToken cancellationToken = default);
 
     /// <summary>The visit's token slip, to print or reprint (MDV-P2-046); the same token every time.</summary>
     /// <exception cref="AppointmentNotFoundException">No such appointment in this tenant.</exception>

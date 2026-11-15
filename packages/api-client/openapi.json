@@ -1206,6 +1206,45 @@
         }
       }
     },
+    "/v1/encounters/{encounterId}/take-over": {
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "encounterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/TakeOverVisit"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/v1/encounters/{encounterId}/note/addenda": {
       "post": {
         "tags": [
@@ -2943,6 +2982,38 @@
         }
       }
     },
+    "/v1/front-desk/elsewhere": {
+      "get": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "facilityId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ElsewhereCount"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/queue/tv": {
       "get": {
         "tags": [
@@ -4064,6 +4135,38 @@
         }
       }
     },
+    "/v1/me/signature": {
+      "get": {
+        "tags": [
+          "Host.Api"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Host.Api"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Host.Api"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/v1/organisation/request": {
       "get": {
         "tags": [
@@ -4423,6 +4526,25 @@
         "responses": {
           "200": {
             "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/staff/plan": {
+      "get": {
+        "tags": [
+          "Host.Api"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanSeats"
+                }
+              }
+            }
           }
         }
       }
@@ -9968,6 +10090,10 @@
               "null",
               "string"
             ]
+          },
+          "ownSignature": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -10036,6 +10162,36 @@
               "type": "string",
               "format": "uuid"
             }
+          }
+        }
+      },
+      "ElsewhereCount": {
+        "required": [
+          "facilityId",
+          "waiting",
+          "today"
+        ],
+        "type": "object",
+        "properties": {
+          "facilityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "waiting": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "today": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -11420,6 +11576,39 @@
           }
         }
       },
+      "PlanSeats": {
+        "required": [
+          "doctors",
+          "staff",
+          "doctorFree",
+          "staffFree"
+        ],
+        "type": "object",
+        "properties": {
+          "doctors": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "staff": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "doctorFree": {
+            "type": "boolean"
+          },
+          "staffFree": {
+            "type": "boolean"
+          }
+        }
+      },
       "PregnancyDates": {
         "required": [
           "lmp",
@@ -11610,6 +11799,10 @@
             ],
             "format": "uint32",
             "default": 0
+          },
+          "signatureLine": {
+            "type": "boolean",
+            "default": true
           }
         }
       },
@@ -12830,6 +13023,12 @@
               "string"
             ]
           },
+          "signatureLine": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
           "version": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
@@ -13608,6 +13807,20 @@
         "type": "object",
         "properties": {
           "country": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "TakeOverVisit": {
+        "required": [
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "reason": {
             "type": [
               "null",
               "string"

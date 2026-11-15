@@ -199,6 +199,10 @@ public static class SchedulingEndpoints
                     await patients.IncompleteCountAsync(ct), doctors);
             })
             .AuditedWithErrors("clinic_today.read", SchedulingAudit.MetricsResource, SchedulingAudit.Operations);
+        // My day's hint for a doctor who works at several locations (#1365 F-061): the caller's own counts at their other locations, nothing else.
+        frontDesk.MapGet("/elsewhere", (Guid? facilityId, [FromServices] IFrontDeskService service, CancellationToken ct) =>
+                service.GetElsewhereAsync(facilityId ?? Guid.Empty, ct))
+            .AuditedWithErrors("front_desk.elsewhere.read", SchedulingAudit.MetricsResource, SchedulingAudit.Operations, window: AuditWindow.Repeated); // My day polls it
         // Live board updates (MDV-P1-029): ids and states only. The hub checks facility and capability on connect and on every call.
         app.MapHub<BoardHub>(BoardHub.Path)
             .RequireCapability(Capability.CheckInQueue, Access.Read, Access.Full)

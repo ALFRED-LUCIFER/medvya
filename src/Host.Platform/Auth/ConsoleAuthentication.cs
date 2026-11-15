@@ -55,6 +55,8 @@ public static partial class ConsoleAuthentication
                 o.ResponseType = OpenIdConnectResponseType.Code;
                 o.ResponseMode = OpenIdConnectResponseMode.Query;
                 o.UsePkce = true;
+                // Invitations match preferred_username, email or upn (ProviderEmails, from the one directory Medvya administers); Entra sends email only for this scope.
+                o.Scope.Add("email");
                 o.SaveTokens = false;
                 o.MapInboundClaims = false;
                 o.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
@@ -78,8 +80,11 @@ public static partial class ConsoleAuthentication
         // Entra's object id is stable for the person across applications; "sub" is per application. The dev provider sends only "sub".
         var subject = principal.FindFirst("oid")?.Value ?? principal.FindFirst("sub")?.Value;
         var link = ctx.Properties?.Items.TryGetValue(LinkItem, out var l) == true ? l : null;
+        // Who the person is, for the team list and the audit log. Entra sends the address as "email" only when configured, else as "preferred_username".
+        var name = principal.FindFirst("name")?.Value;
+        var email = principal.FindFirst("email")?.Value ?? principal.FindFirst("preferred_username")?.Value;
         var session = issuer is null || subject is null ? null
-            : await ctx.HttpContext.RequestServices.GetRequiredService<IPlatformSignIn>().SignOnAsync(issuer, subject, link, ctx.HttpContext.RequestAborted);
+            : await ctx.HttpContext.RequestServices.GetRequiredService<IPlatformSignIn>().SignOnAsync(issuer, subject, ProviderEmails.Of(principal), link, name, email, ctx.HttpContext.RequestAborted);
         if (session is null)
         {
             SignOnRefused(ctx.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(ConsoleAuthentication)));
@@ -117,6 +122,7 @@ public static partial class ConsoleAuthentication
     public static WebApplication UseConsoleAuthentication(this WebApplication app)
     {
         app.UseAuthentication();
+        app.UseSignedInRateLimit(); // before authorization, so a refused (401, 403) request is counted too
         app.Use(async (ctx, next) =>
         {
             if (ctx.Request.Cookies.ContainsKey(CookieName)
@@ -146,7 +152,7 @@ public static partial class ConsoleAuthentication
 
         app.MapGet("/v1/me", async (ClaimsPrincipal principal, [FromServices] IPlatformSignIn signIn, CancellationToken ct) =>
             await signIn.ValidateAsync(Read(principal, SessionIdClaim)!.Value, Read(principal, ClaimTypes.NameIdentifier)!.Value, activity: false, ct) is { } s
-                ? Results.Ok(new { s.DisplayName, Role = s.Role.ToString(), s.KeyVerified, s.HasKey, s.CanRegister })
+                ? Results.Ok(new { s.DisplayName, s.Email, Role = s.Role.ToString(), s.KeyVerified, s.HasKey, s.CanRegister, s.OtherOwner })
                 : Results.Unauthorized())
             .RequireAuthorization(PlatformPolicies.SignedOn);
 
@@ -162,7 +168,13 @@ public static partial class ConsoleAuthentication
                 ? Results.Content(options, "application/json")
                 : Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "A key link from an owner is needed"));
         key.MapPost("/registration", async (ClaimsPrincipal principal, [FromBody] JsonElement response, [FromServices] IPlatformSignIn signIn, CancellationToken ct) =>
-            await signIn.CompleteKeyRegistrationAsync(Session(principal), response.GetRawText(), ct) ? Results.NoContent() : Results.Unauthorized());
+            await signIn.CompleteKeyRegistrationAsync(Session(principal), response.GetRawText(), ct) switch
+            {
+                KeyRegistration.Registered => Results.NoContent(),
+                // The reason, so the page can say what to use instead; the rule itself is unchanged (still refused, still logged).
+                KeyRegistration.SyncedPasskey => Results.Json(new { errors = new Dictionary<string, string[]> { ["key"] = ["synced"] } }, statusCode: StatusCodes.Status401Unauthorized),
+                _ => Results.Unauthorized(),
+            });
 
         app.MapPost("/bff/logout", async (HttpContext http, [FromServices] IPlatformSignIn signIn) =>
         {

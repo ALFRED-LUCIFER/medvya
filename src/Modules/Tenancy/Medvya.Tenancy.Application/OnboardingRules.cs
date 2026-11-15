@@ -45,8 +45,8 @@ public abstract partial class OnboardingRules
     protected abstract Regex LicenceNumber { get; }
     protected abstract Regex? TaxIdFormat { get; }
 
-    /// <summary>Whether the text is a well-formed tax number of this country (GSTIN or TRN; format only, no checksum).</summary>
-    public bool IsTaxId(string tax) => tax.Length <= 20 && (TaxIdFormat?.IsMatch(tax) ?? true);
+    /// <summary>Whether the text is a well-formed tax number of this country (India: a GSTIN with its check character; UAE: a TRN of 15 digits).</summary>
+    public virtual bool IsTaxId(string tax) => tax.Length <= 20 && (TaxIdFormat?.IsMatch(tax) ?? true);
 
     /// <summary>
     /// The wizard's steps (6 Nov design): 1 your practice, 2 hours and services, 3 your team, 4 your patients, 5 payments and messages.
@@ -164,10 +164,14 @@ public abstract partial class OnboardingRules
         Text(c?.Name, "clinic.name", 200, true, e);
         if (OutboundText.HasLink(c?.Name)) e.Add(new("clinic.name", "link")); // the practice name goes into invitation emails (#886)
         Text(c?.Address, "clinic.address", 500, true, e);
-        Text(c?.RegistrationNumber, "clinic.registrationNumber", 50, false, e);
+        // A Clinic's request must carry its registration certificate and its tax registration (ADR-016, OrganisationDocumentRules.Required):
+        // Medvya's reviewer compares each certificate with the number given here, so both numbers are required with them.
+        var clinic = c?.Type == nameof(OrganisationType.Clinic);
+        Text(c?.RegistrationNumber, "clinic.registrationNumber", 50, clinic, e);
         var tax = c?.TaxId?.Trim();
-        if (!string.IsNullOrEmpty(tax) && TaxIdFormat is { } format && !format.IsMatch(tax)) e.Add(new("clinic.taxId", "format"));
-        else if (tax is { Length: > 20 }) e.Add(new("clinic.taxId", "tooLong"));
+        if (string.IsNullOrEmpty(tax)) { if (clinic) e.Add(new("clinic.taxId", "required")); }
+        else if (tax.Length > 20) e.Add(new("clinic.taxId", "tooLong"));
+        else if (!IsTaxId(tax)) e.Add(new("clinic.taxId", "format"));
     }
 
     static void Hours(OnboardingHours? h, List<OnboardingError> e)
@@ -247,8 +251,28 @@ internal sealed partial class IndiaOnboardingRules : OnboardingRules
     public override string Currency => "INR";
     public override string TimeZone => "Asia/Kolkata";
     protected override Regex LicenceNumber => RegistrationNumber();
-    // GSTIN: 2-digit state, 10-character PAN, entity number, "Z", check character. Format only; the checksum is not verified.
+    // GSTIN: 2-digit state, 10-character PAN, entity number, "Z", check character.
     protected override Regex? TaxIdFormat => Gstin();
+
+    const string Base36 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+    /// <summary>
+    /// The format, then the check character: each of the first 14 characters as a base-36 digit, weighted 1, 2, 1, 2 ..., the two base-36
+    /// digits of each product added up; the 15th character brings the total to a multiple of 36. A mistyped GSTIN fails it.
+    /// shortcut: the number is not looked up in the GST register, so a well-formed number of another business passes; the reviewer compares
+    /// it with the uploaded certificate. Add the register lookup if Medvya gets access to the GST API.
+    /// </summary>
+    public override bool IsTaxId(string tax)
+    {
+        if (!base.IsTaxId(tax)) return false;
+        var sum = 0;
+        for (var i = 0; i < 14; i++)
+        {
+            var product = Base36.IndexOf(tax[i], StringComparison.Ordinal) * (i % 2 == 0 ? 1 : 2);
+            sum += product / 36 + product % 36;
+        }
+        return tax[14] == Base36[(36 - sum % 36) % 36];
+    }
 
     // shortcut: the National Medical Commission and the state medical councils; names stay English and the list is not exhaustive
     // (no council for union territories without one). Replace with the NMC register lookup when verification ships (MDV-P1-007).
@@ -282,6 +306,7 @@ internal sealed partial class UaeOnboardingRules : OnboardingRules
 
     // Licences look like GD-29918 (prefix, dash, digits); other forms are letters and digits with dashes.
     [GeneratedRegex(@"^[A-Za-z0-9][A-Za-z0-9/\-]{3,19}$")] private static partial Regex Licence();
-    // shortcut: TRN is optional (only VAT-registered facilities have one); when given it is exactly 15 digits.
+    // A TRN is exactly 15 digits. shortcut: no check digit is verified (the Federal Tax Authority publishes none); the reviewer compares the
+    // number with the uploaded certificate. Add a register lookup if one becomes available.
     [GeneratedRegex(@"^\d{15}$")] private static partial Regex Trn();
 }

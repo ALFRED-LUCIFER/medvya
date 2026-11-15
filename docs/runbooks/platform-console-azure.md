@@ -54,5 +54,5 @@ You need: an Application Administrator in the company Entra tenant, Key Vault Se
 ## Later
 
 - **Secret rotation:** the client secret expires after one year. Run step 1 again (it replaces the secret), then restart the console web app.
-- **Bootstrap owner:** `Platform:BootstrapOwner` is ignored once the team has a member; leave the variable as it is.
+- **Bootstrap owner:** `Platform:BootstrapOwner` is ignored once the team has a member; leave the variable as it is. The owner's name and address are not configured: each sign-on takes them from the company sign-on (the `name` claim, and `email` or `preferred_username`), for every member, so Team access and the audit log name the person. A first key must be a hardware security key (USB or NFC): a passkey that syncs between devices is refused, and the sign-in page says so.
 - **Lost key:** another owner verifies the person on a video call and issues a recovery link (Team access); nobody recovers their own key.

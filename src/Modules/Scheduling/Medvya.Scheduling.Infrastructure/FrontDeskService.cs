@@ -20,7 +20,8 @@ namespace Medvya.Scheduling.Infrastructure;
 /// </summary>
 public sealed partial class FrontDeskService(
     SchedulingDbContext db, SchedulingContext context, DoctorDayTransaction transaction, IBoardNotifier notifier, IOptions<SchedulingOptions> options,
-    ILogger<FrontDeskService> log, IEnumerable<IHandoffGate> handoffGates, IEnumerable<IOpenConsultations> consultations, QueueOrdering ordering) : IFrontDeskService
+    ILogger<FrontDeskService> log, IEnumerable<IHandoffGate> handoffGates, IEnumerable<IOpenConsultations> consultations, QueueOrdering ordering,
+    Medvya.Tenancy.Application.IMembershipDirectory memberships) : IFrontDeskService
 {
     /// <summary>Meter of front-desk measurements. Values are durations only; the one tag is the opaque tenant id.</summary>
     public const string MeterName = "Medvya.FrontDesk";
@@ -186,6 +187,26 @@ public sealed partial class FrontDeskService(
         var doctors = (await context.CalendarsAsync(facilityId, cancellationToken)).Where(c => c.Kind == CalendarKind.Doctor).Select(c => new StaffName(c.Id, c.Name)).ToList();
         return new(now, facility.TimeZone, visits.Count(v => !v.WalkIn), visits.Count(v => v.State == AppointmentState.Booked), arrived.Count(v => v.WalkIn), arrived.Count(v => !v.WalkIn),
             waiting.Count, waiting.Count == 0 ? null : (int)(now - waiting.Min()).TotalMinutes, doctors);
+    }
+
+    public async Task<IReadOnlyList<ElsewhereCount>> GetElsewhereAsync(Guid facilityId, CancellationToken cancellationToken = default)
+    {
+        await context.RequireAsync(facilityId, SchedulingAccess.CanViewBoard, cancellationToken);
+        if (context.UserId is not { } me) return [];
+        var (now, states, result) = (context.Now, VisitFlow.BoardStates.ToArray(), new List<ElsewhereCount>());
+        // Only the caller's own active memberships in this organisation, and only where that membership opens the board, as the board itself asks.
+        foreach (var other in (await memberships.ForCurrentUserAsync(cancellationToken)).Where(m => m.TenantId == context.TenantId && m.FacilityId != facilityId).Select(m => m.FacilityId).Distinct())
+        {
+            if (!await context.AllowsAsync(other, SchedulingAccess.CanViewBoard, cancellationToken)) continue;
+            var (_, zone) = await context.FacilityAsync(other, cancellationToken);
+            var date = ScheduleRules.LocalDate(now, zone);
+            var (from, to) = (ScheduleRules.Instant(date, TimeOnly.MinValue, zone), ScheduleRules.Instant(date.AddDays(1), TimeOnly.MinValue, zone));
+            // The caller's own calendar only (a doctor's calendar id is their user id).
+            var mine = await db.Appointments.AsNoTracking().Where(a => a.FacilityId == other && a.CalendarId == me && a.Start >= from && a.Start < to && states.Contains(a.State))
+                .Select(a => a.State).ToListAsync(cancellationToken);
+            if (mine.Count > 0) result.Add(new(other, mine.Count(VisitFlow.CanReassign), mine.Count));
+        }
+        return result;
     }
 
     public async Task<BoardCard> ReassignAsync(Guid appointmentId, ReassignVisit command, CancellationToken cancellationToken = default)

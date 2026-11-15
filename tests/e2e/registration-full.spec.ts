@@ -93,10 +93,15 @@ test('India: full registration in steps, with Aadhaar last 4 only, the PIN rule 
   await page.getByLabel('Policy / member number').fill('SYN-23-000411-01');
   await next(page);
 
-  // Consents (MDV-P1-019): treatment is locked on, marketing starts off, reminders are chosen per channel.
+  // Consents (MDV-P1-019, #1365 F-040): nothing is pre-ticked; treatment is the desk's explicit tick and Continue refuses without it.
   await expect(page.getByRole('heading', { name: 'Consents', level: 2 })).toBeFocused();
-  await expect(page.getByRole('switch', { name: 'Treatment' })).toBeDisabled();
-  await expect(page.getByRole('switch', { name: 'Treatment' })).toBeChecked();
+  await expect(page.getByRole('switch', { name: 'Treatment' })).not.toBeChecked();
+  await expect(page.getByRole('switch', { name: 'Patient portal' })).not.toBeChecked();
+  await expect(page.getByText('Every channel is off until the patient says yes', { exact: false })).toBeVisible(); // F-041: the text agrees with the switches
+  await next(page);
+  await expectSummary(page, ['Treatment: Required.']);
+  await page.getByRole('switch', { name: 'Treatment' }).check();
+  await expect(summary(page)).toBeHidden(); // the page settles before the next tick
   await expect(page.getByRole('switch', { name: 'Health tips and offers' })).not.toBeChecked();
   await expect(page.getByRole('switch', { name: 'Link to ABHA' })).not.toBeChecked();
   // MDV-AUDIT-1106: no reminder channel is pre-ticked (consent is the patient's to give); the desk ticks SMS and WhatsApp.
@@ -129,7 +134,7 @@ test('India: full registration in steps, with Aadhaar last 4 only, the PIN rule 
     emergencyContact: { name: 'Suresh Pillai', relationship: 'Spouse', phone: '+91 90000 00412' }, guardian: null,
     consents: { policyVersion: '2026-11-draft', decisions: [
       { type: 'Treatment', channel: null, granted: true }, { type: 'Reminders', channel: 'WhatsApp', granted: true }, { type: 'Reminders', channel: 'Sms', granted: true }, { type: 'Reminders', channel: 'Email', granted: false },
-      { type: 'InformationExchange', channel: null, granted: false }, { type: 'Portal', channel: null, granted: true }, { type: 'Marketing', channel: null, granted: false }] },
+      { type: 'InformationExchange', channel: null, granted: false }, { type: 'Portal', channel: null, granted: false }, { type: 'Marketing', channel: null, granted: false }] },
   });
   expect(body).not.toHaveProperty('countryCode'); // the country is the tenant's, never sent
   expect(body).not.toHaveProperty('facilityId');
@@ -166,6 +171,7 @@ test('UAE: Arabic name typed right to left, an expired Emirates ID warns, the em
   await next(page); // payer left for later
   // The emirate chosen in the address names the HIE on the consent (MDV-P1-014, MDV-P1-019).
   await expect(page.getByRole('switch', { name: 'Share with NABIDH' })).not.toBeChecked();
+  await page.getByRole('switch', { name: 'Treatment' }).check();
   await next(page);
   await expect(page.getByText('فاطمة المنصوري', { exact: false }).first()).toBeVisible();
   await page.getByRole('button', { name: 'Register patient' }).click();
@@ -227,6 +233,7 @@ test('a minor needs a guardian before saving, in quick mode too, and the guardia
   await page.getByRole('textbox', { name: 'Date of birth (required)', exact: true }).fill('2016-05-01');
   await page.getByRole('radio', { name: 'Male', exact: true }).check();
   await expect(page.getByText('Required: the patient is under 18.')).toBeVisible();
+  await page.getByRole('switch', { name: 'Treatment' }).check();
   await page.getByRole('button', { name: 'Register patient' }).click();
   await expectSummary(page, ['Guardian (if under 18): A guardian is required: the patient is under 18.']);
   expect(saves).toHaveLength(0);

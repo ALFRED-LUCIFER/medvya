@@ -745,6 +745,9 @@ namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<bool>("SignatureLine")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("TaxNumber")
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");

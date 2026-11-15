@@ -11,7 +11,7 @@ import DocumentViewer from './DocumentViewer';
 export type DetailVm = {
   selected: boolean; state: 'loading' | 'error' | 'ready'; notFound: boolean; detail: Detail | null;
   canDecide: boolean; allowed: readonly Action[]; blockedByDpa: boolean;
-  checked: readonly string[]; canTick: boolean; blockedByChecks: boolean; onCheck: (id: string, on: boolean) => void;
+  checked: readonly string[]; opened: readonly string[]; canTick: boolean; blockedByChecks: boolean; onCheck: (id: string, on: boolean) => void;
   pending: Action | null; form: UseFormReturn<ReasonForm>; busy: boolean; problem: string | null; sent: EmailPreview | null;
   onStart: (a: Action) => void; onCancel: () => void; onConfirm: FormEventHandler; onDismissSent: () => void;
   viewing: { doc: DocumentView; url: string; contentType: string; openedAt: Date } | null; viewerFailed: boolean; opening: string | null;
@@ -70,14 +70,17 @@ export default function ApprovalDetail({ vm, operator }: { vm: DetailVm; operato
           <TableBody>
             {d.documents.map(doc => {
               const name = isDocumentKind(doc.kind) ? t(`platform.approvals.doc.${doc.kind}` as MessageKey) : doc.kind;
+              const unopened = !vm.opened.includes(doc.id);
               return (
                 <TableRow key={doc.id}>
                   <TableHead scope="row" className="font-semibold">{name}</TableHead>
                   <TableCell label={t('platform.approvals.docs.checks')}>{t('platform.approvals.check.format', { type: doc.contentType === 'application/pdf' ? 'PDF' : doc.contentType.replace('image/', '').toUpperCase(), size: sizeLabel(doc.sizeBytes) })}</TableCell>
                   {vm.canTick && (
                     <TableCell label={t('platform.approvals.docs.checked')}>
-                      <ChoiceRow type="checkbox" checked={vm.checked.includes(doc.id)} onChange={e => vm.onCheck(doc.id, e.target.checked)}
-                        aria-label={t('platform.approvals.docs.checkNamed', { name })}>{t('platform.approvals.docs.checked')}</ChoiceRow>
+                      {/* A document is ticked only after it was opened; until then the box is off and says why. */}
+                      <ChoiceRow type="checkbox" checked={vm.checked.includes(doc.id)} disabled={unopened} onChange={e => vm.onCheck(doc.id, e.target.checked)}
+                        aria-label={t('platform.approvals.docs.checkNamed', { name })} aria-describedby={unopened ? `approvals-open-first-${doc.id}` : undefined}>{t('platform.approvals.docs.checked')}</ChoiceRow>
+                      {unopened && <p id={`approvals-open-first-${doc.id}`} className="text-sm text-muted-foreground">{t('platform.approvals.docs.openFirst')}</p>}
                     </TableCell>
                   )}
                   <TableCell>
@@ -156,7 +159,8 @@ export function DecisionBar({ vm }: { vm: DetailVm }) {
         const Icon = icons[a];
         const blocked = a === 'approve' && (vm.blockedByDpa || vm.blockedByChecks);
         return (
-          <Button key={a} variant={isDestructive(a) ? 'destructive' : isFilled(a) ? 'default' : 'outline'} disabled={blocked}
+          // One filled button per view: Reject and Suspend are outlined in the danger tokens and say what they do in words and icon (F-052).
+          <Button key={a} variant={isFilled(a) ? 'default' : 'outline'} className={isDestructive(a) ? 'border-danger-border text-danger-text' : undefined} disabled={blocked}
             aria-describedby={blocked ? (vm.blockedByDpa ? 'approvals-dpa' : 'approvals-checks') : undefined} onClick={() => vm.onStart(a)}>
             <Icon aria-hidden />{t(`platform.approvals.action.${a}` as MessageKey)}
           </Button>

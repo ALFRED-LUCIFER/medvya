@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { BoardCard } from '../../front-desk/domain/board';
-import { ageOn, escalatedVisits, MAX_FLAGS, nextPatient, patientIdsOf, todayVisits } from './today';
+import { ageOn, elsewhereLines, escalatedVisits, MAX_FLAGS, nextPatient, patientIdsOf, todayVisits } from './today';
 
 const card = (id: string, calendarId: string, state: BoardCard['state'], start: string, since = start): BoardCard => ({
   id, reference: id, patientId: `p-${id}`, patientName: id, dateOfBirth: null, registrationIncomplete: false, calendarId, calendarName: calendarId,
@@ -59,4 +59,14 @@ describe('patientIdsOf', () => {
     expect(patientIdsOf([{ ...twice[0]!, patientId: '' }])).toEqual([]); // a visit without a patient has nothing to look up
   });
   it('stays inside what the server answers per lookup', () => expect(MAX_FLAGS).toBe(100));
+});
+
+describe('elsewhereLines (#1365 F-061)', () => {
+  const memberships = [{ id: 'm-2', facilityId: 'f-2', facilityName: 'Velachery' }, { id: 'm-3', facilityId: 'f-3', facilityName: 'Aundh' }];
+  it('names each location by the membership that switches there, waiting patients first, and drops what the session does not list', () => {
+    expect(elsewhereLines([{ facilityId: 'f-3', waiting: 0, today: 2 }, { facilityId: 'f-2', waiting: 1, today: 1 }, { facilityId: 'f-9', waiting: 4, today: 4 },
+      { facilityId: 'f-2', waiting: 0, today: 0 }], memberships)).toEqual([
+      { membershipId: 'm-2', facilityName: 'Velachery', waiting: 1, today: 1 }, { membershipId: 'm-3', facilityName: 'Aundh', waiting: 0, today: 2 }]);
+    expect(elsewhereLines([], memberships)).toEqual([]);
+  });
 });

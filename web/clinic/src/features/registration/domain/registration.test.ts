@@ -7,9 +7,9 @@ import {
 
 // Synthetic values only (IDs fail their checksums).
 const lakshmi = { ecName: 'Lakshmi Nair', ecRelationship: 'Spouse', ecPhone: '+91 90000 00209' };
-const deepak: RegistrationForm = { ...emptyForm, fullName: 'Deepak Nair', mobile: '+91 90000 00201', dateOfBirth: '1979-08-14', sexAtBirth: 'Male', ...lakshmi };
+const deepak: RegistrationForm = { ...emptyForm, consentTreatment: true, fullName: 'Deepak Nair', mobile: '+91 90000 00201', dateOfBirth: '1979-08-14', sexAtBirth: 'Male', ...lakshmi };
 const fatima: RegistrationForm = {
-  ...emptyForm, fullName: 'Fatima Al Mansoori', mobile: '050 000 0458', dateOfBirth: '1988-02-03', sexAtBirth: 'Female', emiratesId: '784-1988-1234567-1',
+  ...emptyForm, consentTreatment: true, fullName: 'Fatima Al Mansoori', mobile: '050 000 0458', dateOfBirth: '1988-02-03', sexAtBirth: 'Female', emiratesId: '784-1988-1234567-1',
   ecName: 'Ahmed Al Mansoori', ecRelationship: 'Spouse', ecPhone: '050 000 0459',
 };
 const today = '2026-10-26';
@@ -53,7 +53,7 @@ describe('duplicate check while typing', () => {
 
 describe('quick registration', () => {
   it('needs name, mobile, date of birth or (India) age, and sex', () => {
-    expect(errors('IN', true, emptyForm)).toEqual({ fullName: 'required', mobile: 'required', dateOfBirth: 'required', sexAtBirth: 'required' });
+    expect(errors('IN', true, emptyForm)).toEqual({ fullName: 'required', mobile: 'required', dateOfBirth: 'required', sexAtBirth: 'required', consentTreatment: 'required' });
     expect(errors('IN', true, { ...deepak, ageInstead: true, ageYears: '131' })).toEqual({ ageYears: 'out_of_range' });
     expect(errors('IN', true, deepak)).toEqual({});
   });
@@ -243,11 +243,11 @@ describe('family, emergency contact and guardian (MDV-P1-020)', () => {
 });
 
 describe('consents (MDV-P1-019)', () => {
-  it('always grants treatment and records every other choice as its own decision, declined ones too', () => {
+  it('records treatment as ticked and every other choice as its own decision, declined ones too', () => {
     const set = toRegisterRequest({ ...deepak, consentWhatsApp: true, consentSms: true }, 'IN', false, null).consents;
     expect(set.policyVersion).toBe(consentPolicyVersion);
     expect(set.decisions.map(d => `${d.type}${d.channel ? `/${d.channel}` : ''}=${d.granted}`)).toEqual([
-      'Treatment=true', 'Reminders/WhatsApp=true', 'Reminders/Sms=true', 'Reminders/Email=false', 'InformationExchange=false', 'Portal=true', 'Marketing=false']);
+      'Treatment=true', 'Reminders/WhatsApp=true', 'Reminders/Sms=true', 'Reminders/Email=false', 'InformationExchange=false', 'Portal=false', 'Marketing=false']);
   });
 
   it('asks only for treatment in quick mode, and marketing starts off', () => {
@@ -257,5 +257,15 @@ describe('consents (MDV-P1-019)', () => {
 
   it('starts with every reminder channel off until the patient ticks one (MDV-AUDIT-1106)', () => {
     expect([emptyForm.consentSms, emptyForm.consentEmail, emptyForm.consentWhatsApp]).toEqual([false, false, false]);
+  });
+
+  it('pre-ticks nothing, and refuses a registration in either mode until treatment is ticked (#1365 F-040)', () => {
+    expect(Object.entries(emptyForm).filter(([k, v]) => k.startsWith('consent') && v !== false)).toEqual([]);
+    for (const quick of [true, false]) {
+      expect(errors('IN', quick, { ...deepak, consentTreatment: false })).toEqual({ consentTreatment: 'required' });
+      expect(errors('IN', quick, deepak)).toEqual({});
+    }
+    expect(stepOf('consentTreatment')).toBe('consents');
+    expect(fieldLabel('consentTreatment', 'IN', deepak, true)).toBe('registration.consents.treatment.title');
   });
 });

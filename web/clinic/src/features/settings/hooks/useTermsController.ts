@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError } from '../../schedule/services/scheduleApi';
 import { acceptTerms, fetchTerms } from '../services/settingsApi';
@@ -6,7 +7,9 @@ import { acceptTerms, fetchTerms } from '../services/settingsApi';
 export function useTermsController() {
   const queryClient = useQueryClient();
   const terms = useQuery({ queryKey: ['settings', 'terms'], queryFn: fetchTerms });
-  const accept = useMutation({ mutationFn: acceptTerms, onSuccess: data => queryClient.setQueryData(['settings', 'terms'], data) });
+  // Accepting is two steps (#1365 F-038): the button asks, the confirmation names the version, and only its Confirm records the acceptance.
+  const [confirming, setConfirming] = useState(false);
+  const accept = useMutation({ mutationFn: acceptTerms, onSuccess: data => queryClient.setQueryData(['settings', 'terms'], data), onSettled: () => setConfirming(false) });
   return {
     terms: terms.data ?? null,
     loading: terms.isPending,
@@ -14,6 +17,9 @@ export function useTermsController() {
     accepting: accept.isPending,
     notOwner: accept.error instanceof ApiError && accept.error.status === 403,
     acceptFailed: accept.isError && !(accept.error instanceof ApiError && accept.error.status === 403),
+    confirming,
+    onAsk: () => setConfirming(true),
+    onCancel: () => setConfirming(false),
     onAccept: () => accept.mutate(),
   };
 }

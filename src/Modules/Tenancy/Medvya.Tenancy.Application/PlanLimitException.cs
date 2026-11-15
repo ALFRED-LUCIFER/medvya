@@ -8,3 +8,6 @@ public sealed class PlanLimitException(int doctors, int staff)
     public int Doctors => doctors;
     public int Staff => staff;
 }
+
+/// <summary>The plan's limits and whether one more doctor or one more member of staff still fits, for the add wizards' first step (#1365 F-039).</summary>
+public sealed record PlanSeats(int Doctors, int Staff, bool DoctorFree, bool StaffFree);

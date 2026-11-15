@@ -79,11 +79,13 @@ public sealed class PlatformConsoleTests(PostgresFixture sql) : IClassFixture<Po
     internal static PlatformDbContext Db(PostgresFixture sql) => new(new DbContextOptionsBuilder<PlatformDbContext>().UseNpgsql(sql.As("medvya_platform")).Options);
 
     /// <summary>Company sign-on through the dev provider; returns the callback response.</summary>
-    internal static async Task<HttpResponseMessage> SignOn(HttpClient browser, string subject, string? link = null)
+    internal static async Task<HttpResponseMessage> SignOn(HttpClient browser, string subject, string? link = null, string? email = null)
     {
         var challenge = await browser.GetAsync(new Uri(link is null ? "/bff/login" : $"/bff/login?link={link}", UriKind.Relative));
         Assert.Equal(HttpStatusCode.Redirect, challenge.StatusCode);
-        var authorize = await browser.GetAsync(new Uri($"{challenge.Headers.Location}&login_hint={Uri.EscapeDataString(subject)}"));
+        Assert.Contains("scope=openid%20profile%20email", challenge.Headers.Location!.Query, StringComparison.Ordinal); // Entra sends the email claim an invitation matches
+        // email: the address the company directory reports for the account.
+        var authorize = await browser.GetAsync(new Uri($"{challenge.Headers.Location}&login_hint={Uri.EscapeDataString(subject)}{(email is null ? "" : $"&email={Uri.EscapeDataString(email)}")}"));
         Assert.Equal(HttpStatusCode.Redirect, authorize.StatusCode);
         return await browser.GetAsync(authorize.Headers.Location);
     }
@@ -225,8 +227,19 @@ public sealed class PlatformConsoleTests(PostgresFixture sql) : IClassFixture<Po
         var issued = await invite.Content.ReadFromJsonAsync<JsonElement>();
         var link = issued.GetProperty("token").GetString()!;
 
+        // The link binds only the company account whose email is the invited address: another account, or one with no address, is
+        // refused and the link stays usable by the invitee.
+        foreach (var email in new[] { "ravi@medvya.example", null })
+        {
+            using var other = Browser();
+            Assert.Equal("/sign-in?signin=failed", (await SignOn(other, "new", link, email)).Headers.Location!.OriginalString);
+            Assert.Equal(HttpStatusCode.Unauthorized, (await other.GetAsync(new Uri("/v1/me", UriKind.Relative))).StatusCode);
+        }
+        await using (var db = Db())
+            Assert.Null((await db.Members.SingleAsync(m => m.Email == "kavya.reviewer@medvya.example")).Subject);
+
         using var browser = Browser();
-        Assert.Equal("/", (await SignOn(browser, "new", link)).Headers.Location!.OriginalString);
+        Assert.Equal("/", (await SignOn(browser, "new", link, "KAVYA.reviewer@medvya.example")).Headers.Location!.OriginalString);
         Assert.True((await Me(browser)).GetProperty("canRegister").GetBoolean());
         using var soft = new SoftSecurityKey(Origin);
         Assert.Equal(HttpStatusCode.NoContent, await RegisterKey(browser, soft));
@@ -242,9 +255,44 @@ public sealed class PlatformConsoleTests(PostgresFixture sql) : IClassFixture<Po
         var team = await ownerBrowser.GetFromJsonAsync<JsonElement>(new Uri("/v1/team", UriKind.Relative));
         var joined = team.GetProperty("members").EnumerateArray().Single(m => m.GetProperty("email").GetString() == "kavya.reviewer@medvya.example");
         Assert.True(joined.GetProperty("hasKey").GetBoolean());
+        // F-036: the name typed at invitation gave way to the company directory's at sign-on, and the audit log names that person.
+        var name = joined.GetProperty("displayName").GetString()!;
+        Assert.StartsWith("New colleague", name, StringComparison.Ordinal);
+        Assert.Equal(name, me.GetProperty("displayName").GetString());
         var actions = (await Audit(ownerBrowser)).Select(a => (a.GetProperty("action").GetString(), a.GetProperty("actor").GetString())).ToList();
         Assert.Contains(("team.invite", owner.DisplayName), actions);
-        Assert.Contains(("key.register", "Kavya (synthetic)"), actions);
+        Assert.Contains(("key.register", name), actions);
+    }
+
+    // F-036: an invited member keeps the name the owner typed until they sign on; an address another member holds is never taken over.
+    [Fact]
+    public async Task AMemberIsNamedByTheCompanySignOnAndKeepsTheirOwnAddress()
+    {
+        var (owner, ownerKey) = await Member(PlatformRole.Owner);
+        var (other, _) = await Member(PlatformRole.Support);
+        using var ownerBrowser = await SignedIn(owner, ownerKey);
+        var team = await ownerBrowser.GetFromJsonAsync<JsonElement>(new Uri("/v1/team", UriKind.Relative));
+        Assert.Equal(owner.DisplayName, team.GetProperty("members").EnumerateArray().Single(m => m.GetProperty("id").GetGuid() == owner.Id).GetProperty("displayName").GetString());
+
+        async Task SignOn(string? name, string? email)
+        {
+            await using var scope = factory.Services.CreateAsyncScope();
+            Assert.NotNull(await scope.ServiceProvider.GetRequiredService<Medvya.Platform.Application.IPlatformSignIn>().SignOnAsync(owner.Issuer!, owner.Subject!, [], null, name, email));
+        }
+        var address = $"{Guid.NewGuid():N}@medvya.example";
+        await SignOn("  Asha Verma (synthetic)  ", address.ToUpperInvariant());
+        await SignOn(null, other.Email); // no name in the token: the last known one stays; the address is another member's
+        await SignOn(new string('x', PlatformMember.NameMax + 1), "not-an-address");
+        await using var db = Db();
+        var saved = await db.Members.SingleAsync(m => m.Id == owner.Id);
+        Assert.Equal(("Asha Verma (synthetic)", address), (saved.DisplayName, saved.Email));
+
+        // An entry written after the sign-on carries the person's name and address, in the list and in the export.
+        Assert.Equal(HttpStatusCode.NoContent, (await Post(ownerBrowser, "/v1/team/access-review", new { reason = "Quarterly review of console access" })).StatusCode);
+        var entry = (await Audit(ownerBrowser)).First(a => a.GetProperty("action").GetString() == "team.access_review" && a.GetProperty("actor").GetString() == "Asha Verma (synthetic)");
+        Assert.Equal(address, entry.GetProperty("actorEmail").GetString());
+        var csv = await (await Post(ownerBrowser, "/v1/audit/export", new { reason = "Annual audit request" })).Content.ReadAsStringAsync();
+        Assert.Contains($"\"Asha Verma (synthetic)\",\"{address}\",\"Quarterly review of console access\"", csv, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -255,10 +303,27 @@ public sealed class PlatformConsoleTests(PostgresFixture sql) : IClassFixture<Po
         var link = (await (await Post(ownerBrowser, "/v1/team/invitations",
             new { displayName = "Ravi (synthetic)", email = "ravi@medvya.example", role = "Support", reason = "Support engineer joining" })).Content.ReadFromJsonAsync<JsonElement>()).GetProperty("token").GetString()!;
         using var browser = Browser();
-        await SignOn(browser, "new", link);
+        await SignOn(browser, "new", link, "ravi@medvya.example");
         using var synced = new SoftSecurityKey(Origin) { BackupEligible = true };
-        Assert.Equal(HttpStatusCode.Unauthorized, await RegisterKey(browser, synced));
-        Assert.False((await Me(browser)).GetProperty("keyVerified").GetBoolean());
+        // F-028: still refused, now with the reason, so the page can say what to register instead; the refusal is in the audit log (F-037).
+        var options = await browser.PostAsync(new Uri("/bff/key/registration/options", UriKind.Relative), null);
+        var refused = await browser.PostAsync(new Uri("/bff/key/registration", UriKind.Relative),
+            new StringContent(synced.Create(await options.Content.ReadAsStringAsync()), Encoding.UTF8, "application/json"));
+        Assert.Equal(HttpStatusCode.Unauthorized, refused.StatusCode);
+        Assert.Equal("synced", (await refused.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("errors").GetProperty("key")[0].GetString());
+        var me = await Me(browser);
+        Assert.False(me.GetProperty("keyVerified").GetBoolean());
+        Assert.True(me.GetProperty("otherOwner").GetBoolean()); // the inviting owner could issue a new link
+        await using var db = Db();
+        Assert.False(await db.Keys.AnyAsync(k => k.CredentialId == synced.CredentialId));
+        var name = me.GetProperty("displayName").GetString();
+        Assert.Contains(await Audit(ownerBrowser), a => a.GetProperty("action").GetString() == "auth.key.refused.synced" && a.GetProperty("actor").GetString() == name);
+
+        // Any other refusal (here: an answer to a challenge that was never asked) says nothing more than before, and is logged as refused.
+        var other = await browser.PostAsync(new Uri("/bff/key/registration", UriKind.Relative), new StringContent("{}", Encoding.UTF8, "application/json"));
+        Assert.Equal(HttpStatusCode.Unauthorized, other.StatusCode);
+        Assert.Equal(0, other.Content.Headers.ContentLength ?? 0);
+        Assert.Contains(await Audit(ownerBrowser), a => a.GetProperty("action").GetString() == "auth.key.refused" && a.GetProperty("actor").GetString() == name);
     }
 
     // Check 4: another owner issues a one-hour link; the old key stops at once; the new key works; both steps are logged.
@@ -378,10 +443,33 @@ public sealed class PlatformConsoleTests(PostgresFixture sql) : IClassFixture<Po
         Assert.Equal(HttpStatusCode.OK, export.StatusCode);
         Assert.Equal("text/csv", export.Content.Headers.ContentType!.MediaType);
         var csv = await export.Content.ReadAsStringAsync();
-        Assert.StartsWith("occurred_at,action,resource_type,resource_id,practice_id,actor,reason", csv, StringComparison.Ordinal);
+        Assert.StartsWith("occurred_at,action,resource_type,resource_id,practice_id,practice,detail,actor,actor_email,reason\r\n", csv, StringComparison.Ordinal);
         Assert.Contains("\"'=HYPERLINK(\"\"x\"\") review\"", csv, StringComparison.Ordinal);
         Assert.Contains("\"audit.export\"", csv, StringComparison.Ordinal);
         Assert.Contains("\"Annual audit request\"", csv, StringComparison.Ordinal);
+    }
+
+    // F-037: an entry about an organisation's document carries the organisation's name and the document's kind, in the list and in the export.
+    [Fact]
+    public async Task TheLogNamesTheOrganisationAndTheDocumentOfAnEntry()
+    {
+        var (owner, key) = await Member(PlatformRole.Owner);
+        var (organisation, document) = (Guid.NewGuid(), Guid.NewGuid());
+        await using (var db = Db())
+        {
+            db.AuditEntries.Add(new PlatformAuditEntry
+            {
+                ActorMemberId = owner.Id, Action = "organisation.document.view", ResourceType = "organisation", ResourceId = document, SubjectTenantId = organisation,
+                SubjectName = "=Rao Clinic (synthetic)", Detail = "TaxRegistration", OccurredAt = DateTimeOffset.UtcNow,
+            });
+            await db.SaveChangesAsync();
+        }
+        using var browser = await SignedIn(owner, key);
+        var entry = Assert.Single(await Audit(browser), a => a.GetProperty("resourceId").ValueKind == JsonValueKind.String && a.GetProperty("resourceId").GetGuid() == document);
+        Assert.Equal(("=Rao Clinic (synthetic)", "TaxRegistration"), (entry.GetProperty("subjectName").GetString(), entry.GetProperty("detail").GetString()));
+        var csv = await (await Post(browser, "/v1/audit/export", new { reason = "Annual audit request" })).Content.ReadAsStringAsync();
+        // The name is the applicant's text: a cell a spreadsheet would run as a formula is defused like a reason.
+        Assert.Contains($"{document},{organisation},\"'=Rao Clinic (synthetic)\",\"TaxRegistration\",\"{owner.DisplayName}\"", csv, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -431,6 +519,8 @@ public sealed class PlatformBootstrapTests(PostgresFixture sql) : IClassFixture<
     {
         using var browser = PlatformConsoleTests.Browser(factory);
         Assert.Equal("/", (await PlatformConsoleTests.SignOn(browser, "platform-owner")).Headers.Location!.OriginalString);
+        // F-028: the first owner has nobody to ask for a link, and /v1/me says so before the key step.
+        Assert.False((await browser.GetFromJsonAsync<JsonElement>(new Uri("/v1/me", UriKind.Relative))).GetProperty("otherOwner").GetBoolean());
         using var key = new SoftSecurityKey(PlatformConsoleTests.Origin);
         Assert.Equal(HttpStatusCode.NoContent, await PlatformConsoleTests.RegisterKey(browser, key));
         Assert.Equal(HttpStatusCode.OK, (await browser.GetAsync(new Uri("/v1/team", UriKind.Relative))).StatusCode);
@@ -442,6 +532,60 @@ public sealed class PlatformBootstrapTests(PostgresFixture sql) : IClassFixture<
         // And a new company account is not taken for the first owner once the team exists.
         using var stranger = PlatformConsoleTests.Browser(factory);
         Assert.Equal("/sign-in?signin=failed", (await PlatformConsoleTests.SignOn(stranger, "new")).Headers.Location!.OriginalString);
+    }
+
+    // F-036: the first owner is configured by account id only; the company sign-on says who the person is, whether the row exists yet or not.
+    [Fact]
+    public async Task TheFirstOwnerIsNamedByTheCompanySignOn()
+    {
+        await using var scope = factory.Services.CreateAsyncScope();
+        var session = await scope.ServiceProvider.GetRequiredService<Medvya.Platform.Application.IPlatformSignIn>()
+            .SignOnAsync(ConsoleProgram.DevCompanyIssuer, "platform-owner", [], null, "Asha Verma (synthetic)", "asha.verma@medvya.example");
+        await using var db = PlatformConsoleTests.Db(sql);
+        var owner = await db.Members.SingleAsync(m => m.Id == session!.MemberId);
+        Assert.Equal(("Asha Verma (synthetic)", "asha.verma@medvya.example", PlatformRole.Owner), (owner.DisplayName, owner.Email, owner.Role));
+        var log = await scope.ServiceProvider.GetRequiredService<Medvya.Platform.Application.IPlatformAuditLog>().ListAsync(null, null, 100);
+        Assert.All(log.Where(a => a.Action is "team.bootstrap" or "auth.signon"), a => Assert.Equal("Asha Verma (synthetic)", a.Actor));
+    }
+}
+
+/// <summary>
+/// The quarterly access review counts from the last review, or from the team's first member when there has been none: a team that is minutes
+/// old is not "due" (pilot audit #1365). A fresh database, so the first member and the reviews are the ones this test makes.
+/// </summary>
+public sealed class PlatformAccessReviewTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IDisposable
+{
+    readonly WebApplicationFactory<ConsoleProgram> factory = PlatformConsoleTests.CreateFactory(sql);
+
+    public void Dispose() => factory.Dispose();
+
+    [Fact]
+    public async Task TheAccessReviewIsDueNinetyDaysAfterTheFirstMemberThenAfterEachReview()
+    {
+        var joined = DateTimeOffset.UtcNow.AddDays(-30);
+        await using (var db = PlatformConsoleTests.Db(sql))
+        {
+            // The team's first member, since removed: the team is still thirty days old.
+            db.Members.Add(new PlatformMember { DisplayName = "First owner (synthetic)", Email = "first.owner@medvya.example", Role = PlatformRole.Owner, InvitedAt = joined, RemovedAt = DateTimeOffset.UtcNow });
+            await db.SaveChangesAsync();
+        }
+        var (owner, key) = await PlatformConsoleTests.Seed(sql, PlatformRole.Owner);
+        using var browser = await PlatformConsoleTests.SignedIn(factory, owner, key);
+        async Task<(DateTimeOffset? Last, DateTimeOffset Due)> Review()
+        {
+            var team = await browser.GetFromJsonAsync<JsonElement>(new Uri("/v1/team", UriKind.Relative));
+            var last = team.GetProperty("lastAccessReviewAt");
+            return (last.ValueKind == JsonValueKind.Null ? null : last.GetDateTimeOffset(), team.GetProperty("accessReviewDueAt").GetDateTimeOffset());
+        }
+
+        var (never, due) = await Review();
+        Assert.Null(never);
+        Assert.Equal(joined.AddDays(90), due, TimeSpan.FromSeconds(1)); // sixty days from now: not due on the day the team is read
+
+        Assert.Equal(HttpStatusCode.NoContent, (await PlatformConsoleTests.Post(browser, "/v1/team/access-review", new { reason = "Quarterly review of console access" })).StatusCode);
+        var (last, next) = await Review();
+        Assert.Equal(DateTimeOffset.UtcNow, last!.Value, TimeSpan.FromMinutes(1));
+        Assert.Equal(last.Value.AddDays(90), next, TimeSpan.FromSeconds(1));
     }
 }
 

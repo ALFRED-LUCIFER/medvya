@@ -109,11 +109,10 @@ var permitsPerMinute = builder.Configuration.GetValue("RateLimiting:PermitsPerMi
 builder.Services.AddOpenApi(); // document only, exported at build time; no endpoint serves it
 builder.Services.AddRateLimiter(o =>
 {
-    o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-    // Per client IP across the whole API.
-    o.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(ctx =>
-        RateLimitPartition.GetFixedWindowLimiter(ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-            _ => new FixedWindowRateLimiterOptions { PermitLimit = permitsPerMinute, Window = TimeSpan.FromMinutes(1) }));
+    // Across the whole API: per signed-in user, and per client address for requests without a session (GeneralRateLimit, #1365).
+    // 300 a minute: the heaviest screen makes about 12 API calls on a first load, so one person stays far below it, and a clinic's
+    // staff no longer share one count; the same number per address still covers 15 people signing in within a minute.
+    o.AddGeneralLimit(permitsPerMinute);
     // Starting sign-in is cheap to abuse; codes and lockout are enforced by the identity provider.
     o.AddQueueDisplayPairingLimit(builder.Configuration.GetValue("RateLimiting:DisplayPairingPerMinute", 20));
     o.AddPolicy(StaffAuthentication.SignInRateLimit, ctx => RateLimitPartition.GetFixedWindowLimiter(ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
@@ -130,6 +129,8 @@ builder.Services.AddUserRateLimit(PatientEndpoints.RecordRateLimit, builder.Conf
 builder.Services.AddUserRateLimit(PatientEndpoints.DuplicateCheckRateLimit, builder.Configuration.GetValue("RateLimiting:DuplicateChecksPerMinute", 60));
 // Joining the live board: once per page load and per reconnect; a client looping on it is refused. Per user, after sign-in.
 builder.Services.AddUserRateLimit(BoardHub.WatchRateLimit, builder.Configuration.GetValue("RateLimiting:BoardWatchPerMinute", 30));
+// Finishing sign-up creates an organisation: once per practice, plus a retry after a slow answer. Per user, after sign-in.
+builder.Services.AddUserRateLimit(OnboardingEndpoints.FinishRateLimit, builder.Configuration.GetValue("RateLimiting:OnboardingFinishPerMinute", 5));
 
 builder.Services.AddWebApp();
 
@@ -139,10 +140,10 @@ app.UseForwardedHeaders(); // first, so every later step sees the client's addre
 if (!app.Environment.IsDevelopment()) app.UseHsts();
 // The Blob origin for signed links: set explicitly (local Azurite), else the managed-identity endpoint's own origin (Azure).
 app.UseSecurityHeaders(app.Configuration["Storage:ImageOrigin"] ?? (Uri.TryCreate(app.Configuration["Storage:BlobEndpoint"], UriKind.Absolute, out var blob) ? blob.GetLeftPart(UriPartial.Authority) : null));
+app.UseWebApp(); // static files only; reads no session cookie. Before the rate limiter: scripts and the shell page are not counted (#1365)
 app.UseRateLimiter();
-app.UseWebApp(); // static files only; reads no session cookie
 app.RunPublicSiteBeforeAuthentication(); // public pages never read the session cookie
-app.UseStaffAuthentication();
+app.UseStaffAuthentication(); // counts the signed-in requests per user, between authentication and authorization
 
 // Deploy smoke tests (MDV-P0-007) read the version from here: the tag the deploy published with, plus the commit.
 var version = typeof(Program).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
@@ -153,10 +154,10 @@ app.MapNativeSignIn();
 app.MapSchedulingEndpoints();
 app.MapNotifications();
 app.UseJobs();
-if (app.Services.GetService<IRecurringJobManager>() is { } recurring && app.Services.GetService<Medvya.Audit.Infrastructure.LedgerDigests>() is not null)
+if (app.Services.GetService<RecurringJobRegistration>() is { } recurring && app.Services.GetService<Medvya.Audit.Infrastructure.LedgerDigests>() is not null)
 {
-    recurring.AddOrUpdate<Medvya.Audit.Infrastructure.LedgerJobs>(Medvya.Audit.Infrastructure.LedgerJobs.PublishJobId, j => j.PublishAsync(CancellationToken.None), Cron.Daily(1));
-    recurring.AddOrUpdate<Medvya.Audit.Infrastructure.LedgerJobs>(Medvya.Audit.Infrastructure.LedgerJobs.VerifyJobId, j => j.VerifyAsync(CancellationToken.None), Cron.Daily(2));
+    recurring.Add(Medvya.Audit.Infrastructure.LedgerJobs.PublishJobId, m => m.AddOrUpdate<Medvya.Audit.Infrastructure.LedgerJobs>(Medvya.Audit.Infrastructure.LedgerJobs.PublishJobId, j => j.PublishAsync(CancellationToken.None), Cron.Daily(1)));
+    recurring.Add(Medvya.Audit.Infrastructure.LedgerJobs.VerifyJobId, m => m.AddOrUpdate<Medvya.Audit.Infrastructure.LedgerJobs>(Medvya.Audit.Infrastructure.LedgerJobs.VerifyJobId, j => j.VerifyAsync(CancellationToken.None), Cron.Daily(2)));
 }
 app.MapPublicSite();
 app.MapInvitations();

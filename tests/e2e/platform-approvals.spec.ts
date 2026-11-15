@@ -25,8 +25,8 @@ const hospitalDocs = [doc('h1', 'HospitalRegistration'), doc('h2', 'TaxRegistrat
 type Org = { id: string; name: string; type: 'Clinic' | 'Hospital'; state: string; docs: ReturnType<typeof doc>[]; tax: string };
 async function mock(page: Page, role: string) {
   const orgs: Org[] = [
-    { id: 'o-clinic', name: 'Rao Clinic (synthetic)', type: 'Clinic', state: 'Submitted', docs: clinicDocs, tax: '27AAPFU0939F1ZV' },
-    { id: 'o-hospital', name: 'Lakeview Hospital (synthetic)', type: 'Hospital', state: 'Submitted', docs: hospitalDocs, tax: '27AAPFU0939F1ZV' },
+    { id: 'o-clinic', name: 'Rao Clinic (synthetic)', type: 'Clinic', state: 'Submitted', docs: clinicDocs, tax: '27AAAAA0000A1Z2' },
+    { id: 'o-hospital', name: 'Lakeview Hospital (synthetic)', type: 'Hospital', state: 'Submitted', docs: hospitalDocs, tax: '27AAAAA0000A1Z2' },
     { id: 'o-done', name: 'Menon Clinic (synthetic)', type: 'Clinic', state: 'Approved', docs: clinicDocs, tax: '12345' },
   ];
   const api = { posts: [] as { path: string; body: { reason: string; checkedDocuments?: string[] } }[], opened: [] as string[], filters: [] as string[] };
@@ -58,11 +58,14 @@ async function mock(page: Page, role: string) {
   return api;
 }
 
-/** MDV-P5-044: the reviewer ticks every document as checked; approve waits for that. */
+/** MDV-P5-044: the reviewer opens every document and ticks it as checked; approve waits for that. A box is off until its document was opened. */
 async function tickAll(page: Page) {
-  const boxes = page.getByRole('region', { name: /List of documents|قائمة المستندات/ }).getByRole('checkbox');
-  await expect(boxes.first()).toBeVisible(); // the request has loaded
-  for (const box of await boxes.all()) await box.check();
+  const rows = page.getByRole('region', { name: /List of documents|قائمة المستندات/ }).getByRole('row').filter({ has: page.getByRole('checkbox') });
+  await expect(rows.first()).toBeVisible(); // the request has loaded
+  for (const row of await rows.all()) {
+    if (await row.getByRole('checkbox').isDisabled()) await row.getByRole('button').click();
+    await row.getByRole('checkbox').check();
+  }
 }
 
 test('a reviewer opens a request, reads a document in the private viewer, approves with a reason and sees the email', async ({ page }) => {
@@ -90,11 +93,20 @@ test('a reviewer opens a request, reads a document in the private viewer, approv
   const approve = page.getByRole('button', { name: 'Approve', exact: true });
   await expect(approve).toBeDisabled();
   await expect(approve).toHaveAccessibleDescription('Open and read each document and tick it as checked before you approve.');
-  await page.getByRole('checkbox', { name: 'Checked: Clinic registration certificate' }).check();
+  await page.getByRole('checkbox', { name: 'Checked: Clinic registration certificate' }).check(); // opened above
   await expect(approve).toBeDisabled();
+  // A document that was not opened cannot be ticked: the box is off and says why.
+  const unopened = page.getByRole('region', { name: 'List of documents' }).getByRole('checkbox', { disabled: true });
+  await expect(unopened).toHaveCount(3);
+  await expect(unopened.first()).toHaveAccessibleDescription('Open it first.');
+  expect(await axe(page)).toEqual([]);
   await tickAll(page);
+  expect(api.opened).toEqual(['d1', 'd2', 'd3', 'd4']);
   await approve.click();
-  await expect(page.getByLabel('Reason (saved in the audit log)')).toHaveValue('Documents checked and in order.'); // preset wording, editable
+  // F-032: the reason starts empty, and a refused Confirm says why: nothing is sent, the summary takes focus and names the field.
+  await expect(page.getByLabel('Reason (saved in the audit log)')).toHaveValue('');
+  await page.getByRole('button', { name: 'Approve and email the owner' }).click();
+  await expect(page.getByRole('group', { name: 'There is a problem' }).getByRole('link')).toHaveText(['Reason (saved in the audit log): Give a reason of at least 5 characters.']);
   await page.getByLabel('Reason (saved in the audit log)').fill('no');
   await page.getByRole('button', { name: 'Approve and email the owner' }).click();
   await expect(page.getByRole('group', { name: 'There is a problem' })).toBeFocused(); // MDV-P2-058
@@ -211,6 +223,10 @@ for (const locale of ['en', 'ar'])
       const approve = bar.getByRole('button', { name: t(locale, 'platform.approvals.action.approve'), exact: true });
       await tickAll(page);
       await commitVisible(page, approve);
+      // F-052: one filled button per view. Approve is it; Reject is outlined and says what it does in words and icon, not by colour alone.
+      await expect(bar.locator('[data-variant=default], [data-variant=destructive]')).toHaveCount(1);
+      await expect(bar.getByRole('button', { name: t(locale, 'platform.approvals.action.reject'), exact: true })).toHaveAttribute('data-variant', 'outline');
+      expect(await axe(page)).toEqual([]);
       await approve.click();
       await expect(bar).toHaveCount(1);
       await commitVisible(page, bar.getByRole('button', { name: t(locale, 'platform.approvals.confirm.approve.confirm') }));

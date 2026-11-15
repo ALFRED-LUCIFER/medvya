@@ -22,6 +22,8 @@ export type Doctor = {
   attestedByName: string | null;
   attestedAt: string;
   hasSignature: boolean;
+  /** The signed-in doctor's own row: only they set or replace their signature image (the server refuses anyone else). */
+  ownSignature: boolean;
   /** The room this doctor sees patients in at this location (MDV-P1-111). */
   room?: string | null;
 };
@@ -31,8 +33,8 @@ export type DoctorList = {
   authorities: Authority[];
 };
 
-/** The wizard steps in order (F-09). Schedule asks for the doctor's room and explains that hours are set once the doctor accepts. */
-export const doctorSteps = ['details', 'licence', 'schedule', 'fees', 'access', 'signature'] as const;
+/** The wizard steps in order (F-09). Schedule asks for the doctor's room and explains that hours are set once the doctor accepts. The signature image is the doctor's own to add, so it is not a step. */
+export const doctorSteps = ['details', 'licence', 'schedule', 'fees', 'access'] as const;
 export type DoctorStep = (typeof doctorSteps)[number];
 
 const text = (max: number) => z.string().trim().max(max);
@@ -80,7 +82,6 @@ export const stepFields: Record<DoctorStep, (keyof DoctorForm)[]> = {
   schedule: ['room'],
   fees: ['newVisitFee', 'followUpFee'],
   access: ['facilityId', 'alsoFacilityIds'],
-  signature: [],
 };
 
 /** Fees are whole currency units in the form and minor units (x100) on the wire. */

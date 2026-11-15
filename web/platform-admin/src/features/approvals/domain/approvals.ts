@@ -68,6 +68,7 @@ export const waitDays = (submittedAt: string | null, now: Date) =>
 
 export const decisionOf = (a: Action): OrgState => (a === 'approve' || a === 'reinstate' ? 'Approved' : a === 'request-changes' ? 'NeedsChanges' : a === 'reject' ? 'Rejected' : 'Suspended');
 
-/** Server codes the screen words: state:transition (somebody decided first), document.Dpa:required and documents:unchecked. */
-export const errorKeyOf = (fields: Record<string, string[]>): 'state' | 'dpa' | 'unchecked' | null =>
-  fields.state?.includes('transition') ? 'state' : fields['document.Dpa']?.includes('required') ? 'dpa' : fields.documents?.includes('unchecked') ? 'unchecked' : null;
+/** Server codes the screen words: state:transition (somebody decided first), document.Dpa:required, documents:unchecked and documents:unopened (a tick for a document this reviewer has not opened in this request). */
+export const errorKeyOf = (fields: Record<string, string[]>): 'state' | 'dpa' | 'unchecked' | 'unopened' | null =>
+  fields.state?.includes('transition') ? 'state' : fields['document.Dpa']?.includes('required') ? 'dpa'
+    : fields.documents?.includes('unchecked') ? 'unchecked' : fields.documents?.includes('unopened') ? 'unopened' : null;

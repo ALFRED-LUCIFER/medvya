@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import type { Locale } from '@medvya/i18n';
 import { I18nProvider, useI18n } from '@medvya/i18n';
 import { SystemState } from '@medvya/ui';
@@ -15,6 +15,7 @@ import OrganisationNotice from '../features/onboarding/components/OrganisationNo
 import { organisationPath } from '../features/onboarding/domain/organisationRequest';
 import LanguageSwitcher from '../features/locale/components/LanguageSwitcher';
 import FacilityPicker from '../features/session/components/FacilityPicker';
+import SessionEndingNotice from '../features/session/components/SessionEndingNotice';
 import SessionExpiredPage from '../features/session/components/SessionExpiredPage';
 import AppShell from '../features/shell/components/AppShell';
 import MorePage from '../features/shell/components/MorePage';
@@ -28,7 +29,8 @@ import TabletOnly from './TabletOnly';
 
 // Not on the schedule's first render (MDV-P1-023, 2.5 s budget): the component gallery, the front desk and the nurse screens load when opened.
 const FrontDeskRoute = lazy(() => import('./FrontDeskRoute'));
-const UiGallery = lazy(() => import('../dev/UiGallery'));
+// Development and the mocked e2e runs only (they use the Vite dev server): a production build has neither the route nor its chunk.
+const UiGallery = import.meta.env.DEV ? lazy(() => import('../dev/UiGallery')) : null;
 const NurseQueueRoute = lazy(() => import('./NurseRoutes').then(m => ({ default: m.NurseQueueRoute })));
 const NurseIntakeRoute = lazy(() => import('./NurseRoutes').then(m => ({ default: m.NurseIntakeRoute })));
 // Loaded on demand: invitations bring the form stack (React Hook Form, Zod) that most sessions never need.
@@ -94,6 +96,10 @@ export default function App({ locale, onLocaleChange }: Props) {
     canSwitchFacility: (shell.session?.memberships.length ?? 0) > 1 };
   const toHome = () => navigate('/');
   const active = shell.session?.active;
+  // The memberships to switch to from the top bar, and of those the organisation's own other locations, which My day asks about (#1365 F-061).
+  const others = useMemo(() => (shell.session?.memberships ?? []).filter(m => m.id !== active?.membershipId), [shell.session, active?.membershipId]);
+  const otherLocations = useMemo(() => others.filter(m => m.tenantId === active?.tenantId), [others, active?.tenantId]);
+  const switchTo = (id: string) => shell.chooseFacility(id, () => navigate('/', { replace: true }));
   // The routes below drawn without the shell: signed out, choosing a facility, and the public and gallery pages.
   const inShell = !shell.loading && !shell.expired && !!active && !/^\/(?:__ui|invite|verify|rx|choose-facility)(?:\/|$)/.test(location.pathname);
   // Signed in at a facility, rules and formats follow the tenant's country (from the server, never the client).
@@ -125,7 +131,7 @@ export default function App({ locale, onLocaleChange }: Props) {
 
   // F-05a: an ended session replaces every screen; signing in again comes back to this route.
   const routes = shell.loading ? <Route path="*" element={<ShellMessage standalone busy title={t('shell.loading')} />} />
-    : shell.expired ? <Route path="*" element={<SessionExpiredPage languageSwitcher={switcher} onSignIn={shell.signIn}
+    : shell.expired ? <Route path="*" element={<SessionExpiredPage languageSwitcher={switcher} idle={shell.expiredIdle} onSignIn={shell.signIn}
         onOtherAccount={() => { shell.forgetEndedSession(); navigate('/', { replace: true }); }} />} />
     : !shell.session ? <>
         <Route path="/" element={<SignInRoute switcher={switcher} />} />
@@ -149,8 +155,10 @@ export default function App({ locale, onLocaleChange }: Props) {
         {/* With one clinic there is no other to switch to: the picker (also reached right after the automatic choice) goes on to the screen asked for. */}
         <Route path="/choose-facility" element={shell.session.memberships.length > 1 ? picker : <Navigate to={from ?? '/'} replace />} />
         <Route element={
-          <AppShell banner={strip} displayName={account.displayName} onSignOut={account.onSignOut} onLocaleChange={onLocaleChange} onMyDevices={() => navigate(devicesPath)}
+          <AppShell banner={<>{strip}{shell.ending && <SessionEndingNotice {...shell.ending} />}</>} displayName={account.displayName} onSignOut={account.onSignOut} onLocaleChange={onLocaleChange} onMyDevices={() => navigate(devicesPath)}
             onChangeFacility={account.canSwitchFacility ? () => navigate('/choose-facility') : undefined}
+            otherFacilities={others.map(m => ({ id: m.id, name: m.tenantId === active.tenantId ? m.facilityName : t('session.picker.facility', { tenant: m.tenantName, facility: m.facilityName }) }))}
+            onSwitchFacility={switchTo} switchingFacility={shell.choosingId !== null}
             role={active.role} facilityName={active.facilityName} items={shell.items} tabs={shell.tabs} searchPath={searchPath}
             globalSearch={searchPath && clinical
               ? <GlobalSearchRoute startVisitPath={walkInPath} bookPath={pathOf('schedule')} registerPath={registerPath} /> : undefined}
@@ -164,7 +172,7 @@ export default function App({ locale, onLocaleChange }: Props) {
             ? <ScheduleRoute facilityId={active.facilityId} userId={shell.session?.user.id ?? ''} userName={shell.session?.user.displayName ?? ''} canBook={active.capabilities.RegisterBookPatients === 'Full'}
                 canCheckIn={active.capabilities.CheckInQueue === 'Full'} registerPath={registerPath} leavePath={leavePath} />
             // My day (MDV-P2-002, named in MDV-P2-051): the doctor's own day, never the board.
-            : i.id === 'today' ? <TodayRoute facilityId={active.facilityId} online={online} userId={shell.session?.user.id ?? ''} />
+            : i.id === 'today' ? <TodayRoute facilityId={active.facilityId} online={online} userId={shell.session?.user.id ?? ''} otherLocations={otherLocations} onSwitch={switchTo} switchingTo={shell.choosingId} />
             : i.id === 'frontDesk'
             ? <FrontDeskRoute facilityId={active.facilityId} online={online} userId={shell.session?.user.id ?? ''} canMove={active.capabilities.CheckInQueue === 'Full'} canCancel={active.capabilities.RegisterBookPatients === 'Full'}
                 registerPath={registerPath} walkInPath={walkInPath} waitlistPath={waitlistPath} bookPath={active.capabilities.RegisterBookPatients === 'Full' ? pathOf('schedule') : null} billingPath={shell.items.find(b => b.id === 'billing')?.path ?? null}
@@ -239,10 +247,11 @@ export default function App({ locale, onLocaleChange }: Props) {
               <Route path={`${searchPath}/:patientId/complete`} element={<TabletOnly title={t('registration.complete.title')}><CompleteRegistrationRoute country={country} /></TabletOnly>} />}
           </>}
           {/* My devices (MDV-P0-012): any signed-in member; the server only ever lists and ends the caller's own sessions. */}
-          <Route path={devicesPath} element={<MyDevicesRoute timeZone={active.timeZone} />} />
+          <Route path={devicesPath} element={<MyDevicesRoute timeZone={active.timeZone} prescriber={active.capabilities.PrescriptionsOrders === 'Sign'} />} />
           <Route path="/more" element={<MorePage {...account} devicesPath={devicesPath} role={active.role} facilityName={active.facilityName} items={shell.items} />} />
           {/* A screen the app has but this role may not open says so; anything else is "Page not found" (MDV-P1-096). */}
-          <Route path="*" element={refusedAddress(location.pathname, active) ? <DeniedPage onHome={toHome} /> : <NotFoundPage onHome={toHome} />} />
+          <Route path="*" element={refusedAddress(location.pathname, active)
+            ? <DeniedPage onHome={toHome} organisationState={active.organisationState} requestPath={active.capabilities.StaffRolesIntegrations === 'Config' ? organisationPath : undefined} /> : <NotFoundPage onHome={toHome} />} />
         </Route>
       </>;
 
@@ -254,7 +263,7 @@ export default function App({ locale, onLocaleChange }: Props) {
         <LoadErrorBoundary fallback={online ? <main className="grid min-h-screen place-items-center p-4"><SystemState state="offline" onAction={reload} /></main> : inShell && strip}>
           <Suspense fallback={<ShellMessage standalone busy title={t('shell.loading')} />}>
             <Routes>
-              <Route path="/__ui" element={<UiGallery switcher={switcher} />} />
+              {UiGallery && <Route path="/__ui" element={<UiGallery switcher={switcher} />} />}
               {/* Public and token-based (F-06): the same page whether or not someone is signed in. */}
               <Route path="/invite/:token" element={<InvitationRoute switcher={switcher} />} />
               {/* The QR code on a printed prescription (MDV-P2-017): public, validity only. */}

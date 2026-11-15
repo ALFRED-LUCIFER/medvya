@@ -73,7 +73,7 @@ export default function RxPrintPage(p: Props) {
   return (
     <PaperPrintPage size={p.paper} label={v.clinic} toolbar={toolbar} after={after}>
       {/* shortcut: the print data has no clinic logo yet (the server PDF prints it); add it to RxPrint if the browser print must carry it. */}
-      <Masthead clinic={v.clinic} address={[v.clinicAddress, v.clinicPhone].filter(Boolean).join(' · ') || null} doctor={{ name: v.doctor, lines: [v.qualifications, t('paper.regAuthority', { number: ltr(v.licenceNumber), authority: v.licenceAuthority })] }} />
+      <Masthead clinic={v.clinic} address={[v.clinicAddress, v.clinicPhone, v.clinicRegistration && t('rxPrint.registration', { number: ltr(v.clinicRegistration) })].filter(Boolean).join(sep) || null} doctor={{ name: v.doctor, lines: [v.qualifications, t('paper.regAuthority', { number: ltr(v.licenceNumber), authority: v.licenceAuthority })] }} />
       <Meta title={t('rxPrint.title')}><Mono>{v.authorisation.number}</Mono>{sep}{t('paper.rxMeta', { version: v.authorisation.versionNo, when, zone: v.timeZone })}</Meta>
       <Rows>
         <Row id="rx-patient" label={t('paper.row.patient')}>
@@ -111,7 +111,8 @@ export default function RxPrintPage(p: Props) {
         )}
         {v.followUpOn && <Row id="rx-follow-up" label={t('paper.row.followUp')}><p className="font-bold">{t('paper.followUpOn', { date: formatCalendarDate(v.followUpOn) })}</p></Row>}
       </Rows>
-      <Signature name={v.doctor} lines={[t('paper.reg', { number: ltr(v.licenceNumber) }), t('paper.authorised', { when })]} />
+      <Signature name={v.doctor} lines={[t('paper.reg', { number: ltr(v.licenceNumber) }), t('paper.authorised', { when })]}
+        noSignatureNeeded={v.signatureLine === false ? t('printFamily.computerGenerated') : undefined} />
       <PaperFooter qr={v.qr} qrLabel={t('rxPrint.qr')} title={t('paper.checkRx')} end={<Mono>{v.authorisation.number}</Mono>}>
         <p>{t('paper.scanOrOpen')} <Mono wrap>{v.verifyUrl}</Mono></p>
       </PaperFooter>

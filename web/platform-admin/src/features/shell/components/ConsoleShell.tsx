@@ -10,6 +10,7 @@ const icons: Record<NavId, typeof Users> = { overview: LayoutDashboard, approval
 
 type Props = {
   displayName: string;
+  email: string;
   role: PlatformRole;
   items: NavItem[];
   languageSwitcher: ReactNode;
@@ -21,7 +22,7 @@ type Props = {
 const initials = (name: string) => name.split(/\s+/).map(p => p[0]).slice(0, 2).join('').toUpperCase();
 
 /** The console frame: navy sidebar from 768 px, a top bar below; a standing line that the console never shows patient records. */
-export default function ConsoleShell({ displayName, role, items, languageSwitcher, signingOut, onSignOut, children }: Props) {
+export default function ConsoleShell({ displayName, email, role, items, languageSwitcher, signingOut, onSignOut, children }: Props) {
   const { t } = useI18n();
   return (
     <div className="min-h-screen md:grid md:grid-cols-[clamp(196px,22vw,232px)_minmax(0,1fr)]">
@@ -56,6 +57,7 @@ export default function ConsoleShell({ displayName, role, items, languageSwitche
           <span aria-hidden className="grid size-8 shrink-0 place-items-center rounded-full bg-nav-line text-xs font-bold text-white">{initials(displayName)}</span>
           <div className="min-w-0">
             <p className="truncate text-label text-white">{displayName}</p>
+            <p dir="ltr" className="truncate text-xs text-nav-muted">{email}</p>
             <p className="truncate text-xs text-nav-muted">{t(`platform.role.${role}`)}</p>
           </div>
         </div>

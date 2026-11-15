@@ -112,6 +112,12 @@ public sealed class OrganisationRequestTests(PostgresFixture sql) : IClassFixtur
     static async Task<string[]> ErrorsAsync(HttpResponseMessage r) =>
         [.. (await r.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("errors").EnumerateObject().Select(p => p.Name + ":" + p.Value[0].GetString())];
 
+    async Task OpenEveryDocumentAsync(HttpClient ops)
+    {
+        foreach (var d in (await ops.GetFromJsonAsync<JsonElement>($"/v1/operations/organisations/{h.Tenant}")).GetProperty("documents").EnumerateArray())
+            Assert.Equal(HttpStatusCode.OK, (await ops.GetAsync($"/v1/operations/organisations/{h.Tenant}/documents/{d.GetProperty("id").GetGuid()}")).StatusCode);
+    }
+
     static async Task UploadAllAsync(HttpClient owner, OrganisationType type)
     {
         foreach (var kind in OrganisationDocumentRules.Required(type, ownerIsDoctor: true))
@@ -139,7 +145,7 @@ public sealed class OrganisationRequestTests(PostgresFixture sql) : IClassFixtur
         await UploadAllAsync(owner, OrganisationType.Clinic);
         Assert.Equal(HttpStatusCode.OK, (await PutFile(owner, "OwnerId", Pdf)).StatusCode); // a new file replaces the old one
         Assert.Equal(4, files.Stored.Count);
-        Assert.All(files.Stored.Keys, k => Assert.StartsWith($"onboarding/{h.Tenant}/", k, StringComparison.Ordinal));
+        Assert.All(files.Stored.Keys, k => Assert.StartsWith($"{h.Tenant}/onboarding/", k, StringComparison.Ordinal));
         Assert.Equal(HttpStatusCode.NoContent, (await owner.PostAsync("/v1/organisation/request/submit", null)).StatusCode);
         Assert.Equal(OrganisationState.Submitted, await StateAsync());
 
@@ -266,6 +272,7 @@ public sealed class OrganisationRequestTests(PostgresFixture sql) : IClassFixtur
         Assert.Equal(HttpStatusCode.BadRequest, (await owner.PostAsync("/v1/organisation/request/submit", null)).StatusCode);
 
         await SetStateAsync(OrganisationState.Submitted);
+        await OpenEveryDocumentAsync(ops);
         Assert.Equal(HttpStatusCode.NoContent, await Act("approve", "Documents checked"));
         Assert.Equal(OrganisationState.Approved, await StateAsync());
         Assert.Equal(HttpStatusCode.NoContent, await Act("suspend", "Payment dispute"));
@@ -296,6 +303,7 @@ public sealed class OrganisationRequestTests(PostgresFixture sql) : IClassFixtur
             Assert.Equal(HttpStatusCode.OK, (await PutFile(owner, kind, Pdf)).StatusCode);
         await SetStateAsync(OrganisationState.Submitted); // as if sent (the submit rule itself is tested above)
         var ops = Client(approver);
+        await OpenEveryDocumentAsync(ops);
         var refused = await ops.PostAsJsonAsync($"/v1/operations/organisations/{h.Tenant}/approve", new { reason = "Documents checked" });
         Assert.Equal(["document.Dpa:required"], await ErrorsAsync(refused));
         Assert.Equal(OrganisationState.Submitted, await StateAsync());
@@ -304,7 +312,32 @@ public sealed class OrganisationRequestTests(PostgresFixture sql) : IClassFixtur
         await SetStateAsync(OrganisationState.Draft);
         Assert.Equal(HttpStatusCode.OK, (await PutFile(owner, OrganisationDocumentRules.Dpa, Pdf)).StatusCode);
         await SetStateAsync(OrganisationState.Submitted);
+        await OpenEveryDocumentAsync(ops); // the DPA is new since the last look
         Assert.Equal(HttpStatusCode.NoContent, (await ops.PostAsJsonAsync($"/v1/operations/organisations/{h.Tenant}/approve", new { reason = "Documents checked" })).StatusCode);
+    }
+
+    // #1365: the interim API keeps the console's rule. Mutation check: drop the RequireEveryDocumentOpenedAsync call in Apply and every refusal here fails.
+    [Fact]
+    public async Task AnApproveNeedsThisOperatorToHaveOpenedEveryDocumentSinceTheRequestWasSubmitted()
+    {
+        using var owner = Client(h.Admin);
+        var ops = Client(approver);
+        await UploadAllAsync(owner, OrganisationType.Clinic);
+        await OpenEveryDocumentAsync(ops); // before the submit: does not count
+        Assert.Equal(HttpStatusCode.NoContent, (await owner.PostAsync("/v1/organisation/request/submit", null)).StatusCode);
+        async Task<HttpResponseMessage> Approve() => await ops.PostAsJsonAsync($"/v1/operations/organisations/{h.Tenant}/approve", new { reason = "Documents checked" });
+
+        Assert.Equal(["documents:unopened"], await ErrorsAsync(await Approve()));
+        await OpenEveryDocumentAsync(Client(reader)); // another operator's views are not this one's
+        Assert.Equal(["documents:unopened"], await ErrorsAsync(await Approve()));
+        var documents = (await ops.GetFromJsonAsync<JsonElement>($"/v1/operations/organisations/{h.Tenant}")).GetProperty("documents").EnumerateArray().Select(d => d.GetProperty("id").GetGuid()).ToList();
+        foreach (var id in documents.Skip(1)) Assert.Equal(HttpStatusCode.OK, (await ops.GetAsync($"/v1/operations/organisations/{h.Tenant}/documents/{id}")).StatusCode);
+        Assert.Equal(["documents:unopened"], await ErrorsAsync(await Approve())); // one still unopened
+        Assert.Equal(OrganisationState.Submitted, await StateAsync());
+
+        Assert.Equal(HttpStatusCode.OK, (await ops.GetAsync($"/v1/operations/organisations/{h.Tenant}/documents/{documents[0]}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await Approve()).StatusCode);
+        Assert.Equal(OrganisationState.Approved, await StateAsync());
     }
 
     [Fact]
@@ -389,7 +422,7 @@ public sealed class OrganisationRequestTests(PostgresFixture sql) : IClassFixtur
         var doc = items.Single(i => i.GetProperty("tenantId").GetGuid() == h.Tenant).GetProperty("documents")[0].GetProperty("id").GetGuid();
         Assert.Equal(HttpStatusCode.Forbidden, (await owner.GetAsync($"/v1/operations/organisations/{h.Tenant}/documents/{doc}")).StatusCode); // the applicant cannot use the review route
         var link = await ops.GetFromJsonAsync<JsonElement>($"/v1/operations/organisations/{h.Tenant}/documents/{doc}");
-        Assert.StartsWith($"https://blob.test/onboarding/{h.Tenant}/", link.GetProperty("url").GetString(), StringComparison.Ordinal);
+        Assert.StartsWith($"https://blob.test/{h.Tenant}/onboarding/", link.GetProperty("url").GetString(), StringComparison.Ordinal);
         Assert.Equal(HttpStatusCode.NotFound, (await ops.GetAsync($"/v1/operations/organisations/{h.Tenant}/documents/{Guid.NewGuid()}")).StatusCode);
         await using var audit = sql.Audit(h.Tenant);
         var viewed = await audit.Events.Where(e => e.Action == "organisation.document.view").SingleAsync();

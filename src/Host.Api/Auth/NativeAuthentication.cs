@@ -55,7 +55,7 @@ public static partial class NativeAuthentication
             var ticket = Format(Context.RequestServices, AccessPurpose).Unprotect(header["Bearer ".Length..]);
             if (ticket?.Properties.ExpiresUtc is not { } expires || expires <= TimeProvider.GetUtcNow()) return AuthenticateResult.Fail("Invalid or expired token.");
             // The session row decides, as for the cookie: revoked, idle-expired or switched sessions are refused on this request.
-            return await SessionControl.IsLiveAsync(ticket.Principal, Context.RequestServices, activity: !Request.Headers.ContainsKey(SessionControl.PassiveHeader), Context.RequestAborted)
+            return await SessionControl.IsLiveAsync(ticket.Principal, Context.RequestServices, activity: SessionControl.IsActivity(Context), Context.RequestAborted)
                 ? AuthenticateResult.Success(ticket) : AuthenticateResult.Fail("Session ended.");
         }
     }

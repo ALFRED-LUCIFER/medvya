@@ -30,7 +30,7 @@ public sealed class PlatformValidationException(IReadOnlyDictionary<string, stri
 public sealed record TeamMemberView(Guid Id, string DisplayName, string Email, PlatformRole Role, bool HasKey, bool Joined,
     DateTimeOffset? LastActiveAt, DateOnly? AccessEndsOn);
 
-/// <summary>The team and the quarterly access review: due 90 days after the last one, or now when there has been none.</summary>
+/// <summary>The team and the quarterly access review: due 90 days after the last one, or 90 days after the team's first member when there has been none.</summary>
 public sealed record TeamView(IReadOnlyList<TeamMemberView> Members, DateTimeOffset? LastAccessReviewAt, DateTimeOffset AccessReviewDueAt);
 
 /// <summary>A one-hour key link. <see cref="Token"/> exists only in this answer: the database keeps its hash.</summary>
@@ -52,7 +52,7 @@ public interface IPlatformTeam
 }
 
 public sealed record AuditEntryView(Guid Id, DateTimeOffset OccurredAt, string Action, string ResourceType, Guid? ResourceId, Guid? SubjectTenantId,
-    string? Actor, string? Reason);
+    string? Actor, string? ActorEmail, string? Reason, string? SubjectName, string? Detail);
 
 public interface IPlatformAuditLog
 {
@@ -68,8 +68,19 @@ public interface IPlatformAuditLog
 /// </summary>
 public interface IConsoleActions
 {
-    /// <summary>Appends an entry naming the signed-in member, the action, the organisation (null for Medvya-wide data) and the reason (null for a view).</summary>
-    Task RecordAsync(string action, string resourceType, Guid resourceId, Guid? subjectTenantId, string? reason, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Appends an entry naming the signed-in member, the action, the organisation (null for Medvya-wide data) and the reason (null for a view).
+    /// <paramref name="subjectName"/> is the organisation's name and <paramref name="detail"/> a stable code for the part concerned (a document's kind),
+    /// so the log says which organisation and which document without another look-up.
+    /// </summary>
+    Task RecordAsync(string action, string resourceType, Guid resourceId, Guid? subjectTenantId, string? reason, string? subjectName = null, string? detail = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The resources of an organisation for which the signed-in member has an <paramref name="action"/> entry at or after <paramref name="since"/>
+    /// (any time when null): for example the documents of a request this member opened since it was submitted.
+    /// </summary>
+    Task<IReadOnlySet<Guid>> RecordedAsync(string action, Guid subjectTenantId, DateTimeOffset? since, CancellationToken cancellationToken = default);
 
     /// <summary>Display names of console members, for a history that records them as actors. Unknown ids are left out.</summary>
     Task<IReadOnlyDictionary<Guid, string>> MemberNamesAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default);
@@ -77,8 +88,15 @@ public interface IConsoleActions
 
 public sealed record ConsoleSession(Guid MemberId, Guid SessionId);
 
-/// <summary><see cref="CanRegister"/>: this session may register a key (it signed on with a usable link, or it is the first owner's first key).</summary>
-public sealed record SessionState(Guid MemberId, string DisplayName, PlatformRole Role, bool KeyVerified, bool HasKey, bool CanRegister);
+/// <summary>
+/// <see cref="CanRegister"/>: this session may register a key (it signed on with a usable link, or it is the first owner's first key).
+/// <see cref="OtherOwner"/>: before the key step, whether another owner exists who could issue a one-hour link (the sign-in page only says
+/// "ask another owner" when there is one); false once the key is verified.
+/// </summary>
+public sealed record SessionState(Guid MemberId, string DisplayName, string Email, PlatformRole Role, bool KeyVerified, bool HasKey, bool CanRegister, bool OtherOwner);
+
+/// <summary>How registering a key ended. <see cref="SyncedPasskey"/>: the key itself was sound but can be copied to other devices, so it is refused.</summary>
+public enum KeyRegistration { Registered, Refused, SyncedPasskey }
 
 /// <summary>
 /// Console sign-in (MDV-P5-040): company sign-on starts a session that can only take the security-key step; a verified key (WebAuthn)
@@ -86,8 +104,12 @@ public sealed record SessionState(Guid MemberId, string DisplayName, PlatformRol
 /// </summary>
 public interface IPlatformSignIn
 {
-    /// <summary>Null when this company account is not a console member (or the link does not fit it).</summary>
-    Task<ConsoleSession?> SignOnAsync(string issuer, string subject, string? linkToken, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Null when this company account is not a console member (or the link does not fit it, or was issued to another address).
+    /// <paramref name="emails"/> are the addresses the provider vouches for; <paramref name="name"/> and <paramref name="email"/>
+    /// are the person's, from the company sign-on: the member row takes them, so the audit log names who acted.
+    /// </summary>
+    Task<ConsoleSession?> SignOnAsync(string issuer, string subject, IReadOnlyCollection<string> emails, string? linkToken, string? name, string? email, CancellationToken cancellationToken = default);
     /// <summary>The live session, or null when it has ended, been revoked, or the member has lost access.</summary>
     Task<SessionState?> ValidateAsync(Guid sessionId, Guid memberId, bool activity, CancellationToken cancellationToken = default);
     /// <summary>Assertion options, or null when the member has no live key.</summary>
@@ -95,6 +117,7 @@ public interface IPlatformSignIn
     Task<bool> CompleteKeyCheckAsync(Guid sessionId, string responseJson, CancellationToken cancellationToken = default);
     /// <summary>Creation options, or null when this session may not register a key (see <see cref="SessionState.CanRegister"/>).</summary>
     Task<string?> BeginKeyRegistrationAsync(Guid sessionId, CancellationToken cancellationToken = default);
-    Task<bool> CompleteKeyRegistrationAsync(Guid sessionId, string responseJson, CancellationToken cancellationToken = default);
+    /// <summary>Every refusal is in the audit log, a synced passkey under its own action so the log says why.</summary>
+    Task<KeyRegistration> CompleteKeyRegistrationAsync(Guid sessionId, string responseJson, CancellationToken cancellationToken = default);
     Task SignOutAsync(Guid sessionId, CancellationToken cancellationToken = default);
 }

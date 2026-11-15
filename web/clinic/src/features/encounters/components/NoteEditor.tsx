@@ -7,6 +7,7 @@ import type { StepUpReturn } from '../domain/stepUp';
 import NoteAssist, { type Assist } from './NoteAssist';
 import { NoteSectionField, SaveState, SectionField, SignedBanner, TemplatePicker, type SectionSource, type StructuredProps } from './NoteParts';
 import { SignChecklist, SignedLine, SignNote, type SignProblem } from './NoteSign';
+import type { TakeOverProps } from './TakeOverVisit';
 import RecordingConsentChoice from './RecordingConsentChoice';
 
 export type NoteEditorProps = StructuredProps & {
@@ -27,6 +28,7 @@ export type NoteEditorProps = StructuredProps & {
   onRequestSign: () => void; onCancelSign: () => void; onConfirmSign: () => void;
   /** Back from the step-up (MDV-P2-047). */
   signResume: StepUpReturn;
+  takeOver?: TakeOverProps;
   signAsName: string | null; timeZone: string | undefined; patient: SignPatient | null;
   consent: RecordingConsent | null; onConsent: (value: RecordingConsent) => void;
   /** Empty without Sign or once signed. */
@@ -60,7 +62,7 @@ export default function NoteEditor(p: NoteEditorProps) {
           {!p.canSign && <p className="text-sm text-muted-foreground">{t('noteSign.onlyDoctor')}</p>}
           {p.checklist.length > 0 && <SignChecklist items={p.checklist} />}
           <SignNote canSign={p.canSign} remaining={p.remaining} patient={p.patient} doctorName={p.signAsName} signing={p.signing} confirming={p.confirming} problem={p.signProblem}
-            onRequest={p.onRequestSign} onCancel={p.onCancelSign} onConfirm={p.onConfirmSign} resume={p.signResume} />
+            onRequest={p.onRequestSign} onCancel={p.onCancelSign} onConfirm={p.onConfirmSign} resume={p.signResume} takeOver={p.takeOver} />
         </>
       )}
     </Card>

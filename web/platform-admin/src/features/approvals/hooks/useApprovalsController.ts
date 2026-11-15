@@ -26,6 +26,8 @@ export function useApprovalsController(role: PlatformRole) {
   const [viewerFailed, setViewerFailed] = useState(false);
   const [opening, setOpening] = useState<string | null>(null);
   const [checked, setChecked] = useState<string[]>([]);
+  // Documents this reviewer opened on this screen: only those can be ticked. The server holds the same rule from its log of views.
+  const [opened, setOpened] = useState<string[]>([]);
   const reason = useForm<ReasonForm>({ resolver: zodResolver(reasonForm), defaultValues: { reason: '' }, shouldFocusError: false });
 
   const queue = useQuery({ queryKey: queueKey(filter), queryFn: () => fetchQueue(filter) });
@@ -39,7 +41,7 @@ export function useApprovalsController(role: PlatformRole) {
   const act = useMutation({
     mutationFn: ({ action, text }: { action: Action; text: string }) => decide(tenantId!, action, text, checked),
     onSuccess: preview => {
-      setPending(null); setSent(preview); setChecked([]); reason.reset();
+      setPending(null); setSent(preview); setChecked([]); setOpened([]); reason.reset();
       void client.invalidateQueries({ queryKey: ['platform', 'approvals'] });
     },
   });
@@ -53,6 +55,7 @@ export function useApprovalsController(role: PlatformRole) {
     : refused === 'state' ? 'platform.approvals.error.state'
     : refused === 'dpa' ? 'platform.approvals.error.dpa'
     : refused === 'unchecked' ? 'platform.approvals.error.unchecked'
+    : refused === 'unopened' ? 'platform.approvals.error.unopened'
     : detailError?.status === 404 ? 'platform.approvals.error.gone'
     : 'platform.error.failed';
 
@@ -64,7 +67,7 @@ export function useApprovalsController(role: PlatformRole) {
       // Measured when the queue was read, so rendering stays pure.
       asOf: new Date(queue.dataUpdatedAt),
       onFilter: (f: Filter) => { setFilter(f); },
-      onSelect: (id: string) => { setPending(null); setSent(null); setChecked([]); close(); act.reset(); void navigate(`/approvals/${id}`); },
+      onSelect: (id: string) => { setPending(null); setSent(null); setChecked([]); setOpened([]); close(); act.reset(); void navigate(`/approvals/${id}`); },
     },
     detail: {
       selected: Boolean(tenantId),
@@ -73,12 +76,12 @@ export function useApprovalsController(role: PlatformRole) {
       detail: d ?? null,
       canDecide: canDecide(role), allowed, blockedByDpa,
       // The reviewer ticks each document once read; approve waits for all of them (MDV-P5-044).
-      checked, canTick: allowed.includes('approve'), blockedByChecks: Boolean(d && uncheckedDocuments(d, checked)),
+      checked, opened, canTick: allowed.includes('approve'), blockedByChecks: Boolean(d && uncheckedDocuments(d, checked)),
       onCheck: (id: string, on: boolean) => setChecked(c => (on ? [...c, id] : c.filter(x => x !== id))),
       pending, form: reason, busy: act.isPending, problem: problem ? t(problem) : null, sent,
       onStart: (action: Action) => {
-        act.reset(); setSent(null); setPending(action);
-        reason.reset({ reason: t(`platform.approvals.preset.${action}` as MessageKey) });
+        // The reason starts empty: the operator writes why, in their own words (F-032).
+        act.reset(); setSent(null); setPending(action); reason.reset();
       },
       onCancel: () => { setPending(null); act.reset(); },
       onConfirm: reason.handleSubmit(({ reason: text }) => { if (pending) act.mutate({ action: pending, text }); }),
@@ -91,6 +94,7 @@ export function useApprovalsController(role: PlatformRole) {
           const file = await fetchDocument(tenantId, doc.id);
           current.current = file.url;
           setViewing({ doc, ...file, openedAt: new Date() });
+          setOpened(o => (o.includes(doc.id) ? o : [...o, doc.id]));
         } catch { setViewerFailed(true); } finally { setOpening(null); }
       },
       onClose: close,

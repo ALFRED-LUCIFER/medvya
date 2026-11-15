@@ -1,7 +1,14 @@
 export type PlatformRole = 'Owner' | 'Operations' | 'Support' | 'Finance' | 'Reviewer';
 
 /** GET /v1/me: who signed on, and how far: company sign-on alone, or the security key too. */
-export type Me = { displayName: string; role: PlatformRole; keyVerified: boolean; hasKey: boolean; canRegister: boolean };
+export type Me = { displayName: string; email: string; role: PlatformRole; keyVerified: boolean; hasKey: boolean; canRegister: boolean; otherOwner: boolean };
+
+/**
+ * Why the key step failed. synced: the server refused a passkey that syncs between devices (key:synced). failed: anything else, a cancelled
+ * prompt included; the browser does not say which.
+ */
+export type KeyProblem = 'synced' | 'failed';
+export const keyProblemOf = (refusedFields: Record<string, string[]> | null): KeyProblem => (refusedFields?.key?.includes('synced') ? 'synced' : 'failed');
 
 /**
  * signedOut: company sign-on first. registerKey: this session holds an owner's one-hour link (or is the first owner's first key).

@@ -84,18 +84,57 @@ public static class JobsSetup
         builder.Services.AddHangfire(c => c.SetDataCompatibilityLevel(CompatibilityLevel.Version_180).UseSimpleAssemblyNameTypeSerializer().UseRecommendedSerializerSettings()
             .UsePostgreSqlStorage(o => o.UseConnectionFactory(new DataSourceConnectionFactory(PostgresDataSources.For(connectionString))), new PostgreSqlStorageOptions { SchemaName = "hangfire", PrepareSchemaIfNecessary = false }));
         builder.Services.AddHangfireServer(o => o.WorkerCount = 2);
+        builder.Services.AddSingleton<RecurringJobRegistration>().AddHostedService(sp => sp.GetRequiredService<RecurringJobRegistration>());
         return builder;
     }
 
     public static WebApplication UseJobs(this WebApplication app)
     {
-        if (app.Services.GetService<IRecurringJobManager>() is not { } jobs) return app;
+        if (app.Services.GetService<RecurringJobRegistration>() is not { } jobs) return app;
         // Medvya operations only: the policy needs a signed-in user listed in Jobs:DashboardUsers (nobody by default); read-only.
         app.MapHangfireDashboard("/admin/jobs", new DashboardOptions { Authorization = [], IsReadOnlyFunc = _ => true, DashboardTitle = "Medvya jobs" })
             .RequireAuthorization(NotificationJobs.DashboardPolicy);
-        jobs.AddOrUpdate<NotificationJobs>(NotificationJobs.JobId, j => j.RunAsync(CancellationToken.None), Cron.Minutely());
+        jobs.Add(NotificationJobs.JobId, m => m.AddOrUpdate<NotificationJobs>(NotificationJobs.JobId, j => j.RunAsync(CancellationToken.None), Cron.Minutely()));
         return app;
     }
+}
+
+/// <summary>
+/// Registers the recurring jobs after the web app has started, never during start-up (#1365): registering needs a database lock per job, and
+/// when a restarting copy still held it the wait timed out, the exception left Program.cs and the clinic app stayed down. A job already
+/// stored by an earlier start keeps running meanwhile; registering only creates it or updates its schedule. It keeps trying for as long as
+/// the app runs: a job left unregistered until the next deploy would silently send nothing.
+/// </summary>
+public sealed partial class RecurringJobRegistration(IRecurringJobManager manager, ILogger<RecurringJobRegistration> log) : BackgroundService
+{
+    readonly List<(string Id, Action<IRecurringJobManager> Register)> pending = [];
+
+    /// <summary>The wait before try n (from 2): 5, 10, 20, 40 s, then a minute. Tests shorten it.</summary>
+    public Func<int, TimeSpan> Delay { get; init; } = attempt => TimeSpan.FromSeconds(Math.Min(60, 5 << Math.Min(attempt - 2, 4)));
+
+    /// <summary>Call before the app runs.</summary>
+    public void Add(string jobId, Action<IRecurringJobManager> register) => pending.Add((jobId, register));
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        for (var attempt = 1; pending.Count > 0; attempt++)
+        {
+            if (attempt > 1) await Task.Delay(Delay(attempt), stoppingToken);
+            foreach (var job in pending.ToArray())
+            {
+                try
+                {
+                    job.Register(manager);
+                    pending.Remove(job);
+                }
+                // The type only: exception text can carry connection details. The first five tries, then every tenth (about ten minutes apart), so a lock held for hours does not flood the log.
+                catch (Exception e) { if (attempt <= 5 || attempt % 10 == 0) NotRegistered(log, job.Id, attempt, e.GetType().Name); }
+            }
+        }
+    }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Recurring job {JobId} was not registered (attempt {Attempt}): {ErrorType}. The app keeps serving; it is tried again at most a minute later.")]
+    static partial void NotRegistered(ILogger logger, string jobId, int attempt, string errorType);
 }
 
 /// <summary>Development only, and only with Notifications:DevAllowAllConsent: lets a local run send without any consent receipt.</summary>

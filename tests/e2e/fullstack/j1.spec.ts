@@ -31,11 +31,13 @@ test('J1: a new clinic owner sets up the practice, Medvya approves it, then a pa
     await page.getByRole('button', { name: 'Continue' }).click();
     await page.getByRole('link', { name: /New synthetic person/ }).click();
     await page.waitForURL(/\/app\/onboarding/);
-    await page.getByRole('button', { name: 'Start setup' }).click();
+    // The country came from sign-up, so onboarding opens on step 1 without asking again (#1365 F-022).
     // The create-account answers (MDV-P1-059) are already in the draft: practice type, name, practice name, and the city as the address start.
     await expect(page.getByLabel('Full name')).toHaveValue('Arjun Menon (synthetic)');
     await expect(page.getByLabel('Practice name')).toHaveValue(`Menon Clinic ${n} (synthetic)`);
     await page.getByLabel(/^Address/).fill('12 Test Street, Chennai');
+    await page.getByLabel('Clinical establishment registration').fill('CE-0001'); // a clinic gives the numbers of the certificates it uploads
+    await page.getByLabel('GSTIN').fill('33AAAAA0000A1Z9'); // synthetic: nobody's PAN, with its real check character
     await page.getByLabel('A clinic').check(); // ADR-016: Clinic or Hospital is chosen first; a doctor who works alone registers a clinic
     await page.getByLabel('Email Medvya writes to about this request').fill(`owner${n}@example.test`);
     await page.getByLabel('General practice').check();
@@ -99,6 +101,9 @@ test('J1: a new clinic owner sets up the practice, Medvya approves it, then a pa
     await page.getByLabel('Clinic registration certificate').setInputFiles(pdf);
     await page.getByRole('button', { name: 'Send again to Medvya' }).click();
     await expect(page.getByRole('status').filter({ hasText: 'Sent. Waiting for Medvya to review it.' })).toBeVisible();
+    // The operator opens every document of the resubmitted request before approving: the server refuses an approve without those logged views.
+    const detail = await (await ops.request.get(`/v1/operations/organisations/${tenantId}`)).json();
+    for (const document of detail.documents) expect((await ops.request.get(`/v1/operations/organisations/${tenantId}/documents/${document.id}`)).status()).toBe(200);
     expect((await act('approve', 'Documents checked')).status()).toBe(204);
     await ops.close();
 
@@ -127,7 +132,9 @@ test('J1: a new clinic owner sets up the practice, Medvya approves it, then a pa
     await page.getByRole('combobox', { name: 'Relationship (required)', exact: true }).click();
     await page.getByRole('option', { name: 'Spouse', exact: true }).click();
     await page.getByLabel('Emergency contact phone').fill(patient.emergencyMobile);
-    for (let i = 0; i < 3; i++) await page.getByRole('button', { name: 'Continue' }).click();
+    for (let i = 0; i < 2; i++) await page.getByRole('button', { name: 'Continue' }).click();
+    await page.getByRole('switch', { name: 'Treatment' }).check(); // consents: never pre-ticked (#1365 F-040)
+    await page.getByRole('button', { name: 'Continue' }).click();
     await page.getByRole('button', { name: 'Register patient' }).click();
     await expect(page.getByRole('heading', { name: `${patient.name} is registered` })).toBeVisible();
   });

@@ -34,6 +34,9 @@ public sealed class EndpointAuditTests(PostgresFixture sql) : IClassFixture<Post
         "DELETE /v1/me/sessions/{id:guid}",
         "PUT /v1/me/push-token",    // MDV-P5-033: the app's own device token on its own session; no patient data
         "DELETE /v1/me/push-token",
+        "GET /v1/me/signature/",    // #1365: the doctor's own signature image (the service audits each change); no patient data
+        "PUT /v1/me/signature/",
+        "DELETE /v1/me/signature/",
         // MDV-P5-033, ADR-020: the patient app's own session (no record is linked); sign-in, sign-out and a replay are audited in the platform chain.
         "GET /v1/patient/me",
         "POST /v1/patient/logout",
@@ -51,6 +54,7 @@ public sealed class EndpointAuditTests(PostgresFixture sql) : IClassFixture<Post
         "POST /v1/staff/",
         "POST /v1/staff/invitations/{id:guid}/resend",
         "GET /v1/staff/roles",
+        "GET /v1/staff/plan", // #1365 F-039: the plan's two limits and whether a seat is free; no person, no patient
         "POST /v1/staff/roles",
         "PUT /v1/staff/roles/{id:guid}",
         "GET /v1/staff/access-review", // MDV-P1-010: staff names, roles, last sign-in; decisions are audited in the service

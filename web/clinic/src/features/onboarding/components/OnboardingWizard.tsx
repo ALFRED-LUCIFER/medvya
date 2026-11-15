@@ -19,12 +19,11 @@ type Props = {
   index: number;
   last: boolean;
   saveState: 'idle' | 'saving' | 'saved' | 'failed';
-  problem: 'check' | 'finish' | 'later' | null;
+  problem: 'check' | 'finish' | 'later' | 'tooMany' | 'rateLimited' | null;
   /** Changes once per failed Continue: the error summary takes focus then. */
   errorFocusKey: number;
   working: boolean;
   done: FinishResult | null;
-  homeLabel: 'today' | 'frontDesk';
   onNext: () => void;
   onSkip: () => void;
   onBack: () => void;
@@ -93,7 +92,7 @@ export default function OnboardingWizard(p: Props) {
 
         <main className="min-w-0">
           <Card className="gap-6 p-5 md:p-8">
-            {done ? <ReadyScreen form={values} done={done} homeLabel={p.homeLabel} onBook={p.onBook} onHome={p.onHome} /> : (
+            {done ? <ReadyScreen form={values} done={done} onBook={p.onBook} onHome={p.onHome} /> : (
               <form noValidate onSubmit={e => { e.preventDefault(); p.onNext(); }} className="flex flex-col gap-6" aria-label={t(`onboarding.${id}.title`)}>
                 {/* The eyebrow is the step counter, not a menu item. */}
                 <PageHeader className="[&_h1]:whitespace-normal" eyebrow={t('onboarding.eyebrow', { n: index + 1, name })} title={t(`onboarding.${id}.title`)}

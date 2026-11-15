@@ -90,6 +90,7 @@ export async function walkIn(page: Page, patient: ReturnType<typeof syntheticPat
   await page.getByLabel('Mobile').fill(patient.mobile);
   await page.getByRole('textbox', { name: 'Date of birth (required)', exact: true }).fill(patient.dob);
   await page.getByRole('radio', { name: 'Female', exact: true }).check();
+  await page.getByRole('switch', { name: 'Treatment' }).check();
   await page.getByRole('button', { name: 'Register patient' }).click();
   await page.getByRole('link', { name: 'Check in now (walk-in)' }).click();
   await expect(page.getByText(`Patient: ${patient.name} · MRN`)).toBeVisible();

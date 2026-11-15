@@ -23,6 +23,16 @@ public static partial class OnboardingEndpoints
     public sealed record SaveRequest(int Step, int? Validate, OnboardingData? Data);
     public sealed record FinishResult(Guid? MembershipId, string? Role, int InvitationsSent, int InvitationsFailed);
 
+    /// <summary>Per-user rate limit for finishing sign-up (registered by the host with <see cref="UserRateLimit.AddUserRateLimit"/>).</summary>
+    public const string FinishRateLimit = "onboarding-finish";
+
+    /// <summary>
+    /// One account owns at most this many organisations that Medvya has not approved yet. Two, so an owner whose first practice is still
+    /// waiting can set up a second one; a third waits until one of them is approved or rejected.
+    /// shortcut: a constant for every account; make it a platform setting if a group that opens several practices at once needs more.
+    /// </summary>
+    public const int MaxUnapprovedOrganisations = 2;
+
     static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { Converters = { new JsonStringEnumConverter() } };
 
     public static WebApplication MapOnboarding(this WebApplication app)
@@ -56,7 +66,7 @@ public static partial class OnboardingEndpoints
         });
 
         group.MapPost("/finish", async (HttpContext http, ClaimsPrincipal principal, [FromServices] IOnboardingDrafts drafts, [FromServices] IPracticeProvisioning provisioning,
-            [FromServices] IStaffUsers users, CancellationToken ct) =>
+            [FromServices] IStaffUsers users, [FromServices] IMembershipDirectory memberships, CancellationToken ct) =>
         {
             var userId = UserId(principal);
             if (await drafts.GetAsync(userId, ct) is not { } draft)
@@ -67,6 +77,10 @@ public static partial class OnboardingEndpoints
             }
             var data = JsonSerializer.Deserialize<OnboardingData>(draft.Data, Json) ?? new OnboardingData(null, null, null, null, null, null);
             if (OnboardingRules.For(draft.Country)!.ValidateAll(data) is { Count: > 0 } errors) return Results.ValidationProblem(Errors(errors));
+            // The draft stays, so the owner finishes it once an earlier request is decided. Remove this and OnboardingTests.AnAccountOwnsAtMostTwoOrganisationsAwaitingApproval fails.
+            if (await memberships.UnapprovedOwnedAsync(ct) >= MaxUnapprovedOrganisations)
+                return Results.Problem(statusCode: StatusCodes.Status409Conflict, title: "Too many organisations are waiting for approval",
+                    extensions: new Dictionary<string, object?> { ["code"] = "too_many_unapproved" });
 
             // From here the request's token is not used: a browser that stops waiting must not leave a practice half set up (#205).
             ct = CancellationToken.None;
@@ -102,7 +116,7 @@ public static partial class OnboardingEndpoints
                 catch (Exception ex) when (ex is InvalidOperationException or IOException or DbUpdateException) { failed++; }
             }
             return Results.Ok(new FinishResult(practice.MembershipId, practice.Role.ToString(), sent, failed));
-        });
+        }).RequireUserRateLimit(FinishRateLimit);
 
         return app;
     }

@@ -7,7 +7,7 @@ using Medvya.Tenancy.Application;
 namespace Medvya.Prescribing.Infrastructure;
 
 /// <summary>
-/// The authorised prescription as an English PDF on A4 or A5 (MDV-P2-017, E-10) in the print family layout (MDV-P1-111): clinic with address and phone,
+/// The authorised prescription as an English PDF on A4 or A5 (MDV-P2-017, E-10) in the print family layout (MDV-P1-111): clinic with address, phone and registration number,
 /// doctor with qualifications and registration, the Rx number and the patient's identifiers on every page; then labelled rows: the chart's allergies
 /// (a listed allergy in the red block with a shield and the word), the diagnoses, each medicine numbered by its generic name in capitals with its
 /// instruction and the notes its regulatory class needs boxed under it, the medicines to stop, advice and follow-up; the signature box with the
@@ -17,12 +17,14 @@ namespace Medvya.Prescribing.Infrastructure;
 /// shortcut: the PDF's instructions are English only (owner decision 11 Nov 2026: the pharmacist explains them); add a translator-reviewed
 /// patient-language line if pilot clinics ask for it.
 /// The clinic logo heads every page and the doctor's signature image sits in the signature box, when each was uploaded (Tenancy settings).
+/// Without an image, the box leaves space to sign by hand, or, when the practice turned its signature line off, says no signature is needed (#1365).
 /// shortcut: brand names are not printed, because the composer does not choose one (generic only); print "generic (brand)" once it does.
 /// </summary>
 public static class RxPdfDocument
 {
     /// <summary>The layout a doctor approves (exit gate 4): raise it whenever what the paper shows or where changes, so each doctor approves again.</summary>
-    public const int LayoutVersion = 4; // 2: the logo and the signature image; 3: age, diagnosis, follow-up, a signature line, the hash on the verify page; 4: the print family layout
+    public const int LayoutVersion = 5; // 2: the logo and the signature image; 3: age, diagnosis, follow-up, a signature line, the hash on the verify page; 4: the print family layout;
+    // 5: the practice's registration number in the masthead (#1365 F-068)
 
     /// <exception cref="PdfUnsupportedTextException"/>
     public static byte[] Render(RxPrintView v, PlainPdf.Paper paper, PrintImages images)
@@ -30,7 +32,8 @@ public static class RxPdfDocument
         var zone = TimeZoneInfo.FindSystemTimeZoneById(v.TimeZone);
         var when = TimeZoneInfo.ConvertTime(v.Authorisation.AuthorisedAt, zone).ToString("dd MMM yyyy, HH:mm", CultureInfo.InvariantCulture);
         var mast = new PlainPdf.Masthead(v.Clinic, v.ClinicAddress, v.ClinicPhone, images.Logo, v.Doctor,
-            [.. new[] { v.Qualifications }.OfType<string>(), Text("printFamily.reg", ("number", v.LicenceNumber), ("authority", v.LicenceAuthority))]);
+            [.. new[] { v.Qualifications }.OfType<string>(), Text("printFamily.reg", ("number", v.LicenceNumber), ("authority", v.LicenceAuthority))],
+            PaperText.Registration(v.ClinicRegistration));
         var meta = new PlainPdf.Meta(Text("rxPrint.title"), v.Authorisation.Number,
             Text("printFamily.rxMeta", ("version", v.Authorisation.VersionNo.ToString(CultureInfo.InvariantCulture)), ("when", when), ("zone", zone.Id)));
         var patient = new PlainPdf.Row(Text("printFamily.label.patient"), Patient(v.Patient.FullName, v.Patient.SexAtBirth, v.Patient.Mrn, v.Patient.DateOfBirth, v.PatientAge));
@@ -62,7 +65,8 @@ public static class RxPdfDocument
         if (v.FollowUpOn is { } due)
             rows.Add(new(Text("printFamily.label.followUp"), PlainPdf.Lines((Text("printFamily.followUpOn", ("date", due.ToString("dd MMM yyyy", CultureInfo.InvariantCulture))), PlainPdf.Tone.Strong))));
 
-        var sign = new PlainPdf.Signature(images.Signature, v.Doctor, [Text("printFamily.regShort", ("number", v.LicenceNumber)), Text("printFamily.authorisedAt", ("when", when))]);
+        var sign = new PlainPdf.Signature(images.Signature, v.Doctor, [Text("printFamily.regShort", ("number", v.LicenceNumber)), Text("printFamily.authorisedAt", ("when", when))],
+            v.SignatureLine ? null : Text("printFamily.computerGenerated"));
         var footer = new PlainPdf.Footer(v.Qr, Text("printFamily.checkRx"), Text("printFamily.scanOrOpen", ("url", v.VerifyUrl)), null, v.Authorisation.Number,
             (page, pages) => Text("printFamily.page", ("page", page.ToString(CultureInfo.InvariantCulture)), ("pages", pages.ToString(CultureInfo.InvariantCulture))));
         return PlainPdf.Write(paper, mast, meta, patient, rows, sign, footer);

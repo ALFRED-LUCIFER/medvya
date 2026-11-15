@@ -25,6 +25,7 @@ public sealed class Encounter
     [Classification(DataClass.Internal)] public Guid? MergedFromPatientId { get; init; }
     /// <summary>Opaque id of the visit in the Scheduling module.</summary>
     [Classification(DataClass.Internal)] public Guid AppointmentId { get; init; }
+    /// <summary>The clinician who started it, or the colleague who took the unsigned visit over since (<see cref="EncounterHandover"/>).</summary>
     [Classification(DataClass.Internal)] public Guid LeadClinicianId { get; init; }
     [Classification(DataClass.Internal)] public EncounterStatus Status { get; set; }
     [Classification(DataClass.Internal)] public AuthorityMode AuthorityMode { get; init; }
@@ -34,4 +35,19 @@ public sealed class Encounter
     /// <summary>MDV-P1-091: the treating doctor confirmed name and date of birth with the patient (one tap); null until then. Set once, never cleared.</summary>
     [Classification(DataClass.Internal)] public DateTimeOffset? IdentityConfirmedAt { get; set; }
     [Classification(DataClass.Internal)] public Guid? IdentityConfirmedBy { get; set; }
+}
+
+/// <summary>
+/// A colleague took over an unsigned visit (#1365) because its doctor could not sign it: who led it, who leads it now, when and why.
+/// Append-only and hash-chained; the audit event names the same two doctors, and the typed reason stays here (free text never goes into the audit log).
+/// </summary>
+public sealed class EncounterHandover
+{
+    [Classification(DataClass.Internal)] public Guid Id { get; init; }
+    [Classification(DataClass.Internal)] public Guid TenantId { get; init; }
+    [Classification(DataClass.Internal)] public Guid EncounterId { get; init; }
+    [Classification(DataClass.Internal)] public Guid FromClinicianId { get; init; }
+    [Classification(DataClass.Internal)] public Guid ToClinicianId { get; init; }
+    [Classification(DataClass.SensitiveHealth)] public required string Reason { get; init; }
+    [Classification(DataClass.Internal)] public DateTimeOffset At { get; init; }
 }

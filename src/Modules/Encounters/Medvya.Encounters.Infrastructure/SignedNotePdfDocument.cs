@@ -58,7 +58,8 @@ public static class SignedNotePdfDocument
 
         var signedOn = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(original.Row.SignedAt, zone).DateTime);
         var mast = new PlainPdf.Masthead(facility.Name, facility.Address, facility.Phone, images.Logo, signer?.FullName ?? original.SignerName, signer is null ? []
-            : [.. new[] { signer.Qualifications }.OfType<string>(), Text("printFamily.reg", ("number", signer.LicenceNumber), ("authority", signer.LicenceAuthority))]);
+            : [.. new[] { signer.Qualifications }.OfType<string>(), Text("printFamily.reg", ("number", signer.LicenceNumber), ("authority", signer.LicenceAuthority))],
+            string.IsNullOrWhiteSpace(facility.Registration) ? null : Text("rxPrint.registration", ("number", facility.Registration)));
         var meta = new PlainPdf.Meta(Text("printFamily.noteTitle"), null, Text("printFamily.noteMeta", ("version", versions[^1].Row.VersionNo.ToString(CultureInfo.InvariantCulture))));
         var who = Row(Text("printFamily.label.patient"), (patient.FullName, Tone.Name), (Text("printFamily.patient", ("sex", Text($"rxPrint.sex.{patient.SexAtBirth}")),
             ("age", CountryRules.AgeOn(signedOn, patient.DateOfBirth).ToString(CultureInfo.InvariantCulture)), ("mrn", patient.Mrn),

@@ -334,6 +334,86 @@ public sealed class SignNoteTests(PostgresFixture sql) : IClassFixture<PostgresF
         Assert.Equal((NoteStatus.Draft, 0), ((await NoteAsync()).Status, await SignedRowsAsync()));
     }
 
+    // SAFETY mutation check: remove the LeadClinicianId check in ConsultNoteService.SignAsync and the colleague's signature is accepted.
+    [Fact]
+    public async Task OnlyTheDoctorWhoHeldTheConsultationSignsItsNote()
+    {
+        var version = await SaveDraftAsync(Complete);
+        // A colleague who may treat the patient (the clinic's default access) still does not sign another doctor's consultation.
+        using (var colleague = await SignAsync(h.SecondDoctor, version))
+        {
+            Assert.Equal(HttpStatusCode.Forbidden, colleague.StatusCode);
+            Assert.Equal("no_access", (await Json(colleague)).GetProperty("code").GetString());
+        }
+        Assert.Equal((NoteStatus.Draft, 0), ((await NoteAsync()).Status, await SignedRowsAsync()));
+
+        using var own = await SignAsync(h.Doctor, version);
+        Assert.True(own.IsSuccessStatusCode, await own.Content.ReadAsStringAsync());
+        await using var db = sql.Encounters(h.Tenant);
+        Assert.Equal(h.Doctor, (await db.SignedNoteVersions.SingleAsync()).SignedBy);
+    }
+
+    // #1365: the doctor who held the visit is away, so the note could never be signed. SAFETY mutation checks: drop the clinical-access gate in
+    // ConsultNoteService.TakeOverAsync and the doctor from the other location takes the visit over (the nurse and the desk are stopped at the
+    // endpoint's Sign capability too); drop the signed-note condition and the signed visit changes hands.
+    [Fact]
+    public async Task AColleagueTakesOverAnUnsignedVisitWithAReasonAndThenSignsIt()
+    {
+        var version = await SaveDraftAsync(Complete);
+        Task<HttpResponseMessage> TakeOver(Guid who, string? reason) => Client(who).PostAsJsonAsync(U($"/v1/encounters/{encounter}/take-over"), new { reason });
+        async Task<Guid> LeadAsync()
+        {
+            await using var db = sql.Encounters(h.Tenant);
+            return await db.Encounters.Where(e => e.Id == encounter).Select(e => e.LeadClinicianId).SingleAsync();
+        }
+
+        using (var early = await SignAsync(h.SecondDoctor, version)) Assert.Equal(HttpStatusCode.Forbidden, early.StatusCode);
+        foreach (var who in new[] { h.Nurse, h.Reception })
+            using (var refused = await TakeOver(who, "Covering (synthetic)")) Assert.Equal(HttpStatusCode.Forbidden, refused.StatusCode);
+        // A doctor who works only at the clinic's other location has the role, but no access to a visit at this one.
+        var elsewhere = Guid.NewGuid();
+        await using (var tenancy = sql.Context(h.Tenant))
+        {
+            tenancy.Memberships.Add(new() { Id = Guid.NewGuid(), TenantId = h.Tenant, UserId = elsewhere, FacilityId = h.OtherFacility, Role = Role.HospitalDoctor, Status = MembershipStatus.Active });
+            await tenancy.SaveChangesAsync();
+        }
+        using (var away = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost") }))
+        {
+            away.DefaultRequestHeaders.Add("X-Test-User", elsewhere.ToString());
+            away.DefaultRequestHeaders.Add("X-Test-Facility", h.OtherFacility.ToString());
+            using var refused = await away.PostAsJsonAsync(U($"/v1/encounters/{encounter}/take-over"), new { reason = "Covering (synthetic)" });
+            Assert.Equal(HttpStatusCode.Forbidden, refused.StatusCode);
+        }
+        using (var blank = await TakeOver(h.SecondDoctor, "  "))
+            Assert.Equal((HttpStatusCode.BadRequest, "required"), (blank.StatusCode, (await Json(blank)).GetProperty("errors").GetProperty("reason")[0].GetString()));
+        using (var longer = await TakeOver(h.SecondDoctor, new string('x', SignedNoteVersion.MaxReasonLength + 1))) Assert.Equal(HttpStatusCode.BadRequest, longer.StatusCode);
+        Assert.Equal(h.Doctor, await LeadAsync());
+
+        using (var taken = await TakeOver(h.SecondDoctor, " The doctor is on leave this week (synthetic) ")) Assert.Equal(HttpStatusCode.NoContent, taken.StatusCode);
+        Assert.Equal(h.SecondDoctor, await LeadAsync());
+        await using (var db = sql.Encounters(h.Tenant))
+        {
+            var row = await db.EncounterHandovers.SingleAsync();
+            Assert.Equal((encounter, h.Doctor, h.SecondDoctor, "The doctor is on leave this week (synthetic)"), (row.EncounterId, row.FromClinicianId, row.ToClinicianId, row.Reason));
+        }
+        await using (var audit = sql.Audit(h.Tenant))
+        {
+            var row = await audit.Events.SingleAsync(e => e.Action == "encounter.takeover" && e.Outcome == AuditOutcome.Allowed);
+            Assert.Equal(((Guid?)h.SecondDoctor, (Guid?)encounter, (Guid?)h.Patient, $"from:{h.Doctor};to:{h.SecondDoctor}"), (row.ActorUserId, row.ResourceId, row.PatientId, row.Detail));
+        }
+
+        // The visit is the colleague's now: its first doctor no longer signs it, the colleague does, under their own name.
+        using (var old = await SignAsync(h.Doctor, version)) Assert.Equal(HttpStatusCode.Forbidden, old.StatusCode);
+        using (var signed = await SignAsync(h.SecondDoctor, version)) Assert.True(signed.IsSuccessStatusCode, await signed.Content.ReadAsStringAsync());
+        await using (var db = sql.Encounters(h.Tenant)) Assert.Equal(h.SecondDoctor, (await db.SignedNoteVersions.SingleAsync()).SignedBy);
+
+        // A signed note stays with who signed it.
+        using (var late = await TakeOver(h.Doctor, "Back from leave (synthetic)"))
+            Assert.Equal((HttpStatusCode.Conflict, "note_signed"), (late.StatusCode, (await Json(late)).GetProperty("code").GetString()));
+        Assert.Equal(h.SecondDoctor, await LeadAsync());
+        await using (var db = sql.Encounters(h.Tenant)) Assert.Equal(1, await db.EncounterHandovers.CountAsync());
+    }
+
     // SAFETY mutation check: remove the Status == Signed guard in ConsultNoteService.SaveAsync and the 409 case fails (the trigger would answer 500);
     // drop the TR_ConsultNotes_SignedImmutable trigger (migration SignedNotes) and the direct-database cases fail.
     [Fact]
@@ -636,6 +716,12 @@ public sealed class SignNoteTests(PostgresFixture sql) : IClassFixture<PostgresF
         using (var added = await AddendumAsync(h.Doctor, "Synthetic: follow-up moved to Friday", "Patient asked")) Assert.True(added.IsSuccessStatusCode);
         await using (var patients = sql.Patients(h.Tenant)) // a long name must not push the MRN or date of birth off the page
             await patients.Patients.Where(x => x.Id == h.Patient).ExecuteUpdateAsync(x => x.SetProperty(y => y.FullName, "Meera Lakshmi Venkataraman Iyer (synthetic)"));
+        await using (var tenancy = sql.Context(h.Tenant)) // #1365 F-068: the letterhead carries the location's own address, not the practice's, and the practice's phone
+        {
+            (await tenancy.Facilities.SingleAsync(f => f.Id == h.Facility)).Address = "7 Lake View Road (synthetic)";
+            tenancy.Profiles.Add(new PracticeProfile { Id = Guid.NewGuid(), TenantId = h.Tenant, Address = "Head office (synthetic)", Phone = "044 5550 0100", RegistrationNumber = "TN/CE/2026/00042", ChangedAt = DateTimeOffset.UtcNow });
+            await tenancy.SaveChangesAsync();
+        }
 
         using var r = await PdfAsync(h.Doctor);
         Assert.Equal(HttpStatusCode.OK, r.StatusCode);
@@ -646,7 +732,8 @@ public sealed class SignNoteTests(PostgresFixture sql) : IClassFixture<PostgresF
 
         Assert.StartsWith("%PDF-", Encoding.ASCII.GetString(bytes, 0, 5), StringComparison.Ordinal);
         var pages = PdfPages.Read(bytes, PlainPdf.A4.Margin);
-        string[] markers = ["MRN 000001", "Born 12 Mar 1972", "Meera Lakshmi Venkataraman Iyer (synthetic)", "Corrections are added as signed addenda."];
+        string[] markers = ["MRN 000001", "Born 12 Mar 1972", "Meera Lakshmi Venkataraman Iyer (synthetic)", "Corrections are added as signed addenda.",
+            "7 Lake View Road (synthetic)", "044 5550 0100", "Registration no. TN/CE/2026/00042"];
         Assert.True(pages.Count >= 2, $"{pages.Count} page(s)");
         Assert.All(pages, page =>
         {
@@ -655,6 +742,7 @@ public sealed class SignNoteTests(PostgresFixture sql) : IClassFixture<PostgresF
                 Assert.Contains(marker, page.Text, StringComparison.Ordinal);
         });
         var text = string.Join(' ', pages.Select(x => x.Text));
+        Assert.DoesNotContain("Head office", text, StringComparison.Ordinal);
         foreach (var expected in new[] { "Signed by Dr. Arjun Rao (synthetic)", "Addendum · version 2", "Reason: Patient asked", "Synthetic: follow-up moved to Friday", "Asia/Kolkata" })
             Assert.Contains(expected, text, StringComparison.Ordinal);
 

@@ -47,9 +47,18 @@ public sealed class StaffSession
     /// <summary>A native app session: reachable only by bearer token, never by cookie (and the reverse).</summary>
     [Classification(DataClass.Internal)] public bool IsNative => RefreshTokenHash is not null;
 
-    public bool IsActive(DateTimeOffset now) =>
-        RevokedAt is null && now < CreatedAt + (IsNative ? NativeMaxLifetime : MaxLifetime)
-        && now < LastSeenAt + (IsNative ? NativeIdleTimeout : TimeSpan.FromMinutes(IdleTimeoutMinutes));
+    public bool IsActive(DateTimeOffset now) => RevokedAt is null && now < Ends().At;
+
+    /// <summary>
+    /// When the session ends if nothing more is done: the idle timeout from the last activity, or the hard cap when that comes first.
+    /// Extendable says which: activity moves the first, nothing moves the second. The app warns shortly before (#1365 F-057).
+    /// </summary>
+    public (DateTimeOffset At, bool Extendable) Ends()
+    {
+        var idle = LastSeenAt + (IsNative ? NativeIdleTimeout : TimeSpan.FromMinutes(IdleTimeoutMinutes));
+        var cap = CreatedAt + (IsNative ? NativeMaxLifetime : MaxLifetime);
+        return idle < cap ? (idle, true) : (cap, false);
+    }
 
     /// <summary>
     /// "Medvya app 1.2.0 on iOS": what a native app reports about itself at sign-in (MDV-P5-033 device registration), for My devices.

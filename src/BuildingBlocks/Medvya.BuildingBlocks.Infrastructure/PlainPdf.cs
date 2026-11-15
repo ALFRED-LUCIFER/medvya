@@ -49,8 +49,11 @@ public static class PlainPdf
         }
     }
 
-    /// <summary>The masthead: the clinic (logo PNG or JPEG, when uploaded) with its address and phone at the start; the doctor and their lines at the end.</summary>
-    public sealed record Masthead(string Clinic, string? Address, string? Phone, byte[]? Logo, string Doctor, IReadOnlyList<string> DoctorLines);
+    /// <summary>
+    /// The masthead: the clinic (logo PNG or JPEG, when uploaded) with its address, phone and registration line (already worded, #1365 F-068) at the
+    /// start; the doctor and their lines at the end.
+    /// </summary>
+    public sealed record Masthead(string Clinic, string? Address, string? Phone, byte[]? Logo, string Doctor, IReadOnlyList<string> DoctorLines, string? Registration = null);
 
     /// <summary>The meta row under the rule: the paper's title, then its number (when it has one) and the detail (version, date).</summary>
     public sealed record Meta(string Title, string? Number, string Detail);
@@ -58,8 +61,9 @@ public static class PlainPdf
     /// <summary>A labelled row: the label hangs in the start margin, the value's parts (one per numbered item, else one) fill the column.</summary>
     public sealed record Row(string Label, params Action<IContainer>[] Parts);
 
-    /// <summary>The signature box: the image (when uploaded) over a line, the name, then its lines (registration, when).</summary>
-    public sealed record Signature(byte[]? Image, string Name, IReadOnlyList<string> Lines);
+    /// <summary>The signature box: the image (when uploaded) over a line, the name, then its lines (registration, when). Without an image, <paramref name="NoSignatureNeeded"/>
+    /// (when given) is printed in place of the space left to sign by hand.</summary>
+    public sealed record Signature(byte[]? Image, string Name, IReadOnlyList<string> Lines, string? NoSignatureNeeded = null);
 
     /// <summary>The footer on every page: the QR code's rows ('1' dark; none: no code), the check line, its link and hash, and the page cell (number, page X of Y).</summary>
     public sealed record Footer(IReadOnlyList<string>? Qr, string Check, string? Link, string? Hash, string? Number, Func<int, int, string> Page);
@@ -132,7 +136,7 @@ public static class PlainPdf
             who.RelativeItem().AlignMiddle().Column(c =>
             {
                 c.Item().Text(m.Clinic).FontSize(15).LineHeight(1.15f).ExtraBold().FontColor(Brand950);
-                var address = string.Join(" · ", new[] { m.Address, m.Phone }.Where(x => !string.IsNullOrWhiteSpace(x)));
+                var address = string.Join(" · ", new[] { m.Address, m.Phone, m.Registration }.Where(x => !string.IsNullOrWhiteSpace(x)));
                 if (address.Length > 0) c.Item().PaddingTop(2).Text(address).FontSize(7.6f).FontColor(Ink600);
             });
         });
@@ -169,8 +173,9 @@ public static class PlainPdf
 
     static void Sign(IContainer e, Paper p, Signature s) => e.PaddingTop(p.SignGap).Width(p.SignWidth).ShowEntire().Column(c =>
     {
-        // No image uploaded: the space stays blank, so the doctor signs by hand above the line.
-        if (s.Image is null) c.Item().Height(p.SignHeight);
+        // No image uploaded: the space stays blank, so the doctor signs by hand above the line, unless the paper says it needs no signature.
+        if (s.Image is null && s.NoSignatureNeeded is { } note) c.Item().MinHeight(p.SignHeight).AlignBottom().PaddingBottom(3).Text(note).FontSize(7.6f).FontColor(Ink700);
+        else if (s.Image is null) c.Item().Height(p.SignHeight);
         else c.Item().Height(p.SignHeight).AlignLeft().AlignBottom().Image(s.Image).FitHeight();
         c.Item().BorderTop(0.7f).BorderColor(Ink900).PaddingTop(3).Column(box =>
         {

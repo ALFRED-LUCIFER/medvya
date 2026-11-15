@@ -12,6 +12,8 @@ export type Profile = {
   phone: string | null;
   email: string | null;
   hasLogo: boolean;
+  /** Printed prescriptions leave space for a handwritten signature (default); false: they say they are computer generated and need none (#1365). */
+  signatureLine?: boolean;
   /** The row version this was read at (0 before a profile exists); a save sends it back and is refused (409 "changed") if it moved on (#889). */
   version: number;
 };
@@ -45,11 +47,13 @@ export const profileSchema = z.object({
   taxNumber: optional(30),
   phone: optional(30).refine(v => v === '' || /^[0-9+() -]{6,30}$/.test(v)),
   email: optional(254).refine(v => v === '' || /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(v)),
+  signatureLine: z.boolean(),
 });
 export type ProfileForm = z.infer<typeof profileSchema>;
 
 export const toProfileForm = (p: Profile): ProfileForm => ({
   name: p.name, address: p.address ?? '', registrationNumber: p.registrationNumber ?? '', registrationExpiresOn: p.registrationExpiresOn ?? '', taxNumber: p.taxNumber ?? '', phone: p.phone ?? '', email: p.email ?? '',
+  signatureLine: p.signatureLine ?? true,
 });
 
 /** Editing a location also sets its vitals room and guest Wi-Fi (MDV-P1-111); the server refuses a password without its network. */
@@ -174,6 +178,13 @@ export const logoProblem = (file: { type: string; size: number }): LogoProblem |
   !['image/png', 'image/jpeg'].includes(file.type) ? 'type' : file.size === 0 || file.size > logoMaxBytes ? 'size' : null;
 
 /** Problem codes from the API ("field:code" for a rejected field, as the shared client reports them). */
+/**
+ * What to say after a logo change failed. A server answer (after the profile was read again and had not moved) means nothing changed: the
+ * image was refused ("type", "size") or the save "failed". No answer at all is "unknown": the logo may or may not be stored (#1365 F-066).
+ */
+export const logoFailure = (answer: { code?: string } | null): LogoProblem | 'failed' | 'unknown' =>
+  !answer ? 'unknown' : answer.code === 'logo:type' ? 'type' : answer.code === 'logo:too_large' ? 'size' : 'failed';
+
 export const knownErrors = ['logo:type', 'logo:too_large', 'date:duplicate', 'name:duplicate', 'name:link'] as const;
 export type SettingsError = (typeof knownErrors)[number] | 'failed';
 export const settingsError = (code: string | undefined): SettingsError =>

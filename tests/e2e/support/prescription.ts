@@ -72,6 +72,7 @@ export const printView = () => ({
   ],
   verifyUrl: 'https://clinic.test/app/verify/rx/synthetic-token', qr, layoutVersion: 1,
   patientAge: 53, diagnoses: [{ description: 'Type 2 diabetes (synthetic)', provisional: false }], followUpOn: '2026-11-02',
+  clinicAddress: '12 Beach Road (synthetic), Adyar, Chennai 600020', clinicPhone: '044 5550 0100', clinicRegistration: 'TN/CE/2026/00042',
 });
 
 type AuthState = { authorised: ReturnType<typeof authorised> | null; changed: boolean; discard?: { reason: string; discardedBy: string; discardedAt: string } | null; editable?: boolean };

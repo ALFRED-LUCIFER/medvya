@@ -22,7 +22,7 @@ namespace Medvya.IntegrationTests;
 public sealed class PracticeSettingsTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IAsyncLifetime
 {
     static readonly byte[] Png = TestImages.Png;
-    const string Gstin = "27AAAAA0000A1Z5"; // format only (synthetic)
+    const string Gstin = "27AAAAA0000A1Z2"; // synthetic: nobody's PAN, with its real check character
     readonly SchedulingHarness h = new(sql);
     WebApplicationFactory<Program>? factory;
 
@@ -143,6 +143,29 @@ public sealed class PracticeSettingsTests(PostgresFixture sql) : IClassFixture<P
         var events = await audit.Events.ToListAsync();
         var row = Assert.Single(events);
         Assert.Equal(("settings.profile.update", "settings", Medvya.Audit.Domain.AuditOutcome.Allowed), (row.Action, row.ResourceType, row.Outcome));
+    }
+
+    /// <summary>#1365: the signature line on printed prescriptions is on until the practice turns it off; a save that leaves it out keeps it as it is, and
+    /// each change is in the profile's before/after.</summary>
+    [Fact]
+    public async Task TheSignatureLineIsOnByDefaultSavesOffOverHttpAndASaveWithoutItKeepsIt()
+    {
+        using var client = Client(Role.PracticeAdmin);
+        var loaded = await client.GetFromJsonAsync<JsonElement>("/v1/settings/profile");
+        Assert.True(loaded.GetProperty("signatureLine").GetBoolean());
+
+        using (var off = await client.PutAsJsonAsync("/v1/settings/profile", new { name = "Iyer Family Clinic (synthetic)", signatureLine = false, version = loaded.GetProperty("version").GetUInt32() }))
+            Assert.False((await off.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("signatureLine").GetBoolean());
+        var saved = await client.GetFromJsonAsync<JsonElement>("/v1/settings/profile");
+        Assert.False(saved.GetProperty("signatureLine").GetBoolean());
+        using (var other = await client.PutAsJsonAsync("/v1/settings/profile", new { name = "Iyer Family Clinic (synthetic)", phone = "+91 90000 00301", version = saved.GetProperty("version").GetUInt32() }))
+            Assert.Equal(HttpStatusCode.OK, other.StatusCode);
+        Assert.False((await client.GetFromJsonAsync<JsonElement>("/v1/settings/profile")).GetProperty("signatureLine").GetBoolean());
+
+        await using var db = sql.Context(h.Tenant);
+        var changes = await db.SettingsChanges.ToListAsync();
+        Assert.Equal(2, changes.Count);
+        Assert.Single(changes, c => c.Before!.Contains("\"signatureLine\":true", StringComparison.Ordinal) && c.After!.Contains("\"signatureLine\":false", StringComparison.Ordinal));
     }
 
     /// <summary>#889: two administrators open the profile, both save. The second sends a version the first already replaced, so it is refused.</summary>

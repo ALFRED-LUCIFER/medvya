@@ -19,6 +19,7 @@
     <ProjectReference Include="..\Medvya.Tenancy.Application\Medvya.Tenancy.Application.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\Medvya.BuildingBlocks.Domain\Medvya.BuildingBlocks.Domain.csproj" />
     <ProjectReference Include="..\..\Identity\Medvya.Identity.Application\Medvya.Identity.Application.csproj" />
+    <ProjectReference Include="..\..\Audit\Medvya.Audit.Application\Medvya.Audit.Application.csproj" />
     <ProjectReference Include="..\..\Scheduling\Medvya.Scheduling.Application\Medvya.Scheduling.Application.csproj" />
     <ProjectReference Include="..\..\Scheduling\Medvya.Scheduling.Domain\Medvya.Scheduling.Domain.csproj" />
   </ItemGroup>

@@ -1,4 +1,3 @@
-using Azure.Identity;
 using Azure.Storage.Blobs;
 using Medvya.Audit.Application;
 using Medvya.Audit.Infrastructure.Persistence;
@@ -34,7 +33,7 @@ public static class AuditModule
     public static IServiceCollection AddLedgerDigests(this IServiceCollection services, string connectionString, IConfiguration configuration, bool requireStorage)
     {
         BlobDigestStore? store = configuration["Storage:BlobEndpoint"] is { Length: > 0 } endpoint
-            ? new(new BlobContainerClient(new Uri(new Uri(endpoint), BlobDigestStore.Container), new DefaultAzureCredential()), createContainer: false)
+            ? new(new BlobContainerClient(new Uri(new Uri(endpoint), BlobDigestStore.Container), AzureCredentials.Shared), createContainer: false)
             : configuration["Storage:ConnectionString"] is { Length: > 0 } storage ? new(new BlobContainerClient(storage, BlobDigestStore.Container), createContainer: true) : null;
         if (store is null)
             return requireStorage ? throw new InvalidOperationException("Ledger digests need Storage:BlobEndpoint or Storage:ConnectionString.") : services;

@@ -5,6 +5,7 @@ import { CircleAlert, CircleSlash, TrendingDown, CircleX, FilePen, History, Plus
 import { useI18n } from '@medvya/i18n';
 import { Button, buttonVariants, ClinicalAlert, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tag } from '@medvya/ui';
 import { authoriseTarget, isCurrent, type AuthoriseProblem, type RxAuthorisationState } from '../domain/authorisation';
+import StepUpConfirmed from '../../encounters/components/StepUpConfirmed';
 import type { StepUpReturn } from '../../encounters/domain/stepUp';
 import { describedBy, fieldError } from '../../settings/components/fieldStyles';
 import { Section } from '../../settings/components/Section';
@@ -192,6 +193,7 @@ function Authorise(p: Props) {
       <p className="text-sm">{t('rx.auth.separate')}</p>
       {(p.checks?.unresolved ?? 0) > 0 && <p className="text-sm font-bold">{t('rx.auth.unresolved')}</p>}
       {cancellation && <p className="text-sm">{t('rx.auth.cancelledReason', { reason: cancellation.reason })}</p>}
+      <StepUpConfirmed confirmed={confirmed} action={label} />
       <div className="flex flex-wrap items-center gap-3">
         {!current && !locked && (
           <Button id={authoriseTarget} ref={focus} loading={p.authorising} disabled={p.busy} onClick={p.onAuthorise}>
@@ -206,7 +208,6 @@ function Authorise(p: Props) {
         {p.ended && !current && !locked && !p.discarding && (
           <Button variant="outline" onClick={() => p.onDiscarding(true)}><Trash2 aria-hidden className="size-4" />{t('rx.discard.confirm')}</Button>
         )}
-        {confirmed && <p role="status" className="font-bold">{t('stepUp.confirmed', { action: label })}</p>}
       </div>
       {p.ended && !current && !locked && p.discarding && (
         <form noValidate onSubmit={p.onDiscard} className="flex flex-col gap-2">

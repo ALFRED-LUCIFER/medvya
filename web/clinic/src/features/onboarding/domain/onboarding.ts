@@ -148,6 +148,8 @@ export const stepSchema = (step: number) => base.superRefine((f, ctx) => {
   if (step === 1) {
     need('orgType', f.orgType !== ''); need('contactEmail', filled(f.contactEmail));
     need('fullName', filled(f.fullName)); need('clinicName', filled(f.clinicName)); need('address', filled(f.address));
+    // A clinic gives the numbers of the two certificates it uploads; the server checks their format (GSTIN check character, TRN digits).
+    if (f.orgType === 'Clinic') { need('registrationNumber', filled(f.registrationNumber)); need('taxId', filled(f.taxId)); }
     if (f.mode === 'Solo') { need('specialties', f.specialties.length > 0 || filled(f.specialty)); need('authority', filled(f.authority)); need('number', filled(f.number)); need('expiresOn', filled(f.expiresOn)); need('attested', f.attested); }
   }
   if (step === 2) {

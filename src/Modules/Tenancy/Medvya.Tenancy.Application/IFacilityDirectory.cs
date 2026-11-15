@@ -6,10 +6,12 @@ namespace Medvya.Tenancy.Application;
 /// <param name="Queue">The organisation's queue rule (MDV-P1-103), which every screen that lists arrived patients follows.</param>
 /// <param name="Address">The location's street address, else the practice's: printed under the clinic name on every paper (MDV-P1-111).</param>
 /// <param name="Phone">The practice phone, printed beside the address.</param>
+/// <param name="Registration">The practice's registration number, printed after them when it was entered (#1365 F-068).</param>
 /// <param name="NurseRoom">Where patients go for vitals and nurse intake at this location, e.g. "Room 1"; null when not set.</param>
 /// <param name="Wifi">The guest Wi-Fi printed on the token slip's tear-off stub; null when not set.</param>
+/// <param name="SignatureLine">The practice setting: prescriptions leave space for a handwritten signature (default), else say they need none (#1365).</param>
 public sealed record FacilityInfo(Guid Id, string Name, string TimeZone, string TenantName, QueueRule Queue, string? Address = null, string? Phone = null,
-    string? NurseRoom = null, GuestWifi? Wifi = null);
+    string? NurseRoom = null, GuestWifi? Wifi = null, string? Registration = null, bool SignatureLine = true);
 
 /// <summary>A location's guest Wi-Fi for patients (MDV-P1-111). Daily: the desk changes the password every day, so the slip says "today only".</summary>
 public sealed record GuestWifi(string Network, string? Password, bool Daily);

@@ -18,13 +18,14 @@ async function axe(page: Page) {
 }
 
 const b64 = (s: string) => Buffer.from(s).toString('base64url');
-const owner = (over: object) => ({ displayName: 'Ops Admin (synthetic)', role: 'Owner', keyVerified: false, hasKey: false, canRegister: true, ...over });
+const owner = (over: object) => ({ displayName: 'Ops Admin (synthetic)', email: 'ops.admin@medvya.example', role: 'Owner', keyVerified: false, hasKey: false, canRegister: true, otherOwner: false, ...over });
 const team = {
   lastAccessReviewAt: null, accessReviewDueAt: '2026-11-01T00:00:00Z',
   members: [{ id: 'm-1', displayName: 'Ops Admin (synthetic)', email: 'ops.admin@medvya.example', role: 'Owner', hasKey: true, joined: true, lastActiveAt: '2026-11-07T05:00:00Z', accessEndsOn: null }],
 };
 const audit = [
-  { id: 'a2', occurredAt: '2026-11-07T05:01:00Z', action: 'team.invite', resourceType: 'platform_member', resourceId: 'm-2', subjectTenantId: null, actor: 'Ops Admin (synthetic)', reason: 'New licence reviewer joining' },
+  { id: 'a3', occurredAt: '2026-11-07T05:02:00Z', action: 'organisation.document.view', resourceType: 'organisation', resourceId: 'd-2', subjectTenantId: 'o-clinic', actor: 'Ops Admin (synthetic)', actorEmail: 'ops.admin@medvya.example', reason: null, subjectName: 'Rao Clinic (synthetic)', detail: 'TaxRegistration' },
+  { id: 'a2', occurredAt: '2026-11-07T05:01:00Z', action: 'team.invite', resourceType: 'platform_member', resourceId: 'm-2', subjectTenantId: null, actor: 'Ops Admin (synthetic)', actorEmail: 'ops.admin@medvya.example', reason: 'New licence reviewer joining' },
   { id: 'a1', occurredAt: '2026-11-07T05:00:00Z', action: 'auth.signin', resourceType: 'platform_session', resourceId: 's-1', subjectTenantId: null, actor: 'Ops Admin (synthetic)', reason: null },
 ];
 
@@ -48,6 +49,7 @@ test('a link holder signs on, registers a security key in the browser, and only 
 
   await page.goto('/');
   await expect(page.getByText('Signed in as Ops Admin (synthetic) · Platform owner')).toBeVisible();
+  await expect(page.getByText('ops.admin@medvya.example')).toBeVisible(); // F-029: the person, not only the role
   await expect(page.getByRole('navigation')).toHaveCount(0); // no console until the key step
   expect(await axe(page)).toEqual([]);
   await page.getByRole('button', { name: 'Register security key' }).click();
@@ -55,6 +57,34 @@ test('a link holder signs on, registers a security key in the browser, and only 
   expect(sent.type).toBe('public-key');
   expect(sent.response?.attestationObject).toBeTruthy(); // a real authenticator answer, not a stub
 });
+
+// F-028: a refused registration says why and what to use instead, and names another owner only when the team has one.
+const registrationOptions = {
+  rp: { id: 'localhost', name: 'Medvya Platform' }, user: { id: b64('member-1'), name: 'ops.admin@medvya.example', displayName: 'Ops Admin (synthetic)' },
+  challenge: b64('a-challenge-of-sixteen-plus-bytes'), pubKeyCredParams: [{ type: 'public-key', alg: -7 }], timeout: 60000, attestation: 'none',
+  authenticatorSelection: { authenticatorAttachment: 'cross-platform', residentKey: 'discouraged', userVerification: 'required' }, excludeCredentials: [],
+};
+for (const locale of ['en', 'ar'] as const)
+  test(`${locale}: a refused synced passkey says why and what to register instead; the first owner is not sent to another owner`, async ({ page }) => {
+    await virtualKey(page);
+    await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
+    let me = owner({});
+    let answer: object = { status: 401, json: { errors: { key: ['synced'] } } };
+    await page.route('**/v1/me', r => r.fulfill({ json: me }));
+    await page.route('**/bff/key/registration/options', r => r.fulfill({ json: registrationOptions }));
+    await page.route('**/bff/key/registration', r => r.fulfill(answer));
+    await page.goto('/');
+    await expect(page.getByText(t(locale, 'platform.signIn.register'))).toBeVisible(); // says which kind of key before the first try
+    await page.getByRole('button', { name: t(locale, 'platform.signIn.registerKey') }).click();
+    await expect(page.getByRole('alert')).toHaveText(t(locale, 'platform.signIn.keySynced'));
+    expect(await axe(page)).toEqual([]);
+
+    // Any other refusal, on a team that has another owner: what to try, and whom to ask.
+    me = owner({ otherOwner: true });
+    answer = { status: 401 };
+    await page.getByRole('button', { name: t(locale, 'platform.signIn.registerKey') }).click();
+    await expect(page.getByRole('alert')).toHaveText(`${t(locale, 'platform.signIn.keyNotRegistered')} ${t(locale, 'platform.signIn.askOwner')}`);
+  });
 
 test('signed out, the console offers company sign-on and explains lost-key recovery', async ({ page }) => {
   await page.route('**/v1/me', r => r.fulfill({ status: 401 }));
@@ -101,6 +131,11 @@ test('the audit log reads in Arabic, right to left, with actions in words', asyn
   await expect(page.getByRole('heading', { name: 'سجل تدقيق المنصة' })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.dir)).toBe('rtl');
   await expect(page.getByRole('row', { name: /دُعي عضو في الفريق/ })).toContainText('New licence reviewer joining');
+  // F-037: an opened document says which organisation and which document; F-036: who, by name and address.
+  const opened = page.getByRole('row', { name: new RegExp(t('ar', 'platform.audit.action.organisation_document_view')) });
+  await expect(opened).toContainText('Rao Clinic (synthetic)');
+  await expect(opened).toContainText(t('ar', 'platform.approvals.doc.TaxRegistration'));
+  await expect(opened).toContainText('ops.admin@medvya.example');
   await expect(page.getByRole('cell', { name: /team\.|auth\./ })).toHaveCount(0);
   expect(await axe(page)).toEqual([]);
 });

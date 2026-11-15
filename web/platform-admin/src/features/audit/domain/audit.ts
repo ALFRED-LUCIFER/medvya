@@ -1,7 +1,12 @@
 export type AuditEntry = {
   id: string; occurredAt: string; action: string; resourceType: string; resourceId: string | null; subjectTenantId: string | null;
-  actor: string | null; reason: string | null;
+  actor: string | null; actorEmail: string | null; reason: string | null;
+  /** The organisation by name and the part concerned as a code (a document's kind); null on entries written before they were recorded. */
+  subjectName: string | null; detail: string | null;
 };
+
+/** The document kind of an entry's detail. A file of a rejected request is kept aside as "old-1a2b3c4d-TaxRegistration": the kind is its last part. */
+export const documentKindOf = (detail: string) => detail.replace(/^old-[0-9a-f]+-/, '');
 
 /** Actions the console writes today, each with words in the catalogue, so no raw code reaches the screen. */
 const actionKeys = {
@@ -9,6 +14,7 @@ const actionKeys = {
   'auth.signin': 'platform.audit.action.auth_signin',
   'auth.signout': 'platform.audit.action.auth_signout',
   'auth.key.refused': 'platform.audit.action.auth_key_refused',
+  'auth.key.refused.synced': 'platform.audit.action.auth_key_refused_synced',
   'key.register': 'platform.audit.action.key_register',
   'key.recovery.issue': 'platform.audit.action.key_recovery_issue',
   'team.bootstrap': 'platform.audit.action.team_bootstrap',

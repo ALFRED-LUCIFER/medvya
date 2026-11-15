@@ -5,6 +5,7 @@ import { useForm, type FieldErrors } from 'react-hook-form';
 import { useI18n } from '@medvya/i18n';
 import { ApiError } from '../../schedule/services/scheduleApi';
 import { planFullText, type PlanLimit } from '../../staff/domain/staff';
+import { fetchPlanSeats } from '../../staff/services/staffApi';
 import {
   doctorProblem, doctorSchema, doctorSteps, emptyDoctor, emptyLicence, errorTarget, fieldProblem, licenceSchema, signatureProblem, stepFields,
   type Doctor, type DoctorForm, type DoctorStep, type LicenceForm,
@@ -28,9 +29,7 @@ export function useDoctorsController(defaultFacilityId: string) {
   // ---- Add doctor wizard ----
   const [adding, setAdding] = useState(false);
   const [step, setStep] = useState<DoctorStep>('details');
-  const [signature, setSignature] = useState<File | null>(null);
-  const [signatureProblemKind, setSignatureProblemKind] = useState<'type' | 'size' | null>(null);
-  const [added, setAdded] = useState<{ name: string; signatureFailed: boolean } | null>(null);
+  const [added, setAdded] = useState<{ name: string } | null>(null);
   const form = useForm<DoctorForm>({ resolver: zodResolver(doctorSchema), defaultValues: emptyDoctor(defaultFacilityId), shouldFocusError: false }); // the error summary takes focus
   // Each failed Next or save: the error summary takes focus once.
   const [failures, setFailures] = useState(0);
@@ -38,21 +37,14 @@ export function useDoctorsController(defaultFacilityId: string) {
   const open = () => {
     form.reset(emptyDoctor(defaultFacilityId, list.data?.defaults));
     setStep('details');
-    setSignature(null);
-    setSignatureProblemKind(null);
     setAdded(null);
     setAdding(true);
   };
   const close = () => setAdding(false);
 
   const add = useMutation({
-    mutationFn: async (values: DoctorForm) => {
-      const doctor = await addDoctor(values);
-      // The doctor exists from here on; a failed image upload must not make the whole add look failed.
-      const signatureFailed = signature ? await uploadSignature(doctor.id, signature).then(() => false, () => true) : false;
-      return { doctor, signatureFailed };
-    },
-    onSuccess: ({ doctor, signatureFailed }) => { setAdding(false); setAdded({ name: doctor.fullName, signatureFailed }); refresh(); },
+    mutationFn: addDoctor,
+    onSuccess: doctor => { setAdding(false); setAdded({ name: doctor.fullName }); refresh(); },
     onError: e => {
       // "licence.number:format" → under that field, on its step.
       const [path, code] = (e instanceof ApiError ? e.code ?? '' : '').split(':');
@@ -61,6 +53,9 @@ export function useDoctorsController(defaultFacilityId: string) {
     },
   });
 
+  // #1365 F-039: asked when the wizard opens, so "no doctor seat" is said at the first of six steps. A failed read says nothing: the add still decides.
+  const seats = useQuery({ queryKey: ['staff', 'plan'], queryFn: fetchPlanSeats, enabled: adding, staleTime: 0 });
+  const noSeat = seats.data && !seats.data.doctorFree ? planFullText(i18n, seats.data) : null;
   const index = doctorSteps.indexOf(step);
   const next = async () => {
     if (await form.trigger(stepFields[step])) setStep(doctorSteps[index + 1] ?? step);
@@ -118,15 +113,10 @@ export function useDoctorsController(defaultFacilityId: string) {
     onSubmit: form.handleSubmit(values => add.mutate(values)),
     submitting: add.isPending,
     submitFailed: add.isError && !(add.error instanceof ApiError && (add.error.status === 400 || add.error.code === emailFailed || add.error.code === planFull)),
-    planFull: add.error instanceof ApiError && add.error.code === planFull ? planFullText(i18n, add.error.body as PlanLimit) : null,
+    planFull: add.error instanceof ApiError && add.error.code === planFull ? planFullText(i18n, add.error.body as PlanLimit) : noSeat,
+    /** False when the plan has no doctor seat: the wizard says why and does not go on. */
+    canContinue: noSeat === null,
     emailFailed: add.error instanceof ApiError && add.error.code === emailFailed,
-    signature,
-    signatureProblem: signatureProblemKind,
-    onPickSignature: (file: File | undefined) => {
-      const problem = file ? signatureProblem(file) : null;
-      setSignatureProblemKind(problem);
-      setSignature(file && !problem ? file : null);
-    },
 
     correcting,
     licenceForm,

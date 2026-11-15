@@ -15,9 +15,9 @@ public sealed class FacilityDirectory(TenancyDbContext db, ILogoStore store) : I
         if (f is null) return null;
         // The tenant filter and row-level security leave exactly this tenant's row.
         var tenant = await db.Tenants.AsNoTracking().Select(t => new { t.Name, t.QueueOrder, t.BookedFirst }).SingleAsync(cancellationToken);
-        var profile = await db.Profiles.AsNoTracking().Select(p => new { p.Address, p.Phone }).SingleOrDefaultAsync(cancellationToken);
+        var profile = await db.Profiles.AsNoTracking().Select(p => new { p.Address, p.Phone, p.RegistrationNumber, p.SignatureLine }).SingleOrDefaultAsync(cancellationToken);
         return new FacilityInfo(f.Id, f.Name, f.TimeZone, tenant.Name, new(tenant.QueueOrder, tenant.BookedFirst), f.Address ?? profile?.Address, profile?.Phone, f.NurseRoom,
-            f.WifiNetwork is { } network ? new GuestWifi(network, f.WifiPassword, f.WifiDaily) : null);
+            f.WifiNetwork is { } network ? new GuestWifi(network, f.WifiPassword, f.WifiDaily) : null, profile?.RegistrationNumber, profile?.SignatureLine ?? true);
     }
 
     public Task<Role?> ActiveRoleAsync(Guid userId, Guid facilityId, CancellationToken cancellationToken = default) =>

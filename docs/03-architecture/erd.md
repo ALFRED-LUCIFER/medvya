@@ -34,7 +34,7 @@ flowchart LR
   api --> Identity["Identity<br/>schema identity<br/>5 tables"]
   api --> Patients["Patients<br/>schema patients<br/>7 tables"]
   api --> Scheduling["Scheduling<br/>schema scheduling<br/>15 tables"]
-  api --> Encounters["Encounters<br/>schema encounters<br/>24 tables"]
+  api --> Encounters["Encounters<br/>schema encounters<br/>25 tables"]
   api --> Prescribing["Prescribing<br/>schema prescribing<br/>18 tables"]
   api --> Notifications["Notifications<br/>schema notifications<br/>5 tables"]
   api --> Audit["Audit<br/>schema audit<br/>1 table"]
@@ -280,7 +280,7 @@ erDiagram
 | `OrganisationDocuments` | 8 | Id | tenant-scoped |
 | `OrganisationRequests` | 6 | TenantId | tenant-scoped |
 | `PracticeDefaults` | 13 | TenantId | tenant-scoped |
-| `Profiles` | 12 | Id | tenant-scoped |
+| `Profiles` | 13 | Id | tenant-scoped |
 | `SettingsChanges` | 8 | Id | tenant-scoped |
 | `Tenants` | 10 | Id |  |
 | `TenantIndex` | 1 | TenantId | tenant-scoped |
@@ -551,6 +551,7 @@ erDiagram
 | `Phone` | character varying(30) |  |  |
 | `RegistrationExpiresOn` | date | yes |  |
 | `RegistrationNumber` | character varying(50) |  |  |
+| `SignatureLine` | bool |  |  |
 | `TaxNumber` | character varying(30) |  |  |
 | `TenantId` | guid |  | FK to `Tenant` |
 | `xmin` | xid |  |  |
@@ -1346,7 +1347,7 @@ erDiagram
 
 </details>
 
-### Encounters (schema `encounters`, 24 tables)
+### Encounters (schema `encounters`, 25 tables)
 
 ```mermaid
 erDiagram
@@ -1399,6 +1400,12 @@ erDiagram
     guid LeadClinicianId "id of identity.Users"
     guid MergedFromPatientId "id of patients.Patients"
     guid PatientId "id of patients.Patients"
+  }
+  EncounterHandovers {
+    guid Id PK
+    guid EncounterId "id of encounters.Encounters"
+    guid FromClinicianId "id of identity.Users"
+    guid ToClinicianId "id of identity.Users"
   }
   GeriatricAssessments {
     guid Id PK
@@ -1554,6 +1561,9 @@ erDiagram
   identity_Users ||..o{ Encounters : "LeadClinicianId"
   patients_Patients |o..o{ Encounters : "MergedFromPatientId"
   patients_Patients ||..o{ Encounters : "PatientId"
+  Encounters ||..o{ EncounterHandovers : "EncounterId, no FK"
+  identity_Users ||..o{ EncounterHandovers : "FromClinicianId"
+  identity_Users ||..o{ EncounterHandovers : "ToClinicianId"
   tenancy_Facilities ||..o{ GeriatricAssessments : "FacilityId"
   patients_Patients |o..o{ GeriatricAssessments : "MergedFromPatientId"
   patients_Patients ||..o{ GeriatricAssessments : "PatientId"
@@ -1631,6 +1641,7 @@ erDiagram
 | `ConsultNotes` | 16 | Id | tenant-scoped |
 | `DoctorNoteTemplates` | 4 | Id | tenant-scoped |
 | `Encounters` | 14 | Id | tenant-scoped |
+| `EncounterHandovers` | 7 | Id | tenant-scoped |
 | `GeriatricAssessments` | 19 | Id | tenant-scoped |
 | `HistoryEntries` | 8 | Id | tenant-scoped |
 | `Immunisations` | 14 | Id | tenant-scoped |
@@ -1793,6 +1804,20 @@ erDiagram
 | `StartedAt` | timestamptz |  |  |
 | `Status` | character varying(20) |  |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
+
+</details>
+
+<details><summary><code>encounters.EncounterHandovers</code> columns</summary>
+
+| Column | Type | Null | Links to |
+|---|---|---|---|
+| `Id` | guid |  |  |
+| `At` | timestamptz |  |  |
+| `EncounterId` | guid |  | id of `encounters.Encounters` |
+| `FromClinicianId` | guid |  | id of `identity.Users` |
+| `Reason` | character varying(500) |  |  |
+| `TenantId` | guid |  | `tenancy.Tenants` |
+| `ToClinicianId` | guid |  | id of `identity.Users` |
 
 </details>
 
@@ -2932,7 +2957,7 @@ erDiagram
 | `KeyLinks` | 8 | Id |  |
 | `PlanPrices` | 6 | PlanVersionId, Country |  |
 | `PlanVersions` | 14 | Id |  |
-| `AuditEntries` | 10 | Id |  |
+| `AuditEntries` | 12 | Id |  |
 | `Members` | 11 | Id |  |
 | `Sessions` | 8 | Id |  |
 | `SecurityKeys` | 8 | Id |  |
@@ -2995,10 +3020,12 @@ erDiagram
 | `ActorMemberId` | guid | yes |  |
 | `ClientIp` | character varying(45) |  |  |
 | `CorrelationId` | character varying(64) |  |  |
+| `Detail` | character varying(64) |  |  |
 | `OccurredAt` | timestamptz |  |  |
 | `Reason` | character varying(500) |  |  |
 | `ResourceId` | guid | yes |  |
 | `ResourceType` | character varying(64) |  |  |
+| `SubjectName` | character varying(200) |  |  |
 | `SubjectTenantId` | guid | yes |  |
 
 </details>
@@ -3148,13 +3175,13 @@ From `docs/03-architecture/data-model.md` (areas A to D). "Built" means a table 
 | D · Care, portal, integration, audit | `AUDIT_EVENT` | built | `audit.AuditEvents` |
 | D · Care, portal, integration, audit | `OUTBOX_EVENT` | built | `scheduling.OutboxEvents` |
 
-Tables that exist but were added while building (not named in the plan): `encounters.CareChecks`, `encounters.CareGoals`, `encounters.CareTargets`, `encounters.ConsultNotes`, `encounters.DoctorNoteTemplates`, `encounters.GeriatricAssessments`, `encounters.HistoryEntries`, `encounters.Immunisations`, `encounters.IntakeEscalations`, `encounters.Intakes`, `encounters.MedicationDecisions`, `encounters.MedicationReconciliations`, `encounters.MilestoneResponses`, `encounters.OutboxEvents`, `encounters.PregnancyEpisodes`, `encounters.PregnancyRuledOuts`, `encounters.SignedNotePdfs`, `encounters.SignedNoteVersions`, `identity.OnboardingDrafts`, `identity.PatientSessions`, `identity.Sessions`, `identity.SmsSignIns`, `leads.DemoRequests`, `leads.Waitlist`, `notifications.Preferences`, `notifications.StaffNotificationReads`, `notifications.StaffNotifications`, `patients.DataKeys`, `patients.MergeRequests`, `platform.AuditEntries`, `platform.KeyLinks`, `platform.Members`, `platform.PlanPrices`, `platform.PlanVersions`, `platform.SecurityKeys`, `platform.Sessions`, `prescribing.FormularyBrands`, `prescribing.PrescriptionCancellations`, `prescribing.PrescriptionDiscards`, `prescribing.PrescriptionPdfs`, `prescribing.PrintedPapers`, `prescribing.ReferralEvents`, `prescribing.RxAdvice`, `prescribing.RxAlertOverrides`, `prescribing.RxLayoutApprovals`, `prescribing.RxShareCodes`, `prescribing.RxShares`, `scheduling.AppointmentReschedules`, `scheduling.BookingConflicts`, `scheduling.MetricBaselines`, `scheduling.OutboxTenants`, `scheduling.QueueDisplays`, `scheduling.Resources`, `scheduling.SlotHolds`, `scheduling.VisitStatusEvents`, `tenancy.AccessRequests`, `tenancy.AccessReviewDecisions`, `tenancy.AccessReviews`, `tenancy.FeatureFlags`, `tenancy.FeatureReleases`, `tenancy.Invitations`, `tenancy.OperatingHours`, `tenancy.OrganisationDocuments`, `tenancy.OrganisationRequests`, `tenancy.PracticeDefaults`, `tenancy.Profiles`, `tenancy.SettingsChanges`, `tenancy.TenantIndex`, `tenancy.TermsAcceptances`.
+Tables that exist but were added while building (not named in the plan): `encounters.CareChecks`, `encounters.CareGoals`, `encounters.CareTargets`, `encounters.ConsultNotes`, `encounters.DoctorNoteTemplates`, `encounters.EncounterHandovers`, `encounters.GeriatricAssessments`, `encounters.HistoryEntries`, `encounters.Immunisations`, `encounters.IntakeEscalations`, `encounters.Intakes`, `encounters.MedicationDecisions`, `encounters.MedicationReconciliations`, `encounters.MilestoneResponses`, `encounters.OutboxEvents`, `encounters.PregnancyEpisodes`, `encounters.PregnancyRuledOuts`, `encounters.SignedNotePdfs`, `encounters.SignedNoteVersions`, `identity.OnboardingDrafts`, `identity.PatientSessions`, `identity.Sessions`, `identity.SmsSignIns`, `leads.DemoRequests`, `leads.Waitlist`, `notifications.Preferences`, `notifications.StaffNotificationReads`, `notifications.StaffNotifications`, `patients.DataKeys`, `patients.MergeRequests`, `platform.AuditEntries`, `platform.KeyLinks`, `platform.Members`, `platform.PlanPrices`, `platform.PlanVersions`, `platform.SecurityKeys`, `platform.Sessions`, `prescribing.FormularyBrands`, `prescribing.PrescriptionCancellations`, `prescribing.PrescriptionDiscards`, `prescribing.PrescriptionPdfs`, `prescribing.PrintedPapers`, `prescribing.ReferralEvents`, `prescribing.RxAdvice`, `prescribing.RxAlertOverrides`, `prescribing.RxLayoutApprovals`, `prescribing.RxShareCodes`, `prescribing.RxShares`, `scheduling.AppointmentReschedules`, `scheduling.BookingConflicts`, `scheduling.MetricBaselines`, `scheduling.OutboxTenants`, `scheduling.QueueDisplays`, `scheduling.Resources`, `scheduling.SlotHolds`, `scheduling.VisitStatusEvents`, `tenancy.AccessRequests`, `tenancy.AccessReviewDecisions`, `tenancy.AccessReviews`, `tenancy.FeatureFlags`, `tenancy.FeatureReleases`, `tenancy.Invitations`, `tenancy.OperatingHours`, `tenancy.OrganisationDocuments`, `tenancy.OrganisationRequests`, `tenancy.PracticeDefaults`, `tenancy.Profiles`, `tenancy.SettingsChanges`, `tenancy.TenantIndex`, `tenancy.TermsAcceptances`.
 
-**Counts:** 106 tables across 11 schemas; 37 of 90 planned entities are built; 69 tables were added during the build.
+**Counts:** 107 tables across 11 schemas; 37 of 90 planned entities are built; 70 tables were added during the build.
 
 ## 6. Rules the model follows
 
-- **Tenant isolation:** 91 of 106 tables carry `TenantId` (EF query filter plus PostgreSQL forced row-level security on `medvya.tenant_id`). Without `TenantId`: `identity.OnboardingDrafts`, `identity.PatientSessions`, `identity.SmsSignIns`, `identity.Users`, `leads.DemoRequests`, `leads.Waitlist`, `platform.AuditEntries`, `platform.KeyLinks`, `platform.Members`, `platform.PlanPrices`, `platform.PlanVersions`, `platform.SecurityKeys`, `platform.Sessions`, `tenancy.FeatureReleases`, `tenancy.Tenants`. (`TenantId` present is not proof the row-level-security policy covers the table; see `docs/03-architecture/database-security.md`.)
+- **Tenant isolation:** 92 of 107 tables carry `TenantId` (EF query filter plus PostgreSQL forced row-level security on `medvya.tenant_id`). Without `TenantId`: `identity.OnboardingDrafts`, `identity.PatientSessions`, `identity.SmsSignIns`, `identity.Users`, `leads.DemoRequests`, `leads.Waitlist`, `platform.AuditEntries`, `platform.KeyLinks`, `platform.Members`, `platform.PlanPrices`, `platform.PlanVersions`, `platform.SecurityKeys`, `platform.Sessions`, `tenancy.FeatureReleases`, `tenancy.Tenants`. (`TenantId` present is not proof the row-level-security policy covers the table; see `docs/03-architecture/database-security.md`.)
 - **Append-only ledgers:** `audit.AuditEvents`, `encounters.SignedNotePdfs`, `encounters.SignedNoteVersions`, `patients.ConsentReceipts`, `prescribing.AuthorisedPrescriptions`, `prescribing.PharmacyDispatchEvents`, `prescribing.PrescriptionPdfs`, `prescribing.PrintedPapers`, `prescribing.RxLayoutApprovals`, `prescribing.RxShares`, `tenancy.TermsAcceptances` (hash-chained, MDV-P0-036; each also has ChainSeq, PrevHash and RowHash added by `LedgerSql`, outside the EF model).
 - **No cross-module foreign keys:** modules link by id and through application services (AGENTS.md 3.1).
 - **Country data plane:** one deployment and one database per country (ADR-003); this diagram is the same in each.

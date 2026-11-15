@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { withTitle, insertAt, maxSectionLength, snippetSections, addendumFailure, addendumSchema, inTemplateOrder, missingRequired, pdfFailure, signFailure, reapply, staleVersion, switchChoices, switchTemplate, type NoteTemplate } from './note';
+import { withTitle, insertAt, maxSectionLength, snippetSections, addendumFailure, addendumSchema, takeOverSchema, inTemplateOrder, missingRequired, pdfFailure, signFailure, reapply, staleVersion, switchChoices, switchTemplate, type NoteTemplate } from './note';
 
 const tpl = (key: string, ...ids: string[]): NoteTemplate => ({ key, version: 1, quickPhrases: [], sections: ids.map(id => ({ id, required: id === 'plan' })) });
 
@@ -87,6 +87,11 @@ describe('addendum rules (MDV-P2-013)', () => {
     expect(addendumSchema.safeParse({ text: 'Dose corrected', reason: '   ' }).success).toBe(false);
     expect(addendumSchema.safeParse({ text: '', reason: 'Typo' }).success).toBe(false);
     expect(addendumSchema.safeParse({ text: 'x', reason: 'r'.repeat(501) }).success).toBe(false);
+  });
+  it('taking over a visit needs a reason of at most 500 characters (#1365)', () => {
+    expect(takeOverSchema.safeParse({ reason: 'The doctor is away' }).success).toBe(true);
+    expect(takeOverSchema.safeParse({ reason: '  ' }).success).toBe(false);
+    expect(takeOverSchema.safeParse({ reason: 'r'.repeat(501) }).success).toBe(false);
   });
   it('maps refusals to what the doctor sees', () => {
     expect(addendumFailure(403, { code: 'reauth_required' })).toBe('reauth');

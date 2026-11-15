@@ -114,7 +114,8 @@ public static class PaperPdfDocument
     {
         var doctor = paper.Doctor?.FullName ?? doctorName ?? "";
         var mast = new PlainPdf.Masthead(paper.Facility.Name, paper.Facility.Address, paper.Facility.Phone, paper.Images.Logo, doctor, paper.Doctor is { } d
-            ? [.. new[] { d.Qualifications }.OfType<string>(), T("printFamily.reg", ("number", d.LicenceNumber), ("authority", d.LicenceAuthority))] : []);
+            ? [.. new[] { d.Qualifications }.OfType<string>(), T("printFamily.reg", ("number", d.LicenceNumber), ("authority", d.LicenceAuthority))] : [],
+            PaperText.Registration(paper.Facility.Registration));
         var sign = new PlainPdf.Signature(paper.Images.Signature, doctor,
             [.. paper.Doctor is { } r ? [T("printFamily.regShort", ("number", r.LicenceNumber))] : Array.Empty<string>(), when]);
         var footer = new PlainPdf.Footer(paper.Qr, check, T("printFamily.scanOrOpen", ("url", paper.VerifyUrl)), T("paper.hash", ("hash", paper.ContentHash)), null,

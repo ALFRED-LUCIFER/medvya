@@ -85,7 +85,16 @@ for (const locale of ['en', 'ar'])
     await expect(accept).toBeVisible();
     await expect(page.getByRole('heading', { name: locale === 'en' ? 'Licence responsibility' : 'مسؤولية التراخيص' })).toBeVisible(); // MDV-P1-067
     expect(await axe(page)).toEqual([]);
+    // #1365 F-038: one click accepts nothing; the confirmation names the version, and Cancel leaves it unaccepted.
     await accept.click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toContainText('2026-11-draft-2');
+    expect(accepted).toBe(false);
+    await dialog.getByRole('button', { name: locale === 'en' ? 'Cancel' : 'إلغاء', exact: true }).last().click();
+    await expect(dialog).toHaveCount(0);
+    expect(accepted).toBe(false);
+    await accept.click();
+    await page.getByRole('dialog').getByRole('button', { name: locale === 'en' ? 'Confirm and accept' : 'تأكيد وموافقة' }).click();
     await expect(accept).toHaveCount(0);
     await expect(page.getByRole('status').filter({ hasText: /2026|٢٠٢٦/ })).toBeVisible();
     expect(await axe(page)).toEqual([]);
@@ -122,6 +131,7 @@ test('a non-owner who tries to accept is told only the owner can', async ({ page
   await page.route('**/v1/settings/terms/accept', r => r.fulfill({ status: 403, json: { title: 'Only the practice owner can accept' } }));
   await page.goto('/settings?tab=terms');
   await page.getByRole('button', { name: 'Accept the terms for this practice' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Confirm and accept' }).click();
   await expect(page.getByRole('alert')).toHaveText('Only the practice owner can accept the terms.');
 });
 

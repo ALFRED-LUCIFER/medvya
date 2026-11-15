@@ -62,6 +62,9 @@ public sealed class NotePdfUnsupportedTextException() : Exception("The note has 
 /// <summary>Sign the note as the editor last saw it (<see cref="BaseVersion"/>), so text typed in another tab is never signed unseen.</summary>
 public sealed record SignNote(int BaseVersion);
 
+/// <summary>Take over an unsigned visit from its doctor (#1365). The reason is required, as long as an addendum's at most.</summary>
+public sealed record TakeOverVisit(string? Reason);
+
 /// <summary>The note is signed: it cannot be saved (code note_signed). A correction is an addendum.</summary>
 public sealed class NoteSignedException() : Exception("The note is signed.");
 
@@ -127,6 +130,15 @@ public interface IConsultNotes
     /// <exception cref="StaleNoteException"/>
     /// <exception cref="IdentityNotConfirmedException">The doctor has not confirmed identity with the patient on this encounter (MDV-P1-091).</exception>
     Task<NoteView?> SignAsync(Guid encounterId, SignNote command, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// A colleague takes over an unsigned visit whose doctor cannot sign it (#1365): Sign on Clinical notes with clinical access to the patient
+    /// at the visit's facility, and a reason. The caller becomes the lead clinician and then signs as usual; the change is recorded with both
+    /// doctors and the reason, and audited. Taking over a visit the caller already leads changes nothing. False: no such encounter.
+    /// </summary>
+    /// <exception cref="NoteValidationException">The reason is blank or too long (codes <c>required</c>, <c>too_long</c> on <c>reason</c>).</exception>
+    /// <exception cref="NoteSignedException">The note is signed: a colleague adds an addendum instead.</exception>
+    Task<bool> TakeOverAsync(Guid encounterId, TakeOverVisit command, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Signs an addendum (MDV-P2-013) as the next version of a signed note, under the same gate as signing (Sign on Clinical notes, care

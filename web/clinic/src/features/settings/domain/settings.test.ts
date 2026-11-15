@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { groupOf, settingsGroups, settingsTabs, certificateProblem, closureSchema, locationProblem, hoursProblems, logoProblem, profileSchema, sessionProblem, sessionsOutsideHours, settingsError, templateBody, toDayHours, toHoursRows, type CalendarTemplate } from './settings';
+import { groupOf, settingsGroups, settingsTabs, certificateProblem, closureSchema, locationProblem, hoursProblems, logoFailure, logoProblem, profileSchema, sessionProblem, sessionsOutsideHours, settingsError, templateBody, toDayHours, toHoursRows, type CalendarTemplate } from './settings';
 
 describe('practice settings rules', () => {
   it('shows the week from Monday and sends only the open days', () => {
@@ -14,6 +14,11 @@ describe('practice settings rules', () => {
     expect(toDayHours(rows)).toBeNull();
   });
 
+  it('says a logo change is unknown, never "nothing changed", when no answer came (#1365 F-066)', () => {
+    expect(logoFailure(null)).toBe('unknown');
+    expect([logoFailure({ code: 'logo:type' }), logoFailure({ code: 'logo:too_large' }), logoFailure({}), logoFailure({ code: 'x' })]).toEqual(['type', 'size', 'failed', 'failed']);
+  });
+
   it('checks a logo by type and size before upload', () => {
     expect(logoProblem({ type: 'image/png', size: 1000 })).toBeNull();
     expect(logoProblem({ type: 'image/jpeg', size: 512 * 1024 })).toBeNull();
@@ -24,7 +29,7 @@ describe('practice settings rules', () => {
   });
 
   it('validates the profile and treats empty optional fields as fine', () => {
-    const ok = { name: ' Iyer Family Clinic (synthetic) ', address: '', registrationNumber: '', registrationExpiresOn: '', taxNumber: '', phone: '', email: '' };
+    const ok = { name: ' Iyer Family Clinic (synthetic) ', address: '', registrationNumber: '', registrationExpiresOn: '', taxNumber: '', phone: '', email: '', signatureLine: true };
     expect(profileSchema.safeParse(ok).success).toBe(true);
     expect(profileSchema.safeParse({ ...ok, name: '  ' }).success).toBe(false);
     expect(profileSchema.safeParse({ ...ok, phone: '+91 90000 00101', email: 'desk@clinic.example' }).success).toBe(true);

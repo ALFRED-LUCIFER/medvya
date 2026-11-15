@@ -70,3 +70,17 @@ test('with a mouse the library controls are 36 px on /__ui', async ({ page }) =>
   expect(await page.evaluate(async () => (await (window as unknown as { axe: { run: (c: unknown, o: unknown) => Promise<{ violations: { id: string }[] }> } }).axe
     .run(document, { rules: { 'target-size': { enabled: true } } })).violations.map(v => v.id))).toEqual([]);
 });
+
+// The gallery is a development page: the production build (port 4174, `pnpm -r build` first) has no such route and ships no chunk for it.
+test.describe('production build', () => {
+  test.use({ baseURL: 'http://localhost:4174' });
+  test('the component gallery is not part of the built app', async ({ page }) => {
+    const scripts: string[] = [];
+    page.on('request', r => { if (r.resourceType() === 'script') scripts.push(r.url()); });
+    await page.route('**/v1/me/context', r => r.fulfill({ status: 401 }));
+    await page.goto('/app/__ui', { waitUntil: 'networkidle' });
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible(); // the app rendered something else
+    await expect(page.locator('#d-input')).toHaveCount(0);
+    expect(scripts.filter(u => /UiGallery/i.test(u))).toEqual([]);
+  });
+});

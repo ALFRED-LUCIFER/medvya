@@ -10,7 +10,7 @@ const admin = {
 };
 const existing = {
   id: 'd-1', fullName: 'Dr. Arjun Rao (synthetic)', specialty: 'Family medicine', qualifications: null, languages: null, facilityId: 'f-1', facilityName: 'Adyar (synthetic)',
-  status: 'Active', authority: 'TNMC', number: '84213', category: null, expiresOn: null, expired: true, attestedBy: 'u-lakshmi', attestedByName: null, attestedAt: '2026-11-01T09:00:00Z', hasSignature: false,
+  status: 'Active', authority: 'TNMC', number: '84213', category: null, expiresOn: null, expired: true, attestedBy: 'u-lakshmi', attestedByName: null, attestedAt: '2026-11-01T09:00:00Z', hasSignature: false, ownSignature: false,
 };
 const list = (doctors: object[]) => ({
   doctors, defaults: { newVisitFee: 50000, followUpFee: 30000, currency: 'INR' },
@@ -84,14 +84,14 @@ test('the Doctors tab lists doctors with who attested the licence, and an expire
   expect(state.resubmitted).toMatchObject({ authority: 'TNMC', number: '84213', category: 'Permanent', expiresOn: '2031-12-31', attested: true });
 });
 
-test('Add doctor: six steps, fees prefilled in whole currency units, then one request and the signature image', async ({ page }) => {
+test('Add doctor: five steps, fees prefilled in whole currency units, then one request and no signature image from the administrator', async ({ page }) => {
   const state = await setUp(page);
   await page.goto('/settings?tab=doctors');
   await page.getByRole('button', { name: 'Add doctor' }).first().click();
 
-  await expect(page.getByText('Step 1 of 6: Details')).toBeVisible();
+  await expect(page.getByText('Step 1 of 5: Details')).toBeVisible();
   await page.getByRole('button', { name: 'Next' }).click(); // nothing typed: refused, still on step 1
-  await expect(page.getByText('Step 1 of 6: Details')).toBeVisible();
+  await expect(page.getByText('Step 1 of 5: Details')).toBeVisible();
   await expect(page.getByLabel('Full name')).toHaveAttribute('aria-invalid', 'true');
   // MDV-P2-058: a refused Next puts focus on the error summary; each link names its field and focuses it.
   const summary = page.getByRole('group', { name: 'There is a problem' });
@@ -105,34 +105,28 @@ test('Add doctor: six steps, fees prefilled in whole currency units, then one re
   await page.getByLabel('Specialty').fill('Paediatrics');
   await page.getByRole('button', { name: 'Next' }).click();
 
-  await expect(page.getByText('Step 2 of 6: Licence')).toBeVisible();
+  await expect(page.getByText('Step 2 of 5: Licence')).toBeVisible();
   await page.getByRole('combobox', { name: 'Medical council' }).click();
   await page.getByRole('option', { name: 'Tamil Nadu Medical Council' }).click();
   await page.getByLabel('Registration number').fill('84213');
   await page.getByLabel('Registration category').fill('Permanent');
   await page.getByLabel('Expiry date').fill('2031-12-31');
   await page.getByRole('button', { name: 'Next' }).click();
-  await expect(page.getByText('Step 2 of 6: Licence')).toBeVisible(); // not without the owner's attestation
+  await expect(page.getByText('Step 2 of 5: Licence')).toBeVisible(); // not without the owner's attestation
   await page.getByLabel(/I confirm this licence belongs to this doctor/).check();
   await page.getByRole('button', { name: 'Next' }).click();
 
-  await expect(page.getByText('Step 3 of 6: Schedule')).toBeVisible();
+  await expect(page.getByText('Step 3 of 5: Schedule')).toBeVisible();
   await page.getByLabel('Room', { exact: true }).fill('Room 2'); // MDV-P1-111: where the doctor sits at this location
   await page.getByRole('button', { name: 'Next' }).click();
 
-  await expect(page.getByText('Step 4 of 6: Default fees')).toBeVisible();
+  await expect(page.getByText('Step 4 of 5: Default fees')).toBeVisible();
   await expect(page.getByLabel('New patient fee (INR)')).toHaveValue('500');
   await expect(page.getByLabel('Follow-up fee (INR)')).toHaveValue('300');
   await page.getByRole('button', { name: 'Next' }).click();
-  await expect(page.getByText('Step 5 of 6: Access')).toBeVisible();
+  await expect(page.getByText('Step 5 of 5: Access')).toBeVisible();
   await expect(page.getByLabel('Role')).toHaveValue('Doctor');
-  await page.getByRole('button', { name: 'Next' }).click();
-
-  await expect(page.getByText('Step 6 of 6: Signature image')).toBeVisible();
-  await expect(page.getByText('Signing in Medvya is always an authenticated action by the doctor (passkey / MFA), never the image alone.')).toBeVisible();
   expect(await axe(page)).toEqual([]);
-  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
-  await page.getByLabel('Signature image', { exact: true }).setInputFiles({ name: 'signature.png', mimeType: 'image/png', buffer: png });
   await page.getByRole('button', { name: 'Add doctor and send invitation' }).click();
 
   await expect(page.getByText('Dr. Sana Khan (synthetic) was added and the invitation was sent.')).toBeVisible();
@@ -140,7 +134,23 @@ test('Add doctor: six steps, fees prefilled in whole currency units, then one re
     fullName: 'Dr. Sana Khan (synthetic)', email: 'sana.khan@example.test', authority: 'TNMC', licenceNumber: '84213', category: 'Permanent', expiresOn: '2031-12-31', attested: true,
     newVisitFee: 50000, followUpFee: 30000, facilityId: 'f-1', qualifications: null, room: 'Room 2',
   });
-  expect(state.signature).toBe('image/png');
+  expect(state.signature).toBeNull(); // the image is the doctor's own to add
+});
+
+test('the signature image: a doctor uploads their own; for a colleague the administrator sees why not and can only remove', async ({ page }) => {
+  const state = await setUp(page);
+  state.doctors = [{ ...existing, ownSignature: true }, { ...existing, id: 'd-3', fullName: 'Dr. Sana Khan (synthetic)', hasSignature: true }];
+  await page.goto('/settings?tab=doctors');
+  const own = page.getByRole('listitem').filter({ hasText: 'Dr. Arjun Rao (synthetic)' });
+  const colleague = page.getByRole('listitem').filter({ hasText: 'Dr. Sana Khan (synthetic)' });
+  await expect(colleague.getByText('Only the doctor adds or replaces this image, from My devices in their own sign-in.')).toBeVisible();
+  await expect(colleague.locator('input[type=file]')).toHaveCount(0);
+  await expect(colleague.getByRole('button', { name: 'Remove signature image' })).toBeVisible();
+  await expect(own.getByText('Only the doctor adds or replaces this image')).toHaveCount(0);
+  expect(await axe(page)).toEqual([]);
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+  await own.getByLabel('Signature image', { exact: true }).setInputFiles({ name: 'signature.png', mimeType: 'image/png', buffer: png });
+  await expect.poll(() => state.signature).toBe('image/png');
 });
 
 for (const locale of ['en', 'ar'])
@@ -166,6 +176,24 @@ for (const locale of ['en', 'ar'])
     const tops = await boxes.evaluateAll(els => els.map(e => Math.round(e.getBoundingClientRect().top)));
     await page.screenshot({ path: info.outputPath(`add-doctor-${locale}.png`) });
     expect(new Set(tops).size, `tops ${tops.join(', ')}`).toBe(1);
+  });
+
+// #1365 F-039: with no doctor seat free, Add doctor says so at the first of its six steps and does not go on.
+for (const [locale, text, next] of [
+  ['en', 'Your plan allows 1 doctor and 2 staff; contact Medvya to upgrade', 'Next'],
+  ['ar', 'تتيح خطتك طبيبًا واحدًا وموظفَين اثنين؛ تواصل مع Medvya للترقية', 'التالي'],
+] as const)
+  test(`with no doctor seat free, Add doctor says so at step 1 and Next is off with the reason (${locale})`, async ({ page }) => {
+    const state = await setUp(page, locale);
+    await page.route('**/v1/staff/plan', r => r.fulfill({ json: { doctors: 1, staff: 2, doctorFree: false, staffFree: true } }));
+    await page.goto('/settings?tab=doctors');
+    await page.getByRole('button', { name: locale === 'ar' ? /طبيب/ : 'Add doctor' }).first().click();
+    await expect(page.getByRole('alert').filter({ hasText: text })).toBeVisible();
+    const go = page.getByRole('button', { name: next });
+    await expect(go).toBeDisabled();
+    await expect(go).toHaveAccessibleDescription(text);
+    expect(state.added).toBeNull();
+    expect(await axe(page)).toEqual([]);
   });
 
 // MDV-P1-111: each doctor row is one location; its room is changed there and sent alone (blank clears it).

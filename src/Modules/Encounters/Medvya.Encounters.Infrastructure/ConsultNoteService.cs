@@ -23,7 +23,7 @@ public sealed class ConsultNoteService(
     IPatientDirectory patients, IStaffUsers staff, IFacilityDirectory facilities) : IConsultNotes
 {
     public const string ReadAction = "note.read", SaveAction = "note.save", SignAction = "note.sign", AddendumAction = "note.addendum", PdfAction = "note.pdf",
-        PendingAction = "note.pending", PrefillAction = "note.prefill", PreviousAction = "note.previous", Resource = "note";
+        PendingAction = "note.pending", TakeOverAction = "encounter.takeover", PrefillAction = "note.prefill", PreviousAction = "note.previous", Resource = "note";
     static readonly Access[] Leads = [Access.Full], SignLevel = [Access.Sign];
 
     public async Task<NoteView?> GetAsync(Guid encounterId, CancellationToken cancellationToken = default)
@@ -113,6 +113,9 @@ public sealed class ConsultNoteService(
         // The endpoint already needs Sign on Clinical notes (licence gate included); this adds the care relationship.
         await clinical.RequireAsync(encounter.PatientId, encounter.FacilityId, Capability.ClinicalNotes, SignLevel, cancellationToken);
         var me = user.UserId ?? throw new InvalidOperationException("No user.");
+        // A note is signed by the doctor who held the consultation, never by a colleague on their behalf (a colleague adds an addendum
+        // under their own name once it is signed). Remove this and SignNoteTests.OnlyTheDoctorWhoHeldTheConsultationSignsItsNote fails.
+        if (encounter.LeadClinicianId != me) throw new ClinicalAccessDeniedException(canRequest: false, requestPending: false);
         var now = RequireReauth();
         var note = await db.ConsultNotes.SingleOrDefaultAsync(n => n.EncounterId == encounterId, cancellationToken);
         if (note?.Status == NoteStatus.Signed) return await ViewAsync(note, cancellationToken); // a double click or retry: nothing new is written
@@ -162,6 +165,44 @@ public sealed class ConsultNoteService(
             throw new StaleNoteException(current.Version);
         }
         return await ViewAsync(note, cancellationToken, [signed]);
+    }
+
+    public async Task<bool> TakeOverAsync(Guid encounterId, TakeOverVisit command, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        if (await db.Encounters.AsNoTracking().SingleOrDefaultAsync(e => e.Id == encounterId, cancellationToken) is not { } encounter) return false;
+        // The same gate as signing: a doctor (Sign on Clinical notes) with clinical access to this patient at the visit's facility.
+        // Remove it and SignNoteTests.AColleagueTakesOverAnUnsignedVisitAndThenSignsIt fails.
+        await clinical.RequireAsync(encounter.PatientId, encounter.FacilityId, Capability.ClinicalNotes, SignLevel, cancellationToken);
+        var me = user.UserId ?? throw new InvalidOperationException("No user.");
+        var reason = command.Reason?.Trim();
+        if (string.IsNullOrEmpty(reason)) throw new NoteValidationException([("reason", "required")]);
+        if (reason.Length > SignedNoteVersion.MaxReasonLength) throw new NoteValidationException([("reason", "too_long")]);
+        if (encounter.LeadClinicianId == me) return true;
+
+        await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
+        // A signed note stays with the doctor who signed it. The check and the change are one statement.
+        // shortcut: a signature that commits in the same instant is not seen by this statement, and the visit would then name the colleague
+        // as lead of a note its first doctor signed (nothing signed is changed); lock the encounter row in both paths if that is ever seen.
+        if (await db.Encounters.Where(e => e.Id == encounterId && e.LeadClinicianId == encounter.LeadClinicianId
+                    && !db.ConsultNotes.Any(n => n.EncounterId == encounterId && n.Status == NoteStatus.Signed))
+                .ExecuteUpdateAsync(s => s.SetProperty(e => e.LeadClinicianId, me), cancellationToken) == 0)
+            throw new NoteSignedException();
+        db.EncounterHandovers.Add(new()
+        {
+            Id = Guid.CreateVersion7(), TenantId = TenantId, EncounterId = encounterId, FromClinicianId = encounter.LeadClinicianId, ToClinicianId = me,
+            Reason = reason, At = clock.GetUtcNow(),
+        });
+        await db.SaveChangesAsync(cancellationToken);
+        // Opaque ids only in the audit row; the reason is on the handover record.
+        await audit.WriteAsync(new()
+        {
+            Id = Guid.CreateVersion7(), TenantId = TenantId, ActorUserId = me, Action = TakeOverAction, ResourceType = EncounterService.Resource, ResourceId = encounterId,
+            PatientId = encounter.PatientId, FacilityId = encounter.FacilityId, Purpose = AuditPurpose.Treatment, Outcome = AuditOutcome.Allowed, OccurredAt = clock.GetUtcNow(),
+            Detail = $"from:{encounter.LeadClinicianId};to:{me}",
+        }, tx.GetDbTransaction(), cancellationToken);
+        await tx.CommitAsync(cancellationToken);
+        return true;
     }
 
     public async Task<NoteView?> AddAddendumAsync(Guid encounterId, AddNoteAddendum command, CancellationToken cancellationToken = default)

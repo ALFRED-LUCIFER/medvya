@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { lastUsedFirst, nextSession, toSession, type MeContext } from './session';
+import { endingSoon, lastUsedFirst, nextPollMs, nextSession, toSession, type MeContext, type SessionEnd } from './session';
 import { signInSchema } from './signIn';
 
 const me: MeContext = { user: { id: 'u-joseph', displayName: 'A. Joseph (synthetic)' }, memberships: [], active: null };
@@ -16,6 +16,37 @@ describe('nextSession', () => {
 
   it('is signed out when this tab never had a session (or signed out)', () => {
     expect(nextSession(false, null)).toEqual({ kind: 'signedOut' });
+  });
+});
+
+describe('the end of a session (#1365 F-057)', () => {
+  const end = (endsInSeconds: number, extendable = true, idleTimeoutSeconds = 900): SessionEnd => ({ endsInSeconds, extendable, idleTimeoutSeconds });
+
+  it('gives notice two minutes before the end, or half the time-out where a clinic set a very short one', () => {
+    expect([121, 120, 0].map(s => endingSoon(end(s)))).toEqual([false, true, true]);
+    expect([31, 30].map(s => endingSoon(end(s, true, 60)))).toEqual([false, true]);
+    expect([endingSoon(null), endingSoon(undefined)]).toEqual([false, false]); // an older server says nothing: no notice, never a guess
+  });
+
+  it('asks again each minute, in time for the notice, and right after the end once the notice shows', () => {
+    expect(nextPollMs(undefined)).toBe(60_000);
+    expect(nextPollMs(end(900))).toBe(60_000);
+    expect(nextPollMs(end(150))).toBe(30_000);  // the notice is due in 30 s
+    expect(nextPollMs(end(122))).toBe(5_000);   // never under five seconds apart
+    expect(nextPollMs(end(40))).toBe(41_000);   // showing: look again just after the end
+    expect(nextPollMs(end(110))).toBe(60_000);
+  });
+
+  it('keeps the end beside the context, so the context keeps its shape whatever the clock says', () => {
+    expect(nextSession(true, { ...me, session: end(100) })).toEqual({ kind: 'signedIn', me, end: end(100) });
+    expect(nextSession(true, me)).toEqual({ kind: 'signedIn', me });
+  });
+
+  it('says a session ended for lack of use only when the idle notice was showing', () => {
+    expect(nextSession(true, null, { kind: 'signedIn', me, end: end(30) })).toEqual({ kind: 'expired', idle: true });
+    expect(nextSession(true, null, { kind: 'signedIn', me, end: end(600) })).toEqual({ kind: 'expired' }); // revoked or signed out elsewhere
+    expect(nextSession(true, null, { kind: 'signedIn', me, end: end(30, false) })).toEqual({ kind: 'expired' }); // the 8-hour limit, not idleness
+    expect(nextSession(true, null, { kind: 'signedIn', me })).toEqual({ kind: 'expired' });
   });
 });
 

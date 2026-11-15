@@ -11,7 +11,7 @@ public sealed class WebAppTests(PostgresFixture sql) : IClassFixture<PostgresFix
     readonly string webRoot = Directory.CreateTempSubdirectory("medvya-webroot").FullName;
     WebApplicationFactory<Program>? factory;
 
-    HttpClient Browser(bool built = true)
+    HttpClient Browser(bool built = true, int permitsPerMinute = 300)
     {
         if (built)
         {
@@ -19,7 +19,8 @@ public sealed class WebAppTests(PostgresFixture sql) : IClassFixture<PostgresFix
             File.WriteAllText(Path.Combine(webRoot, "app", "index.html"), "<!doctype html><title>shell</title>");
             File.WriteAllText(Path.Combine(webRoot, "app", "assets", "main-abc123.js"), "export {}");
         }
-        factory = StaffSignInTests.CreateFactory(sql.ConnectionString, b => b.UseSetting("Web:AppPath", "/app/").UseWebRoot(webRoot));
+        factory = StaffSignInTests.CreateFactory(sql.ConnectionString, b => b.UseSetting("Web:AppPath", "/app/").UseWebRoot(webRoot)
+            .UseSetting("RateLimiting:PermitsPerMinute", permitsPerMinute.ToString(System.Globalization.CultureInfo.InvariantCulture)));
         return factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
     }
 
@@ -51,6 +52,19 @@ public sealed class WebAppTests(PostgresFixture sql) : IClassFixture<PostgresFix
         Assert.Contains("immutable", asset.Headers.CacheControl!.ToString(), StringComparison.Ordinal);
         // A missing file must not answer with the shell page (a stale tab would run HTML as script).
         Assert.Equal(HttpStatusCode.NotFound, (await browser.GetAsync(new Uri("/app/assets/gone.js", UriKind.Relative))).StatusCode);
+    }
+
+    /// <summary>#1365: a refused script or shell page is a blank screen, so the app's files are not counted. Mutation check: UseRateLimiter before UseWebApp in Program.cs.</summary>
+    [Theory]
+    [InlineData("/app/assets/main-abc123.js")]
+    [InlineData("/app/schedule")]
+    public async Task TheAppsFilesAndShellAreNotRateLimited(string path)
+    {
+        using var browser = Browser(permitsPerMinute: 1);
+        for (var i = 0; i < 3; i++) Assert.Equal(HttpStatusCode.OK, (await browser.GetAsync(new Uri(path, UriKind.Relative))).StatusCode);
+        // The limit itself is in force, and the files above used none of it.
+        Assert.Equal(HttpStatusCode.OK, (await browser.GetAsync(new Uri("/health", UriKind.Relative))).StatusCode);
+        Assert.Equal(HttpStatusCode.TooManyRequests, (await browser.GetAsync(new Uri("/health", UriKind.Relative))).StatusCode);
     }
 
     /// <summary>MDV audit UX-12: the app's files go compressed; an API answer never does (BREACH). Mutation check: drop UseResponseCompression in WebApp.</summary>

@@ -15,4 +15,7 @@ static class PaperText
     public static string Get(string key, params (string Name, string Value)[] values) =>
         values.Aggregate(Catalog.Value.GetValueOrDefault(key) ?? throw new KeyNotFoundException($"Message key '{key}' is not in en.json."),
             (text, v) => text.Replace("{" + v.Name + "}", v.Value, StringComparison.Ordinal));
+
+    /// <summary>The practice's registration number as the masthead words it (#1365 F-068); null when none was entered.</summary>
+    public static string? Registration(string? number) => string.IsNullOrWhiteSpace(number) ? null : Get("rxPrint.registration", ("number", number));
 }

@@ -35,6 +35,17 @@ export function ageOn(dateOfBirth: string | null, day: string): number | null {
   return ty! - y! - (tm! < m! || (tm === m && td! < d!) ? 1 : 0);
 }
 
+/** The doctor's own counts at another location of the organisation (#1365 F-061): counts only, never who. */
+export type Elsewhere = { facilityId: string; waiting: number; today: number };
+export type ElsewhereLine = { membershipId: string; facilityName: string; waiting: number; today: number };
+
+/** Each count with the membership that switches there, waiting patients first; a location the session does not list is left out. */
+export const elsewhereLines = (counts: Elsewhere[], memberships: { id: string; facilityId: string; facilityName: string }[]): ElsewhereLine[] =>
+  counts.flatMap(c => {
+    const m = memberships.find(x => x.facilityId === c.facilityId);
+    return m && c.today > 0 ? [{ membershipId: m.id, facilityName: m.facilityName, waiting: c.waiting, today: c.today }] : [];
+  }).sort((a, b) => b.waiting - a.waiting);
+
 /** The server answers at most this many patients per flag lookup (IPatientChart.MaxFlags). */
 export const MAX_FLAGS = 100;
 

@@ -9,7 +9,7 @@ public class OnboardingRulesTests
     static OnboardingData Valid(string number = "84213", string authority = "TNMC", string? taxId = null, string mode = "Solo") => new(
         new("Arjun Rao (synthetic)", mode, "General medicine", null, null),
         new(authority, number, null, true, new DateOnly(2099, 1, 1)),
-        new("Rao Clinic (synthetic)", "12 Test Street, Chennai", null, taxId, "Clinic", "desk@rao-clinic.example"),
+        new("Rao Clinic (synthetic)", "12 Test Street, Chennai", "CE-0001", taxId ?? "33AAAAA0000A1Z9", "Clinic", "desk@rao-clinic.example"),
         new([new("09:00", "13:00"), new("17:00", "20:00")], [], 20, 100_000, 60_000),
         ["general-opd"],
         []);
@@ -34,23 +34,42 @@ public class OnboardingRulesTests
     [InlineData("DoH", "x", false)]
     [InlineData("TNMC", "GD-29918", false)] // an Indian council is unknown in the UAE
     public void UaeLicenceNeedsDohDhaOrMohapAndALicenceNumber(string authority, string number, bool ok) =>
-        Assert.Equal(ok, OnboardingRules.Uae.ValidateStep(1, Valid(number, authority)).Count == 0);
+        Assert.Equal(ok, OnboardingRules.Uae.ValidateStep(1, Valid(number, authority, taxId: "100123456700003")).Count == 0);
 
+    // The numbers are synthetic: the PAN part AAAAA0000A belongs to nobody; only the check character is real arithmetic.
     [Theory]
-    [InlineData("33AAAAA0000A1Z5", true)]
-    [InlineData("", true)]                 // optional
+    [InlineData("33AAAAA0000A1Z9", true)]
+    [InlineData("27AAAAA0000A1Z2", true)]
+    [InlineData("33AAAAA0000A1Z5", false)] // well formed, wrong check character
+    [InlineData("33AAAAA0000A2Z9", false)] // one character mistyped
     [InlineData("33AAAAA0000A1Z", false)]  // 14 characters
-    [InlineData("33aaaaa0000a1z5", false)] // lower case
-    public void GstinIsOptionalButChecked(string gstin, bool ok) =>
-        Assert.Equal(ok, OnboardingRules.India.ValidateStep(1, Valid(taxId: gstin)).Count == 0);
+    [InlineData("33aaaaa0000a1z9", false)] // lower case
+    public void AGstinNeedsItsFormatAndItsCheckCharacter(string gstin, bool ok)
+    {
+        Assert.Equal(ok ? [] : ["clinic.taxId:format"], Fields(OnboardingRules.India, 1, Valid(taxId: gstin)));
+        Assert.Equal(ok, OnboardingRules.India.IsTaxId(gstin)); // the same rule checks a location's tax number in Settings
+    }
 
     [Theory]
     [InlineData("100123456700003", true)]
-    [InlineData("", true)]
     [InlineData("10012345670000", false)]   // 14 digits
     [InlineData("1001234567000A3", false)]
     public void TrnIsFifteenDigits(string trn, bool ok) =>
         Assert.Equal(ok, OnboardingRules.Uae.ValidateStep(1, Valid("GD-29918", "DHA", taxId: trn)).Count == 0);
+
+    // F-030 (ADR-016): a Clinic uploads its registration certificate and tax registration, so it gives both numbers for the reviewer to
+    // compare; a Hospital's request asks for a different registration and keeps the numbers optional.
+    [Theory]
+    [InlineData("Clinic", "clinic.registrationNumber:required", "clinic.taxId:required")]
+    [InlineData("Hospital")]
+    public void AClinicGivesItsRegistrationNumberAndTaxNumber(string type, params string[] expected)
+    {
+        foreach (var rules in new[] { OnboardingRules.India, OnboardingRules.Uae })
+        {
+            var draft = Valid(mode: "Clinic") with { Licence = null };
+            Assert.Equal(expected, Fields(rules, 1, draft with { Clinic = draft.Clinic! with { Type = type, RegistrationNumber = " ", TaxId = "" } }));
+        }
+    }
 
     [Fact]
     public void HoursNeedOrderedNonOverlappingWindowsAndAKnownSlot()

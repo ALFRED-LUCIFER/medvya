@@ -53,7 +53,8 @@ public sealed class OrganisationRequests(TenancyDbContext db, ICurrentTenant ten
         var now = clock.GetUtcNow();
         var document = await db.OrganisationDocuments.SingleOrDefaultAsync(d => d.Kind == kind, cancellationToken);
         var replaced = document?.BlobKey;
-        var blobKey = $"onboarding/{tenantId}/{Guid.CreateVersion7()}";
+        // Tenant first, like every other file; rows from before keep their "onboarding/{tenant}/" key, so those files still open. Ids only, no names in blob paths.
+        var blobKey = $"{tenantId}/onboarding/{Guid.CreateVersion7()}";
         var uploader = user.UserId ?? throw new InvalidOperationException("No signed-in user.");
         await files.PutAsync(blobKey, content, contentType!, cancellationToken);
         // A new file of the same kind replaces the row in place (documents are never deleted from the database).

@@ -76,6 +76,7 @@ test('a new walk-in is quick-registered and checked in within a minute, then wai
   await page.getByLabel('Mobile').fill('+91 90000 00777');
   await page.getByRole('textbox', { name: 'Date of birth (required)', exact: true }).fill('1990-01-01');
   await page.getByRole('radio', { name: 'Male', exact: true }).check();
+  await page.getByRole('switch', { name: 'Treatment' }).check(); // a form field too: the patient's consent is asked, never pre-ticked (#1365 F-040)
   await page.getByRole('button', { name: 'Register patient' }).click(); // click 3 (the sex radio is a form field, as before)
   const back = page.getByRole('link', { name: 'Check in now (walk-in)' });
   await expect(back).toBeVisible();

@@ -42,7 +42,7 @@ public static class MedicineListEndpoints
         act.MapPost("/", async ([FromBody] NewMedicine body, [FromServices] ISharedFormulary list, [FromServices] IConsoleActions actions, CancellationToken ct) =>
         {
             var added = await list.AddAsync(body.Country, body.Medicine(), ct);
-            await actions.RecordAsync("medicine.add", Resource, added.Id, null, PlatformReason.Valid(body.Reason), ct);
+            await actions.RecordAsync("medicine.add", Resource, added.Id, null, PlatformReason.Valid(body.Reason), cancellationToken: ct);
             return Results.Created((string?)null, added);
         });
         act.MapPost("/{id:guid}/correction", async (Guid id, [FromBody] Correction body, [FromServices] ISharedFormulary list, [FromServices] IConsoleActions actions, CancellationToken ct) =>
@@ -57,7 +57,7 @@ public static class MedicineListEndpoints
     static async Task<IResult> Recorded(SharedMedicineView? changed, string action, IReasoned body, IConsoleActions actions, CancellationToken ct)
     {
         if (changed is null) return Results.NotFound();
-        await actions.RecordAsync(action, Resource, changed.Id, null, PlatformReason.Valid(body.Reason), ct);
+        await actions.RecordAsync(action, Resource, changed.Id, null, PlatformReason.Valid(body.Reason), cancellationToken: ct);
         return Results.Ok(changed);
     }
 

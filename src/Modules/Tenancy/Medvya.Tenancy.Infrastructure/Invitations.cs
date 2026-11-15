@@ -189,6 +189,25 @@ public sealed partial class Invitations(TenancyDbContext db, ICurrentTenant tena
         return x is null ? null : new InvitationPreview(x.Name, x.Facility, x.InvitedBy, x.Role, x.ExpiresAt, InvitationRules.RequiresLicenceVerification(x.Role));
     }
 
+    public async Task<bool?> IsAddressedToAsync(string token, IReadOnlyCollection<string> emails, CancellationToken cancellationToken = default)
+    {
+        if (InvitationToken.Read(token) is not { } t || t.TenantId != tenant.TenantId) return null;
+        var now = DateTimeOffset.UtcNow;
+        var invitation = await db.Invitations.Where(i => i.TokenHash == t.Hash && i.AcceptedAt == null && i.RevokedAt == null && i.ExpiresAt > now)
+            .Select(i => new { i.Id, i.Email }).SingleOrDefaultAsync(cancellationToken);
+        if (invitation is null) return null;
+        if (emails.Contains(invitation.Email, StringComparer.OrdinalIgnoreCase)) return true;
+        // The clinic's access log shows that someone else tried the link; no address is recorded.
+        await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
+        await audit.WriteAsync(new AuditEvent
+        {
+            Id = Guid.CreateVersion7(), TenantId = t.TenantId, Action = "invitation.accept", ResourceType = "invitation",
+            ResourceId = invitation.Id, Purpose = "support", Outcome = AuditOutcome.Denied, OccurredAt = now,
+        }, tx.GetDbTransaction(), cancellationToken);
+        await tx.CommitAsync(cancellationToken);
+        return false;
+    }
+
     public async Task<bool> AcceptAsync(string token, Guid userId, CancellationToken cancellationToken = default)
     {
         if (InvitationToken.Read(token) is not { } t || t.TenantId != tenant.TenantId) return false;

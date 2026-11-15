@@ -75,6 +75,8 @@ Staff sign-in needs the first two, or the app refuses every sign-in with "the pr
 
 3. **Sign-out redirect URI on the app registration** (#912). Authentication → Web → Redirect URIs: add `https://<web app host>/signout-callback-oidc` next to `https://<web app host>/signin-oidc`. Sign-out sends it as `post_logout_redirect_uri`; without it Entra still signs the browser out but stays on its own "You signed out" page instead of returning to Medvya. CLI (the list is replaced, so pass every URI): `az ad app update --id <client id> --web-redirect-uris https://<host>/signin-oidc https://<host>/signout-callback-oidc`.
 
+4. **Invite each person at the address they sign in with.** An invitation (clinic staff, platform console team) is accepted only by the account whose sign-in name or email is the invited address. Entra always sends the sign-in name (`preferred_username`), and both sign-ins (staff and console) request the `email` scope, so Entra also sends the account's mailbox address (`email`) when the directory has one. Set the user's **Email** (mail) in Entra when they are invited at a mailbox address that differs from their sign-in name; nothing to add in Token configuration. If user consent is turned off in the directory, grant admin consent for Microsoft Graph `email` (API permissions) on both app registrations.
+
 Branding of the hosted sign-in pages (email code, MFA set-up, recovery) is set by `infra/entra/branding.sh` (MDV-P1-060): logo, colour and text from `infra/entra/branding/`, per country. A tenant administrator runs it; it is idempotent and holds no secret.
 
 ## Email (MDV-P1-032)

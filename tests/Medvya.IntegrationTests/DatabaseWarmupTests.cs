@@ -25,8 +25,9 @@ public sealed class DatabaseWarmupTests(PostgresFixture sql) : IClassFixture<Pos
     {
         var (audit, outbox) = (await Rows("audit.\"AuditEvents\""), await Rows("scheduling.\"OutboxEvents\""));
         var log = new CapturingLogger<DatabaseWarmup>();
+        var unordered = new UnorderedRowLimits();
         using var host = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b.UseSetting("ConnectionStrings:Medvya", sql.ConnectionString)
-            .ConfigureServices(s => s.AddSingleton<ILogger<DatabaseWarmup>>(log)));
+            .ConfigureServices(s => s.AddSingleton<ILogger<DatabaseWarmup>>(log).AddSingleton<ILoggerProvider>(unordered)));
 
         var warmup = host.Services.GetServices<IHostedService>().OfType<DatabaseWarmup>().Single();
         await warmup.Running!;
@@ -34,7 +35,23 @@ public sealed class DatabaseWarmupTests(PostgresFixture sql) : IClassFixture<Pos
         var (level, message) = Assert.Single(log.Entries);
         Assert.Equal(LogLevel.Information, level);
         Assert.StartsWith("Database warm-up finished: 9 contexts", message, StringComparison.Ordinal);
+        Assert.Equal(0, unordered.Count); // #1365: start-up logged one such warning per table
         Assert.Equal((audit, outbox), (await Rows("audit.\"AuditEvents\""), await Rows("scheduling.\"OutboxEvents\"")));
+    }
+
+    /// <summary>Counts EF Core's "row limiting operator without OrderBy" warnings from every logger of the host.</summary>
+    sealed class UnorderedRowLimits : ILoggerProvider, ILogger
+    {
+        int count;
+        public int Count => count;
+        public ILogger CreateLogger(string categoryName) => this;
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public bool IsEnabled(LogLevel logLevel) => true;
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            if (eventId == Microsoft.EntityFrameworkCore.Diagnostics.CoreEventId.RowLimitingOperationWithoutOrderByWarning) Interlocked.Increment(ref count);
+        }
+        public void Dispose() { }
     }
 
     [Fact]

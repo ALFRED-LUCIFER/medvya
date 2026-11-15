@@ -253,3 +253,71 @@ for (const [w, h] of [[1024, 768], [768, 1024]] as const) {
     });
   });
 }
+
+// #1365 F-061: a doctor who works at several locations of one organisation. My day at Adyar is empty while a patient waits at Velachery: the page says so
+// in counts only and switches there; the location name in the top bar is the switcher, reachable by keyboard. The server's side is ElsewhereTests.
+for (const locale of ['en', 'ar'])
+  test(`a doctor with patients waiting at another location is told and can switch there; axe clean (${locale})`, async ({ page }) => {
+    const en = locale === 'en';
+    const velachery = { id: 'm-2', tenantId: 't-1', tenantName: 'Iyer Family Clinic', facilityId: 'f-2', facilityName: 'Velachery (synthetic)', role: 'SoloDoctor' };
+    const aundh = { id: 'm-3', tenantId: 't-1', tenantName: 'Iyer Family Clinic', facilityId: 'f-3', facilityName: 'Aundh (synthetic)', role: 'SoloDoctor' };
+    const elsewhereOrg = { id: 'm-9', tenantId: 't-9', tenantName: 'Rao Clinic (synthetic)', facilityId: 'f-9', facilityName: 'Main', role: 'SoloDoctor' };
+    let activeId = 'm-1';
+    const chosen: unknown[] = [];
+    await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
+    await page.route('**/v1/me/context', r => r.fulfill({ json: { ...doctor, memberships: [...doctor.memberships, velachery, aundh, elsewhereOrg],
+      active: { ...doctor.active, membershipId: activeId, facilityId: activeId === 'm-1' ? 'f-1' : 'f-2' } } }));
+    await page.route('**/v1/me/facility', r => { chosen.push(r.request().postDataJSON()); activeId = 'm-2'; return r.fulfill({ status: 204 }); });
+    await page.route('**/v1/front-desk/board?*', r => r.fulfill({ json: { facilityId: 'f-1', timeZone: 'Asia/Kolkata', date: '2026-10-19', now: ist('10:04'), cards: [] } }));
+    const asked: string[] = [];
+    await page.route('**/v1/front-desk/elsewhere?*', r => {
+      asked.push(new URL(r.request().url()).search);
+      return r.fulfill({ json: activeId === 'm-1' ? [{ facilityId: 'f-3', waiting: 0, today: 2 }, { facilityId: 'f-2', waiting: 1, today: 3 }] : [] });
+    });
+    for (const path of ['**/v1/chart/allergy-flags', '**/v1/intake-escalations?*']) await page.route(path, r => r.fulfill({ json: path.includes('flags') ? { items: [] } : [] }));
+    for (const path of ['**/v1/prescriptions/pending', '**/v1/notes/pending']) await page.route(path, r => r.fulfill({ json: { more: false, items: [] } }));
+    await page.goto('/today');
+
+    await expect(page.locator('main [data-slot=page-message]')).toContainText(en ? 'No visits today' : 'لا زيارات اليوم');
+    // Waiting patients first; counts and the location's name only.
+    const lines = page.getByRole('main').locator('[data-slot=banner]');
+    await expect(lines).toHaveCount(2);
+    await expect(lines.nth(0)).toContainText('Velachery (synthetic)');
+    await expect(lines.nth(0)).toContainText(en ? '1 patient is waiting for you at this location.' : 'مريض واحد ينتظرك في هذا الموقع.');
+    await expect(lines.nth(1)).toContainText(en ? 'You have 2 visits today at this location. Nobody is waiting yet.' : 'لديك زيارتان اليوم في هذا الموقع. لا أحد ينتظر بعد.');
+    expect(asked[0]).toBe('?facilityId=f-1'); // an id only, never a patient
+    if (!en) await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+    for (const b of await page.getByRole('main').getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
+    await page.addScriptTag({ path: axePath });
+    // An open menu hides the page behind it from assistive technology (Radix), so the menu is checked on its own.
+    const violations = (within = 'html') => page.evaluate(async scope =>
+      (await (window as unknown as { axe: { run: (scope: string) => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run(scope)).violations
+        .map(v => `${v.id} (${v.nodes.length})`), within);
+    expect(await violations()).toEqual([]);
+
+    // The top bar's location name is the switcher: opened and used with the keyboard, it lists every other membership (another organisation's by its name).
+    const switcher = page.getByRole('banner').getByRole('button', { name: /Adyar/ });
+    await switcher.focus();
+    await page.keyboard.press('Enter');
+    const menu = page.getByRole('menu');
+    await expect(menu.getByRole('menuitem')).toHaveCount(3);
+    await expect(menu.getByRole('menuitem').nth(2)).toContainText('Rao Clinic (synthetic) · Main');
+    expect(await violations('[role=menu]')).toEqual([]);
+    await page.keyboard.press('Escape');
+    await expect(switcher).toBeFocused();
+
+    await lines.nth(0).getByRole('button').click();
+    await expect(page.getByRole('banner').getByRole('button', { name: /Velachery/ })).toBeVisible();
+    expect(chosen).toEqual([{ membershipId: 'm-2' }]);
+    await expect(lines).toHaveCount(0);
+  });
+
+test('one location only: the top bar names it in plain text and My day asks nothing about other locations', async ({ page }) => {
+  let asked = 0;
+  await page.route('**/v1/front-desk/elsewhere?*', r => { asked++; return r.fulfill({ json: [] }); });
+  await open(page);
+  await expect(page.getByRole('region', { name: "Today's visits" })).toBeVisible();
+  await expect(page.getByRole('banner').getByText('Iyer Family Clinic · Adyar')).toBeVisible();
+  await expect(page.getByRole('banner').getByRole('button', { name: /Adyar/ })).toHaveCount(0);
+  expect(asked).toBe(0);
+});

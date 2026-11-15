@@ -35,7 +35,7 @@ public static class FeatureReleaseEndpoints
                 return Results.NotFound();
             // shortcut: the release and this entry are in two databases (the country's and the console's), so they cannot share a transaction; add an outbox
             // or a reconcile job if an entry here is ever missing.
-            await actions.RecordAsync($"feature.{body.Stage.ToString().ToLowerInvariant()}", Resource(key, country), id, null, reason, ct);
+            await actions.RecordAsync($"feature.{body.Stage.ToString().ToLowerInvariant()}", Resource(key, country), id, null, reason, cancellationToken: ct);
             return Results.NoContent();
         });
 
@@ -48,7 +48,7 @@ public static class FeatureReleaseEndpoints
             if (feature.AlwaysOn) return Results.ValidationProblem(new Dictionary<string, string[]> { ["stage"] = ["locked"] });
             foreach (var country in releases.Countries)
                 if (await releases.SetAsync(country, key, new(ReleaseStage.Off, null, null, null), Operator(caller), ct) is { } id)
-                    await actions.RecordAsync("feature.off", Resource(key, country), id, null, reason, ct);
+                    await actions.RecordAsync("feature.off", Resource(key, country), id, null, reason, cancellationToken: ct);
             return Results.NoContent();
         });
         return app;

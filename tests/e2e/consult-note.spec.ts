@@ -892,3 +892,36 @@ test('keyboard: following the print link puts focus on the page content, not the
   await expect(page.getByRole('article')).toBeVisible();
   await expect(page.locator('#main')).toBeFocused();
 });
+
+// #1365: a colleague opens an unsigned visit another doctor leads. Sign is locked and says why in words; taking the visit over needs a reason,
+// and Sign unlocks from the server's answer. Who may take over, and the record of it, are SignNoteTests on PostgreSQL.
+for (const locale of ['en', 'ar'])
+  test(`a colleague sees why Sign is locked and takes the visit over with a reason, axe clean (${locale})`, async ({ page }) => {
+    const ar = locale === 'ar';
+    const colleague = { ...doctor, user: { id: 'u-menon', displayName: 'Dr. S. Menon (synthetic)' } };
+    const mock = await open(page, { version: 1, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' }, recordingConsent: 'Declined' }, locale, colleague);
+    const taken: unknown[] = [];
+    await page.route('**/v1/encounters/e-1', r => r.fulfill({ json: {
+      encounter: { ...encounterOf(mock), leadClinicianId: taken.length > 0 ? 'u-menon' : 'u-rao' },
+      timeZone: 'Asia/Kolkata', treatmentConsent: true,
+      patient: { id: 'p-a1', fullName: 'Meera Iyer (synthetic)', mrn: '000001', dateOfBirth: '1972-03-12', ageYears: 54, sexAtBirth: 'Female' },
+      allergies: { state: 'NoKnownAllergies', allergies: [] } } }));
+    await page.route('**/v1/encounters/e-1/take-over', r => { taken.push(r.request().postDataJSON()); return r.fulfill({ status: 204 }); });
+
+    const sign = page.getByRole('button', { name: ar ? 'توقيع الملاحظة' : 'Sign note' });
+    await expect(sign).toBeDisabled();
+    await expect(page.getByText(ar ? 'أنت لست الطبيب المسؤول عن هذه الزيارة.' : 'You do not lead this visit.', { exact: false })).toBeVisible();
+    await page.getByRole('button', { name: ar ? 'تولَّ هذه الزيارة' : 'Take over this visit' }).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByRole('button', { name: ar ? 'تولَّ الزيارة' : 'Take over', exact: true }).click();
+    await expect(dialog.getByText(ar ? 'اكتب السبب.' : 'Give a reason.')).toBeVisible();
+    expect(taken).toEqual([]);
+    if (ar) await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+    expect(await axeViolations(page)).toEqual([]);
+    await dialog.getByLabel(ar ? 'السبب' : 'Reason').fill('The doctor is on leave (synthetic)');
+    await dialog.getByRole('button', { name: ar ? 'تولَّ الزيارة' : 'Take over', exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+    expect(taken).toEqual([{ reason: 'The doctor is on leave (synthetic)' }]);
+    await expect(sign).toBeEnabled();
+    await expect(page.getByRole('button', { name: ar ? 'تولَّ هذه الزيارة' : 'Take over this visit' })).toHaveCount(0);
+  });

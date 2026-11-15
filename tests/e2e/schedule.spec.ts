@@ -499,6 +499,7 @@ test('registering a new patient from the booking panel comes back to the held sl
   await page.getByLabel('Mobile').fill('+91 90000 00201');
   await page.getByRole('textbox', { name: 'Date of birth (required)', exact: true }).fill('1979-08-14');
   await page.getByRole('radio', { name: 'Male', exact: true }).check();
+  await page.getByRole('switch', { name: 'Treatment' }).check();
   await page.getByRole('button', { name: 'Register patient' }).click();
   await expect(page.getByRole('heading', { name: 'Deepak Nair is registered' })).toBeVisible();
   await page.getByRole('link', { name: 'Back to the booking' }).click();

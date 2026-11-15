@@ -442,6 +442,40 @@ public sealed class RxAuthorisationTests(PostgresFixture sql, AzuriteFixture blo
     Task<HttpResponseMessage> CancelAsync(Guid user, object body, int? reauthMinutesAgo = 0) =>
         Client(user, reauthMinutesAgo).PostAsJsonAsync(U($"/v1/encounters/{encounter}/prescription/cancellation"), body);
 
+    // The author cancels with a reason; so may another doctor who treats the patient, and then the record and the audit name that doctor and
+    // keep the reason. SAFETY mutation check: make the reason optional in PrescriptionService.CancelAsync (Text(..., required: false)) and the
+    // colleague's cancellation without a reason goes through.
+    [Fact]
+    public async Task AnotherDoctorCancelsAPrescriptionOnlyWithAReasonRecordedUnderTheirOwnName()
+    {
+        await PrescribeAsync("Metformin", Twice);
+        using (await AuthoriseAsync(h.Doctor)) { }
+        foreach (var body in new object[] { new { }, new { reason = "  " } })
+        {
+            using var r = await CancelAsync(h.SecondDoctor, body);
+            Assert.Equal(HttpStatusCode.BadRequest, r.StatusCode);
+        }
+        await using (var db = sql.Prescribing(h.Tenant)) Assert.Equal(0, await db.PrescriptionCancellations.CountAsync());
+
+        using (var ok = await CancelAsync(h.SecondDoctor, new { reason = "Patient reported a reaction (synthetic)" }))
+            Assert.Equal(HttpStatusCode.OK, ok.StatusCode);
+        await using (var db = sql.Prescribing(h.Tenant))
+        {
+            var row = await db.PrescriptionCancellations.SingleAsync();
+            Assert.Equal(("Patient reported a reaction (synthetic)", h.SecondDoctor), (row.Reason, row.CancelledBy));
+            Assert.Equal(h.Doctor, (await db.AuthorisedPrescriptions.SingleAsync(p => p.Id == row.PrescriptionId)).AuthorisedBy);
+        }
+        Assert.Equal([(Guid?)h.SecondDoctor], (await AuditAsync("rx.cancel")).Where(e => e.Outcome == AuditOutcome.Allowed).Select(e => e.ActorUserId));
+
+        // Without a care relationship the colleague cancels nothing, reason or not.
+        await PrescribeAsync("Amlodipine", Twice);
+        using (await AuthoriseAsync(h.Doctor)) { }
+        await h.Settings(h.Admin).SaveClinicalAccessAsync(ClinicalAccessPolicy.AssignedOnly);
+        using (var refused = await CancelAsync(h.SecondDoctor, new { reason = "Synthetic" }))
+            Assert.Equal((HttpStatusCode.Forbidden, "no_care_relationship"), (refused.StatusCode, await Code(refused)));
+        await using (var db = sql.Prescribing(h.Tenant)) Assert.Equal(1, await db.PrescriptionCancellations.CountAsync());
+    }
+
     // SAFETY mutation check: remove RequireFreshReauth from PrescriptionService.CancelAsync and the stale cancellations go through; drop the cancelled
     // throw in PrintableAsync and the cancelled prescription prints; drop the cancellation look-up in PrescriptionVerification and it verifies as valid;
     // drop AddLedger for PrescriptionCancellations (migration RxCancellations) and the database UPDATE succeeds.
@@ -610,6 +644,16 @@ public sealed class RxAuthorisationTests(PostgresFixture sql, AzuriteFixture blo
     [Fact]
     public async Task ThePdfRendersServerSideOnA4AndA5WithTheLicenceAndIsStoredWithItsHash()
     {
+        // #1365 F-068: what the owner entered in settings heads every page. This location has no address of its own, so the practice's prints.
+        await using (var db = sql.Context(h.Tenant))
+        {
+            db.Profiles.Add(new PracticeProfile
+            {
+                Id = Guid.NewGuid(), TenantId = h.Tenant, Address = "12 Beach Road (synthetic)\nAdyar, Chennai 600020", Phone = "044 5550 0100",
+                RegistrationNumber = "TN/CE/2026/00042", ChangedAt = h.Clock.GetUtcNow(),
+            });
+            await db.SaveChangesAsync();
+        }
         await PrescribeAsync("Metformin", Twice); // Schedule H in India: its warning prints
         foreach (var i in Enumerable.Range(1, 12)) await PrescribeAsync("Cetirizine", Twice with { Instructions = $"Synthetic note {i}" }); // more than one A5 page
         foreach (var alert in (await h.Get<IPrescriptions>(h.Doctor).CheckAsync(encounter))!.Alerts.Where(a => a.Severity == RxSeverity.Severe))
@@ -631,7 +675,9 @@ public sealed class RxAuthorisationTests(PostgresFixture sql, AzuriteFixture blo
             Assert.Equal(hash, r.Headers.GetValues("X-Content-SHA256").Single());
             hashes.Add(hash);
             var pages = PdfPages.Read(bytes, paper.Margin);
-            string[] markers = ["Reg. 84213 · Tamil Nadu Medical Council", "MRN 000001", "Dr. Arjun Rao (synthetic)", "MBBS, MD (General Medicine)", "PATIENT"];
+            // #1365 F-068: the practice's address, phone and registration number are in the masthead of every page.
+            string[] markers = ["Reg. 84213 · Tamil Nadu Medical Council", "MRN 000001", "Dr. Arjun Rao (synthetic)", "MBBS, MD (General Medicine)", "PATIENT",
+                "12 Beach Road (synthetic)", "Adyar, Chennai 600020", "044 5550 0100"];
             Assert.True(paper == PlainPdf.A4 || pages.Count >= 2, $"{paper.Name}: {pages.Count} page(s)");
             Assert.All(pages, page =>
             {
@@ -647,6 +693,7 @@ public sealed class RxAuthorisationTests(PostgresFixture sql, AzuriteFixture blo
             var packed = text.Replace(" ", "", StringComparison.Ordinal); // wrapping may break a line anywhere
             foreach (var expected in new[] { "IyerFamilyClinic(synthetic)·Adyar(synthetic)", "DIAGNOSIS", "Hypertension(synthetic)(provisional)", "FOLLOW-UP", "Onorafter", "Reg.84213Authorised" })
                 Assert.Contains(expected, packed, StringComparison.Ordinal);
+            Assert.All(pages, page => Assert.Contains("Registrationno.TN/CE/2026/00042", page.Text.Replace(" ", "", StringComparison.Ordinal), StringComparison.Ordinal));
             Assert.Matches(@"·\d+years·MRN", packed);
             Assert.DoesNotMatch("[0-9a-f]{64}", packed); // the content hash is on the QR verify page, not on the patient's copy (MDV-AUDIT-1097)
             Assert.True(pages[^1].Shapes > 200, "the QR code is drawn"); // a version 5+ code has hundreds of dark modules
@@ -701,6 +748,97 @@ public sealed class RxAuthorisationTests(PostgresFixture sql, AzuriteFixture blo
         Assert.All(pages, p => Assert.True(p.InsideMargins));
         // SAFETY mutation check: let the signature box break away from the last row in PlainPdf.Write and this fails (a signature-only page can be stapled to another paper).
         Assert.Contains("Synthetic note 12", Assert.Single(pages, p => p.Text.Contains("Authorised ", StringComparison.Ordinal)).Text, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// #1365: the practice's signature-line setting is read when the paper renders. On (the default) leaves the space to sign by hand; off prints that
+    /// the prescription is computer generated in its place, on A4 and A5. A doctor's uploaded signature image still prints when it is off, without the line.
+    /// Mutation check: drop the line in PlainPdf's signature box and the off case fails.
+    /// </summary>
+    [Fact]
+    public async Task WithTheSignatureLineOffThePaperSaysItIsComputerGeneratedInPlaceOfTheSigningSpace()
+    {
+        await PrescribeAsync("Metformin", Twice);
+        using (var ok = await AuthoriseAsync(h.Doctor)) Assert.Equal(HttpStatusCode.OK, ok.StatusCode);
+        const string Line = "Thisprescriptioniscomputergeneratedanddoesnotneedasignature."; // spaces dropped: the line may wrap anywhere
+        async Task<(string Text, IReadOnlyList<PdfPages.Page> Pages)> ReadAsync(PlainPdf.Paper paper)
+        {
+            using var r = await PdfAsync(paper.Name);
+            Assert.Equal(HttpStatusCode.OK, r.StatusCode);
+            var pages = PdfPages.Read(await r.Content.ReadAsByteArrayAsync(), paper.Margin);
+            return (string.Concat(pages.Select(p => p.Text)).Replace(" ", "", StringComparison.Ordinal), pages);
+        }
+        Assert.DoesNotContain(Line, (await ReadAsync(PlainPdf.A4)).Text, StringComparison.Ordinal); // no profile yet: on
+
+        await using (var db = sql.Context(h.Tenant))
+        {
+            db.Profiles.Add(new PracticeProfile { Id = Guid.NewGuid(), TenantId = h.Tenant, SignatureLine = false, ChangedAt = h.Clock.GetUtcNow() });
+            await db.SaveChangesAsync();
+        }
+        foreach (var paper in new[] { PlainPdf.A4, PlainPdf.A5 })
+        {
+            var (text, pages) = await ReadAsync(paper);
+            Assert.Contains(Line, text, StringComparison.Ordinal);
+            Assert.Contains("Reg.84213Authorised", text, StringComparison.Ordinal); // the doctor's name and registration stay in the box
+            Assert.All(pages, p => Assert.True(p.InsideMargins, $"{paper.Name}: a line runs past the margin"));
+        }
+
+        await using (var db = sql.Context(h.Tenant))
+        {
+            (await db.Profiles.SingleAsync()).SignatureLine = true;
+            await db.SaveChangesAsync();
+        }
+        Assert.DoesNotContain(Line, (await ReadAsync(PlainPdf.A4)).Text, StringComparison.Ordinal);
+
+        var signature = $"{h.Tenant}/signature/{Guid.NewGuid()}";
+        await new BlobLogoStore(blobs.ConnectionString).PutAsync(signature, TestImages.Make(8, 2, SkiaSharp.SKEncodedImageFormat.Png), "image/png");
+        await using (var db = sql.Context(h.Tenant))
+        {
+            (await db.Profiles.SingleAsync()).SignatureLine = false;
+            var membership = await db.Memberships.SingleAsync(m => m.UserId == h.Doctor);
+            (await db.DoctorProfiles.SingleAsync(p => p.MembershipId == membership.Id)).SignatureKey = signature;
+            await db.SaveChangesAsync();
+        }
+        var signed = await ReadAsync(PlainPdf.A4);
+        Assert.DoesNotContain(Line, signed.Text, StringComparison.Ordinal);
+        Assert.Equal(1, signed.Pages.Sum(p => p.Images)); // the doctor's own signature, as today
+    }
+
+    /// <summary>
+    /// #1365 F-067: once a paper has printed, the next one is ready well inside two seconds and reads neither image from storage again (a logo or a
+    /// signature is written once under a random key, so the bytes are kept by key). Mutation check: drop the kept copy in BlobLogoStore.ReadAsync
+    /// and the second PDF fails, because its images are gone from storage.
+    /// </summary>
+    [Fact]
+    public async Task AWarmPdfIsReadyWithinTwoSecondsAndReadsNoImageFromStorageAgain()
+    {
+        await PrescribeAsync("Metformin", Twice);
+        using (var ok = await AuthoriseAsync(h.Doctor)) Assert.Equal(HttpStatusCode.OK, ok.StatusCode);
+        var logos = new BlobLogoStore(blobs.ConnectionString);
+        var (logo, signature) = ($"{h.Tenant}/logo/{Guid.NewGuid()}", $"{h.Tenant}/signature/{Guid.NewGuid()}");
+        await logos.PutAsync(logo, TestImages.Png, "image/png");
+        await logos.PutAsync(signature, TestImages.Make(8, 2, SkiaSharp.SKEncodedImageFormat.Png), "image/png");
+        await using (var db = sql.Context(h.Tenant))
+        {
+            db.Profiles.Add(new PracticeProfile { Id = Guid.NewGuid(), TenantId = h.Tenant, LogoKey = logo, ChangedAt = h.Clock.GetUtcNow() });
+            var membership = await db.Memberships.SingleAsync(m => m.UserId == h.Doctor);
+            (await db.DoctorProfiles.SingleAsync(p => p.MembershipId == membership.Id)).SignatureKey = signature;
+            await db.SaveChangesAsync();
+        }
+        using (var cold = await PdfAsync()) Assert.Equal(HttpStatusCode.OK, cold.StatusCode); // start-up, fonts and both images: not timed
+
+        var container = new BlobContainerClient(blobs.ConnectionString, BlobLogoStore.Container);
+        foreach (var key in new[] { logo, signature }) await container.DeleteBlobAsync(key); // behind the app's back: a read from storage would now fail
+        foreach (var paper in new[] { PlainPdf.A4, PlainPdf.A5 })
+        {
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            using var warm = await PdfAsync(paper.Name);
+            var bytes = await warm.Content.ReadAsByteArrayAsync();
+            watch.Stop();
+            Assert.Equal(HttpStatusCode.OK, warm.StatusCode);
+            Assert.Equal(2, PdfPages.Read(bytes, paper.Margin).Sum(p => p.Images)); // the logo and the signature, from memory
+            Assert.True(watch.Elapsed < TimeSpan.FromSeconds(2), $"{paper.Name}: {watch.ElapsedMilliseconds} ms"); // measured locally: 50 to 200 ms
+        }
     }
 
     // SAFETY mutation check: drop the glyph catch in PlainPdf.Write and the emoji gives 500, not 422.

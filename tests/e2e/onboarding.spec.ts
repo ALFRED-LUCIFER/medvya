@@ -32,11 +32,13 @@ test('a visitor from the region selector signs up: the country is carried into m
 
 test('the create-account answers fill the new draft once, then leave the browser (MDV-P1-059)', async ({ page }) => {
   const api = await mockOnboarding(page);
-  const prefill = { profile: { fullName: 'Omar Haddad (synthetic)', mode: 'Clinic' }, clinic: { name: 'Lakeside Clinic (synthetic)', address: 'Abu Dhabi' } };
+  const prefill = { profile: { fullName: 'Omar Haddad (synthetic)', mode: 'Clinic' }, clinic: { name: 'Lakeside Clinic (synthetic)', address: 'Abu Dhabi', contactEmail: 'owner@example.test' } };
   await page.addInitScript(p => { if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1'); sessionStorage.setItem('medvya.signUp', p); } }, JSON.stringify(prefill));
   await page.goto('/onboarding?country=AE');
-  await page.getByRole('button', { name: 'Start setup' }).click();
+  // #1365 F-022: straight from create account the country is not asked again, and the work email is already the request's contact email.
   await expect(page.getByLabel('Full name')).toHaveValue('Omar Haddad (synthetic)');
+  await expect(page.getByLabel('Email Medvya writes to about this request')).toHaveValue('owner@example.test');
+  await expect(page.getByRole('button', { name: 'Start setup' })).toHaveCount(0);
   expect(api.saves[0]).toMatchObject({ step: 1, data: prefill });
   expect(await page.evaluate(() => sessionStorage.getItem('medvya.signUp'))).toBeNull();
 });
@@ -98,6 +100,16 @@ test('a finish whose answer was lost succeeds on the second try with the same pr
   await expect.poll(() => api.chose).toBe('m-1');
 });
 
+// #1365: the server limits organisations awaiting approval per account (409) and finishes per minute (429); each refusal is said in words.
+test('a finish refused by the per-account limits says why, and the answers stay', async ({ page }) => {
+  const api = await mockOnboarding(page);
+  const refusals = [409, 429];
+  await page.route('**/v1/onboarding/finish', r => (refusals.length ? r.fulfill({ status: refusals.shift()!, json: { code: 'too_many_unapproved' } }) : r.fallback()));
+  await page.goto('/onboarding?country=IN');
+  await completeWizard(page, { refusals: [/You already have two organisations waiting for approval from Medvya/, /Too many attempts\. Wait a minute, then try again\./] });
+  expect(api.finished).toBe(true); // the third try reached the server's finish
+});
+
 test('errors appear under the field and are announced; a server error keeps the person on the step', async ({ page }) => {
   await mockOnboarding(page, { step: 1, data: {} });
   await page.goto('/onboarding');
@@ -118,6 +130,8 @@ test('errors appear under the field and are announced; a server error keeps the 
   await page.getByLabel('A clinic').check();
   await page.getByLabel('Email Medvya writes to about this request').fill('desk@example.test');
   await page.getByLabel(/^Address/).fill('12 Test Street');
+  await page.getByLabel('Clinical establishment registration').fill('CE-0001'); // a clinic gives the numbers of the certificates it uploads (ADR-016)
+  await page.getByLabel('GSTIN').fill('33AAAAA0000A1Z9');
   await page.getByLabel('Paediatrics').check();
   await page.getByRole('combobox', { name: 'Medical council' }).click();
   await page.getByRole('option', { name: /TNMC/ }).click();
@@ -140,6 +154,12 @@ test('an owner who is not a doctor gives no licence and needs no specialty', asy
   await page.getByLabel('A clinic').check();
   await page.getByLabel('Email Medvya writes to about this request').fill('desk@example.test');
   await page.getByLabel(/^Address/).fill('1 Test Road');
+  // F-030: a clinic cannot go on without the numbers of its two certificates; they are asked on the page, not under More details.
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await expect(page.locator('#registrationNumber-error')).toHaveText('This is required.');
+  await expect(page.locator('#taxId-error')).toHaveText('This is required.');
+  await page.getByLabel('Clinical establishment registration').fill('CE-0001'); // a clinic gives the numbers of the certificates it uploads (ADR-016)
+  await page.getByLabel('GSTIN').fill('33AAAAA0000A1Z9');
   await page.getByRole('button', { name: 'Continue' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'When are you open, and what do you charge?' })).toBeVisible();
 });
@@ -160,7 +180,7 @@ test('the team step invites the front desk, says what each role sees, and does n
   await expect(page.locator('#inviteEmail-error')).toHaveText('Each person can be invited once.');
   await page.getByLabel('Email address').fill('');
   await page.getByRole('button', { name: 'Continue' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Bring your existing patients.' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Your existing patients.' })).toBeVisible();
   expect(api.saves.at(-1)!.data.team).toEqual([{ email: 'nurse@example.test', role: 'Nurse' }]);
 });
 
@@ -169,9 +189,9 @@ test('skip leaves a step empty; finish later saves and signs out', async ({ page
   await page.goto('/onboarding');
   await expect(page.getByLabel('Move from my software')).toBeChecked();
   await page.getByRole('button', { name: 'Skip for now' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Get paid and keep patients informed.' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Payments and messages.' })).toBeVisible();
   expect(api.saves.at(-1)!.data.patients).toBeUndefined();
-  await expect(page.getByText('Later, in Settings')).toHaveCount(4);
+  await expect(page.getByText('Not available yet')).toHaveCount(4); // #1365 F-025: nothing is promised that is not built
 
   await page.getByRole('button', { name: 'Finish later' }).click();
   await expect.poll(() => api.signedOut).toBe(true);
@@ -190,6 +210,10 @@ test('the wizard works from the keyboard at 768 px', async ({ page }) => {
   await page.keyboard.type('1 Test Road');
   await page.keyboard.press('Tab');
   await page.keyboard.type('desk@example.test');
+  await page.keyboard.press('Tab');
+  await page.keyboard.type('CE-0001');
+  await page.keyboard.press('Tab');
+  await page.keyboard.type('33AAAAA0000A1Z9');
   await page.keyboard.press('Enter'); // Enter in a field submits the step
   await expect(page.getByRole('heading', { level: 1, name: 'When are you open, and what do you charge?' })).toBeVisible();
   await page.getByRole('switch', { name: /Sunday/ }).focus();
@@ -235,7 +259,8 @@ for (const locale of ['en', 'ar'])
       await mockOnboarding(page, { step: 1, data: {} });
       await page.goto('/onboarding');
       const optional = locale === 'en' ? '(optional)' : '(اختياري)';
-      await expect(page.locator('label[for=taxId]')).toContainText(optional);
+      await expect(page.locator('label[for=qualifications]')).toContainText(optional);
+      await expect(page.locator('label[for=taxId]')).not.toContainText(optional); // F-030: required of a clinic
       await expect(page.locator('label[for=fullName]')).not.toContainText(optional);
       expect(await page.locator('main label, main legend').allTextContents()).not.toContainEqual(expect.stringContaining('*'));
       await page.locator('form button[type=submit]').click();

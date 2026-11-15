@@ -56,6 +56,7 @@ public sealed class PracticeSettings(
         else if (command.Version is { } seen) db.Entry(profile).Property<uint>("xmin").OriginalValue = seen; // refused at save if the row moved on (#889)
         (clinic.Name, profile.Address, profile.RegistrationNumber, profile.TaxNumber, profile.Phone, profile.Email) = (name!, address, registration, taxNumber, phone, email);
         profile.RegistrationExpiresOn = command.RegistrationExpiresOn;
+        profile.SignatureLine = command.SignatureLine ?? profile.SignatureLine;
         (profile.ChangedBy, profile.ChangedAt) = (user.UserId, clock.GetUtcNow());
         var after = ViewOf(clinic, profile);
         await SaveAuditedAsync("settings.profile.update", "profile", profile.Id, before, after, cancellationToken);
@@ -285,7 +286,7 @@ public sealed class PracticeSettings(
     static LocationView Audited(LocationView v) => v with { WifiPassword = v.WifiPassword is null ? null : "set" };
 
     static ProfileView ViewOf(Tenant clinic, PracticeProfile? p) =>
-        new(clinic.Name, p?.Address, p?.RegistrationNumber, p?.TaxNumber, p?.Phone, p?.Email, p?.LogoKey is not null, p?.RegistrationExpiresOn);
+        new(clinic.Name, p?.Address, p?.RegistrationNumber, p?.TaxNumber, p?.Phone, p?.Email, p?.LogoKey is not null, p?.RegistrationExpiresOn, SignatureLine: p?.SignatureLine ?? true);
 
     static void Max(List<ValidationError> errors, string field, string? value, int max)
     {

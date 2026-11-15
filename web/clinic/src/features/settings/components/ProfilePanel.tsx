@@ -1,5 +1,5 @@
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, ErrorSummary, Field, Input, Label, StickyActionBar, Textarea } from '@medvya/ui';
+import { Button, buttonVariants, ErrorSummary, Field, Input, Label, StickyActionBar, Switch, Textarea } from '@medvya/ui';
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import type { ProfileForm } from '../domain/settings';
@@ -24,7 +24,8 @@ type Props = {
   clinicName: string;
   uploading: boolean;
   removing: boolean;
-  logoError: 'type' | 'size' | 'failed' | null;
+  logoError: 'type' | 'size' | 'failed' | 'unknown' | null;
+  onCheckLogo: () => void;
   onLogo: (file: File | undefined) => void;
   onRemoveLogo: () => void;
 };
@@ -75,6 +76,15 @@ export default function ProfilePanel(p: Props) {
           <Field id="profile-email" label={t('settings.profile.email')} error={error('profile-email')}>
             <Input type="email" dir="ltr" autoComplete="email" {...p.form.register('email')} />
           </Field>
+          <div className="col-span-full flex flex-col gap-1.5">
+            <label className="flex min-h-control items-center gap-3 font-bold">
+              <Switch aria-describedby="profile-signature-line-hint" checked={p.form.watch('signatureLine')}
+                onCheckedChange={on => p.form.setValue('signatureLine', on, { shouldDirty: true })} />
+              <span>{t('settings.profile.signatureLine')}</span>
+              <span className="text-sm font-normal text-muted-foreground">{t(p.form.watch('signatureLine') ? 'settings.notifications.on' : 'settings.notifications.off')}</span>
+            </label>
+            <p id="profile-signature-line-hint" className="text-caption text-muted-foreground">{t('settings.profile.signatureLineHint')}</p>
+          </div>
           <StickyActionBar className={`${cardBar} col-span-full`} aria-live="polite" status={<>
             {p.saved && <span>{t('settings.saved')}</span>}
             {p.changed && (
@@ -111,6 +121,7 @@ export default function ProfilePanel(p: Props) {
               </label>
             </span>
             {logoError && <p id="logo-file-error" role="alert" className="text-label text-danger-text">{logoError}</p>}
+            {p.logoError === 'unknown' && <Button type="button" variant="outline" className="w-fit" onClick={p.onCheckLogo}>{t('settings.logo.check')}</Button>}
           </div>
           {p.hasLogo && <Button type="button" variant="outline" loading={p.removing} onClick={p.onRemoveLogo}>{t('settings.logo.remove')}</Button>}
         </div>

@@ -246,12 +246,49 @@ public sealed class DoctorTests(PostgresFixture sql) : IClassFixture<PostgresFix
 
     // ---- Signature image ----
 
+    /// <summary>The added doctor has accepted the invitation (MDV-P0-013, InvitationTests) and administers the practice, as an owner doctor does.</summary>
+    async Task<Guid> Joined(Guid id, Role role = Role.SoloDoctor)
+    {
+        var user = Guid.NewGuid();
+        await using var db = sql.Context(h.Tenant);
+        await db.Memberships.Where(m => m.Id == id).ExecuteUpdateAsync(s => s.SetProperty(m => m.UserId, user).SetProperty(m => m.Status, MembershipStatus.Active).SetProperty(m => m.Role, role));
+        return user;
+    }
+
+    // SAFETY mutation check: remove the own-membership check in Doctors.SetSignatureAsync and the administrator's upload is stored.
+    [Fact]
+    public async Task OnlyTheDoctorSetsTheirOwnSignatureImage()
+    {
+        var id = await AddDoctor();
+        using var admin = Client(Role.PracticeAdmin);
+        // An administrator does not put an image on a doctor's prescriptions: not before the doctor has joined, and not after.
+        Assert.Equal(HttpStatusCode.Forbidden, (await admin.PutAsync($"/v1/settings/doctors/{id}/signature", new ByteArrayContent(Png))).StatusCode);
+        var doctor = await Joined(id);
+        Assert.Equal(HttpStatusCode.Forbidden, (await admin.PutAsync($"/v1/settings/doctors/{id}/signature", new ByteArrayContent(Png))).StatusCode);
+        Assert.Empty(h.Logos.Stored);
+        Assert.False((await admin.GetFromJsonAsync<JsonElement>("/v1/settings/doctors")).GetProperty("doctors").EnumerateArray().Single().GetProperty("ownSignature").GetBoolean());
+
+        using var own = Client(null, doctor);
+        Assert.Equal(HttpStatusCode.NoContent, (await own.PutAsync($"/v1/settings/doctors/{id}/signature", new ByteArrayContent(Png))).StatusCode);
+        Assert.Single(h.Logos.Stored);
+        var mine = (await own.GetFromJsonAsync<JsonElement>("/v1/settings/doctors")).GetProperty("doctors").EnumerateArray().Single();
+        Assert.True(mine.GetProperty("ownSignature").GetBoolean() && mine.GetProperty("hasSignature").GetBoolean());
+
+        // An administrator may remove it, and the access log names them.
+        Assert.Equal(HttpStatusCode.NoContent, (await admin.DeleteAsync($"/v1/settings/doctors/{id}/signature")).StatusCode);
+        Assert.Empty(h.Logos.Stored);
+        await using var audit = sql.Audit(h.Tenant);
+        Assert.Equal([("settings.doctor.signature.update", (Guid?)doctor), ("settings.doctor.signature.delete", h.ByRole[Role.PracticeAdmin])],
+            (await audit.Events.Where(e => e.Action.StartsWith("settings.doctor.signature")).OrderBy(e => e.OccurredAt).ToListAsync()).Select(e => (e.Action, e.ActorUserId)));
+    }
+
     [Fact]
     public async Task TheSignatureImageIsStoredPrivatelyIsNeverServedBackAndCanBeRemoved()
     {
         var id = await AddDoctor();
         using var admin = Client(Role.PracticeAdmin);
-        var put = await admin.PutAsync($"/v1/settings/doctors/{id}/signature", new ByteArrayContent(Png));
+        using var own = Client(null, await Joined(id));
+        var put = await own.PutAsync($"/v1/settings/doctors/{id}/signature", new ByteArrayContent(Png));
         Assert.Equal(HttpStatusCode.NoContent, put.StatusCode);
         var key = Assert.Single(h.Logos.Stored).Key;
         Assert.StartsWith($"{h.Tenant}/signature/", key);
@@ -262,11 +299,41 @@ public sealed class DoctorTests(PostgresFixture sql) : IClassFixture<PostgresFix
         // No read path: the image reaches nobody but a printed prescription (P2).
         Assert.NotEqual(HttpStatusCode.OK, (await admin.GetAsync($"/v1/settings/doctors/{id}/signature")).StatusCode);
 
-        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsync($"/v1/settings/doctors/{id}/signature", new ByteArrayContent("<svg onload=alert(1)>"u8.ToArray()))).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await own.PutAsync($"/v1/settings/doctors/{id}/signature", new ByteArrayContent("<svg onload=alert(1)>"u8.ToArray()))).StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, (await admin.DeleteAsync($"/v1/settings/doctors/{id}/signature")).StatusCode);
         Assert.Empty(h.Logos.Stored);
         using var reception = Client(Role.Receptionist);
         Assert.Equal(HttpStatusCode.Forbidden, (await reception.PutAsync($"/v1/settings/doctors/{id}/signature", new ByteArrayContent(Png))).StatusCode);
+    }
+
+    // #1365: an employed doctor does not administer the practice, so the settings endpoint refuses them; their own endpoint does not.
+    // SAFETY mutation check: drop the user match in Doctors.OwnSignatureAsync and the nurse's upload reaches the doctor's profile.
+    [Fact]
+    public async Task AnEmployedDoctorSetsAndRemovesTheirOwnSignatureImageAndNobodyElseDoesItForThem()
+    {
+        var id = await AddDoctor();
+        var doctor = await Joined(id, Role.HospitalDoctor);
+        using var own = Client(null, doctor);
+        Assert.Equal(HttpStatusCode.Forbidden, (await own.PutAsync($"/v1/settings/doctors/{id}/signature", new ByteArrayContent(Png))).StatusCode);
+        Assert.False((await own.GetFromJsonAsync<JsonElement>("/v1/me/signature")).GetProperty("hasSignature").GetBoolean());
+
+        // Staff who do not prescribe have no such endpoint, and a prescriber without a doctor's profile here has nothing to set.
+        using var nurse = Client(Role.Nurse);
+        Assert.Equal(HttpStatusCode.Forbidden, (await nurse.PutAsync("/v1/me/signature", new ByteArrayContent(Png))).StatusCode);
+        using var other = Client(Role.SoloDoctor);
+        Assert.Equal(HttpStatusCode.NotFound, (await other.PutAsync("/v1/me/signature", new ByteArrayContent(Png))).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await other.DeleteAsync("/v1/me/signature")).StatusCode);
+        Assert.Empty(h.Logos.Stored);
+
+        Assert.Equal(HttpStatusCode.BadRequest, (await own.PutAsync("/v1/me/signature", new ByteArrayContent("<svg onload=alert(1)>"u8.ToArray()))).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await own.PutAsync("/v1/me/signature", new ByteArrayContent(Png))).StatusCode);
+        Assert.StartsWith($"{h.Tenant}/signature/", Assert.Single(h.Logos.Stored).Key);
+        Assert.True((await own.GetFromJsonAsync<JsonElement>("/v1/me/signature")).GetProperty("hasSignature").GetBoolean());
+        Assert.Equal(HttpStatusCode.NoContent, (await own.DeleteAsync("/v1/me/signature")).StatusCode);
+        Assert.Empty(h.Logos.Stored);
+        await using var audit = sql.Audit(h.Tenant);
+        Assert.Equal([("settings.doctor.signature.update", (Guid?)doctor), ("settings.doctor.signature.delete", doctor)],
+            (await audit.Events.Where(e => e.Action.StartsWith("settings.doctor.signature")).OrderBy(e => e.OccurredAt).ToListAsync()).Select(e => (e.Action, e.ActorUserId)));
     }
 
     // ---- Schedule ----

@@ -27,7 +27,7 @@ Status column: **Done** = implemented and tested; otherwise the ticket that deli
 | I | IDOR: guessing patient/appointment ids; receptionist reading notes | Server-side policy on every endpoint (tenant, facility, role, relationship, purpose); RLS; IDOR test suite (`AuthorisationMatrixTests`, every route with an id) | **Done** (MDV-P0-014, MDV-P0-010, MDV-P1-038) |
 | I | PHI in URLs, logs, telemetry, browser storage | No PHI in URLs (API rule); allowlist telemetry scrubbing; nothing but UI language in localStorage | Telemetry **Done** (P0-018); storage **Done** (P0-021) |
 | I | Clickjacking, MIME sniffing, referrer leaks | `frame-ancestors 'none'`, X-Frame-Options DENY, nosniff, Referrer-Policy no-referrer | **Done** (P0-026) |
-| D | Request floods, huge bodies | Per-IP rate limit (429; forwarded client address only from listed proxies); per-user limit on patient search; 1 MiB body limit | **Done** (P0-026, MDV-P1-018) |
+| D | Request floods, huge bodies | General rate limit per signed-in user, per client address without a session (429 with Retry-After; forwarded client address only from listed proxies; the app's static files are not counted); per-user limit on patient search; 1 MiB body limit | **Done** (P0-026, MDV-P1-018) |
 | E | Role escalation via custom roles | Custom roles composed only from existing capabilities; locked role capabilities | MDV-P0-014, MDV-P1-008 |
 
 ## B2 · Host.Api → Azure SQL / Blob / Key Vault

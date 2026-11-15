@@ -105,6 +105,26 @@ for (const locale of ['en', 'ar'])
     expect(violations).toEqual([]);
   });
 
+// #1365: the signature line on printed prescriptions is a switch in the profile, on until the owner turns it off; it saves with the profile.
+for (const locale of ['en', 'ar'])
+  test(`the signature line switch is on by default and saves off with the profile (${locale})`, async ({ page }) => {
+    const saved = await open(page, locale);
+    const name = locale === 'ar' ? 'سطر التوقيع على الوصفات المطبوعة' : 'Signature line on printed prescriptions';
+    const toggle = page.getByRole('switch', { name });
+    await expect(toggle).toBeChecked();
+    await expect(toggle).toHaveAccessibleDescription(locale === 'ar' ? /لا تحتاج إلى توقيع/ : /computer generated and do not need a signature/);
+    await toggle.click();
+    await expect(toggle).not.toBeChecked();
+    if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+    await page.addScriptTag({ path: axePath });
+    const violations = await page.evaluate(async () =>
+      (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations.map(v => `${v.id} (${v.nodes.length})`));
+    expect(violations).toEqual([]);
+    await page.locator('form button[type=submit]').first().click();
+    await expect.poll(() => saved.length).toBe(1);
+    expect(saved[0]).toMatchObject({ signatureLine: false, version: 3 });
+  });
+
 // MDV-P2-055 AC5: at 1024 px and wider a group's sections are a left sub-navigation (right in Arabic) in place of the second tab row; narrower,
 // the row stays. The five groups and every ?tab= address open the same section as before.
 const sections: Record<string, string> = {
@@ -170,3 +190,35 @@ for (const locale of ['en', 'ar'])
       (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations.map(v => `${v.id} (${v.nodes.length})`));
     expect(violations).toEqual([]);
   });
+
+// #1365 F-066: the upload's request got no answer although the server stored the logo. The screen reads the profile again before it says
+// anything: stored means the logo shows; when that cannot be told it says so and offers to check again, never "nothing was changed".
+const png = { name: 'logo.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64') };
+for (const locale of ['en', 'ar'])
+  for (const readable of [true, false])
+    test(`a logo upload that got no answer is checked before the screen says anything (${locale}, profile ${readable ? 'readable' : 'not readable'})`, async ({ page }) => {
+      await open(page, locale);
+      await expect(page.locator('#profile-name')).toHaveValue(profile.name);
+      let stored = false, answers = readable;
+      await page.route('**/v1/settings/profile', r => (!answers ? r.fulfill({ status: 503, json: {} }) : r.fulfill({ json: stored ? { ...profile, hasLogo: true, version: 4 } : profile })));
+      await page.route('**/v1/settings/logo', r => {
+        if (r.request().method() !== 'PUT') return r.fulfill({ json: { url: `data:image/png;base64,${png.buffer.toString('base64')}`, expiresAt: '2026-10-19T05:00:00Z' } });
+        stored = true; // the server stored it; the answer never arrived
+        return r.abort('timedout');
+      });
+      await page.locator('#logo-file').setInputFiles(png);
+      const alert = page.locator('#logo-file-error');
+      if (!readable) {
+        await expect(alert).toBeVisible(); // unknown, with a way to check: never "nothing was changed"
+        if (locale === 'en') await expect(alert).toHaveText('We could not confirm whether the logo was saved. Check again, or upload it once more.');
+        else await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+        await page.addScriptTag({ path: axePath });
+        const violations = await page.evaluate(async () =>
+          (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations.map(v => `${v.id} (${v.nodes.length})`));
+        expect(violations).toEqual([]);
+        answers = true;
+        await page.getByRole('button', { name: locale === 'en' ? 'Check again' : 'تحقق مرة أخرى' }).click();
+      }
+      await expect(page.locator('img[src^="data:image/png"]')).toBeVisible(); // it was stored after all, and the screen shows it
+      await expect(alert).toHaveCount(0);
+    });

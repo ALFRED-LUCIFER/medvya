@@ -24,7 +24,7 @@ All under `/v1/operations/organisations`, all need a signed-in session and, for 
 | `GET /?filter=Waiting` | The queue, oldest submission first: organisation id, name, country, type, state, submitted time, last reason, hospital IT contact, document list (id, kind, type, size). `filter` is the console's: `Waiting` (Submitted), `NeedsChanges`, `Decided` (Approved, Rejected, Suspended) or `All` (the default). No patient or staff data is part of it. |
 | `GET /{tenantId}` | The detail for one organisation: profile (name, address, contact email, registration and tax number, hospital IT contact), documents and the history of decisions with the operator's name and reason. |
 | `GET /{tenantId}/documents/{documentId}` | `{ "url", "expiresAt" }`: a read-only link to one document that expires in 5 minutes. Opening a document is audited in the organisation (this is the log behind the design's "every view is logged") (`organisation.document.view`, naming the operator and the document). |
-| `POST /{tenantId}/approve` | Submitted to Approved. A **Hospital without its signed DPA on file cannot be approved** (400 `document.Dpa:required`): ask for changes instead. |
+| `POST /{tenantId}/approve` | Submitted to Approved. **Open each document first** (`GET /{tenantId}/documents/{documentId}` for every document in the detail), signed in as the operator who approves, after the request was last submitted: otherwise 400 `documents:unopened`. The organisation's logged view is the record, as in the console. A **Hospital without its signed DPA on file cannot be approved** (400 `document.Dpa:required`): ask for changes instead. |
 | `POST /{tenantId}/request-changes` | Submitted to NeedsChanges. The owner edits and sends the request again. |
 | `POST /{tenantId}/reject` | Submitted to Rejected. Final for that request; the applicant may start a new one. |
 | `POST /{tenantId}/reinstate` | Suspended back to Approved, with a reason (400 `state:transition` for any other state). |
@@ -35,6 +35,8 @@ Every `POST` takes `{ "reason": "..." }` of **5 to 500 characters**, in plain wo
 Example, with a session cookie from signing in as the operator:
 
 ```bash
+# First open each document listed by GET /<tenant id> (the link is logged as this operator's view), then approve.
+curl "https://<api host>/v1/operations/organisations/<tenant id>/documents/<document id>" -H "Cookie: <session cookie>"
 curl -X POST "https://<api host>/v1/operations/organisations/<tenant id>/approve" \
   -H "Cookie: <session cookie>" -H "X-Medvya-Csrf: 1" -H "Content-Type: application/json" \
   -d '{"reason":"Registration certificate and GSTIN checked"}'
@@ -69,7 +71,7 @@ The console (`Host.Platform`, `web/platform-admin`, page **Approvals**) does the
 
 - **Queue:** filters Waiting, Needs changes, Decided, All, oldest first. **Detail:** profile, tax number format check, documents with a file check, history with the operator, decision.
 - **Documents** open in a private viewer: shown from memory, no download button or menu, the operator's name and time drawn over the file. The console host fetches the file, so no storage link reaches the browser. Every view is audited in the organisation and in the platform audit log.
-- **Documents checked (MDV-P5-044):** the reviewer ticks each document as checked once read. Approve stays off until every document is ticked, and the server refuses an approve without them (`documents:unchecked`). Each tick is recorded in the platform audit log with the decision (`organisation.document.checked`, the document, the operator, the time). The interim API does not ask for ticks; use it only when the console is not available.
+- **Documents checked (MDV-P5-044):** the reviewer ticks each document as checked once read. Approve stays off until every document is ticked, and the server refuses an approve without them (`documents:unchecked`). Each tick is recorded in the platform audit log with the decision (`organisation.document.checked`, the document, the operator, the time). The interim API does not ask for ticks but refuses an approve until the operator has opened every document since the request was submitted (`documents:unopened`); use it only when the console is not available.
 - **A Hospital without its signed DPA cannot be approved:** the Approve button is off and the screen offers Ask for changes; the server refuses too (`document.Dpa:required`).
 - **Reason** (5 to 500 characters) on every action; the box starts with suggested wording you can edit. After the decision the screen shows the email the applicant was sent (no patient data).
 - **Two logs per action:** the organisation's own audit (clinic audit and settings history, the operator's console member id as actor) and the platform audit log (`organisation.approve`, `organisation.request-changes`, `organisation.reject`, `organisation.suspend`, `organisation.reinstate`, `organisation.document.view`, `organisation.document.checked`, with the organisation). The console is the Audit log page's source for the second.

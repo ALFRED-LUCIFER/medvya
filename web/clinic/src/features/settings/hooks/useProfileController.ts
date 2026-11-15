@@ -3,8 +3,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { ApiError } from '../../schedule/services/scheduleApi';
-import { logoProblem, profileSchema, settingsError, toProfileForm, type ProfileForm } from '../domain/settings';
-import { fetchLogoLink, fetchProfile, removeLogo, saveProfile, uploadLogo } from '../services/settingsApi';
+import { logoFailure, logoProblem, profileSchema, settingsError, toProfileForm, type ProfileForm } from '../domain/settings';
+import { fetchLogoLink, fetchProfile, removeLogo, saveProfile, settleLogo, uploadLogo } from '../services/settingsApi';
 
 
 /** Profile tab: clinic details and logo. The server decides who may change them; this only follows its answer. */
@@ -29,13 +29,13 @@ export function useProfileController() {
 
   const [pickProblem, setPickProblem] = useState<'type' | 'size' | null>(null);
   const afterLogoChange = () => void queryClient.invalidateQueries({ queryKey: ['settings'] });
-  const upload = useMutation({ mutationFn: uploadLogo, onSuccess: afterLogoChange });
-  const remove = useMutation({ mutationFn: removeLogo, onSuccess: afterLogoChange });
+  // A request that got no answer is checked against the profile before anything is said about it (#1365 F-066).
+  const upload = useMutation({ mutationFn: (file: File) => settleLogo(uploadLogo(file), profile.data?.version ?? 0), onSuccess: afterLogoChange });
+  const remove = useMutation({ mutationFn: () => settleLogo(removeLogo(), profile.data?.version ?? 0), onSuccess: afterLogoChange });
 
   const changed = save.error instanceof ApiError && save.error.status === 409 && save.error.code === 'changed';
-  const rejected = upload.error instanceof ApiError ? settingsError(upload.error.code) : null;
-  const logoError: 'type' | 'size' | 'failed' | null = pickProblem
-    ?? (rejected === 'logo:type' ? 'type' : rejected === 'logo:too_large' ? 'size' : upload.isError || remove.isError ? 'failed' : null);
+  const failure = upload.error ?? remove.error;
+  const logoError = pickProblem ?? (failure ? logoFailure(failure instanceof ApiError ? failure : null) : null);
 
   return {
     form,
@@ -58,6 +58,7 @@ export function useProfileController() {
     removing: remove.isPending,
     /** Why the last logo was refused: picked locally, or by the server after checking the file itself. */
     logoError,
+    onCheckLogo: () => { upload.reset(); remove.reset(); afterLogoChange(); },
     onLogo: (file: File | undefined) => {
       if (!file) return;
       const problem = logoProblem(file);

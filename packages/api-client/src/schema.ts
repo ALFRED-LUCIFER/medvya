@@ -1558,6 +1558,45 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/encounters/{encounterId}/take-over": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    encounterId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["TakeOverVisit"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/encounters/{encounterId}/note/addenda": {
         parameters: {
             query?: never;
@@ -3523,6 +3562,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/front-desk/elsewhere": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    facilityId?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ElsewhereCount"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/queue/tv": {
         parameters: {
             query?: never;
@@ -5122,6 +5198,73 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/me/signature": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/organisation/request": {
         parameters: {
             query?: never;
@@ -5644,6 +5787,41 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/staff/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PlanSeats"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -9866,6 +10044,8 @@ export interface components {
             followUpFee: number | string;
             currency: string;
             room?: null | string;
+            /** @default false */
+            ownSignature: boolean;
         };
         /** @enum {unknown} */
         DocumentType: "LabReport" | "Imaging" | "Prescription" | "Referral" | "Other";
@@ -9882,6 +10062,14 @@ export interface components {
         DuplicateResolution: {
             decision: components["schemas"]["DuplicateDecision"];
             candidateIds: string[];
+        };
+        ElsewhereCount: {
+            /** Format: uuid */
+            facilityId: string;
+            /** Format: int32 */
+            waiting: number | string;
+            /** Format: int32 */
+            today: number | string;
         };
         EscalateIntake: {
             reason: null | string;
@@ -10210,6 +10398,14 @@ export interface components {
         PlaceOrders: {
             destination: null | string;
         };
+        PlanSeats: {
+            /** Format: int32 */
+            doctors: number | string;
+            /** Format: int32 */
+            staff: number | string;
+            doctorFree: boolean;
+            staffFree: boolean;
+        };
         PregnancyDates: {
             /** Format: date */
             lmp: null | string;
@@ -10256,6 +10452,8 @@ export interface components {
              * @default 0
              */
             version: number | string;
+            /** @default true */
+            signatureLine: boolean;
         };
         PushTokenRequest: {
             token: null | string;
@@ -10528,6 +10726,7 @@ export interface components {
             taxNumber?: null | string;
             phone?: null | string;
             email?: null | string;
+            signatureLine?: null | boolean;
             /** Format: uint32 */
             version?: null | number | string;
         };
@@ -10718,6 +10917,9 @@ export interface components {
         };
         StartRequest: {
             country: null | string;
+        };
+        TakeOverVisit: {
+            reason: null | string;
         };
         TaperStep: {
             dose: string;

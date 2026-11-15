@@ -53,13 +53,15 @@ export async function mockOnboarding(page: Page, draft: { step: number; data: Re
 }
 
 /** Fills the five steps for an owner-doctor in India, invites the front desk, finishes and opens Today from the ready screen. */
-export async function completeWizard(page: Page, { lost = false } = {}) {
+export async function completeWizard(page: Page, { lost = false, refusals = lost ? [/could not finish/i] : [] }: { lost?: boolean; refusals?: RegExp[] } = {}) {
   await page.getByRole('button', { name: 'Start setup' }).click();
   await page.getByLabel('Full name').fill('Arjun Rao (synthetic)');
   await page.getByLabel('Practice name').fill('Rao Clinic (synthetic)');
   await page.getByLabel('A clinic').check();
   await page.getByLabel('Email Medvya writes to about this request').fill('desk@example.test');
   await page.getByLabel(/^Address/).fill('12 Test Street, Chennai');
+  await page.getByLabel('Clinical establishment registration').fill('CE-0001'); // a clinic gives the numbers of the certificates it uploads (ADR-016)
+  await page.getByLabel('GSTIN').fill('33AAAAA0000A1Z9');
   await page.getByLabel('General practice').check();
   await page.getByRole('combobox', { name: 'Medical council' }).click();
   await page.getByRole('option', { name: /TNMC/ }).click();
@@ -80,10 +82,11 @@ export async function completeWizard(page: Page, { lost = false } = {}) {
   await page.getByRole('button', { name: 'Continue' }).click();
 
   await page.getByRole('button', { name: 'Finish setup' }).click();
-  if (lost) { // the first answer never came back: the page says so, and trying again finds the practice the server made
-    await expect(page.getByText(/could not finish/i)).toBeVisible();
+  // Lost: the first answer never came back; the page says so, and trying again finds the practice the server made. A refusal says why in words.
+  for (const refusal of refusals) {
+    await expect(page.getByText(refusal)).toBeVisible();
     await page.getByRole('button', { name: 'Finish setup' }).click();
   }
   await expect(page.getByRole('heading', { level: 1, name: 'Rao Clinic (synthetic) is ready.' })).toBeVisible();
-  await page.getByRole('button', { name: 'Open My day' }).click();
+  await page.getByRole('button', { name: 'Open Medvya' }).click();
 }

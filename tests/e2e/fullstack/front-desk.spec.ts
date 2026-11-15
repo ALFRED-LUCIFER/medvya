@@ -40,6 +40,7 @@ test('front desk: register, book, check in, see the board, cancel', async ({ pag
     await page.getByLabel('Emergency contact phone').fill(patient.emergencyMobile);
     await page.getByRole('button', { name: 'Continue' }).click();
     await page.getByRole('button', { name: 'Continue' }).click();
+    await page.getByRole('switch', { name: 'Treatment' }).check(); // consents: never pre-ticked (#1365 F-040)
     await page.getByRole('button', { name: 'Continue' }).click();
     const created = page.waitForResponse(r => r.request().method() === 'POST' && new URL(r.url()).pathname === '/v1/patients');
     await page.getByRole('button', { name: 'Register patient' }).click();

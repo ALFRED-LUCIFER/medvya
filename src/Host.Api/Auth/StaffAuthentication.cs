@@ -163,6 +163,7 @@ public static partial class StaffAuthentication
     public static WebApplication UseStaffAuthentication(this WebApplication app)
     {
         app.UseAuthentication();
+        app.UseSignedInRateLimit(); // before authorization, so a refused (401, 403) request is counted too
         app.Use(async (ctx, next) =>
         {
             // CSRF rides on the session cookie, so only cookie-carrying requests need the header (server-to-server calls carry none).

@@ -17,6 +17,8 @@ export function useSessionController() {
       return status;
     },
     refetchInterval: q => (q.state.data?.kind === 'signedIn' ? pollMs : false),
+    // The poll and the invalidations (a 401 or 403, a facility choice) keep it current: a screen that mounts this hook again does not read again (#1365).
+    staleTime: pollMs,
   });
   const logout = useMutation({
     mutationFn: signOut,

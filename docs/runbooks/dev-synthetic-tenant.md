@@ -26,6 +26,8 @@ Roles outside a clinic pilot (hospital doctor, hospital IT, patient) are not cre
 
 List the dev URL and the persona sign-in addresses (not the passwords) in the R0 delivery package (MDV-P0-029).
 
+**Fill this table whenever persona accounts are created or removed on Azure dev.** While it is empty, no written list of the persona accounts exists.
+
 | Date (UTC) | Done by | Personas able to sign in with MFA | Notes |
 |---|---|---|---|
 | _pending: first run after the dev deployment_ | | | |

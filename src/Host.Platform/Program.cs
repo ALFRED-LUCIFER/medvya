@@ -49,10 +49,7 @@ if (builder.Configuration.GetConnectionString("Formulary") is { } formulary)
 builder.Services.AddHsts(o => { o.MaxAge = TimeSpan.FromDays(365); o.IncludeSubDomains = true; });
 builder.Services.AddRateLimiter(o =>
 {
-    o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-    o.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(ctx =>
-        RateLimitPartition.GetFixedWindowLimiter(ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-            _ => new FixedWindowRateLimiterOptions { PermitLimit = builder.Configuration.GetValue("RateLimiting:PermitsPerMinute", 300), Window = TimeSpan.FromMinutes(1) }));
+    o.AddGeneralLimit(builder.Configuration.GetValue("RateLimiting:PermitsPerMinute", 300)); // per signed-in member, else per client address
     o.AddPolicy(ConsoleAuthentication.SignInRateLimit, ctx => RateLimitPartition.GetFixedWindowLimiter(ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = builder.Configuration.GetValue("RateLimiting:SignInPerMinute", 20), Window = TimeSpan.FromMinutes(1) }));
 });
@@ -63,16 +60,16 @@ app.UseForwardedHeaders(); // first, so every later step sees the client's addre
 if (!app.Environment.IsDevelopment()) app.UseHsts();
 // "blob:" lets the approvals viewer show a document it fetched from this host in a frame (a PDF) and nothing from outside this origin.
 app.UseSecurityHeaders("blob:");
-app.UseRateLimiter();
-// The built console (web/platform-admin) when the deploy copies it to wwwroot; client routes reload into its shell.
+// The built console (web/platform-admin) when the deploy copies it to wwwroot; client routes reload into its shell. Its files are not rate limited.
 app.UseStaticFiles();
-app.UseConsoleAuthentication();
+app.UseRateLimiter();
+app.UseConsoleAuthentication(); // counts the signed-in requests per member, between authentication and authorization
 
 var version = typeof(Program).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
 app.MapGet("/health", () => Results.Ok(new { status = "ok", version })).AllowAnonymous(); // public: deploy smoke tests check the version
 app.MapConsoleSession();
 app.MapPlatformConsole();
-app.MapFallbackToFile("{*path:nonfile}", "index.html").AllowAnonymous();
+app.MapFallbackToFile("{*path:nonfile}", "index.html").AllowAnonymous().DisableRateLimiting();
 if (app.Environment.IsDevelopment() && app.Configuration["Authentication:Oidc:Authority"]?.EndsWith(DevIdentityProvider.Path, StringComparison.Ordinal) == true)
 {
     var boot = app.Configuration.GetSection("Platform:BootstrapOwner").Get<BootstrapOwner>();

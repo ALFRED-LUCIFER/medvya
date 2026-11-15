@@ -10,7 +10,8 @@ export function useNotificationsController(facilityId: string, online: boolean) 
   const queryClient = useQueryClient();
   const key = ['notifications', facilityId];
   const [open, setOpen] = useState(false);
-  const query = useQuery({ queryKey: key, queryFn: () => fetchInbox(facilityId), refetchInterval: refreshMs, enabled: online, retry: false });
+  // staleTime: the minute's refresh and the mark-read invalidations keep it current; mounting the bell again does not read again (#1365).
+  const query = useQuery({ queryKey: key, queryFn: () => fetchInbox(facilityId), refetchInterval: refreshMs, staleTime: refreshMs, enabled: online, retry: false });
   const refresh = () => void queryClient.invalidateQueries({ queryKey: key });
   const all = useMutation({ mutationFn: () => markAllRead(facilityId), onSuccess: refresh });
   const one = useMutation({ mutationFn: (id: string) => markRead(facilityId, id), onSuccess: refresh });

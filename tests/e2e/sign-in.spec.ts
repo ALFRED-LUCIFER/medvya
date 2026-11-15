@@ -77,6 +77,18 @@ for (const locale of ['en', 'ar'])
     expect(await axe(page)).toEqual([]);
   });
 
+// #1365: an invitation is for the person it was sent to; another account is told so, without any address.
+for (const locale of ['en', 'ar'])
+  test(`a sign-in with another account than the invited one says so (${locale})`, async ({ page }) => {
+    await signedOut(page, locale);
+    await page.goto('/?signin=invitation');
+    const alert = page.getByRole('alert');
+    await expect(alert).toContainText(locale === 'ar' ? 'أُرسلت هذه الدعوة إلى عنوان بريد إلكتروني يختلف' : 'This invitation was sent to a different email address');
+    await expect(alert).not.toContainText('@');
+    if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+    expect(await axe(page)).toEqual([]);
+  });
+
 test('create account: two steps feed the setup, the email becomes the login hint', async ({ page }) => {
   const start = await signedOut(page);
   await page.goto('/');

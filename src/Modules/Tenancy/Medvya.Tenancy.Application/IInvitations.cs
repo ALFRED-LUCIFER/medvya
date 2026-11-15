@@ -48,6 +48,13 @@ public interface IInvitations
     Task<InvitationPreview?> PreviewAsync(string token, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Whether the pending invitation for a token was sent to one of <paramref name="emails"/> (compared without case): the invitation is
+    /// for the person it was addressed to. Null when the token is not pending. A mismatch is audited as a denied acceptance.
+    /// Runs in the token's tenant, like <see cref="PreviewAsync"/>.
+    /// </summary>
+    Task<bool?> IsAddressedToAsync(string token, IReadOnlyCollection<string> emails, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Uses the token once: in one transaction the invitation is marked used and the membership gets this user and becomes Active.
     /// The acceptance is audited before that transaction commits (fail closed).
     /// False when the token is not pending (unknown, expired, revoked, already used) or the user already holds a membership there.

@@ -17,14 +17,15 @@ sealed class PlatformSignIn(PlatformDbContext db, IPlatformCaller caller, IFido2
 {
     const string Assertion = "a:", Registration = "r:";
 
-    public async Task<ConsoleSession?> SignOnAsync(string issuer, string subject, string? linkToken, CancellationToken cancellationToken = default)
+    public async Task<ConsoleSession?> SignOnAsync(string issuer, string subject, IReadOnlyCollection<string> emails, string? linkToken, CancellationToken cancellationToken = default)
     {
         var now = clock.GetUtcNow();
         var member = await db.Members.SingleOrDefaultAsync(m => m.Issuer == issuer && m.Subject == subject && m.RemovedAt == null, cancellationToken);
         KeyLink? link = null;
         if (linkToken is not null)
         {
-            // A link fits one member: an invitee binds their company account to it; anyone else's account is refused.
+            // A link fits one member: an invitee binds their company account to it, and only the account whose email is the invited
+            // address (compared without case); anyone else's account is refused.
             var hash = PlatformAudit.Hash(linkToken);
             link = await db.Links.SingleOrDefaultAsync(l => l.TokenHash == hash, cancellationToken);
             if (link?.IsUsable(now) != true) return null;
@@ -32,6 +33,7 @@ sealed class PlatformSignIn(PlatformDbContext db, IPlatformCaller caller, IFido2
             if (invited is null || (member is not null && member.Id != invited.Id) || (member is null && invited.Subject is not null)) return null;
             if (member is null)
             {
+                if (!emails.Contains(invited.Email, StringComparer.OrdinalIgnoreCase)) return null;
                 invited.Issuer = issuer;
                 invited.Subject = subject;
                 member = invited;

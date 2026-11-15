@@ -23,9 +23,9 @@ export default function SignInPage({ languageSwitcher, form, failure, onSubmit, 
     <AuthFrame languageSwitcher={languageSwitcher}>
       {/* Wraps rather than truncates: nothing loads into this title, and on a phone it must be read whole. */}
       <PageHeader className="[&_h1]:whitespace-normal" title={t('signin.title')} description={t('signin.body')} />
-      {failure === 'failed' && (
+      {(failure === 'failed' || failure === 'invitation') && (
         <p role="alert" className="flex items-start gap-2 rounded-lg border border-danger-700 bg-danger-50 p-3 text-sm font-semibold text-danger-700">
-          <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />{t('session.failed')}
+          <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />{t(failure === 'failed' ? 'session.failed' : 'session.failedInvitation')}
         </p>
       )}
       {failure === 'mfa' && (

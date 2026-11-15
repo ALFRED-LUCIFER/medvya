@@ -79,7 +79,7 @@ public static partial class ConsoleAuthentication
         var subject = principal.FindFirst("oid")?.Value ?? principal.FindFirst("sub")?.Value;
         var link = ctx.Properties?.Items.TryGetValue(LinkItem, out var l) == true ? l : null;
         var session = issuer is null || subject is null ? null
-            : await ctx.HttpContext.RequestServices.GetRequiredService<IPlatformSignIn>().SignOnAsync(issuer, subject, link, ctx.HttpContext.RequestAborted);
+            : await ctx.HttpContext.RequestServices.GetRequiredService<IPlatformSignIn>().SignOnAsync(issuer, subject, ProviderEmails.Of(principal), link, ctx.HttpContext.RequestAborted);
         if (session is null)
         {
             SignOnRefused(ctx.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(ConsoleAuthentication)));

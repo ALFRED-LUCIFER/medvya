@@ -79,11 +79,12 @@ public sealed class PlatformConsoleTests(PostgresFixture sql) : IClassFixture<Po
     internal static PlatformDbContext Db(PostgresFixture sql) => new(new DbContextOptionsBuilder<PlatformDbContext>().UseNpgsql(sql.As("medvya_platform")).Options);
 
     /// <summary>Company sign-on through the dev provider; returns the callback response.</summary>
-    internal static async Task<HttpResponseMessage> SignOn(HttpClient browser, string subject, string? link = null)
+    internal static async Task<HttpResponseMessage> SignOn(HttpClient browser, string subject, string? link = null, string? email = null)
     {
         var challenge = await browser.GetAsync(new Uri(link is null ? "/bff/login" : $"/bff/login?link={link}", UriKind.Relative));
         Assert.Equal(HttpStatusCode.Redirect, challenge.StatusCode);
-        var authorize = await browser.GetAsync(new Uri($"{challenge.Headers.Location}&login_hint={Uri.EscapeDataString(subject)}"));
+        // email: the address the company directory reports for the account.
+        var authorize = await browser.GetAsync(new Uri($"{challenge.Headers.Location}&login_hint={Uri.EscapeDataString(subject)}{(email is null ? "" : $"&email={Uri.EscapeDataString(email)}")}"));
         Assert.Equal(HttpStatusCode.Redirect, authorize.StatusCode);
         return await browser.GetAsync(authorize.Headers.Location);
     }
@@ -225,8 +226,19 @@ public sealed class PlatformConsoleTests(PostgresFixture sql) : IClassFixture<Po
         var issued = await invite.Content.ReadFromJsonAsync<JsonElement>();
         var link = issued.GetProperty("token").GetString()!;
 
+        // The link binds only the company account whose email is the invited address: another account, or one with no address, is
+        // refused and the link stays usable by the invitee.
+        foreach (var email in new[] { "ravi@medvya.example", null })
+        {
+            using var other = Browser();
+            Assert.Equal("/sign-in?signin=failed", (await SignOn(other, "new", link, email)).Headers.Location!.OriginalString);
+            Assert.Equal(HttpStatusCode.Unauthorized, (await other.GetAsync(new Uri("/v1/me", UriKind.Relative))).StatusCode);
+        }
+        await using (var db = Db())
+            Assert.Null((await db.Members.SingleAsync(m => m.Email == "kavya.reviewer@medvya.example")).Subject);
+
         using var browser = Browser();
-        Assert.Equal("/", (await SignOn(browser, "new", link)).Headers.Location!.OriginalString);
+        Assert.Equal("/", (await SignOn(browser, "new", link, "KAVYA.reviewer@medvya.example")).Headers.Location!.OriginalString);
         Assert.True((await Me(browser)).GetProperty("canRegister").GetBoolean());
         using var soft = new SoftSecurityKey(Origin);
         Assert.Equal(HttpStatusCode.NoContent, await RegisterKey(browser, soft));
@@ -255,7 +267,7 @@ public sealed class PlatformConsoleTests(PostgresFixture sql) : IClassFixture<Po
         var link = (await (await Post(ownerBrowser, "/v1/team/invitations",
             new { displayName = "Ravi (synthetic)", email = "ravi@medvya.example", role = "Support", reason = "Support engineer joining" })).Content.ReadFromJsonAsync<JsonElement>()).GetProperty("token").GetString()!;
         using var browser = Browser();
-        await SignOn(browser, "new", link);
+        await SignOn(browser, "new", link, "ravi@medvya.example");
         using var synced = new SoftSecurityKey(Origin) { BackupEligible = true };
         Assert.Equal(HttpStatusCode.Unauthorized, await RegisterKey(browser, synced));
         Assert.False((await Me(browser)).GetProperty("keyVerified").GetBoolean());

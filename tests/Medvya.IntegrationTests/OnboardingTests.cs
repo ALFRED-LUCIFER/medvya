@@ -226,7 +226,7 @@ public sealed partial class OnboardingTests(PostgresFixture sql) : IClassFixture
         var token = LinkToken().Match(outbox.Sent.Single(m => m.To == "joseph@example.test").Body).Groups[1].Value;
         using var desk = Browser();
         var challenge = await desk.GetAsync(new Uri($"/bff/login?returnUrl=%2F&invitation={token}", UriKind.Relative));
-        var authorize = await desk.GetAsync(new Uri($"{challenge.Headers.Location}&login_hint=new"));
+        var authorize = await desk.GetAsync(new Uri($"{challenge.Headers.Location}&login_hint=new&email=joseph%40example.test")); // the invited address
         Assert.Equal("/", (await desk.GetAsync(authorize.Headers.Location)).Headers.Location?.OriginalString);
         var deskMembership = Assert.Single((await Json(await desk.GetAsync(new Uri("/v1/me/context", UriKind.Relative)))).GetProperty("memberships").EnumerateArray());
         Assert.Equal("Receptionist", deskMembership.GetProperty("role").GetString());

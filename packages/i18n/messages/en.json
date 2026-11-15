@@ -77,6 +77,7 @@
   "session.failedMfa.how": "Add a second step to your Microsoft account, then sign in again.",
   "session.failedMfa.link": "Add a sign-in method at aka.ms/mysecurityinfo (opens in a new tab)",
   "session.failedMfa.admin": "If you already have one and this keeps happening, ask your clinic admin to turn on multi-factor sign-in for your account.",
+  "session.failedInvitation": "This invitation was sent to a different email address than the account you signed in with. Sign in with the account for the invited address, or ask your clinic admin to invite the address you use.",
   "shell.skip": "Skip to main content",
   "shell.mainNav": "Main navigation",
   "shell.notifications": "Notifications",

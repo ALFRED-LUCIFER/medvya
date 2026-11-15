@@ -87,7 +87,7 @@ public sealed record SessionState(Guid MemberId, string DisplayName, PlatformRol
 public interface IPlatformSignIn
 {
     /// <summary>Null when this company account is not a console member (or the link does not fit it).</summary>
-    Task<ConsoleSession?> SignOnAsync(string issuer, string subject, string? linkToken, CancellationToken cancellationToken = default);
+    Task<ConsoleSession?> SignOnAsync(string issuer, string subject, IReadOnlyCollection<string> emails, string? linkToken, CancellationToken cancellationToken = default);
     /// <summary>The live session, or null when it has ended, been revoked, or the member has lost access.</summary>
     Task<SessionState?> ValidateAsync(Guid sessionId, Guid memberId, bool activity, CancellationToken cancellationToken = default);
     /// <summary>Assertion options, or null when the member has no live key.</summary>

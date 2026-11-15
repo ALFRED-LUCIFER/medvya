@@ -266,7 +266,7 @@ erDiagram
 | `Closures` | 5 | Id | tenant-scoped |
 | `CustomRoles` | 6 | Id | tenant-scoped |
 | `DoctorLicences` | 10 | MembershipId | tenant-scoped |
-| `DoctorProfiles` | 11 | MembershipId | tenant-scoped |
+| `DoctorProfiles` | 12 | MembershipId | tenant-scoped |
 | `Facilities` | 12 | Id | tenant-scoped |
 | `FeatureFlags` | 10 | Id | tenant-scoped |
 | `FeatureReleases` | 11 | Id |  |
@@ -379,6 +379,7 @@ erDiagram
 | `Languages` | character varying(200) |  |  |
 | `NewVisitFeeMinor` | bigint |  |  |
 | `Qualifications` | character varying(200) |  |  |
+| `Room` | character varying(50) |  |  |
 | `SignatureKey` | character varying(200) |  |  |
 | `Specialty` | character varying(100) |  |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
@@ -1044,7 +1045,7 @@ erDiagram
 | `ScheduleExceptions` | 12 | Id | tenant-scoped |
 | `Resources` | 6 | Id | tenant-scoped |
 | `ScheduleSlots` | 6 | Id | tenant-scoped |
-| `Templates` | 9 | Id | tenant-scoped |
+| `Templates` | 8 | Id | tenant-scoped |
 | `SlotHolds` | 9 | Id | tenant-scoped |
 | `VisitStatusEvents` | 10 | Id | tenant-scoped |
 | `Waitlist` | 21 | Id | tenant-scoped |
@@ -1237,7 +1238,6 @@ erDiagram
 | `ChangedAt` | timestamptz |  |  |
 | `ChangedBy` | guid | yes | id of `identity.Users` |
 | `FacilityId` | guid |  | id of `tenancy.Facilities` |
-| `Room` | character varying(50) |  |  |
 | `SlotMinutes` | int |  |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
 

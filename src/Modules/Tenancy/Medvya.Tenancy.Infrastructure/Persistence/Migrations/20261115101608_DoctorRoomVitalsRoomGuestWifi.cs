@@ -5,7 +5,7 @@
 namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
 {
     /// <inheritdoc />
-    public partial class NurseRoomAndGuestWifi : Migration
+    public partial class DoctorRoomVitalsRoomGuestWifi : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -41,6 +41,14 @@ namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
                 type: "character varying(63)",
                 maxLength: 63,
                 nullable: true);
+
+            migrationBuilder.AddColumn<string>(
+                name: "Room",
+                schema: "tenancy",
+                table: "DoctorProfiles",
+                type: "character varying(50)",
+                maxLength: 50,
+                nullable: true);
         }
 
         /// <inheritdoc />
@@ -65,6 +73,11 @@ namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
                 name: "WifiPassword",
                 schema: "tenancy",
                 table: "Facilities");
+
+            migrationBuilder.DropColumn(
+                name: "Room",
+                schema: "tenancy",
+                table: "DoctorProfiles");
         }
     }
 }

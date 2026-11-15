@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(TenancyDbContext))]
-    [Migration("20261115100556_NurseRoomAndGuestWifi")]
-    partial class NurseRoomAndGuestWifi
+    [Migration("20261115101608_DoctorRoomVitalsRoomGuestWifi")]
+    partial class DoctorRoomVitalsRoomGuestWifi
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -272,6 +272,10 @@ namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
                     b.Property<string>("Qualifications")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Room")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<string>("SignatureKey")
                         .HasMaxLength(200)

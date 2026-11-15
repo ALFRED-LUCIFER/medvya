@@ -378,7 +378,7 @@ function VisitCard(props: Props & { card: BoardCard; board: Board; primary: stri
         {card.token && <FrontDeskTag kind="token" text={[t('board.token', { token: card.token }), card.queuePlace != null && aheadWords(i18n, card.queuePlace - 1)].filter(Boolean).join(' · ')} />}
       </div>
       {(state === 'CheckedIn' || state === 'ReadyForDoctor') && <FrontDeskTag kind="waiting" text={t('board.waiting', { minutes: minutesSince(card.since, now) })} />}
-      {card.room && state === 'InConsult' && <FrontDeskTag kind="room" text={t('board.room', { room: card.room })} />}
+      {card.room && (state === 'InConsult' || state === 'WithNurse') && <FrontDeskTag kind="room" text={t('board.room', { room: card.room })} />}
 
       {canMove && confirming ? <ConfirmCheckIn {...props} card={card} /> : <NextAction {...props} card={card} className="mt-1 w-full" />}
       {/* shortcut: with billing.invoices off (all of P1) payment is a disabled placeholder; P4 builds payments behind that flag. */}

@@ -63,6 +63,8 @@ public sealed class DoctorProfile
     [Classification(DataClass.Public)] public string? Languages { get; set; }
     [Classification(DataClass.Internal)] public long NewVisitFeeMinor { get; set; }
     [Classification(DataClass.Internal)] public long FollowUpFeeMinor { get; set; }
+    /// <summary>The room this doctor sees patients in at this location, e.g. "Room 2" (MDV-P1-111): on the board, the TV and the token slip.</summary>
+    [Classification(DataClass.Internal)] public string? Room { get; set; }
     /// <summary>Private Blob key of the signature image. Printed on prescriptions only; never served to the screen, never a way to sign.</summary>
     [Classification(DataClass.Personal)] public string? SignatureKey { get; set; }
     [Classification(DataClass.Internal)] public Guid? ChangedBy { get; set; }

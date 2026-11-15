@@ -87,16 +87,23 @@ public sealed class SchedulingContext(
         db.Exceptions.AsNoTracking().Where(x => x.FacilityId == facilityId && x.FromDate <= last && x.ToDate >= first && (calendarId == null || x.CalendarId == calendarId))
             .ToListAsync(cancellationToken);
 
-    /// <summary>The room of the calendar's session running now, else of the session the visit was booked in; else unchanged.</summary>
+    /// <summary>
+    /// The doctor's room for the visit: the room of the calendar's session running now, else of the session the visit was booked in, else the
+    /// doctor's room at the location (MDV-P1-111); null when none is set. Never the vitals room the visit may sit in now.
+    /// </summary>
     public async Task<string?> RoomAsync(Appointment visit, TimeZoneInfo zone, DateTimeOffset now, CancellationToken cancellationToken)
     {
         var template = await db.Templates.AsNoTracking().SingleOrDefaultAsync(t => t.FacilityId == visit.FacilityId && t.CalendarId == visit.CalendarId, cancellationToken);
-        if (template is null) return visit.Room;
+        if (template is null) return await facilities.DoctorRoomAsync(visit.CalendarId, visit.FacilityId, cancellationToken);
         var today = ScheduleRules.LocalDate(now, zone);
         var hours = ScheduleRules.Day(template, today, zone, await ExceptionsAsync(visit.FacilityId, today, today, visit.CalendarId, cancellationToken)).Hours;
         var session = hours.FirstOrDefault(w => w.Start <= now && now < w.End) ?? hours.FirstOrDefault(w => w.Start <= visit.Start && visit.Start < w.End);
-        return session?.Room ?? visit.Room;
+        return session?.Room ?? await facilities.DoctorRoomAsync(visit.CalendarId, visit.FacilityId, cancellationToken);
     }
+
+    /// <summary>The practice logo as stored (PNG), for the token slip; null without one.</summary>
+    public async Task<byte[]?> LogoAsync(Guid facilityId, CancellationToken cancellationToken) =>
+        (await facilities.PrintImagesAsync(Guid.Empty, facilityId, cancellationToken)).Logo; // no user: the logo only, no signature
 
     /// <summary>Doctors first, then resources, each by name: the column order of the day view.</summary>
     public async Task<List<Calendar>> CalendarsAsync(Guid facilityId, CancellationToken cancellationToken)

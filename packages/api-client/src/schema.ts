@@ -4906,6 +4906,45 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/settings/doctors/{id}/room": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DoctorRoom"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/organisation/request": {
         parameters: {
             query?: never;
@@ -9122,6 +9161,7 @@ export interface components {
             newVisitFee?: null | number | string;
             /** Format: int64 */
             followUpFee?: null | number | string;
+            room?: null | string;
         };
         AddLocation: {
             name?: null | string;
@@ -9612,6 +9652,9 @@ export interface components {
             delayMinutes: number | string;
             next: components["schemas"]["NextVisit"][];
         };
+        DoctorRoom: {
+            room: null | string;
+        };
         DoctorView: {
             /** Format: uuid */
             id: string;
@@ -9640,6 +9683,7 @@ export interface components {
             /** Format: int64 */
             followUpFee: number | string;
             currency: string;
+            room?: null | string;
         };
         /** @enum {unknown} */
         DocumentType: "LabReport" | "Imaging" | "Prescription" | "Referral" | "Other";
@@ -9820,6 +9864,11 @@ export interface components {
             name: string;
             address: null | string;
             timeZone: string;
+            nurseRoom?: null | string;
+            wifiNetwork?: null | string;
+            wifiPassword?: null | string;
+            /** @default false */
+            wifiDaily: boolean;
         };
         /** @enum {unknown} */
         MedicationDecisionKind: "Keep" | "Change" | "Stop" | "Add" | "Ignore" | "Taper" | null;
@@ -10046,11 +10095,14 @@ export interface components {
             doctor: string;
             /** Format: int32 */
             ahead: number | string;
+            room?: null | string;
         };
         QueueTvNow: {
             token: string;
             room: null | string;
             doctor: string;
+            /** @default false */
+            vitals: boolean;
         };
         Reactivate: {
             reason: null | string;
@@ -10267,6 +10319,10 @@ export interface components {
             name?: null | string;
             address?: null | string;
             timeZone?: null | string;
+            nurseRoom?: null | string;
+            wifiNetwork?: null | string;
+            wifiPassword?: null | string;
+            wifiDaily?: boolean;
         };
         SaveNote: {
             templateKey: null | string;
@@ -10511,6 +10567,18 @@ export interface components {
             timeZone: string;
             /** Format: int32 */
             ahead: null | number | string;
+            address: null | string;
+            phone: null | string;
+            room: null | string;
+            vitalsRoom: null | string;
+            logo: null | string;
+            wifi: null | components["schemas"]["TokenSlipWifi"];
+        };
+        TokenSlipWifi: {
+            network: string;
+            password: null | string;
+            daily: boolean;
+            qr: string[];
         };
         UnavailableBlock: {
             /** Format: date-time */

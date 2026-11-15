@@ -16,7 +16,11 @@ export type Profile = {
   version: number;
 };
 export type LogoLink = { url: string; expiresAt: string };
-export type Location = { id: string; name: string; address: string | null; timeZone: string };
+/** nurseRoom: where patients go for vitals; the Wi-Fi fields: the guest network printed on token slips (MDV-P1-111). */
+export type Location = {
+  id: string; name: string; address: string | null; timeZone: string;
+  nurseRoom?: string | null; wifiNetwork?: string | null; wifiPassword?: string | null; wifiDaily?: boolean;
+};
 /** Weekday by name (the API writes System.DayOfWeek as text); times are "HH:mm:ss" facility wall-clock times. */
 export type DayHours = { weekday: Weekday; opens: string; closes: string };
 export type Closure = { id: string; facilityId: string; date: string; name: string };
@@ -48,9 +52,16 @@ export const toProfileForm = (p: Profile): ProfileForm => ({
   name: p.name, address: p.address ?? '', registrationNumber: p.registrationNumber ?? '', registrationExpiresOn: p.registrationExpiresOn ?? '', taxNumber: p.taxNumber ?? '', phone: p.phone ?? '', email: p.email ?? '',
 });
 
-export const locationSchema = z.object({ name: z.string().trim().min(1).max(200), address: optional(500), timeZone: z.string().min(1) });
+/** Editing a location also sets its vitals room and guest Wi-Fi (MDV-P1-111); the server refuses a password without its network. */
+export const locationSchema = z.object({
+  name: z.string().trim().min(1).max(200), address: optional(500), timeZone: z.string().min(1),
+  nurseRoom: optional(50), wifiNetwork: optional(32), wifiPassword: optional(63), wifiDaily: z.boolean(),
+});
 export type LocationForm = z.infer<typeof locationSchema>;
-export const emptyLocation: LocationForm = { name: '', address: '', timeZone: timeZones[0] };
+export const emptyLocation: LocationForm = { name: '', address: '', timeZone: timeZones[0], nurseRoom: '', wifiNetwork: '', wifiPassword: '', wifiDaily: false };
+export const toLocationForm = (l: Location): LocationForm => ({
+  name: l.name, address: l.address ?? '', timeZone: l.timeZone, nurseRoom: l.nurseRoom ?? '', wifiNetwork: l.wifiNetwork ?? '', wifiPassword: l.wifiPassword ?? '', wifiDaily: l.wifiDaily ?? false,
+});
 /** Adding a location also needs its tax number (GSTIN or TRN) and certificate; the controller asks for them on add only, and the server checks the format. */
 export const addLocationSchema = locationSchema.extend({ taxNumber: optional(20) });
 export type AddLocationForm = z.infer<typeof addLocationSchema>;
@@ -68,6 +79,7 @@ export const locationErrorKeys = {
   'taxNumber:required': 'settings.locations.error.taxNumber.required', 'taxNumber:format': 'settings.locations.error.taxNumber.format',
   'certificate:required': 'settings.locations.error.certificate.required', 'certificate:type': 'settings.locations.error.certificate.type',
   'certificate:too_large': 'settings.locations.error.certificate.too_large', 'countryCode:mismatch': 'settings.locations.error.country',
+  'wifiNetwork:required': 'settings.locations.error.wifiNetwork',
 } as const satisfies Record<string, MessageKey>;
 export const locationProblem = (code: string | undefined): { field: 'taxNumber' | 'certificate' | 'form'; key: MessageKey } => {
   const key = (locationErrorKeys as Record<string, MessageKey>)[code ?? ''];

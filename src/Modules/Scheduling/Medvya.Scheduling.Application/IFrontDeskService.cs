@@ -23,11 +23,17 @@ public sealed record BoardCard(
 public sealed record FrontDeskBoard(Guid FacilityId, string TimeZone, DateOnly Date, DateTimeOffset Now, IReadOnlyList<BoardCard> Cards, int LeftWithoutBeingSeen = 0);
 
 /// <summary>
-/// The waiting-room token slip (MDV-P2-046): clinic, token, the doctor whose queue it is in now and when it was issued. Nothing
-/// about the patient: no name, MRN, phone or reason, because the slip is left on chairs and handed across the desk. Ahead: how many
-/// patients wait before this one in that doctor's queue when it is printed (decision 10, MDV-P1-103); null once the patient is no longer waiting.
+/// The waiting-room token slip (MDV-P2-046, laid out by MDV-P1-111): clinic with its logo, address and phone, token, the doctor whose queue it is
+/// in now, the doctor's room and the vitals room, when it was issued, and the location's guest Wi-Fi. Nothing about the patient: no name, MRN, phone
+/// or reason, because the slip is left on chairs and handed across the desk. Ahead: how many patients wait before this one in that doctor's queue
+/// when it is printed (decision 10, MDV-P1-103); null once the patient is no longer waiting. Room and VitalsRoom are null when not set (the row is
+/// left out); VitalsRoom only while nurse intake is on. Logo is a PNG data URL.
 /// </summary>
-public sealed record TokenSlip(string ClinicName, string Token, string DoctorName, DateTimeOffset IssuedAt, string TimeZone, int? Ahead);
+public sealed record TokenSlip(string ClinicName, string Token, string DoctorName, DateTimeOffset IssuedAt, string TimeZone, int? Ahead,
+    string? Address, string? Phone, string? Room, string? VitalsRoom, string? Logo, TokenSlipWifi? Wifi);
+
+/// <summary>The guest Wi-Fi on the slip's tear-off stub: the join QR code's rows ('1' dark) and the words to type. Daily: "today only".</summary>
+public sealed record TokenSlipWifi(string Network, string? Password, bool Daily, IReadOnlyList<string> Qr);
 
 /// <summary>
 /// Check in a visit. ElapsedMs is how long the desk took, from opening Walk-in or tapping "Check in" to this call (exit gate 3

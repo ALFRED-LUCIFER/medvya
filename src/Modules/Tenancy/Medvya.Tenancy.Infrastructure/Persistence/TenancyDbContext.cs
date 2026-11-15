@@ -246,6 +246,7 @@ public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options,
             e.Property(x => x.Qualifications).HasMaxLength(200);
             e.Property(x => x.Languages).HasMaxLength(200);
             e.Property(x => x.SignatureKey).HasMaxLength(200);
+            e.Property(x => x.Room).HasMaxLength(50);
             e.HasOne<Membership>().WithOne().HasForeignKey<DoctorProfile>(x => x.MembershipId).OnDelete(DeleteBehavior.Restrict);
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });

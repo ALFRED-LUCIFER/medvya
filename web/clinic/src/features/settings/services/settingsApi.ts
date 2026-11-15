@@ -3,7 +3,7 @@ import type { NotificationPrefs, TemplatePreview } from '../domain/notifications
 import type { AddLocationForm, CalendarTemplate, Closure, ClosureForm, ClosureWithVisits, DayHours, Location, LocationForm, LogoLink, Profile, ProfileForm, QueueRule, TermsStatus } from '../domain/settings';
 
 const json = (method: string, body: unknown) => ({ method, headers: { ...csrf, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-const blank = <T extends Record<string, string>>(form: T) => Object.fromEntries(Object.entries(form).map(([k, v]) => [k, v === '' ? null : v]));
+const blank = <T extends Record<string, string | boolean>>(form: T) => Object.fromEntries(Object.entries(form).map(([k, v]) => [k, v === '' ? null : v]));
 
 // Practice settings (F-08, MDV-P1-005). Ids in paths, details in bodies; business details only.
 export const fetchProfile = () => send<Profile>('/v1/settings/profile');

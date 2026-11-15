@@ -33,6 +33,12 @@ public sealed class FacilityDirectory(TenancyDbContext db, ILogoStore store) : I
     public async Task<PrescriberInfo?> PrescriberAsync(Guid userId, Guid facilityId, CancellationToken cancellationToken = default) =>
         (await PrescribersAsync(facilityId, [userId], cancellationToken)).GetValueOrDefault(userId);
 
+    public Task<string?> DoctorRoomAsync(Guid userId, Guid facilityId, CancellationToken cancellationToken = default) =>
+        (from m in db.Memberships.AsNoTracking()
+         join p in db.DoctorProfiles.AsNoTracking() on m.Id equals p.MembershipId
+         where m.FacilityId == facilityId && m.UserId == userId
+         select p.Room).FirstOrDefaultAsync(cancellationToken);
+
     public async Task<PrintImages> PrintImagesAsync(Guid userId, Guid facilityId, CancellationToken cancellationToken = default)
     {
         var logo = await db.Profiles.AsNoTracking().Select(p => p.LogoKey).SingleOrDefaultAsync(cancellationToken);

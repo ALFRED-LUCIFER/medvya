@@ -9,7 +9,7 @@ import {
   doctorProblem, doctorSchema, doctorSteps, emptyDoctor, emptyLicence, errorTarget, fieldProblem, licenceSchema, signatureProblem, stepFields,
   type Doctor, type DoctorForm, type DoctorStep, type LicenceForm,
 } from '../domain/doctors';
-import { addDoctor, fetchDoctors, removeSignature, resubmitLicence, uploadSignature } from '../services/doctorsApi';
+import { addDoctor, fetchDoctors, removeSignature, resubmitLicence, saveDoctorRoom, uploadSignature } from '../services/doctorsApi';
 
 /** The invitation email could not be sent; the server saved nothing (502 with this code). */
 const emailFailed = 'email_failed', planFull = 'plan_limit';
@@ -90,6 +90,9 @@ export function useDoctorsController(defaultFacilityId: string) {
   });
   const remove = useMutation({ mutationFn: removeSignature, onSuccess: afterSignature, onError: (_e, id) => setRowProblem({ id, kind: 'failed' }) });
 
+  // ---- The doctor's room at their location (MDV-P1-111) ----
+  const room = useMutation({ mutationFn: ({ id, value }: { id: string; value: string }) => saveDoctorRoom(id, value), onSuccess: refresh });
+
   return {
     loading: list.isPending,
     forbidden: list.error instanceof ApiError && list.error.status === 403,
@@ -138,6 +141,10 @@ export function useDoctorsController(defaultFacilityId: string) {
 
     rowProblem,
     busyId: upload.isPending ? upload.variables.id : remove.isPending ? remove.variables : null,
+    roomBusyId: room.isPending ? room.variables.id : null,
+    roomSavedId: room.isSuccess ? room.variables.id : null,
+    roomFailedId: room.isError ? room.variables.id : null,
+    onRoom: (id: string, value: string) => room.mutate({ id, value }),
     onSignature: (id: string, file: File | undefined) => {
       if (!file) return;
       const problem = signatureProblem(file);

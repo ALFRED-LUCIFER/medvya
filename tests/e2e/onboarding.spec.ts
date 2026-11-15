@@ -162,7 +162,7 @@ test('the team step invites the front desk, says what each role sees, and does n
   await expect(page.locator('#inviteEmail-error')).toHaveText('Each person can be invited once.');
   await page.getByLabel('Email address').fill('');
   await page.getByRole('button', { name: 'Continue' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Bring your existing patients.' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Your existing patients.' })).toBeVisible();
   expect(api.saves.at(-1)!.data.team).toEqual([{ email: 'nurse@example.test', role: 'Nurse' }]);
 });
 
@@ -171,9 +171,9 @@ test('skip leaves a step empty; finish later saves and signs out', async ({ page
   await page.goto('/onboarding');
   await expect(page.getByLabel('Move from my software')).toBeChecked();
   await page.getByRole('button', { name: 'Skip for now' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Get paid and keep patients informed.' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Payments and messages.' })).toBeVisible();
   expect(api.saves.at(-1)!.data.patients).toBeUndefined();
-  await expect(page.getByText('Later, in Settings')).toHaveCount(4);
+  await expect(page.getByText('Not available yet')).toHaveCount(4); // #1365 F-025: nothing is promised that is not built
 
   await page.getByRole('button', { name: 'Finish later' }).click();
   await expect.poll(() => api.signedOut).toBe(true);

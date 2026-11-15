@@ -10,8 +10,8 @@ import { fetchFamily, fetchProfile } from '../services/profile';
 export function useProfileController() {
   const { session, biometric, lock, signOut } = useSignedIn();
   const { locale } = useI18n();
-  const profile = useQuery({ queryKey: ['profile', session.person.id], queryFn: () => fetchProfile(session.person.id) });
-  const family = useQuery({ queryKey: ['family', session.person.id], queryFn: () => fetchFamily(session.person.id) });
+  const profile = useQuery({ queryKey: ['profile', session.person?.id], queryFn: () => fetchProfile(session.person?.id) });
+  const family = useQuery({ queryKey: ['family', session.person?.id], queryFn: () => fetchFamily(session.person?.id) });
   return {
     session,
     phone: maskPhone(session.phone),

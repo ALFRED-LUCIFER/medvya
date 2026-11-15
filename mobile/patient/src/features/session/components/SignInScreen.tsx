@@ -11,8 +11,8 @@ type Props = {
   onSubmitPhone: () => void; onSubmitCode: () => void; onResend: () => void; onBack: () => void; busy: boolean;
   people: Person[]; onChoosePerson: (p: Person) => void;
   biometricAvailable: boolean; unlockMethod: string; onEnableBiometric: () => void; onSkipBiometric: () => void; error: string | null;
-  /** Set when five wrong codes locked the number: the banner says how long to wait. */
-  lockedMinutes: number | null;
+  /** Set when the API asks to wait (number locked, too many codes): the banner says how long. */
+  waitMinutes: number | null;
 };
 
 const pages: { icon: IconName; title: MessageKey; body: MessageKey }[] = [
@@ -55,7 +55,7 @@ function Welcome({ page, onPage, onStart, unlockMethod }: Pick<Props, 'page' | '
 export function SignInScreen(vm: Props) {
   const { t, tCount } = useI18n();
   const error = vm.error ? <Banner tone="danger" icon="error-outline"
-    text={vm.lockedMinutes !== null ? tCount('mobile.patientSignIn.locked', vm.lockedMinutes) : t(vm.error as MessageKey)} /> : null;
+    text={vm.waitMinutes !== null ? tCount(vm.error, vm.waitMinutes) : t(vm.error as MessageKey)} /> : null;
 
   if (vm.step === 'welcome') return <Welcome page={vm.page} onPage={vm.onPage} onStart={vm.onStart} unlockMethod={vm.unlockMethod} />;
 

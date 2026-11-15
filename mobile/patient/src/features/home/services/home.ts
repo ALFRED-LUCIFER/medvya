@@ -1,7 +1,7 @@
 import { Linking, Platform } from 'react-native';
 import { fromCast } from '../../api/services/source';
 
-export const fetchHome = (_personId: string) => fromCast(c => c.home);
+export const fetchHome = (_personId?: string) => fromCast(c => c.home);
 export const call = (number: string) => Linking.openURL(`tel:${number}`);
 /** Opens the phone's maps app at the clinic. */
 export const openDirections = (address: string) => {

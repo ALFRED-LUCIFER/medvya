@@ -2,7 +2,7 @@ import { useI18n, type MessageKey } from '@medvya/i18n';
 import { AppHeader, Button, Card, Icon, Loading, Screen, Section, StateMessage, Text, type IconName } from '@medvya/ui-native';
 import { theme } from '@medvya/tokens';
 import { Pressable, StyleSheet, View } from 'react-native';
-import type { Session } from '../../session/domain/session';
+import { clinicLine, type Session } from '../../session/domain/session';
 import type { Home, Task } from '../domain/home';
 
 type Props = {
@@ -14,10 +14,11 @@ const taskIcon: Record<Task['kind'], IconName> = { pay: 'payments', video: 'vide
 
 export function HomeScreen(vm: Props) {
   const { t, formatDate, formatTime, formatMoney } = useI18n();
-  const tz = vm.session.clinic.timeZone;
-  const firstName = vm.session.person.name.split(' ')[0] ?? vm.session.person.name;
-  const header = <AppHeader title={t('mobile.home.hello', { name: firstName })} subtitle={`${vm.session.clinic.name} · ${vm.session.clinic.branch}`}
-    initials={vm.session.person.initials} action={{ icon: 'call', label: t('mobile.home.callClinic'), onPress: vm.onCallClinic }} />;
+  const { person, clinic } = vm.session;
+  const tz = clinic?.timeZone;
+  const header = <AppHeader title={person ? t('mobile.home.hello', { name: person.name.split(' ')[0] ?? person.name }) : t('mobile.patient.tab.home')}
+    subtitle={clinicLine(vm.session)} initials={person?.initials ?? t('mobile.monogram')}
+    action={clinic ? { icon: 'call', label: t('mobile.home.callClinic'), onPress: vm.onCallClinic } : undefined} />;
 
   if (vm.loading) return <Screen header={header} scroll={false}><Loading label={t('mobile.common.loading')} /></Screen>;
   if (vm.error || !vm.home) return <Screen header={header} scroll={false}><StateMessage icon="cloud-off" title={t('mobile.common.unavailable')} body={t((vm.error ?? 'mobile.error.generic') as MessageKey)} /></Screen>;

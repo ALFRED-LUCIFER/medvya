@@ -12,8 +12,8 @@ import { Section } from './Section';
 
 type Wizard = {
   adding: boolean; step: DoctorStep; stepIndex: number; lastStep: boolean; form: UseFormReturn<DoctorForm>; fieldErrors: Record<string, FieldProblem | undefined>; errorFocusKey: number;
-  submitting: boolean; submitFailed: boolean; emailFailed: boolean; planFull: string | null; signature: File | null; signatureProblem: 'type' | 'size' | null;
-  onPickSignature: (file: File | undefined) => void; onBack: () => void; onNext: () => void; onClose: () => void; onSubmit: FormEventHandler<HTMLFormElement>;
+  submitting: boolean; submitFailed: boolean; emailFailed: boolean; planFull: string | null;
+  onBack: () => void; onNext: () => void; onClose: () => void; onSubmit: FormEventHandler<HTMLFormElement>;
 };
 
 type Props = Wizard & {
@@ -25,7 +25,7 @@ type Props = Wizard & {
   locations: Location[];
   currency: string;
   onRetry: () => void;
-  added: { name: string; signatureFailed: boolean } | null;
+  added: { name: string } | null;
   onDismissAdded: () => void;
   onOpen: () => void;
   correcting: Doctor | null;
@@ -68,7 +68,7 @@ export default function DoctorsPanel(p: Props) {
       {p.added && (
         <p role="status" className="flex items-start gap-2 rounded-md border bg-muted p-3">
           <Info className="mt-0.5 size-4 shrink-0" aria-hidden />
-          <span>{t('doctors.added', { name: p.added.name })}{p.added.signatureFailed ? ` ${t('doctors.added.signatureFailed')}` : ''}</span>
+          <span>{t('doctors.added', { name: p.added.name })}</span>
           <Button type="button" variant="ghost" className="ms-auto" onClick={p.onDismissAdded}>{t('doctors.dismiss')}</Button>
         </p>
       )}
@@ -117,12 +117,17 @@ function DoctorRow({ doctor: d, ...p }: Props & { doctor: Doctor }) {
       <div className="flex flex-col gap-2">
         <p className="font-bold">{d.hasSignature ? t('doctors.signature.has') : t('doctors.signature.none')}</p>
         <p className="text-sm text-muted-foreground">{t('doctors.signature.notice')}</p>
+        {/* Only the doctor adds or replaces their own image; an administrator may remove one. */}
+        {!d.ownSignature && <p className="text-sm text-muted-foreground">{t('doctors.signature.ownOnly')}</p>}
+        {!d.ownSignature && problem && <p role="alert" className={fieldError}>{t(`doctors.signature.error.${problem}`)}</p>}
         <div className="flex flex-wrap items-end gap-3">
-          <Field id={`sig-${d.id}`} label={d.hasSignature ? t('doctors.signature.replace') : t('doctors.signature.choose')} hint={t('doctors.signature.hint')}
-            error={problem ? t(`doctors.signature.error.${problem}`) : undefined} className="min-w-60">
-            <Input type="file" accept="image/png,image/jpeg" className="h-auto py-2" disabled={busy}
-              onChange={e => { p.onSignature(d.id, e.currentTarget.files?.[0]); e.currentTarget.value = ''; }} />
-          </Field>
+          {d.ownSignature && (
+            <Field id={`sig-${d.id}`} label={d.hasSignature ? t('doctors.signature.replace') : t('doctors.signature.choose')} hint={t('doctors.signature.hint')}
+              error={problem ? t(`doctors.signature.error.${problem}`) : undefined} className="min-w-60">
+              <Input type="file" accept="image/png,image/jpeg" className="h-auto py-2" disabled={busy}
+                onChange={e => { p.onSignature(d.id, e.currentTarget.files?.[0]); e.currentTarget.value = ''; }} />
+            </Field>
+          )}
           {d.hasSignature && <Button type="button" variant="outline" loading={busy} onClick={() => p.onRemoveSignature(d.id)}>{t('doctors.signature.remove')}</Button>}
         </div>
       </div>

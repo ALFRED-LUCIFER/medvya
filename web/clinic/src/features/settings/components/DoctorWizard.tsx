@@ -1,6 +1,5 @@
 import type { FormEventHandler } from 'react';
 import { Controller, type FieldValues, type UseFormReturn } from 'react-hook-form';
-import { Info } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
 import { Button, ChoiceRow, ErrorSummary, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, StickyActionBar } from '@medvya/ui';
 import { doctorSteps, stepFields, type Authority, type FieldProblem, type DoctorForm, type DoctorStep, type LicenceForm } from '../domain/doctors';
@@ -107,16 +106,13 @@ type Props = {
   submitFailed: boolean;
   emailFailed: boolean;
   planFull: string | null;
-  signature: File | null;
-  signatureProblem: 'type' | 'size' | null;
-  onPickSignature: (file: File | undefined) => void;
   onBack: () => void;
   onNext: () => void;
   onClose: () => void;
   onSubmit: FormEventHandler<HTMLFormElement>;
 };
 
-/** Add doctor (F-09): details, licence, schedule, fees, access, signature. Nothing is created until the last step. */
+/** Add doctor (F-09): details, licence, schedule, fees, access. Nothing is created until the last step. */
 export default function DoctorWizard(p: Props) {
   const { t } = useI18n();
   const error = useFieldError(p.fieldErrors);
@@ -188,17 +184,6 @@ export default function DoctorWizard(p: Props) {
                 )} />
               )}
             </>
-          )}
-          {p.step === 'signature' && (
-            <div className="flex flex-col gap-3 col-span-full">
-              <p role="note" className="flex items-start gap-2 rounded-md border bg-muted p-3 text-sm font-semibold">
-                <Info className="mt-0.5 size-4 shrink-0" aria-hidden />{t('doctors.signature.notice')}
-              </p>
-              <Field id="d-signature" label={t('doctors.signature.choose')} hint={t('doctors.signature.hint')} error={p.signatureProblem ? t(`doctors.signature.error.${p.signatureProblem}`) : undefined}>
-                <Input type="file" accept="image/png,image/jpeg" className="h-auto py-2" onChange={e => p.onPickSignature(e.currentTarget.files?.[0])} />
-              </Field>
-              {p.signature && <p role="status">{t('doctors.signature.chosen')}</p>}
-            </div>
           )}
         </div>
         <StickyActionBar className={cardBar} aria-live="polite" status={<>

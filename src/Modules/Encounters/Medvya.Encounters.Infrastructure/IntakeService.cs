@@ -432,7 +432,7 @@ public sealed class IntakeService(
 public sealed class IntakeHandoffGate(EncountersDbContext db, IFeatureFlags flags) : IHandoffGate
 {
     public async Task<bool> MayMoveOnAsync(Guid appointmentId, CancellationToken cancellationToken = default) =>
-        !await flags.IsEnabledAsync(IntakeFlag.Key, cancellationToken)
+        !await flags.IsEnabledAsync(Features.NurseIntake, cancellationToken)
         || await db.Intakes.AsNoTracking().AnyAsync(i => i.AppointmentId == appointmentId && i.HandedOffAt != null, cancellationToken);
 }
 

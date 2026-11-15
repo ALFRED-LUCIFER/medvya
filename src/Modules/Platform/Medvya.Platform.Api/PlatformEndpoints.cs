@@ -19,6 +19,8 @@ public static class PlatformPolicies
     public const string AuditRead = "platform.audit.read";
     /// <summary>Organisation approvals (MDV-P1-064): every console role reads; only owner, operations and reviewer decide.</summary>
     public const string OrganisationRead = Console, OrganisationDecide = "platform.organisation.decide";
+    /// <summary>Feature releases (MDV-P5-041): every console role reads; only owner and operations change a release.</summary>
+    public const string FeatureRead = Console, FeatureChange = "platform.feature.change";
     /// <summary>Plans (MDV-P5-042, ADR-019): every console role reads; only owner and finance save a new version.</summary>
     public const string PlansRead = Console, PlansEdit = "platform.plans.edit";
 
@@ -32,6 +34,7 @@ public static class PlatformPolicies
             .AddPolicy(Console, console)
             .AddPolicy(Owner, p => p.Combine(console).RequireClaim(RoleClaim, nameof(PlatformRole.Owner)))
             .AddPolicy(OrganisationDecide, p => p.Combine(console).RequireClaim(RoleClaim, nameof(PlatformRole.Owner), nameof(PlatformRole.Operations), nameof(PlatformRole.Reviewer)))
+            .AddPolicy(FeatureChange, p => p.Combine(console).RequireClaim(RoleClaim, nameof(PlatformRole.Owner), nameof(PlatformRole.Operations)))
             .AddPolicy(PlansEdit, p => p.Combine(console).RequireClaim(RoleClaim, nameof(PlatformRole.Owner), nameof(PlatformRole.Finance)))
             .AddPolicy(AuditRead, p => p.Combine(console).RequireClaim(RoleClaim, nameof(PlatformRole.Owner), nameof(PlatformRole.Operations)));
     }
@@ -84,6 +87,7 @@ public static class PlatformEndpoints
         });
 
         app.MapOrganisationApprovals();
+        app.MapFeatureReleases();
         app.MapGet("/v1/plans", ([FromServices] IPlatformPlans plans, CancellationToken ct) => plans.ListAsync(ct)).RequireAuthorization(PlatformPolicies.PlansRead);
         app.Actions("/v1/plans").RequireAuthorization(PlatformPolicies.PlansEdit)
             .MapPost("/{code}/versions", async (string code, [FromBody] PlanEdit body, [FromServices] IPlatformPlans plans, CancellationToken ct) =>

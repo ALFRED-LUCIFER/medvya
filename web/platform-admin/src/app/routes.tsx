@@ -3,6 +3,8 @@ import { useApprovalsController } from '../features/approvals/hooks/useApprovals
 import type { PlatformRole } from '../features/session/domain/session';
 import AuditPage from '../features/audit/components/AuditPage';
 import { useAuditController } from '../features/audit/hooks/useAuditController';
+import FeaturesPage from '../features/features/components/FeaturesPage';
+import { useFeaturesController } from '../features/features/hooks/useFeaturesController';
 import PlansPage from '../features/plans/components/PlansPage';
 import { usePlansController } from '../features/plans/hooks/usePlansController';
 import TeamPage from '../features/team/components/TeamPage';
@@ -18,6 +20,10 @@ export function PlansRoute({ canEdit }: { canEdit: boolean }) {
 
 export function AuditRoute({ canExport }: { canExport: boolean }) {
   return <AuditPage vm={useAuditController(canExport)} />;
+}
+
+export function FeaturesRoute({ role }: { role: PlatformRole }) {
+  return <FeaturesPage vm={useFeaturesController(role)} />;
 }
 
 export function ApprovalsRoute({ role, operator }: { role: PlatformRole; operator: string }) {

@@ -15,6 +15,7 @@ public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options,
     public DbSet<Facility> Facilities => Set<Facility>();
     public DbSet<Membership> Memberships => Set<Membership>();
     public DbSet<FeatureFlag> FeatureFlags => Set<FeatureFlag>();
+    public DbSet<FeatureRelease> FeatureReleases => Set<FeatureRelease>();
     public DbSet<Invitation> Invitations => Set<Invitation>();
     public DbSet<PracticeProfile> Profiles => Set<PracticeProfile>();
     public DbSet<OperatingHours> OperatingHours => Set<OperatingHours>();
@@ -128,6 +129,17 @@ public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options,
             e.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(x => new { x.TenantId, x.Key }).IsUnique();
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        // Medvya's release per feature and country (MDV-P5-041): not a tenant row, so no query filter and no row-level security. The clinic application may
+        // only read it; the console's narrow login medvya_features writes it (table-rights.sql).
+        modelBuilder.Entity<FeatureRelease>(e =>
+        {
+            e.Property(x => x.Country).HasMaxLength(2).IsFixedLength();
+            e.Property(x => x.Key).HasMaxLength(100);
+            e.Property(x => x.Stage).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.ClinicalSignOff).HasMaxLength(FeatureRelease.SignOffMax);
+            e.HasIndex(x => new { x.Country, x.Key }).IsUnique();
+            e.ToTable(t => t.HasCheckConstraint("CK_FeatureReleases_Percentage", "\"Percentage\" BETWEEN 0 AND 99"));
         });
         modelBuilder.Entity<Invitation>(e =>
         {

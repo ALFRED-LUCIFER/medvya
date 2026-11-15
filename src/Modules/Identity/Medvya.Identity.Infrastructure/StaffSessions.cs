@@ -84,6 +84,16 @@ sealed class StaffSessions(IdentityDbContext db) : IStaffSessions
     public Task LabelDeviceAsync(Guid sessionId, string device, CancellationToken cancellationToken = default) =>
         db.Sessions.Where(s => s.Id == sessionId && s.RefreshTokenHash != null).ExecuteUpdateAsync(u => u.SetProperty(s => s.Device, device), cancellationToken);
 
+    public async Task<IReadOnlyList<string>> PushTokensAsync(Guid tenantId, IReadOnlyCollection<Guid> membershipIds, CancellationToken cancellationToken = default)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var cutoff = now - StaffSession.NativeMaxLifetime; // the longest lifetime; IsActive below applies each session's own
+        var sessions = await db.Sessions.AsNoTracking()
+            .Where(s => s.TenantId == tenantId && s.MembershipId != null && membershipIds.Contains(s.MembershipId.Value) && s.PushToken != null && s.RefreshTokenHash != null && s.RevokedAt == null && s.CreatedAt > cutoff)
+            .ToListAsync(cancellationToken);
+        return [.. sessions.Where(s => s.IsActive(now)).Select(s => s.PushToken!)];
+    }
+
     public async Task<bool> SetPushTokenAsync(Guid userId, Guid sessionId, string? token, CancellationToken cancellationToken = default)
     {
         // Move and set in one transaction; the unique index means a token never sits on two sessions, so a push never reaches two phones.

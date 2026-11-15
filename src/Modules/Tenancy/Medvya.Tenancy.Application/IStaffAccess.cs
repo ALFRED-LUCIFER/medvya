@@ -29,6 +29,13 @@ public interface IStaffAccess
     /// </summary>
     Task<IReadOnlyList<Access>> RoleAccessAsync(IReadOnlyList<Capability> capabilities, Guid facilityId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// The access every active membership at <paramref name="facilityId"/> holds for one capability, by membership id, worked out as
+    /// <see cref="AccessAsync(Capability, Guid, CancellationToken)"/> does for the signed-in user (role, custom role, organisation state).
+    /// For the background job, which has no signed-in user: who an in-app item may reach (MDV-P5-038).
+    /// </summary>
+    Task<IReadOnlyDictionary<Guid, Access>> FacilityAccessAsync(Capability capability, Guid facilityId, CancellationToken cancellationToken = default);
+
     /// <summary>The role of the user's active membership at the current facility (database), or null. For display and audit, not for access: use <see cref="AccessAsync(Capability, CancellationToken)"/>.</summary>
     Task<Role?> CurrentRoleAsync(CancellationToken cancellationToken = default);
 

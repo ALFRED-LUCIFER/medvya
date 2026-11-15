@@ -200,6 +200,9 @@ namespace Medvya.Notifications.Infrastructure.Persistence.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
 
+                    b.Property<DateTimeOffset?>("PushedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<Guid?>("RefId")
                         .HasColumnType("uuid");
 
@@ -207,6 +210,10 @@ namespace Medvya.Notifications.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "CreatedAt")
+                        .HasDatabaseName("IX_StaffNotifications_Unpushed")
+                        .HasFilter("\"PushedAt\" IS NULL");
 
                     b.HasIndex("TenantId", "DedupeKey")
                         .IsUnique();

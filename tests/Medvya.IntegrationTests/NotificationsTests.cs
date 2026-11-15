@@ -103,6 +103,7 @@ public sealed partial class NotificationsTests(PostgresFixture sql) : IClassFixt
             .AddSingleton<Medvya.Tenancy.Application.ILogoStore>(h.Logos)
             .AddSingleton<IEmailSender>(email)
             .AddSingleton<ISmsGateway>(smsGateway)
+            .AddSingleton<IPushSender>(pushes)
             .AddSingleton(h.NationalIds); // the fixture's national-ID setup (this harness has no host configuration)
         if (!denyAll && !realConsent) services.AddSingleton<IReminderConsent>(consent);
         services.AddAuditModule(h.ConnectionString).AddTenancyModule(h.ConnectionString).AddIdentityModule(h.ConnectionString)

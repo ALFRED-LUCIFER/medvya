@@ -70,7 +70,7 @@ if (builder.Configuration.GetConnectionString("Medvya") is { } sql)
     builder.Services.AddAuditModule(sql).AddDeniedAccessAudit().AddTenancyModule(sql, builder.Configuration["Storage:ConnectionString"], builder.Configuration["Storage:BlobEndpoint"],
         builder.Configuration.GetSection("Features:InternalOrganisations").Get<Guid[]>()) // Medvya's own test organisations: the Internal release stage (MDV-P5-041)
         .AddIdentityModule(sql).AddPatientsModule(sql).AddSchedulingModule(sql).AddEncountersModule(sql, builder.Configuration, builder.Environment.IsDevelopment()).AddPrescribingModule(sql)
-        .AddNotificationsModule(sql, smsSink: builder.Environment.IsDevelopment() && builder.Configuration["Notifications:Sms:Provider"] == "Sink")
+        .AddNotificationsModule(sql, smsSink: builder.Environment.IsDevelopment() && builder.Configuration["Notifications:Sms:Provider"] == "Sink", pushLog: builder.Environment.IsDevelopment())
         .AddScoped<IReminderConsent, PatientReminderConsent>() // after the module: replaces its deny-all default (MDV-P1-019)
         .AddLeadsModule(sql, builder.Configuration.GetSection("Leads:Email").Get<LeadsEmailOptions>() ?? new()).AddCapabilityPolicies();
     DatabaseWarmup.AddTo(builder.Services); // after the modules: it warms the DbContexts they registered (#912)

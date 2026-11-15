@@ -81,6 +81,9 @@ sealed class StaffSessions(IdentityDbContext db) : IStaffSessions
         return session;
     }
 
+    public Task LabelDeviceAsync(Guid sessionId, string device, CancellationToken cancellationToken = default) =>
+        db.Sessions.Where(s => s.Id == sessionId && s.RefreshTokenHash != null).ExecuteUpdateAsync(u => u.SetProperty(s => s.Device, device), cancellationToken);
+
     public async Task<bool> SetPushTokenAsync(Guid userId, Guid sessionId, string? token, CancellationToken cancellationToken = default)
     {
         // Move and set in one transaction; the unique index means a token never sits on two sessions, so a push never reaches two phones.

@@ -12,7 +12,7 @@ function Harness() {
   const { session } = useSession();
   const vm = useSignInController();
   const { Text } = jest.requireActual<typeof import('react-native')>('react-native');
-  return session ? <Text testID="signed-in">{`${session.person.name}|${session.phone}`}</Text> : <SignInScreen {...vm} />;
+  return session ? <Text testID="signed-in">{`${session.person?.name}|${session.phone}`}</Text> : <SignInScreen {...vm} />;
 }
 
 async function toCode(number: string) {

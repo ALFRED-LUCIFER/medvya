@@ -6,6 +6,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Host.Api.Auth;
+using Medvya.Identity.Application;
 using Medvya.Identity.Domain;
 using Medvya.Tenancy.Domain;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -112,6 +113,22 @@ public sealed class NativeSignInTests(PostgresFixture sql) : IClassFixture<Postg
     {
         await using var db = sql.Identity();
         return await db.Sessions.AsNoTracking().OrderByDescending(s => s.CreatedAt).FirstAsync(s => s.UserId == userId);
+    }
+
+    /// <summary>Device registration: the app says what it is at the code exchange, and My devices shows that instead of the system browser.</summary>
+    [Fact]
+    public async Task MyDevicesShowsTheAppsPlatformAndVersion()
+    {
+        var (user, _) = await Staff();
+        var (verifier, challenge) = Pkce();
+        using var browser = Browser();
+        var code = await BrowserSignIn(browser, user.Subject, challenge);
+        var tokens = await Read(await Token(("grant_type", "authorization_code"), ("code", code), ("code_verifier", verifier), ("redirect_uri", Redirect),
+            ("platform", "ios"), ("app_version", "1.4.0")));
+
+        Assert.Equal("Medvya app 1.4.0 on iOS", (await SessionOf(user.Id)).Device);
+        var devices = await (await Api(tokens.Access, HttpMethod.Get, "/v1/me/sessions")).Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("Medvya app 1.4.0 on iOS", devices.EnumerateArray().Single(d => d.GetProperty("current").GetBoolean()).GetProperty("device").GetString());
     }
 
     [Fact]

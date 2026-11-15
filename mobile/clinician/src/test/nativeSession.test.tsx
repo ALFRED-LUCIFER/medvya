@@ -29,6 +29,7 @@ let mockBrowserOpened = '';
 jest.mock('expo-web-browser', () => ({
   openAuthSessionAsync: async (url: string) => { mockBrowserOpened = url; return mockBrowserUrl ? { type: 'success', url: mockBrowserUrl } : { type: 'cancel' }; },
 }));
+jest.mock('expo-constants', () => ({ __esModule: true, default: { expoConfig: { version: '1.2.3' } } })); // the device label in My devices
 jest.mock('expo-local-authentication', () => ({
   hasHardwareAsync: async () => false, isEnrolledAsync: async () => false, authenticateAsync: async () => ({ success: false }),
   supportedAuthenticationTypesAsync: async () => [], AuthenticationType: { FINGERPRINT: 1, FACIAL_RECOGNITION: 2 },
@@ -127,7 +128,7 @@ it('signs in through the system browser with PKCE, chooses the facility and take
   expect(login.searchParams.get('redirect_uri')).toBe('medvya-clinician://auth');
   expect(login.searchParams.get('code_challenge_method')).toBe('S256');
   const exchange = new URLSearchParams(server.calls.find(c => c.url.endsWith('/native/token'))!.body);
-  expect(Object.fromEntries(exchange)).toEqual({ grant_type: 'authorization_code', code: 'one+time', code_verifier: expect.stringMatching(/^[0-9a-f]{64}$/), redirect_uri: 'medvya-clinician://auth' });
+  expect(Object.fromEntries(exchange)).toEqual({ grant_type: 'authorization_code', code: 'one+time', code_verifier: expect.stringMatching(/^[0-9a-f]{64}$/), redirect_uri: 'medvya-clinician://auth', platform: 'ios', app_version: '1.2.3' });
   const { createHash } = jest.requireActual<{ createHash: (a: string) => { update: (s: string) => { digest: (e: 'base64url') => string } } }>('node:crypto');
   expect(login.searchParams.get('code_challenge')).toBe(createHash('sha256').update(exchange.get('code_verifier')!).digest('base64url'));
 

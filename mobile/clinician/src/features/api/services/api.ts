@@ -1,4 +1,6 @@
+import Constants from 'expo-constants';
 import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 import { apiBase } from './source';
 import { deviceOnly } from './store';
 
@@ -50,9 +52,9 @@ async function grant(fields: Record<string, string>) {
   return access;
 }
 
-/** The one-time code from the browser sign-in, with the PKCE verifier, for the first token pair. */
+/** The one-time code from the browser sign-in, with the PKCE verifier, for the first token pair. Platform and version label the device in My devices. */
 export const exchangeCode = (code: string, verifier: string) =>
-  grant({ grant_type: 'authorization_code', code, code_verifier: verifier, redirect_uri: REDIRECT_URI });
+  grant({ grant_type: 'authorization_code', code, code_verifier: verifier, redirect_uri: REDIRECT_URI, platform: Platform.OS, app_version: Constants.expoConfig?.version ?? '0.0.0' });
 
 /** Reads the stored refresh token into memory (at launch, with a stored session); true when there is one. */
 export async function loadTokens() {

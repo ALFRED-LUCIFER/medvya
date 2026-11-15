@@ -598,6 +598,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/patient-sign-in/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["RefreshRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/queue/tv/session": {
         parameters: {
             query?: never;
@@ -4095,6 +4132,72 @@ export interface paths {
                     "application/json": components["schemas"]["VerifyRequest"];
                 };
             };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/patient/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/patient/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
             responses: {
                 /** @description OK */
                 200: {
@@ -10278,6 +10381,9 @@ export interface components {
         ReferralState: "Draft" | "Sent" | "AppointmentBooked" | "ReportReceived" | "Closed" | "Received" | null;
         /** @enum {unknown} */
         ReferralUrgency: "Routine" | "Urgent" | null;
+        RefreshRequest: {
+            refreshToken: null | string;
+        };
         RegisterRequest: {
             quick?: boolean;
             fullName?: string;
@@ -10709,6 +10815,8 @@ export interface components {
             countryCode: null | string;
             mobile: null | string;
             code: null | string;
+            platform?: null | string;
+            appVersion?: null | string;
         };
         VerifyRx: {
             token: null | string;

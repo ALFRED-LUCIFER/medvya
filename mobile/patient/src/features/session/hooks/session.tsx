@@ -1,7 +1,9 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { onSessionEnded } from '../../api/services/api';
 import { shouldLock, type Session } from '../domain/session';
 import { onForeground } from '../services/appState';
+import { endLeftoverSession, signOutDevice } from '../services/session';
 
 // shortcut: duplicated in mobile/clinician; both move to packages/auth-client with native tokens (MDV-P5-033).
 type SessionState = {
@@ -16,8 +18,8 @@ type SessionState = {
 const SessionContext = createContext<SessionState | null>(null);
 
 /**
- * Who is signed in, and the 15-minute lock.
- * shortcut: the session lives in memory, so closing the app signs out; tokens in expo-secure-store come with MDV-P5-033.
+ * Who is signed in, and the 15-minute lock. With a server the refresh token is in secure-store (api.ts), but the session
+ * lives in memory, so closing the app signs out (services/session.ts endLeftoverSession).
  */
 export function SessionProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
@@ -25,6 +27,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [locked, setLocked] = useState(false);
   const [biometric, setBiometric] = useState(false);
   const backgroundedAt = useRef<number | null>(null);
+
+  // Sign-out and a revoke (a refused refresh) both end here: nothing cached or stored outlives the session (ADR-011 §3).
+  const signOut = useCallback(() => {
+    setSession(null); setLocked(false); setBiometric(false); queryClient.clear(); void signOutDevice().catch(() => undefined);
+  }, [queryClient]);
+  useEffect(() => onSessionEnded(signOut), [signOut]);
+  useEffect(() => { void endLeftoverSession().catch(() => undefined); }, []);
 
   useEffect(() => onForeground(active => {
     if (!active) { backgroundedAt.current = Date.now(); return; }
@@ -37,8 +46,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     begin: (s, b) => { setSession(s); setBiometric(b); setLocked(false); },
     lock: () => setLocked(true),
     unlock: () => setLocked(false),
-    signOut: () => { setSession(null); setLocked(false); setBiometric(false); queryClient.clear(); }, // nothing cached outlives the session
-  }), [session, locked, biometric, queryClient]);
+    signOut,
+  }), [session, locked, biometric, signOut]);
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }
 

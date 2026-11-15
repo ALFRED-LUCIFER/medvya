@@ -149,6 +149,9 @@ importers:
       expo-router:
         specifier: ~58.0.30
         version: 58.0.30(80a50b519971ec003db2ea9f13c88a6e)
+      expo-secure-store:
+        specifier: ~58.0.3
+        version: 58.0.3(expo@58.0.23)
       expo-status-bar:
         specifier: ~58.0.4
         version: 58.0.4(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.13)(@react-native/metro-config@0.88.1(@babel/core@7.29.13))(@types/react@19.3.0)(react@19.3.1))(react@19.3.1)

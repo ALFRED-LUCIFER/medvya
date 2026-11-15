@@ -251,7 +251,7 @@ public sealed partial class PatientSmsSignInTests : IClassFixture<PostgresFixtur
     {
         var endpoints = factory.Services.GetServices<EndpointDataSource>().SelectMany(s => s.Endpoints).OfType<RouteEndpoint>()
             .Where(e => e.RoutePattern.RawText?.StartsWith("/v1/patient-sign-in", StringComparison.Ordinal) == true).ToList();
-        Assert.Equal(2, endpoints.Count);
+        Assert.Equal(3, endpoints.Count); // code, verify and refresh (PatientSessionTests)
         Assert.All(endpoints, e =>
         {
             Assert.NotNull(e.Metadata.GetMetadata<IAllowAnonymous>());

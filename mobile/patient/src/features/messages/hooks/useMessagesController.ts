@@ -5,7 +5,7 @@ import { fetchMessages } from '../services/messages';
 
 export function useMessagesController() {
   const { session } = useSignedIn();
-  const query = useQuery({ queryKey: ['messages', session.person.id], queryFn: () => fetchMessages(session.person.id) });
+  const query = useQuery({ queryKey: ['messages', session.person?.id], queryFn: () => fetchMessages(session.person?.id) });
   return {
     session,
     messages: query.data ?? null,

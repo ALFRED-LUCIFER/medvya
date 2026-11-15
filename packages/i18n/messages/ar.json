@@ -2357,6 +2357,8 @@
   "audit.actionName.auth.facility.switch": "تبديل العيادة",
   "audit.actionName.auth.signin": "تسجيل الدخول",
   "audit.actionName.auth.signout": "تسجيل الخروج",
+  "audit.actionName.patient.signin": "سجّل المريض الدخول إلى التطبيق",
+  "audit.actionName.patient.signout": "سجّل المريض الخروج من التطبيق",
   "audit.actionName.compliance.access_review.due": "موعد مراجعة الصلاحيات",
   "audit.actionName.compliance.licence_expiry.notify": "إرسال إشعار انتهاء الترخيص",
   "audit.actionName.emirates_id.expired": "تسجيل انتهاء الهوية الإماراتية",

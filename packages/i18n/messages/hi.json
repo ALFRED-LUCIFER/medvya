@@ -2344,6 +2344,8 @@
   "audit.actionName.auth.facility.switch": "क्लिनिक बदला",
   "audit.actionName.auth.signin": "साइन इन",
   "audit.actionName.auth.signout": "साइन आउट",
+  "audit.actionName.patient.signin": "मरीज़ ने ऐप में साइन इन किया",
+  "audit.actionName.patient.signout": "मरीज़ ने ऐप से साइन आउट किया",
   "audit.actionName.compliance.access_review.due": "एक्सेस समीक्षा बाकी",
   "audit.actionName.compliance.licence_expiry.notify": "लाइसेंस समाप्ति सूचना भेजी",
   "audit.actionName.emirates_id.expired": "समाप्त अमीरात आईडी दर्ज",

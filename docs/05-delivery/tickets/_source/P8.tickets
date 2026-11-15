@@ -5,6 +5,7 @@
 # dep:  1 regulatory classification review for any decision-support feature
 
 @epic MDV-P8-E01 | Demand-driven features | P8-01, P8-02, P8-03, P8-04, P8-05, P8-06 | Features released individually as minor versions when demand and evidence justify them.
+@epic MDV-P8-E02 | Dental clinic pack | P8-06 | A dental clinic runs its chair in Medvya, not on paper: tooth chart, treatment plan with an estimate, procedure billing and dental follow-up.
 
 === MDV-P8-001
 title: Feature intake: adoption target, evidence review and regulatory classification check for every P8 feature
@@ -146,3 +147,302 @@ Public FHIR APIs with SMART-on-FHIR auth, a library of saved migration templates
 ac:
 - Each item passes its own intake record before work starts.
 - Public APIs enforce the same tenant/relationship/purpose authorisation and audit.
+
+=== MDV-P8-008
+title: Dental practitioner licences: dental councils in India and dental licences in the UAE, printed on prescriptions
+type: Story
+epic: MDV-P8-E02
+prd: P8-06
+priority: MUST
+roles: Owner, Dentist
+labels: dental, licence, identity
+estimate: 2
+weeks: 52
+depends: MDV-P8-001, MDV-P1-065
+confidence: 80 | Extends the owner attestation from P1-065; the authority lists are known.
+sources: Dentist review of the clinic journey (whiteboard, 15 Nov 2026)
+desc:
+The owner attests a dentist the same way as a doctor (P1-065), but the authority list offers the Dental Council of India and the state dental councils (India) and the dental licence of DHA, DOH or MOHAP (UAE). The role Dentist gets the doctor's clinical capabilities.
+ac:
+- A dentist can be added with a dental council registration number, authority and expiry; the medical-only authorities are not required.
+- The prescription and signed note print the dental registration number and authority.
+- Licence expiry reminders (P1-010) cover dental licences.
+- Server-side authorisation tests prove a Dentist has the same clinical access as a Doctor and no more.
+
+=== MDV-P8-009
+title: Book by chair and procedure length: chairs as bookable resources, durations per dental procedure
+type: Story
+epic: MDV-P8-E02
+prd: P8-06
+priority: MUST
+roles: Dentist, Dental assistant, Receptionist
+labels: dental, scheduling, booking
+estimate: 4
+weeks: 52-53
+depends: MDV-P8-008, MDV-P1-011, MDV-P1-022
+confidence: 70 | Rooms and resources exist in schedule templates; booking still follows the doctor.
+sources: Dentist review of the clinic journey (whiteboard, 15 Nov 2026)
+desc:
+Each dental chair is a resource with its own hours. A dental procedure carries a default duration (for example root canal 60 min, scaling 30 min) that sets the appointment length. An appointment holds a dentist and a chair.
+ac:
+- A booking reserves both the dentist and the chair; neither can be double-booked (same guard as P1-022, tested under concurrency).
+- Choosing a procedure sets the slot length; reception can lengthen it.
+- The day view can be shown by chair as well as by dentist, in English and Arabic.
+
+=== MDV-P8-010
+title: Dental services and fees list
+type: Story
+epic: MDV-P8-E02
+prd: P8-06
+priority: MUST
+roles: Owner
+labels: dental, billing, catalogue
+estimate: 2
+weeks: 53
+depends: MDV-P8-008, MDV-P4-002
+confidence: 65 | Depends on the P4 services catalogue; UAE claim codes need a licence check.
+sources: Dentist review of the clinic journey (whiteboard, 15 Nov 2026)
+desc:
+A starter list of dental procedures (consultation, scaling, filling by surfaces, root canal by canals, extraction, crown, bridge, denture, implant stages, orthodontic visits) loaded into the services catalogue with editable fees. India consultations stay GST-exempt; UAE carries VAT and the code set the payer requires.
+ac:
+- The owner can load, edit and price the dental list from Settings → Services.
+- Fees are integer minor units with currency (AGENTS.md 3.4).
+- The licence terms of any UAE dental code set are recorded before it is loaded.
+
+=== MDV-P8-011
+title: Tooth chart: FDI numbering, adult and milk teeth, surfaces and conditions, with history per tooth
+type: Story
+epic: MDV-P8-E02
+prd: P8-06
+priority: MUST
+roles: Dentist
+labels: dental, chart, clinical
+estimate: 6
+weeks: 53-55
+depends: MDV-P8-008, MDV-P2-004
+confidence: 60 | New clinical component; needs a dentist to approve the condition list.
+sources: Dentist review of the clinic journey (whiteboard, 15 Nov 2026)
+desc:
+A tooth chart on the patient record and the consultation: FDI two-digit numbering, permanent, primary and mixed dentition, five surfaces per tooth, and conditions (caries, filling, crown, root canal treated, missing, implant, bridge, mobile, fractured). Each change is recorded with who, when and the visit, as part of the signed note.
+ac:
+- A dentist can mark a condition on a tooth and surface with a mouse, a touch screen or the keyboard alone.
+- A condition is shown by a symbol and words, never by colour alone (AGENTS.md 1.5).
+- Signed findings are not edited; a correction is an addendum.
+- Each new domain property carries a data classification; tenant isolation tests cover the new tables.
+- Checked in a browser in English and Arabic (right to left keeps FDI numbers in their quadrants), axe clean.
+
+=== MDV-P8-012
+title: Dental treatment plan: items per tooth, phases, cost estimate and patient acceptance
+type: Story
+epic: MDV-P8-E02
+prd: P8-06
+priority: MUST
+roles: Dentist, Patient, Receptionist
+labels: dental, treatment-plan, billing
+estimate: 5
+weeks: 55-56
+depends: MDV-P8-010, MDV-P8-011, MDV-P4-004
+confidence: 60 | Links clinical plan to charge capture; estimate wording needs a dentist.
+sources: Dentist review of the clinic journey (whiteboard, 15 Nov 2026)
+desc:
+From the tooth chart the dentist builds a plan: procedure items on teeth and surfaces, grouped in phases, priced from the dental list. The patient sees and accepts the estimate (printed or on a tablet). Items move Planned → In progress → Done, and a done item becomes a charge on the visit invoice.
+ac:
+- The estimate shows each item, its tooth and its fee, and a total; acceptance records who accepted and when.
+- A done item creates exactly one charge (idempotent), with the fee version of the day.
+- Declined or postponed items stay on the plan with a reason.
+
+=== MDV-P8-013
+title: Multi-visit procedures: root canal, crown, implant and braces stages across visits
+type: Story
+epic: MDV-P8-E02
+prd: P8-06
+priority: SHOULD
+roles: Dentist, Dental assistant, Receptionist
+labels: dental, treatment-plan, booking
+estimate: 4
+weeks: 56-57
+depends: MDV-P8-012, MDV-P8-009
+confidence: 55 | Stage lists per procedure need a dentist.
+sources: Dentist review of the clinic journey (whiteboard, 15 Nov 2026)
+desc:
+A procedure with stages (for example root canal: access and cleaning, shaping, obturation) shows which stage is next, and booking the next visit carries the stage and its duration.
+ac:
+- The plan shows the current and next stage of each multi-visit item.
+- Booking the next stage opens the schedule with patient, dentist, chair and duration filled.
+- A stage cannot be marked done on an unsigned visit.
+
+=== MDV-P8-014
+title: Medical history check before dental treatment
+type: Story
+epic: MDV-P8-E02
+prd: P8-06
+priority: MUST
+roles: Dentist, Dental assistant, Receptionist
+labels: dental, safety, clinical
+estimate: 2
+weeks: 53
+depends: MDV-P8-008, MDV-P2-004, MDV-P2-008
+confidence: 75 | Reuses chart history and allergies; the question list needs a dentist.
+sources: Dentist review of the clinic journey (whiteboard, 15 Nov 2026)
+desc:
+At each treatment visit the assistant or dentist confirms the history that matters for dental care: anticoagulants or antiplatelets, diabetes, pregnancy, heart conditions and endocarditis risk, bisphosphonates, and local anaesthetic allergy. Nurse vitals stay optional for a dental clinic.
+ac:
+- A treatment visit shows the history check with the date it was last confirmed.
+- An answer that raises risk shows a warning in words on the consultation before the plan item can be started.
+- The check is recorded on the visit and audited.
+
+=== MDV-P8-015
+title: Dental note template and dental medicines in the formulary
+type: Task
+epic: MDV-P8-E02
+prd: P8-06
+priority: SHOULD
+roles: Dentist, Dental assistant, Receptionist
+labels: dental, templates, formulary
+estimate: 2
+weeks: 53
+depends: MDV-P2-025, MDV-P2-014
+confidence: 75 | Uses the existing template engine and admin-added medicines.
+sources: Dentist review of the clinic journey (whiteboard, 15 Nov 2026)
+desc:
+A dental template in the P2-025 engine (chief complaint, extra-oral and intra-oral examination, findings from the tooth chart, plan, advice) and dental items in the formulary (local anaesthetics such as lignocaine with adrenaline, chlorhexidine mouthwash, common dental analgesics and antibiotics).
+ac:
+- The owner can pick the dental template as the clinic default.
+- Dental medicines are searchable and carry their regulatory class.
+- A dentist approves the template and the medicine list.
+
+=== MDV-P8-016
+title: Dental imaging: X-rays and photos on the tooth, with a viewer
+type: Story
+epic: MDV-P8-E02
+prd: P8-06
+priority: SHOULD
+roles: Dentist, Dental assistant, Receptionist
+labels: dental, imaging, documents
+estimate: 4
+weeks: 57-58
+depends: MDV-P8-011, MDV-P2-006
+confidence: 50 | Upload and viewer build on documents; CBCT (DICOM) needs a spike.
+sources: Dentist review of the clinic journey (whiteboard, 15 Nov 2026)
+desc:
+Intraoral X-rays (IOPA/RVG), OPG and intraoral photos uploaded through the documents pipeline (malware scan, time-limited viewer) and attached to one or more teeth and the visit; viewer with zoom, brightness and contrast; before/after comparison. CBCT and DICOM sensor import start as a spike.
+ac:
+- An image can be attached to teeth and opened from the tooth chart.
+- Images never appear in URLs with patient data; links are time-limited (P2-006 rules).
+- A spike records the CBCT/DICOM option and its cost.
+
+=== MDV-P8-017
+title: Gum (periodontal) chart
+type: Story
+epic: MDV-P8-E02
+prd: P8-06
+priority: COULD
+roles: Dentist
+labels: dental, chart, clinical
+estimate: 3
+weeks: 58
+depends: MDV-P8-011
+confidence: 55 | Standard six-site charting; needs a dentist.
+sources: Dentist review of the clinic journey (whiteboard, 15 Nov 2026)
+desc:
+Six sites per tooth: pocket depth, recession, bleeding on probing, plaque; mobility and furcation per tooth; comparison with the last chart.
+ac:
+- A dentist can record a full chart by keyboard in one pass.
+- Two charts can be compared side by side with changes in words.
+
+=== MDV-P8-018
+title: Dental lab orders: send, track and fit
+type: Story
+epic: MDV-P8-E02
+prd: P8-06
+priority: SHOULD
+roles: Dentist, Dental assistant, Receptionist
+labels: dental, lab
+estimate: 3
+weeks: 58-59
+depends: MDV-P8-012
+confidence: 60 | Simple order tracking, no lab integration.
+sources: Dentist review of the clinic journey (whiteboard, 15 Nov 2026)
+desc:
+An order to an external dental lab for a crown, bridge, denture or aligner: teeth, shade, material, instructions, due date and the lab from a clinic list. Status Sent → Received → Fitted; the fit visit is booked against the due date.
+ac:
+- An order prints or exports for the lab without data the lab does not need.
+- Overdue orders show on the reception list.
+- Fitting closes the order and the linked plan item.
+
+=== MDV-P8-019
+title: Procedure consent forms signed on a tablet
+type: Story
+epic: MDV-P8-E02
+prd: P8-06
+priority: MUST
+roles: Dentist, Patient
+labels: dental, consent, safety
+estimate: 3
+weeks: 55
+depends: MDV-P8-012, MDV-P1-019, MDV-P2-006
+confidence: 60 | Consent wording per procedure needs legal and a dentist.
+sources: Dentist review of the clinic journey (whiteboard, 15 Nov 2026)
+desc:
+Versioned consent templates per procedure (extraction, root canal, implant, sedation) in the patient's language; the patient signs on a tablet before the item starts; the signed form is stored as a document with its version.
+ac:
+- A plan item that needs consent cannot start until a signed consent of the current version exists.
+- Withdrawal is recorded and stops later items.
+- Wording is approved by a lawyer and a dentist before release.
+
+=== MDV-P8-020
+title: Dental recall: six-month check-up and cleaning reminders
+type: Story
+epic: MDV-P8-E02
+prd: P8-06
+priority: SHOULD
+roles: Receptionist
+labels: dental, reminders
+estimate: 2
+weeks: 59
+depends: MDV-P8-008, MDV-P1-032
+confidence: 70 | Reuses the reminder pipeline.
+sources: Dentist review of the clinic journey (whiteboard, 15 Nov 2026)
+desc:
+A recall date per patient (default six months after the last check-up or cleaning), a due list for reception and reminders through the existing channels.
+ac:
+- Reminders respect the patient's reminder consent and carry no clinical detail.
+- Booking a recall visit clears the recall.
+
+=== MDV-P8-021
+title: Materials stock and sterilisation log
+type: Story
+epic: MDV-P8-E02
+prd: P8-06
+priority: COULD
+roles: Dental assistant, Owner
+labels: dental, inventory, safety
+estimate: 4
+weeks: 60-61
+depends: MDV-P8-001
+confidence: 45 | Inventory is new to Medvya; scope needs an intake record.
+sources: Dentist review of the clinic journey (whiteboard, 15 Nov 2026)
+desc:
+Consumables with batch, expiry and reorder level; an autoclave cycle log (cycle, date, operator, result) with instrument sets linked to the visits that used them.
+ac:
+- Expired items are flagged and cannot be logged as used.
+- A failed cycle lists the instrument sets and visits it affects.
+
+=== MDV-P8-022
+title: Dental pilot gate: a dentist walks a dental journey and signs off
+type: Gate
+epic: MDV-P8-E02
+prd: P8-06
+priority: MUST
+roles: Dentist, Founder
+labels: dental, pilot, gate
+estimate: 2
+weeks: 61
+depends: MDV-P8-009, MDV-P8-011, MDV-P8-012, MDV-P8-014, MDV-P8-019
+confidence: 50 | Needs a pilot dentist.
+sources: Dentist review of the clinic journey (whiteboard, 15 Nov 2026)
+desc:
+Add a dental journey (first visit: register, history check, tooth chart, treatment plan and estimate, consent, procedure, invoice, next-stage booking, recall) to the journeys and run it as a Playwright spec on the real stack; a pilot dentist walks it and signs off.
+ac:
+- The dental journey passes on the real stack in English and Arabic, axe clean.
+- A named dentist signs off, recorded in the session handoff.

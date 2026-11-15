@@ -84,6 +84,8 @@ public sealed class StaffNotification
     /// <summary>With the tenant it makes raising the same event twice harmless, e.g. "failed:" and the notification id.</summary>
     [Classification(DataClass.Internal)] public string DedupeKey { get; init; } = "";
     [Classification(DataClass.Internal)] public DateTimeOffset CreatedAt { get; init; }
+    /// <summary>When the push job claimed it (MDV-P5-038); null until then. Set once, so an item is pushed at most once.</summary>
+    [Classification(DataClass.Internal)] public DateTimeOffset? PushedAt { get; set; }
 }
 
 /// <summary>One staff member has read one staff notification; this is what makes the read state follow them across devices.</summary>

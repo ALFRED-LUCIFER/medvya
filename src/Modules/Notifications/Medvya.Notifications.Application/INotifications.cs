@@ -11,6 +11,28 @@ public interface ISmsGateway
     Task SendAsync(SmsMessage message, CancellationToken cancellationToken = default);
 }
 
+/// <summary>
+/// One push to one device (MDV-P5-038, ADR-011 §8). It carries an opaque id and the fixed <see cref="Text"/> and nothing else: no kind,
+/// no name, no test or result, so a lock screen shows nothing about anyone's health. The app fetches the detail after unlock.
+/// </summary>
+public sealed record PushMessage(string Token, Guid Id)
+{
+    public const string Text = "You have an update from your clinic";
+}
+
+/// <summary>Hands one push to the push service. Throws when it was not accepted.</summary>
+public interface IPushSender
+{
+    Task SendAsync(PushMessage message, CancellationToken cancellationToken = default);
+}
+
+/// <summary>Pushes the current tenant's new notification-centre items to the devices of the people who may see them (MDV-P5-038).</summary>
+public interface IStaffPush
+{
+    /// <summary>Returns how many pushes were handed over. Each item is pushed at most once, whatever the number of runs or instances.</summary>
+    Task<int> SendDueAsync(int batch = 100, CancellationToken cancellationToken = default);
+}
+
 /// <summary>One message as reception sees it: no text, no address.</summary>
 public sealed record NotificationView(
     Guid Id, Guid AppointmentId, NotificationKind Kind, NotificationChannel Channel, NotificationStatus Status, int Attempts, string? FailureCode, DateTimeOffset SendAt, DateTimeOffset UpdatedAt);

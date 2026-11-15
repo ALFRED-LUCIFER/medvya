@@ -55,6 +55,7 @@ public sealed class NotificationsDbContext(DbContextOptions<NotificationsDbConte
             e.Property(x => x.DedupeKey).HasMaxLength(80);
             e.HasIndex(x => new { x.TenantId, x.DedupeKey }).IsUnique();
             e.HasIndex(x => new { x.TenantId, x.FacilityId, x.CreatedAt });
+            e.HasIndex(x => new { x.TenantId, x.CreatedAt }).HasFilter("\"PushedAt\" IS NULL").HasDatabaseName("IX_StaffNotifications_Unpushed");
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<StaffNotificationRead>(e =>

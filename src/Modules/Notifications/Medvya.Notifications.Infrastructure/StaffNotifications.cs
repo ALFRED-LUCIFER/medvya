@@ -15,7 +15,7 @@ namespace Medvya.Notifications.Infrastructure;
 public sealed class StaffNotifications(NotificationsDbContext db, IStaffAccess access, ICurrentUser user, TimeProvider clock) : IStaffNotifications
 {
     /// <summary>What a kind needs: message failures are for the desk (view access to registering and booking).</summary>
-    static Capability NeededFor(StaffNotificationKind kind) => kind switch
+    internal static Capability NeededFor(StaffNotificationKind kind) => kind switch
     {
         StaffNotificationKind.MessageFailed => Capability.RegisterBookPatients,
         // Practice administration (owner doctor, practice admin, hospital IT): the same people who manage staff and doctors.
@@ -36,13 +36,16 @@ public sealed class StaffNotifications(NotificationsDbContext db, IStaffAccess a
         });
     }
 
+    /// <summary>The access that shows a kind's items: the same rule for the list and for who is pushed to (MDV-P5-038).</summary>
+    internal static bool Sees(Access access) => access is Access.Read or Access.Full or Access.Config;
+
     async Task<(Guid User, IReadOnlyList<StaffNotificationKind> Kinds)> WhoAsync(Guid facilityId, CancellationToken ct)
     {
         var me = user.UserId ?? throw new NotificationAccessDeniedException();
         if (facilityId == Guid.Empty) throw new NotificationAccessDeniedException();
         var kinds = new List<StaffNotificationKind>();
         foreach (var k in Enum.GetValues<StaffNotificationKind>())
-            if (await access.AccessAsync(NeededFor(k), facilityId, ct) is Access.Read or Access.Full or Access.Config) kinds.Add(k);
+            if (Sees(await access.AccessAsync(NeededFor(k), facilityId, ct))) kinds.Add(k);
         if (kinds.Count == 0) throw new NotificationAccessDeniedException();
         return (me, kinds);
     }

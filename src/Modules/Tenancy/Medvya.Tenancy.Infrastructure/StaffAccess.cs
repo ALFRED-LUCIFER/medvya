@@ -34,19 +34,27 @@ public sealed class StaffAccess(TenancyDbContext db, IFacilityDirectory faciliti
         var result = new List<Access>(capabilities.Count);
         foreach (var capability in capabilities)
         {
-            var access = RoleMatrix.Of(role, capability);
             // A practice-defined role may add capabilities its base role lacks (MDV-P1-008); only then is the role row read, once.
-            if (access == Access.None && CustomRoleRules.Extras(role).Contains(capability))
-            {
-                if (!extras.Read)
-                    extras = (true, await db.Memberships.Where(m => m.UserId == userId && m.FacilityId == facilityId && m.Status == MembershipStatus.Active)
-                        .Select(m => db.CustomRoles.Where(r => r.Id == m.CustomRoleId).Select(r => r.Capabilities).FirstOrDefault()).SingleOrDefaultAsync(cancellationToken));
-                access = CustomRoleRules.Effective(role, extras.Value, capability);
-            }
-            result.Add(OrganisationRules.Apply(access, capability, state));
+            if (NeedsCustomRole(role, capability) && !extras.Read)
+                extras = (true, await db.Memberships.Where(m => m.UserId == userId && m.FacilityId == facilityId && m.Status == MembershipStatus.Active)
+                    .Select(m => db.CustomRoles.Where(r => r.Id == m.CustomRoleId).Select(r => r.Capabilities).FirstOrDefault()).SingleOrDefaultAsync(cancellationToken));
+            result.Add(OrganisationRules.Apply(Of(role, extras.Value, capability), capability, state));
         }
         return result;
     }
+
+    public async Task<IReadOnlyDictionary<Guid, Access>> FacilityAccessAsync(Capability capability, Guid facilityId, CancellationToken cancellationToken = default)
+    {
+        var state = await OrganisationStateAsync(cancellationToken);
+        var members = await db.Memberships.Where(m => m.FacilityId == facilityId && m.Status == MembershipStatus.Active)
+            .Select(m => new { m.Id, m.Role, Extras = db.CustomRoles.Where(r => r.Id == m.CustomRoleId).Select(r => r.Capabilities).FirstOrDefault() }).ToListAsync(cancellationToken);
+        return members.ToDictionary(m => m.Id, m => OrganisationRules.Apply(Of(m.Role, m.Extras, capability), capability, state));
+    }
+
+    static bool NeedsCustomRole(Role role, Capability capability) => RoleMatrix.Of(role, capability) == Access.None && CustomRoleRules.Extras(role).Contains(capability);
+
+    static Access Of(Role role, string? customCapabilities, Capability capability) =>
+        NeedsCustomRole(role, capability) ? CustomRoleRules.Effective(role, customCapabilities, capability) : RoleMatrix.Of(role, capability);
 
     // Tenant from filters and RLS; no readable tenant row fails closed as Draft (set-up only).
     public async Task<OrganisationState> OrganisationStateAsync(CancellationToken cancellationToken = default) =>

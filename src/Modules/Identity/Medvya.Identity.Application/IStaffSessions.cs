@@ -32,6 +32,9 @@ public interface IStaffSessions
     /// </summary>
     Task<bool> SetPushTokenAsync(Guid userId, Guid sessionId, string? token, CancellationToken cancellationToken = default);
 
+    /// <summary>The push tokens of the live native sessions scoped to these memberships of the tenant (MDV-P5-038). Revoked, timed-out and browser sessions give none.</summary>
+    Task<IReadOnlyList<string>> PushTokensAsync(Guid tenantId, IReadOnlyCollection<Guid> membershipIds, CancellationToken cancellationToken = default);
+
     /// <summary>When each of these users last signed in (the newest session start, live or ended); users who never did are left out.</summary>
     Task<IReadOnlyDictionary<Guid, DateTimeOffset>> LastSignInAsync(IReadOnlyCollection<Guid> userIds, Guid tenantId, CancellationToken cancellationToken = default);
 

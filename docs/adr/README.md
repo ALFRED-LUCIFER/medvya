@@ -20,6 +20,7 @@ Format: Context · Decision · Consequences · Status. One decision per file. Ne
 | [ADR-019](ADR-019-subscription-pricing.md) | Subscription pricing: Solo, Clinic per doctor and Hospital custom in INR and AED, 14-day trial, patients not counted, plans as versioned data in the console | Decided 6 Nov 2026 (prices) and 15 Nov 2026 (limits and defaults) | P5 |
 | [ADR-020](ADR-020-patient-app-session.md) | Patient app session: a verified mobile number, the staff app's token rules on its own scheme, no clinic data until records are linked | **Accepted** 15 Nov 2026 | P5 |
 | [ADR-021](ADR-021-ai-service.md) | AI runs in a separate Python service (FastAPI, `src/AiService`), called only by Medvya's API; Medvya stays the system of record | **Accepted** 16 Nov 2026 for development (pilot conditions listed) | P3 |
+| [ADR-022](ADR-022-ai-communication-middleware.md) | AI communication middleware: one .NET conversation engine with channel adapters for WhatsApp, clinic chat and the support desk; AI turns in the AI service, tools run by Medvya | **Proposed** 16 Nov 2026, needs the owner's agreement | P4 |
 | [ADR-009](ADR-009-frontend-architecture.md) | Front-end: domain-driven features, controller hooks, presentational components (lint-enforced) | **Accepted** | Now |
 
 The Software Architecture blueprint also lists ADR topics for speech providers, consent ledger and audio retention. They are ticketed in P3: speech and LLM providers as ADR-007 (MDV-P3-001), consent templates and receipts (MDV-P3-002), audio retention (MDV-P3-019).

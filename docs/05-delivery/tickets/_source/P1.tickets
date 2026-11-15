@@ -1384,7 +1384,7 @@ prd: P1-01
 screens: F-01
 priority: SHOULD
 roles: Public
-labels: public-site, marketing, ai
+labels: public-site, marketing, ai, ai-notes
 estimate: 1.5
 weeks: 12
 depends: MDV-P1-053

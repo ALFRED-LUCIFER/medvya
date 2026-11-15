@@ -33,3 +33,4 @@ These names are used in fixtures, tests and demos. All are synthetic.
 | Rahul Menon, 61 M | Critical potassium 6.1 result (J5) |
 | R. Varghese | Hospital integration admin (Kauvery Group, synthetic) |
 | Dr. S. Menon | ED doctor, break-glass example |
+| CarePlus · ValuePlus | Two synthetic tenants for cross-tenant tests of the communication middleware (ADR-022): separate WhatsApp numbers, AI settings and knowledge |

@@ -493,7 +493,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P4-022](P4-clinic-operations/MDV-P4-022.md) | Release rules: the doctor controls what patients see and when | P4 | wk 20–20 | 85% |
 | [MDV-P4-034](P4-clinic-operations/MDV-P4-034.md) | UPI AutoPay for packages, secure pay link by WhatsApp, Apple Pay and Google Pay in the UAE | P4 | wk 20–21 | 55% |
 
-## Week 21 · 15 Mar 2027 – 19 Mar 2027 · load 10.7 dev-days ⚠ over capacity
+## Week 21 · 15 Mar 2027 – 19 Mar 2027 · load 14.7 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -506,8 +506,10 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P4-028](P4-clinic-operations/MDV-P4-028.md) | WhatsApp reminders and confirmations (EN/AR/HI), opt-in records, delivery status, one-tap reschedule, "doctor running late" broadcast (N-03, design needed) | P4 | wk 21–23 | 62% |
 | [MDV-P4-031](P4-clinic-operations/MDV-P4-031.md) | Invoice and receipt formats reviewed by a chartered accountant (India) and tax adviser (UAE) | P4 | wk 21–23 | 65% |
 | [MDV-P4-034](P4-clinic-operations/MDV-P4-034.md) | UPI AutoPay for packages, secure pay link by WhatsApp, Apple Pay and Google Pay in the UAE | P4 | wk 20–21 | 55% |
+| [MDV-P4-035](P4-clinic-operations/MDV-P4-035.md) | Agree ADR-022 (AI communication middleware) and check Meta WhatsApp Cloud API onboarding per tenant | P4 | wk 21–21 | 70% |
+| [MDV-P4-036](P4-clinic-operations/MDV-P4-036.md) | Conversations module foundation: threads, messages, assignment, human takeover, channel accounts and tenant resolution (CarePlus and ValuePlus) | P4 | wk 21–22 | 75% |
 
-## Week 22 · 22 Mar 2027 – 26 Mar 2027 · load 14.5 dev-days ⚠ over capacity
+## Week 22 · 22 Mar 2027 – 26 Mar 2027 · load 20.7 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -522,9 +524,12 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P4-028](P4-clinic-operations/MDV-P4-028.md) | WhatsApp reminders and confirmations (EN/AR/HI), opt-in records, delivery status, one-tap reschedule, "doctor running late" broadcast (N-03, design needed) | P4 | wk 21–23 | 62% |
 | [MDV-P4-029](P4-clinic-operations/MDV-P4-029.md) | Spike: reporting store that keeps PHI out of analytics (read replica vs warehouse) | P4 | wk 22–22 | 75% |
 | [MDV-P4-031](P4-clinic-operations/MDV-P4-031.md) | Invoice and receipt formats reviewed by a chartered accountant (India) and tax adviser (UAE) | P4 | wk 21–23 | 65% |
+| [MDV-P4-036](P4-clinic-operations/MDV-P4-036.md) | Conversations module foundation: threads, messages, assignment, human takeover, channel accounts and tenant resolution (CarePlus and ValuePlus) | P4 | wk 21–22 | 75% |
+| [MDV-P4-037](P4-clinic-operations/MDV-P4-037.md) | WhatsApp Cloud API channel adapter: webhook verification, signature check, idempotent inbound, retries and delivery status | P4 | wk 22–23 | 65% |
+| [MDV-P4-038](P4-clinic-operations/MDV-P4-038.md) | AI orchestration in the AI service: one conversation turn, tenant knowledge retrieval, tool requests executed by Medvya, guardrails and audit | P4 | wk 22–24 | 65% |
 | [MDV-P5-001](P5-commercial-launch/MDV-P5-001.md) | Design the 11 new P5 screens (N-04 … N-14) before build | P5 | wk 22–24 | 60% |
 
-## Week 23 · 29 Mar 2027 – 02 Apr 2027 · load 11.8 dev-days ⚠ over capacity
+## Week 23 · 29 Mar 2027 – 02 Apr 2027 · load 16.9 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -537,9 +542,12 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P4-025](P4-clinic-operations/MDV-P4-025.md) | Caregiver proxy authorisation with scopes, expiry, OTP verification and revocation (R-04) | P4 | wk 23–24 | 82% |
 | [MDV-P4-028](P4-clinic-operations/MDV-P4-028.md) | WhatsApp reminders and confirmations (EN/AR/HI), opt-in records, delivery status, one-tap reschedule, "doctor running late" broadcast (N-03, design needed) | P4 | wk 21–23 | 62% |
 | [MDV-P4-031](P4-clinic-operations/MDV-P4-031.md) | Invoice and receipt formats reviewed by a chartered accountant (India) and tax adviser (UAE) | P4 | wk 21–23 | 65% |
+| [MDV-P4-037](P4-clinic-operations/MDV-P4-037.md) | WhatsApp Cloud API channel adapter: webhook verification, signature check, idempotent inbound, retries and delivery status | P4 | wk 22–23 | 65% |
+| [MDV-P4-038](P4-clinic-operations/MDV-P4-038.md) | AI orchestration in the AI service: one conversation turn, tenant knowledge retrieval, tool requests executed by Medvya, guardrails and audit | P4 | wk 22–24 | 65% |
+| [MDV-P4-039](P4-clinic-operations/MDV-P4-039.md) | Tenant knowledge base: clinic facts, services, doctors, hours and policies for the assistant, never patient data | P4 | wk 23–24 | 75% |
 | [MDV-P5-001](P5-commercial-launch/MDV-P5-001.md) | Design the 11 new P5 screens (N-04 … N-14) before build | P5 | wk 22–24 | 60% |
 
-## Week 24 · 05 Apr 2027 – 09 Apr 2027 · load 14.1 dev-days ⚠ over capacity
+## Week 24 · 05 Apr 2027 – 09 Apr 2027 · load 19.2 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -548,26 +556,34 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P4-026](P4-clinic-operations/MDV-P4-026.md) | Portal Arabic RTL and patient help pages in three languages | P4 | wk 24–24 | 85% |
 | [MDV-P4-027](P4-clinic-operations/MDV-P4-027.md) | Public doctor and clinic profiles with live availability, indexed for search (N-02, design needed) | P4 | wk 24–25 | 55% |
 | [MDV-P4-030](P4-clinic-operations/MDV-P4-030.md) | Clinic reports and owner dashboard: appointments, no-shows, revenue, follow-up completion, note time saved (H-07) | P4 | wk 24–25 | 80% |
+| [MDV-P4-038](P4-clinic-operations/MDV-P4-038.md) | AI orchestration in the AI service: one conversation turn, tenant knowledge retrieval, tool requests executed by Medvya, guardrails and audit | P4 | wk 22–24 | 65% |
+| [MDV-P4-039](P4-clinic-operations/MDV-P4-039.md) | Tenant knowledge base: clinic facts, services, doctors, hours and policies for the assistant, never patient data | P4 | wk 23–24 | 75% |
+| [MDV-P4-040](P4-clinic-operations/MDV-P4-040.md) | WhatsApp AI for patients: book, reschedule and cancel from the live calendar, with identity check and handover to staff | P4 | wk 24–25 | 65% |
 | [MDV-P5-001](P5-commercial-launch/MDV-P5-001.md) | Design the 11 new P5 screens (N-04 … N-14) before build | P5 | wk 22–24 | 60% |
 | [MDV-P5-002](P5-commercial-launch/MDV-P5-002.md) | Migration: read-only source connection via self-hosted integration runtime (Oracle, SQL Server, MySQL, CSV/Excel) (N-04) | P5 | wk 24–25 | 65% |
 | [MDV-P5-054](P5-commercial-launch/MDV-P5-054.md) | Later: date and time pickers and a combobox in the app language; dark and high contrast only after the tone tokens | P5 | wk 24–24 | 55% |
 
-## Week 25 · 12 Apr 2027 – 16 Apr 2027 · load 8.2 dev-days ⚠ over capacity
+## Week 25 · 12 Apr 2027 – 16 Apr 2027 · load 15.2 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
 | [MDV-P4-027](P4-clinic-operations/MDV-P4-027.md) | Public doctor and clinic profiles with live availability, indexed for search (N-02, design needed) | P4 | wk 24–25 | 55% |
 | [MDV-P4-030](P4-clinic-operations/MDV-P4-030.md) | Clinic reports and owner dashboard: appointments, no-shows, revenue, follow-up completion, note time saved (H-07) | P4 | wk 24–25 | 80% |
+| [MDV-P4-040](P4-clinic-operations/MDV-P4-040.md) | WhatsApp AI for patients: book, reschedule and cancel from the live calendar, with identity check and handover to staff | P4 | wk 24–25 | 65% |
+| [MDV-P4-041](P4-clinic-operations/MDV-P4-041.md) | Clinic AI chat on the clinic's public page: widget, tenant key and origin allow-list, answers from the clinic's knowledge | P4 | wk 25–25 | 70% |
+| [MDV-P4-042](P4-clinic-operations/MDV-P4-042.md) | Support desk on the conversation model: patient-to-clinic tickets with AI drafts and clinic-to-Medvya technical tickets, kept apart | P4 | wk 25–26 | 70% |
 | [MDV-P5-002](P5-commercial-launch/MDV-P5-002.md) | Migration: read-only source connection via self-hosted integration runtime (Oracle, SQL Server, MySQL, CSV/Excel) (N-04) | P5 | wk 24–25 | 65% |
 | [MDV-P5-003](P5-commercial-launch/MDV-P5-003.md) | Migration mapping: AI-proposed column and code mappings (LOINC, ICD-10, formulary) approved by a person; reusable vendor templates (N-04) | P5 | wk 25–26 | 62% |
 | [MDV-P5-006](P5-commercial-launch/MDV-P5-006.md) | Data-quality queue: problems grouped by type and fixed by rule; reversible (N-05) | P5 | wk 25–26 | 65% |
 | [MDV-P5-016](P5-commercial-launch/MDV-P5-016.md) | Medvya subscription pricing decision recorded (ADR-019); building it is MDV-P5-042, MDV-P5-043 and MDV-P5-065 (N-11) | P5 | wk 25–27 | 90% |
 
-## Week 26 · 19 Apr 2027 – 23 Apr 2027 · load 14.2 dev-days ⚠ over capacity
+## Week 26 · 19 Apr 2027 – 23 Apr 2027 · load 19.2 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
 | [MDV-P4-033](P4-clinic-operations/MDV-P4-033.md) | R4 pilot, exit gate review and release notes | P4 | wk 26–26 | 68% |
+| [MDV-P4-042](P4-clinic-operations/MDV-P4-042.md) | Support desk on the conversation model: patient-to-clinic tickets with AI drafts and clinic-to-Medvya technical tickets, kept apart | P4 | wk 25–26 | 70% |
+| [MDV-P4-043](P4-clinic-operations/MDV-P4-043.md) | Communication settings for the clinic and integration health in the platform console (counts only, kill switch per tenant) | P4 | wk 26–26 | 75% |
 | [MDV-P5-003](P5-commercial-launch/MDV-P5-003.md) | Migration mapping: AI-proposed column and code mappings (LOINC, ICD-10, formulary) approved by a person; reusable vendor templates (N-04) | P5 | wk 25–26 | 62% |
 | [MDV-P5-004](P5-commercial-launch/MDV-P5-004.md) | Migration dry run into a test tenant and owner-signed dry-run report (N-04) | P5 | wk 26–26 | 72% |
 | [MDV-P5-006](P5-commercial-launch/MDV-P5-006.md) | Data-quality queue: problems grouped by type and fixed by rule; reversible (N-05) | P5 | wk 25–26 | 65% |

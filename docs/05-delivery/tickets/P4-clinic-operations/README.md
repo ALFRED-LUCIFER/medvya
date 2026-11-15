@@ -8,9 +8,9 @@
 **Day one:** Bill and collect payment, close the cash drawer, track every result and follow-up to closure, and let patients book and see their records.  
 **Goal:** The clinic runs its money and its follow-ups in Medvya, and patients can serve themselves.
 
-**Tickets:** 34 · **Estimate:** 75.5 dev-days vs **50 working days** in the window (OVER by 25.5 days: needs scope trade-off or overlap) · **Average confidence:** 78%
+**Tickets:** 43 · **Estimate:** 108 dev-days vs **50 working days** in the window (OVER by 58 days: needs scope trade-off or overlap) · **Average confidence:** 77%
 
-**Status:** To do 33 · Done 1
+**Status:** To do 42 · Done 1
 
 ## Epics
 
@@ -22,6 +22,7 @@
 | MDV-P4-E04 | Patient portal | P4-07 | Patients book, see released records, manage consent and authorise caregivers (incl. Arabic RTL). |
 | MDV-P4-E05 | WhatsApp, discovery and clinic reports | P4-08, P4-09, P4-10 | Messaging patients in their channel, public profiles and owner reports without overclaiming. |
 | MDV-P4-E06 | R4 readiness and gate | P4-02, P4-03 | External approvals, tax review, training and the R4 exit gate. |
+| MDV-P4-E07 | AI communication middleware | P4-06, P4-09 | One conversation engine for WhatsApp AI, clinic AI chat and the support desk, tenant-isolated, using Medvya's existing services (ADR-022). |
 
 ## Tickets
 
@@ -47,20 +48,29 @@
 | [MDV-P4-016](MDV-P4-016.md) | To do | Care plans and tasks with owners, due dates, stage tracks and evidence to close (C-02) | Story | MUST | P4-05 | C-02 | 3 | 21–22 | 15 Mar → 26 Mar 2027 | 82% Medium |
 | [MDV-P4-028](MDV-P4-028.md) | To do | WhatsApp reminders and confirmations (EN/AR/HI), opt-in records, delivery status, one-tap reschedule, "doctor running late" broadcast (N-03, design needed) | Story | MUST | P4-09 | N-03 | 3 | 21–23 | 15 Mar → 02 Apr 2027 | 62% Low |
 | [MDV-P4-031](MDV-P4-031.md) | To do | Invoice and receipt formats reviewed by a chartered accountant (India) and tax adviser (UAE) | Chore | MUST | P4-02 | — | 0.5 | 21–23 | 15 Mar → 02 Apr 2027 | 65% Medium |
+| [MDV-P4-035](MDV-P4-035.md) | To do | Agree ADR-022 (AI communication middleware) and check Meta WhatsApp Cloud API onboarding per tenant | Spike | MUST | P4-09, P4-06 | — | 1.5 | 21–21 | 15 Mar → 19 Mar 2027 | 70% Medium |
+| [MDV-P4-036](MDV-P4-036.md) | To do | Conversations module foundation: threads, messages, assignment, human takeover, channel accounts and tenant resolution (CarePlus and ValuePlus) | Story | MUST | P4-06, P4-09 | — | 5 | 21–22 | 15 Mar → 26 Mar 2027 | 75% Medium |
 | [MDV-P4-011](MDV-P4-011.md) | To do | Dues, ageing and patient statement with no-PHI balance reminders (P-12) | Story | MUST | P4-04 | P-12 | 2 | 22–22 | 22 Mar → 26 Mar 2027 | 86% High |
 | [MDV-P4-012](MDV-P4-012.md) | To do | Cash reconciliation and day-end close with denominations, second-person confirmation and shift report (P-07, P-13) | Story | MUST | P4-04 | P-07, P-13 | 3 | 22–23 | 22 Mar → 02 Apr 2027 | 86% High |
 | [MDV-P4-017](MDV-P4-017.md) | To do | Patient contact log and reminders: outcome required; "delivered" is not a contact (C-03) | Story | MUST | P4-05 | C-03 | 2 | 22–22 | 22 Mar → 26 Mar 2027 | 88% High |
 | [MDV-P4-018](MDV-P4-018.md) | To do | Overdue escalation: escalate to doctor, reassign, or close with reason (C-04) | Story | MUST | P4-05 | C-04 | 1.5 | 22–23 | 22 Mar → 02 Apr 2027 | 88% High |
 | [MDV-P4-023](MDV-P4-023.md) | To do | Portal booking and reschedule with fee and cancellation policy shown (R-02) | Story | MUST | P4-07 | R-02 | 2.5 | 22–23 | 22 Mar → 02 Apr 2027 | 88% High |
 | [MDV-P4-029](MDV-P4-029.md) | To do | Spike: reporting store that keeps PHI out of analytics (read replica vs warehouse) | Spike | MUST | P4-10 | — | 1 | 22–22 | 22 Mar → 26 Mar 2027 | 75% Medium |
+| [MDV-P4-037](MDV-P4-037.md) | To do | WhatsApp Cloud API channel adapter: webhook verification, signature check, idempotent inbound, retries and delivery status | Story | MUST | P4-09 | — | 4 | 22–23 | 22 Mar → 02 Apr 2027 | 65% Medium |
+| [MDV-P4-038](MDV-P4-038.md) | To do | AI orchestration in the AI service: one conversation turn, tenant knowledge retrieval, tool requests executed by Medvya, guardrails and audit | Story | MUST | P4-06, P4-09 | — | 5 | 22–24 | 22 Mar → 09 Apr 2027 | 65% Medium |
 | [MDV-P4-013](MDV-P4-013.md) | To do | Doctor revenue and payout report (P-09) | Story | MUST | P4-04 | P-09 | 1.5 | 23–23 | 29 Mar → 02 Apr 2027 | 80% Medium |
 | [MDV-P4-019](MDV-P4-019.md) | To do | Clinic messages inbox (patient ↔ clinic) with AI reply draft approved by staff (C-06) | Story | SHOULD | P4-06 | C-06 | 3 | 23–24 | 29 Mar → 09 Apr 2027 | 75% Medium |
 | [MDV-P4-024](MDV-P4-024.md) | To do | Portal consent and privacy controls with policy version and change log (R-03) | Story | MUST | P4-07 | R-03 | 1.5 | 23–23 | 29 Mar → 02 Apr 2027 | 88% High |
 | [MDV-P4-025](MDV-P4-025.md) | To do | Caregiver proxy authorisation with scopes, expiry, OTP verification and revocation (R-04) | Story | MUST | P4-07 | R-04 | 2.5 | 23–24 | 29 Mar → 09 Apr 2027 | 82% Medium |
+| [MDV-P4-039](MDV-P4-039.md) | To do | Tenant knowledge base: clinic facts, services, doctors, hours and policies for the assistant, never patient data | Story | SHOULD | P4-06 | — | 3 | 23–24 | 29 Mar → 09 Apr 2027 | 75% Medium |
 | [MDV-P4-026](MDV-P4-026.md) | To do | Portal Arabic RTL and patient help pages in three languages | Task | MUST | P4-07 | R-01 | 1.5 | 24–24 | 05 Apr → 09 Apr 2027 | 85% High |
 | [MDV-P4-027](MDV-P4-027.md) | To do | Public doctor and clinic profiles with live availability, indexed for search (N-02, design needed) | Story | SHOULD | P4-08 | N-02 | 3 | 24–25 | 05 Apr → 16 Apr 2027 | 55% Low |
 | [MDV-P4-030](MDV-P4-030.md) | To do | Clinic reports and owner dashboard: appointments, no-shows, revenue, follow-up completion, note time saved (H-07) | Story | MUST | P4-10 | H-07 | 3 | 24–25 | 05 Apr → 16 Apr 2027 | 80% Medium |
+| [MDV-P4-040](MDV-P4-040.md) | To do | WhatsApp AI for patients: book, reschedule and cancel from the live calendar, with identity check and handover to staff | Story | SHOULD | P4-09 | — | 4 | 24–25 | 05 Apr → 16 Apr 2027 | 65% Medium |
+| [MDV-P4-041](MDV-P4-041.md) | To do | Clinic AI chat on the clinic's public page: widget, tenant key and origin allow-list, answers from the clinic's knowledge | Story | COULD | P4-08, P4-06 | — | 3 | 25–25 | 12 Apr → 16 Apr 2027 | 70% Medium |
+| [MDV-P4-042](MDV-P4-042.md) | To do | Support desk on the conversation model: patient-to-clinic tickets with AI drafts and clinic-to-Medvya technical tickets, kept apart | Story | SHOULD | P4-06 | C-06 | 4 | 25–26 | 12 Apr → 23 Apr 2027 | 70% Medium |
 | [MDV-P4-033](MDV-P4-033.md) | To do | R4 pilot, exit gate review and release notes | Gate | MUST | P4-04, P4-05 | — | 1.5 | 26–26 | 19 Apr → 23 Apr 2027 | 68% Medium |
+| [MDV-P4-043](MDV-P4-043.md) | To do | Communication settings for the clinic and integration health in the platform console (counts only, kill switch per tenant) | Story | SHOULD | P4-09 | — | 3 | 26–26 | 19 Apr → 23 Apr 2027 | 75% Medium |
 
 ## Exit criteria (release gate)
 

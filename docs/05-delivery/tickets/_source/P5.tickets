@@ -65,7 +65,7 @@ prd: P5-01
 screens: N-04
 priority: MUST
 roles: Medvya operations, Practice owner
-labels: migration, mapping, ai
+labels: migration, mapping, ai, ai-records
 estimate: 4
 weeks: 25-26
 depends: MDV-P5-002
@@ -304,7 +304,7 @@ prd: P5-05
 screens: N-08
 priority: SHOULD
 roles: Patient, Doctor
-labels: uploads, ai, extraction
+labels: uploads, ai, extraction, ai-records
 estimate: 3
 weeks: 28-29
 depends: MDV-P5-001, MDV-P3-007, MDV-P2-006
@@ -325,7 +325,7 @@ prd: P5-06
 screens: N-10
 priority: SHOULD
 roles: Patient (caller), Receptionist, Practice owner
-labels: voice, ai, telephony
+labels: voice, ai, telephony, ai-voice
 estimate: 6
 weeks: 29-31
 depends: MDV-P5-001, MDV-P1-022, MDV-P3-007
@@ -751,7 +751,7 @@ epic: MDV-P5-E08
 prd: P8-06
 priority: MUST
 roles: Doctor
-labels: mobile, staff-app, ai-scribe
+labels: mobile, staff-app, ai-scribe, ai, ai-notes
 estimate: 5
 weeks: 31-33
 depends: MDV-P5-034, MDV-P3-001
@@ -1036,7 +1036,7 @@ prd: P5-09
 screens: N-13
 priority: MUST
 roles: Practice owner, Medvya support
-labels: platform, support
+labels: platform, support, ai, ai-support
 estimate: 3.5
 weeks: 28-30
 depends: MDV-P5-040, MDV-P5-018
@@ -1050,6 +1050,7 @@ ac:
 - Given a request breaches its SLA, when time passes, then it is flagged to the team lead.
 notes:
 - Scope (ADR-016 (docs/adr/ADR-016-organisation-onboarding-and-approval.md)): an organisation in set-up-only mode and an applicant in Needs changes can use Help and raise a request; the request can be linked to its onboarding request so the reviewer sees it. Requests are tied to the organisation (and optionally a location).
+- Built on the shared conversation model of the AI communication middleware (ADR-022, MDV-P4-042): one thread, ticket and audit model for every channel.
 
 === MDV-P5-048
 title: Platform analytics, practice health score and scheduled reports with small-count hiding

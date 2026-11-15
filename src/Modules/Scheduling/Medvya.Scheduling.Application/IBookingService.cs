@@ -146,7 +146,7 @@ public interface IBookingService
     /// slot, queues it unscheduled under the chosen doctor, or for "next available" the least busy doctor working today (no slot
     /// taken, so no double booking). The visit is Booked and tagged walk-in; the desk then checks it in through the board's check-in.
     /// </summary>
-    /// <exception cref="SlotUnavailableException">"no_free_slot": nothing free today, no doctor chosen and nobody working today; or "busy".</exception>
+    /// <exception cref="SlotUnavailableException">"no_free_slot": nothing free today, no doctor chosen and every doctor on leave today; or "busy".</exception>
     Task<AppointmentView> WalkInAsync(WalkIn command, CancellationToken cancellationToken = default);
 
     /// <summary>Name and MRN of a patient of this tenant, to confirm the patient before booking; null when unknown.</summary>

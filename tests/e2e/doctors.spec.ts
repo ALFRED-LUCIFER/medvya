@@ -92,12 +92,12 @@ test('Add doctor: six steps, fees prefilled in whole currency units, then one re
   // MDV-P2-058: a refused Next puts focus on the error summary; each link names its field and focuses it.
   const summary = page.getByRole('group', { name: 'There is a problem' });
   await expect(summary).toBeFocused();
-  await expect(summary.getByRole('link')).toHaveText(['Full name: Check this value.', 'Email for the invitation: Check this value.', 'Specialty: Check this value.']);
+  await expect(summary.getByRole('link')).toHaveText(['Full name: Check this value.', 'Email: Check this value.', 'Specialty: Check this value.']);
   await summary.getByRole('link').nth(1).click();
-  await expect(page.getByLabel('Email for the invitation')).toBeFocused();
+  await expect(page.getByLabel('Email (required)')).toBeFocused();
 
   await page.getByLabel('Full name').fill('Dr. Sana Khan (synthetic)');
-  await page.getByLabel('Email for the invitation').fill('sana.khan@example.test');
+  await page.getByLabel('Email (required)').fill('sana.khan@example.test');
   await page.getByLabel('Specialty').fill('Paediatrics');
   await page.getByRole('button', { name: 'Next' }).click();
 
@@ -147,4 +147,18 @@ for (const locale of ['en', 'ar'])
     expect(await page.evaluate(() => document.documentElement.dir)).toBe(locale === 'ar' ? 'rtl' : 'ltr');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
     expect(await axe(page)).toEqual([]);
+  });
+
+// The pilot saw the email box drop below the others on a wide screen: its label ("Email for the invitation (required)") wrapped.
+for (const locale of ['en', 'ar'])
+  test(`Add doctor step 1: the five boxes line up on a wide screen (${locale})`, async ({ page }, info) => {
+    await setUp(page, locale);
+    await page.setViewportSize({ width: 1910, height: 1000 });
+    await page.goto('/settings?tab=doctors');
+    await page.getByRole('button', { name: locale === 'ar' ? /طبيب/ : 'Add doctor' }).first().click();
+    const boxes = page.locator('form input:visible');
+    await expect(boxes).toHaveCount(5);
+    const tops = await boxes.evaluateAll(els => els.map(e => Math.round(e.getBoundingClientRect().top)));
+    await page.screenshot({ path: info.outputPath(`add-doctor-${locale}.png`) });
+    expect(new Set(tops).size, `tops ${tops.join(', ')}`).toBe(1);
   });

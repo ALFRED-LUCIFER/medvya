@@ -12,7 +12,7 @@ namespace Medvya.Encounters.Infrastructure;
 /// The signed note as an A4 PDF (MDV-P2-013, E-06): the patient's name, MRN and date of birth at the top of every page, version 1 with its signer
 /// block, what was recorded at signing (MDV-P2-049: vitals, allergies, diagnoses, medicines, as the print view shows them), then each addendum in
 /// order with its reason and signer, and "Corrections are added as signed addenda" at the foot of every page. The signer's uploaded signature image
-/// (Tenancy settings, when there is one) sits under version 1's signed-by line; each medicine carries its prescription's number (MDV-P2-049 Q9).
+/// (Tenancy settings, when there is one) sits under version 1's signed-by line, and the practice's logo heads the page as on the prescription; each medicine carries its prescription's number (MDV-P2-049 Q9).
 /// Copy comes from the shared English catalogue (packages/i18n/messages/en.json); the server never invents wording.
 /// Written by <see cref="PlainPdf"/>: Hindi, Tamil and Arabic print shaped; text no embedded font has is refused with <see cref="NotePdfUnsupportedTextException"/>.
 /// </summary>
@@ -29,7 +29,7 @@ public static class SignedNotePdfDocument
     public sealed record Version(SignedNoteVersion Row, string SignerName, string? SignerLicence = null);
 
     /// <exception cref="NotePdfUnsupportedTextException"/>
-    public static byte[] Render(PatientSummary patient, string facilityName, TimeZoneInfo zone, NoteTemplate template, IReadOnlyList<Version> versions, byte[]? signature = null)
+    public static byte[] Render(PatientSummary patient, string facilityName, TimeZoneInfo zone, NoteTemplate template, IReadOnlyList<Version> versions, byte[]? signature = null, byte[]? logo = null)
     {
         var original = versions[0];
         string When(DateTimeOffset at) => Text("notePdf.when", ("date", TimeZoneInfo.ConvertTime(at, zone).ToString("dd MMM yyyy, HH:mm", CultureInfo.InvariantCulture)), ("zone", zone.Id));
@@ -61,7 +61,7 @@ public static class SignedNotePdfDocument
         try
         {
             return PlainPdf.Write(header, body, (page, pages) => Text("notePdf.footer", ("page", page.ToString(CultureInfo.InvariantCulture)), ("pages", pages.ToString(CultureInfo.InvariantCulture))),
-                signature: signature, signatureAfter: 0); // body line 0 is version 1's signed-by line
+                logo: logo, signature: signature, signatureAfter: 0); // body line 0 is version 1's signed-by line
         }
         catch (PdfUnsupportedTextException)
         {

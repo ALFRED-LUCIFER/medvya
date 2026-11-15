@@ -2010,7 +2010,7 @@
   "doctors.choose": "اختر…",
   "doctors.back": "رجوع",
   "doctors.next": "التالي",
-  "doctors.email": "البريد الإلكتروني للدعوة",
+  "doctors.email": "البريد الإلكتروني",
   "doctors.emailHint": "تُرسل دعوة الانضمام إلى هذا العنوان.",
   "doctors.added": "تمت إضافة {name} وإرسال الدعوة. تم تسجيل ترخيصه كمؤكَّد من قِبلك.",
   "doctors.added.signatureFailed": "تعذر حفظ صورة التوقيع؛ أضفها من القائمة.",

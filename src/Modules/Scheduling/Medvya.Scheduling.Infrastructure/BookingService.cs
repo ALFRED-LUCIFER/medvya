@@ -191,8 +191,8 @@ public sealed class BookingService(
         }
 
         // No free slot today: queue the walk-in under the chosen doctor without taking any slot (zero length at arrival, no
-        // SCHEDULE_SLOT rows), so the calendar is never double-booked. "Next available" queues with a doctor working today (#912);
-        // only when nobody works today is the desk asked to choose one.
+        // SCHEDULE_SLOT rows), so the calendar is never double-booked. "Next available" queues with a doctor working today (#912), or
+        // with nobody working today with any doctor not on leave; only when every doctor is on leave is the desk asked to choose one.
         if ((command.CalendarId ?? await LeastBusyDoctorTodayAsync(command.FacilityId, doctors, today, zone, cancellationToken)) is not { } doctor)
             throw new SlotUnavailableException("no_free_slot");
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
@@ -207,13 +207,18 @@ public sealed class BookingService(
 
     /// <summary>
     /// The doctor a "next available" walk-in with no free slot waits for: of the doctors with a session today (template less leave),
-    /// the one with the fewest open visits today, then by id so two desks agree. Null when nobody works today.
+    /// the one with the fewest open visits today, then by id so two desks agree. When nobody has a session today, every doctor not on leave
+    /// today. Null when there is none.
     /// </summary>
     async Task<Guid?> LeastBusyDoctorTodayAsync(Guid facilityId, List<ScheduleTemplate> doctors, DateOnly today, TimeZoneInfo zone, CancellationToken cancellationToken)
     {
         var exceptions = await context.ExceptionsAsync(facilityId, today, today, null, cancellationToken);
         var working = doctors.Where(t => ScheduleRules.Day(t, today, zone, exceptions.Where(x => x.CalendarId == t.CalendarId)).Slots.Count > 0)
             .Select(t => t.CalendarId).ToList();
+        // Nobody has hours today (a Sunday the clinic opens, no doctor's template does): the patient is at the desk, so any doctor not on leave
+        // waits for them, as the walk-in screen then offers every doctor.
+        if (working.Count == 0)
+            working = [.. doctors.Where(t => !exceptions.Any(x => x.CalendarId == t.CalendarId && x.Kind == ExceptionKind.Leave)).Select(t => t.CalendarId)];
         if (working.Count == 0) return null;
         var (dayStart, dayEnd) = ScheduleRules.DayBounds(today, zone);
         var open = await db.Appointments.AsNoTracking()

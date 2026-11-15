@@ -234,9 +234,10 @@ public sealed class NotePrintRecordTests(PostgresFixture sql, AzuriteFixture blo
             Assert.DoesNotContain(live, pdf, StringComparison.Ordinal);
     }
 
-    // Q9 (founder, 14 Nov): the signer's uploaded signature image sits once, under version 1's signed-by line; none uploaded, no image.
+    // Q9 (founder, 14 Nov): the signer's uploaded signature image sits once, under version 1's signed-by line, and the practice logo heads the
+    // page; none uploaded, no image.
     [Fact]
-    public async Task ThePdfCarriesTheSignersSignatureImageOnlyWhenUploaded()
+    public async Task ThePdfCarriesTheSignersSignatureAndThePracticeLogoOnlyWhenUploaded()
     {
         await using (var db = sql.Encounters(h.Tenant))
         {
@@ -259,5 +260,15 @@ public sealed class NotePrintRecordTests(PostgresFixture sql, AzuriteFixture blo
         }
         var page = Assert.Single(await PdfPagesAsync());
         Assert.Equal(1, page.Images);
+
+        // The practice logo heads the note as it heads the prescription (it was looked up and dropped, so the pilot's note had none).
+        var logo = $"{h.Tenant}/logo/{Guid.NewGuid()}";
+        await new BlobLogoStore(blobs.ConnectionString).PutAsync(logo, TestImages.Png, "image/png");
+        await using (var db = sql.Context(h.Tenant))
+        {
+            db.Profiles.Add(new PracticeProfile { Id = Guid.NewGuid(), TenantId = h.Tenant, LogoKey = logo, ChangedAt = h.Clock.GetUtcNow() });
+            await db.SaveChangesAsync();
+        }
+        Assert.Equal(2, Assert.Single(await PdfPagesAsync()).Images);
     }
 }

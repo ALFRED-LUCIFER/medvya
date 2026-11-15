@@ -127,6 +127,13 @@ it('shows the last copy offline with a banner and no Start consultation', async 
   expect(screen.getByRole('button', { name: 'Open record' })).toBeOnTheScreen();
 });
 
+it('unlocks with the PIN while offline (the check is on the phone, so it never waits for the network)', async () => {
+  await signedInThenLocked();
+  await act(() => onlineManager.setOnline(false));
+  await enterPin('246810');
+  expect(await screen.findByRole('button', { name: 'Lock now' })).toBeOnTheScreen();
+});
+
 it('says so when offline with no copy on the phone', async () => {
   onlineManager.setOnline(false);
   await renderApp(<App />);

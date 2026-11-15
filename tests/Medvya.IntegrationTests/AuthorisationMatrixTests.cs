@@ -540,6 +540,33 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         None(failures);
     }
 
+    /// <summary>
+    /// (d) MDV-P5-033, ADR-020: a patient app token is no caller at all on any route of the matrix, its own clinic's rows included. 401, not 403: the
+    /// staff policies never read the patient scheme, so a capability check is not the only thing in the way.
+    /// </summary>
+    [Fact]
+    public async Task APatientTokenIsNoCallerOnAnyRouteOfTheMatrix()
+    {
+        var sms = new PatientSessionTests.FakeSms();
+        using var host = factory.WithWebHostBuilder(b => PatientSessionTests.WithSms(b, sms));
+        using var client = host.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
+        var patient = await PatientSessionTests.SignInAsync(client, sms, "9000012345");
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", patient.Access);
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync(new Uri("/v1/patient/me", UriKind.Relative))).StatusCode); // the token is live
+
+        // Every kind of id the routes take: its own clinic's rows where the harness has them, fresh ids for the rest.
+        var ours = theirs.ToDictionary(p => p.Key, _ => Guid.NewGuid());
+        (ours["patient"], ours["appointment"], ours["encounter"], ours["location"]) = (h.Patient, ownVisit, ownEncounter, h.Facility);
+        var failures = new List<string>();
+        foreach (var (_, call) in CrossTenant.Concat(WithoutTheCapability))
+        {
+            var (status, body) = await SendAsync(client, call, ours, h.Facility, h.Doctor);
+            if (status != HttpStatusCode.Unauthorized) failures.Add($"{call.Method} {call.Path}: {(int)status}");
+            if (body.Contains("Meera", StringComparison.Ordinal)) failures.Add($"{call.Method} {call.Path}: the refusal carries data");
+        }
+        None(failures);
+    }
+
     [Fact]
     public async Task ASessionAtOneFacilityCannotReachAnother()
     {

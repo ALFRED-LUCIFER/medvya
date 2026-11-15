@@ -44,4 +44,13 @@ public class StaffSessionTests
     [InlineData("Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0", "Firefox on Linux")]
     [InlineData(null, "Browser on unknown device")]
     public void DeviceLabelIsCoarse(string? userAgent, string expected) => Assert.Equal(expected, StaffSession.DeviceLabel(userAgent));
+
+    /// <summary>MDV-P5-033 device registration: the app's own platform and version, never free text it sends.</summary>
+    [Theory]
+    [InlineData("ios", "1.2.0", "Medvya app 1.2.0 on iOS")]
+    [InlineData("android", "58.0.3", "Medvya app 58.0.3 on Android")]
+    [InlineData("windows", "1.0", "Medvya app 1.0 on unknown device")]
+    [InlineData("ios", "1.0 <script>", "Medvya app on iOS")]
+    [InlineData(null, null, "Medvya app on unknown device")]
+    public void AppLabelKeepsOnlyPlatformAndVersion(string? platform, string? version, string expected) => Assert.Equal(expected, StaffSession.AppLabel(platform, version));
 }

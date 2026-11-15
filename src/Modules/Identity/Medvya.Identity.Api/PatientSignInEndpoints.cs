@@ -11,7 +11,8 @@ namespace Medvya.Identity.Api;
 public static class PatientSignInEndpoints
 {
     public sealed record CodeRequest(string? CountryCode, string? Mobile, string? Language);
-    public sealed record VerifyRequest(string? CountryCode, string? Mobile, string? Code);
+    /// <param name="Platform">"ios" or "android", and <paramref name="AppVersion"/>: the device registration shown as "Medvya app 1.2.0 on iOS".</param>
+    public sealed record VerifyRequest(string? CountryCode, string? Mobile, string? Code, string? Platform = null, string? AppVersion = null);
 
     public static WebApplication MapPatientSignIn(this WebApplication app)
     {
@@ -21,11 +22,13 @@ public static class PatientSignInEndpoints
             CountryRules.Mobile(request.CountryCode, request.Mobile) is not { } mobile ? InvalidNumber
                 : Answer(await signIn.RequestCodeAsync(mobile, request.CountryCode!, request.Language, ct)));
 
-        // shortcut: a right code answers { verified: true } and starts no session, because patient accounts and a patient principal are not
-        // designed yet (ADR-011 §2 waits for them); the app's sign-in stays on Development data until that ADR lands (MDV-P5-033, MDV-P5-036).
-        group.MapPost("/verify", async (VerifyRequest request, [FromServices] IPatientSmsSignIn signIn, CancellationToken ct) =>
-            CountryRules.Mobile(request.CountryCode, request.Mobile) is not { } mobile ? InvalidNumber
-                : Answer(await signIn.VerifyAsync(mobile, request.Code, ct)));
+        // A right code starts a patient session and answers its token pair (ADR-020); the session reaches no clinic or patient data.
+        group.MapPost("/verify", async (VerifyRequest request, HttpContext http, [FromServices] IPatientSmsSignIn signIn, CancellationToken ct) =>
+        {
+            if (CountryRules.Mobile(request.CountryCode, request.Mobile) is not { } mobile) return InvalidNumber;
+            var result = await signIn.VerifyAsync(mobile, request.Code, ct);
+            return result.Outcome == SmsSignInOutcome.Verified ? await PatientAuthentication.StartAsync(http, mobile, request.Platform, request.AppVersion) : Answer(result);
+        });
 
         return app;
     }
@@ -36,7 +39,6 @@ public static class PatientSignInEndpoints
     static IResult Answer(SmsSignInResult result) => result.Outcome switch
     {
         SmsSignInOutcome.Sent => Results.Accepted(),
-        SmsSignInOutcome.Verified => Results.Ok(new { verified = true }),
         SmsSignInOutcome.WrongCode => Results.BadRequest(new { error = "wrong_code" }),
         SmsSignInOutcome.NotSent => Results.Json(new { error = "send_failed" }, statusCode: StatusCodes.Status503ServiceUnavailable),
         SmsSignInOutcome.Locked => Results.Json(new { error = "locked", retryAfterMinutes = result.RetryAfterMinutes }, statusCode: StatusCodes.Status429TooManyRequests),

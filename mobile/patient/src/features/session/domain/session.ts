@@ -4,8 +4,12 @@ import type { Country } from '@medvya/i18n';
 /** A person this number may act for: the patient themself, or family the clinic has linked (explicit, time-limited proxy). */
 export type Person = { id: string; name: string; initials: string; relation: 'self' | 'family'; clinic: string; since: string; linked: boolean; proxyUntil?: string };
 export type Clinic = { name: string; branch: string; phone: string; address: string; country: Country; timeZone: string };
-export type Session = { person: Person; phone: string; clinic: Clinic };
+/** Person and clinic are null in a server session: no records are linked to a patient session yet (MDV-P5-036). */
+export type Session = { person: Person | null; phone: string; clinic: Clinic | null };
 export type SignInStep = 'welcome' | 'phone' | 'code' | 'who' | 'biometric';
+
+/** The header line under a screen title: the clinic and branch, or nothing when no clinic is linked yet. */
+export const clinicLine = (s: Session) => (s.clinic ? `${s.clinic.name} · ${s.clinic.branch}` : undefined);
 
 const mobile: Record<Country, { prefix: string; pattern: RegExp }> = {
   IN: { prefix: '+91', pattern: /^[6-9]\d{9}$/ }, // 10 digits, starting 6–9
@@ -25,9 +29,12 @@ export function toE164(country: Country, typed: string): string | null {
 export const phoneForm = z.object({ country: z.enum(['IN', 'AE']), number: z.string() })
   .refine(v => toE164(v.country, v.number) !== null, { path: ['number'], message: 'mobile.patientSignIn.phoneInvalid' });
 export const codeForm = z.object({ code: z.string().regex(/^\d{6}$/, 'mobile.signIn.codeInvalid') });
-/** Five wrong codes locked the number (MDV-P5-033): the API answers 429 { error: 'locked', retryAfterMinutes }. */
-export class SignInLockedError extends Error {
-  constructor(readonly minutes: number) { super('mobile.patientSignIn.locked'); }
+/**
+ * The API asks the patient to wait (MDV-P5-033): 429 { error: 'locked' } after five wrong codes, or { error: 'too_many_codes' }
+ * after too many codes sent, both with retryAfterMinutes. The message is the i18n key, said with the minutes.
+ */
+export class SignInWaitError extends Error {
+  constructor(key: 'mobile.patientSignIn.locked' | 'mobile.patientSignIn.tooManyCodes', readonly minutes: number) { super(key); }
 }
 
 export type PhoneForm = z.infer<typeof phoneForm>;

@@ -8,7 +8,7 @@ import { fetchRecords } from '../services/records';
 export function useRecordsController() {
   const { session } = useSignedIn();
   const [tab, setTab] = useState<RecordsTab>('visits');
-  const query = useQuery({ queryKey: ['records', session.person.id], queryFn: () => fetchRecords(session.person.id) });
+  const query = useQuery({ queryKey: ['records', session.person?.id], queryFn: () => fetchRecords(session.person?.id) });
   return {
     session,
     tab,

@@ -81,6 +81,9 @@ sealed class StaffSessions(IdentityDbContext db) : IStaffSessions
         return session;
     }
 
+    public Task LabelDeviceAsync(Guid sessionId, string device, CancellationToken cancellationToken = default) =>
+        db.Sessions.Where(s => s.Id == sessionId && s.RefreshTokenHash != null).ExecuteUpdateAsync(u => u.SetProperty(s => s.Device, device), cancellationToken);
+
     public async Task<IReadOnlyList<string>> PushTokensAsync(Guid tenantId, IReadOnlyCollection<Guid> membershipIds, CancellationToken cancellationToken = default)
     {
         var now = DateTimeOffset.UtcNow;

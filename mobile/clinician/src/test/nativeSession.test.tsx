@@ -1,7 +1,7 @@
 import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { useEffect } from 'react';
 import { Text } from 'react-native';
-import { send } from '../features/api/services/api';
+import { exchangeCode, forgetTokens, send } from '../features/api/services/api';
 import { readCopy } from '../features/api/services/store';
 import { LockScreen } from '../features/session/components/LockScreen';
 import { SignInScreen } from '../features/session/components/SignInScreen';
@@ -29,13 +29,14 @@ let mockBrowserOpened = '';
 jest.mock('expo-web-browser', () => ({
   openAuthSessionAsync: async (url: string) => { mockBrowserOpened = url; return mockBrowserUrl ? { type: 'success', url: mockBrowserUrl } : { type: 'cancel' }; },
 }));
+jest.mock('expo-constants', () => ({ __esModule: true, default: { expoConfig: { version: '1.2.3' } } })); // the device label in My devices
 jest.mock('expo-local-authentication', () => ({
   hasHardwareAsync: async () => false, isEnrolledAsync: async () => false, authenticateAsync: async () => ({ success: false }),
   supportedAuthenticationTypesAsync: async () => [], AuthenticationType: { FINGERPRINT: 1, FACIAL_RECOGNITION: 2 },
 }));
 
 /** A stand-in for Host.Api's native endpoints (NativeAuthentication.cs), as the integration tests drive them. */
-const server = { revoked: false, issued: 0, access: '', calls: [] as { url: string; method: string; auth: string | null; body: string }[] };
+const server = { revoked: false, issued: 0, access: '', calls: [] as { url: string; method: string; auth: string | null; body: string }[], during: undefined as (() => void) | undefined };
 const reply = (status: number, body?: unknown) => ({ ok: status < 300, status, json: async () => body });
 function fakeFetch(url: string, init: RequestInit = {}) {
   const headers = (init.headers ?? {}) as Record<string, string>;
@@ -44,6 +45,7 @@ function fakeFetch(url: string, init: RequestInit = {}) {
   const path = url.replace(API, '');
   if (path === '/native/token') {
     if (server.revoked) return reply(400, { error: 'invalid_grant' });
+    server.during?.(); // something the phone does while the answer is on its way
     server.issued++;
     server.access = `access-${server.issued}`;
     return reply(200, { access_token: server.access, token_type: 'Bearer', expires_in: 900, refresh_token: `refresh-${server.issued}` });
@@ -94,7 +96,7 @@ function App({ start }: { start?: Session }) {
 const log = { log: jest.spyOn(console, 'log'), info: jest.spyOn(console, 'info'), warn: jest.spyOn(console, 'warn'), error: jest.spyOn(console, 'error'), debug: jest.spyOn(console, 'debug') };
 beforeEach(() => {
   process.env.EXPO_PUBLIC_MEDVYA_API = API;
-  Object.assign(server, { revoked: false, issued: 0, access: '', calls: [] });
+  Object.assign(server, { revoked: false, issued: 0, access: '', calls: [], during: undefined });
   globalThis.fetch = jest.fn(fakeFetch) as unknown as typeof fetch;
   mockBrowserUrl = null;
 });
@@ -127,7 +129,7 @@ it('signs in through the system browser with PKCE, chooses the facility and take
   expect(login.searchParams.get('redirect_uri')).toBe('medvya-clinician://auth');
   expect(login.searchParams.get('code_challenge_method')).toBe('S256');
   const exchange = new URLSearchParams(server.calls.find(c => c.url.endsWith('/native/token'))!.body);
-  expect(Object.fromEntries(exchange)).toEqual({ grant_type: 'authorization_code', code: 'one+time', code_verifier: expect.stringMatching(/^[0-9a-f]{64}$/), redirect_uri: 'medvya-clinician://auth' });
+  expect(Object.fromEntries(exchange)).toEqual({ grant_type: 'authorization_code', code: 'one+time', code_verifier: expect.stringMatching(/^[0-9a-f]{64}$/), redirect_uri: 'medvya-clinician://auth', platform: 'ios', app_version: '1.2.3' });
   const { createHash } = jest.requireActual<{ createHash: (a: string) => { update: (s: string) => { digest: (e: 'base64url') => string } } }>('node:crypto');
   expect(login.searchParams.get('code_challenge')).toBe(createHash('sha256').update(exchange.get('code_verifier')!).digest('base64url'));
 
@@ -185,6 +187,13 @@ it('wipes at launch a stored profile whose refresh token is gone', async () => {
   await renderApp(<App />);
   expect(await screen.findByRole('button', { name: 'Sign in' })).toBeOnTheScreen();
   await waitFor(() => expect(keychain.size).toBe(0));
+});
+
+it('ends on the server a token pair that arrives after the phone signed out, and keeps none of it', async () => {
+  server.during = () => { forgetTokens(); }; // Switch user while the code exchange is out
+  await expect(exchangeCode('code-1', 'verifier-1')).rejects.toThrow();
+  expect(server.calls.find(c => c.url.endsWith('/bff/logout'))?.auth).toBe('Bearer access-1');
+  expect(keychain.size).toBe(0);
 });
 
 it('runs one refresh for calls that need it at the same time (two would end the session)', async () => {

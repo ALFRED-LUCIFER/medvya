@@ -1,0 +1,22 @@
+{
+  "cli": {
+    "version": ">= 27.2.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "preview": {
+      "distribution": "internal",
+      "node": "22.23.4",
+      "pnpm": "11.9.0",
+      "env": {
+        "EXPO_PUBLIC_MEDVYA_API": "https://app-medvya-dev-3afs7i.azurewebsites.net"
+      },
+      "android": {
+        "buildType": "apk"
+      },
+      "ios": {
+        "simulator": true
+      }
+    }
+  }
+}

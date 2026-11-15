@@ -52,6 +52,42 @@ namespace Medvya.Identity.Infrastructure.Persistence.Migrations
                     b.ToTable("OnboardingDrafts", "identity");
                 });
 
+            modelBuilder.Entity("Medvya.Identity.Domain.PatientSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Device")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset>("LastSeenAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<byte[]>("PhoneHash")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<byte[]>("PreviousRefreshTokenHash")
+                        .HasColumnType("bytea");
+
+                    b.Property<byte[]>("RefreshTokenHash")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PatientSessions", "identity");
+                });
+
             modelBuilder.Entity("Medvya.Identity.Domain.SmsSignIn", b =>
                 {
                     b.Property<byte[]>("PhoneHash")

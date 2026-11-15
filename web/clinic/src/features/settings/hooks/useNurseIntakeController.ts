@@ -27,6 +27,8 @@ export function useNurseIntakeController() {
     enabled: query.data?.enabled ?? false,
     loading: query.isPending,
     forbidden: query.error instanceof ApiError && query.error.status === 403,
+    /** Medvya has not released nurse intake to this practice (MDV-P5-041): the server has no switch for it, so none is shown. */
+    unavailable: query.error instanceof ApiError && query.error.status === 404,
     loadFailed: query.isError,
     saving: save.isPending,
     saveFailed: save.isError,

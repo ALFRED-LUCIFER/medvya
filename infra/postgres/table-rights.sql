@@ -117,3 +117,16 @@ BEGIN
         GRANT INSERT ON ledger."Chains" TO medvya_review;
     END IF;
 END $$;
+
+-- Medvya's feature releases (MDV-P5-041): the platform console host's third login, IN ROLE medvya_features alone, one per country database. It reads and
+-- writes tenancy."FeatureReleases" (no delete: a release is set to Off, never removed) and nothing else: no other table, schema-wide or default right.
+-- The clinic application reads the table and may not change it, so a clinic request can never release a feature. Granted from scratch on each run.
+REVOKE ALL ON ALL TABLES IN SCHEMA tenancy, audit, ledger FROM medvya_features;
+GRANT USAGE ON SCHEMA tenancy TO medvya_features;
+DO $$
+BEGIN
+    IF to_regclass('tenancy."FeatureReleases"') IS NOT NULL THEN
+        GRANT SELECT, INSERT, UPDATE ON tenancy."FeatureReleases" TO medvya_features;
+        REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON tenancy."FeatureReleases" FROM medvya_tenancy;
+    END IF;
+END $$;

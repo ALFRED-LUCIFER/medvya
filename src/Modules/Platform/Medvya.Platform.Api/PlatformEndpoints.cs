@@ -19,6 +19,8 @@ public static class PlatformPolicies
     public const string AuditRead = "platform.audit.read";
     /// <summary>Organisation approvals (MDV-P1-064): every console role reads; only owner, operations and reviewer decide.</summary>
     public const string OrganisationRead = Console, OrganisationDecide = "platform.organisation.decide";
+    /// <summary>Feature releases (MDV-P5-041): every console role reads; only owner and operations change a release.</summary>
+    public const string FeatureRead = Console, FeatureChange = "platform.feature.change";
 
     public static AuthorizationBuilder AddPlatformPolicies(this AuthorizationBuilder builder)
     {
@@ -30,6 +32,7 @@ public static class PlatformPolicies
             .AddPolicy(Console, console)
             .AddPolicy(Owner, p => p.Combine(console).RequireClaim(RoleClaim, nameof(PlatformRole.Owner)))
             .AddPolicy(OrganisationDecide, p => p.Combine(console).RequireClaim(RoleClaim, nameof(PlatformRole.Owner), nameof(PlatformRole.Operations), nameof(PlatformRole.Reviewer)))
+            .AddPolicy(FeatureChange, p => p.Combine(console).RequireClaim(RoleClaim, nameof(PlatformRole.Owner), nameof(PlatformRole.Operations)))
             .AddPolicy(AuditRead, p => p.Combine(console).RequireClaim(RoleClaim, nameof(PlatformRole.Owner), nameof(PlatformRole.Operations)));
     }
 }
@@ -81,6 +84,7 @@ public static class PlatformEndpoints
         });
 
         app.MapOrganisationApprovals();
+        app.MapFeatureReleases();
         app.Actions("/v1/audit").RequireAuthorization(PlatformPolicies.Owner)
             .MapPost("/export", async ([FromBody] ReasonBody body, [FromServices] IPlatformAuditLog log, CancellationToken ct) =>
                 Results.File(System.Text.Encoding.UTF8.GetBytes(await log.ExportCsvAsync(PlatformReason.Valid(body.Reason)!, ct)), "text/csv; charset=utf-8",

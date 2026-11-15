@@ -175,6 +175,38 @@
         }
       }
     },
+    "/v1/me/push-token": {
+      "put": {
+        "tags": [
+          "Host.Api"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PushTokenRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Host.Api"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/v1/staff/{userId}/sessions": {
       "delete": {
         "tags": [
@@ -11379,6 +11411,20 @@
             ],
             "format": "uint32",
             "default": 0
+          }
+        }
+      },
+      "PushTokenRequest": {
+        "required": [
+          "token"
+        ],
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

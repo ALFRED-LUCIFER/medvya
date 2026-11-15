@@ -6,7 +6,7 @@ import { renderApp } from './render';
 const noop = () => {};
 const vm = {
   session: { staff: cast.staff[0]!, facility: cast.facilities[0]! }, today: cast.today, loading: false, error: null, refreshing: false,
-  onRefresh: noop, canConsult: true, onOpenAccount: noop, onOpenPatient: noop, onStartConsult: noop,
+  onRefresh: noop, canConsult: true, offlineSince: null,onOpenAccount: noop, onOpenPatient: noop, onStartConsult: noop,
 };
 
 it('says Allergy on the allergy chip and words each queue state as the web does (MDV-P5-057)', async () => {

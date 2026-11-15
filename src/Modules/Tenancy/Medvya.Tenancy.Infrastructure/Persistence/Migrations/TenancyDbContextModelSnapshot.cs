@@ -373,6 +373,62 @@ namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
                     b.ToTable("FeatureFlags", "tenancy");
                 });
 
+            modelBuilder.Entity("Medvya.Tenancy.Domain.FeatureRelease", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("ChangedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ChangedByMemberId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ClinicalSignOff")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Country")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("character(2)")
+                        .IsFixedLength();
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.PrimitiveCollection<Guid[]>("Organisations")
+                        .IsRequired()
+                        .HasColumnType("uuid[]");
+
+                    b.Property<int>("Percentage")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("SignOffAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("SignOffByMemberId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Stage")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Country", "Key")
+                        .IsUnique();
+
+                    b.ToTable("FeatureReleases", "tenancy", t =>
+                        {
+                            t.HasCheckConstraint("CK_FeatureReleases_Percentage", "\"Percentage\" BETWEEN 0 AND 99");
+                        });
+                });
+
             modelBuilder.Entity("Medvya.Tenancy.Domain.Invitation", b =>
                 {
                     b.Property<Guid>("Id")
@@ -382,7 +438,7 @@ namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset?>("AcceptedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid[]>("AlsoFacilityIds")
+                    b.PrimitiveCollection<Guid[]>("AlsoFacilityIds")
                         .IsRequired()
                         .HasColumnType("uuid[]");
 

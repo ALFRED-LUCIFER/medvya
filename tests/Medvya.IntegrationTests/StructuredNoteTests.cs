@@ -17,6 +17,7 @@ namespace Medvya.IntegrationTests;
 /// <summary>
 /// MDV-P2-042 over HTTP on real PostgreSQL: the structured review of systems and examination by system (stored canonical in the note's
 /// sections, an abnormal finding refused without its note, a blank kept blank through signing and the PDF), and the template a new note starts on.
+/// Also MDV-P2-067: the visit's free notes, the reserved section every template accepts, through signing and the PDF.
 /// </summary>
 public sealed class StructuredNoteTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IAsyncLifetime
 {
@@ -146,6 +147,40 @@ public sealed class StructuredNoteTests(PostgresFixture sql) : IClassFixture<Pos
             Assert.False((await Json(empty)).GetProperty("sections").TryGetProperty(NoteTemplates.ReviewOfSystems, out _));
         using var old = await SaveAsync(1, Note("""{"chestPain":{"answer":"no"}}""", "{}"), "general-opd");
         Assert.Equal(["unknown_section"], (await ErrorsAsync(old))["sections.reviewOfSystems"]);
+    }
+
+    // SAFETY mutation check (MDV-P2-067): drop the reserved Notes section in ConsultNoteService.SaveAsync and the first save fails (unknown_section).
+    [Fact]
+    public async Task VisitNotesAreSavedSignedInTheHashAndPrinted()
+    {
+        const string Notes = "Synthetic: patient asks about fasting during the festival.\nRecheck feet next visit.";
+        var note = Note("{}", "{}");
+        note[NoteTemplates.Notes.Id] = Notes;
+        using (var unknown = await SaveAsync(0, new(note) { ["notez"] = "x" })) // any other id the template lacks is still refused
+            Assert.Equal(["unknown_section"], (await ErrorsAsync(unknown))["sections.notez"]);
+        using (var saved = await SaveAsync(0, note))
+            Assert.True(saved.IsSuccessStatusCode, await saved.Content.ReadAsStringAsync());
+        using (var read = await Client().GetAsync(U($"/v1/encounters/{encounter}/note")))
+            Assert.Equal(Notes, (await Json(read)).GetProperty("sections").GetProperty("notes").GetString());
+
+        using (var signed = await Client(reauth: true).PostAsJsonAsync(U($"/v1/encounters/{encounter}/note/sign"), new { baseVersion = 1 }))
+            Assert.True(signed.IsSuccessStatusCode, await signed.Content.ReadAsStringAsync());
+        await using (var db = sql.Encounters(h.Tenant))
+        {
+            var row = await db.SignedNoteVersions.SingleAsync();
+            Assert.Equal(Notes, row.Sections[NoteTemplates.Notes.Id]);
+            Assert.Equal(SignedNoteVersion.Hash(Diabetes, 2, row.Sections, atSigning: row.AtSigning), row.ContentHash);
+            Assert.NotEqual(SignedNoteVersion.Hash(Diabetes, 2, row.Sections.Where(s => s.Key != NoteTemplates.Notes.Id).ToDictionary(), atSigning: row.AtSigning), row.ContentHash);
+        }
+        // Signed: the notes change only by addendum.
+        using (var changed = await SaveAsync(2, new(note) { [NoteTemplates.Notes.Id] = "Synthetic: changed after signing" }))
+            Assert.Equal((HttpStatusCode.Conflict, "note_signed"), (changed.StatusCode, (await Json(changed)).GetProperty("code").GetString()));
+
+        using var pdf = await Client().PostAsync(U($"/v1/encounters/{encounter}/note/pdf"), null);
+        Assert.True(pdf.IsSuccessStatusCode, await pdf.Content.ReadAsStringAsync());
+        var text = string.Join('\n', PdfPages.Read(await pdf.Content.ReadAsByteArrayAsync(), PlainPdf.A4.Margin).Select(p => p.Text));
+        foreach (var line in new[] { "Notes", "patient asks about fasting during the festival", "Recheck feet next visit." })
+            Assert.Contains(line, text, StringComparison.Ordinal);
     }
 
     [Fact]

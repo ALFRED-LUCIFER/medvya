@@ -7,7 +7,8 @@ export type TextVariant = 'display' | 'title' | 'heading' | 'body' | 'label' | '
 /** The type scale. Sizes are a base; system font scaling (Dynamic Type, Android font size) still applies up to 200 %. */
 export function Text({ variant = 'body', tone, style, ...rest }: TextProps & { variant?: TextVariant; tone?: string }) {
   const { body, solid } = useBrand();
-  const size = { display: 30, title: 24, heading: body + 2, body, label: body, caption: body - 2, overline: 12 }[variant];
+  // title 24 is the Medvya Mobile screen title; the web title token (20) sits in a 44 px header and is too small here.
+  const size = { display: theme.text.display.fontSize, title: 24, heading: body + 2, body, label: body, caption: body - 2, overline: theme.text.caption.fontSize }[variant];
   return (
     <RNText
       maxFontSizeMultiplier={2}

@@ -3,7 +3,7 @@ import { FileDown, Printer } from 'lucide-react';
 import { ltr, useI18n } from '@medvya/i18n';
 import { Button, buttonVariants, PageContainer, PageHeader, PageMessage } from '@medvya/ui';
 import type { EncounterBanner } from '../domain/encounter';
-import { sectionLabelKey, vitalNameKey, type NoteRecord, type NoteTemplate, type NoteView } from '../domain/note';
+import { notesSection, sectionLabelKey, vitalNameKey, type NoteRecord, type NoteTemplate, type NoteView } from '../domain/note';
 import { Versions } from './NoteHistory';
 import { StructuredField } from './NoteParts';
 import { isStructured } from '../domain/structured';
@@ -47,7 +47,7 @@ export default function NotePrintPage(p: Props) {
           </p>
         </PageHeader>
         <AtSigning record={note.atSigning ?? null} timeZone={banner.timeZone} />
-        {p.template.sections.filter(s => note.sections[s.id]).map(s => isStructured(s) ? (
+        {[...p.template.sections, notesSection].filter(s => note.sections[s.id]).map(s => isStructured(s) ? (
           <section key={s.id}><StructuredField section={s} text={note.sections[s.id]!} readOnly heading onChange={() => undefined} /></section>
         ) : (
           <section key={s.id} aria-labelledby={`print-${s.id}`}>

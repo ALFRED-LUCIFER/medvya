@@ -35,7 +35,7 @@ public sealed class AllergyIntakeTests(PostgresFixture sql) : IClassFixture<Post
     {
         await h.SeedAsync();
         await h.DoctorTemplateAsync();
-        await h.Get<IFeatureFlags>(h.Admin).SetAsync(IntakeFlag.Key, true, "clinical-team", "Nurse intake (synthetic test)");
+        await h.Get<IFeatureFlags>(h.Admin).SetAsync(Features.NurseIntake, true, "clinical-team", "Nurse intake (synthetic test)");
     }
 
     public Task DisposeAsync() => h.CloseAsync();
@@ -225,7 +225,7 @@ public sealed class AllergyIntakeTests(PostgresFixture sql) : IClassFixture<Post
     [Fact]
     public async Task TheDoctorRecordsAllergiesVitalsAndWeightInTheConsultationUntilItEnds()
     {
-        await h.Get<IFeatureFlags>(h.Admin).SetAsync(IntakeFlag.Key, false, "clinical-team", "No nurse (synthetic test)");
+        await h.Get<IFeatureFlags>(h.Admin).SetAsync(Features.NurseIntake, false, "clinical-team", "No nurse (synthetic test)");
         var visit = await h.BookAsync(11);
         await h.FrontDesk(h.Reception).CheckInAsync(visit.Id, new CheckIn());
         Assert.Equal("visit_closed", (await Assert.ThrowsAsync<IntakeConflictException>(() => Intake(h.Doctor).ConfirmNoKnownAllergiesAsync(visit.Id))).Code); // not in the room yet

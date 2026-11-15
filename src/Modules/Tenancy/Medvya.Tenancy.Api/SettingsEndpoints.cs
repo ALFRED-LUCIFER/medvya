@@ -26,9 +26,6 @@ public static class SettingsEndpoints
     /// <summary>The switch and how many patients are with the nurse now, which the owner is told before switching (MDV-P2-055).</summary>
     public sealed record NurseIntakeView(bool Enabled, int WithNurse);
 
-    /// <summary>The tenant flag the Encounters module reads (IntakeFlag.Key); a test pins that the two agree.</summary>
-    public const string NurseIntakeFlag = "clinical.nurse-intake";
-
     public static WebApplication MapPracticeSettings(this WebApplication app)
     {
         var g = app.MapGroup("/v1/settings").RequireAuthorization(StaffPolicies.ManageStaff).AddEndpointFilter(MapErrors);
@@ -86,13 +83,14 @@ public static class SettingsEndpoints
         g.MapPut("/queue-rule", ([FromBody] QueueRule body, [FromServices] IPracticeSettings s, CancellationToken ct) => s.SaveQueueRuleAsync(body, ct));
 
         // Nurse intake before the doctor (MDV-P2-007): a practice-wide switch, off until the owner turns it on. Changes are audited by the flag service.
+        // The switch exists only while Medvya's release reaches the practice (MDV-P5-041): otherwise 404, and the screen says it is not available.
         g.MapGet("/nurse-intake", async ([FromServices] IFeatureFlags flags, [FromServices] IScheduleService schedule, CancellationToken ct) =>
-            Results.Ok(new NurseIntakeView(await flags.IsEnabledAsync(NurseIntakeFlag, ct), await schedule.CountWithNurseAsync(ct))));
+            Results.Ok(new NurseIntakeView(await flags.IsEnabledAsync(Features.NurseIntake, ct), await schedule.CountWithNurseAsync(ct)))).RequireRelease(Features.NurseIntake);
         g.MapPut("/nurse-intake", async ([FromBody] NurseIntakeBody body, [FromServices] IFeatureFlags flags, [FromServices] IScheduleService schedule, CancellationToken ct) =>
         {
-            await flags.SetAsync(NurseIntakeFlag, body.Enabled, "practice", "Nurse intake before the doctor (MDV-P2-007)", ct);
+            await flags.SetAsync(Features.NurseIntake, body.Enabled, "practice", "Nurse intake before the doctor (MDV-P2-007)", ct);
             return Results.Ok(new NurseIntakeView(body.Enabled, await schedule.CountWithNurseAsync(ct)));
-        });
+        }).RequireRelease(Features.NurseIntake);
 
         // Terms of Service and DPA (MDV-P1-019): anyone who administers the practice can see the status; only an owner (practice admin or
         // owner-doctor) can accept, which the service checks. Until accepted, booking and sending are refused (RequireAcceptedTerms).

@@ -28,6 +28,16 @@ public static class TenancyModule
             .AddSingleton<IOrganisationConsole, OrganisationConsole>();
     }
 
+    /// <summary>
+    /// Medvya's release switches for the platform console (MDV-P5-041), and nothing else of this module: one database per country, each through the narrow
+    /// login medvya_features (roles.sql, table-rights.sql), which can reach tenancy."FeatureReleases" only.
+    /// </summary>
+    public static IServiceCollection AddFeatureReleasePath(this IServiceCollection services, IReadOnlyDictionary<string, string> countryConnectionStrings)
+    {
+        services.TryAddSingleton(TimeProvider.System);
+        return services.AddSingleton<IFeatureReleaseConsole>(sp => new FeatureReleaseConsole(countryConnectionStrings, sp.GetRequiredService<TimeProvider>()));
+    }
+
     static void AddShared(IServiceCollection services, string connectionString, string? blobConnectionString, string? blobEndpoint)
     {
         services.TryAddScoped<TenantSessionInterceptor>();
@@ -37,11 +47,16 @@ public static class TenancyModule
         services.AddDbContext<TenancyDbContext>((sp, o) => o.UseNpgsql(PostgresDataSources.For(connectionString)).AddInterceptors(sp.GetRequiredService<TenantSessionInterceptor>()));
     }
 
-    /// <summary>Needs the Audit module (flag changes and invitations are audited) and an IEmailSender (invitations).</summary>
-    public static IServiceCollection AddTenancyModule(this IServiceCollection services, string connectionString, string? blobConnectionString = null, string? blobEndpoint = null)
+    /// <summary>
+    /// Needs the Audit module (flag changes and invitations are audited) and an IEmailSender (invitations). <paramref name="internalOrganisations"/>: Medvya's
+    /// own test organisations in this country, which a feature at the Internal stage reaches (MDV-P5-041).
+    /// </summary>
+    public static IServiceCollection AddTenancyModule(this IServiceCollection services, string connectionString, string? blobConnectionString = null, string? blobEndpoint = null,
+        IReadOnlyCollection<Guid>? internalOrganisations = null)
     {
         AddShared(services, connectionString, blobConnectionString, blobEndpoint);
         return services
+            .AddSingleton(sp => new FeatureReleaseCache(sp.GetRequiredService<TimeProvider>(), (internalOrganisations ?? []).ToHashSet()))
             .AddScoped<IFeatureFlags, FeatureFlags>()
             .AddScoped<ITermsAcceptance, TermsAcceptances>()
             .AddScoped<IFacilityDirectory, FacilityDirectory>()

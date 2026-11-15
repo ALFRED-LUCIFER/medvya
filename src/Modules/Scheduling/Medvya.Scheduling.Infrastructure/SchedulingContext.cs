@@ -45,7 +45,7 @@ public sealed class SchedulingContext(
 
     /// <summary>The visit steps the tenant has on (MDV audit UX-05): a step that is off is skipped on the board and by the consultation.</summary>
     public async Task<VisitSteps> StepsAsync(CancellationToken cancellationToken) =>
-        new(await flags.IsEnabledAsync(VisitStepFlags.Nurse, cancellationToken), await flags.IsEnabledAsync(VisitStepFlags.Billing, cancellationToken));
+        new(await flags.IsEnabledAsync(Features.NurseIntake, cancellationToken), await flags.IsEnabledAsync(Features.Billing, cancellationToken));
 
     public Guid TenantId => tenant.TenantId ?? throw new InvalidOperationException("No tenant context.");
 

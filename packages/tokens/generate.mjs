@@ -9,6 +9,7 @@ const camel = s => s.replace(/-(\w)/g, (_, c) => c.toUpperCase());
 const num = v => (/^[\d.]+(px|ms)$/.test(v) ? parseFloat(v) : v);
 // Each group is a Tailwind theme namespace (--text-*, --spacing-*, --container-*, ...), so a token is also a utility.
 // `space` is not one: it names the allowed steps of Tailwind's own numeric scale, which a --spacing-<n> key would override.
+// `native` is not a group either: sizes only the Expo apps use go into the theme and never into web CSS.
 const groups = ['color', 'radius', 'font', 'breakpoint', 'text', 'space', 'spacing', 'container', 'shadow', 'ease', 'transition-duration'];
 
 export function render(source) {
@@ -35,7 +36,7 @@ export function render(source) {
   const css = `/* Generated from tokens.json by generate.mjs. Do not edit. */\n@theme static {\n${lines.join('\n')}\n}\n@media (any-pointer: coarse) {\n  :root {\n${coarse.join('\n')}\n  }\n}\n`;
   const plain = v => (typeof v === 'string' ? num(v) : obj(v));
   const obj = o => Object.fromEntries(Object.entries(o).map(([k, v]) => [camel(k), plain(v)]));
-  const theme = `// Generated from tokens.json by generate.mjs. Do not edit. Plain values for React Native (px and ms become numbers).\nexport const theme = ${JSON.stringify({ ...Object.fromEntries(groups.map(g => [camel(g), obj(t[g])])), tone, coarse: obj(t.coarse) }, null, 2)} as const;\n`;
+  const theme = `// Generated from tokens.json by generate.mjs. Do not edit. Plain values for React Native (px and ms become numbers).\nexport const theme = ${JSON.stringify({ ...Object.fromEntries(groups.map(g => [camel(g), obj(t[g])])), tone, coarse: obj(t.coarse), native: obj(t.native) }, null, 2)} as const;\n`;
   return { css, theme };
 }
 

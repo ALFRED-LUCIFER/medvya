@@ -125,9 +125,23 @@ journey('J2', {
       diagnoses: [{ icd10Code: 'E11.9', description: 'Type 2 diabetes (synthetic)', verification: 'Verified', onsetOn: null, source: 'ClinicianVerified', status: 'Active' }] };
     await page.goto('/consult/e-1');
     const note = page.getByRole('region', { name: 'Consultation note' });
+    // MDV-P2-067: the visit's free notes from the bottom bar, saved with the note; Done gives focus back to the button, which says they are written.
+    const visitNotes = 'Asks about fasting during the festival (synthetic)';
+    await page.getByRole('button', { name: 'Notes', exact: true }).click();
+    const sheet = page.getByRole('dialog', { name: 'Notes' });
+    await sheet.getByRole('textbox', { name: /Notes/ }).fill(visitNotes);
+    await expect.poll(() => mock.puts.at(-1)?.sections.notes).toBe(visitNotes);
+    await sheet.getByRole('button', { name: 'Done' }).click();
+    await expect(page.getByRole('button', { name: 'Notes · written' })).toBeFocused();
     await page.getByRole('button', { name: 'Sign note' }).click();
     await page.getByRole('dialog').getByRole('button', { name: /^Sign as / }).click();
     await expect(note.getByRole('status').filter({ hasText: 'SIGNED v1' })).toBeVisible();
+    // Signed: the notes are read with the note and the Sheet shows them with no text box.
+    await expect(note.getByRole('textbox', { name: 'Notes' })).toHaveValue(visitNotes);
+    await page.getByRole('button', { name: 'Notes · written' }).click();
+    await expect(sheet).toContainText(visitNotes);
+    await expect(sheet.getByRole('textbox')).toHaveCount(0);
+    await sheet.getByRole('button', { name: 'Done' }).click();
     // Read-only content only (MDV audit UX-11): no section left "To do", the consent in words instead of radios.
     await expect(note.getByRole('navigation', { name: 'Note sections' })).not.toContainText('To do');
     await expect(note.getByRole('radio')).toHaveCount(0);
@@ -138,6 +152,7 @@ journey('J2', {
     await expect(kept).toContainText('Pulse 76 /min (Kavya Nair (synthetic), nurse intake, verified 19 Oct 2026 10:00)');
     await expect(kept).toContainText('Penicillin (Rash) · Patient reported · Patient reported');
     await expect(kept).toContainText('Type 2 diabetes (synthetic)');
+    await expect(page.getByRole('region', { name: 'Notes' })).toContainText(visitNotes);
   },
   // E-04 → D-01 (MDV-P1-090): End consultation asks first about the unfinished prescription (Escape cancels and nothing ends); End anyway; My day lists
   // it under Prescriptions to authorise, whose row opens the consultation at the Authorise button. The server rules are proven in RxFinishTests.

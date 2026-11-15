@@ -52,6 +52,11 @@ describe('design tokens', () => {
     expect(() => render({ ...source, coarse: { 'spacing-nope': '44px' } })).toThrow(/spacing-nope/);
   });
 
+  it('gives the native apps their own sizes in the theme only: 52 px actions, 15 and 17 px body, 48 px patient targets', () => {
+    expect(theme.native).toEqual({ action: 52, body: 15, bodyPatient: 17, targetPatient: 48 });
+    expect(read('tokens.css')).not.toContain('--native');
+  });
+
   it('keeps the public site parser working: one @theme block with no closing brace inside', () => {
     expect(read('tokens.css')).toMatch(/@theme static \{[^}]*\}/);
   });

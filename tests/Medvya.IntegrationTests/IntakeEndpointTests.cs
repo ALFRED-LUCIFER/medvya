@@ -54,7 +54,7 @@ public sealed class IntakeEndpointTests(PostgresFixture sql) : IClassFixture<Pos
 
     static async Task<JsonElement> Json(HttpResponseMessage r) => await r.Content.ReadFromJsonAsync<JsonElement>();
 
-    Task FlagAsync(bool on) => h.Get<IFeatureFlags>(h.Admin).SetAsync(IntakeFlag.Key, on, "clinical-team", "Nurse intake (synthetic test)");
+    Task FlagAsync(bool on) => h.Get<IFeatureFlags>(h.Admin).SetAsync(Medvya.Tenancy.Domain.Features.NurseIntake, on, "clinical-team", "Nurse intake (synthetic test)");
 
     async Task<Guid> WithNurseAsync()
     {

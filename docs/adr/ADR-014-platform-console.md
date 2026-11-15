@@ -51,3 +51,11 @@ The product owner had not answered how the console reads the approval queue, so 
 - **Two audit trails.** The decision is audited in the organisation (clinic audit, the operator's platform member id as actor) and appended to `platform.AuditEntries` with the organisation as `SubjectTenantId`. They are in two databases, so not one transaction (a `shortcut:` in the endpoint); when the control plane moves to its own database (MDV-P5-017) the review path becomes a service call and this login goes away.
 - **Documents** are fetched by the console host (the storage link never reaches the browser), shown from memory with no download, and logged in both trails. The watermark is drawn over the file, not burned into it (`shortcut:`).
 
+
+## Note, 15 Nov 2026 (MDV-P5-041): feature releases use a third narrow login per country
+
+The owner decided two kinds of switch (plan on issue #774): the clinic's own switch stays with the practice owner, and a Medvya switch per feature and country is set from the console's Features page. The Medvya release lives in each country's clinic database (`tenancy.FeatureReleases`, not a tenant row; ADR-003), so the clinic API reads it locally, with a cache of at most 60 s.
+
+- **A third login, not a wider one.** The console host gets `ConnectionStrings:Features:<country>` (one per country database), a login in the new role `medvya_features`: `SELECT`, `INSERT` and `UPDATE` on `tenancy.FeatureReleases` and nothing else (`table-rights.sql`; `TheFeaturesLoginReachesNothingButTheReleaseTable`). The clinic application's role may read that table but not change it, so no clinic request can release a feature. The service is `Tenancy.Infrastructure`'s `FeatureReleaseConsole`, inside the slice the console host already loads; no new module reference.
+- **Roles.** Every console role reads; owner and operations change a release; support, finance and reviewer are refused by the server (`PlatformPolicies.FeatureChange`).
+- **Two databases again.** The release is saved in the country's database and the entry appended to `platform.AuditEntries` after it, not in one transaction (a `shortcut:` in the endpoint), as for approvals.

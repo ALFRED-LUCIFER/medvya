@@ -8,6 +8,7 @@ import { Text } from './text';
 export type IconName = ComponentProps<typeof MaterialIcons>['name'];
 /** Icon size follows the system font size so icons grow with their text, capped lower than text (2×) so rows and targets keep their shape. */
 const ICON_SCALE_CAP = 1.5;
+const { space, radius } = theme;
 /** `fixed` keeps the given size, for bars of fixed height such as the tab bar (iOS keeps tab icons fixed too). */
 export function Icon({ name, size = 22, color = theme.color.ink600, fixed }: { name: IconName; size?: number; color?: string; fixed?: boolean }) {
   const { fontScale } = useWindowDimensions();
@@ -20,7 +21,7 @@ type ButtonProps = { label: string; accessibilityLabel?: string; onPress?: () =>
 
 /** One button for both apps. Disabled buttons take a grey fill from tokens (as on the web, not opacity) and show `hint` as the reason under them. */
 export function Button({ label, accessibilityLabel, onPress, variant = 'primary', icon, disabled, busy, hint }: ButtonProps) {
-  const { solid, target } = useBrand();
+  const { solid } = useBrand();
   const off = disabled || busy;
   const fg = disabled ? theme.color.ink600 : { primary: theme.color.card, secondary: theme.color.ink900, ghost: solid, inverse: solid }[variant];
   const look = {
@@ -37,7 +38,7 @@ export function Button({ label, accessibilityLabel, onPress, variant = 'primary'
       accessibilityState={{ disabled: !!off, busy: !!busy }}
       disabled={off}
       onPress={onPress}
-      style={({ pressed }) => [styles.button, { minHeight: Math.max(target, 52) }, look, disabled && styles.off, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.button, look, disabled && styles.off, pressed && styles.pressed]}
     >
       {busy ? <ActivityIndicator color={fg} /> : icon ? <Icon name={icon} size={20} color={fg} /> : null}
       <Text variant="label" tone={fg}>{label}</Text>
@@ -69,7 +70,7 @@ type FieldProps = TextInputProps & { label: string; error?: string; hint?: strin
 
 /** A labelled input. Errors show as text with an icon, never colour alone, and are announced with the field. */
 export function TextField({ label, error, hint, style, ...input }: FieldProps) {
-  const { solid, target, body } = useBrand();
+  const { solid, body } = useBrand();
   return (
     <View style={styles.field}>
       <Text variant="label">{label}</Text>
@@ -79,7 +80,7 @@ export function TextField({ label, error, hint, style, ...input }: FieldProps) {
         accessibilityState={{ disabled: input.editable === false }}
         placeholderTextColor={theme.color.ink600}
         selectionColor={solid}
-        style={[styles.input, { minHeight: Math.max(target, 52), fontSize: body + 1 }, error ? { borderColor: theme.color.danger700 } : null, input.editable === false && styles.inputOff, style]}
+        style={[styles.input, { fontSize: body + 1 }, error ? { borderColor: theme.color.danger700 } : null, input.editable === false && styles.inputOff, style]}
         {...input}
       />
       {error
@@ -98,7 +99,7 @@ export function Segmented<K extends string>({ options, value, onChange }: { opti
         const on = o.key === value;
         return (
           <Pressable key={o.key} accessibilityRole="tab" accessibilityState={{ selected: on }} onPress={() => onChange(o.key)}
-            style={[styles.segment, { minHeight: target - 4 }, on && styles.segmentOn]}>
+            style={[styles.segment, { minHeight: target - space[4] }, on && styles.segmentOn]}>
             <Text variant="label" tone={on ? solid : theme.color.ink600}>{o.label}</Text>
           </Pressable>
         );
@@ -108,18 +109,18 @@ export function Segmented<K extends string>({ options, value, onChange }: { opti
 }
 
 const styles = StyleSheet.create({
-  button: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, paddingHorizontal: 20 },
+  button: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space[8], minHeight: theme.native.action, borderRadius: radius.md, paddingHorizontal: space[16] },
   off: { backgroundColor: theme.color.disabled, borderColor: theme.color.disabled },
-  withReason: { gap: 4 },
+  withReason: { gap: space[4] },
   reason: { textAlign: 'center' },
   pressed: { opacity: 0.8 },
-  iconButton: { alignItems: 'center', justifyContent: 'center', borderRadius: 12, borderWidth: 1, borderColor: theme.color.input, backgroundColor: theme.color.card },
-  badge: { position: 'absolute', top: -4, end: -4, minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 5, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.color.danger700 },
-  field: { gap: 6 },
-  input: { borderWidth: 1, borderColor: theme.color.input, borderRadius: 12, paddingHorizontal: 14, color: theme.color.ink900, backgroundColor: theme.color.card },
+  iconButton: { alignItems: 'center', justifyContent: 'center', borderRadius: radius.md, borderWidth: 1, borderColor: theme.color.input, backgroundColor: theme.color.card },
+  badge: { position: 'absolute', top: -space[4], end: -space[4], minWidth: 20, height: 20, borderRadius: radius.full, paddingHorizontal: space[4], alignItems: 'center', justifyContent: 'center', backgroundColor: theme.color.danger700 },
+  field: { gap: space[6] },
+  input: { minHeight: theme.native.action, borderWidth: 1, borderColor: theme.color.input, borderRadius: radius.md, paddingHorizontal: space[12], color: theme.color.ink900, backgroundColor: theme.color.card },
   inputOff: { backgroundColor: theme.color.disabled },
-  errorRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  segmented: { flexDirection: 'row', padding: 4, gap: 4, borderRadius: 14, backgroundColor: theme.color.muted },
-  segment: { flex: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 10 },
+  errorRow: { flexDirection: 'row', alignItems: 'center', gap: space[6] },
+  segmented: { flexDirection: 'row', padding: space[4], gap: space[4], borderRadius: radius.md, backgroundColor: theme.color.muted },
+  segment: { flex: 1, alignItems: 'center', justifyContent: 'center', borderRadius: radius.sm },
   segmentOn: { backgroundColor: theme.color.card, shadowColor: theme.color.ink900, shadowOpacity: 0.08, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
 });

@@ -3,12 +3,12 @@ import { Avatar, Banner, Button, Emblem, Icon, ListRow, Loading, Screen, Text, T
 import { theme } from '@medvya/tokens';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 import { StyleSheet, View } from 'react-native';
-import type { CodeForm, EmailForm, Facility, SignInStep } from '../domain/session';
+import type { CodeForm, EmailForm, Facility, NewPinForm, SignInStep } from '../domain/session';
 
 type Props = {
   step: SignInStep; email: string; busy: boolean; error: string | null;
-  emailForm: UseFormReturn<EmailForm>; codeForm: UseFormReturn<CodeForm>;
-  onSubmitEmail: () => void; onSubmitCode: () => void; onBack: () => void;
+  emailForm: UseFormReturn<EmailForm>; codeForm: UseFormReturn<CodeForm>; pinForm: UseFormReturn<NewPinForm>;
+  onSubmitEmail: () => void; onSubmitCode: () => void; onBack: () => void; onSubmitPin: () => void;
   facilities: Facility[]; facilitiesLoading: boolean; onChooseFacility: (f: Facility) => void;
   biometricAvailable: boolean; unlockMethod: string; onEnableBiometric: () => void; onSkipBiometric: () => void;
 };
@@ -77,6 +77,24 @@ export function SignInScreen(vm: Props) {
           <ListRow title={f.name} subtitle={t('mobile.signIn.facilityLine', { city: f.city, opens: f.opens, closes: f.closes })}
             leading={<Icon name="storefront" color={theme.color.brand700} />} onPress={() => vm.onChooseFacility(f)} />
         </View>
+      ))}
+      {error}
+    </Screen>
+  );
+
+  if (vm.step === 'pin') return (
+    <Screen footer={<Button label={t('mobile.signIn.continue')} onPress={vm.onSubmitPin} busy={vm.busy} />}>
+      <View style={styles.intro}>
+        <Text variant="display" accessibilityRole="header">{t('mobile.pin.title')}</Text>
+        <Text>{t('mobile.pin.intro')}</Text>
+      </View>
+      {(['pin', 'confirm'] as const).map((name, i) => (
+        <Controller key={name} control={vm.pinForm.control} name={name} render={({ field, fieldState }) => (
+          <TextField label={t(name === 'pin' ? 'mobile.pin.label' : 'mobile.pin.confirm')} value={field.value} onChangeText={v => field.onChange(v.replace(/\D/g, ''))} onBlur={field.onBlur}
+            error={fieldState.error?.message ? t(fieldState.error.message as MessageKey) : undefined}
+            keyboardType="number-pad" secureTextEntry autoComplete="off" textContentType="none" maxLength={6} autoFocus={i === 0}
+            style={styles.code} onSubmitEditing={vm.onSubmitPin} />
+        )} />
       ))}
       {error}
     </Screen>

@@ -205,15 +205,16 @@ public sealed partial class NotificationsTests(PostgresFixture sql) : IClassFixt
     [Fact]
     public async Task AnEmailCarriesTheBrandedHtmlBesideTheSameTextWithTheClinicsLogoAddressAndPhone()
     {
+        const string blob = "synthetic/logo"; // a blob path, not a secret (gitleaks reads `LogoKey = "…"` as an API key)
         await using (var db = sql.Context(h.Tenant))
         {
             db.Profiles.Add(new Medvya.Tenancy.Domain.PracticeProfile
             {
-                Id = Guid.CreateVersion7(), TenantId = h.Tenant, Address = "12 Kasturba Nagar 1st Street, Adyar, Chennai 600020", Phone = "044 2441 0000", LogoKey = "synthetic/logo",
+                Id = Guid.CreateVersion7(), TenantId = h.Tenant, Address = "12 Kasturba Nagar 1st Street, Adyar, Chennai 600020", Phone = "044 2441 0000", LogoKey = blob,
             });
             await db.SaveChangesAsync();
         }
-        h.Logos.Stored["synthetic/logo"] = ([0x89, 0x50, 0x4E, 0x47], "image/png");
+        h.Logos.Stored[blob] = ([0x89, 0x50, 0x4E, 0x47], "image/png");
         await BookTuesdayAsync();
         await RunJobAsync();
 

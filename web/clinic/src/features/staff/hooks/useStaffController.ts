@@ -6,7 +6,7 @@ import { useI18n } from '@medvya/i18n';
 import { fetchLocations } from '../../settings/services/settingsApi';
 import { ApiError } from '../../schedule/services/scheduleApi';
 import { useTableController } from '../../table/hooks/useTableController';
-import { roleOfValue, roleValue, addStaffSchema, offboardSchema, reactivateSchema, rebookingMissing, locationsOf, locationsSchema, reasonMissing, type LocationsForm, type AddStaffForm, type OffboardForm, type ReactivateForm, type StaffMember, type AssignableRole, type RoleChoice, type Step } from '../domain/staff';
+import { roleOfValue, roleValue, addStaffSchema, offboardSchema, reactivateSchema, rebookingMissing, locationsOf, locationsSchema, reasonMissing, type LocationsForm, type AddStaffForm, type OffboardForm, type ReactivateForm, type StaffMember, type AssignableRole, type RoleChoice, type Step, planFullText, type PlanLimit } from '../domain/staff';
 import { staffSort } from '../domain/staffTable';
 import { addStaff, changeStaffRole, fetchRoles, fetchStaff, offboardStaff, reactivateStaff, resendInvitation, revokeInvitation, setStaffLocations, startStepUp } from '../services/staffApi';
 
@@ -25,7 +25,9 @@ const offboardProblem = (e: unknown) => {
 
 export function useStaffController(defaultFacilityId: string) {
   const queryClient = useQueryClient();
-  const { t } = useI18n();
+  const i18n = useI18n();
+  const { t } = i18n;
+  const planText = (e: unknown) => (planFull(e) ? planFullText(i18n, (e as ApiError).body as PlanLimit) : null);
   const staff = useQuery({ queryKey: ['staff', 'list'], queryFn: fetchStaff });
   const table = useTableController(staff.data ?? [], staffSort, c => t(`staff.col.${c}`));
   const roles = useQuery({ queryKey: ['staff', 'roles'], queryFn: fetchRoles });
@@ -113,7 +115,8 @@ export function useStaffController(defaultFacilityId: string) {
     notice,
     adding: add.isPending,
     addFailed: add.isError && !sendFailed(add.error) && !planFull(add.error),
-    planFull: planFull(add.error),
+    planFull: planText(add.error),
+    reactivatePlanFull: planText(reactivate.error),
     emailFailed: sendFailed(add.error) || sendFailed(resend.error),
     working: resend.isPending || revoke.isPending,
     rowFailed: (resend.isError && !sendFailed(resend.error)) || revoke.isError,

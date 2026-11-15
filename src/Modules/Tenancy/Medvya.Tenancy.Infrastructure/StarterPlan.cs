@@ -6,21 +6,23 @@ using Microsoft.EntityFrameworkCore;
 namespace Medvya.Tenancy.Infrastructure;
 
 /// <summary>
-/// The one place the plan cap lives (MDV-P1-069): 1 doctor and 2 other staff per organisation, in total across its locations.
+/// The one place the plan cap lives (MDV-P1-069): 1 doctor and 2 other staff per organisation unless the environment sets other numbers
+/// (settings Plan:Doctors and Plan:Staff, checked at start-up), in total across its locations.
 /// Patients are never counted. A seat is held by an active or suspended member and by an invited member whose invitation is not revoked;
 /// offboarding or revoking frees it. A person is one seat however many locations they work at (a membership is per location, MDV-P1-071).
 /// </summary>
-// shortcut: one hard-coded plan; the console has versioned plans now (MDV-P5-042, ADR-019), but they reach the clinic database only with the
-// per-country write path of MDV-P5-041. Replace this with the organisation's plan entitlements then.
-static class StarterPlan
+// shortcut: one plan for every organisation of an environment, set by configuration; the console has versioned plans now (MDV-P5-042, ADR-019),
+// but they reach the clinic database only with the per-country write path of MDV-P5-041. Replace this with the organisation's plan entitlements then.
+public sealed class StarterPlan
 {
-    const int Doctors = 1, Staff = 2;
+    public int Doctors { get; set; } = 1;
+    public int Staff { get; set; } = 2;
     // Test seam, internal and keyed by tenant id so parallel test classes never see each other's cap. Empty in production: nothing calls it.
     static readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, bool> Raised = new();
     internal static void RaiseCapForTests(Guid tenantId) => Raised[tenantId] = true;
 
     /// <summary>Call inside the transaction that adds the seat, before saving it. The per-tenant advisory lock makes parallel adds count one after the other.</summary>
-    public static async Task EnsureRoomAsync(TenancyDbContext db, Guid tenantId, Role adding, CancellationToken cancellationToken, Guid? person = null)
+    public async Task EnsureRoomAsync(TenancyDbContext db, Guid tenantId, Role adding, CancellationToken cancellationToken, Guid? person = null)
     {
         if (Raised.ContainsKey(tenantId)) return;
         var key = $"plan:{tenantId}";
@@ -33,7 +35,7 @@ static class StarterPlan
         // One seat per signed-in person; an invitee has no user yet and is their own seat.
         var seats = held.Where(m => m.UserId is null).Select(m => m.Role).Concat(held.Where(m => m.UserId is not null).GroupBy(m => m.UserId).Select(g => g.First().Role)).ToList();
         var doctors = seats.Count(IsDoctor);
-        if (IsDoctor(adding) ? doctors >= Doctors : seats.Count - doctors >= Staff) throw new PlanLimitException();
+        if (IsDoctor(adding) ? doctors >= Doctors : seats.Count - doctors >= Staff) throw new PlanLimitException(Doctors, Staff);
     }
 
     static bool IsDoctor(Role role) => role is Role.SoloDoctor or Role.HospitalDoctor;

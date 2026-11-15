@@ -51,6 +51,9 @@ param ledgerDigestRetentionDays int = env == 'prod' ? 3650 : 7
 param ledgerDigestPolicyLocked bool = false
 @description('Image of the database deploy job (migrations and roles inside the VNet). Pinned; the job downloads db-migrate from Blob.')
 param dbJobImage string = 'mcr.microsoft.com/azure-cli:2.92.0'
+@description('Plan cap (MDV-P1-069, StarterPlan.cs): doctors and other staff an organisation may have. Dev is raised so the pilot audit can set up a 3-doctor clinic; every other environment keeps the starter plan.')
+param planDoctors int = env == 'dev' ? 3 : 1
+param planStaff int = env == 'dev' ? 5 : 2
 @description('Platform console (ADR-014): application (client) id of its Entra app registration in the company tenant (infra/entra/console-app.sh). Not a secret.')
 @minLength(36)
 param consoleClientId string
@@ -487,6 +490,9 @@ resource app 'Microsoft.Web/sites@2023-12-01' = {
         { name: 'Web__AppPath', value: '/app/' }
         { name: 'Invitations__LinkBaseUrl', value: 'https://${appHost}/app' }
         { name: 'PublicSite__Deployments__SignUpUrls__IN', value: 'https://${appHost}/app/signup' }
+        // The plan cap (MDV-P1-069): the app refuses to start on a value under 1 doctor or 0 staff.
+        { name: 'Plan__Doctors', value: string(planDoctors) }
+        { name: 'Plan__Staff', value: string(planStaff) }
         // No password anywhere: the app signs in with an Entra token for its managed identity, a login IN ROLE medvya_app made by the
         // database job (PostgresDataSources). The login name is the app's name. The server certificate is checked.
         { name: 'ConnectionStrings__Medvya', value: 'Host=${postgres.outputs.fqdn};Database=${postgres.outputs.databaseName};Username=${appName};SslMode=VerifyFull' }

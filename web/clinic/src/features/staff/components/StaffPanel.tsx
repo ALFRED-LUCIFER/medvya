@@ -61,7 +61,9 @@ type Props = {
   adding: boolean;
   addFailed: boolean;
   emailFailed: boolean;
-  planFull: boolean;
+  /** The plan-limit sentence with the plan's real numbers, when the server refused for that. */
+  planFull: string | null;
+  reactivatePlanFull: string | null;
   working: boolean;
   rowFailed: boolean;
   onOpen: () => void;
@@ -256,7 +258,7 @@ export default function StaffPanel(p: Props) {
             <Field id="staff-reactivate-reason" label={t('staff.offboardReason')} error={p.reactivateForm.formState.errors.reason && t('staff.offboardReasonRequired')}>
               <Textarea rows={3} maxLength={500} {...p.reactivateForm.register('reason')} />
             </Field>
-            {p.reactivateError && <p role="alert" className={fieldError}>{t(`staff.reactivateError.${p.reactivateError}`)}</p>}
+            {p.reactivateError && <p role="alert" className={fieldError}>{p.reactivateError === 'planFull' ? p.reactivatePlanFull : t(`staff.reactivateError.${p.reactivateError}`)}</p>}
             <div className="flex flex-wrap gap-2">
               <Button type="submit" loading={p.reactivateWorking}>{t('staff.reactivateConfirm')}</Button>
               <Button type="button" variant="outline" onClick={p.onReactivateCancel}>{t('settings.cancel')}</Button>
@@ -323,7 +325,7 @@ export default function StaffPanel(p: Props) {
             )}
             {p.addFailed && <p role="alert" className={fieldError}>{t('staff.error.add')}</p>}
             {p.emailFailed && <p role="alert" className={fieldError}>{t('staff.error.email')}</p>}
-            {p.planFull && <p role="alert" className={fieldError}>{t('plan.full')}</p>}
+            {p.planFull && <p role="alert" className={fieldError}>{p.planFull}</p>}
             <StickyActionBar className={cardBar}>
               {p.step !== 'role' && <Button type="button" variant="outline" onClick={p.onBack}>{t('staff.back')}</Button>}
               {p.step !== 'permissions' && <Button type="button" disabled={!p.canContinue} onClick={p.onNext}>{t('staff.next')}</Button>}

@@ -3,6 +3,7 @@ using Medvya.BuildingBlocks.Infrastructure;
 using Medvya.Tenancy.Application;
 using Medvya.Tenancy.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -55,7 +56,12 @@ public static class TenancyModule
         IReadOnlyCollection<Guid>? internalOrganisations = null)
     {
         AddShared(services, connectionString, blobConnectionString, blobEndpoint);
+        // The plan cap (MDV-P1-069): a wrong Plan:Doctors or Plan:Staff stops the app at start-up, it never falls back to another cap.
+        // Read from the host's configuration when there is one; a composition without one (test harnesses) keeps the default plan.
+        services.AddOptions<StarterPlan>().Configure<IServiceProvider>((plan, sp) => sp.GetService<IConfiguration>()?.GetSection("Plan").Bind(plan))
+            .Validate(p => p is { Doctors: >= 1, Staff: >= 0 }, "Plan:Doctors must be 1 or more and Plan:Staff must be 0 or more.").ValidateOnStart();
         return services
+            .AddSingleton(sp => sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<StarterPlan>>().Value)
             .AddSingleton(sp => new FeatureReleaseCache(sp.GetRequiredService<TimeProvider>(), (internalOrganisations ?? []).ToHashSet()))
             .AddScoped<IFeatureFlags, FeatureFlags>()
             .AddScoped<ITermsAcceptance, TermsAcceptances>()

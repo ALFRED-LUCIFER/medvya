@@ -15,7 +15,7 @@ namespace Medvya.Tenancy.Infrastructure;
 /// "staff.role") and writes its audit event in one transaction, so an unaudited permission change never commits.
 /// </summary>
 public sealed class StaffRoster(TenancyDbContext db, ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, TimeProvider clock,
-    IEnumerable<IStaffOffboardingParticipant> offboarding, IStaffAccess access, ICurrentFacility facility) : IStaffRoster
+    IEnumerable<IStaffOffboardingParticipant> offboarding, IStaffAccess access, ICurrentFacility facility, StarterPlan plan) : IStaffRoster
 {
     const string Section = "staff.role";
     static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() } };
@@ -218,7 +218,7 @@ public sealed class StaffRoster(TenancyDbContext db, ICurrentTenant tenant, ICur
             Before = JsonSerializer.Serialize(new { status = MembershipStatus.Offboarded }, Json), After = JsonSerializer.Serialize(new { status = member.Status, reason }, Json),
         });
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
-        await StarterPlan.EnsureRoomAsync(db, TenantId, member.Role, cancellationToken, member.UserId); // coming back takes a seat again, unless the person holds one at another location
+        await plan.EnsureRoomAsync(db, TenantId, member.Role, cancellationToken, member.UserId); // coming back takes a seat again, unless the person holds one at another location
         await db.SaveChangesAsync(cancellationToken);
         await audit.WriteAsync(new AuditEvent
         {

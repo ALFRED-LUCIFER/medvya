@@ -18,7 +18,7 @@ namespace Medvya.IntegrationTests;
 /// <summary>MDV-P5-033: native app sign-in (OIDC in the system browser, PKCE, one-time code), rotating refresh tokens, replay and revocation.</summary>
 public sealed class NativeSignInTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IDisposable
 {
-    const string Redirect = "medvya-clinician://auth";
+    internal const string Redirect = "medvya-clinician://auth";
     readonly WebApplicationFactory<Program> factory = StaffSignInTests.CreateFactory(sql.ConnectionString);
     readonly Guid tenant = Guid.NewGuid();
 
@@ -53,14 +53,14 @@ public sealed class NativeSignInTests(PostgresFixture sql) : IClassFixture<Postg
         return (user, membership.Id);
     }
 
-    static (string Verifier, string Challenge) Pkce()
+    internal static (string Verifier, string Challenge) Pkce()
     {
         var verifier = Base64Url.EncodeToString(RandomNumberGenerator.GetBytes(32));
         return (verifier, Base64Url.EncodeToString(SHA256.HashData(Encoding.ASCII.GetBytes(verifier))));
     }
 
     /// <summary>The system browser's part: login → provider → callback → complete. Returns the code from the app redirect.</summary>
-    static async Task<string> BrowserSignIn(HttpClient browser, string subject, string challenge, Action<HttpResponseMessage>? onCallback = null)
+    internal static async Task<string> BrowserSignIn(HttpClient browser, string subject, string challenge, Action<HttpResponseMessage>? onCallback = null)
     {
         var start = await browser.GetAsync(new Uri($"/native/login?redirect_uri={Uri.EscapeDataString(Redirect)}&code_challenge={challenge}&code_challenge_method=S256", UriKind.Relative));
         Assert.Equal(HttpStatusCode.Redirect, start.StatusCode);

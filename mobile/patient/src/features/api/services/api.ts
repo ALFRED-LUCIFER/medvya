@@ -33,14 +33,18 @@ export function onSessionEnded(listener: () => void) {
 export const postAnonymous = (path: string, body: unknown) =>
   fetch(`${apiBase()}${path}`, { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 
-/** Keeps the pair `request` returns, unless the phone was signed out meanwhile (then nothing is kept). Null: nothing issued. */
+/**
+ * Keeps the pair `request` returns, unless the phone was signed out meanwhile: then the pair is ended on the server and
+ * nothing is kept. Null: nothing issued.
+ */
 async function grant(request: () => Promise<TokenPair | null>) {
   const since = generation;
   const pair = await request();
   if (!pair) return null;
-  if (since !== generation) throw new SessionEndedError();
+  const late = async () => { await endServerSession({ access: pair.access_token, refresh: pair.refresh_token }); return new SessionEndedError(); };
+  if (since !== generation) throw await late();
   await SecureStore.setItemAsync(REFRESH, pair.refresh_token, deviceOnly);
-  if (since !== generation) { await SecureStore.deleteItemAsync(REFRESH); throw new SessionEndedError(); } // a wipe ran during the write
+  if (since !== generation) { await SecureStore.deleteItemAsync(REFRESH); throw await late(); } // a wipe ran during the write
   refreshToken = pair.refresh_token;
   access = pair.access_token;
   return access;
@@ -97,11 +101,11 @@ export function forgetTokens() {
 }
 
 /**
- * Ends the server session too (POST /v1/patient/logout, 204), with the tokens held when it is called, so the phone can wipe
- * at once. Best effort: offline, the session ends after 7 days unused, and the phone holds no token for it.
+ * Ends the server session too (POST /v1/patient/logout, 204), with the tokens held when it is called (or a pair that came
+ * back after a sign-out), so the phone can wipe at once. Best effort: offline, the session ends after 7 days unused, and the
+ * phone holds no token for it.
  */
-export async function endServerSession() {
-  const held = { access, refresh: refreshToken };
+export async function endServerSession(held: { access: string | null; refresh: string | null } = { access, refresh: refreshToken }) {
   if (!apiBase() || !held.refresh) return;
   const logout = (token: string) => fetch(`${apiBase()}/v1/patient/logout`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
   try {

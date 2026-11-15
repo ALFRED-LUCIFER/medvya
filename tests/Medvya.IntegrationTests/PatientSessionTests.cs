@@ -41,7 +41,8 @@ public sealed partial class PatientSessionTests : IClassFixture<PostgresFixture>
     public PatientSessionTests(PostgresFixture sql)
     {
         this.sql = sql;
-        factory = StaffSignInTests.CreateFactory(sql.ConnectionString).WithWebHostBuilder(b => WithSms(b, sms));
+        // Through CreateFactory's hook, not WithWebHostBuilder: a derived factory's staff sign-in would call the parent's OIDC back channel.
+        factory = StaffSignInTests.CreateFactory(sql.ConnectionString, b => WithSms(b, sms));
     }
 
     /// <summary>A host whose SMS codes land in <paramref name="sms"/>; also used by the authorisation matrix.</summary>
@@ -185,6 +186,42 @@ public sealed partial class PatientSessionTests : IClassFixture<PostgresFixture>
 
         using var staffToken = await Client().PostAsync(U("/native/token"), new FormUrlEncodedContent([KeyValuePair.Create("grant_type", "refresh_token"), KeyValuePair.Create("refresh_token", tokens.Refresh)]));
         Assert.Equal(HttpStatusCode.BadRequest, staffToken.StatusCode);
+    }
+
+    /// <summary>The other way round: a live staff session, as a native access token or as the web cookie, is no caller at all on a patient endpoint.</summary>
+    [Fact]
+    public async Task AStaffTokenOrCookieOpensNoPatientEndpoint()
+    {
+        var id = Guid.NewGuid();
+        var subject = id.ToString();
+        await using (var db = sql.Identity())
+        {
+            db.Users.Add(new StaffUser { Id = id, Issuer = IdentityProviders.Development, Subject = subject, DisplayName = "Dr. Arjun Rao (synthetic)" });
+            await db.SaveChangesAsync();
+        }
+
+        var (verifier, challenge) = NativeSignInTests.Pkce();
+        using var phone = Client();
+        var code = await NativeSignInTests.BrowserSignIn(phone, subject, challenge);
+        using var exchange = await Client().PostAsync(U("/native/token"), new FormUrlEncodedContent([KeyValuePair.Create("grant_type", "authorization_code"),
+            KeyValuePair.Create("code", code), KeyValuePair.Create("code_verifier", verifier), KeyValuePair.Create("redirect_uri", NativeSignInTests.Redirect)]));
+        Assert.Equal(HttpStatusCode.OK, exchange.StatusCode);
+        var staffAccess = (await exchange.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("access_token").GetString()!;
+        Assert.Equal(HttpStatusCode.OK, (await Api(staffAccess, HttpMethod.Get, "/v1/me/sessions")).StatusCode); // the token is live
+        Assert.Equal(HttpStatusCode.Unauthorized, (await Api(staffAccess, HttpMethod.Get, "/v1/patient/me")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await Api(staffAccess, HttpMethod.Post, "/v1/patient/logout")).StatusCode);
+
+        using var browser = Client();
+        await StaffSignInTests.SignIn(browser, subject);
+        Task<HttpResponseMessage> WithCookie(HttpMethod method, string path)
+        {
+            var request = new HttpRequestMessage(method, U(path));
+            request.Headers.Add(Host.Api.Auth.StaffAuthentication.CsrfHeader, "1"); // so a refusal is the policy's, not the CSRF check's
+            return browser.SendAsync(request);
+        }
+        Assert.Equal(HttpStatusCode.OK, (await WithCookie(HttpMethod.Get, "/v1/me/sessions")).StatusCode); // the cookie is live
+        Assert.Equal(HttpStatusCode.Unauthorized, (await WithCookie(HttpMethod.Get, "/v1/patient/me")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await WithCookie(HttpMethod.Post, "/v1/patient/logout")).StatusCode);
     }
 
     [Fact]

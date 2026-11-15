@@ -504,7 +504,9 @@ public sealed class PatientEndpointTests(PostgresFixture sql) : IClassFixture<Po
         using var admin = Client(host, "admin");
         Assert.Equal(HttpStatusCode.OK, (await Search(desk, new { })).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await Search(desk, new { })).StatusCode);
-        Assert.Equal(HttpStatusCode.TooManyRequests, (await Search(desk, new { })).StatusCode);
+        var refused = await Search(desk, new { });
+        Assert.Equal(HttpStatusCode.TooManyRequests, refused.StatusCode);
+        Assert.Equal((true, "application/problem+json"), (refused.Headers.RetryAfter?.Delta > TimeSpan.Zero, refused.Content.Headers.ContentType?.MediaType)); // #1365
         Assert.Equal(HttpStatusCode.OK, (await Search(admin, new { })).StatusCode);
     }
 

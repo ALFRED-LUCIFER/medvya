@@ -5,6 +5,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Medvya.IntegrationTests;
@@ -57,6 +58,47 @@ public class SecurityBaselineTests
         var codes = new List<HttpStatusCode>();
         for (var i = 0; i < 3; i++) codes.Add((await client.GetAsync(new Uri("/health", UriKind.Relative))).StatusCode);
         Assert.Equal([HttpStatusCode.OK, HttpStatusCode.OK, HttpStatusCode.TooManyRequests], codes);
+    }
+
+    // #1365: a refused request says when to come back and why, never an empty answer the browser shows as a blank page or a download.
+    [Fact]
+    public async Task ARefusedRequestCarriesRetryAfterAndAProblemBody()
+    {
+        var client = Client(permitsPerMinute: 1);
+        await client.GetAsync(new Uri("/health", UriKind.Relative));
+        var refused = await client.GetAsync(new Uri("/health", UriKind.Relative));
+        Assert.Equal(HttpStatusCode.TooManyRequests, refused.StatusCode);
+        Assert.InRange(refused.Headers.RetryAfter!.Delta!.Value, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(60));
+        Assert.Equal("application/problem+json", refused.Content.Headers.ContentType!.MediaType);
+        var problem = await refused.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal((429, "Too many requests"), (problem.GetProperty("status").GetInt32(), problem.GetProperty("title").GetString()));
+        Assert.True(refused.Headers.Contains("Content-Security-Policy"));
+    }
+
+    // #1365: a clinic's staff share one internet address, so signed-in requests are counted per user; only requests without a session share
+    // the address's count. Mutation checks: key every request by address in GeneralRateLimit (the second user is refused); drop
+    // UseSignedInRateLimit from UseStaffAuthentication (the third signed-in request passes).
+    [Fact]
+    public async Task SignedInRequestsAreLimitedPerUserAndOthersPerAddress()
+    {
+        using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b.UseSetting("RateLimiting:PermitsPerMinute", "2")
+            .ConfigureTestServices(s => PatientEndpointTests.SignInFromHeaders(s, Guid.NewGuid())));
+        using var client = factory.CreateClient(new() { BaseAddress = new Uri("https://clinic.medvya.test") });
+        async Task<HttpStatusCode> Staff(string? user)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, new Uri("/v1/staff", UriKind.Relative));
+            if (user is not null) request.Headers.Add("X-Test-User", user);
+            return (await client.SendAsync(request)).StatusCode;
+        }
+        var (first, second) = (Guid.NewGuid().ToString(), Guid.NewGuid().ToString());
+
+        // No database here, so a signed-in request is refused for its capability (403): what matters is 429 or not.
+        Assert.Equal([HttpStatusCode.Forbidden, HttpStatusCode.Forbidden, HttpStatusCode.TooManyRequests], new[] { await Staff(first), await Staff(first), await Staff(first) });
+        Assert.Equal(HttpStatusCode.Forbidden, await Staff(second)); // same address, own count
+        // Without a session the address is counted, and a signed-in colleague at that address is not held up by it.
+        Assert.Equal([HttpStatusCode.Unauthorized, HttpStatusCode.Unauthorized, HttpStatusCode.TooManyRequests], new[] { await Staff(null), await Staff(null), await Staff(null) });
+        Assert.Equal(HttpStatusCode.TooManyRequests, (await client.GetAsync(new Uri("/health", UriKind.Relative))).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, await Staff(second));
     }
 
     // MDV-P1-038: the public site has no sign-in, so the per-IP limit is its only brake on scraping and floods.

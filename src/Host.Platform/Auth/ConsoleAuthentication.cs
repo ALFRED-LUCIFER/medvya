@@ -117,6 +117,7 @@ public static partial class ConsoleAuthentication
     public static WebApplication UseConsoleAuthentication(this WebApplication app)
     {
         app.UseAuthentication();
+        app.UseSignedInRateLimit(); // before authorization, so a refused (401, 403) request is counted too
         app.Use(async (ctx, next) =>
         {
             if (ctx.Request.Cookies.ContainsKey(CookieName)

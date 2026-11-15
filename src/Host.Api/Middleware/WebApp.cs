@@ -37,7 +37,7 @@ public static class WebApp
         app.MapFallbackToFile($"{Path}/{{*path:nonfile}}", "app/index.html", new StaticFileOptions
         {
             OnPrepareResponse = ctx => ctx.Context.Response.Headers[HeaderNames.CacheControl] = "no-cache",
-        }).AllowAnonymous();
+        }).AllowAnonymous().DisableRateLimiting(); // a refused shell is a blank page (#1365); it is one small file, like the scripts above
         return app;
     }
 }

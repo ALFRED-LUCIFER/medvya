@@ -31,7 +31,7 @@ MEDVYA_LOAD_HOT_DAY=1 MEDVYA_LOAD_THINK_MS=500 MEDVYA_LOAD_SECONDS=60 MEDVYA_LOA
 Other outputs: `MEDVYA_LOAD_RESULTS=<path>` writes the numbers as JSON; `MEDVYA_LOAD_BASELINE=<path>` (a results file) also fails the run when a
 step's p95 is more than 20 % (and at least 25 ms) over the baseline's.
 
-The test is skipped unless `MEDVYA_LOAD=1` (the script sets it), so `dotnet test` stays fast. The per-IP and per-user rate limits are raised
+The test is skipped unless `MEDVYA_LOAD=1` (the script sets it), so `dotnet test` stays fast. The general (per user, per address without a session) and per-user rate limits are raised
 (`RateLimiting:PermitsPerMinute` and two more) only inside this harness; production configuration is untouched.
 
 ## Nightly regression check

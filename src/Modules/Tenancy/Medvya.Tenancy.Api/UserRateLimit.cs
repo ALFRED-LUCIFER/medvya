@@ -20,7 +20,7 @@ public static class UserRateLimit
             RateLimitPartition.GetFixedWindowLimiter(user, _ => new FixedWindowRateLimiterOptions { PermitLimit = permitsPerMinute, Window = TimeSpan.FromMinutes(1) })));
 
     /// <summary>
-    /// Applies the named per-user limit (429 when used up). Add it before <c>.Audited(...)</c> so a refused request is not
+    /// Applies the named per-user limit (429 with Retry-After when used up). Add it before <c>.Audited(...)</c> so a refused request is not
     /// counted as an access. Not registered = the request fails (fail closed).
     /// </summary>
     public static TBuilder RequireUserRateLimit<TBuilder>(this TBuilder builder, string name) where TBuilder : IEndpointConventionBuilder =>
@@ -29,6 +29,10 @@ public static class UserRateLimit
             var http = ctx.HttpContext;
             if (http.User.FindFirstValue(ClaimTypes.NameIdentifier) is not { } user) return Results.Unauthorized();
             using var lease = await http.RequestServices.GetRequiredKeyedService<PartitionedRateLimiter<string>>(name).AcquireAsync(user, 1, http.RequestAborted);
-            return lease.IsAcquired ? await next(ctx) : Results.StatusCode(StatusCodes.Status429TooManyRequests);
+            if (lease.IsAcquired) return await next(ctx);
+            // As the general limit answers (GeneralRateLimit): when to come back, and a small problem body.
+            var seconds = lease.TryGetMetadata(MetadataName.RetryAfter, out var after) ? Math.Max(1, (int)Math.Ceiling(after.TotalSeconds)) : 60;
+            http.Response.Headers.RetryAfter = seconds.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            return Results.Problem(statusCode: StatusCodes.Status429TooManyRequests, title: "Too many requests", detail: $"Try again in {seconds} seconds.");
         });
 }

@@ -1,8 +1,13 @@
 /** Shared fetch for every feature: a timeout and bounded, jittered retry for requests that are safe to repeat (MDV-P1-048). */
 export const timeoutMs = 15_000;
 export const maxRetries = 2;
-const retriableStatus = new Set([502, 503, 504]);
+const retriableStatus = new Set([429, 502, 503, 504]);
 const backoffMs = (attempt: number) => Math.random() * 400 * 2 ** attempt;
+// A 429 (rate limit, #1365) says when to come back: wait that long, at most the server's one-minute window. Nothing was done, so asking again is safe.
+const refusedWaitMs = (res: Response) => {
+  const seconds = Number(res.headers.get('Retry-After'));
+  return seconds > 0 ? Math.min(seconds, 60) * 1000 : null;
+};
 
 /** The request got no answer in time. Carries no URL or body, so nothing patient-related can leak through it. */
 export class RequestTimeoutError extends Error {
@@ -29,12 +34,14 @@ async function attempt(url: string, { timeout = timeoutMs, ...init }: RequestIni
 export async function apiFetch(url: string, init: RequestInit & { timeout?: number } = {}): Promise<Response> {
   const retries = safeToRepeat(init) ? maxRetries : 0;
   for (let n = 0; ; n++) {
+    let wait = backoffMs(n);
     try {
       const res = await attempt(url, init);
       if (n >= retries || !retriableStatus.has(res.status)) return res;
+      if (res.status === 429) wait = refusedWaitMs(res) ?? wait;
     } catch (e) {
       if (n >= retries || init.signal?.aborted) throw e;
     }
-    await new Promise((r) => setTimeout(r, backoffMs(n)));
+    await new Promise((r) => setTimeout(r, wait));
   }
 }

@@ -55,6 +55,27 @@ describe('apiFetch', () => {
     expect(f.mock.calls.map((c) => (c[1].headers as Record<string, string>)['Idempotency-Key'])).toEqual(['k1', 'k1']);
   });
 
+  // #1365: a rate-limited read comes back by itself once the server's Retry-After has passed.
+  it('waits for Retry-After on a 429, then asks again', async () => {
+    const f = vi.fn().mockResolvedValueOnce(new Response('{}', { status: 429, headers: { 'Retry-After': '7' } })).mockResolvedValueOnce(answer(200));
+    vi.stubGlobal('fetch', f);
+    const p = apiFetch('/v1/x');
+    await vi.advanceTimersByTimeAsync(6_999);
+    expect(f).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(f).toHaveBeenCalledTimes(2);
+    expect((await p).status).toBe(200);
+  });
+
+  it('hands a 429 that keeps coming to the screen after the bounded retries, and never repeats a refused write', async () => {
+    const f = vi.fn().mockImplementation(() => Promise.resolve(new Response('{}', { status: 429, headers: { 'Retry-After': '1' } })));
+    vi.stubGlobal('fetch', f);
+    expect(((await run(apiFetch('/v1/x'))) as Response).status).toBe(429);
+    expect(f).toHaveBeenCalledTimes(maxRetries + 1);
+    expect(((await run(apiFetch('/v1/appointments', { method: 'POST', body: '{}' }))) as Response).status).toBe(429);
+    expect(f).toHaveBeenCalledTimes(maxRetries + 2);
+  });
+
   it('does not retry a 4xx answer', async () => {
     const f = vi.fn().mockResolvedValue(answer(409));
     vi.stubGlobal('fetch', f);

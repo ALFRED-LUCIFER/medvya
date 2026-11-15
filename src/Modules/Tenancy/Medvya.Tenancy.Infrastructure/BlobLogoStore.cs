@@ -11,7 +11,8 @@ namespace Medvya.Tenancy.Infrastructure;
 /// Logos in a private Blob container (no public access). Reads go through a read-only SAS link that expires. Azure: the managed identity and a
 /// user-delegation SAS (the container is made by Bicep; the app cannot create it). Local Azurite: the connection string, account-key links.
 /// A key is random and written once (a new upload gets a new key), so the bytes read for a printed paper are kept in memory by key and a changed
-/// logo is simply another key: every PDF after the first prints without a storage round trip (#1365 F-067).
+/// logo is simply another key: every PDF after the first prints without a storage round trip (#1365 F-067). Only what a paper reads (the logo
+/// and the signature image) is kept; an upload is not, because the same store holds the owner's ID and the registration certificates.
 /// </summary>
 public sealed class BlobLogoStore : ILogoStore, IDisposable
 {
@@ -44,7 +45,6 @@ public sealed class BlobLogoStore : ILogoStore, IDisposable
             containerReady = true;
         }
         await container.GetBlobClient(key).UploadAsync(new BinaryData(content), new BlobUploadOptions { HttpHeaders = new BlobHttpHeaders { ContentType = contentType } }, cancellationToken);
-        Keep(key, content);
     }
 
     public async Task DeleteAsync(string key, CancellationToken cancellationToken = default)

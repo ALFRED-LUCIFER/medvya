@@ -1184,6 +1184,45 @@
         }
       }
     },
+    "/v1/encounters/{encounterId}/take-over": {
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "encounterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/TakeOverVisit"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/v1/encounters/{encounterId}/note/addenda": {
       "post": {
         "tags": [
@@ -13698,6 +13737,20 @@
         "type": "object",
         "properties": {
           "country": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "TakeOverVisit": {
+        "required": [
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "reason": {
             "type": [
               "null",
               "string"

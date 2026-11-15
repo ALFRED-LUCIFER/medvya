@@ -1521,6 +1521,45 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/encounters/{encounterId}/take-over": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    encounterId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["TakeOverVisit"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/encounters/{encounterId}/note/addenda": {
         parameters: {
             query?: never;
@@ -10769,6 +10808,9 @@ export interface components {
         };
         StartRequest: {
             country: null | string;
+        };
+        TakeOverVisit: {
+            reason: null | string;
         };
         TaperStep: {
             dose: string;

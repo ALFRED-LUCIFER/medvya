@@ -130,6 +130,8 @@ export const maxReasonLength = 500;
 /** An addendum needs its text and why it is added (MDV-P2-013); the server checks the same. */
 export const addendumSchema = z.object({ text: z.string().trim().min(1).max(maxSectionLength), reason: z.string().trim().min(1).max(maxReasonLength) });
 export type AddendumForm = z.infer<typeof addendumSchema>;
+/** Taking over an unsigned visit from its doctor needs a reason (#1365), as long as an addendum's at most; the server checks the same. */
+export const takeOverSchema = z.object({ reason: z.string().trim().min(1).max(maxReasonLength) });
 
 /** Why an addendum was refused: confirm identity, another addendum won the same moment, not allowed, or anything else. */
 export type AddendumFailure = 'reauth' | 'stale' | 'denied' | 'failed';

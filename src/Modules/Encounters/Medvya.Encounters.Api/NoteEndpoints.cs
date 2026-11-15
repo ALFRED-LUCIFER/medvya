@@ -42,6 +42,12 @@ public static class NoteEndpoints
                 : await service.SignAsync(encounterId, body, ct) is { } view ? Results.Ok(view) : Results.NotFound())
             .RequireCapability(Capability.ClinicalNotes, Access.Sign)
             .AuditedByUseCase("note.sign", "note", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
+        // #1365: a colleague takes over an unsigned visit whose doctor cannot sign it, with a reason; the use case checks access and records both doctors.
+        app.MapPost("/v1/encounters/{encounterId:guid}/take-over", async (Guid encounterId, [FromBody] TakeOverVisit? body, [FromServices] IConsultNotes service, CancellationToken ct) =>
+                body is null ? Results.ValidationProblem(new Dictionary<string, string[]> { ["reason"] = ["required"] })
+                : await service.TakeOverAsync(encounterId, body, ct) ? Results.NoContent() : Results.NotFound())
+            .RequireCapability(Capability.ClinicalNotes, Access.Sign)
+            .AuditedByUseCase("encounter.takeover", "encounter", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
         // MDV-P2-013: an addendum is signed under the same gate as the note; the PDF is a read of the note that also stores the copy it hands out.
         app.MapPost("/v1/encounters/{encounterId:guid}/note/addenda", async (Guid encounterId, [FromBody] AddNoteAddendum? body, [FromServices] IConsultNotes service, CancellationToken ct) =>
                 body is null ? Results.ValidationProblem(new Dictionary<string, string[]> { ["body"] = ["required"] })

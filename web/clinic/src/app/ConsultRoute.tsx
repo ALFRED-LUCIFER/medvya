@@ -32,6 +32,7 @@ import { useLetterController, useReferralsController } from '../features/referra
 import SlipPage from '../features/orders/components/SlipPage';
 import { useOrdersController, useSlipController } from '../features/orders/hooks/useOrdersController';
 import { useNoteController } from '../features/encounters/hooks/useNoteController';
+import { useTakeOverController } from '../features/encounters/hooks/useTakeOverController';
 import { useStepUpReturn } from '../features/encounters/hooks/useStepUpReturn';
 import type { StepUpReturn } from '../features/encounters/domain/stepUp';
 import AssessmentDiagnoses from '../features/problems/components/AssessmentDiagnoses';
@@ -61,7 +62,11 @@ function Consult({ encounterId, boardPath, online, canOrder, canReconcile, canSi
   const consult = { ...consultation, onEnd: finish.onRequestEnd };
   const phone = usePhone();
   // One controller for both views (MDV-P2-041): switching keeps the form, the autosave and every typed word.
+  // #1365: a doctor who does not lead this unsigned visit sees why Sign is locked and may take the visit over (the server decides).
+  const takeOverController = useTakeOverController(encounterId);
+  const lead = consult.banner?.encounter.leadClinicianId;
   const note = { ...noteController, onRequestSign: finish.onRequestSign, timeZone: consult.banner?.timeZone,
+    takeOver: noteController.canSign && lead !== undefined && lead !== userId ? takeOverController : undefined,
     patient: consult.banner && { name: consult.banner.patient.fullName, mrn: consult.banner.patient.mrn, dateOfBirth: consult.banner.patient.dateOfBirth, allergies: consult.banner.allergies } };
   const ended = consult.banner?.encounter.status === 'Ended';
   const patient = consult.banner && { ...consult.banner.patient, allergies: consult.banner.allergies };

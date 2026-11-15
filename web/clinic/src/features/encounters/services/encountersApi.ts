@@ -8,6 +8,8 @@ export const fetchEncounter = (id: string) => send<EncounterBanner>(`/v1/encount
 export const endEncounter = (id: string) => post<Encounter>(`/v1/encounters/${id}/end`, {});
 /** MDV-P1-091: "Confirmed with the patient"; the server records who and when, and allows only the doctor leading the consultation. */
 export const confirmIdentity = (id: string) => post<Encounter>(`/v1/encounters/${id}/identity-confirmation`, {});
+/** #1365: a colleague takes over an unsigned visit whose doctor cannot sign it. The reason travels in the body. */
+export const takeOverVisit = (id: string, reason: string) => post<void>(`/v1/encounters/${id}/take-over`, { reason });
 // The plan's follow-up (MDV-P2-043): a period code in the body.
 export const fetchFollowUp = (id: string) => send<FollowUp>(`/v1/encounters/${id}/follow-up`);
 export const saveFollowUp = (id: string, period: FollowUpPeriod | null) =>

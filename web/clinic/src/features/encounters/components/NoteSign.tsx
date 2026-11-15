@@ -7,6 +7,7 @@ import { checklistKey, type ChecklistItem } from '../domain/checklist';
 import { sectionLabelKey, withTitle, type NoteSignature, type SignFailure, type SignPatient } from '../domain/note';
 import type { StepUpReturn } from '../domain/stepUp';
 import StepUpConfirmed from './StepUpConfirmed';
+import TakeOverVisit, { type TakeOverProps } from './TakeOverVisit';
 
 export type SignProblem = SignFailure | { kind: 'unsaved' } | { kind: 'finding' } | null;
 type Props = {
@@ -16,6 +17,8 @@ type Props = {
   onRequest: () => void; onCancel: () => void; onConfirm: () => void;
   /** Back from the step-up (MDV-P2-047): focus on Sign and a status line. */
   resume: StepUpReturn;
+  /** #1365: set for a doctor who does not lead this unsigned visit. Sign is locked and says why; they may take the visit over. */
+  takeOver?: TakeOverProps;
 };
 
 /** E-06: Sign note, with a confirmation that says what signing means. Hidden without the capability (the server decides either way). */
@@ -28,11 +31,13 @@ export function SignNote(p: Props) {
       {p.canSign && (
         <div className="flex flex-wrap items-center gap-3">
           {/* Inline on purpose: it runs again each render, so focus lands once the checklist has loaded and Sign is enabled. */}
-          <Button ref={el => { signRef.current = el; p.resume.focus(el); }} loading={p.signing} disabled={p.remaining > 0} aria-describedby="sign-remaining" onClick={p.onRequest}>{t('noteSign.button')}</Button>
-          <p id="sign-remaining" aria-live="polite" className="inline-flex items-center gap-1.5 font-bold">
-            {p.remaining > 0 ? <CircleAlert aria-hidden className="size-4" /> : <CircleCheck aria-hidden className="size-4" />}
-            {p.remaining > 0 ? tCount('signChecklist.remaining', p.remaining) : t('signChecklist.ready')}
-          </p>
+          <Button ref={el => { signRef.current = el; p.resume.focus(el); }} loading={p.signing} disabled={p.remaining > 0 || !!p.takeOver} aria-describedby="sign-remaining" onClick={p.onRequest}>{t('noteSign.button')}</Button>
+          {p.takeOver ? <TakeOverVisit {...p.takeOver} /> : (
+            <p id="sign-remaining" aria-live="polite" className="inline-flex items-center gap-1.5 font-bold">
+              {p.remaining > 0 ? <CircleAlert aria-hidden className="size-4" /> : <CircleCheck aria-hidden className="size-4" />}
+              {p.remaining > 0 ? tCount('signChecklist.remaining', p.remaining) : t('signChecklist.ready')}
+            </p>
+          )}
         </div>
       )}
       <SignProblemText problem={p.problem} />

@@ -27,6 +27,7 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
     public DbSet<ConsultNote> ConsultNotes => Set<ConsultNote>();
     public DbSet<SignedNoteVersion> SignedNoteVersions => Set<SignedNoteVersion>();
     public DbSet<SignedNotePdf> SignedNotePdfs => Set<SignedNotePdf>();
+    public DbSet<EncounterHandover> EncounterHandovers => Set<EncounterHandover>();
     public DbSet<OutboxEvent> Outbox => Set<OutboxEvent>();
     public DbSet<HistoryEntry> HistoryEntries => Set<HistoryEntry>();
     public DbSet<PregnancyEpisode> PregnancyEpisodes => Set<PregnancyEpisode>();
@@ -54,6 +55,12 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
                 t.HasCheckConstraint("CK_Encounters_EndedHasTime", "(\"Status\" = 'Ended') = (\"EndedAt\" IS NOT NULL)");
                 t.HasCheckConstraint("CK_Encounters_IdentityConfirmedHasWho", "(\"IdentityConfirmedAt\" IS NULL) = (\"IdentityConfirmedBy\" IS NULL)");
             });
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<EncounterHandover>(e =>
+        {
+            e.Property(x => x.Reason).HasMaxLength(SignedNoteVersion.MaxReasonLength);
+            e.HasIndex(x => new { x.TenantId, x.EncounterId });
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         // Chart facts (MDV-P2-004): one table each, by patient. Enums are stored as their names.

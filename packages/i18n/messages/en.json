@@ -2011,7 +2011,7 @@
   "doctors.choose": "Choose…",
   "doctors.back": "Back",
   "doctors.next": "Next",
-  "doctors.email": "Email for the invitation",
+  "doctors.email": "Email",
   "doctors.emailHint": "The invitation to join is sent here.",
   "doctors.added": "{name} was added and the invitation was sent. Their licence is recorded as confirmed by you.",
   "doctors.added.signatureFailed": "The signature image could not be saved; add it from the list.",

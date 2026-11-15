@@ -2000,7 +2000,7 @@
   "doctors.choose": "चुनें…",
   "doctors.back": "पीछे",
   "doctors.next": "आगे",
-  "doctors.email": "निमंत्रण के लिए ईमेल",
+  "doctors.email": "ईमेल",
   "doctors.emailHint": "जुड़ने का निमंत्रण यहीं भेजा जाता है।",
   "doctors.added": "{name} को जोड़ दिया गया और निमंत्रण भेज दिया गया। उनका लाइसेंस आपके द्वारा प्रमाणित के रूप में दर्ज है।",
   "doctors.added.signatureFailed": "हस्ताक्षर की छवि सहेजी नहीं जा सकी; सूची से जोड़ें।",

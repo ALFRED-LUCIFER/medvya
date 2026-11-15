@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { loadCatalog, makeI18n } from '@medvya/i18n';
-import { ageYears, aheadWords, canReprint, canUndo, echoMs, endKinds, groupByColumn, inToday, isFrontDeskView, isOthersChange, listGroups, minutesSince, moveError, needsRebooking, nextConsultId, nextState, serverNow, updatedMs, visibleColumns, walkInError, withUpdated, type BoardCard } from './board';
+import { ageYears, aheadWords, canReprint, canUndo, echoMs, endKinds, groupByColumn, inToday, isFrontDeskView, isOthersChange, listGroups, minutesSince, moveError, needsRebooking, nextConsultId, nextState, serverNow, updatedMs, visibleColumns, walkInDoctors, walkInError, withUpdated, type BoardCard } from './board';
 
 describe('walk-in (MDV-P1-025)', () => {
   it('tells "no free slot" (choose a doctor to queue with) and "busy" from other failures', () => {
@@ -131,6 +131,13 @@ describe('walk-in doctors (UX-10)', () => {
     expect(inToday({ hours: [{ ...h('09:00', '13:00'), room: null }], unavailable: [{ ...h('00:00', '23:59'), reason: 'Leave', label: null }] })).toBe(false);
     // Away for the morning session only: still in for the afternoon.
     expect(inToday({ hours: [{ ...h('09:00', '13:00'), room: null }, { ...h('16:00', '19:00'), room: null }], unavailable: [{ ...h('09:00', '13:00'), reason: 'Leave', label: null }] })).toBe(true);
+  });
+  it('offers only the doctors in today, and every doctor on a day nobody has hours (a Sunday the clinic opens)', () => {
+    const rao = { calendarId: 'rao', calendarKind: 'Doctor' as const, name: 'Dr. Rao', hours: [{ ...h('09:00', '13:00'), room: null }], unavailable: [] };
+    const menon = { ...rao, calendarId: 'menon', name: 'Dr. Menon', hours: [] };
+    const room = { ...rao, calendarId: 'room', calendarKind: 'Resource' as const, name: 'Room 1' };
+    expect(walkInDoctors([rao, menon, room]).map(d => d.id)).toEqual(['rao']);
+    expect(walkInDoctors([{ ...rao, hours: [] }, menon, room]).map(d => d.id)).toEqual(['rao', 'menon']);
   });
 });
 

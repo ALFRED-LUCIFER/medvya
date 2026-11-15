@@ -110,12 +110,23 @@ public sealed class WalkInTests(PostgresFixture sql) : IClassFixture<PostgresFix
         Assert.Equal((h.SecondDoctor, true), (queued.CalendarId, queued.Unscheduled));
     }
 
-    /// <summary>Nobody works today (Sunday): there is no doctor to queue with, so the desk is still asked to choose one.</summary>
+    /// <summary>
+    /// Nobody works today (a Sunday the clinic opens, no doctor's template does): the patient is at the desk, so "next available" queues them
+    /// with a doctor not on leave. Only with every doctor on leave is the desk asked to choose one.
+    /// </summary>
     [Fact]
-    public async Task NextAvailableOnADayNobodyWorksStillAsksForADoctor()
+    public async Task NextAvailableOnADayNobodyWorksQueuesWithADoctorNotOnLeave()
     {
+        var sunday = Monday.AddDays(6);
         h.Clock.Advance(SchedulingHarness.At(10, 0).AddDays(6) - h.Clock.GetUtcNow());
+        await h.Adjustments(h.Admin).SaveAsync(new SaveAdjustment { FacilityId = h.Facility, CalendarId = h.Doctor, Kind = ExceptionKind.Leave, FromDate = sunday, ToDate = sunday });
         Assert.Equal("no_free_slot", (await Assert.ThrowsAsync<SlotUnavailableException>(() => h.Booking(h.Reception).WalkInAsync(For(doctor: null)))).Code);
+
+        // Dr. Menon also has no Sunday hours but is not on leave: the walk-in is queued with Dr. Menon and checked in.
+        await h.Schedule(h.Admin).SaveTemplateAsync(h.DoctorTemplate() with { CalendarId = h.SecondDoctor });
+        var queued = await h.Booking(h.Reception).WalkInAsync(For(doctor: null));
+        Assert.Equal((h.SecondDoctor, true, true), (queued.CalendarId, queued.WalkIn, queued.Unscheduled));
+        Assert.Equal(AppointmentState.ReadyForDoctor, (await h.FrontDesk(h.Reception).CheckInAsync(queued.Id, new CheckIn())).State);
     }
 
     /// <summary>No double booking (MDV-P1-022) holds for walk-ins: six desks at once for two free slots get two distinct slots and four queued.</summary>

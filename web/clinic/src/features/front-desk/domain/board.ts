@@ -195,6 +195,13 @@ export const newPatientWalkIn: WalkInChoice = { ...emptyWalkIn, visitType: 'NewC
 export const inToday = (c: Pick<ScheduleColumn, 'hours' | 'unavailable'>) =>
   c.hours.some(h => !c.unavailable.some(u => Date.parse(u.start) <= Date.parse(h.start) && Date.parse(u.end) >= Date.parse(h.end)));
 
+/** Walk-in's doctor choice: the doctors in today; when none is (nobody has hours today), every doctor. */
+export function walkInDoctors(columns: Pick<ScheduleColumn, 'calendarId' | 'calendarKind' | 'name' | 'hours' | 'unavailable'>[]) {
+  const all = columns.filter(c => c.calendarKind === 'Doctor');
+  const today = all.filter(inToday);
+  return (today.length > 0 ? today : all).map(c => ({ id: c.calendarId, name: c.name }));
+}
+
 /** 409 codes of a walk-in: nothing free today (the desk then chooses a doctor to queue with), or the calendar is busy. */
 // already_today: the patient has an open visit today; the desk confirms before a second one is made (MDV-P1-052).
 export const walkInErrors = ['no_free_slot', 'busy', 'terms_not_accepted', 'already_today'] as const;

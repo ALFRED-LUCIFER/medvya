@@ -20,7 +20,7 @@ test('a second tenant\'s user cannot see the first tenant\'s patients, schedule 
 
   await search.fill('Meera');
   await search.press('Enter');
-  await expect(page.getByRole('status')).toHaveText('No patients match.');
+  await expect(page.getByRole('status').filter({ hasText: 'No patients match.' })).toHaveText('No patients match.'); // the top bar search has its own status
 
   // Straight at the API with the same session: the other tenant's rows do not exist for this user.
   const record = await page.request.get(`/v1/patients/${meeraId}`);

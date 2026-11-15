@@ -56,6 +56,8 @@ public static partial class StaffAuthentication
                 o.ResponseType = OpenIdConnectResponseType.Code;
                 o.ResponseMode = OpenIdConnectResponseMode.Query;
                 o.UsePkce = true;
+                // Invitations match preferred_username, email or upn (ProviderEmails, from the one directory Medvya administers); Entra sends email only for this scope.
+                o.Scope.Add("email");
                 o.SaveTokens = false; // nothing downstream needs them, so they are not kept anywhere
                 o.MapInboundClaims = false;
                 // Only the local dev provider may use plain http, and it exists only in Development.

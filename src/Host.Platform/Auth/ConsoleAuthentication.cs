@@ -55,6 +55,8 @@ public static partial class ConsoleAuthentication
                 o.ResponseType = OpenIdConnectResponseType.Code;
                 o.ResponseMode = OpenIdConnectResponseMode.Query;
                 o.UsePkce = true;
+                // Invitations match preferred_username, email or upn (ProviderEmails, from the one directory Medvya administers); Entra sends email only for this scope.
+                o.Scope.Add("email");
                 o.SaveTokens = false;
                 o.MapInboundClaims = false;
                 o.RequireHttpsMetadata = !builder.Environment.IsDevelopment();

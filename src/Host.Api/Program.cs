@@ -48,7 +48,9 @@ builder.AddStaffAuthentication();
 builder.AddNativeAuthentication(); // the staff app's bearer tokens, on the same server-side sessions (MDV-P5-033)
 // Waiting-room TVs sign in with a display token, never a staff session (MDV-P1-031).
 builder.Services.AddAuthentication().AddQueueDisplay();
-builder.Services.AddAuthorizationBuilder().AddStaffPolicies().AddOperationsPolicies(builder.Configuration).AddStaffAdminPolicy().AddQueueDisplayPolicy();
+// The patient app's bearer tokens after a right SMS code: their own scheme and policy, never a staff session (MDV-P5-033, ADR-020).
+builder.Services.AddAuthentication().AddPatientBearer();
+builder.Services.AddAuthorizationBuilder().AddStaffPolicies().AddOperationsPolicies(builder.Configuration).AddStaffAdminPolicy().AddQueueDisplayPolicy().AddPatientPolicy();
 // Enums travel as names ("Receptionist"), never as numbers that shift when an enum changes.
 builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddEmailSender(builder.Configuration, () => new Azure.Identity.ManagedIdentityCredential(Azure.Identity.ManagedIdentityId.SystemAssigned));
@@ -159,6 +161,7 @@ if (app.Services.GetService<IRecurringJobManager>() is { } recurring && app.Serv
 app.MapPublicSite();
 app.MapInvitations();
 app.MapPatientSignIn();
+app.MapPatientSession();
 app.MapOnboarding();
 app.MapPracticeSettings();
 app.MapDoctors();

@@ -289,6 +289,9 @@ public sealed class SessionControlTests(PostgresFixture sql) : IClassFixture<Pos
             Assert.Equal(HttpStatusCode.OK, (await browser.SendAsync(poll)).StatusCode);
         }
         Assert.True(DateTimeOffset.UtcNow - (await SessionOf(user.Id)).LastSeenAt > TimeSpan.FromMinutes(4));
+        // Nor does the live board's connection, which reconnects by itself and cannot carry the header on a WebSocket upgrade.
+        Assert.NotEqual(HttpStatusCode.Unauthorized, (await Send(browser, HttpMethod.Post, $"{Medvya.Scheduling.Api.BoardHub.Path}/negotiate?negotiateVersion=1")).StatusCode);
+        Assert.True(DateTimeOffset.UtcNow - (await SessionOf(user.Id)).LastSeenAt > TimeSpan.FromMinutes(4));
         Assert.Equal(HttpStatusCode.OK, await ContextStatus(browser));
         Assert.True(DateTimeOffset.UtcNow - (await SessionOf(user.Id)).LastSeenAt < TimeSpan.FromMinutes(1));
 

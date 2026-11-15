@@ -1,5 +1,6 @@
+// @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { apiFetch, maxRetries, RequestTimeoutError, timeoutMs } from './apiClient';
+import { activeWindowMs, apiFetch, maxRetries, RequestTimeoutError, timeoutMs } from './apiClient';
 
 const answer = (status: number) => new Response('{}', { status });
 const never = (_: string, init: RequestInit) => new Promise<Response>((_res, rej) => init.signal!.addEventListener('abort', () => rej(new DOMException('x', 'AbortError'))));
@@ -110,5 +111,22 @@ describe('apiFetch', () => {
     c.abort();
     await p;
     expect(f).toHaveBeenCalledTimes(1);
+  });
+
+  it('marks a request passive once nobody has touched the page for a minute, and not after input', async () => {
+    const f = vi.fn().mockImplementation(() => Promise.resolve(answer(200)));
+    vi.stubGlobal('fetch', f);
+    const sentPassive = (call: number) => new Headers((f.mock.calls[call]![1] as RequestInit).headers).has('X-Medvya-Passive');
+    window.dispatchEvent(new Event('keydown'));
+    await vi.advanceTimersByTimeAsync(activeWindowMs - 1);
+    await apiFetch('/v1/x');
+    expect(sentPassive(0)).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    await apiFetch('/v1/x', { headers: { 'X-Medvya-Csrf': '1' } });
+    expect(sentPassive(1)).toBe(true);
+    expect(new Headers((f.mock.calls[1]![1] as RequestInit).headers).get('X-Medvya-Csrf')).toBe('1');
+    window.dispatchEvent(new Event('pointerdown'));
+    await apiFetch('/v1/x');
+    expect(sentPassive(2)).toBe(false);
   });
 });

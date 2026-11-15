@@ -45,12 +45,19 @@ public static class SessionControl
     /// <summary>Runs on every cookie-authenticated request: the session row must still be live and match the cookie.</summary>
     public static async Task ValidatePrincipalAsync(CookieValidatePrincipalContext ctx)
     {
-        if (!await IsLiveAsync(ctx.Principal!, ctx.HttpContext.RequestServices, activity: !ctx.Request.Headers.ContainsKey(PassiveHeader), ctx.HttpContext.RequestAborted))
+        if (!await IsLiveAsync(ctx.Principal!, ctx.HttpContext.RequestServices, activity: IsActivity(ctx.HttpContext), ctx.HttpContext.RequestAborted))
         {
             ctx.RejectPrincipal();
             await ctx.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
         }
     }
+
+    /// <summary>
+    /// A request counts as the person's activity unless it says it is a background poll, or it opens a live-update (hub) connection:
+    /// the browser cannot put a header on a WebSocket upgrade, and the connection reconnects by itself on an unattended screen.
+    /// </summary>
+    internal static bool IsActivity(HttpContext http) =>
+        !http.Request.Headers.ContainsKey(PassiveHeader) && http.GetEndpoint()?.Metadata.GetMetadata<Microsoft.AspNetCore.SignalR.HubMetadata>() is null;
 
     /// <summary>
     /// The principal's server-side session is still live and scoped to the membership the principal names. Also run on every

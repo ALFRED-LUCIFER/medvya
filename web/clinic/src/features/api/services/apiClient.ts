@@ -18,7 +18,23 @@ export class RequestTimeoutError extends Error {
 const safeToRepeat = (init: RequestInit) =>
   ['GET', 'HEAD', undefined].includes(init.method?.toUpperCase()) || new Headers(init.headers).has('Idempotency-Key');
 
-async function attempt(url: string, { timeout = timeoutMs, ...init }: RequestInit & { timeout?: number }): Promise<Response> {
+// A request made while nobody has touched the page for a minute is a background poll (the bell, the board, a live-update refetch), so it
+// is sent as passive: the server does not count it as activity and an unattended screen reaches its idle time-out (#1365). One rule here
+// covers every timed poll, because a query function cannot tell a timed refetch from a person opening the screen.
+export const activeWindowMs = 60_000;
+let lastInput = Date.now(); // loading the page is the person's doing
+if (typeof window !== 'undefined')
+  for (const type of ['pointerdown', 'keydown', 'wheel'])
+    window.addEventListener(type, () => { lastInput = Date.now(); }, { capture: true, passive: true });
+const passive = (init: RequestInit): RequestInit => {
+  if (Date.now() - lastInput < activeWindowMs) return init;
+  const headers = new Headers(init.headers);
+  headers.set('X-Medvya-Passive', '1');
+  return { ...init, headers };
+};
+
+async function attempt(url: string, { timeout = timeoutMs, ...rest }: RequestInit & { timeout?: number }): Promise<Response> {
+  const init = passive(rest);
   const timer = new AbortController();
   const id = setTimeout(() => timer.abort(), timeout);
   const signal = init.signal ? AbortSignal.any([init.signal, timer.signal]) : timer.signal;

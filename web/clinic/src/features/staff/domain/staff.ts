@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { I18n } from '@medvya/i18n';
 import type { Access, Capability, Role } from '../../session/domain/session';
 
 // Mirrors src/Host.Api/Staff/StaffEndpoints.cs and IStaffRoster.cs (the server is the authority; these checks only save a round trip).
@@ -124,3 +125,9 @@ export const removesLocation = (current: string[], chosen: string[]) => current.
 export const reasonMissing = (current: string[], v: LocationsForm) => removesLocation(current, v.facilityIds) && v.reason === '';
 
 export type Step = 'role' | 'scope' | 'permissions';
+
+/** The plan's seat limits, as the server sends them with a `plan_limit` refusal (MDV-P1-069). */
+export type PlanLimit = { doctors: number; staff: number };
+/** "Your plan allows 3 doctors and 5 staff; contact Medvya to upgrade", with each count in the reader's plural form. */
+export const planFullText = ({ t, tCount }: Pick<I18n, 't' | 'tCount'>, plan: PlanLimit) =>
+  t('plan.full', { doctors: tCount('plan.doctors', plan.doctors), staff: tCount('plan.staff', plan.staff) });

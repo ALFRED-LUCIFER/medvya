@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { canChangeRole, isOwnerAmong, offboardBlock, roleOfValue, addableRows, canOffboard, canResend, canReactivate, canSetLocations, locationsOf, permissionRows, reasonMissing, rebookingMissing, removesLocation, statusLabel, type RoleCatalogue, type StaffMember } from './staff';
+import { loadCatalog, makeI18n } from '@medvya/i18n';
+import { canChangeRole, isOwnerAmong, offboardBlock, roleOfValue, addableRows, canOffboard, canResend, canReactivate, canSetLocations, locationsOf, permissionRows, planFullText, reasonMissing, rebookingMissing, removesLocation, statusLabel, type RoleCatalogue, type StaffMember } from './staff';
 
 const catalogue: RoleCatalogue = {
   builtIn: [
@@ -99,5 +100,17 @@ describe('locations (MDV-P1-071)', () => {
     expect(removesLocation(['a', 'b'], ['a'])).toBe(true);
     expect(reasonMissing(['a', 'b'], { facilityIds: ['a'], reason: '' })).toBe(true);
     expect(reasonMissing(['a', 'b'], { facilityIds: ['a', 'b', 'c'], reason: '' })).toBe(false);
+  });
+});
+
+describe('planFullText (MDV-P1-069)', () => {
+  it('says the plan\'s own numbers, each in the plural form of the language', async () => {
+    await Promise.all([loadCatalog('hi'), loadCatalog('ar')]);
+    const say = (locale: 'en' | 'hi' | 'ar', doctors: number, staff: number) => planFullText(makeI18n(locale, 'IN'), { doctors, staff });
+    expect(say('en', 1, 2)).toBe('Your plan allows 1 doctor and 2 staff; contact Medvya to upgrade');
+    expect(say('en', 3, 5)).toBe('Your plan allows 3 doctors and 5 staff; contact Medvya to upgrade');
+    expect(say('hi', 3, 5)).toBe('आपके प्लान में 3 डॉक्टर और 5 स्टाफ की अनुमति है; अपग्रेड के लिए Medvya से संपर्क करें');
+    expect(say('ar', 1, 2)).toBe('تتيح خطتك طبيبًا واحدًا وموظفَين اثنين؛ تواصل مع Medvya للترقية');
+    expect(say('ar', 3, 5)).toBe('تتيح خطتك 3 أطباء و5 موظفين؛ تواصل مع Medvya للترقية');
   });
 });

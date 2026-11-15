@@ -47,6 +47,8 @@ etag=$(az storage container immutability-policy show --account-name <storage> -c
 az storage container immutability-policy lock --account-name <storage> -c ledger-digests --if-match "$etag"
 ```
 
+**Plan cap (MDV-P1-069):** `Plan__Doctors` and `Plan__Staff` come from the parameters `planDoctors` and `planStaff`: 3 and 5 in dev (the pilot audit sets up a clinic with 3 doctors and 5 other staff), 1 and 2 (the starter plan, also the app's default when the settings are absent) in any other environment. The app refuses to start when a value is not a whole number, doctors is under 1 or staff is under 0.
+
 After the lock, every deployment of that environment passes `ledgerDigestPolicyLocked=true`. Azure refuses any write to a locked policy, even an unchanged one, so without it the deployment fails. Dev was locked on 13 Nov 2026, and `infra-dev.yml` passes it.
 
 **First deployment of an environment, once** (values never echoed or committed):

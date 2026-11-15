@@ -31,7 +31,7 @@
 ## Consequences
 
 - Until MDV-P5-050, `/pricing` still reads `pricing.json`. A price changed in the console must also be changed there until then (`shortcut:` in `pricing.json`).
-- Until the per-country write path of MDV-P5-041 exists, plan entitlements are not pushed to the clinic databases and `StarterPlan.cs` keeps enforcing 1 doctor and 2 staff for every organisation (`shortcut:` there and in MDV-P5-042).
+- Until the per-country write path of MDV-P5-041 exists, plan entitlements are not pushed to the clinic databases and `StarterPlan.cs` keeps enforcing 1 doctor and 2 staff for every organisation (or the environment's `Plan:Doctors` and `Plan:Staff`, MDV-P1-069) (`shortcut:` there and in MDV-P5-042).
 - The feature keys on a plan are plain strings. They are checked against the code feature list once MDV-P5-041 lands it.
 - Money in INR and AED is never summed (MDV-P5-043 reports them separately).
 

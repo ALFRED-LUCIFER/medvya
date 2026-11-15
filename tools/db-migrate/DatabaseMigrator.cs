@@ -27,10 +27,10 @@ public static class DatabaseMigrator
 
     /// <summary>
     /// The roles an Entra identity may sign in as: the clinic app, the migrator, reporting, and the platform console's own login and its narrow
-    /// organisation-review and feature-release logins (ADR-014: one identity per login, never one login in two roles).
+    /// organisation-review, feature-release and medicine-list logins (ADR-014: one identity per login, never one login in two roles).
     /// </summary>
     public static readonly IReadOnlySet<string> LoginRoles = new HashSet<string>(StringComparer.Ordinal)
-        { "medvya_app", "medvya_migrator", "medvya_reporting", "medvya_platform", "medvya_review", "medvya_features" };
+        { "medvya_app", "medvya_migrator", "medvya_reporting", "medvya_platform", "medvya_review", "medvya_features", "medvya_formulary" };
 
     /// <summary>
     /// The administrator's step (infra/postgres/roles.sql then table-rights.sql, idempotent): roles, schemas and privileges. Run it as a superuser or role administrator

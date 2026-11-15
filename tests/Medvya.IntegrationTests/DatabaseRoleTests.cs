@@ -53,6 +53,7 @@ public class DatabaseRoleTests(PostgresFixture sql) : IClassFixture<PostgresFixt
     [InlineData("medvya_platform", true)]
     [InlineData("medvya_review", true)]
     [InlineData("medvya_features", true)]
+    [InlineData("medvya_formulary", true)]
     [InlineData("medvya_patients", false)]
     [InlineData("medvya_owner", false)]
     public async Task OnlyLoginRolesCanBeMappedToAnEntraIdentity(string role, bool allowed)

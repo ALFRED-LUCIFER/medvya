@@ -502,10 +502,9 @@ resource app 'Microsoft.Web/sites@2023-12-01' = {
 
 // Platform console (MDV-P5-040, ADR-014): Host.Platform serving web/platform-admin, on the same plan and VNet. Company sign-on (OIDC) then the
 // member's own security key. Each database login is its own Entra identity: the system identity is the console's login (medvya_platform, no
-// clinic schema); consoleReviewDb is the organisation-review login (medvya_review, MDV-P1-064) and consoleFeaturesDb the feature-release login
-// (medvya_features, MDV-P5-041) of this country's database. One identity in two roles would be one wider login.
-// shortcut: the console's medicine list (medvya_formulary, ConnectionStrings__Formulary, #1358) gets an identity like these once its role is on
-// main; until then that page fails closed.
+// clinic schema); consoleReviewDb is the organisation-review login (medvya_review, MDV-P1-064), consoleFeaturesDb the feature-release login
+// (medvya_features, MDV-P5-041) of this country's database and consoleFormularyDb the medicine-list login (medvya_formulary, MDV-P5-064).
+// One identity in two roles would be one wider login.
 resource consoleReviewDb 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: 'id-review-${name}'
   location: location
@@ -514,6 +513,12 @@ resource consoleReviewDb 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-
 
 resource consoleFeaturesDb 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: 'id-features-${name}'
+  location: location
+  tags: tags
+}
+
+resource consoleFormularyDb 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+  name: 'id-formulary-${name}'
   location: location
   tags: tags
 }
@@ -531,7 +536,7 @@ resource console 'Microsoft.Web/sites@2023-12-01' = {
   name: consoleName
   location: location
   tags: tags
-  identity: { type: 'SystemAssigned, UserAssigned', userAssignedIdentities: { '${consoleReviewDb.id}': {}, '${consoleFeaturesDb.id}': {} } }
+  identity: { type: 'SystemAssigned, UserAssigned', userAssignedIdentities: { '${consoleReviewDb.id}': {}, '${consoleFeaturesDb.id}': {}, '${consoleFormularyDb.id}': {} } }
   properties: {
     serverFarmId: plan.id
     httpsOnly: true
@@ -560,6 +565,8 @@ resource console 'Microsoft.Web/sites@2023-12-01' = {
         { name: 'ConnectionStrings__Review', value: '${consoleDb};Username=${consoleReviewDb.name};Entra Client Id=${consoleReviewDb.properties.clientId}' }
         // Release switches per country database; this deployment is one country's (the UAE one sets its own :AE).
         { name: 'ConnectionStrings__Features__${country}', value: '${consoleDb};Username=${consoleFeaturesDb.name};Entra Client Id=${consoleFeaturesDb.properties.clientId}' }
+        // The Medvya-wide medicine list: the rows with no tenant in prescribing.FormularyItems only (row-level security).
+        { name: 'ConnectionStrings__Formulary', value: '${consoleDb};Username=${consoleFormularyDb.name};Entra Client Id=${consoleFormularyDb.properties.clientId}' }
         // Organisation documents (practice-assets, read only) through a user-delegation link signed with the system identity.
         { name: 'Storage__BlobEndpoint', value: storage.properties.primaryEndpoints.blob }
       ])
@@ -636,6 +643,7 @@ AZURE_CLIENT_ID="$ADMIN_CLIENT_ID" ./Medvya.DbMigrate entra "$db;Database=postgr
 AZURE_CLIENT_ID="$ADMIN_CLIENT_ID" ./Medvya.DbMigrate entra "$db;Database=postgres;Username=$ADMIN_NAME" medvya_platform "$CONSOLE_NAME" "$CONSOLE_OBJECT_ID"
 AZURE_CLIENT_ID="$ADMIN_CLIENT_ID" ./Medvya.DbMigrate entra "$db;Database=postgres;Username=$ADMIN_NAME" medvya_review "$REVIEW_NAME" "$REVIEW_OBJECT_ID"
 AZURE_CLIENT_ID="$ADMIN_CLIENT_ID" ./Medvya.DbMigrate entra "$db;Database=postgres;Username=$ADMIN_NAME" medvya_features "$FEATURES_NAME" "$FEATURES_OBJECT_ID"
+AZURE_CLIENT_ID="$ADMIN_CLIENT_ID" ./Medvya.DbMigrate entra "$db;Database=postgres;Username=$ADMIN_NAME" medvya_formulary "$FORMULARY_NAME" "$FORMULARY_OBJECT_ID"
 AZURE_CLIENT_ID="$MIGRATOR_CLIENT_ID" ./Medvya.DbMigrate migrate "$db;Database=$PGDATABASE;Username=$MIGRATOR_NAME"
 '''
 
@@ -676,6 +684,8 @@ resource dbJob 'Microsoft.App/jobs@2024-03-01' = {
           { name: 'REVIEW_OBJECT_ID', value: consoleReviewDb.properties.principalId }
           { name: 'FEATURES_NAME', value: consoleFeaturesDb.name }
           { name: 'FEATURES_OBJECT_ID', value: consoleFeaturesDb.properties.principalId }
+          { name: 'FORMULARY_NAME', value: consoleFormularyDb.name }
+          { name: 'FORMULARY_OBJECT_ID', value: consoleFormularyDb.properties.principalId }
           { name: 'DOTNET_SYSTEM_GLOBALIZATION_INVARIANT', value: '1' }
         ]
       }]

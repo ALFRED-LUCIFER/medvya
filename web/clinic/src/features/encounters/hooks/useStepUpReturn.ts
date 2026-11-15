@@ -4,12 +4,14 @@ import { parseResume, type ResumeAction, type StepUpReturn } from '../domain/ste
 
 /**
  * Back from the step-up (MDV-P2-047): the button of the action that asked scrolls into view and takes focus, then `confirmed` fills the
- * status line. Nothing is pressed for the doctor: the action still waits for their click.
+ * status line. Nothing is pressed for the doctor: the action still waits for their click. A doctor who clicked or typed before the button
+ * was there keeps their focus, and is still told (#1365 F-062): the line never depends on the focus move.
  */
 export function useStepUpReturn(action: ResumeAction): StepUpReturn {
   const [params, setParams] = useSearchParams();
   const [asked] = useState(() => parseResume(params.get('resume')) === action);
-  const pending = useRef(asked);
+  const pending = useRef(asked); // the focus may still move
+  const said = useRef(false);
   const [confirmed, setConfirmed] = useState(false);
   // The word leaves the address at once, so a reload or a copied link does not say it again.
   useEffect(() => {
@@ -25,12 +27,15 @@ export function useStepUpReturn(action: ResumeAction): StepUpReturn {
   }, [asked]);
   // A callback ref: the button appears only once the section's data has loaded.
   const focus = useCallback((el: HTMLButtonElement | null) => {
-    if (!el || !pending.current || el.disabled) return;
-    pending.current = false;
-    el.scrollIntoView({ block: 'center' });
-    el.focus({ preventScroll: true });
+    if (!el || !asked || said.current || el.disabled) return;
+    said.current = true;
+    if (pending.current) {
+      pending.current = false;
+      el.scrollIntoView({ block: 'center' });
+      el.focus({ preventScroll: true });
+    }
     setConfirmed(true); // the status line appears after the focus move, so the screen reader says it after the button
     el.addEventListener('click', () => setConfirmed(false), { once: true }); // pressed: the action's own answer takes over
-  }, []);
+  }, [asked]);
   return { focus, confirmed };
 }

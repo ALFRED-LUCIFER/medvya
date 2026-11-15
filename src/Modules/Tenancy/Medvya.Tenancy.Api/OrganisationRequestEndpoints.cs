@@ -1,3 +1,5 @@
+using Medvya.Audit.Application;
+using Medvya.BuildingBlocks.Domain;
 using Medvya.Identity.Application;
 using Medvya.Tenancy.Application;
 using Medvya.Tenancy.Domain;
@@ -120,7 +122,27 @@ public static class OrganisationApprovalEndpoints
         try { current = await states.CurrentAsync(ct); } catch (InvalidOperationException) { return Results.NotFound(); }
         // Approve is for a request in review and Reinstate for a suspended organisation: the same move, two deliberate actions.
         if (from is { } required && current != required) throw new SettingsValidationException([new("state", "transition")]);
+        if (to == OrganisationState.Approved && from == OrganisationState.Submitted) await RequireEveryDocumentOpenedAsync(scope.ServiceProvider, ct);
         await states.SetAsync(to, reason, ct);
         return Results.NoContent();
+    }
+
+    /// <summary>
+    /// The console's rule (MDV-P5-044) on this path too: approve only after this operator opened every document of the request since it was submitted.
+    /// The organisation's logged view (<c>organisation.document.view</c>, written before a link exists) is the record. shortcut: opened is not proof of read.
+    /// </summary>
+    static async Task RequireEveryDocumentOpenedAsync(IServiceProvider services, CancellationToken ct)
+    {
+        var operatorId = services.GetRequiredService<ICurrentUser>().UserId ?? throw new InvalidOperationException("No signed-in user."); // null would read every actor's views
+        var request = await services.GetRequiredService<IOrganisationRequests>().DetailAsync(ct);
+        var unopened = request.Documents.Select(d => d.Id).ToHashSet();
+        var trail = services.GetRequiredService<IAuditTrail>();
+        for (string? after = null; unopened.Count > 0;)
+        {
+            var page = await trail.QueryAsync(new AuditQuery(operatorId, null, "organisation.document.view", request.SubmittedAt, null, after, 200), ct);
+            unopened.ExceptWith(page.Items.Select(e => e.ResourceId).OfType<Guid>());
+            if ((after = page.Next) is null) break;
+        }
+        if (unopened.Count > 0) throw new SettingsValidationException([new("documents", "unopened")]);
     }
 }

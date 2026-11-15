@@ -101,6 +101,9 @@ test('J1: a new clinic owner sets up the practice, Medvya approves it, then a pa
     await page.getByLabel('Clinic registration certificate').setInputFiles(pdf);
     await page.getByRole('button', { name: 'Send again to Medvya' }).click();
     await expect(page.getByRole('status').filter({ hasText: 'Sent. Waiting for Medvya to review it.' })).toBeVisible();
+    // The operator opens every document of the resubmitted request before approving: the server refuses an approve without those logged views.
+    const detail = await (await ops.request.get(`/v1/operations/organisations/${tenantId}`)).json();
+    for (const document of detail.documents) expect((await ops.request.get(`/v1/operations/organisations/${tenantId}/documents/${document.id}`)).status()).toBe(200);
     expect((await act('approve', 'Documents checked')).status()).toBe(204);
     await ops.close();
 

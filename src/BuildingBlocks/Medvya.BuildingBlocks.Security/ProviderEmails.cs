@@ -6,8 +6,8 @@ namespace Medvya.BuildingBlocks.Security;
 public static class ProviderEmails
 {
     /// <summary>
-    /// Entra sends the sign-in name as preferred_username (always, with the profile scope), and email and upn when the app registration
-    /// adds them as optional claims; the development provider sends email. They are trusted because each host's authority is one
+    /// Entra sends the sign-in name as preferred_username (always, with the profile scope), email for the email scope both sign-ins request,
+    /// and upn when the app registration adds it as an optional claim; the development provider sends email. They are trusted because each host's authority is one
     /// directory that Medvya administers (infra/bicep, infra/entra), where only an administrator sets these values. An email the
     /// provider marks as not verified is left out.
     /// shortcut: with a multi-tenant or Entra External ID authority these claims are set by the other directory or by the person; require

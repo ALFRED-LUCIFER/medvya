@@ -83,6 +83,7 @@ public sealed class PlatformConsoleTests(PostgresFixture sql) : IClassFixture<Po
     {
         var challenge = await browser.GetAsync(new Uri(link is null ? "/bff/login" : $"/bff/login?link={link}", UriKind.Relative));
         Assert.Equal(HttpStatusCode.Redirect, challenge.StatusCode);
+        Assert.Contains("scope=openid%20profile%20email", challenge.Headers.Location!.Query, StringComparison.Ordinal); // Entra sends the email claim an invitation matches
         // email: the address the company directory reports for the account.
         var authorize = await browser.GetAsync(new Uri($"{challenge.Headers.Location}&login_hint={Uri.EscapeDataString(subject)}{(email is null ? "" : $"&email={Uri.EscapeDataString(email)}")}"));
         Assert.Equal(HttpStatusCode.Redirect, authorize.StatusCode);

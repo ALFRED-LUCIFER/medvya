@@ -51,6 +51,7 @@ public sealed class StaffSignInTests(PostgresFixture sql) : IClassFixture<Postgr
         var challenge = await browser.GetAsync(new Uri($"/bff/login?returnUrl={Uri.EscapeDataString(returnUrl)}", UriKind.Relative));
         Assert.Equal(HttpStatusCode.Redirect, challenge.StatusCode);
         Assert.Contains("code_challenge_method=S256", challenge.Headers.Location!.Query, StringComparison.Ordinal);
+        Assert.Contains("scope=openid%20profile%20email", challenge.Headers.Location!.Query, StringComparison.Ordinal); // Entra sends the email claim an invitation matches
         var authorize = await browser.GetAsync(new Uri($"{challenge.Headers.Location}&login_hint={subject}{extra}"));
         Assert.Equal(HttpStatusCode.Redirect, authorize.StatusCode);
         if (beforeCallback is not null) await beforeCallback();

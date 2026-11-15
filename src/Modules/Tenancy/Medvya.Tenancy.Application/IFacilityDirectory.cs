@@ -43,6 +43,9 @@ public interface IFacilityDirectory
     /// <summary>The images a printed prescription (and a signed note's PDF) carries: the practice logo and this doctor's signature at this facility.</summary>
     Task<PrintImages> PrintImagesAsync(Guid userId, Guid facilityId, CancellationToken cancellationToken = default);
 
+    /// <summary>The practice logo (PNG) for an email masthead; null when none was uploaded or it cannot be read, because a logo never holds up a message.</summary>
+    Task<byte[]?> LogoAsync(CancellationToken cancellationToken = default);
+
     /// <summary>Holidays of the facility between two facility-local dates (inclusive), name by date. Bookings on these dates are refused (MDV-P1-005).</summary>
     Task<IReadOnlyDictionary<DateOnly, string>> ClosuresAsync(Guid facilityId, DateOnly first, DateOnly last, CancellationToken cancellationToken = default);
 }

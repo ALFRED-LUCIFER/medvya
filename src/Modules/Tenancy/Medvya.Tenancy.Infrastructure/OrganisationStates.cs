@@ -50,14 +50,21 @@ public sealed partial class OrganisationStates(TenancyDbContext db, ICurrentTena
     static partial void EmailFailed(ILogger logger, OrganisationState state, string errorType);
 
     // No patient data: the organisation's name, the outcome and the operator's reason (plain words, never personal details). English only until templates are localised (MDV-P1-032).
-    internal static EmailMessage Message(string to, string organisation, OrganisationState state, string? reason) => state switch
+    // The masthead is Medvya's: the decision is Medvya's, not the organisation's.
+    internal static EmailMessage Message(string to, string organisation, OrganisationState state, string? reason)
     {
-        OrganisationState.Approved => new(to, $"{organisation} is approved on Medvya", $"{organisation} is approved. Sign in to Medvya to register patients and book visits."),
-        OrganisationState.NeedsChanges => new(to, $"Medvya needs changes to the request for {organisation}",
-            $"Medvya reviewed the request for {organisation} and needs changes.\n\nReason: {reason}\n\nSign in to Medvya, update the request and send it again."),
-        OrganisationState.Rejected => new(to, $"The request for {organisation} was not approved",
-            $"Medvya could not approve the request for {organisation}.\n\nReason: {reason}\n\nYou may start a new request."),
-        _ => new(to, $"{organisation} is suspended on Medvya",
-            $"Medvya has suspended {organisation}. Existing records stay readable; new registration, booking and signing are paused.\n\nReason: {reason}"),
-    };
+        var (subject, lead, next) = state switch
+        {
+            OrganisationState.Approved => ($"{organisation} is approved on Medvya", $"{organisation} is approved. Sign in to Medvya to register patients and book visits.", null),
+            OrganisationState.NeedsChanges => ($"Medvya needs changes to the request for {organisation}", $"Medvya reviewed the request for {organisation} and needs changes.",
+                "Sign in to Medvya, update the request and send it again."),
+            OrganisationState.Rejected => ($"The request for {organisation} was not approved", $"Medvya could not approve the request for {organisation}.", "You may start a new request."),
+            _ => ($"{organisation} is suspended on Medvya", $"Medvya has suspended {organisation}. Existing records stay readable; new registration, booking and signing are paused.", (string?)null),
+        };
+        if (state == OrganisationState.Approved) reason = null;
+        var text = lead + (reason is null ? "" : $"\n\nReason: {reason}") + (next is null ? "" : $"\n\n{next}");
+        var html = EmailHtml.Render(new EmailView("en", "Medvya", null, subject, [lead], reason is null ? [] : [new("Reason", reason)], null,
+            next is null ? [] : [next], [EmailHtml.MedvyaFooter]), logo: false);
+        return new(to, subject, text, Html: html);
+    }
 }

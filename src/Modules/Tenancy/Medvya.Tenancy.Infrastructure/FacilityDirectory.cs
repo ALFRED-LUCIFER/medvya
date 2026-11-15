@@ -43,6 +43,16 @@ public sealed class FacilityDirectory(TenancyDbContext db, ILogoStore store) : I
         return new(logo is null ? null : await store.ReadAsync(logo, cancellationToken), signature is null ? null : await store.ReadAsync(signature, cancellationToken));
     }
 
+    public Task<byte[]?> LogoAsync(CancellationToken cancellationToken = default) => Logo(db, store, cancellationToken);
+
+    internal static async Task<byte[]?> Logo(TenancyDbContext db, ILogoStore store, CancellationToken cancellationToken)
+    {
+        var key = await db.Profiles.AsNoTracking().Select(p => p.LogoKey).SingleOrDefaultAsync(cancellationToken);
+        if (key is null) return null;
+        try { return await store.ReadAsync(key, cancellationToken); }
+        catch (Exception e) when (e is not OperationCanceledException) { return null; } // the email goes out with the name only
+    }
+
     public async Task<IReadOnlyDictionary<Guid, PrescriberInfo>> PrescribersAsync(Guid facilityId, IReadOnlyCollection<Guid> userIds, CancellationToken cancellationToken = default)
     {
         var rows = await (

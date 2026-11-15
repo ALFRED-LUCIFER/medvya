@@ -1,4 +1,5 @@
 using System.Globalization;
+using Medvya.BuildingBlocks.Domain;
 
 namespace Medvya.Notifications.Application;
 
@@ -20,7 +21,15 @@ public static class SecureLinkCatalog
             "{0} هو رمزك لفتح المستند الذي شاركه {1}. تنتهي صلاحيته خلال 10 دقائق. لا تشاركه إلا مع من أرسلت إليه المستند."),
     };
 
-    static CultureInfo Culture(string lang) => CultureInfo.GetCultureInfo(lang switch { "hi" => "hi-IN", "ar" => "ar-AE", _ => "en-IN" });
+    static CultureInfo Culture(string lang) => MessageCatalog.Culture(lang);
+
+    // The HTML email's own words (MDV-P1-111): the opening without the link (the button carries it), how to open it, the button and the expiry label.
+    static readonly Dictionary<string, (string Lead, string How, string Open, string Expires)> EmailTexts = new()
+    {
+        ["en"] = ("{0} has shared a document with you.", "To open it, enter the code we text to your registered mobile.", "Open the document", "Expires"),
+        ["hi"] = ("{0} ने आपके साथ एक दस्तावेज़ साझा किया है।", "इसे खोलने के लिए, आपके पंजीकृत मोबाइल पर भेजा गया कोड डालें।", "दस्तावेज़ खोलें", "समाप्ति"),
+        ["ar"] = ("شارك {0} مستندًا معك.", "لفتحه، أدخل الرمز الذي نرسله إلى هاتفك المسجل.", "افتح المستند", "ينتهي"),
+    };
 
     static string When(DateTimeOffset localExpiry, string lang) => localExpiry.ToString("d MMM yyyy h:mm tt", Culture(lang));
 
@@ -34,6 +43,25 @@ public static class SecureLinkCatalog
     public static RenderedMessage PharmacyLink(string clinic, string url, DateTimeOffset localExpiry) =>
         new("A shared document", $"{clinic} has shared a document with your pharmacy: {url} To open it, ask the patient for the code we text to their registered mobile. The link works until {When(localExpiry, "en")}.",
             "SecureLink.pharmacy");
+
+    /// <summary>The HTML copy of <see cref="Link"/>: the button opens the link; the expiry is a labelled row with its time zone named.</summary>
+    public static EmailView LinkEmail(string? languageTag, RenderedMessage text, string sender, string location, string url, DateTimeOffset localExpiry, string timeZone)
+    {
+        var lang = MessageCatalog.Language(languageTag);
+        return View(lang, text, sender, location, string.Format(Culture(lang), EmailTexts[lang].Lead, sender), EmailTexts[lang].How, url, localExpiry, timeZone);
+    }
+
+    /// <summary>The HTML copy of <see cref="PharmacyLink"/>, in English like its text.</summary>
+    public static EmailView PharmacyLinkEmail(RenderedMessage text, string sender, string location, string url, DateTimeOffset localExpiry, string timeZone) =>
+        View("en", text, sender, location, $"{sender} has shared a document with your pharmacy.", "To open it, ask the patient for the code we text to their registered mobile.", url, localExpiry, timeZone);
+
+    static EmailView View(string lang, RenderedMessage text, string sender, string location, string lead, string how, string url, DateTimeOffset localExpiry, string timeZone)
+    {
+        var t = EmailTexts[lang];
+        return new(lang, sender, location == sender ? null : location, text.Subject, [lead],
+            [new(t.Expires, When(localExpiry, lang), MessageCatalog.ZoneName(timeZone, lang))], new(t.Open, url), [how],
+            [string.Format(Culture(lang), MessageCatalog.Words[lang].SentBy, sender)]);
+    }
 
     public static RenderedMessage Code(string? languageTag, string code, string clinic)
     {

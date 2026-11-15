@@ -18,13 +18,13 @@ async function axe(page: Page) {
 }
 
 const b64 = (s: string) => Buffer.from(s).toString('base64url');
-const owner = (over: object) => ({ displayName: 'Ops Admin (synthetic)', role: 'Owner', keyVerified: false, hasKey: false, canRegister: true, ...over });
+const owner = (over: object) => ({ displayName: 'Ops Admin (synthetic)', email: 'ops.admin@medvya.example', role: 'Owner', keyVerified: false, hasKey: false, canRegister: true, ...over });
 const team = {
   lastAccessReviewAt: null, accessReviewDueAt: '2026-11-01T00:00:00Z',
   members: [{ id: 'm-1', displayName: 'Ops Admin (synthetic)', email: 'ops.admin@medvya.example', role: 'Owner', hasKey: true, joined: true, lastActiveAt: '2026-11-07T05:00:00Z', accessEndsOn: null }],
 };
 const audit = [
-  { id: 'a2', occurredAt: '2026-11-07T05:01:00Z', action: 'team.invite', resourceType: 'platform_member', resourceId: 'm-2', subjectTenantId: null, actor: 'Ops Admin (synthetic)', reason: 'New licence reviewer joining' },
+  { id: 'a2', occurredAt: '2026-11-07T05:01:00Z', action: 'team.invite', resourceType: 'platform_member', resourceId: 'm-2', subjectTenantId: null, actor: 'Ops Admin (synthetic)', actorEmail: 'ops.admin@medvya.example', reason: 'New licence reviewer joining' },
   { id: 'a1', occurredAt: '2026-11-07T05:00:00Z', action: 'auth.signin', resourceType: 'platform_session', resourceId: 's-1', subjectTenantId: null, actor: 'Ops Admin (synthetic)', reason: null },
 ];
 
@@ -48,6 +48,7 @@ test('a link holder signs on, registers a security key in the browser, and only 
 
   await page.goto('/');
   await expect(page.getByText('Signed in as Ops Admin (synthetic) · Platform owner')).toBeVisible();
+  await expect(page.getByText('ops.admin@medvya.example')).toBeVisible(); // F-029: the person, not only the role
   await expect(page.getByRole('navigation')).toHaveCount(0); // no console until the key step
   expect(await axe(page)).toEqual([]);
   await page.getByRole('button', { name: 'Register security key' }).click();

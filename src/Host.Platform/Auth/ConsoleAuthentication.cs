@@ -78,8 +78,11 @@ public static partial class ConsoleAuthentication
         // Entra's object id is stable for the person across applications; "sub" is per application. The dev provider sends only "sub".
         var subject = principal.FindFirst("oid")?.Value ?? principal.FindFirst("sub")?.Value;
         var link = ctx.Properties?.Items.TryGetValue(LinkItem, out var l) == true ? l : null;
+        // Who the person is, for the team list and the audit log. Entra sends the address as "email" only when configured, else as "preferred_username".
+        var name = principal.FindFirst("name")?.Value;
+        var email = principal.FindFirst("email")?.Value ?? principal.FindFirst("preferred_username")?.Value;
         var session = issuer is null || subject is null ? null
-            : await ctx.HttpContext.RequestServices.GetRequiredService<IPlatformSignIn>().SignOnAsync(issuer, subject, link, ctx.HttpContext.RequestAborted);
+            : await ctx.HttpContext.RequestServices.GetRequiredService<IPlatformSignIn>().SignOnAsync(issuer, subject, link, name, email, ctx.HttpContext.RequestAborted);
         if (session is null)
         {
             SignOnRefused(ctx.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(ConsoleAuthentication)));
@@ -146,7 +149,7 @@ public static partial class ConsoleAuthentication
 
         app.MapGet("/v1/me", async (ClaimsPrincipal principal, [FromServices] IPlatformSignIn signIn, CancellationToken ct) =>
             await signIn.ValidateAsync(Read(principal, SessionIdClaim)!.Value, Read(principal, ClaimTypes.NameIdentifier)!.Value, activity: false, ct) is { } s
-                ? Results.Ok(new { s.DisplayName, Role = s.Role.ToString(), s.KeyVerified, s.HasKey, s.CanRegister })
+                ? Results.Ok(new { s.DisplayName, s.Email, Role = s.Role.ToString(), s.KeyVerified, s.HasKey, s.CanRegister })
                 : Results.Unauthorized())
             .RequireAuthorization(PlatformPolicies.SignedOn);
 

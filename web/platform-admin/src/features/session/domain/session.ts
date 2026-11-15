@@ -1,7 +1,7 @@
 export type PlatformRole = 'Owner' | 'Operations' | 'Support' | 'Finance' | 'Reviewer';
 
 /** GET /v1/me: who signed on, and how far: company sign-on alone, or the security key too. */
-export type Me = { displayName: string; role: PlatformRole; keyVerified: boolean; hasKey: boolean; canRegister: boolean };
+export type Me = { displayName: string; email: string; role: PlatformRole; keyVerified: boolean; hasKey: boolean; canRegister: boolean };
 
 /**
  * signedOut: company sign-on first. registerKey: this session holds an owner's one-hour link (or is the first owner's first key).

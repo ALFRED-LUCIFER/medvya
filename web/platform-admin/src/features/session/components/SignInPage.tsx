@@ -43,7 +43,10 @@ export default function SignInPage({ stage, me, hasLink, signOnFailed, keyFailed
 
         {stage !== 'signedOut' && me && (
           <div className="flex flex-col gap-3">
-            <p className="text-sm">{t('platform.signIn.as', { name: me.displayName, role: t(`platform.role.${me.role}`) })}</p>
+            <p className="text-sm">
+              {t('platform.signIn.as', { name: me.displayName, role: t(`platform.role.${me.role}`) })}
+              <span dir="ltr" className="block break-all text-muted-foreground">{me.email}</span>
+            </p>
             {stage === 'touchKey' && (
               <>
                 <p className="font-semibold">{t('platform.signIn.touch')}</p>

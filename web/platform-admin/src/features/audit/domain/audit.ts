@@ -1,6 +1,6 @@
 export type AuditEntry = {
   id: string; occurredAt: string; action: string; resourceType: string; resourceId: string | null; subjectTenantId: string | null;
-  actor: string | null; reason: string | null;
+  actor: string | null; actorEmail: string | null; reason: string | null;
 };
 
 /** Actions the console writes today, each with words in the catalogue, so no raw code reaches the screen. */

@@ -52,7 +52,7 @@ public interface IPlatformTeam
 }
 
 public sealed record AuditEntryView(Guid Id, DateTimeOffset OccurredAt, string Action, string ResourceType, Guid? ResourceId, Guid? SubjectTenantId,
-    string? Actor, string? Reason);
+    string? Actor, string? ActorEmail, string? Reason);
 
 public interface IPlatformAuditLog
 {
@@ -78,7 +78,7 @@ public interface IConsoleActions
 public sealed record ConsoleSession(Guid MemberId, Guid SessionId);
 
 /// <summary><see cref="CanRegister"/>: this session may register a key (it signed on with a usable link, or it is the first owner's first key).</summary>
-public sealed record SessionState(Guid MemberId, string DisplayName, PlatformRole Role, bool KeyVerified, bool HasKey, bool CanRegister);
+public sealed record SessionState(Guid MemberId, string DisplayName, string Email, PlatformRole Role, bool KeyVerified, bool HasKey, bool CanRegister);
 
 /// <summary>
 /// Console sign-in (MDV-P5-040): company sign-on starts a session that can only take the security-key step; a verified key (WebAuthn)
@@ -86,8 +86,11 @@ public sealed record SessionState(Guid MemberId, string DisplayName, PlatformRol
 /// </summary>
 public interface IPlatformSignIn
 {
-    /// <summary>Null when this company account is not a console member (or the link does not fit it).</summary>
-    Task<ConsoleSession?> SignOnAsync(string issuer, string subject, string? linkToken, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Null when this company account is not a console member (or the link does not fit it). <paramref name="name"/> and <paramref name="email"/>
+    /// are the person's, from the company sign-on: the member row takes them, so the audit log names who acted.
+    /// </summary>
+    Task<ConsoleSession?> SignOnAsync(string issuer, string subject, string? linkToken, string? name, string? email, CancellationToken cancellationToken = default);
     /// <summary>The live session, or null when it has ended, been revoked, or the member has lost access.</summary>
     Task<SessionState?> ValidateAsync(Guid sessionId, Guid memberId, bool activity, CancellationToken cancellationToken = default);
     /// <summary>Assertion options, or null when the member has no live key.</summary>

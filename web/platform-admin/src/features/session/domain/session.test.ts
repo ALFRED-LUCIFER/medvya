@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { linkFrom, stageOf, type Me } from './session';
 
-const me = (over: Partial<Me>): Me => ({ displayName: 'Ops Admin (synthetic)', role: 'Owner', keyVerified: false, hasKey: true, canRegister: false, ...over });
+const me = (over: Partial<Me>): Me => ({ displayName: 'Ops Admin (synthetic)', email: 'ops.admin@medvya.example', role: 'Owner', keyVerified: false, hasKey: true, canRegister: false, ...over });
 
 describe('stageOf', () => {
   it('opens the console only once the key is verified', () => {

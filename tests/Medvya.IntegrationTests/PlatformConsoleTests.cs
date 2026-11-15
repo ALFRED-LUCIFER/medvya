@@ -242,9 +242,44 @@ public sealed class PlatformConsoleTests(PostgresFixture sql) : IClassFixture<Po
         var team = await ownerBrowser.GetFromJsonAsync<JsonElement>(new Uri("/v1/team", UriKind.Relative));
         var joined = team.GetProperty("members").EnumerateArray().Single(m => m.GetProperty("email").GetString() == "kavya.reviewer@medvya.example");
         Assert.True(joined.GetProperty("hasKey").GetBoolean());
+        // F-036: the name typed at invitation gave way to the company directory's at sign-on, and the audit log names that person.
+        var name = joined.GetProperty("displayName").GetString()!;
+        Assert.StartsWith("New colleague", name, StringComparison.Ordinal);
+        Assert.Equal(name, me.GetProperty("displayName").GetString());
         var actions = (await Audit(ownerBrowser)).Select(a => (a.GetProperty("action").GetString(), a.GetProperty("actor").GetString())).ToList();
         Assert.Contains(("team.invite", owner.DisplayName), actions);
-        Assert.Contains(("key.register", "Kavya (synthetic)"), actions);
+        Assert.Contains(("key.register", name), actions);
+    }
+
+    // F-036: an invited member keeps the name the owner typed until they sign on; an address another member holds is never taken over.
+    [Fact]
+    public async Task AMemberIsNamedByTheCompanySignOnAndKeepsTheirOwnAddress()
+    {
+        var (owner, ownerKey) = await Member(PlatformRole.Owner);
+        var (other, _) = await Member(PlatformRole.Support);
+        using var ownerBrowser = await SignedIn(owner, ownerKey);
+        var team = await ownerBrowser.GetFromJsonAsync<JsonElement>(new Uri("/v1/team", UriKind.Relative));
+        Assert.Equal(owner.DisplayName, team.GetProperty("members").EnumerateArray().Single(m => m.GetProperty("id").GetGuid() == owner.Id).GetProperty("displayName").GetString());
+
+        async Task SignOn(string? name, string? email)
+        {
+            await using var scope = factory.Services.CreateAsyncScope();
+            Assert.NotNull(await scope.ServiceProvider.GetRequiredService<Medvya.Platform.Application.IPlatformSignIn>().SignOnAsync(owner.Issuer!, owner.Subject!, null, name, email));
+        }
+        var address = $"{Guid.NewGuid():N}@medvya.example";
+        await SignOn("  Asha Verma (synthetic)  ", address.ToUpperInvariant());
+        await SignOn(null, other.Email); // no name in the token: the last known one stays; the address is another member's
+        await SignOn(new string('x', PlatformMember.NameMax + 1), "not-an-address");
+        await using var db = Db();
+        var saved = await db.Members.SingleAsync(m => m.Id == owner.Id);
+        Assert.Equal(("Asha Verma (synthetic)", address), (saved.DisplayName, saved.Email));
+
+        // An entry written after the sign-on carries the person's name and address, in the list and in the export.
+        Assert.Equal(HttpStatusCode.NoContent, (await Post(ownerBrowser, "/v1/team/access-review", new { reason = "Quarterly review of console access" })).StatusCode);
+        var entry = (await Audit(ownerBrowser)).First(a => a.GetProperty("action").GetString() == "team.access_review" && a.GetProperty("actor").GetString() == "Asha Verma (synthetic)");
+        Assert.Equal(address, entry.GetProperty("actorEmail").GetString());
+        var csv = await (await Post(ownerBrowser, "/v1/audit/export", new { reason = "Annual audit request" })).Content.ReadAsStringAsync();
+        Assert.Contains($"\"Asha Verma (synthetic)\",\"{address}\",\"Quarterly review of console access\"", csv, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -378,7 +413,7 @@ public sealed class PlatformConsoleTests(PostgresFixture sql) : IClassFixture<Po
         Assert.Equal(HttpStatusCode.OK, export.StatusCode);
         Assert.Equal("text/csv", export.Content.Headers.ContentType!.MediaType);
         var csv = await export.Content.ReadAsStringAsync();
-        Assert.StartsWith("occurred_at,action,resource_type,resource_id,practice_id,actor,reason", csv, StringComparison.Ordinal);
+        Assert.StartsWith("occurred_at,action,resource_type,resource_id,practice_id,actor,actor_email,reason", csv, StringComparison.Ordinal);
         Assert.Contains("\"'=HYPERLINK(\"\"x\"\") review\"", csv, StringComparison.Ordinal);
         Assert.Contains("\"audit.export\"", csv, StringComparison.Ordinal);
         Assert.Contains("\"Annual audit request\"", csv, StringComparison.Ordinal);
@@ -442,6 +477,20 @@ public sealed class PlatformBootstrapTests(PostgresFixture sql) : IClassFixture<
         // And a new company account is not taken for the first owner once the team exists.
         using var stranger = PlatformConsoleTests.Browser(factory);
         Assert.Equal("/sign-in?signin=failed", (await PlatformConsoleTests.SignOn(stranger, "new")).Headers.Location!.OriginalString);
+    }
+
+    // F-036: the first owner is configured by account id only; the company sign-on says who the person is, whether the row exists yet or not.
+    [Fact]
+    public async Task TheFirstOwnerIsNamedByTheCompanySignOn()
+    {
+        await using var scope = factory.Services.CreateAsyncScope();
+        var session = await scope.ServiceProvider.GetRequiredService<Medvya.Platform.Application.IPlatformSignIn>()
+            .SignOnAsync(ConsoleProgram.DevCompanyIssuer, "platform-owner", null, "Asha Verma (synthetic)", "asha.verma@medvya.example");
+        await using var db = PlatformConsoleTests.Db(sql);
+        var owner = await db.Members.SingleAsync(m => m.Id == session!.MemberId);
+        Assert.Equal(("Asha Verma (synthetic)", "asha.verma@medvya.example", PlatformRole.Owner), (owner.DisplayName, owner.Email, owner.Role));
+        var log = await scope.ServiceProvider.GetRequiredService<Medvya.Platform.Application.IPlatformAuditLog>().ListAsync(null, null, 100);
+        Assert.All(log.Where(a => a.Action is "team.bootstrap" or "auth.signon"), a => Assert.Equal("Asha Verma (synthetic)", a.Actor));
     }
 }
 

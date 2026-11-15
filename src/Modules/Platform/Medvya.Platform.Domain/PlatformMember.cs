@@ -14,8 +14,9 @@ public sealed class PlatformMember
     public const int NameMax = 100, EmailMax = 254;
 
     [Classification(DataClass.Internal)] public Guid Id { get; init; } = Guid.CreateVersion7();
-    [Classification(DataClass.Personal)] public required string DisplayName { get; init; }
-    [Classification(DataClass.Personal)] public required string Email { get; init; }
+    /// <summary>As the inviting owner typed them, until the person signs on: then the company directory's name and address (who really acted).</summary>
+    [Classification(DataClass.Personal)] public required string DisplayName { get; set; }
+    [Classification(DataClass.Personal)] public required string Email { get; set; }
     [Classification(DataClass.Internal)] public PlatformRole Role { get; set; }
     [Classification(DataClass.Internal)] public string? Issuer { get; set; }
     [Classification(DataClass.Internal)] public string? Subject { get; set; }

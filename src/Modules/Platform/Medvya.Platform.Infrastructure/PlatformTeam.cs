@@ -117,10 +117,10 @@ sealed class PlatformAuditLog(PlatformDbContext db, IPlatformCaller caller, Time
     {
         db.AuditEntries.Add(PlatformAudit.Entry(caller, clock.GetUtcNow(), "audit.export", "platform_audit", null, reason));
         await db.SaveChangesAsync(cancellationToken); // logged before anything is handed out
-        var csv = new StringBuilder("occurred_at,action,resource_type,resource_id,practice_id,actor,reason\r\n");
+        var csv = new StringBuilder("occurred_at,action,resource_type,resource_id,practice_id,actor,actor_email,reason\r\n");
         foreach (var a in await View(db.AuditEntries.AsNoTracking().OrderBy(a => a.OccurredAt).ThenBy(a => a.Id)).ToListAsync(cancellationToken))
             csv.AppendJoin(',', [a.OccurredAt.ToString("O", CultureInfo.InvariantCulture), Cell(a.Action), Cell(a.ResourceType), a.ResourceId?.ToString() ?? "",
-                a.SubjectTenantId?.ToString() ?? "", Cell(a.Actor), Cell(a.Reason)]).Append("\r\n");
+                a.SubjectTenantId?.ToString() ?? "", Cell(a.Actor), Cell(a.ActorEmail), Cell(a.Reason)]).Append("\r\n");
         return csv.ToString();
     }
 
@@ -128,7 +128,7 @@ sealed class PlatformAuditLog(PlatformDbContext db, IPlatformCaller caller, Time
         from a in q
         join m in db.Members on a.ActorMemberId equals m.Id into actors
         from m in actors.DefaultIfEmpty()
-        select new AuditEntryView(a.Id, a.OccurredAt, a.Action, a.ResourceType, a.ResourceId, a.SubjectTenantId, m == null ? null : m.DisplayName, a.Reason);
+        select new AuditEntryView(a.Id, a.OccurredAt, a.Action, a.ResourceType, a.ResourceId, a.SubjectTenantId, m == null ? null : m.DisplayName, m == null ? null : m.Email, a.Reason);
 
     /// <summary>
     /// One quoted CSV cell. A cell a spreadsheet would run as a formula (=, +, -, @, tab, carriage return) is prefixed with an apostrophe,

@@ -19,7 +19,7 @@ export default function App({ locale, onLocaleChange }: { locale: Locale; onLoca
       busy={s.busy} languageSwitcher={languages} onSignOn={s.onSignOn} onTouchKey={s.onTouchKey} onRegisterKey={s.onRegisterKey} onSignOut={s.onSignOut} />;
   const items = navFor(s.me.role);
   return (
-    <ConsoleShell displayName={s.me.displayName} role={s.me.role} items={items} languageSwitcher={languages} signingOut={s.signingOut} onSignOut={s.onSignOut}>
+    <ConsoleShell displayName={s.me.displayName} email={s.me.email} role={s.me.role} items={items} languageSwitcher={languages} signingOut={s.signingOut} onSignOut={s.onSignOut}>
       <Routes>
         <Route path="/approvals/:tenantId?" element={<ApprovalsRoute role={s.me.role} operator={s.me.displayName} />} />
         <Route path="/features" element={<FeaturesRoute role={s.me.role} />} />

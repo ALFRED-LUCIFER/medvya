@@ -17,8 +17,10 @@ sealed class PlatformSignIn(PlatformDbContext db, IPlatformCaller caller, IFido2
 {
     const string Assertion = "a:", Registration = "r:";
 
-    public async Task<ConsoleSession?> SignOnAsync(string issuer, string subject, string? linkToken, CancellationToken cancellationToken = default)
+    public async Task<ConsoleSession?> SignOnAsync(string issuer, string subject, string? linkToken, string? name, string? email, CancellationToken cancellationToken = default)
     {
+        name = name?.Trim() is { Length: > 0 and <= PlatformMember.NameMax } n ? n : null;
+        email = email?.Trim().ToLowerInvariant() is { Length: <= PlatformMember.EmailMax } e && e.Contains('@', StringComparison.Ordinal) ? e : null;
         var now = clock.GetUtcNow();
         var member = await db.Members.SingleOrDefaultAsync(m => m.Issuer == issuer && m.Subject == subject && m.RemovedAt == null, cancellationToken);
         KeyLink? link = null;
@@ -40,11 +42,15 @@ sealed class PlatformSignIn(PlatformDbContext db, IPlatformCaller caller, IFido2
         else if (member is null && options.BootstrapOwner is { Issuer: { } bi, Subject: { } bs } boot && bi == issuer && bs == subject
                  && !await db.Members.AnyAsync(cancellationToken))
         {
-            member = new PlatformMember { DisplayName = boot.DisplayName, Email = boot.Email.ToLowerInvariant(), Role = PlatformRole.Owner, Issuer = issuer, Subject = subject, InvitedAt = now };
+            member = new PlatformMember { DisplayName = name ?? boot.DisplayName, Email = email ?? boot.Email.ToLowerInvariant(), Role = PlatformRole.Owner, Issuer = issuer, Subject = subject, InvitedAt = now };
             db.Members.Add(member);
             db.AuditEntries.Add(PlatformAudit.Entry(caller, now, "team.bootstrap", "platform_member", member.Id, actor: member.Id));
         }
         if (member is null || !member.HasAccess(now)) return null;
+        // The company directory says who this is, on every sign-on: a configured first owner or a mistyped invitation is corrected here.
+        if (name is not null) member.DisplayName = name;
+        // An address another current member holds is left alone: invitations are refused on a taken address, and so is this.
+        if (email is not null && !await db.Members.AnyAsync(m => m.Id != member.Id && m.RemovedAt == null && m.Email == email, cancellationToken)) member.Email = email;
 
         var session = new PlatformSession { MemberId = member.Id, CreatedAt = now, LastSeenAt = now, KeyLinkId = link?.Id };
         db.Sessions.Add(session);
@@ -66,7 +72,7 @@ sealed class PlatformSignIn(PlatformDbContext db, IPlatformCaller caller, IFido2
             await db.SaveChangesAsync(cancellationToken);
         }
         var hasKey = await db.Keys.AnyAsync(k => k.MemberId == memberId && k.RevokedAt == null, cancellationToken);
-        return new SessionState(member.Id, member.DisplayName, member.Role, session.KeyVerifiedAt is not null, hasKey, await MayRegisterAsync(session, member, cancellationToken));
+        return new SessionState(member.Id, member.DisplayName, member.Email, member.Role, session.KeyVerifiedAt is not null, hasKey, await MayRegisterAsync(session, member, cancellationToken));
     }
 
     public async Task<string?> BeginKeyCheckAsync(Guid sessionId, CancellationToken cancellationToken = default)

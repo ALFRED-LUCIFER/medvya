@@ -38,7 +38,10 @@ export default function AuditPage({ vm }: Props) {
               <TableRow key={a.id}>
                 <TableHead scope="row"><time dateTime={a.occurredAt}>{formatDate(new Date(a.occurredAt))} {formatTime(new Date(a.occurredAt))}</time></TableHead>
                 <TableCell label={t('platform.audit.what')}>{isKnownAction(a.action) ? t(actionKey(a.action)) : a.action}</TableCell>
-                <TableCell label={t('platform.audit.who')}>{a.actor ?? t('platform.audit.system')}</TableCell>
+                <TableCell label={t('platform.audit.who')}>
+                  {a.actor ?? t('platform.audit.system')}
+                  {a.actorEmail && <span dir="ltr" className="block text-sm break-all text-muted-foreground">{a.actorEmail}</span>}
+                </TableCell>
                 <TableCell label={t('platform.audit.reason')}>{a.reason ?? t('platform.audit.noReason')}</TableCell>
               </TableRow>
             ))}

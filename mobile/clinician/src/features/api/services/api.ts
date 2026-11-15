@@ -44,9 +44,11 @@ async function postToken(fields: Record<string, string>) {
 async function grant(fields: Record<string, string>) {
   const since = generation;
   const pair = await postToken(fields);
-  if (since !== generation) throw new SessionEndedError();
+  // Signed out while the request was out: end the session the server just issued, or it would live for 7 days with no phone holding it.
+  const late = async () => { await endServerSession({ access: pair.access_token, refresh: pair.refresh_token }); return new SessionEndedError(); };
+  if (since !== generation) throw await late();
   await SecureStore.setItemAsync(REFRESH, pair.refresh_token, deviceOnly);
-  if (since !== generation) { await SecureStore.deleteItemAsync(REFRESH); throw new SessionEndedError(); } // a wipe ran during the write
+  if (since !== generation) { await SecureStore.deleteItemAsync(REFRESH); throw await late(); } // a wipe ran during the write
   refreshToken = pair.refresh_token;
   access = pair.access_token;
   return access;
@@ -102,8 +104,7 @@ export function forgetTokens() {
  * Ends the server session too (POST /bff/logout answers a bearer with 204), with the tokens held when it is called, so the
  * phone can wipe at once. Best effort: offline, the session ends after 7 days unused, and the phone holds no token for it.
  */
-export async function endServerSession() {
-  const held = { access, refresh: refreshToken };
+export async function endServerSession(held: { access: string | null; refresh: string | null } = { access, refresh: refreshToken }) {
   if (!apiBase() || !held.refresh) return;
   const logout = (token: string) => fetch(`${apiBase()}/bff/logout`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
   try {

@@ -361,6 +361,23 @@ public sealed class RxAuthorisationTests(PostgresFixture sql, AzuriteFixture blo
         Assert.Empty(await AuthorisedAsync());
     }
 
+    // MDV-P5-064 SAFETY mutation check: drop the NotVerified line from FormularyRules.India.PrintRequirements and this fails (the medicine would print
+    // as an ordinary one).
+    [Fact]
+    public async Task AMedicineWhoseClassIsNotVerifiedPrintsThatItIsNotVerified()
+    {
+        await h.Get<IFormulary>(h.Admin).AddAsync(new Medvya.Prescribing.Application.AddMedicine("Synthetic unverified", "5 mg", "Tablet", null, null, RegulatoryClass.NotVerified, null, null));
+        await PrescribeAsync("Synthetic unverified", Twice);
+        using (var ok = await AuthoriseAsync(h.Doctor)) Assert.Equal(HttpStatusCode.OK, ok.StatusCode);
+        Assert.Equal([FormularyRules.ClassNotVerified], Assert.Single(Assert.Single(await AuthorisedAsync()).Lines).PrintRequirements);
+
+        using var print = await Client(h.Doctor).GetAsync(U($"/v1/encounters/{encounter}/prescription/print"));
+        var line = Assert.Single((await Json(print)).GetProperty("lines").EnumerateArray());
+        Assert.Equal(FormularyRules.ClassNotVerified, Assert.Single(line.GetProperty("printRequirements").EnumerateArray()).GetString());
+        using var pdf = await PdfAsync(); // the paper's wording exists in the catalogue (a missing key would fail the render)
+        Assert.Equal(HttpStatusCode.OK, pdf.StatusCode);
+    }
+
     // SAFETY mutation check: drop the care-relationship check (RequireAsync in AuthoriseAsync) and the colleague case fails.
     [Fact]
     public async Task OnlyADoctorWithACareRelationshipAndALicenceAuthorises()

@@ -23,6 +23,8 @@ public static class PlatformPolicies
     public const string FeatureRead = Console, FeatureChange = "platform.feature.change";
     /// <summary>Plans (MDV-P5-042, ADR-019): every console role reads; only owner and finance save a new version.</summary>
     public const string PlansRead = Console, PlansEdit = "platform.plans.edit";
+    /// <summary>The Medvya-wide medicine list (MDV-P5-064): every console role reads; only owner and operations change it.</summary>
+    public const string MedicinesRead = Console, MedicinesWrite = "platform.medicines.write";
 
     public static AuthorizationBuilder AddPlatformPolicies(this AuthorizationBuilder builder)
     {
@@ -36,7 +38,8 @@ public static class PlatformPolicies
             .AddPolicy(OrganisationDecide, p => p.Combine(console).RequireClaim(RoleClaim, nameof(PlatformRole.Owner), nameof(PlatformRole.Operations), nameof(PlatformRole.Reviewer)))
             .AddPolicy(FeatureChange, p => p.Combine(console).RequireClaim(RoleClaim, nameof(PlatformRole.Owner), nameof(PlatformRole.Operations)))
             .AddPolicy(PlansEdit, p => p.Combine(console).RequireClaim(RoleClaim, nameof(PlatformRole.Owner), nameof(PlatformRole.Finance)))
-            .AddPolicy(AuditRead, p => p.Combine(console).RequireClaim(RoleClaim, nameof(PlatformRole.Owner), nameof(PlatformRole.Operations)));
+            .AddPolicy(AuditRead, p => p.Combine(console).RequireClaim(RoleClaim, nameof(PlatformRole.Owner), nameof(PlatformRole.Operations)))
+            .AddPolicy(MedicinesWrite, p => p.Combine(console).RequireClaim(RoleClaim, nameof(PlatformRole.Owner), nameof(PlatformRole.Operations)));
     }
 }
 
@@ -97,6 +100,7 @@ public static class PlatformEndpoints
                     (PlanOutcome.NotFound, _) => Results.NotFound(),
                     _ => Results.Problem(statusCode: StatusCodes.Status409Conflict, title: "The plan has a newer version"),
                 });
+        app.MapMedicineList();
         app.Actions("/v1/audit").RequireAuthorization(PlatformPolicies.Owner)
             .MapPost("/export", async ([FromBody] ReasonBody body, [FromServices] IPlatformAuditLog log, CancellationToken ct) =>
                 Results.File(System.Text.Encoding.UTF8.GetBytes(await log.ExportCsvAsync(PlatformReason.Valid(body.Reason)!, ct)), "text/csv; charset=utf-8",

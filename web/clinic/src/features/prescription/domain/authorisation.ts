@@ -17,7 +17,8 @@ export type RxAuthorisationState = {
 };
 
 /** The notes a regulatory class needs on paper (FormularyRules.PrintRequirements). */
-export type PrintRequirement = 'warning_schedule_h' | 'warning_schedule_h1' | 'warning_schedule_x' | 'warning_controlled' | 'pharmacist_keeps_copy' | 'duplicate_prescription';
+export type PrintRequirement = 'warning_schedule_h' | 'warning_schedule_h1' | 'warning_schedule_x' | 'warning_controlled' | 'pharmacist_keeps_copy' | 'duplicate_prescription'
+  | 'class_not_verified';
 export type RxPrintLine = {
   discontinue: boolean; medicine: string; strength: string | null; form: string | null; sig: Record<string, string>; printRequirements: PrintRequirement[]; reason: string | null;
 };

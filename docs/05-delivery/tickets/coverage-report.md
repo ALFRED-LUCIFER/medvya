@@ -63,7 +63,7 @@ Every requirement, screen, exit criterion, NFR, delivery-package item and depend
 | P5-05 | P5 | SHOULD | MDV-P5-001, MDV-P5-014 |
 | P5-06 | P5 | SHOULD | MDV-P5-001, MDV-P5-015 |
 | P5-07 | P5 | MUST | MDV-P5-001, MDV-P5-016, MDV-P5-028, MDV-P5-042, MDV-P5-043, MDV-P5-050, MDV-P5-052, MDV-P5-065 |
-| P5-08 | P5 | MUST | MDV-P5-001, MDV-P5-017, MDV-P5-026, MDV-P5-040, MDV-P5-041, MDV-P5-044, MDV-P5-046, MDV-P5-048 |
+| P5-08 | P5 | MUST | MDV-P5-001, MDV-P5-017, MDV-P5-026, MDV-P5-040, MDV-P5-041, MDV-P5-044, MDV-P5-046, MDV-P5-048, MDV-P5-064, MDV-P5-066 |
 | P5-09 | P5 | MUST | MDV-P5-001, MDV-P5-018, MDV-P5-019, MDV-P5-045, MDV-P5-047, MDV-P5-049 |
 | P5-10 | P5 | MUST | MDV-P5-020, MDV-P5-021, MDV-P5-022, MDV-P5-023, MDV-P5-027, MDV-P5-030, MDV-P5-053, MDV-P5-054, MDV-P5-055, MDV-P5-056, MDV-P5-057, MDV-P5-058, MDV-P5-059, MDV-P5-060, MDV-P5-061, MDV-P5-062, MDV-P5-063 |
 | P5-11 | P5 | MUST | MDV-P5-024 |
@@ -164,7 +164,7 @@ Every requirement, screen, exit criterion, NFR, delivery-package item and depend
 | N-09 Letters, certificates & e-sick leave | P5 | DESIGN NEEDED | MDV-P5-001, MDV-P5-013 |
 | N-10 Voice appointment assistant: live calls console & owner sett | P5 | DESIGN NEEDED | MDV-P5-001, MDV-P5-015, MDV-P6-009 |
 | N-11 Medvya plans, trial, subscription billing for clinics | P5 | DESIGN NEEDED | MDV-P5-001, MDV-P5-016, MDV-P5-042, MDV-P5-043, MDV-P5-065 |
-| N-12 Platform admin console: tenants, onboarding, support access  | P5 | DESIGN NEEDED | MDV-P1-064, MDV-P5-001, MDV-P5-017, MDV-P5-040, MDV-P5-041, MDV-P5-044, MDV-P5-046, MDV-P5-048 |
+| N-12 Platform admin console: tenants, onboarding, support access  | P5 | DESIGN NEEDED | MDV-P1-064, MDV-P5-001, MDV-P5-017, MDV-P5-040, MDV-P5-041, MDV-P5-044, MDV-P5-046, MDV-P5-048, MDV-P5-064, MDV-P5-066 |
 | N-13 In-app guides, help centre, feedback & status page | P5 | DESIGN NEEDED | MDV-P5-001, MDV-P5-018, MDV-P5-045, MDV-P5-047 |
 | N-14 Clinic data export (FHIR + CSV) | P5 | DESIGN NEEDED | MDV-P5-001, MDV-P5-019, MDV-P5-049 |
 | P-08 Insurance eligibility & claims handoff | P5 | DESIGNED | MDV-P5-008 |

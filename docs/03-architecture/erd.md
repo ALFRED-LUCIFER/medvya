@@ -70,6 +70,7 @@ flowchart LR
   Notifications -->|"Api, Application, Domain"| Tenancy
   Patients -->|"Api, Application"| Audit
   Patients -->|"Api, Application"| Tenancy
+  Platform -->|"Application"| Prescribing
   Platform -->|"Application"| Tenancy
   Prescribing -->|"Api, Application"| Audit
   Prescribing -->|"Application"| Encounters
@@ -2241,7 +2242,7 @@ erDiagram
 | `AuthorisedPrescriptions` | 12 | Id | append-only ledger; tenant-scoped |
 | `Orders` | 15 | Id | tenant-scoped |
 | `FormularyBrands` | 6 | Id | tenant-scoped |
-| `FormularyItems` | 15 | Id | tenant-scoped |
+| `FormularyItems` | 17 | Id | tenant-scoped |
 | `OrderSets` | 6 | Id | tenant-scoped |
 | `PharmacyDispatchEvents` | 8 | Id | append-only ledger; tenant-scoped |
 | `PrescriptionCancellations` | 6 | Id | tenant-scoped |
@@ -2327,6 +2328,8 @@ erDiagram
 | `Generic` | character varying(200) |  |  |
 | `NationalCode` | character varying(30) |  |  |
 | `RegClass` | character varying(20) |  |  |
+| `RegisterCode` | character varying(40) |  |  |
+| `RegisterRelease` | character varying(40) |  |  |
 | `Source` | character varying(20) |  |  |
 | `Strength` | character varying(50) |  |  |
 | `TenantId` | guid | yes | `tenancy.Tenants` |

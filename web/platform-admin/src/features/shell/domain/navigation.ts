@@ -1,6 +1,6 @@
 import type { PlatformRole } from '../../session/domain/session';
 
-export type NavId = 'overview' | 'approvals' | 'features' | 'plans' | 'team' | 'audit';
+export type NavId = 'overview' | 'approvals' | 'features' | 'plans' | 'medicines' | 'team' | 'audit';
 export type NavItem = { id: NavId; path: string; roles: readonly PlatformRole[] };
 
 const everyone: readonly PlatformRole[] = ['Owner', 'Operations', 'Support', 'Finance', 'Reviewer'];
@@ -15,6 +15,8 @@ export const navItems: readonly NavItem[] = [
   { id: 'features', path: '/features', roles: everyone }, // every role reads; only owner and operations change (MDV-P5-041)
   // Every role reads plans; owner and finance edit (PlatformPolicies.PlansEdit).
   { id: 'plans', path: '/plans', roles: everyone },
+  // MDV-P5-064: every role reads the Medvya-wide medicine list; the page offers changes to owner and operations only.
+  { id: 'medicines', path: '/medicines', roles: everyone },
   { id: 'team', path: '/team', roles: ['Owner'] },
   { id: 'audit', path: '/audit', roles: ['Owner', 'Operations'] },
 ];

@@ -63,12 +63,12 @@ public interface IPlatformAuditLog
 }
 
 /// <summary>
-/// Console pages that act in a clinic database (organisation approvals MDV-P1-064, feature releases MDV-P5-041) log each action here, in the platform audit
-/// log, with the organisation it concerns (none for a feature release).
+/// Console pages that act through a reviewed path (organisation approvals MDV-P1-064, feature releases MDV-P5-041, the shared medicine list MDV-P5-064)
+/// log each action here, in the platform audit log, with the organisation it concerns when there is one.
 /// </summary>
 public interface IConsoleActions
 {
-    /// <summary>Appends an entry naming the signed-in member, the action, the organisation and the reason (null for a view).</summary>
+    /// <summary>Appends an entry naming the signed-in member, the action, the organisation (null for Medvya-wide data) and the reason (null for a view).</summary>
     Task RecordAsync(string action, string resourceType, Guid resourceId, Guid? subjectTenantId, string? reason, CancellationToken cancellationToken = default);
 
     /// <summary>Display names of console members, for a history that records them as actors. Unknown ids are left out.</summary>

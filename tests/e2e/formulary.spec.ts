@@ -75,7 +75,7 @@ test('the UAE clinic sees the controlled class and is offered no Indian schedule
   await open(page, 'AE');
   await expect(page.getByRole('row', { name: /Tramadol/ })).toContainText('Controlled medicine');
   await page.getByLabel('Class').click();
-  await expect(page.getByRole('option')).toHaveText(['Prescription medicine', 'Controlled medicine']);
+  await expect(page.getByRole('option')).toHaveText(['Prescription medicine', 'Controlled medicine', 'Not verified']); // MDV-P5-064: never a guessed None
 });
 
 test('an admin adds a medicine, blanks stay blank, and a duplicate is refused in words', async ({ page }) => {

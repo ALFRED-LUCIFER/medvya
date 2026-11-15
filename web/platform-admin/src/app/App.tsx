@@ -6,7 +6,7 @@ import { useSessionController } from '../features/session/hooks/useSessionContro
 import ConsoleShell from '../features/shell/components/ConsoleShell';
 import { navFor } from '../features/shell/domain/navigation';
 import OverviewPage from '../features/overview/components/OverviewPage';
-import { ApprovalsRoute, AuditRoute, FeaturesRoute, PlansRoute, TeamRoute } from './routes';
+import { ApprovalsRoute, AuditRoute, FeaturesRoute, MedicinesRoute, PlansRoute, TeamRoute } from './routes';
 
 export default function App({ locale, onLocaleChange }: { locale: Locale; onLocaleChange: (l: Locale) => void }) {
   const { t } = useI18n();
@@ -24,6 +24,7 @@ export default function App({ locale, onLocaleChange }: { locale: Locale; onLoca
         <Route path="/approvals/:tenantId?" element={<ApprovalsRoute role={s.me.role} operator={s.me.displayName} />} />
         <Route path="/features" element={<FeaturesRoute role={s.me.role} />} />
         <Route path="/plans" element={<PlansRoute canEdit={s.me.role === 'Owner' || s.me.role === 'Finance'} />} />
+        <Route path="/medicines" element={<MedicinesRoute role={s.me.role} />} />
         <Route path="/team" element={<TeamRoute />} />
         <Route path="/audit" element={<AuditRoute canExport={s.me.role === 'Owner'} />} />
         <Route path="*" element={<OverviewPage displayName={s.me.displayName} role={s.me.role} items={items} />} />

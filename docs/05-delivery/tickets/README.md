@@ -5,7 +5,7 @@
 
 Jira-style tickets for every PRD v2 phase (P0–P8). The source of truth is `docs/05-delivery/tickets/_source/*.tickets`. Run `python3 -I tools/tickets/build.py` to regenerate the ticket files, [schedule.md](schedule.md), [jira-import.csv](jira-import.csv) and [coverage-report.md](coverage-report.md).
 
-**373 tickets** in 53 epics · **880.75 dev-days** estimated · confidence: High 102 · Medium 210 · Low 61 · coverage: ✅ every requirement, screen, exit criterion, NFR, package item and dependency is ticketed
+**375 tickets** in 53 epics · **886.75 dev-days** estimated · confidence: High 102 · Medium 211 · Low 62 · coverage: ✅ every requirement, screen, exit criterion, NFR, package item and dependency is ticketed
 
 Conventions, Definition of Ready/Done and the confidence scale: [docs/05-delivery](../README.md).
 
@@ -16,14 +16,14 @@ Conventions, Definition of Ready/Done and the confidence scale: [docs/05-deliver
 | P2 Doctor workspace and EMR core | [P2-doctor-workspace](P2-doctor-workspace/README.md) | 21 Dec 2026 → 05 Feb 2027 | 67 | 0 | 0 | 154.25 | 35 | 78% |
 | P3 AI-drafted notes under clinician review | [P3-ai-scribe](P3-ai-scribe/README.md) | 18 Jan 2027 → 12 Mar 2027 | 27 | 0 | 0 | 57.5 | 40 | 80% |
 | P4 Billing, care follow-up and patient portal | [P4-clinic-operations](P4-clinic-operations/README.md) | 15 Feb 2027 → 23 Apr 2027 | 34 | 1 | 0 | 75.5 | 50 | 78% |
-| P5 Commercial launch v1.0 | [P5-commercial-launch](P5-commercial-launch/README.md) | 05 Apr 2027 → 04 Jun 2027 | 64 | 0 | 0 | 170 | 45 | 67% |
+| P5 Commercial launch v1.0 | [P5-commercial-launch](P5-commercial-launch/README.md) | 05 Apr 2027 → 04 Jun 2027 | 66 | 0 | 0 | 176 | 45 | 66% |
 | P6 Wearable capture and advanced AI | [P6-clip-advanced-ai](P6-clip-advanced-ai/README.md) | 07 Jun 2027 → 13 Aug 2027 | 10 | 0 | 0 | 32 | 50 | 59% |
 | P7 Hospital enterprise and integrations | [P7-hospital-enterprise](P7-hospital-enterprise/README.md) | 28 Jun 2027 → 17 Dec 2027 | 13 | 0 | 0 | 48 | 125 | 66% |
 | P8 Scale and specialty features | [P8-scale-specialty](P8-scale-specialty/README.md) | 18 Oct 2027 → 14 Jan 2028 | 7 | 0 | 0 | 33 | 65 | 56% |
 
 ## Capacity check (read this before committing to dates)
 
-PRD v2 plans **v1.0 GA in week 32** for one full-time developer with AI help, about **160 working days**. The P0–P5 tickets add up to **767.75 ideal dev-days**, roughly **4.8×** that capacity. Phase overlap does not create capacity for a single developer. Before scope freeze, choose one or more of: add a second developer (or a part-time contractor for infra, security and print layouts); cut SHOULD items from P1–P5 (public site, doctor discovery, dictation, voice assistant, clinic messages); launch one country only (ADR-002), which removes the UAE pack from the critical path; or move the GA date. Weeks over capacity are flagged ⚠ in [schedule.md](schedule.md). Estimates are ideal days and should be recalibrated against actual velocity after P0.
+PRD v2 plans **v1.0 GA in week 32** for one full-time developer with AI help, about **160 working days**. The P0–P5 tickets add up to **773.75 ideal dev-days**, roughly **4.8×** that capacity. Phase overlap does not create capacity for a single developer. Before scope freeze, choose one or more of: add a second developer (or a part-time contractor for infra, security and print layouts); cut SHOULD items from P1–P5 (public site, doctor discovery, dictation, voice assistant, clinic messages); launch one country only (ADR-002), which removes the UAE pack from the critical path; or move the GA date. Weeks over capacity are flagged ⚠ in [schedule.md](schedule.md). Estimates are ideal days and should be recalibrated against actual velocity after P0.
 
 
 ## Lowest-confidence tickets (resolve these first)
@@ -31,6 +31,7 @@ PRD v2 plans **v1.0 GA in week 32** for one full-time developer with AI help, ab
 | Key | Title | Confidence | Why |
 |---|---|---|---|
 | [MDV-P5-012](P5-commercial-launch/MDV-P5-012.md) | Health-exchange pull and push for the launch emirate (Malaffi / NABIDH / Riayati) (N-07) | 40% | Regulator onboarding and conformance testing control the dates; one integration module, three configurations. |
+| [MDV-P5-066](P5-commercial-launch/MDV-P5-066.md) | Import Common Drug Codes for India by release into the Medvya-wide medicine list | 40% | The NRCeS flat-file package (31 Aug 2026 release) is not readable yet and its licence is not recorded; the column layout is unknown. |
 | [MDV-P7-001](P7-hospital-enterprise/MDV-P7-001.md) | Hospital procurement, HIS vendor engagement and integration contract | 40% | Entirely dependent on a hospital customer and its HIS vendor. |
 | [MDV-P5-010](P5-commercial-launch/MDV-P5-010.md) | UAE claims via eClaimLink (Dubai) / Shafafiya (Abu Dhabi) for the launch emirate (P-14) | 45% | Requires regulator onboarding and conformance testing outside our control (PRD risk HIGH). |
 | [MDV-P6-001](P6-clip-advanced-ai/MDV-P6-001.md) | Hardware partner, device certification and regulated-device classification advice | 45% | Hardware partner not chosen (decision default: defer until phone metrics are met); CDSCO/UAE classification advice pending. |
@@ -49,4 +50,3 @@ PRD v2 plans **v1.0 GA in week 32** for one full-time developer with AI help, ab
 | [MDV-P1-108](P1-front-desk/MDV-P1-108.md) | UX validation sessions with the pilot doctor, nurse, receptionist and owner: the 21 decisions, the brand list, the training date and the device check | 55% | Needs the pilot clinic's people and time; nothing here can be done by code. |
 | [MDV-P4-027](P4-clinic-operations/MDV-P4-027.md) | Public doctor and clinic profiles with live availability, indexed for search (N-02, design needed) | 55% | DESIGN NEEDED: no screen exists; scope comes only from the October plan line item. |
 | [MDV-P4-034](P4-clinic-operations/MDV-P4-034.md) | UPI AutoPay for packages, secure pay link by WhatsApp, Apple Pay and Google Pay in the UAE | 55% | Design exists (6 Nov 2026); build estimate not yet calibrated. |
-| [MDV-P5-011](P5-commercial-launch/MDV-P5-011.md) | Emirates ID card-reader check-in under 30 seconds and UAE PASS (N-06) | 55% | Hardware sourcing and reader SDK/browser integration are unknown. |

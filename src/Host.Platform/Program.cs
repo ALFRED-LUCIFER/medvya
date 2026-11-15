@@ -9,6 +9,7 @@ using Medvya.Platform.Api;
 using Medvya.Platform.Application;
 using Medvya.Platform.Infrastructure;
 using Medvya.Platform.Infrastructure.Persistence;
+using Medvya.Prescribing.SharedList;
 using Medvya.Tenancy.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
@@ -39,6 +40,10 @@ if (builder.Configuration.GetConnectionString("Review") is { } review)
 if (builder.Configuration.GetSection("ConnectionStrings:Features").GetChildren().Where(c => !string.IsNullOrEmpty(c.Value))
         .ToDictionary(c => c.Key.ToUpperInvariant(), c => c.Value!) is { Count: > 0 } featureDatabases)
     builder.Services.AddFeatureReleasePath(featureDatabases);
+// The Medvya-wide medicine list (MDV-P5-064): the country's shared formulary rows, on its own narrow login (medvya_formulary: read, add and update of the
+// rows with no tenant in prescribing.FormularyItems, nothing else; row-level security keeps every clinic's own rows out). Without it those endpoints fail closed.
+if (builder.Configuration.GetConnectionString("Formulary") is { } formulary)
+    builder.Services.AddSharedFormularyPath(formulary);
 builder.Services.AddHsts(o => { o.MaxAge = TimeSpan.FromDays(365); o.IncludeSubDomains = true; });
 builder.Services.AddRateLimiter(o =>
 {

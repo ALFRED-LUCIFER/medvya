@@ -47,6 +47,12 @@ it('accepts a number with no records until the code, then refuses', async () => 
   expect(await screen.findByText('That code did not work. Check the app and try again.')).toBeOnTheScreen();
 });
 
+it('tells the patient in plain words when five wrong codes locked the number (MDV-P5-033)', async () => {
+  await toCode('90000 00199');
+  expect(await screen.findByText('Too many wrong codes. Try again in 15 minutes.')).toBeOnTheScreen();
+  expect(screen.queryByText('Who are you?')).toBeNull();
+});
+
 it('rejects a number that is not an Indian mobile', async () => {
   await renderApp(<Harness />);
   await fireEvent.press(screen.getByRole('button', { name: 'Skip' }));

@@ -112,6 +112,8 @@ Not clinic data, so no tenant. Of the app roles only `medvya_leads` reaches the 
 |---|---|---|
 | identity.OnboardingDrafts: user_id, country, step, updated_at, completed_at | Internal | One row per person, never listed. Not in reporting (identity schema) |
 | identity.OnboardingDrafts: data (name, licence, clinic address and fees as typed) | Personal | Emptied when the practice is created. Never in logs |
+| identity.SmsSignIns: phone_hash (SHA-256 of the mobile number) | Personal | Reversible by trying every number, so personal. Never in logs or URLs. Not in reporting (identity schema) (MDV-P5-033) |
+| identity.SmsSignIns: code_hash, code_expires_at, last_sent_at, codes_sent, window_started_at, wrong_codes, locked_until | Internal | Patient SMS sign-in limits and lockout. Rows not yet purged (shortcut in `SmsSignIn.cs`) |
 | tenancy.PracticeProfiles: tenant_id, slot_minutes, fees (minor units), currency, hours, note templates, registration number, GSTIN/TRN | Internal | Row-level security |
 | tenancy.PracticeProfiles: address | Personal | A one-doctor clinic can be a home address. Row-level security |
 | tenancy.PracticeProfiles: specialty, qualifications, languages | Public | Shown to patients later (P5) |

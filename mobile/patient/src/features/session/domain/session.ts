@@ -25,6 +25,11 @@ export function toE164(country: Country, typed: string): string | null {
 export const phoneForm = z.object({ country: z.enum(['IN', 'AE']), number: z.string() })
   .refine(v => toE164(v.country, v.number) !== null, { path: ['number'], message: 'mobile.patientSignIn.phoneInvalid' });
 export const codeForm = z.object({ code: z.string().regex(/^\d{6}$/, 'mobile.signIn.codeInvalid') });
+/** Five wrong codes locked the number (MDV-P5-033): the API answers 429 { error: 'locked', retryAfterMinutes }. */
+export class SignInLockedError extends Error {
+  constructor(readonly minutes: number) { super('mobile.patientSignIn.locked'); }
+}
+
 export type PhoneForm = z.infer<typeof phoneForm>;
 export type CodeForm = z.infer<typeof codeForm>;
 

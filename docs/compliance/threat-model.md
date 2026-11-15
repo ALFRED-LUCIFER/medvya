@@ -82,6 +82,7 @@ Status column: **Done** = implemented and tested; otherwise the ticket that deli
 | STRIDE | Threat | Mitigation | Status |
 |---|---|---|---|
 | S | Stolen or replayed tokens | Native session on the server-side row; 15-min access token in memory only; refresh token in secure-store, rotated on each use, a replay ends the session (audited); bearer-only native sessions, cookie-only browser sessions | **Done** for staff (MDV-P5-033, PR #844); patients MDV-P5-033 |
+| S | Guessing a patient's SMS code; SMS flooding; finding who has records | Code hashed, 10 minutes, once; one code a minute and five an hour per number plus the `sign-in` limit per IP; five wrong codes lock the number for 15 minutes; the same answers for every valid number; number in the body only, stored as a hash, never logged (`Identity.Infrastructure/PatientSmsSignIn.cs`) · `PatientSmsSignInTests` (mutation-checked) | **Done** for the code (MDV-P5-033); patient session waits for patient accounts |
 | S | Another app catching the sign-in redirect | PKCE S256 (a caught code is useless); allow-listed redirect URIs; verified https links before release | PKCE **Done** (PR #844); links MDV-P5-039 |
 | I | **Lost phone** | Remote revoke refused on the next request; app wipes the encrypted store (including unsent audio) on the first 401; visit flagged "recording incomplete" | Server **Done** (PR #844); wipe MDV-P5-034/035 |
 | I | **Shared phone** | 15-min biometric/PIN lock; one person per install; switch user = sign-out + wipe | Lock done locally (MDV-P5-034); switch user MDV-P5-034 |

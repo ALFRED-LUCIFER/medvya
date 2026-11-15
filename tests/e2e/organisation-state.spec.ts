@@ -34,6 +34,30 @@ for (const locale of ['en', 'ar'] as const)
       expect(await axe(page)).toEqual([]);
     });
 
+// #1365 F-026: while the organisation waits for approval, a closed screen says that, not "your role does not include this screen", and the
+// owner gets the way to the request. A role without that way gets the start page instead.
+for (const locale of ['en', 'ar'] as const)
+  test(`a screen closed until approval says so, never that the role lacks it (${locale})`, async ({ page }) => {
+    await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
+    await page.route('**/v1/me/context', r => r.fulfill({ json: context('Submitted', { StaffRolesIntegrations: 'Config' }) }));
+    await page.route('**/v1/settings/**', r => r.fulfill({ json: {} }));
+    for (const path of ['/schedule', '/front-desk']) {
+      await page.goto(path);
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText(locale === 'en' ? 'This screen is not open yet' : 'هذه الشاشة غير متاحة بعد');
+      await expect(page.getByRole('main').locator('[data-slot=page-message]')).toContainText(locale === 'en' ? 'Waiting for approval. Medvya is reviewing your organisation.' : 'بانتظار الموافقة');
+      await expect(page.getByRole('main')).not.toContainText(locale === 'en' ? 'Your role does not include' : 'دورك لا يشمل');
+      await expect(page.getByRole('main').locator('[data-slot=page-message]').getByRole('link')).toHaveAttribute('href', '/organisation');
+    }
+    expect(await axe(page)).toEqual([]);
+  });
+
+test('an approved organisation still says a screen is not in the role', async ({ page }) => {
+  await page.route('**/v1/me/context', r => r.fulfill({ json: context('Approved', { StaffRolesIntegrations: 'Config' }) }));
+  await page.route('**/v1/settings/**', r => r.fulfill({ json: {} }));
+  await page.goto('/schedule');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Screen not available');
+});
+
 test('an approved organisation shows no notice', async ({ page }) => {
   await page.route('**/v1/me/context', r => r.fulfill({ json: context('Approved', { StaffRolesIntegrations: 'Config' }) }));
   await page.route('**/v1/settings/**', r => r.fulfill({ json: {} }));

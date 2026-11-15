@@ -308,6 +308,31 @@ test('back from the step-up with the note still loading, Authorise is focused on
   await expect(rx.getByRole('status').filter({ hasText: 'Identity confirmed. Press Authorise prescription.' })).toBeVisible();
 });
 
+// #1365 F-062: the words do not depend on the focus move. A doctor who clicks somewhere while the page is still loading keeps their focus,
+// and is still told, right above the button, that identity is confirmed and what to press. Nothing is authorised for them.
+test('back from the step-up, a doctor who clicked before the page was there is still told to press Authorise', async ({ page }) => {
+  const { calls } = await mockPrescription(page, { lines: [line('rx-1', 'Metformin', { dose: '1', doseUnit: 'Tablet', route: 'Oral', frequency: 'BD', durationDays: 5 })] });
+  await mockNote(page, {});
+  let release = () => {};
+  const held = new Promise<void>(done => { release = done; });
+  await page.route('**/v1/encounters/e-1/prescription/authorisation', async r => { if (r.request().method() === 'GET') await held; await r.fallback(); });
+  await page.goto('/consult/e-1?resume=authorise');
+  const rx = page.getByRole('region', { name: 'Prescription' });
+  const status = rx.getByRole('status').filter({ hasText: 'Identity confirmed' });
+  await expect(rx).toBeVisible();
+  await expect(status).toHaveCount(0);
+  await page.getByRole('heading', { level: 1 }).click(); // a click anywhere while the prescription still loads
+  release();
+  const authorise = rx.getByRole('button', { name: 'Authorise prescription' });
+  await expect(status).toHaveText('Identity confirmed. Press Authorise prescription.');
+  await expect(authorise).not.toBeFocused(); // their focus is not taken
+  // The line sits right above the button it names.
+  const [line1, button] = [(await status.boundingBox())!, (await authorise.boundingBox())!];
+  expect(line1.y + line1.height).toBeLessThanOrEqual(button.y);
+  expect(button.y - (line1.y + line1.height)).toBeLessThan(24);
+  expect(calls.authorised).toBe(0); // nothing was authorised for the doctor
+});
+
 // MDV-P2-054 AC5: at 375 px the medicine lines are stacked: the medicine first and bold, then every dose field under its own name, so no
 // dose field is out of view.
 test.describe('at 375 px', () => {

@@ -179,7 +179,8 @@ test('a click before Authorise appears keeps the focus where the doctor put it',
   const authorise = page.getByRole('region', { name: 'Prescription' }).getByRole('button', { name: 'Authorise prescription' });
   await expect(authorise).toBeVisible();
   await expect(authorise).not.toBeFocused();
-  await expect(page.getByText('Identity confirmed. Press Authorise prescription.')).toHaveCount(0);
+  // #1365 F-062: their focus stays theirs, but they are still told what the identity check was for.
+  await expect(page.getByText('Identity confirmed. Press Authorise prescription.')).toBeVisible();
 });
 
 test('a word that is not on the list in the return address moves nothing and says nothing', async ({ page }) => {

@@ -106,6 +106,7 @@ type Props = {
   submitFailed: boolean;
   emailFailed: boolean;
   planFull: string | null;
+  canContinue: boolean;
   onBack: () => void;
   onNext: () => void;
   onClose: () => void;
@@ -189,14 +190,14 @@ export default function DoctorWizard(p: Props) {
         <StickyActionBar className={cardBar} aria-live="polite" status={<>
           {p.submitFailed && <span role="alert" className={fieldError}>{t('settings.saveFailed')}</span>}
           {p.emailFailed && <span role="alert" className={fieldError}>{t('staff.error.email')}</span>}
-          {p.planFull && <span role="alert" className={fieldError}>{p.planFull}</span>}
+          {p.planFull && <span id="doctor-plan-full" role="alert" className={fieldError}>{p.planFull}</span>}
         </>}>
           <Button type="button" variant="ghost" onClick={p.onClose}>{t('settings.cancel')}</Button>
           {p.stepIndex > 0 && <Button type="button" variant="outline" onClick={p.onBack}>{t('doctors.back')}</Button>}
           {/* Distinct keys: one button must never turn into the submit button under the click that moved to the last step. */}
           {p.lastStep
             ? <Button key="submit" type="submit" loading={p.submitting}>{t('doctors.add.submit')}</Button>
-            : <Button key="next" type="button" onClick={p.onNext}>{t('doctors.next')}</Button>}
+            : <Button key="next" type="button" disabled={!p.canContinue} aria-describedby={p.planFull ? 'doctor-plan-full' : undefined} onClick={p.onNext}>{t('doctors.next')}</Button>}
         </StickyActionBar>
       </form>
     </Section>

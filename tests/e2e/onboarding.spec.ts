@@ -32,11 +32,13 @@ test('a visitor from the region selector signs up: the country is carried into m
 
 test('the create-account answers fill the new draft once, then leave the browser (MDV-P1-059)', async ({ page }) => {
   const api = await mockOnboarding(page);
-  const prefill = { profile: { fullName: 'Omar Haddad (synthetic)', mode: 'Clinic' }, clinic: { name: 'Lakeside Clinic (synthetic)', address: 'Abu Dhabi' } };
+  const prefill = { profile: { fullName: 'Omar Haddad (synthetic)', mode: 'Clinic' }, clinic: { name: 'Lakeside Clinic (synthetic)', address: 'Abu Dhabi', contactEmail: 'owner@example.test' } };
   await page.addInitScript(p => { if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1'); sessionStorage.setItem('medvya.signUp', p); } }, JSON.stringify(prefill));
   await page.goto('/onboarding?country=AE');
-  await page.getByRole('button', { name: 'Start setup' }).click();
+  // #1365 F-022: straight from create account the country is not asked again, and the work email is already the request's contact email.
   await expect(page.getByLabel('Full name')).toHaveValue('Omar Haddad (synthetic)');
+  await expect(page.getByLabel('Email Medvya writes to about this request')).toHaveValue('owner@example.test');
+  await expect(page.getByRole('button', { name: 'Start setup' })).toHaveCount(0);
   expect(api.saves[0]).toMatchObject({ step: 1, data: prefill });
   expect(await page.evaluate(() => sessionStorage.getItem('medvya.signUp'))).toBeNull();
 });
@@ -178,7 +180,7 @@ test('the team step invites the front desk, says what each role sees, and does n
   await expect(page.locator('#inviteEmail-error')).toHaveText('Each person can be invited once.');
   await page.getByLabel('Email address').fill('');
   await page.getByRole('button', { name: 'Continue' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Bring your existing patients.' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Your existing patients.' })).toBeVisible();
   expect(api.saves.at(-1)!.data.team).toEqual([{ email: 'nurse@example.test', role: 'Nurse' }]);
 });
 
@@ -187,9 +189,9 @@ test('skip leaves a step empty; finish later saves and signs out', async ({ page
   await page.goto('/onboarding');
   await expect(page.getByLabel('Move from my software')).toBeChecked();
   await page.getByRole('button', { name: 'Skip for now' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Get paid and keep patients informed.' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Payments and messages.' })).toBeVisible();
   expect(api.saves.at(-1)!.data.patients).toBeUndefined();
-  await expect(page.getByText('Later, in Settings')).toHaveCount(4);
+  await expect(page.getByText('Not available yet')).toHaveCount(4); // #1365 F-025: nothing is promised that is not built
 
   await page.getByRole('button', { name: 'Finish later' }).click();
   await expect.poll(() => api.signedOut).toBe(true);

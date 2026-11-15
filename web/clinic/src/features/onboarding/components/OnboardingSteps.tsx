@@ -271,7 +271,7 @@ export function PatientsStep({ form }: FormProps) {
 
 const connectionIcons: Record<string, LucideIcon> = { upi: QrCode, card: CreditCard, whatsapp: MessageCircle, abha: BadgeCheck, nhcx: ShieldCheck, eclaimlink: ShieldCheck, riayati: Building2 };
 
-/** Step 5: what each country connects. Nothing is connected here yet (see the shortcut on `connections`), so each says "later". */
+/** Step 5: what each country will connect. None of it is built (see the shortcut on `connections`), so each says "Not available yet" (#1365 F-025): nothing is promised. */
 export function PaymentsStep({ country }: { country: Country }) {
   const { t } = useI18n();
   return (

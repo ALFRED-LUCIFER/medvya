@@ -47,9 +47,18 @@ public sealed class StaffSession
     /// <summary>A native app session: reachable only by bearer token, never by cookie (and the reverse).</summary>
     [Classification(DataClass.Internal)] public bool IsNative => RefreshTokenHash is not null;
 
-    public bool IsActive(DateTimeOffset now) =>
-        RevokedAt is null && now < CreatedAt + (IsNative ? NativeMaxLifetime : MaxLifetime)
-        && now < LastSeenAt + (IsNative ? NativeIdleTimeout : TimeSpan.FromMinutes(IdleTimeoutMinutes));
+    public bool IsActive(DateTimeOffset now) => RevokedAt is null && now < Ends().At;
+
+    /// <summary>
+    /// When the session ends if nothing more is done: the idle timeout from the last activity, or the hard cap when that comes first.
+    /// Extendable says which: activity moves the first, nothing moves the second. The app warns shortly before (#1365 F-057).
+    /// </summary>
+    public (DateTimeOffset At, bool Extendable) Ends()
+    {
+        var idle = LastSeenAt + (IsNative ? NativeIdleTimeout : TimeSpan.FromMinutes(IdleTimeoutMinutes));
+        var cap = CreatedAt + (IsNative ? NativeMaxLifetime : MaxLifetime);
+        return idle < cap ? (idle, true) : (cap, false);
+    }
 
     /// <summary>"Chrome on Windows" style label from a User-Agent; unknown parts stay generic.</summary>
     public static string DeviceLabel(string? userAgent)

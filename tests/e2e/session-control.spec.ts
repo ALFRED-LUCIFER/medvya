@@ -71,6 +71,55 @@ for (const locale of ['en', 'ar'])
     expect(new URL((await login).url()).searchParams.get('returnUrl')).toBe('/schedule');
   });
 
+// #1365 F-057: the shell says so shortly before an idle sign-out; "Stay signed in" is a read that counts as activity; if nobody is there,
+// the signed-out page says why and signing in again returns to the same address. The server's side is SessionControlTests.
+for (const locale of ['en', 'ar'])
+  test(`an idle session warns before it ends, stays on request, and says why when it does end (${locale})`, async ({ page }) => {
+    const en = locale === 'en';
+    const server = await mockServer(page, locale);
+    server.chosen = 'm-adyar';
+    let endsIn = 600;
+    const reads: boolean[] = []; // passive?
+    await page.route('**/v1/me/context', r => {
+      reads.push(r.request().headers()['x-medvya-passive'] === '1');
+      if (server.expired) return r.fulfill({ status: 401 });
+      if (!reads.at(-1)) endsIn = 900; // a read that counts as activity: the full time-out is ahead again
+      return r.fulfill({ json: { user, memberships, active: active('m-adyar'), session: { endsInSeconds: endsIn, extendable: true, idleTimeoutSeconds: 900 } } });
+    });
+    await page.clock.install();
+    await page.goto('/schedule?view=day');
+    await expect(page.getByRole('navigation').first()).toBeVisible();
+    const notice = page.locator('[data-slot=banner]', { hasText: en ? 'You will be signed out in less than two minutes' : 'سيتم تسجيل خروجك خلال أقل من دقيقتين' });
+    await expect(notice).toHaveCount(0);
+
+    endsIn = 100; // nobody has used the app: under two minutes are left
+    await page.clock.fastForward(61_000);
+    await expect(notice).toBeVisible();
+    await expect(notice).toHaveAttribute('role', 'status'); // announced, politely
+    await page.addScriptTag({ path: createRequire(import.meta.url).resolve('axe-core/axe.min.js') });
+    const violations = () => page.evaluate(async () => (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string }[] }> } }).axe.run()).violations.map(v => v.id));
+    expect(await violations()).toEqual([]);
+
+    const stay = notice.getByRole('button', { name: en ? 'Stay signed in' : 'البقاء مسجّلًا' });
+    await stay.focus();
+    await page.keyboard.press('Enter');
+    await expect(notice).toHaveCount(0);
+    expect(reads.at(-1)).toBe(false); // the one read that is not a background poll
+    expect(reads.slice(0, -1).every(Boolean)).toBe(true);
+
+    // Left alone again: the notice comes back, the session ends, and the page says it was for lack of use.
+    endsIn = 20;
+    await page.clock.fastForward(61_000);
+    await expect(notice).toBeVisible();
+    server.expired = true;
+    await page.clock.fastForward(22_000); // the app looks again just after the end, not a minute later
+    await expect(page.getByRole('alert')).toContainText(en ? 'because this screen was not used for a while' : 'لأن هذه الشاشة لم تُستخدم لفترة');
+    await expect(page).toHaveURL('/schedule?view=day');
+    const login = page.waitForRequest(r => r.url().includes('/bff/login'));
+    await page.getByRole('alert').getByRole('button', { name: en ? 'Sign in again' : 'سجّل الدخول مجددًا' }).click();
+    expect(new URL((await login).url()).searchParams.get('returnUrl')).toBe('/schedule');
+  });
+
 // MDV-P0-015: a refused API call re-reads the session at once; the clock is frozen, so the minute poll cannot be what reacts.
 test('an API call answering 401 shows "Session expired" at once', async ({ page }) => {
   const server = await mockServer(page);

@@ -8,7 +8,7 @@ import { ApiError } from '../../schedule/services/scheduleApi';
 import { useTableController } from '../../table/hooks/useTableController';
 import { roleOfValue, roleValue, addStaffSchema, offboardSchema, reactivateSchema, rebookingMissing, locationsOf, locationsSchema, reasonMissing, type LocationsForm, type AddStaffForm, type OffboardForm, type ReactivateForm, type StaffMember, type AssignableRole, type RoleChoice, type Step, planFullText, type PlanLimit } from '../domain/staff';
 import { staffSort } from '../domain/staffTable';
-import { addStaff, changeStaffRole, fetchRoles, fetchStaff, offboardStaff, reactivateStaff, resendInvitation, revokeInvitation, setStaffLocations, startStepUp } from '../services/staffApi';
+import { addStaff, changeStaffRole, fetchPlanSeats, fetchRoles, fetchStaff, offboardStaff, reactivateStaff, resendInvitation, revokeInvitation, setStaffLocations, startStepUp } from '../services/staffApi';
 
 
 /** Settings → Staff: the staff table and the "Add staff member" steps (role → location → permissions → invite). */
@@ -38,6 +38,9 @@ export function useStaffController(defaultFacilityId: string) {
   };
 
   const [step, setStep] = useState<Step | null>(null);
+  // #1365 F-039: asked when the wizard opens, so "no seat" is said at the first step, not after the last. A failed read says nothing: the add still decides.
+  const seats = useQuery({ queryKey: ['staff', 'plan'], queryFn: fetchPlanSeats, enabled: step !== null, staleTime: 0 });
+  const noSeat = seats.data && !seats.data.staffFree ? planFullText(i18n, seats.data) : null;
   const [choice, setChoice] = useState<RoleChoice | null>(null);
   const [notice, setNotice] = useState<'invited' | 'resent' | 'revoked' | 'offboarded' | 'reactivated' | 'locations' | 'role' | null>(null);
   /** Patients already checked in for the person just offboarded: reception reassigns them on the board. */
@@ -95,7 +98,7 @@ export function useStaffController(defaultFacilityId: string) {
   const [stepUpFailed, setStepUpFailed] = useState(false);
 
   // Doctors need a licence check, so choosing one stops the steps and shows where to go instead.
-  const canContinue = step === 'role' ? choice !== null && choice.kind !== 'doctor' : true;
+  const canContinue = noSeat === null && (step === 'role' ? choice !== null && choice.kind !== 'doctor' : true);
   const next = async () => {
     if (step === 'role' && canContinue) setStep('scope');
     else if (step === 'scope' && (await form.trigger())) setStep('permissions');
@@ -115,7 +118,7 @@ export function useStaffController(defaultFacilityId: string) {
     notice,
     adding: add.isPending,
     addFailed: add.isError && !sendFailed(add.error) && !planFull(add.error),
-    planFull: planText(add.error),
+    planFull: planText(add.error) ?? noSeat,
     reactivatePlanFull: planText(reactivate.error),
     emailFailed: sendFailed(add.error) || sendFailed(resend.error),
     working: resend.isPending || revoke.isPending,

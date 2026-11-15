@@ -52,6 +52,9 @@ public interface IStaffRoster
 
     Task<IReadOnlyList<CustomRoleView>> RolesAsync(CancellationToken cancellationToken = default);
 
+    /// <summary>Whether the organisation's plan still has a doctor seat and a staff seat (#1365 F-039). The add itself decides again.</summary>
+    Task<PlanSeats> PlanSeatsAsync(CancellationToken cancellationToken = default);
+
     /// <exception cref="SettingsValidationException">Bad name, a base role that cannot be assigned, a duplicate name, or capabilities beyond <see cref="CustomRoleRules.Extras"/>.</exception>
     Task<CustomRoleView> CreateRoleAsync(SaveCustomRole command, CancellationToken cancellationToken = default);
 

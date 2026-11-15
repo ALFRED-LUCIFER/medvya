@@ -90,6 +90,7 @@ test.describe('touch tablet', () => {
     await page.getByLabel('Mobile').fill('+91 90000 00202');
     await page.getByRole('textbox', { name: 'Date of birth (required)', exact: true }).fill('1990-02-03');
     await page.getByRole('radio', { name: 'Female', exact: true }).tap();
+    await page.getByRole('switch', { name: 'Treatment' }).tap();
     await page.getByRole('button', { name: 'Register patient' }).tap();
     await expect(page.getByRole('heading', { name: 'Kavya Iyer is registered' })).toBeVisible();
     expect((await saved).postDataJSON()).toMatchObject({ fullName: 'Kavya Iyer', sexAtBirth: 'Female' });
@@ -148,6 +149,7 @@ for (const name of ['iPad (gen 7)', 'iPad Pro 11', 'Galaxy Tab S4'].flatMap(d =>
         await page.getByLabel(t(locale, 'registration.field.mobile')).fill('+91 90000 00202');
         await page.getByRole('textbox', { name: `${t(locale, 'registration.field.dateOfBirth')} ${t(locale, 'field.required')}`, exact: true }).fill('1990-02-03');
         await page.getByRole('radio', { name: t(locale, 'patients.sex.Female'), exact: true }).tap();
+        await page.getByRole('switch', { name: t(locale, 'registration.consents.treatment.title') }).tap(); // #1365 F-040: never pre-ticked
         expect(await problems(page)).toEqual([]);
         await shot('registration');
         await page.getByRole('button', { name: t(locale, 'registration.save') }).tap();

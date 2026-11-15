@@ -92,6 +92,7 @@ export function fieldLabel(field: FormField, country: Country, v: Pick<Registrat
   switch (field) {
     case 'fullName': return country === 'AE' ? 'registration.field.fullName.AE' : 'registration.field.fullName';
     case 'abha': return 'registration.field.identifier.Abha';
+    case 'consentTreatment': return 'registration.consents.treatment.title';
     case 'otherIdValue': return v.otherIdType === 'Passport' ? 'registration.field.otherIdValue.Passport' : 'registration.field.otherIdValue.AadhaarLast4';
     case 'guardianName': return `registration.field.guardianName.${country}`;
     case 'line1': case 'line2': return `registration.field.${field}.${country}`;
@@ -154,7 +155,7 @@ const shape = z.object({
   payerName: text(), plan: text(100), memberNumber: text(50), validTo: z.string(), network: text(100),
   ecName: text(), ecRelationship: z.string(), ecPhone: z.string().max(25, 'format'),
   guardianName: text(), guardianRelationship: z.string(), guardianPhone: z.string().max(25, 'format'),
-  consentWhatsApp: z.boolean(), consentSms: z.boolean(), consentEmail: z.boolean(), consentExchange: z.boolean(), consentPortal: z.boolean(), consentMarketing: z.boolean(),
+  consentTreatment: z.boolean(), consentWhatsApp: z.boolean(), consentSms: z.boolean(), consentEmail: z.boolean(), consentExchange: z.boolean(), consentPortal: z.boolean(), consentMarketing: z.boolean(),
 });
 
 export type RegistrationForm = z.input<typeof shape>;
@@ -166,8 +167,8 @@ export const emptyForm: RegistrationForm = {
   mobile: '', alternatePhone: '', email: '', line1: '', line2: '', city: '', district: '', region: '', postalCode: '', makani: '', poBox: '',
   payerKind: '', payerName: '', plan: '', memberNumber: '', validTo: '', network: '',
   ecName: '', ecRelationship: '', ecPhone: '', guardianName: '', guardianRelationship: '', guardianPhone: '',
-  // Portal invite is on and everything else off until the patient says yes (docs/04-security-compliance: consent model).
-  consentWhatsApp: false, consentSms: false, consentEmail: false, consentExchange: false, consentPortal: true, consentMarketing: false,
+  // Nothing is pre-ticked: a consent the desk never touched is not a consent. Treatment must be ticked to register (the server refuses without it).
+  consentTreatment: false, consentWhatsApp: false, consentSms: false, consentEmail: false, consentExchange: false, consentPortal: false, consentMarketing: false,
 };
 
 /** Fields each full-mode step owns; "Continue" validates only these. */
@@ -177,11 +178,11 @@ export const stepFields: Record<Exclude<Step, 'review'>, readonly FormField[]> =
   contact: ['mobile', 'alternatePhone', 'email', 'line1', 'line2', 'city', 'district', 'region', 'postalCode', 'makani', 'poBox'],
   family: ['ecName', 'ecRelationship', 'ecPhone', 'guardianName', 'guardianRelationship', 'guardianPhone'],
   payer: ['payerKind', 'payerName', 'plan', 'memberNumber', 'validTo', 'network'],
-  consents: ['consentWhatsApp', 'consentSms', 'consentEmail', 'consentExchange', 'consentPortal', 'consentMarketing'],
+  consents: ['consentTreatment', 'consentWhatsApp', 'consentSms', 'consentEmail', 'consentExchange', 'consentPortal', 'consentMarketing'],
 };
 
 /** Quick mode's fields in screen order; the error summary lists only these, in this order. */
-export const quickFields: readonly FormField[] = ['fullName', 'mobile', 'dateOfBirth', 'ageYears', 'sexAtBirth', 'abha', 'emiratesId', 'guardianName', 'guardianRelationship', 'guardianPhone'];
+export const quickFields: readonly FormField[] = ['fullName', 'mobile', 'dateOfBirth', 'ageYears', 'sexAtBirth', 'abha', 'emiratesId', 'guardianName', 'guardianRelationship', 'guardianPhone', 'consentTreatment'];
 /** "Complete registration" fields in screen order: phones, address, emergency contact, payer. */
 export const completionFields: readonly FormField[] = [...stepFields.contact, 'ecName', 'ecRelationship', 'ecPhone', ...stepFields.payer];
 
@@ -247,6 +248,7 @@ export function registrationSchema(country: Country, quick: boolean, today: stri
     }
     // MDV-P1-020: a guardian for a minor in either mode (the server enforces it); an emergency contact for full registration.
     checkContact(v, country, 'guardian', isMinor(v, country, today) ? 'required_for_minor' : null, issue);
+    if (!v.consentTreatment) issue('consentTreatment', 'required'); // an explicit choice in both modes, never assumed
     if (quick) return;
     checkContact(v, country, 'ec', 'required', issue);
 
@@ -493,9 +495,9 @@ export const consentPolicyVersion = '2026-11-draft';
 export type ConsentDecision = { type: 'Treatment' | 'Reminders' | 'InformationExchange' | 'Portal' | 'Marketing'; channel: 'WhatsApp' | 'Sms' | 'Email' | null; granted: boolean };
 export type ConsentSet = { policyVersion: string; decisions: ConsentDecision[] };
 
-/** Treatment is always granted (locked on); quick mode asks nothing else. Every other choice is recorded as its own decision, declined ones too. */
+/** Treatment as the desk ticked it (the schema and the server refuse a registration without it); quick mode asks nothing else. Every other choice is recorded as its own decision, declined ones too. */
 export function consentSet(v: RegistrationForm, quick: boolean): ConsentSet {
-  const decisions: ConsentDecision[] = [{ type: 'Treatment', channel: null, granted: true }];
+  const decisions: ConsentDecision[] = [{ type: 'Treatment', channel: null, granted: v.consentTreatment }];
   if (!quick) {
     decisions.push(
       { type: 'Reminders', channel: 'WhatsApp', granted: v.consentWhatsApp }, { type: 'Reminders', channel: 'Sms', granted: v.consentSms }, { type: 'Reminders', channel: 'Email', granted: v.consentEmail },

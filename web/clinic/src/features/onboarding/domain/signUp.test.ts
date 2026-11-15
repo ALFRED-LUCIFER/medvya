@@ -7,13 +7,15 @@ describe('create account (MDV-P1-059)', () => {
   it('a doctor becomes a Solo draft with the licence step; a manager becomes a Clinic draft without it', () => {
     expect(toPrefill(filled)).toEqual({
       profile: { fullName: 'Arjun Menon (synthetic)', mode: 'Solo' },
-      clinic: { name: 'Menon Clinic (synthetic)', address: 'Chennai' },
+      clinic: { name: 'Menon Clinic (synthetic)', address: 'Chennai', contactEmail: 'owner@example.test' },
     });
     expect(toPrefill({ ...filled, role: 'manager' }).profile?.mode).toBe('Clinic');
   });
 
-  it('never carries the email or anything else into the draft', () => {
-    expect(JSON.stringify(toPrefill(filled))).not.toContain('example.test');
+  it('carries the work email only as the request contact email, which the owner can change (#1365 F-022)', () => {
+    const { clinic, ...rest } = toPrefill({ ...filled, email: ' owner@example.test ' });
+    expect(clinic?.contactEmail).toBe('owner@example.test');
+    expect(JSON.stringify(rest)).not.toContain('example.test');
   });
 
   it('needs every answer, and a real email', () => {

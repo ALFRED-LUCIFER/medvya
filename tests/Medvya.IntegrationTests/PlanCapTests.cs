@@ -117,6 +117,42 @@ public sealed class PlanCapTests(PostgresFixture sql) : IClassFixture<PostgresFi
         Assert.Equal(1, await db.Memberships.CountAsync(m => m.Status == MembershipStatus.Invited));
     }
 
+    // #1365 F-039: the wizards' first step asks what the last step would be told, and gets the same answer.
+    [Fact]
+    public async Task ThePlansSeatsSayBeforehandWhatTheAddWouldAnswer()
+    {
+        using var c = Client();
+        async Task<(int Doctors, int Staff, bool DoctorFree, bool StaffFree)> SeatsAsync()
+        {
+            var seats = await c.GetFromJsonAsync<JsonElement>("/v1/staff/plan");
+            Assert.Equal(["doctors", "staff", "doctorFree", "staffFree"], seats.EnumerateObject().Select(p => p.Name));
+            return (seats.GetProperty("doctors").GetInt32(), seats.GetProperty("staff").GetInt32(), seats.GetProperty("doctorFree").GetBoolean(), seats.GetProperty("staffFree").GetBoolean());
+        }
+
+        // The owner-doctor holds the one doctor seat; the admin holds one of two staff seats.
+        Assert.Equal((1, 2, false, true), await SeatsAsync());
+        await AssertRefused(await c.PostAsJsonAsync("/v1/settings/doctors", Doctor("sana.khan@example.test", facility)));
+        Assert.Equal(HttpStatusCode.Created, (await AddStaff(c, "desk1@example.test")).StatusCode);
+        // A pending invitation holds its seat: none is free now, and the add says the same.
+        Assert.Equal((1, 2, false, false), await SeatsAsync());
+        await AssertRefused(await AddStaff(c, "desk2@example.test"));
+
+        // Only staff administrators may ask.
+        using var desk = Client();
+        Guid receptionist = Guid.NewGuid();
+        await using (var db = sql.Context(tenant))
+        {
+            // Revoking the invitation frees the seat, which the receptionist below then takes: still none free.
+            await db.Invitations.ExecuteUpdateAsync(s => s.SetProperty(i => i.RevokedAt, DateTimeOffset.UtcNow));
+            Add(db, receptionist, Role.Receptionist, MembershipStatus.Active);
+            await db.SaveChangesAsync();
+        }
+        Assert.Equal((1, 2, false, false), await SeatsAsync());
+        desk.DefaultRequestHeaders.Remove(HeaderAuth.User);
+        desk.DefaultRequestHeaders.Add(HeaderAuth.User, receptionist.ToString());
+        Assert.Equal(HttpStatusCode.Forbidden, (await desk.GetAsync(new Uri("/v1/staff/plan", UriKind.Relative))).StatusCode);
+    }
+
     [Fact]
     public async Task SecondDoctorIsRefusedAndStaffRoomDoesNotHelp()
     {

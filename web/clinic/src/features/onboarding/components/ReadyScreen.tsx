@@ -3,14 +3,15 @@ import { useI18n } from '@medvya/i18n';
 import { Button, PageHeader } from '@medvya/ui';
 import { specialtyIdOf, type FinishResult, type WizardForm } from '../domain/onboarding';
 
-type Props = { form: WizardForm; done: FinishResult; homeLabel: 'today' | 'frontDesk'; onBook: () => void; onHome: () => void };
+type Props = { form: WizardForm; done: FinishResult; onBook: () => void; onHome: () => void };
 
 /**
- * The ready screen after finishing (6 Nov design): a summary of what was set up, then book the first patient or open the app.
+ * The ready screen after finishing (6 Nov design): a summary of what was set up, then send the request or open the app. The second button
+ * names no screen (#1365 F-027): My day and the front desk stay closed until Medvya approves the organisation.
  * shortcut: no "try a sample day" with 3 synthetic patients; patients cannot be flagged as samples or deleted together yet, and
  * mixing them with real patients is unsafe. Add it with a sample flag and a bulk delete in the Patients module.
  */
-export default function ReadyScreen({ form, done, homeLabel, onBook, onHome }: Props) {
+export default function ReadyScreen({ form, done, onBook, onHome }: Props) {
   const { t } = useI18n();
   const specialties = form.specialties.map(specialtyIdOf).filter(id => id !== undefined).slice(0, 2).map(id => t(`onboarding.specialty.${id}`)).join(', ');
   const rows: { icon: LucideIcon; label: string; value: string }[] = [
@@ -39,7 +40,7 @@ export default function ReadyScreen({ form, done, homeLabel, onBook, onHome }: P
       </dl>
       <div className="flex flex-wrap gap-3">
         <Button onClick={onBook}><FileUp className="size-4" aria-hidden />{t('onboarding.ready.book')}</Button>
-        <Button variant="outline" onClick={onHome}>{t(`onboarding.finish.${homeLabel}`)}</Button>
+        <Button variant="outline" onClick={onHome}>{t('onboarding.finish.app')}</Button>
       </div>
     </div>
   );

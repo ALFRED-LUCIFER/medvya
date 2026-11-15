@@ -24,7 +24,7 @@ public static class ConsentPolicy
 public static class ConsentRules
 {
     /// <summary>
-    /// Registration needs the treatment decision granted (locked on, not a choice) and the current policy version; every other
+    /// Registration needs the treatment decision granted (the desk ticks it, never pre-ticked: #1365 F-040) and the current policy version; every other
     /// decision is optional. Each (type, channel) is decided once per submission.
     /// </summary>
     public static ConsentSet ForRegistration(ConsentSet? consents) => Check(consents, treatmentRequired: true);

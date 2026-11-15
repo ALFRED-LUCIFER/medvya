@@ -172,3 +172,21 @@ for (const locale of ['en', 'ar'])
     await page.screenshot({ path: info.outputPath(`add-doctor-${locale}.png`) });
     expect(new Set(tops).size, `tops ${tops.join(', ')}`).toBe(1);
   });
+
+// #1365 F-039: with no doctor seat free, Add doctor says so at the first of its six steps and does not go on.
+for (const [locale, text, next] of [
+  ['en', 'Your plan allows 1 doctor and 2 staff; contact Medvya to upgrade', 'Next'],
+  ['ar', 'تتيح خطتك طبيبًا واحدًا وموظفَين اثنين؛ تواصل مع Medvya للترقية', 'التالي'],
+] as const)
+  test(`with no doctor seat free, Add doctor says so at step 1 and Next is off with the reason (${locale})`, async ({ page }) => {
+    const state = await setUp(page, locale);
+    await page.route('**/v1/staff/plan', r => r.fulfill({ json: { doctors: 1, staff: 2, doctorFree: false, staffFree: true } }));
+    await page.goto('/settings?tab=doctors');
+    await page.getByRole('button', { name: locale === 'ar' ? /طبيب/ : 'Add doctor' }).first().click();
+    await expect(page.getByRole('alert').filter({ hasText: text })).toBeVisible();
+    const go = page.getByRole('button', { name: next });
+    await expect(go).toBeDisabled();
+    await expect(go).toHaveAccessibleDescription(text);
+    expect(state.added).toBeNull();
+    expect(await axe(page)).toEqual([]);
+  });

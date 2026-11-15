@@ -49,6 +49,9 @@ public static class StaffEndpoints
             });
         });
 
+        // The plan's seats (#1365 F-039): the add wizards say at their first step when none is free, instead of refusing at the last.
+        g.MapGet("/plan", ([FromServices] IStaffRoster roster, CancellationToken ct) => roster.PlanSeatsAsync(ct));
+
         g.MapPost("/", async (AddStaff body, [FromServices] IInvitations invitations, CancellationToken ct) =>
         {
             // Doctors are added with licence verification (Settings → Doctors); no membership is created here.

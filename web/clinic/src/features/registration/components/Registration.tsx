@@ -145,7 +145,7 @@ export default function Registration(p: Props) {
           <Card headingId="registration-step" title={t(step ? `registration.step.${step}.title` : 'registration.quick.section')}
             intro={step && t(`registration.step.${step}.intro.${p.country}`)}>
             {p.quick && <QuickFields f={f} country={p.country} ageInstead={p.ageInstead} minor={p.minor} />}
-            {p.quick && <TreatmentConsent f={f} />}
+            {p.quick && <TreatmentConsent f={f} values={p.values} />}
             {step === 'identity' && <IdentityStep f={f} country={p.country} ageInstead={p.ageInstead} values={p.values} today={today} />}
             {step === 'contact' && <ContactStep f={f} country={p.country} values={p.values} />}
             {step === 'family' && <FamilyStep f={f} country={p.country} minor={p.minor} />}

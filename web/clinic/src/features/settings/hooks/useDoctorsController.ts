@@ -5,6 +5,7 @@ import { useForm, type FieldErrors } from 'react-hook-form';
 import { useI18n } from '@medvya/i18n';
 import { ApiError } from '../../schedule/services/scheduleApi';
 import { planFullText, type PlanLimit } from '../../staff/domain/staff';
+import { fetchPlanSeats } from '../../staff/services/staffApi';
 import {
   doctorProblem, doctorSchema, doctorSteps, emptyDoctor, emptyLicence, errorTarget, fieldProblem, licenceSchema, signatureProblem, stepFields,
   type Doctor, type DoctorForm, type DoctorStep, type LicenceForm,
@@ -52,6 +53,9 @@ export function useDoctorsController(defaultFacilityId: string) {
     },
   });
 
+  // #1365 F-039: asked when the wizard opens, so "no doctor seat" is said at the first of six steps. A failed read says nothing: the add still decides.
+  const seats = useQuery({ queryKey: ['staff', 'plan'], queryFn: fetchPlanSeats, enabled: adding, staleTime: 0 });
+  const noSeat = seats.data && !seats.data.doctorFree ? planFullText(i18n, seats.data) : null;
   const index = doctorSteps.indexOf(step);
   const next = async () => {
     if (await form.trigger(stepFields[step])) setStep(doctorSteps[index + 1] ?? step);
@@ -106,7 +110,9 @@ export function useDoctorsController(defaultFacilityId: string) {
     onSubmit: form.handleSubmit(values => add.mutate(values)),
     submitting: add.isPending,
     submitFailed: add.isError && !(add.error instanceof ApiError && (add.error.status === 400 || add.error.code === emailFailed || add.error.code === planFull)),
-    planFull: add.error instanceof ApiError && add.error.code === planFull ? planFullText(i18n, add.error.body as PlanLimit) : null,
+    planFull: add.error instanceof ApiError && add.error.code === planFull ? planFullText(i18n, add.error.body as PlanLimit) : noSeat,
+    /** False when the plan has no doctor seat: the wizard says why and does not go on. */
+    canContinue: noSeat === null,
     emailFailed: add.error instanceof ApiError && add.error.code === emailFailed,
 
     correcting,

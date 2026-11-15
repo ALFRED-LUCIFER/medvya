@@ -76,6 +76,10 @@ public static class SessionControl
             var user = Read(principal, ClaimTypes.NameIdentifier) is { } id ? await users.GetAsync(id, ct) : null;
             if (user is null) return Results.Unauthorized();
             var memberships = await directory.ForCurrentUserAsync(ct);
+            // When this browser session ends if nothing more is done (#1365 F-057): the app warns shortly before and offers to stay signed in.
+            // Read without counting as activity; the request's own activity, if any, was recorded when its cookie was checked.
+            var session = !NativeAuthentication.IsNative(principal) && Read(principal, SessionIdClaim) is { } sid ? await sessions.ValidateAsync(sid, user.Id, activity: false, ct) : null;
+            var ends = session?.Ends();
             // Role comes from the live membership row, so a suspended membership is no longer offered as active.
             var active = memberships.FirstOrDefault(m => m.Id == Read(principal, MembershipClaim));
             var state = active is null ? OrganisationState.Draft : await staff.OrganisationStateAsync(ct);
@@ -93,6 +97,12 @@ public static class SessionControl
                 memberships = memberships.Select(m => new { m.Id, m.TenantId, m.TenantName, m.FacilityId, m.FacilityName, Role = m.Role.ToString() }),
                 // The picker lists the last used facility first (MDV-P1-059); only ever one of the memberships above.
                 lastMembershipId = await sessions.LastMembershipAsync(user.Id, ct) is { } last && memberships.Any(m => m.Id == last) ? last : (Guid?)null,
+                session = ends is null ? null : new
+                {
+                    EndsInSeconds = Math.Max(0, (int)(ends.Value.At - DateTimeOffset.UtcNow).TotalSeconds),
+                    ends.Value.Extendable,
+                    IdleTimeoutSeconds = session!.IdleTimeoutMinutes * 60,
+                },
                 active = active is null ? null : new
                 {
                     MembershipId = active.Id,

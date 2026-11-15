@@ -20,8 +20,11 @@ export const signUpStepFields = { 1: ['practiceName', 'city'], 2: ['fullName', '
 
 export const emptySignUp = (country: Country): SignUpForm => ({ country, practiceName: '', city: '', fullName: '', email: '', role: 'doctor' });
 
-/** The answers as a draft: a doctor practises (Solo, with the licence step), a manager runs the clinic (no licence step). The city starts the address. */
+/**
+ * The answers as a draft: a doctor practises (Solo, with the licence step), a manager runs the clinic (no licence step). The city starts the
+ * address, and the work email starts "Email Medvya writes to about this request" (#1365 F-022): typed once, changeable there.
+ */
 export const toPrefill = (f: SignUpForm): OnboardingData => ({
   profile: { fullName: f.fullName.trim(), mode: f.role === 'doctor' ? 'Solo' : 'Clinic' },
-  clinic: { name: f.practiceName.trim(), address: f.city.trim() },
+  clinic: { name: f.practiceName.trim(), address: f.city.trim(), contactEmail: f.email.trim() },
 });

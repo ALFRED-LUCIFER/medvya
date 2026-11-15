@@ -14,15 +14,16 @@ export class SessionEndedError extends Error {}
 
 /**
  * The signed-in user and working context, or null when there is no session. Marked passive: the status poll must not
- * count as activity, or an unattended screen would never reach its idle timeout.
+ * count as activity, or an unattended screen would never reach its idle timeout. `passive: false` is the person saying "stay signed in"
+ * (#1365 F-057): that read does count.
  */
-export async function fetchMeContext(): Promise<MeContext | null> {
+export async function fetchMeContext(passive = true): Promise<MeContext | null> {
   // The first read was started by public/prefetch.js while the bundle downloaded; a failed or 5xx one is read again with retries.
   const pending = window.medvyaMeContext;
   window.medvyaMeContext = undefined; // taken once, before awaiting, so a second caller never reads the same body
   const early = await pending;
   const res = early && early.status < 500 ? early
-    : await apiFetch('/v1/me/context', { credentials: 'same-origin', headers: { 'X-Medvya-Passive': '1' } });
+    : await apiFetch('/v1/me/context', { credentials: 'same-origin', headers: passive ? { 'X-Medvya-Passive': '1' } : {} });
   if (res.status === 401) return null;
   if (!res.ok) throw new Error(`me/context ${res.status}`);
   return res.json() as Promise<MeContext>;

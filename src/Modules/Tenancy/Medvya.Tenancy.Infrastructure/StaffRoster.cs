@@ -22,6 +22,8 @@ public sealed class StaffRoster(TenancyDbContext db, ICurrentTenant tenant, ICur
 
     Guid TenantId => tenant.TenantId ?? throw new InvalidOperationException("No tenant context.");
 
+    public Task<PlanSeats> PlanSeatsAsync(CancellationToken cancellationToken = default) => plan.SeatsAsync(db, TenantId, cancellationToken);
+
     public async Task<IReadOnlyList<StaffRow>> ListAsync(CancellationToken cancellationToken = default)
     {
         var rows = await (

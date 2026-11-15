@@ -6,6 +6,7 @@ import { bannerAllergyState } from '../../patient360/domain/chart';
 import { checklistKey, type ChecklistItem } from '../domain/checklist';
 import { sectionLabelKey, withTitle, type NoteSignature, type SignFailure, type SignPatient } from '../domain/note';
 import type { StepUpReturn } from '../domain/stepUp';
+import StepUpConfirmed from './StepUpConfirmed';
 
 export type SignProblem = SignFailure | { kind: 'unsaved' } | { kind: 'finding' } | null;
 type Props = {
@@ -23,6 +24,7 @@ export function SignNote(p: Props) {
   const signRef = useRef<HTMLButtonElement>(null);
   return (
     <div className="flex flex-col gap-3">
+      {p.canSign && <StepUpConfirmed confirmed={p.resume.confirmed} action={t('noteSign.button')} />}
       {p.canSign && (
         <div className="flex flex-wrap items-center gap-3">
           {/* Inline on purpose: it runs again each render, so focus lands once the checklist has loaded and Sign is enabled. */}
@@ -31,7 +33,6 @@ export function SignNote(p: Props) {
             {p.remaining > 0 ? <CircleAlert aria-hidden className="size-4" /> : <CircleCheck aria-hidden className="size-4" />}
             {p.remaining > 0 ? tCount('signChecklist.remaining', p.remaining) : t('signChecklist.ready')}
           </p>
-          {p.resume.confirmed && <p role="status" className="font-bold">{t('stepUp.confirmed', { action: t('noteSign.button') })}</p>}
         </div>
       )}
       <SignProblemText problem={p.problem} />

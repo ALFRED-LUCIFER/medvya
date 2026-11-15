@@ -36,6 +36,7 @@ journey('J3', {
     await page.getByLabel('Mobile').fill(patient.mobile);
     await page.getByRole('textbox', { name: 'Date of birth (required)', exact: true }).fill(patient.dob);
     await page.getByRole('radio', { name: 'Female', exact: true }).check();
+    await page.getByRole('switch', { name: 'Treatment' }).check();
     await page.getByRole('button', { name: 'Register patient' }).click();
     await expect(page.getByRole('heading', { name: `${patient.name} is registered` })).toBeVisible();
     await expect(page.getByText('Attention · quick registration.')).toBeVisible();
@@ -52,6 +53,7 @@ journey('J3', {
     await page.getByLabel('Mobile').fill('+91 90000 00102');
     await page.getByRole('textbox', { name: 'Date of birth (required)', exact: true }).fill('1979-05-20');
     await page.getByRole('radio', { name: 'Male', exact: true }).check();
+    await page.getByRole('switch', { name: 'Treatment' }).check();
     const review = page.getByRole('region', { name: 'Attention · possible existing record' });
     await expect(review).toContainText('Matched on name + date of birth.');
     await expect(page.getByRole('button', { name: 'Resolve duplicate to save' })).toBeDisabled();

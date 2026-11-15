@@ -48,6 +48,7 @@ async function typeDeepak(page: Page) {
   await page.getByLabel('Mobile').fill('+91 90000 00201');
   await page.getByRole('textbox', { name: 'Date of birth (required)', exact: true }).fill('1979-08-14');
   await page.getByRole('radio', { name: 'Male', exact: true }).check();
+  await page.getByRole('switch', { name: 'Treatment' }).check(); // #1365 F-040: never pre-ticked
 }
 
 test('a possible match appears while typing, blocks save until resolved, and the decision is sent with the registration', async ({ page }) => {
@@ -134,12 +135,15 @@ test('required fields are announced, and a match found only at save time is show
   await desk(page, { register: () => ({ status: 400, json: { errors: [{ field: 'duplicates', code: 'unresolved' }] } }) });
   await page.getByRole('button', { name: 'Register patient' }).click();
   await expect(page.getByLabel('Full name')).toHaveAttribute('aria-invalid', 'true');
-  await expect(page.locator('main [id$="-error"]', { hasText: 'Required.' })).toHaveCount(4);
+  await expect(page.locator('main [id$="-error"]', { hasText: 'Required.' })).toHaveCount(5); // the four fields and the treatment consent (#1365 F-040)
+  await expect(page.getByRole('switch', { name: 'Treatment' })).not.toBeChecked();
+  await expect(page.getByRole('link', { name: 'Treatment: Required.' })).toBeVisible();
 
   await page.getByLabel('Full name').fill('Lakshmi Pillai');
   await page.getByLabel('Mobile').fill('+91 90000 00202');
   await page.getByRole('textbox', { name: 'Date of birth (required)', exact: true }).fill('1981-02-03');
   await page.getByRole('radio', { name: 'Female', exact: true }).check();
+  await page.getByRole('switch', { name: 'Treatment' }).check();
   await page.getByRole('button', { name: 'Register patient' }).click();
   await expect(page.getByText('A possible existing record was found while saving.', { exact: false })).toHaveCount(0); // nothing to show: no candidate
   await expect(page.getByRole('button', { name: 'Register patient' })).toBeEnabled();
@@ -184,8 +188,8 @@ for (const locale of ['en', 'ar'])
       await expect(summary).toBeFocused();
       await expect(summary).toBeInViewport();
       const links = summary.getByRole('link');
-      if (en) await expect(links).toHaveText(['Full name: Required.', 'Mobile: Required.', 'Date of birth: Required.', 'Sex at birth: Required.']);
-      const ids = ['fullName', 'mobile', 'dateOfBirth', 'sexAtBirth'];
+      if (en) await expect(links).toHaveText(['Full name: Required.', 'Mobile: Required.', 'Date of birth: Required.', 'Sex at birth: Required.', 'Treatment: Required.']);
+      const ids = ['fullName', 'mobile', 'dateOfBirth', 'sexAtBirth', 'consentTreatment'];
       await expect(links).toHaveCount(ids.length);
       for (const [i, id] of ids.entries()) {
         await links.nth(i).click();
@@ -234,6 +238,7 @@ for (const [w, h] of [[1440, 900], [1024, 768]] as const)
     await page.getByLabel('Emergency contact phone').fill('+91 90000 00412');
     await go(3, 'Family & emergency');
     await go(4, 'Payer');
+    await page.getByRole('switch', { name: 'Treatment' }).check();
     await go(5, 'Consents');
     await expect(page.getByRole('heading', { name: 'Review & duplicate check', level: 2 })).toBeVisible();
     await go(6, 'Review');

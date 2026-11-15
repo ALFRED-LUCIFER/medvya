@@ -119,6 +119,9 @@ export function useRegistrationController(country: Country, quick: boolean, scop
   const failure = save.error instanceof ApiError ? save.error : save.error ? new ApiError(0) : null;
   const index = steps.indexOf(step);
   const errors = form.formState.errors;
+  // The treatment tick clears its own error at once (other fields re-check on blur): the summary must not move the page under the next tap.
+  const treatmentFixed = values.consentTreatment && !!errors.consentTreatment;
+  useEffect(() => { if (treatmentFixed) form.clearErrors('consentTreatment'); }, [treatmentFixed, form]);
   const summaryShown = failed.count > 0 && (quick || failed.step === step);
   return {
     form,

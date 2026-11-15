@@ -88,5 +88,5 @@ export async function completeWizard(page: Page, { lost = false, refusals = lost
     await page.getByRole('button', { name: 'Finish setup' }).click();
   }
   await expect(page.getByRole('heading', { level: 1, name: 'Rao Clinic (synthetic) is ready.' })).toBeVisible();
-  await page.getByRole('button', { name: 'Open My day' }).click();
+  await page.getByRole('button', { name: 'Open Medvya' }).click();
 }

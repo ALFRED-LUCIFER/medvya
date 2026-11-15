@@ -7,7 +7,7 @@ import {
   addMember, emptyForm, formFieldOf, stepFields, stepOfPath, steps, stepSchema, toData, toForm,
   type Draft, type FinishResult, type WizardForm,
 } from '../domain/onboarding';
-import { ApiError, fetchDraft, finishOnboarding, saveDraft, startDraft, ValidationError } from '../services/onboardingApi';
+import { ApiError, cameFromSignUp, fetchDraft, finishOnboarding, saveDraft, startDraft, ValidationError } from '../services/onboardingApi';
 
 const key = ['onboarding'];
 const autosaveMs = 1200;
@@ -56,6 +56,11 @@ export function useOnboardingController(initialCountry: Country, onFinished: (re
     mutationFn: startDraft,
     onSuccess: (d: Draft) => queryClient.setQueryData(key, d),
   });
+  // Straight from create account (#1365 F-022): the country was chosen there, so the draft starts with it and the question is not asked twice.
+  // Read once; a failed start falls back to the question with its error and a button to try again.
+  const [fromSignUp] = useState(cameFromSignUp);
+  const autoStart = fromSignUp && draft.isSuccess && !draft.data && start.isIdle;
+  useEffect(() => { if (autoStart) start.mutate(initialCountry); }, [autoStart, start, initialCountry]);
 
   // Autosave: shortly after the last change, keep what was typed without checking it (a half-finished step is fine).
   useEffect(() => {
@@ -110,7 +115,7 @@ export function useOnboardingController(initialCountry: Country, onFinished: (re
   };
 
   return {
-    loading: draft.isPending,
+    loading: draft.isPending || autoStart || (fromSignUp && start.isPending),
     loadFailed: draft.isError,
     retry: () => void draft.refetch(),
     started: Boolean(data),

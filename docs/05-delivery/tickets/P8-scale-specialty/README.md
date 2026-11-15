@@ -8,15 +8,16 @@
 **Day one:** Features released individually as minor versions.  
 **Goal:** Add features where customer demand and clinical evidence justify them.
 
-**Tickets:** 7 · **Estimate:** 33 dev-days vs **65 working days** in the window (fits) · **Average confidence:** 56%
+**Tickets:** 22 · **Estimate:** 81 dev-days vs **65 working days** in the window (OVER by 16 days: needs scope trade-off or overlap) · **Average confidence:** 60%
 
-**Status:** To do 7
+**Status:** To do 22
 
 ## Epics
 
 | Epic | Title | Requirements | Goal |
 |---|---|---|---|
 | MDV-P8-E01 | Demand-driven features | P8-01, P8-02, P8-03, P8-04, P8-05, P8-06 | Features released individually as minor versions when demand and evidence justify them. |
+| MDV-P8-E02 | Dental clinic pack | P8-06 | A dental clinic runs its chair in Medvya, not on paper: tooth chart, treatment plan with an estimate, procedure billing and dental follow-up. |
 
 ## Tickets
 
@@ -24,11 +25,26 @@
 |---|---|---|---|---|---|---|---|---|---|---|
 | [MDV-P8-001](MDV-P8-001.md) | To do | Feature intake: adoption target, evidence review and regulatory classification check for every P8 feature | Chore | MUST | P8-01, P8-02, P8-03, P8-04, P8-05, P8-06 | — | 1 | 52–52 | 18 Oct → 22 Oct 2027 | 85% High |
 | [MDV-P8-002](MDV-P8-002.md) | To do | Teleconsultation: video visit with identity check and ambient notes (A-11) | Story | SHOULD | P8-01 | A-11 | 6 | 52–56 | 18 Oct → 19 Nov 2027 | 60% Low |
+| [MDV-P8-008](MDV-P8-008.md) | To do | Dental practitioner licences: dental councils in India and dental licences in the UAE, printed on prescriptions | Story | MUST | P8-06 | — | 2 | 52–52 | 18 Oct → 22 Oct 2027 | 80% Medium |
+| [MDV-P8-009](MDV-P8-009.md) | To do | Book by chair and procedure length: chairs as bookable resources, durations per dental procedure | Story | MUST | P8-06 | — | 4 | 52–53 | 18 Oct → 29 Oct 2027 | 70% Medium |
+| [MDV-P8-010](MDV-P8-010.md) | To do | Dental services and fees list | Story | MUST | P8-06 | — | 2 | 53–53 | 25 Oct → 29 Oct 2027 | 65% Medium |
+| [MDV-P8-011](MDV-P8-011.md) | To do | Tooth chart: FDI numbering, adult and milk teeth, surfaces and conditions, with history per tooth | Story | MUST | P8-06 | — | 6 | 53–55 | 25 Oct → 12 Nov 2027 | 60% Low |
+| [MDV-P8-014](MDV-P8-014.md) | To do | Medical history check before dental treatment | Story | MUST | P8-06 | — | 2 | 53–53 | 25 Oct → 29 Oct 2027 | 75% Medium |
+| [MDV-P8-015](MDV-P8-015.md) | To do | Dental note template and dental medicines in the formulary | Task | SHOULD | P8-06 | — | 2 | 53–53 | 25 Oct → 29 Oct 2027 | 75% Medium |
 | [MDV-P8-003](MDV-P8-003.md) | To do | Vaccinations and recalls: child, travel and adult schedules with reminders (E-08) | Story | COULD | P8-02 | E-08 | 4 | 54–57 | 01 Nov → 26 Nov 2027 | 70% Medium |
+| [MDV-P8-012](MDV-P8-012.md) | To do | Dental treatment plan: items per tooth, phases, cost estimate and patient acceptance | Story | MUST | P8-06 | — | 5 | 55–56 | 08 Nov → 19 Nov 2027 | 60% Low |
+| [MDV-P8-019](MDV-P8-019.md) | To do | Procedure consent forms signed on a tablet | Story | MUST | P8-06 | — | 3 | 55–55 | 08 Nov → 12 Nov 2027 | 60% Low |
 | [MDV-P8-004](MDV-P8-004.md) | To do | India ABDM: ABHA consent requests and linked records from other facilities | Story | SHOULD | P8-03 | — | 6 | 56–60 | 15 Nov → 17 Dec 2027 | 45% Low |
 | [MDV-P8-005](MDV-P8-005.md) | To do | Remaining UAE health exchanges (the two not used at launch) (N-07) | Story | SHOULD | P8-04 | N-07 | 5 | 56–62 | 15 Nov → 31 Dec 2027 | 45% Low |
+| [MDV-P8-013](MDV-P8-013.md) | To do | Multi-visit procedures: root canal, crown, implant and braces stages across visits | Story | SHOULD | P8-06 | — | 4 | 56–57 | 15 Nov → 26 Nov 2027 | 55% Low |
+| [MDV-P8-016](MDV-P8-016.md) | To do | Dental imaging: X-rays and photos on the tooth, with a viewer | Story | SHOULD | P8-06 | — | 4 | 57–58 | 22 Nov → 03 Dec 2027 | 50% Low |
 | [MDV-P8-006](MDV-P8-006.md) | To do | Front-desk extras: kiosk/QR self check-in, clinic letter inbox, offline read and draft (N-16) | Story | COULD | P8-05 | N-16 | 6 | 58–62 | 29 Nov → 31 Dec 2027 | 45% Low |
+| [MDV-P8-017](MDV-P8-017.md) | To do | Gum (periodontal) chart | Story | COULD | P8-06 | — | 3 | 58–58 | 29 Nov → 03 Dec 2027 | 55% Low |
+| [MDV-P8-018](MDV-P8-018.md) | To do | Dental lab orders: send, track and fit | Story | SHOULD | P8-06 | — | 3 | 58–59 | 29 Nov → 10 Dec 2027 | 60% Low |
+| [MDV-P8-020](MDV-P8-020.md) | To do | Dental recall: six-month check-up and cleaning reminders | Story | SHOULD | P8-06 | — | 2 | 59–59 | 06 Dec → 10 Dec 2027 | 70% Medium |
 | [MDV-P8-007](MDV-P8-007.md) | To do | Platform: public FHIR APIs, saved migration templates per vendor, specialty templates | Story | COULD | P8-06 | — | 5 | 60–64 | 13 Dec → 14 Jan 2028 | 45% Low |
+| [MDV-P8-021](MDV-P8-021.md) | To do | Materials stock and sterilisation log | Story | COULD | P8-06 | — | 4 | 60–61 | 13 Dec → 24 Dec 2027 | 45% Low |
+| [MDV-P8-022](MDV-P8-022.md) | To do | Dental pilot gate: a dentist walks a dental journey and signs off | Gate | MUST | P8-06 | — | 2 | 61–61 | 20 Dec → 24 Dec 2027 | 50% Low |
 
 ## Exit criteria (release gate)
 

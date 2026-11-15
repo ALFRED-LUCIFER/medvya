@@ -875,7 +875,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P7-007](P7-hospital-enterprise/MDV-P7-007.md) | Lab feeds (HL7 v2 ORU/ORM over MLLP/VPN) and imaging viewer links (N-15) | P7 | wk 48–52 | 50% |
 | [MDV-P7-008](P7-hospital-enterprise/MDV-P7-008.md) | Audit log and break-glass review (H-05) | P7 | wk 50–52 | 80% |
 
-## Week 52 · 18 Oct 2027 – 22 Oct 2027 · load 7.2 dev-days ⚠ over capacity
+## Week 52 · 18 Oct 2027 – 22 Oct 2027 · load 11.2 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -886,16 +886,23 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P7-011](P7-hospital-enterprise/MDV-P7-011.md) | Dedicated hospital stamp: own compute, database, Key Vault (CMK/HSM), storage, private link; AKS move when required | P7 | wk 52–58 | 55% |
 | [MDV-P8-001](P8-scale-specialty/MDV-P8-001.md) | Feature intake: adoption target, evidence review and regulatory classification check for every P8 feature | P8 | wk 52–52 | 85% |
 | [MDV-P8-002](P8-scale-specialty/MDV-P8-002.md) | Teleconsultation: video visit with identity check and ambient notes (A-11) | P8 | wk 52–56 | 60% |
+| [MDV-P8-008](P8-scale-specialty/MDV-P8-008.md) | Dental practitioner licences: dental councils in India and dental licences in the UAE, printed on prescriptions | P8 | wk 52–52 | 80% |
+| [MDV-P8-009](P8-scale-specialty/MDV-P8-009.md) | Book by chair and procedure length: chairs as bookable resources, durations per dental procedure | P8 | wk 52–53 | 70% |
 
-## Week 53 · 25 Oct 2027 – 29 Oct 2027 · load 3.1 dev-days
+## Week 53 · 25 Oct 2027 – 29 Oct 2027 · load 13.1 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
 | [MDV-P7-009](P7-hospital-enterprise/MDV-P7-009.md) | Retention and residency policies (H-06) and data subject requests with tamper-evident export (H-10) | P7 | wk 52–55 | 72% |
 | [MDV-P7-011](P7-hospital-enterprise/MDV-P7-011.md) | Dedicated hospital stamp: own compute, database, Key Vault (CMK/HSM), storage, private link; AKS move when required | P7 | wk 52–58 | 55% |
 | [MDV-P8-002](P8-scale-specialty/MDV-P8-002.md) | Teleconsultation: video visit with identity check and ambient notes (A-11) | P8 | wk 52–56 | 60% |
+| [MDV-P8-009](P8-scale-specialty/MDV-P8-009.md) | Book by chair and procedure length: chairs as bookable resources, durations per dental procedure | P8 | wk 52–53 | 70% |
+| [MDV-P8-010](P8-scale-specialty/MDV-P8-010.md) | Dental services and fees list | P8 | wk 53–53 | 65% |
+| [MDV-P8-011](P8-scale-specialty/MDV-P8-011.md) | Tooth chart: FDI numbering, adult and milk teeth, surfaces and conditions, with history per tooth | P8 | wk 53–55 | 60% |
+| [MDV-P8-014](P8-scale-specialty/MDV-P8-014.md) | Medical history check before dental treatment | P8 | wk 53–53 | 75% |
+| [MDV-P8-015](P8-scale-specialty/MDV-P8-015.md) | Dental note template and dental medicines in the formulary | P8 | wk 53–53 | 75% |
 
-## Week 54 · 01 Nov 2027 – 05 Nov 2027 · load 5.1 dev-days ⚠ over capacity
+## Week 54 · 01 Nov 2027 – 05 Nov 2027 · load 7.1 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -904,8 +911,9 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P7-011](P7-hospital-enterprise/MDV-P7-011.md) | Dedicated hospital stamp: own compute, database, Key Vault (CMK/HSM), storage, private link; AKS move when required | P7 | wk 52–58 | 55% |
 | [MDV-P8-002](P8-scale-specialty/MDV-P8-002.md) | Teleconsultation: video visit with identity check and ambient notes (A-11) | P8 | wk 52–56 | 60% |
 | [MDV-P8-003](P8-scale-specialty/MDV-P8-003.md) | Vaccinations and recalls: child, travel and adult schedules with reminders (E-08) | P8 | wk 54–57 | 70% |
+| [MDV-P8-011](P8-scale-specialty/MDV-P8-011.md) | Tooth chart: FDI numbering, adult and milk teeth, surfaces and conditions, with history per tooth | P8 | wk 53–55 | 60% |
 
-## Week 55 · 08 Nov 2027 – 12 Nov 2027 · load 5.7 dev-days ⚠ over capacity
+## Week 55 · 08 Nov 2027 – 12 Nov 2027 · load 13.2 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -915,8 +923,11 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P7-012](P7-hospital-enterprise/MDV-P7-012.md) | SIEM export and privileged access review | P7 | wk 55–57 | 75% |
 | [MDV-P8-002](P8-scale-specialty/MDV-P8-002.md) | Teleconsultation: video visit with identity check and ambient notes (A-11) | P8 | wk 52–56 | 60% |
 | [MDV-P8-003](P8-scale-specialty/MDV-P8-003.md) | Vaccinations and recalls: child, travel and adult schedules with reminders (E-08) | P8 | wk 54–57 | 70% |
+| [MDV-P8-011](P8-scale-specialty/MDV-P8-011.md) | Tooth chart: FDI numbering, adult and milk teeth, surfaces and conditions, with history per tooth | P8 | wk 53–55 | 60% |
+| [MDV-P8-012](P8-scale-specialty/MDV-P8-012.md) | Dental treatment plan: items per tooth, phases, cost estimate and patient acceptance | P8 | wk 55–56 | 60% |
+| [MDV-P8-019](P8-scale-specialty/MDV-P8-019.md) | Procedure consent forms signed on a tablet | P8 | wk 55–55 | 60% |
 
-## Week 56 · 15 Nov 2027 – 19 Nov 2027 · load 6.6 dev-days ⚠ over capacity
+## Week 56 · 15 Nov 2027 – 19 Nov 2027 · load 11.1 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -927,8 +938,10 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P8-003](P8-scale-specialty/MDV-P8-003.md) | Vaccinations and recalls: child, travel and adult schedules with reminders (E-08) | P8 | wk 54–57 | 70% |
 | [MDV-P8-004](P8-scale-specialty/MDV-P8-004.md) | India ABDM: ABHA consent requests and linked records from other facilities | P8 | wk 56–60 | 45% |
 | [MDV-P8-005](P8-scale-specialty/MDV-P8-005.md) | Remaining UAE health exchanges (the two not used at launch) (N-07) | P8 | wk 56–62 | 45% |
+| [MDV-P8-012](P8-scale-specialty/MDV-P8-012.md) | Dental treatment plan: items per tooth, phases, cost estimate and patient acceptance | P8 | wk 55–56 | 60% |
+| [MDV-P8-013](P8-scale-specialty/MDV-P8-013.md) | Multi-visit procedures: root canal, crown, implant and braces stages across visits | P8 | wk 56–57 | 55% |
 
-## Week 57 · 22 Nov 2027 – 26 Nov 2027 · load 4.4 dev-days
+## Week 57 · 22 Nov 2027 – 26 Nov 2027 · load 8.4 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -937,8 +950,10 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P8-003](P8-scale-specialty/MDV-P8-003.md) | Vaccinations and recalls: child, travel and adult schedules with reminders (E-08) | P8 | wk 54–57 | 70% |
 | [MDV-P8-004](P8-scale-specialty/MDV-P8-004.md) | India ABDM: ABHA consent requests and linked records from other facilities | P8 | wk 56–60 | 45% |
 | [MDV-P8-005](P8-scale-specialty/MDV-P8-005.md) | Remaining UAE health exchanges (the two not used at launch) (N-07) | P8 | wk 56–62 | 45% |
+| [MDV-P8-013](P8-scale-specialty/MDV-P8-013.md) | Multi-visit procedures: root canal, crown, implant and braces stages across visits | P8 | wk 56–57 | 55% |
+| [MDV-P8-016](P8-scale-specialty/MDV-P8-016.md) | Dental imaging: X-rays and photos on the tooth, with a viewer | P8 | wk 57–58 | 50% |
 
-## Week 58 · 29 Nov 2027 – 03 Dec 2027 · load 4.6 dev-days
+## Week 58 · 29 Nov 2027 – 03 Dec 2027 · load 11.1 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -947,8 +962,11 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P8-004](P8-scale-specialty/MDV-P8-004.md) | India ABDM: ABHA consent requests and linked records from other facilities | P8 | wk 56–60 | 45% |
 | [MDV-P8-005](P8-scale-specialty/MDV-P8-005.md) | Remaining UAE health exchanges (the two not used at launch) (N-07) | P8 | wk 56–62 | 45% |
 | [MDV-P8-006](P8-scale-specialty/MDV-P8-006.md) | Front-desk extras: kiosk/QR self check-in, clinic letter inbox, offline read and draft (N-16) | P8 | wk 58–62 | 45% |
+| [MDV-P8-016](P8-scale-specialty/MDV-P8-016.md) | Dental imaging: X-rays and photos on the tooth, with a viewer | P8 | wk 57–58 | 50% |
+| [MDV-P8-017](P8-scale-specialty/MDV-P8-017.md) | Gum (periodontal) chart | P8 | wk 58–58 | 55% |
+| [MDV-P8-018](P8-scale-specialty/MDV-P8-018.md) | Dental lab orders: send, track and fit | P8 | wk 58–59 | 60% |
 
-## Week 59 · 06 Dec 2027 – 10 Dec 2027 · load 3.8 dev-days
+## Week 59 · 06 Dec 2027 – 10 Dec 2027 · load 7.3 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -956,8 +974,10 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P8-004](P8-scale-specialty/MDV-P8-004.md) | India ABDM: ABHA consent requests and linked records from other facilities | P8 | wk 56–60 | 45% |
 | [MDV-P8-005](P8-scale-specialty/MDV-P8-005.md) | Remaining UAE health exchanges (the two not used at launch) (N-07) | P8 | wk 56–62 | 45% |
 | [MDV-P8-006](P8-scale-specialty/MDV-P8-006.md) | Front-desk extras: kiosk/QR self check-in, clinic letter inbox, offline read and draft (N-16) | P8 | wk 58–62 | 45% |
+| [MDV-P8-018](P8-scale-specialty/MDV-P8-018.md) | Dental lab orders: send, track and fit | P8 | wk 58–59 | 60% |
+| [MDV-P8-020](P8-scale-specialty/MDV-P8-020.md) | Dental recall: six-month check-up and cleaning reminders | P8 | wk 59–59 | 70% |
 
-## Week 60 · 13 Dec 2027 – 17 Dec 2027 · load 4.8 dev-days
+## Week 60 · 13 Dec 2027 – 17 Dec 2027 · load 6.8 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -966,14 +986,17 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P8-005](P8-scale-specialty/MDV-P8-005.md) | Remaining UAE health exchanges (the two not used at launch) (N-07) | P8 | wk 56–62 | 45% |
 | [MDV-P8-006](P8-scale-specialty/MDV-P8-006.md) | Front-desk extras: kiosk/QR self check-in, clinic letter inbox, offline read and draft (N-16) | P8 | wk 58–62 | 45% |
 | [MDV-P8-007](P8-scale-specialty/MDV-P8-007.md) | Platform: public FHIR APIs, saved migration templates per vendor, specialty templates | P8 | wk 60–64 | 45% |
+| [MDV-P8-021](P8-scale-specialty/MDV-P8-021.md) | Materials stock and sterilisation log | P8 | wk 60–61 | 45% |
 
-## Week 61 · 20 Dec 2027 – 24 Dec 2027 · load 2.9 dev-days
+## Week 61 · 20 Dec 2027 – 24 Dec 2027 · load 6.9 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
 | [MDV-P8-005](P8-scale-specialty/MDV-P8-005.md) | Remaining UAE health exchanges (the two not used at launch) (N-07) | P8 | wk 56–62 | 45% |
 | [MDV-P8-006](P8-scale-specialty/MDV-P8-006.md) | Front-desk extras: kiosk/QR self check-in, clinic letter inbox, offline read and draft (N-16) | P8 | wk 58–62 | 45% |
 | [MDV-P8-007](P8-scale-specialty/MDV-P8-007.md) | Platform: public FHIR APIs, saved migration templates per vendor, specialty templates | P8 | wk 60–64 | 45% |
+| [MDV-P8-021](P8-scale-specialty/MDV-P8-021.md) | Materials stock and sterilisation log | P8 | wk 60–61 | 45% |
+| [MDV-P8-022](P8-scale-specialty/MDV-P8-022.md) | Dental pilot gate: a dentist walks a dental journey and signs off | P8 | wk 61–61 | 50% |
 
 ## Week 62 · 27 Dec 2027 – 31 Dec 2027 · load 2.9 dev-days
 

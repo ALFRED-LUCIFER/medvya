@@ -113,6 +113,9 @@ public sealed class ConsultNoteService(
         // The endpoint already needs Sign on Clinical notes (licence gate included); this adds the care relationship.
         await clinical.RequireAsync(encounter.PatientId, encounter.FacilityId, Capability.ClinicalNotes, SignLevel, cancellationToken);
         var me = user.UserId ?? throw new InvalidOperationException("No user.");
+        // A note is signed by the doctor who held the consultation, never by a colleague on their behalf (a colleague adds an addendum
+        // under their own name once it is signed). Remove this and SignNoteTests.OnlyTheDoctorWhoHeldTheConsultationSignsItsNote fails.
+        if (encounter.LeadClinicianId != me) throw new ClinicalAccessDeniedException(canRequest: false, requestPending: false);
         var now = RequireReauth();
         var note = await db.ConsultNotes.SingleOrDefaultAsync(n => n.EncounterId == encounterId, cancellationToken);
         if (note?.Status == NoteStatus.Signed) return await ViewAsync(note, cancellationToken); // a double click or retry: nothing new is written

@@ -5415,6 +5415,7 @@
   "platform.features.alwaysOn": "تعمل دائمًا",
   "platform.features.new": "جديدة",
   "platform.features.noSignOff": "غير مسجّلة",
+  "platform.features.signOffMissing": "الاعتماد مفقود: أُتيحت للجميع بلا اعتماد سريري مسجّل",
   "platform.features.notNeeded": "غير مطلوبة",
   "platform.features.never": "أبدًا",
   "platform.features.change": "تغيير",

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bodyOf, canChange, needsSignOff, releaseForm, type ReleaseForm } from './features';
+import { bodyOf, canChange, needsSignOff, releaseForm, signOffState, type ReleaseForm } from './features';
 
 const form = (over: Partial<ReleaseForm>): ReleaseForm => ({ stage: 'Off', percentage: '', organisations: '', clinicalSignOff: '', reason: 'Pilot clinics asked for it', ...over });
 const codes = (f: ReleaseForm) => {
@@ -35,6 +35,15 @@ describe('features', () => {
     expect(needsSignOff({ clinical: true, clinicalSignOff: 'CSO (synthetic), HL-041' }, 'Everyone')).toBe(false);
     expect(needsSignOff({ clinical: true, clinicalSignOff: null }, 'Beta')).toBe(false);
     expect(needsSignOff({ clinical: false, clinicalSignOff: null }, 'Everyone')).toBe(false);
+  });
+
+  it('says a clinical feature that reaches everyone without a recorded sign-off is missing one', () => {
+    const clinical = { clinical: true, alwaysOn: false, stage: 'Everyone' as const, clinicalSignOff: null };
+    expect(signOffState(clinical)).toBe('missing');
+    expect(signOffState({ ...clinical, clinicalSignOff: 'CSO (synthetic), HL-041' })).toBe('recorded');
+    expect(signOffState({ ...clinical, stage: 'Beta' })).toBe('none');
+    expect(signOffState({ ...clinical, alwaysOn: true })).toBe('notNeeded');
+    expect(signOffState({ ...clinical, clinical: false })).toBe('notNeeded');
   });
 
   it('sends the share only at Percentage and the organisations as a list', () => {

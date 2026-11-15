@@ -5418,6 +5418,7 @@
   "platform.features.alwaysOn": "Always on",
   "platform.features.new": "New",
   "platform.features.noSignOff": "Not recorded",
+  "platform.features.signOffMissing": "Sign-off missing: released to everyone without a recorded clinical sign-off",
   "platform.features.notNeeded": "Not needed",
   "platform.features.never": "Never",
   "platform.features.change": "Change",

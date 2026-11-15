@@ -48,6 +48,9 @@ test('an operations member moves a clinical feature to everyone only with a sign
   const api = await mock(page, 'Operations');
   await page.goto('/features');
   await expect(page.getByRole('heading', { name: 'Features' })).toBeVisible();
+  // F-043: in the UAE nurse intake reaches everyone with no clinical sign-off on record; the page says so in words, and switches nothing off.
+  await expect(page.getByRole('row', { name: /Nurse intake/ })).toContainText('Sign-off missing: released to everyone without a recorded clinical sign-off');
+  await expect(page.getByRole('row', { name: /Billing and invoices|billing/i }).first()).not.toContainText('Sign-off missing');
   // AE comes first from the server; India is one click away and keeps its own release.
   await page.getByRole('button', { name: 'India' }).click();
   const table = page.getByRole('region', { name: 'Features' });
@@ -107,6 +110,7 @@ test('the Features page reads in Arabic, right to left, axe clean, and stacks on
   await expect(page.getByRole('heading', { name: t('ar', 'platform.features.title') })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.dir)).toBe('rtl');
   await expect(page.getByRole('link', { name: t('ar', 'platform.nav.features') })).toBeVisible();
+  await expect(page.getByText(t('ar', 'platform.features.signOffMissing'))).toBeVisible(); // F-043, with axe below (words and icon, AA contrast)
   expect(await axe(page)).toEqual([]);
   await page.getByRole('button', { name: t('ar', 'platform.features.changeFor', { feature: t('ar', 'platform.features.name.billing.invoices') }) }).click();
   await expect(page.getByRole('button', { name: t('ar', 'platform.features.save') })).toBeVisible();

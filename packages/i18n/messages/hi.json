@@ -5377,6 +5377,7 @@
   "platform.features.alwaysOn": "हमेशा चालू",
   "platform.features.new": "नया",
   "platform.features.noSignOff": "दर्ज नहीं",
+  "platform.features.signOffMissing": "साइन-ऑफ़ नहीं है: दर्ज क्लिनिकल साइन-ऑफ़ के बिना सभी के लिए जारी",
   "platform.features.notNeeded": "ज़रूरी नहीं",
   "platform.features.never": "कभी नहीं",
   "platform.features.change": "बदलें",

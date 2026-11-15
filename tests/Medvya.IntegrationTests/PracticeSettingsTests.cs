@@ -22,7 +22,7 @@ namespace Medvya.IntegrationTests;
 public sealed class PracticeSettingsTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IAsyncLifetime
 {
     static readonly byte[] Png = TestImages.Png;
-    const string Gstin = "27AAAAA0000A1Z5"; // format only (synthetic)
+    const string Gstin = "27AAAAA0000A1Z2"; // synthetic: nobody's PAN, with its real check character
     readonly SchedulingHarness h = new(sql);
     WebApplicationFactory<Program>? factory;
 

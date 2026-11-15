@@ -156,7 +156,8 @@ export function DecisionBar({ vm }: { vm: DetailVm }) {
         const Icon = icons[a];
         const blocked = a === 'approve' && (vm.blockedByDpa || vm.blockedByChecks);
         return (
-          <Button key={a} variant={isDestructive(a) ? 'destructive' : isFilled(a) ? 'default' : 'outline'} disabled={blocked}
+          // One filled button per view: Reject and Suspend are outlined in the danger tokens and say what they do in words and icon (F-052).
+          <Button key={a} variant={isFilled(a) ? 'default' : 'outline'} className={isDestructive(a) ? 'border-danger-border text-danger-text' : undefined} disabled={blocked}
             aria-describedby={blocked ? (vm.blockedByDpa ? 'approvals-dpa' : 'approvals-checks') : undefined} onClick={() => vm.onStart(a)}>
             <Icon aria-hidden />{t(`platform.approvals.action.${a}` as MessageKey)}
           </Button>

@@ -26,6 +26,13 @@ export const canChange = (role: PlatformRole) => role === 'Owner' || role === 'O
 /** A clinical feature needs a recorded clinical sign-off before it reaches everyone; the server refuses too (clinicalSignOff:required). */
 export const needsSignOff = (r: Pick<Release, 'clinical' | 'clinicalSignOff'>, stage: Stage) => r.clinical && stage === 'Everyone' && !r.clinicalSignOff;
 
+/**
+ * What the sign-off column says. missing: a clinical feature reaches everyone with no sign-off on record (its starting stage, or a release from
+ * before the rule): shown in words, nothing is switched off. The server refuses any new move to everyone without one.
+ */
+export const signOffState = (r: Pick<Release, 'clinical' | 'alwaysOn' | 'stage' | 'clinicalSignOff'>): 'recorded' | 'missing' | 'none' | 'notNeeded' =>
+  r.clinicalSignOff ? 'recorded' : !r.clinical || r.alwaysOn ? 'notNeeded' : r.stage === 'Everyone' ? 'missing' : 'none';
+
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** Organisation ids as pasted from the approvals page: one per line or separated by commas or spaces. */
 export const organisationIds = (text: string) => text.split(/[\s,]+/).filter(Boolean);

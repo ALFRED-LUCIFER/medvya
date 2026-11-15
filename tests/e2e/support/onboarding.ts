@@ -60,6 +60,8 @@ export async function completeWizard(page: Page, { lost = false } = {}) {
   await page.getByLabel('A clinic').check();
   await page.getByLabel('Email Medvya writes to about this request').fill('desk@example.test');
   await page.getByLabel(/^Address/).fill('12 Test Street, Chennai');
+  await page.getByLabel('Clinical establishment registration').fill('CE-0001'); // a clinic gives the numbers of the certificates it uploads (ADR-016)
+  await page.getByLabel('GSTIN').fill('33AAAAA0000A1Z9');
   await page.getByLabel('General practice').check();
   await page.getByRole('combobox', { name: 'Medical council' }).click();
   await page.getByRole('option', { name: /TNMC/ }).click();

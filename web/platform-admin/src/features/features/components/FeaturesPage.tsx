@@ -1,5 +1,5 @@
 import { useId, type FormEventHandler } from 'react';
-import { Lock, Power, SlidersHorizontal } from 'lucide-react';
+import { Lock, Power, SlidersHorizontal, TriangleAlert } from 'lucide-react';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 import { useI18n, type MessageKey } from '@medvya/i18n';
 import {
@@ -8,7 +8,7 @@ import {
 } from '@medvya/ui';
 import ReasonPanel, { ReasonBar } from '../../shell/components/ReasonPanel';
 import type { ReasonForm } from '../../team/domain/team';
-import { featureColumns, hasName, needsSignOff, stages, type PendingChange, type Release, type ReleaseForm, type Stage } from '../domain/features';
+import { featureColumns, hasName, needsSignOff, signOffState, stages, type PendingChange, type Release, type ReleaseForm, type Stage } from '../domain/features';
 
 type Props = {
   vm: {
@@ -30,6 +30,13 @@ export default function FeaturesPage({ vm }: Props) {
   const ids = { stage: useId(), percentage: useId(), organisations: useId(), signOff: useId(), reason: useId() };
   const name = (key: string) => (hasName(key) ? t(`platform.features.name.${key}`) : key);
   const stageText = (r: Release) => (r.stage === 'Percentage' ? t('platform.features.stage.percentageOf', { percent: r.percentage }) : t(`platform.features.stage.${r.stage}`));
+  // In words and an icon, never colour alone: a clinical feature that reaches everyone without a recorded sign-off (F-043).
+  const signOffText = (r: Release) => {
+    const state = signOffState(r);
+    return state === 'recorded' ? r.clinicalSignOff
+      : state === 'missing' ? <span className="inline-flex items-center gap-1 font-semibold text-danger-text"><TriangleAlert aria-hidden className="size-4 shrink-0" />{t('platform.features.signOffMissing')}</span>
+      : t(state === 'none' ? 'platform.features.noSignOff' : 'platform.features.notNeeded');
+  };
   const errorText = (code?: string) => (code ? t(`platform.error.${code}` as MessageKey) : undefined);
   const e = vm.changeForm.formState.errors;
   const changing = vm.pending?.kind === 'change' ? vm.pending.release : null;
@@ -114,7 +121,7 @@ export default function FeaturesPage({ vm }: Props) {
                     : <span className="inline-flex flex-wrap items-center gap-2">{stageText(r)}{r.isNew && <Tag tone="info" size="sm" label={t('platform.features.new')} />}</span>}
                 </TableCell>
                 <TableCell label={t('platform.features.col.signOff')}>
-                  {r.clinicalSignOff ?? (r.clinical && !r.alwaysOn ? t('platform.features.noSignOff') : t('platform.features.notNeeded'))}
+                  {signOffText(r)}
                 </TableCell>
                 <TableCell label={t('platform.features.col.changed')}>
                   {r.changedAt ? `${formatDate(new Date(r.changedAt))} ${formatTime(new Date(r.changedAt))}` : t('platform.features.never')}

@@ -39,6 +39,8 @@ describe('set-up wizard model (6 Nov steps)', () => {
     expect(issues(1, emptyForm('IN'))).toEqual(['orgType:required', 'contactEmail:required', 'fullName:required', 'clinicName:required', 'address:required', 'specialties:required', 'authority:required', 'number:required', 'expiresOn:required', 'attested:required']);
     expect(issues(1, { ...emptyForm('IN'), mode: 'Clinic' })).toEqual(['orgType:required', 'contactEmail:required', 'fullName:required', 'clinicName:required', 'address:required']); // no licence, no specialty
     expect(issues(1, { ...emptyForm('IN'), mode: 'Clinic', orgType: 'Hospital', contactEmail: 'desk@example.test', fullName: 'K', clinicName: 'C', address: 'A' })).toEqual([]);
+    // A clinic gives the numbers of its registration certificate and tax registration; a hospital's stay optional.
+    expect(issues(1, { ...emptyForm('IN'), mode: 'Clinic', orgType: 'Clinic', contactEmail: 'desk@example.test', fullName: 'K', clinicName: 'C', address: 'A', taxId: ' ' })).toEqual(['registrationNumber:required', 'taxId:required']);
     expect(issues(2, emptyForm('IN'))).toEqual([]); // the design defaults are complete
     expect(issues(2, { ...emptyForm('IN'), days: [], newVisitFee: ' ' })).toEqual(['days:required', 'newVisitFee:required']);
     expect(issues(2, { ...emptyForm('IN'), weekdayStart1: '', weekdayEnd1: '' })).toEqual(['weekdayStart1:required']);

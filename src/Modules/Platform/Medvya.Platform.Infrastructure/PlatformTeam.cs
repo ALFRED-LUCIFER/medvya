@@ -21,9 +21,11 @@ sealed class PlatformTeam(PlatformDbContext db, IPlatformCaller caller, TimeProv
         var members = await db.Members.AsNoTracking().Where(m => m.RemovedAt == null).OrderBy(m => m.DisplayName).ToListAsync(cancellationToken);
         var withKeys = await db.Keys.AsNoTracking().Where(k => k.RevokedAt == null).Select(k => k.MemberId).Distinct().ToListAsync(cancellationToken);
         var lastReview = await db.AuditEntries.AsNoTracking().Where(a => a.Action == AccessReview).MaxAsync(a => (DateTimeOffset?)a.OccurredAt, cancellationToken);
+        // A team that was never reviewed counts from its first member (removed ones included), so a new console is not "due" on its first day.
+        var since = lastReview ?? await db.Members.AsNoTracking().MinAsync(m => (DateTimeOffset?)m.InvitedAt, cancellationToken) ?? now;
         return new TeamView(
             [.. members.Select(m => new TeamMemberView(m.Id, m.DisplayName, m.Email, m.Role, withKeys.Contains(m.Id), m.Subject is not null, m.LastActiveAt, m.AccessEndsOn))],
-            lastReview, lastReview is { } r ? r + AccessReviewInterval : now);
+            lastReview, since + AccessReviewInterval);
     }
 
     public async Task<IssuedLink> InviteAsync(Invite invite, CancellationToken cancellationToken = default)
@@ -117,10 +119,10 @@ sealed class PlatformAuditLog(PlatformDbContext db, IPlatformCaller caller, Time
     {
         db.AuditEntries.Add(PlatformAudit.Entry(caller, clock.GetUtcNow(), "audit.export", "platform_audit", null, reason));
         await db.SaveChangesAsync(cancellationToken); // logged before anything is handed out
-        var csv = new StringBuilder("occurred_at,action,resource_type,resource_id,practice_id,actor,reason\r\n");
+        var csv = new StringBuilder("occurred_at,action,resource_type,resource_id,practice_id,practice,detail,actor,actor_email,reason\r\n");
         foreach (var a in await View(db.AuditEntries.AsNoTracking().OrderBy(a => a.OccurredAt).ThenBy(a => a.Id)).ToListAsync(cancellationToken))
             csv.AppendJoin(',', [a.OccurredAt.ToString("O", CultureInfo.InvariantCulture), Cell(a.Action), Cell(a.ResourceType), a.ResourceId?.ToString() ?? "",
-                a.SubjectTenantId?.ToString() ?? "", Cell(a.Actor), Cell(a.Reason)]).Append("\r\n");
+                a.SubjectTenantId?.ToString() ?? "", Cell(a.SubjectName), Cell(a.Detail), Cell(a.Actor), Cell(a.ActorEmail), Cell(a.Reason)]).Append("\r\n");
         return csv.ToString();
     }
 
@@ -128,7 +130,7 @@ sealed class PlatformAuditLog(PlatformDbContext db, IPlatformCaller caller, Time
         from a in q
         join m in db.Members on a.ActorMemberId equals m.Id into actors
         from m in actors.DefaultIfEmpty()
-        select new AuditEntryView(a.Id, a.OccurredAt, a.Action, a.ResourceType, a.ResourceId, a.SubjectTenantId, m == null ? null : m.DisplayName, a.Reason);
+        select new AuditEntryView(a.Id, a.OccurredAt, a.Action, a.ResourceType, a.ResourceId, a.SubjectTenantId, m == null ? null : m.DisplayName, m == null ? null : m.Email, a.Reason, a.SubjectName, a.Detail);
 
     /// <summary>
     /// One quoted CSV cell. A cell a spreadsheet would run as a formula (=, +, -, @, tab, carriage return) is prefixed with an apostrophe,

@@ -36,6 +36,8 @@ test('J1: a new clinic owner sets up the practice, Medvya approves it, then a pa
     await expect(page.getByLabel('Full name')).toHaveValue('Arjun Menon (synthetic)');
     await expect(page.getByLabel('Practice name')).toHaveValue(`Menon Clinic ${n} (synthetic)`);
     await page.getByLabel(/^Address/).fill('12 Test Street, Chennai');
+    await page.getByLabel('Clinical establishment registration').fill('CE-0001'); // a clinic gives the numbers of the certificates it uploads
+    await page.getByLabel('GSTIN').fill('33AAAAA0000A1Z9'); // synthetic: nobody's PAN, with its real check character
     await page.getByLabel('A clinic').check(); // ADR-016: Clinic or Hospital is chosen first; a doctor who works alone registers a clinic
     await page.getByLabel('Email Medvya writes to about this request').fill(`owner${n}@example.test`);
     await page.getByLabel('General practice').check();

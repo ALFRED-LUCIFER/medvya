@@ -64,6 +64,8 @@ public sealed class PlatformDbContext(DbContextOptions<PlatformDbContext> option
             e.Property(x => x.Action).HasMaxLength(64);
             e.Property(x => x.ResourceType).HasMaxLength(64);
             e.Property(x => x.Reason).HasMaxLength(PlatformAuditEntry.ReasonMax);
+            e.Property(x => x.SubjectName).HasMaxLength(PlatformAuditEntry.SubjectNameMax);
+            e.Property(x => x.Detail).HasMaxLength(PlatformAuditEntry.DetailMax);
             e.Property(x => x.ClientIp).HasMaxLength(45);
             e.Property(x => x.CorrelationId).HasMaxLength(64);
             e.HasIndex(x => x.OccurredAt);

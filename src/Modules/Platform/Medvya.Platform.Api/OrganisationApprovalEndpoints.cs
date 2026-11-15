@@ -42,8 +42,10 @@ public static class OrganisationApprovalEndpoints
         read.MapGet("/{tenantId:guid}/documents/{documentId:guid}", async (Guid tenantId, Guid documentId, HttpContext http, [FromServices] IOrganisationConsole console,
             [FromServices] IConsoleActions actions, [FromServices] IPlatformCaller caller, CancellationToken ct) =>
         {
+            // The organisation's name and the document's kind go into the entry, so the log says which document of which organisation was opened.
+            var request = await console.DetailAsync(tenantId, Operator(caller), ct);
             if (await console.OpenDocumentAsync(tenantId, documentId, Operator(caller), ct) is not { } file) return Results.NotFound();
-            await actions.RecordAsync("organisation.document.view", Action, documentId, tenantId, null, ct);
+            await actions.RecordAsync("organisation.document.view", Action, documentId, tenantId, null, request?.Name, request?.Documents.FirstOrDefault(d => d.Id == documentId)?.Kind, ct);
             http.Response.Headers.CacheControl = "no-store";
             http.Response.Headers.ContentDisposition = "inline";
             return Results.File(file.Content, file.ContentType);
@@ -60,17 +62,19 @@ public static class OrganisationApprovalEndpoints
                 // shortcut: a tick is the reviewer's word, not proof of reading; each view is logged on its own, so an audit can compare. Require a logged
                 // view per ticked document if a review ever finds ticks without views.
                 Guid[] checkedDocuments = [];
+                var request = await console.DetailAsync(tenantId, Operator(caller), ct); // also names the organisation in the log entries below
                 if (action == ReviewAction.Approve)
                 {
-                    if (await console.DetailAsync(tenantId, Operator(caller), ct) is not { } request) return Results.NotFound();
+                    if (request is null) return Results.NotFound();
                     checkedDocuments = [.. request.Documents.Select(d => d.Id)];
                     if (checkedDocuments.Except(body.CheckedDocuments ?? []).Any()) throw new SettingsValidationException([new("documents", "unchecked")]);
                 }
                 if (await console.DecideAsync(tenantId, action, reason, Operator(caller), ct) is not { } email) return Results.NotFound();
                 // shortcut: the state change and this entry are in two databases (the review login and the console's), so they cannot share a transaction;
                 // the organisation's own audit trail records the decision first. Add an outbox or a reconcile job if an entry here is ever missing.
-                foreach (var document in checkedDocuments) await actions.RecordAsync("organisation.document.checked", Action, document, tenantId, null, ct);
-                await actions.RecordAsync($"organisation.{route}", Action, tenantId, tenantId, reason, ct);
+                foreach (var document in checkedDocuments)
+                    await actions.RecordAsync("organisation.document.checked", Action, document, tenantId, null, request?.Name, request?.Documents.First(d => d.Id == document).Kind, ct);
+                await actions.RecordAsync($"organisation.{route}", Action, tenantId, tenantId, reason, request?.Name, cancellationToken: ct);
                 return Results.Ok(email);
             });
         return app;

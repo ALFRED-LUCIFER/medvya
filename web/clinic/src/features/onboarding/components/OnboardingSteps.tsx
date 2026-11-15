@@ -37,6 +37,8 @@ function Note({ icon: Icon = Info, children }: { icon?: LucideIcon; children: Re
 export function PracticeStep({ form, country, rules }: StepProps) {
   const { t } = useI18n();
   const mode = useWatch({ control: form.control, name: 'mode' });
+  // A clinic uploads its registration certificate and tax registration, and gives both numbers for Medvya to compare (ADR-016); the server refuses without them.
+  const numbersRequired = useWatch({ control: form.control, name: 'orgType' }) !== 'Hospital';
   const errors = form.formState.errors;
   return (
     <div className="flex flex-col gap-6">
@@ -71,6 +73,8 @@ export function PracticeStep({ form, country, rules }: StepProps) {
         <TextField form={form} name="clinicName" label={t('onboarding.field.clinicName')} required />
         <TextField form={form} name="address" label={t('onboarding.field.address')} required wide />
         <TextField form={form} name="contactEmail" label={t('onboarding.field.contactEmail')} required ltr type="email" hint={t('onboarding.hint.contactEmail')} />
+        <TextField form={form} name="registrationNumber" label={t(`onboarding.field.registration.${country}`)} required={numbersRequired} ltr hint={t('onboarding.hint.registrationNumber')} />
+        <TextField form={form} name="taxId" label={t(`onboarding.field.taxId.${country}`)} required={numbersRequired} ltr hint={t(`onboarding.hint.taxId.${country}`)} />
       </div>
       <Group legend={t('onboarding.specialties.legend')} error={{ id: 'specialties-error', code: errors.specialties?.message }}>
         <div className="flex flex-wrap gap-2">
@@ -94,15 +98,15 @@ export function PracticeStep({ form, country, rules }: StepProps) {
           <Note>{t('onboarding.attest.notice')}</Note>
         </div>
       )}
-      <details className="rounded-xl border p-4" open={Boolean(errors.taxId || errors.registrationNumber || errors.qualifications || errors.languages)}>
-        <summary className="flex min-h-control cursor-pointer items-center text-sm font-bold">{t('onboarding.more.legend')}</summary>
-        <div className={`${grid} pt-3`}>
-          {mode === 'Solo' && <TextField form={form} name="qualifications" label={t('onboarding.field.qualifications')} />}
-          {mode === 'Solo' && <TextField form={form} name="languages" label={t('onboarding.field.languages')} hint={t('onboarding.hint.languages')} />}
-          <TextField form={form} name="registrationNumber" label={t(`onboarding.field.registration.${country}`)} ltr />
-          <TextField form={form} name="taxId" label={t(`onboarding.field.taxId.${country}`)} ltr hint={t(`onboarding.hint.taxId.${country}`)} />
-        </div>
-      </details>
+      {mode === 'Solo' && (
+        <details className="rounded-xl border p-4" open={Boolean(errors.qualifications || errors.languages)}>
+          <summary className="flex min-h-control cursor-pointer items-center text-sm font-bold">{t('onboarding.more.legend')}</summary>
+          <div className={`${grid} pt-3`}>
+            <TextField form={form} name="qualifications" label={t('onboarding.field.qualifications')} />
+            <TextField form={form} name="languages" label={t('onboarding.field.languages')} hint={t('onboarding.hint.languages')} />
+          </div>
+        </details>
+      )}
     </div>
   );
 }

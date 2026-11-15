@@ -47,9 +47,9 @@ describe('the reviewer’s ticks', () => {
 
 describe('automatic checks', () => {
   it('checks the tax number format per country', () => {
-    expect(taxCheck('IN', '27AAPFU0939F1ZV')).toBe('ok');
+    expect(taxCheck('IN', '27AAAAA0000A1Z2')).toBe('ok');
     expect(taxCheck('IN', '27aapfu0939f1zv')).toBe('ok');
-    expect(taxCheck('IN', '99AAPFU0939F1ZV')).toBe('format'); // no such state code
+    expect(taxCheck('IN', '99AAAAA0000A1Z2')).toBe('format'); // no such state code
     expect(taxCheck('IN', '12345')).toBe('format');
     expect(taxCheck('AE', '100123456700003')).toBe('ok');
     expect(taxCheck('AE', '10012345')).toBe('format');

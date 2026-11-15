@@ -680,7 +680,7 @@ ac:
 - Given the data map, when it is updated, then device storage and push payloads are listed with their classification.
 
 === MDV-P5-032
-title: Mobile foundation: `mobile/` Expo workspace, shared tokens and i18n, RTL, CI and EAS builds
+title: Mobile foundation: `mobile/` Expo workspace, shared tokens and i18n, RTL, CI and preview builds
 type: Story
 epic: MDV-P5-E08
 prd: P8-06
@@ -693,9 +693,9 @@ depends: MDV-P5-031
 confidence: 70 | Design exists (6 Nov 2026); build estimate not yet calibrated.
 sources: docs/02-design/source/Medvya Mobile.dc.html (6 Nov 2026 revamp); packages/ui tokens; packages/i18n
 desc:
-Create `mobile/clinician` and `mobile/patient` (expo-router, bottom sheets, secure-store, encrypted expo-sqlite, expo-localization with forceRTL for Arabic, Dynamic Type to 200 %). One tokens file feeds web CSS variables and the native theme (clinic teal, patient indigo). Reuse `packages/i18n/messages` (en, hi, ar). Lint layer rules as ADR-009 (`domain`, `services`, `hooks`, `components`). CI: type-check, unit tests, EAS preview builds, `pnpm audit`.
+Create `mobile/clinician` and `mobile/patient` (expo-router, bottom sheets, secure-store, encrypted expo-sqlite, expo-localization with forceRTL for Arabic, Dynamic Type to 200 %). One tokens file feeds web CSS variables and the native theme (clinic teal, patient indigo). Reuse `packages/i18n/messages` (en, hi, ar). Lint layer rules as ADR-009 (`domain`, `services`, `hooks`, `components`). CI: type-check, unit tests, `pnpm audit`, and native preview builds without an Expo or Apple account (an Android APK and an iOS simulator app per app, kept as CI artifacts; owner decision 15 Nov 2026, EAS moves to MDV-P5-039).
 ac:
-- Given the workspace, when CI runs, then both apps type-check, lint, test and produce an EAS preview build.
+- Given the workspace, when CI runs, then both apps type-check, lint, test and produce an installable preview build without an Expo or Apple account: an Android APK and an iOS simulator app, kept as CI artifacts.
 - Given Arabic is selected, when the app restarts, then layout is right-to-left while dates and phone numbers stay left-to-right.
 - Given a string is hard-coded in a component, when lint runs, then the build fails.
 - Given the tokens file changes, when web and native build, then both pick up the same colours and spacing.
@@ -845,7 +845,7 @@ depends: MDV-P5-035, MDV-P5-037, MDV-P5-038
 confidence: 55 | Design exists (6 Nov 2026); build estimate not yet calibrated.
 sources: docs/02-design/source/Medvya Mobile.dc.html (6 Nov 2026 revamp) (Building it in Expo); OWASP MASVS
 desc:
-Apple and Google developer accounts under the company; privacy labels and data-safety forms matching the data map; MASVS L1 review plus root/jailbreak and screenshot rules; TestFlight and closed testing with a pilot clinic; accessibility (screen reader labels, 200 % text) and en/hi/ar checks; EAS Update limited to UI fixes while clinical logic ships with store builds and release notes.
+Apple and Google developer accounts under the company; privacy labels and data-safety forms matching the data map; MASVS L1 review plus root/jailbreak and screenshot rules; TestFlight and closed testing with a pilot clinic; accessibility (screen reader labels, 200 % text) and en/hi/ar checks; EAS Update limited to UI fixes while clinical logic ships with store builds and release notes. EAS is set up here for the store builds: the Expo organisation and projects, `eas.json` and the `EXPO_TOKEN` secret (the CI preview builds of MDV-P5-032 need no account).
 ac:
 - Given a build, when it is submitted, then privacy labels match the data map.
 - Given the MASVS review, when it finishes, then no open high or critical finding.

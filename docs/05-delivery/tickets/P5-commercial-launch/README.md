@@ -68,7 +68,7 @@
 | [MDV-P5-014](MDV-P5-014.md) | To do | Patient report upload with AI extraction marked "Unverified · patient upload" until accepted (N-08) | Story | SHOULD | P5-05 | N-08 | 3 | 28–29 | 03 May → 14 May 2027 | 65% Medium |
 | [MDV-P5-018](MDV-P5-018.md) | To do | In-app role guides, help centre, feedback and public status page (N-13) | Story | MUST | P5-09 | N-13 | 3 | 28–30 | 03 May → 21 May 2027 | 72% Medium |
 | [MDV-P5-027](MDV-P5-027.md) | To do | Availability monitoring: 30 days at ≥ 99.5 % before GA | Task | MUST | P5-10 | — | 1 | 28–32 | 03 May → 04 Jun 2027 | 75% Medium |
-| [MDV-P5-032](MDV-P5-032.md) | To do | Mobile foundation: `mobile/` Expo workspace, shared tokens and i18n, RTL, CI and EAS builds | Story | MUST | P8-06 | — | 4 | 28–29 | 03 May → 14 May 2027 | 70% Medium |
+| [MDV-P5-032](MDV-P5-032.md) | To do | Mobile foundation: `mobile/` Expo workspace, shared tokens and i18n, RTL, CI and preview builds | Story | MUST | P8-06 | — | 4 | 28–29 | 03 May → 14 May 2027 | 70% Medium |
 | [MDV-P5-033](MDV-P5-033.md) | To do | Mobile backend: native token sign-in, device registry, push registry and remote revoke | Story | MUST | P8-06 | — | 3.5 | 28–30 | 03 May → 21 May 2027 | 70% Medium |
 | [MDV-P5-047](MDV-P5-047.md) | To do | Service requests: Help in the clinic app, support inbox with SLA, internal notes, diagnostics | Story | MUST | P5-09 | N-13 | 3.5 | 28–30 | 03 May → 21 May 2027 | 65% Medium |
 | [MDV-P5-065](MDV-P5-065.md) | To do | Collect Medvya subscription payments through the P4-007 (Razorpay) and P4-008 (UAE) adapters | Story | MUST | P5-07 | N-11 | 3 | 28–30 | 03 May → 21 May 2027 | 55% Low |

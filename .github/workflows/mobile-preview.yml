@@ -1,17 +1,28 @@
 name: mobile-preview
 
-# EAS preview builds of both Expo apps (MDV-P5-032): an Android APK and an iOS simulator build each, internal distribution,
-# so no Apple signing is needed. Runs on main, not on every PR: one run is four cloud builds, and the Expo plan's monthly
-# build allowance would last days at PR rate. Every PR already type-checks, lints, tests and bundles both apps (pr.yml web-checks).
-# --no-wait queues the builds and ends; their result and download links are on expo.dev.
-# Until a person creates the Expo projects and adds the EXPO_TOKEN secret (docs/05-delivery/session-handoff.md §8), the build job is skipped.
+# Installable preview builds of both Expo apps (MDV-P5-032 AC 1, owner decision 15 Nov 2026): an Android APK and an iOS
+# simulator app per app, built on the runners, kept as run artifacts. No Expo or Apple account and no secrets; EAS comes
+# with the store release (MDV-P5-039). Type-check, lint, tests and the JS bundle run on every PR in pr.yml (web-checks).
+# Not a required check. Download and install: docs/05-delivery/session-handoff.md §8.
 on:
+  pull_request:
+    paths:
+      - 'mobile/**'
+      - 'packages/i18n/**'
+      - 'packages/tokens/**'
+      - 'packages/ui-native/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/mobile-preview.yml'
   push:
     branches: [main]
     paths:
       - 'mobile/**'
-      - 'packages/**'
+      - 'packages/i18n/**'
+      - 'packages/tokens/**'
+      - 'packages/ui-native/**'
       - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
       - '.github/workflows/mobile-preview.yml'
   workflow_dispatch:
 
@@ -23,48 +34,61 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  account:
-    runs-on: ubuntu-latest
-    timeout-minutes: 2
-    outputs:
-      ready: ${{ steps.token.outputs.ready }}
-    steps:
-      - id: token
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        run: |
-          if [ -n "$EXPO_TOKEN" ]; then
-            echo "ready=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "::notice::EAS preview builds skipped: the EXPO_TOKEN secret is not set yet (person steps in docs/05-delivery/session-handoff.md §8)."
-            echo "ready=false" >> "$GITHUB_OUTPUT"
-          fi
-
-  eas-preview:
-    needs: account
-    if: needs.account.outputs.ready == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+  build:
+    name: ${{ matrix.app }} ${{ matrix.platform }}
+    # iOS on macOS (free minutes on a public repo); macos-26 for the Xcode 26 that React Native 0.88 builds with.
+    runs-on: ${{ matrix.platform == 'ios' && 'macos-26' || 'ubuntu-latest' }}
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
         app: [clinician, patient]
+        platform: [android, ios]
+    env:
+      # The preview signs in against the Azure dev API (docs/releases/r0.md); inlined into the JS bundle at build time.
+      EXPO_PUBLIC_MEDVYA_API: https://app-medvya-dev-3afs7i.azurewebsites.net
+    defaults:
+      run:
+        working-directory: mobile/${{ matrix.app }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          persist-credentials: false # the build step needs no git token; do not leave one on disk beside EXPO_TOKEN
+          persist-credentials: false
       - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
           cache: pnpm
-      - run: pnpm install --frozen-lockfile # eas reads the app config, which loads the Expo config plugins
-      - name: Queue the ${{ matrix.app }} preview build
-        working-directory: mobile/${{ matrix.app }}
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        # eas-cli by npx's exact version, not the expo-github-action: one fewer third-party action that sees the token.
-        # shortcut: npx pins eas-cli but not its dependency tree, and 27.2.0's tree has high advisories (node-forge, tar, minimatch,
-        # nanoid, joi); move to an exact devDependency (lockfile-pinned, run with pnpm exec) at eas-cli 27.8.0 or later, whose tree
-        # audits clean, once that release is old enough to trust (session-handoff §8).
-        run: npx --yes eas-cli@27.2.0 build --profile preview --platform all --non-interactive --no-wait
+      - run: pnpm install --frozen-lockfile
+
+      # android/ and ios/ are generated here from app.json and the config plugins (gitignored, never committed).
+      - name: Android APK
+        if: matrix.platform == 'android'
+        # The release variant is signed with the debug keystore of the prebuild template: an internal preview only, never a
+        # store build (store signing comes with MDV-P5-039). arm64 for phones, x86_64 for the emulator.
+        run: |
+          echo "JAVA_HOME=$JAVA_HOME_17_X64" >> "$GITHUB_ENV"
+          export JAVA_HOME="$JAVA_HOME_17_X64"
+          pnpm exec expo prebuild --platform android --no-install
+          cd android && ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a,x86_64
+          mv app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/medvya-${{ matrix.app }}.apk"
+
+      - name: iOS simulator app
+        if: matrix.platform == 'ios'
+        # A simulator build needs no signing, so no Apple account.
+        run: |
+          pnpm exec expo prebuild --platform ios --no-install
+          cd ios && pod install
+          scheme=$(basename ./*.xcworkspace .xcworkspace)
+          xcodebuild -workspace "$scheme.xcworkspace" -scheme "$scheme" -configuration Release -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' -derivedDataPath "$RUNNER_TEMP/dd" CODE_SIGNING_ALLOWED=NO
+          # ditto keeps the bundle's executable bits and symlinks, which the artifact zip alone would drop.
+          ditto -c -k --keepParent "$RUNNER_TEMP/dd/Build/Products/Release-iphonesimulator/$scheme.app" \
+            "$RUNNER_TEMP/medvya-${{ matrix.app }}-simulator.zip"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: medvya-${{ matrix.app }}-${{ matrix.platform }}
+          path: ${{ runner.temp }}/medvya-${{ matrix.app }}*.${{ matrix.platform == 'ios' && 'zip' || 'apk' }}
+          if-no-files-found: error
+          retention-days: 14

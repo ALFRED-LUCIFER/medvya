@@ -609,7 +609,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P5-018](P5-commercial-launch/MDV-P5-018.md) | In-app role guides, help centre, feedback and public status page (N-13) | P5 | wk 28–30 | 72% |
 | [MDV-P5-024](P5-commercial-launch/MDV-P5-024.md) | Security operations: incident response with DPDP/UAE breach notification, Defender + Sentinel alerts to on-call, Customer Lockbox, VDP, ADHICS evidence, ISO 27001 gap assessment | P5 | wk 27–30 | 70% |
 | [MDV-P5-027](P5-commercial-launch/MDV-P5-027.md) | Availability monitoring: 30 days at ≥ 99.5 % before GA | P5 | wk 28–32 | 75% |
-| [MDV-P5-032](P5-commercial-launch/MDV-P5-032.md) | Mobile foundation: `mobile/` Expo workspace, shared tokens and i18n, RTL, CI and EAS builds | P5 | wk 28–29 | 70% |
+| [MDV-P5-032](P5-commercial-launch/MDV-P5-032.md) | Mobile foundation: `mobile/` Expo workspace, shared tokens and i18n, RTL, CI and preview builds | P5 | wk 28–29 | 70% |
 | [MDV-P5-033](P5-commercial-launch/MDV-P5-033.md) | Mobile backend: native token sign-in, device registry, push registry and remote revoke | P5 | wk 28–30 | 70% |
 | [MDV-P5-040](P5-commercial-launch/MDV-P5-040.md) | Platform console shell (`web/platform-admin`): company sign-on plus security key, platform roles, reason on every action, no PHI | P5 | wk 26–28 | 65% |
 | [MDV-P5-041](P5-commercial-launch/MDV-P5-041.md) | Feature rollouts: staged release (internal, beta tenants, percentage, everyone), kill switch and clinical sign-off gate | P5 | wk 27–29 | 70% |
@@ -641,7 +641,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P5-025](P5-commercial-launch/MDV-P5-025.md) | Retention and deletion jobs per country; patient access/correction/erasure requests for clinics | P5 | wk 29–30 | 68% |
 | [MDV-P5-027](P5-commercial-launch/MDV-P5-027.md) | Availability monitoring: 30 days at ≥ 99.5 % before GA | P5 | wk 28–32 | 75% |
 | [MDV-P5-029](P5-commercial-launch/MDV-P5-029.md) | First paying clinic cut-over without closing (week 29) with go-live runbook | P5 | wk 29–29 | 55% |
-| [MDV-P5-032](P5-commercial-launch/MDV-P5-032.md) | Mobile foundation: `mobile/` Expo workspace, shared tokens and i18n, RTL, CI and EAS builds | P5 | wk 28–29 | 70% |
+| [MDV-P5-032](P5-commercial-launch/MDV-P5-032.md) | Mobile foundation: `mobile/` Expo workspace, shared tokens and i18n, RTL, CI and preview builds | P5 | wk 28–29 | 70% |
 | [MDV-P5-033](P5-commercial-launch/MDV-P5-033.md) | Mobile backend: native token sign-in, device registry, push registry and remote revoke | P5 | wk 28–30 | 70% |
 | [MDV-P5-034](P5-commercial-launch/MDV-P5-034.md) | Staff app: sign-in, 15-minute biometric lock, Today, queue, patient search and patient summary | P5 | wk 29–31 | 65% |
 | [MDV-P5-036](P5-commercial-launch/MDV-P5-036.md) | Patient app: SMS sign-in, family profiles, home, booking, check-in and reschedule | P5 | wk 29–32 | 65% |

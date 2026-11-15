@@ -104,7 +104,7 @@ export default function SafetyChecks(p: SafetyProps) {
             const given = c.overrides.find(o => o.key === a.key);
             return (
               <li key={a.key} className="flex flex-col gap-2">
-                <ClinicalAlert severity={lookOf(a, !!given)}>{`${t(`rx.check.severity.${a.severity}`)} · ${alertText(t, a, c)}`}</ClinicalAlert>
+                <ClinicalAlert severity={lookOf(a, !!given)} allergy={a.kind === 'Allergy' || a.kind === 'CrossSensitivity'}>{`${t(`rx.check.severity.${a.severity}`)} · ${alertText(t, a, c)}`}</ClinicalAlert>
                 {given && <p className="text-sm">{t('rx.check.overridden', { reason: given.reason })}</p>}
                 {!given && a.severity === 'Severe' && !p.ended && (p.overriding === a.key ? (
                   <form noValidate onSubmit={p.onReason} className="flex flex-col gap-2">

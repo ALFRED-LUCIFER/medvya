@@ -78,6 +78,10 @@ namespace Medvya.Identity.Infrastructure.Persistence.Migrations
                     b.Property<byte[]>("PreviousRefreshTokenHash")
                         .HasColumnType("bytea");
 
+                    b.Property<string>("PushToken")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
                     b.Property<byte[]>("RefreshTokenHash")
                         .HasColumnType("bytea");
 
@@ -91,6 +95,10 @@ namespace Medvya.Identity.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("PushToken")
+                        .IsUnique()
+                        .HasFilter("\"PushToken\" IS NOT NULL");
 
                     b.HasIndex("TenantId", "UserId");
 

@@ -8,9 +8,9 @@
 **Day one:** Open Doctor Today, see the patient chart, record vitals, write and sign a note, and print a prescription, without AI.  
 **Goal:** A doctor completes a full visit, from chart to signed note and prescription, in Medvya. This is also the fallback that AI must never break.
 
-**Tickets:** 66 · **Estimate:** 152.25 dev-days vs **35 working days** in the window (OVER by 117.25 days: needs scope trade-off or overlap) · **Average confidence:** 78%
+**Tickets:** 67 · **Estimate:** 154.25 dev-days vs **35 working days** in the window (OVER by 119.25 days: needs scope trade-off or overlap) · **Average confidence:** 78%
 
-**Status:** To do 66
+**Status:** To do 67
 
 ## Epics
 
@@ -70,6 +70,7 @@
 | [MDV-P2-064](MDV-P2-064.md) | To do | One screen per task: top bar, content that fits, bottom bar; long lists scroll inside their panel, never the page | Story | SHOULD | P0-07 | — | 4 | 13–13 | 18 Jan → 22 Jan 2027 | 65% Medium |
 | [MDV-P2-065](MDV-P2-065.md) | To do | Apply the screen layout standard everywhere: full-width content and every action in the sticky bottom bar, the platform console included | Story | SHOULD | P0-07 | — | 3 | 13–13 | 18 Jan → 22 Jan 2027 | 70% Medium |
 | [MDV-P2-066](MDV-P2-066.md) | To do | Papers from the patient record and the visit: one Print menu in the bottom bar (visit summary, record summary, current medicines, lab slip, prescription), one paper format | Story | SHOULD | P2-02, P2-04 | — | 4 | 13–13 | 18 Jan → 22 Jan 2027 | 65% Medium |
+| [MDV-P2-067](MDV-P2-067.md) | To do | Consultation Notes: a Notes button in the bottom bar where the doctor types free notes about the visit, kept with the signed note | Story | SHOULD | P2-04, P2-05 | E-04, E-06 | 2 | 13–13 | 18 Jan → 22 Jan 2027 | 75% Medium |
 | [MDV-P2-019](MDV-P2-019.md) | To do | Referrals out and in with status (E-09) | Story | MUST | P2-06 | E-09 | 2 | 14–14 | 25 Jan → 29 Jan 2027 | 80% Medium |
 | [MDV-P2-020](MDV-P2-020.md) | To do | Share Rx with patient/pharmacy (e-Rx PDF/link) and pharmacy dispatch record (E-10) | Story | MUST | P2-06 | E-10 | 1.5 | 14–14 | 25 Jan → 29 Jan 2027 | 70% Medium |
 | [MDV-P2-026](MDV-P2-026.md) | To do | Doctor and nurse training (30 min each) and R2 materials | Chore | MUST | P2-03, P2-05 | — | 1 | 14–14 | 25 Jan → 29 Jan 2027 | 88% High |

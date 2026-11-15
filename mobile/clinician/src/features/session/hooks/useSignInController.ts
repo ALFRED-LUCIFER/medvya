@@ -4,12 +4,12 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { errorKey } from '../../api/domain/errors';
-import { codeForm, emailForm, type CodeForm, type EmailForm, type Facility, type SignInStep, type Staff } from '../domain/session';
-import { biometricsAvailable, listFacilities, startSignIn, unlockWithBiometrics, verifyCode } from '../services/session';
+import { codeForm, emailForm, newPinForm, type CodeForm, type EmailForm, type Facility, type NewPinForm, type SignInStep, type Staff } from '../domain/session';
+import { biometricsAvailable, listFacilities, setPin, startSignIn, unlockWithBiometrics, verifyCode } from '../services/session';
 import { useSession } from './session';
 import { useUnlockMethod } from './useUnlockMethod';
 
-/** Staff sign-in (MDV-P5-034): work email, code, facility, then the offer to unlock with the phone's face or fingerprint unlock. */
+/** Staff sign-in (MDV-P5-034): work email, code, facility, the app PIN (the lock's fallback), then the offer to unlock with the phone's face or fingerprint unlock. */
 export function useSignInController() {
   const { t } = useI18n();
   const { begin } = useSession();
@@ -21,6 +21,7 @@ export function useSignInController() {
 
   const emailFormApi = useForm<EmailForm>({ resolver: zodResolver(emailForm), defaultValues: { email: '' } });
   const codeFormApi = useForm<CodeForm>({ resolver: zodResolver(codeForm), defaultValues: { code: '' } });
+  const pinFormApi = useForm<NewPinForm>({ resolver: zodResolver(newPinForm), defaultValues: { pin: '', confirm: '' } });
 
   const start = useMutation({ mutationFn: startSignIn, onSuccess: (_, e) => { setEmail(e); setStep('code'); } });
   const verify = useMutation({
@@ -32,12 +33,13 @@ export function useSignInController() {
   });
   const facilities = useQuery({ queryKey: ['facilities', staff?.id], queryFn: () => listFacilities(staff!.id), enabled: !!staff });
   const canBiometric = useQuery({ queryKey: ['biometrics-available'], queryFn: biometricsAvailable, enabled: step === 'biometric' });
-  const enable = useMutation({ mutationFn: () => unlockWithBiometrics(t('mobile.lock.prompt')), onSuccess: ok => { if (ok) finish(true); } });
+  const savePin = useMutation({ mutationFn: setPin, onSuccess: () => { pinFormApi.reset(); setStep('biometric'); } });
+  const enable = useMutation({ mutationFn: () => unlockWithBiometrics(t('mobile.lock.prompt'), t('mobile.pin.use')), onSuccess: ok => { if (ok) finish(true); } });
 
   function finish(biometric: boolean) {
     if (staff && facility) begin({ staff, facility }, biometric);
   }
-  const failure = start.error ?? verify.error ?? facilities.error;
+  const failure = start.error ?? verify.error ?? facilities.error ?? savePin.error;
   return {
     step,
     email,
@@ -46,10 +48,12 @@ export function useSignInController() {
     onSubmitEmail: () => void emailFormApi.handleSubmit(v => start.mutate(v.email))(),
     onSubmitCode: () => void codeFormApi.handleSubmit(v => verify.mutate(v.code))(),
     onBack: () => { setStep('email'); codeFormApi.reset(); verify.reset(); },
-    busy: start.isPending || verify.isPending,
+    pinForm: pinFormApi,
+    onSubmitPin: () => void pinFormApi.handleSubmit(v => savePin.mutate(v.pin))(),
+    busy: start.isPending || verify.isPending || savePin.isPending,
     facilities: facilities.data ?? [],
     facilitiesLoading: facilities.isPending && !!staff,
-    onChooseFacility: (f: Facility) => { setFacility(f); setStep('biometric'); },
+    onChooseFacility: (f: Facility) => { setFacility(f); setStep('pin'); },
     biometricAvailable: canBiometric.data ?? false,
     unlockMethod,
     onEnableBiometric: () => enable.mutate(),

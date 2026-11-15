@@ -32,6 +32,17 @@ public sealed class StaffSession
     [Classification(DataClass.Internal)] public byte[]? RefreshTokenHash { get; set; }
     /// <summary>SHA-256 of the token the last rotation replaced: only that one coming back is a replay; any other mismatch is a forgery (#883).</summary>
     [Classification(DataClass.Internal)] public byte[]? PreviousRefreshTokenHash { get; set; }
+    /// <summary>
+    /// The native app's push token for this device (ADR-011 §8). Every revoke clears it, so a revoked device gets no push; a session that
+    /// only timed out keeps it, so the sender (MDV-P5-038) pushes to live sessions only. A credential to reach the phone: never logged.
+    /// </summary>
+    [Classification(DataClass.Personal)] public string? PushToken { get; set; }
+
+    public const int PushTokenMaxLength = 512;
+
+    /// <summary>Expo, FCM and APNs tokens: letters, digits and a few separators ("ExponentPushToken[…]"), never spaces or markup.</summary>
+    public static bool IsPushToken(string? token) =>
+        token is { Length: > 0 and <= PushTokenMaxLength } && token.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or ':' or '.' or '[' or ']');
 
     /// <summary>A native app session: reachable only by bearer token, never by cookie (and the reverse).</summary>
     [Classification(DataClass.Internal)] public bool IsNative => RefreshTokenHash is not null;

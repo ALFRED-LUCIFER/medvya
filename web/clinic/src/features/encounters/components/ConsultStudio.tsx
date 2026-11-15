@@ -6,10 +6,11 @@ import type { Patient360 } from '../../patient360/domain/chart';
 import ChartPanel, { ChartDrawerButton } from './ChartPanel';
 import { studioSections, templateOwnSections, type StudioSection } from '../domain/checklist';
 import { planHeading, type StudioPanel } from '../domain/encounter';
-import { recordingAvailable, templateNameKey } from '../domain/note';
+import { isBlank, notesSection, recordingAvailable, templateNameKey } from '../domain/note';
 import NoteAssist, { VitalList } from './NoteAssist';
 import type { NoteEditorProps } from './NoteEditor';
-import { NoteSectionField, SaveState, SignedBanner, TemplatePicker } from './NoteParts';
+import { NoteSectionField, SaveState, SectionField, SignedBanner, TemplatePicker } from './NoteParts';
+import NotesSheet from './NotesSheet';
 import { SignedLine, SignNote } from './NoteSign';
 import RecordingConsentChoice from './RecordingConsentChoice';
 
@@ -101,6 +102,8 @@ export default function ConsultStudio(p: Props) {
           <Numbered id="plan" title={numbered}>{field('plan')}{p.plan}</Numbered>
           {/* Review and sign: what was signed, or who may sign. Sign itself is in the layout footer (ConsultFooter). */}
           <Numbered id="sign" title={numbered}>
+            {/* MDV-P2-067: signed, the visit's notes read with the note; a draft edits them from Notes in the bottom bar. */}
+            {p.readOnly && !isBlank(p.answers(notesSection.id)) && <SectionField section={notesSection} register={p.register} readOnly />}
             <SignedBanner signed={p.readOnly} versionNo={p.signature?.versionNo ?? 1} />
             {p.signature && <SignedLine signature={p.signature} timeZone={p.timeZone} />}
             {!p.readOnly && <p className="text-sm text-muted-foreground">{t(p.canSign ? 'studio.sign.inBar' : 'noteSign.onlyDoctor')}</p>}
@@ -119,10 +122,15 @@ export default function ConsultStudio(p: Props) {
  * the whole consultation and never over a field (StickyActionBar reserves its space). Finish visit stays when the note cannot be shown.
  */
 export function ConsultFooter(p: NoteEditorProps & { finish?: ReactNode }) {
-  const note = !p.loading && !p.loadFailed && !p.readOnly;
-  if (!note && !p.finish) return null;
+  const loaded = !p.loading && !p.loadFailed;
+  const note = loaded && !p.readOnly;
+  // MDV-P2-067: Notes on a draft always; on a signed note only when some were written (read-only).
+  const notes = loaded && (note || !isBlank(p.answers(notesSection.id)));
+  if (!note && !notes && !p.finish) return null;
+  const saveState = note && <SaveState phase={p.phase} savedAt={p.savedAt} reloading={p.reloading} onRetry={p.onRetry} onReapply={p.onReapply} />;
   return (
-    <StickyActionBar status={note && <SaveState phase={p.phase} savedAt={p.savedAt} reloading={p.reloading} onRetry={p.onRetry} onReapply={p.onReapply} />}>
+    <StickyActionBar status={saveState}>
+      {notes && <NotesSheet register={p.register} readOnly={p.readOnly} text={p.answers(notesSection.id)} status={saveState} />}
       {note && <SignNote canSign={p.canSign} remaining={p.remaining} patient={p.patient} doctorName={p.signAsName} signing={p.signing} confirming={p.confirming}
         problem={p.signProblem} onRequest={p.onRequestSign} onCancel={p.onCancelSign} onConfirm={p.onConfirmSign} resume={p.signResume} />}
       {p.finish}

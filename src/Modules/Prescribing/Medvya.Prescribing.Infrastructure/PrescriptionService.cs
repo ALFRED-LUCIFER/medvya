@@ -581,6 +581,7 @@ public sealed class PrescriptionService(
         var facts = await chart.FactsAsync(encounter.PatientId, cancellationToken);
         var allergies = facts.AllergyState switch { AllergyState.Listed => ChartAllergies.Listed, AllergyState.NoKnownAllergies => ChartAllergies.NoKnownAllergies, _ => ChartAllergies.NotRecorded };
         var plan = await encounters.PlanAsync(encounter.Id, cancellationToken);
+        var clinic = await facilities.LetterheadAsync(rx.FacilityId, cancellationToken);
         var url = $"{BaseUrl}/verify/rx/{RxVerifyToken.Token(rx.TenantId, rx.VerifyCode)}";
         return new RxPrintView(View(rx), facility.TenantName == facility.Name ? facility.Name : $"{facility.TenantName} · {facility.Name}", facility.TimeZone, doctor.FullName, doctor.Qualifications, doctor.LicenceNumber, doctor.LicenceAuthority,
             new SlipPatient(patient.FullName, patient.Mrn, patient.DateOfBirth, patient.SexAtBirth.ToString()), allergies,
@@ -588,7 +589,9 @@ public sealed class PrescriptionService(
             [.. rx.Lines.Select(l => new RxPrintLine(l.Discontinue, l.Medicine, l.Strength, l.Form, l.Sig, l.PrintRequirements, l.Reason))], url, Qr(url), RxPdfDocument.LayoutVersion,
             rx.Advice is null ? null : new RxAdviceView(rx.Advice, patient.PreferredLanguage, patient.PreferredLanguage is null or "en"),
             PaperIssuer.Age(rx.AuthorisedAt, facility.TimeZone, patient.DateOfBirth),
-            [.. plan.Diagnoses.Select(d => new RxDiagnosis(d.Description, d.Provisional))], plan.FollowUpOn);
+            [.. plan.Diagnoses.Select(d => new RxDiagnosis(d.Description, d.Provisional))], plan.FollowUpOn,
+            DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(encounter.StartedAt, TimeZoneInfo.FindSystemTimeZoneById(facility.TimeZone)).DateTime),
+            clinic.Address, clinic.Phone, clinic.RegistrationNumber, doctor.SignatureOnFile);
     }
 
     /// <summary>The QR code's modules, row by row ('1' dark), with its quiet zone; error correction M survives a crease or a stamp.</summary>

@@ -162,6 +162,13 @@ export const logoProblem = (file: { type: string; size: number }): LogoProblem |
   !['image/png', 'image/jpeg'].includes(file.type) ? 'type' : file.size === 0 || file.size > logoMaxBytes ? 'size' : null;
 
 /** Problem codes from the API ("field:code" for a rejected field, as the shared client reports them). */
+/**
+ * What to say after a logo change failed. A server answer (after the profile was read again and had not moved) means nothing changed: the
+ * image was refused ("type", "size") or the save "failed". No answer at all is "unknown": the logo may or may not be stored (#1365 F-066).
+ */
+export const logoFailure = (answer: { code?: string } | null): LogoProblem | 'failed' | 'unknown' =>
+  !answer ? 'unknown' : answer.code === 'logo:type' ? 'type' : answer.code === 'logo:too_large' ? 'size' : 'failed';
+
 export const knownErrors = ['logo:type', 'logo:too_large', 'date:duplicate', 'name:duplicate', 'name:link'] as const;
 export type SettingsError = (typeof knownErrors)[number] | 'failed';
 export const settingsError = (code: string | undefined): SettingsError =>

@@ -7,7 +7,14 @@ namespace Medvya.Tenancy.Application;
 public sealed record FacilityInfo(Guid Id, string Name, string TimeZone, string TenantName, QueueRule Queue);
 
 /// <summary>What a printed prescription shows about its doctor (MDV-P2-017): the profile's name and qualifications and the licence the owner attested (ADR-016).</summary>
-public sealed record PrescriberInfo(string FullName, string? Qualifications, string LicenceNumber, string LicenceAuthority);
+/// <param name="SignatureOnFile">The doctor uploaded a signature image, which the PDF prints; without one the paper says it was signed electronically.</param>
+public sealed record PrescriberInfo(string FullName, string? Qualifications, string LicenceNumber, string LicenceAuthority, bool SignatureOnFile = false);
+
+/// <summary>
+/// What a printed paper's letterhead says about the clinic besides its name (#1365 F-068): the location's address (the practice's when the location
+/// has none), and the practice's phone and registration number. Each is null when it was never entered.
+/// </summary>
+public sealed record ClinicLetterhead(string? Address, string? Phone, string? RegistrationNumber);
 
 /// <summary>The clinic's logo and the doctor's signature image as stored (PNG, re-encoded on upload); null when none was uploaded.</summary>
 public sealed record PrintImages(byte[]? Logo, byte[]? Signature);
@@ -31,6 +38,9 @@ public interface IFacilityDirectory
 
     /// <summary>The same for several users in one go; users without a profile at this facility are left out.</summary>
     Task<IReadOnlyDictionary<Guid, PrescriberInfo>> PrescribersAsync(Guid facilityId, IReadOnlyCollection<Guid> userIds, CancellationToken cancellationToken = default);
+
+    /// <summary>The address, phone and registration number a paper printed at this facility carries in its letterhead.</summary>
+    Task<ClinicLetterhead> LetterheadAsync(Guid facilityId, CancellationToken cancellationToken = default);
 
     /// <summary>The images a printed prescription (and a signed note's PDF) carries: the practice logo and this doctor's signature at this facility.</summary>
     Task<PrintImages> PrintImagesAsync(Guid userId, Guid facilityId, CancellationToken cancellationToken = default);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { groupOf, settingsGroups, settingsTabs, certificateProblem, closureSchema, locationProblem, hoursProblems, logoProblem, profileSchema, sessionProblem, sessionsOutsideHours, settingsError, templateBody, toDayHours, toHoursRows, type CalendarTemplate } from './settings';
+import { groupOf, settingsGroups, settingsTabs, certificateProblem, closureSchema, locationProblem, hoursProblems, logoFailure, logoProblem, profileSchema, sessionProblem, sessionsOutsideHours, settingsError, templateBody, toDayHours, toHoursRows, type CalendarTemplate } from './settings';
 
 describe('practice settings rules', () => {
   it('shows the week from Monday and sends only the open days', () => {
@@ -12,6 +12,11 @@ describe('practice settings rules', () => {
     const rows = toHoursRows([]).map(r => (r.weekday === 'Friday' ? { ...r, open: true, opens: '18:00', closes: '09:00' } : r));
     expect(hoursProblems(rows)).toEqual(['Friday']);
     expect(toDayHours(rows)).toBeNull();
+  });
+
+  it('says a logo change is unknown, never "nothing changed", when no answer came (#1365 F-066)', () => {
+    expect(logoFailure(null)).toBe('unknown');
+    expect([logoFailure({ code: 'logo:type' }), logoFailure({ code: 'logo:too_large' }), logoFailure({}), logoFailure({ code: 'x' })]).toEqual(['type', 'size', 'failed', 'failed']);
   });
 
   it('checks a logo by type and size before upload', () => {

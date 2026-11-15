@@ -636,6 +636,12 @@ public sealed class SignNoteTests(PostgresFixture sql) : IClassFixture<PostgresF
         using (var added = await AddendumAsync(h.Doctor, "Synthetic: follow-up moved to Friday", "Patient asked")) Assert.True(added.IsSuccessStatusCode);
         await using (var patients = sql.Patients(h.Tenant)) // a long name must not push the MRN or date of birth off the page
             await patients.Patients.Where(x => x.Id == h.Patient).ExecuteUpdateAsync(x => x.SetProperty(y => y.FullName, "Meera Lakshmi Venkataraman Iyer (synthetic)"));
+        await using (var tenancy = sql.Context(h.Tenant)) // #1365 F-068: the letterhead carries the location's own address, not the practice's, and the practice's phone
+        {
+            (await tenancy.Facilities.SingleAsync(f => f.Id == h.Facility)).Address = "7 Lake View Road (synthetic)";
+            tenancy.Profiles.Add(new PracticeProfile { Id = Guid.NewGuid(), TenantId = h.Tenant, Address = "Head office (synthetic)", Phone = "044 5550 0100", ChangedAt = DateTimeOffset.UtcNow });
+            await tenancy.SaveChangesAsync();
+        }
 
         using var r = await PdfAsync(h.Doctor);
         Assert.Equal(HttpStatusCode.OK, r.StatusCode);
@@ -646,7 +652,8 @@ public sealed class SignNoteTests(PostgresFixture sql) : IClassFixture<PostgresF
 
         Assert.StartsWith("%PDF-", Encoding.ASCII.GetString(bytes, 0, 5), StringComparison.Ordinal);
         var pages = PdfPages.Read(bytes, PlainPdf.A4.Margin);
-        string[] markers = ["MRN 000001", "Date of birth 12 Mar 1972", "Meera Lakshmi Venkataraman Iyer (synthetic)", "Corrections are added as signed addenda."];
+        string[] markers = ["MRN 000001", "Date of birth 12 Mar 1972", "Meera Lakshmi Venkataraman Iyer (synthetic)", "Corrections are added as signed addenda.",
+            "7 Lake View Road (synthetic)", "Phone 044 5550 0100"];
         Assert.True(pages.Count >= 2, $"{pages.Count} page(s)");
         Assert.All(pages, page =>
         {
@@ -655,6 +662,7 @@ public sealed class SignNoteTests(PostgresFixture sql) : IClassFixture<PostgresF
                 Assert.Contains(marker, page.Text, StringComparison.Ordinal);
         });
         var text = string.Join(' ', pages.Select(x => x.Text));
+        Assert.DoesNotContain("Head office", text, StringComparison.Ordinal);
         foreach (var expected in new[] { "Signed by Dr. Arjun Rao (synthetic)", "Addendum · version 2", "Reason: Patient asked", "Synthetic: follow-up moved to Friday", "Asia/Kolkata" })
             Assert.Contains(expected, text, StringComparison.Ordinal);
 

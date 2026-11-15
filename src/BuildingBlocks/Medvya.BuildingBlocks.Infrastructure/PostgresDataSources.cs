@@ -31,7 +31,7 @@ public static class PostgresDataSources
     public static (string ConnectionString, TokenCredential Credential) Credential(string connectionString)
     {
         var cs = new DbConnectionStringBuilder { ConnectionString = connectionString };
-        if (!cs.TryGetValue(ManagedIdentityKeyword, out var clientId)) return (connectionString, new DefaultAzureCredential());
+        if (!cs.TryGetValue(ManagedIdentityKeyword, out var clientId)) return (connectionString, AzureCredentials.Shared);
         cs.Remove(ManagedIdentityKeyword);
         return (cs.ConnectionString, new ManagedIdentityCredential(ManagedIdentityId.FromUserAssignedClientId((string)clientId)));
     }

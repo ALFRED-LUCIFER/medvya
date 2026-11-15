@@ -1761,6 +1761,8 @@
   "settings.profile.taxHint": "GSTIN in India, TRN in the UAE.",
   "settings.profile.phone": "Phone",
   "settings.profile.email": "Email",
+  "settings.profile.signatureLine": "Signature line on printed prescriptions",
+  "settings.profile.signatureLineHint": "When off, prescriptions print a line saying they are computer generated and do not need a signature.",
   "settings.logo.title": "Logo",
   "settings.logo.intro": "Shown on prescriptions, invoices and the patient portal.",
   "settings.logo.alt": "Logo of {name}",
@@ -5559,5 +5561,6 @@
   "printFamily.checkLetter": "Check this letter is genuine",
   "printFamily.scanOrOpen": "Scan the code or open {url}",
   "printFamily.page": "Page {page} of {pages}",
-  "printFamily.corrections": "Corrections are added as signed addenda."
+  "printFamily.corrections": "Corrections are added as signed addenda.",
+  "printFamily.computerGenerated": "This prescription is computer generated and does not need a signature."
 }

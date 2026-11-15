@@ -111,7 +111,8 @@ export default function RxPrintPage(p: Props) {
         )}
         {v.followUpOn && <Row id="rx-follow-up" label={t('paper.row.followUp')}><p className="font-bold">{t('paper.followUpOn', { date: formatCalendarDate(v.followUpOn) })}</p></Row>}
       </Rows>
-      <Signature name={v.doctor} lines={[t('paper.reg', { number: ltr(v.licenceNumber) }), t('paper.authorised', { when })]} />
+      <Signature name={v.doctor} lines={[t('paper.reg', { number: ltr(v.licenceNumber) }), t('paper.authorised', { when })]}
+        noSignatureNeeded={v.signatureLine === false ? t('printFamily.computerGenerated') : undefined} />
       <PaperFooter qr={v.qr} qrLabel={t('rxPrint.qr')} title={t('paper.checkRx')} end={<Mono>{v.authorisation.number}</Mono>}>
         <p>{t('paper.scanOrOpen')} <Mono wrap>{v.verifyUrl}</Mono></p>
       </PaperFooter>

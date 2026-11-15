@@ -94,12 +94,13 @@ public sealed record RxPrintLine(bool Discontinue, string Medicine, string? Stre
 /// The authorised prescription as the print view and the PDF show it (MDV-P2-017, E-10): clinic, doctor (qualifications, licence number and authority),
 /// patient identifiers, the chart's allergies, the lines, and the verify link with its QR code (rows of '1' dark and '0' light, quiet zone included).
 /// The clinic's address and phone head the paper under its name (MDV-P1-111), then its registration number when one was entered (#1365 F-068).
+/// SignatureLine is the practice's setting, read when rendering: false prints that the paper is computer generated in place of the signing space (#1365).
 /// </summary>
 public sealed record RxPrintView(
     RxAuthorisationView Authorisation, string Clinic, string TimeZone, string Doctor, string? Qualifications, string LicenceNumber, string LicenceAuthority,
     SlipPatient Patient, ChartAllergies Allergies, IReadOnlyList<string> AllergySubstances, IReadOnlyList<RxPrintLine> Lines, string VerifyUrl, IReadOnlyList<string> Qr,
     int LayoutVersion, RxAdviceView? Advice = null, int PatientAge = 0, IReadOnlyList<RxDiagnosis>? Diagnoses = null, DateOnly? FollowUpOn = null,
-    string? ClinicAddress = null, string? ClinicPhone = null, string? ClinicRegistration = null);
+    string? ClinicAddress = null, string? ClinicPhone = null, string? ClinicRegistration = null, bool SignatureLine = true);
 
 /// <summary>A diagnosis recorded in the consultation; a provisional one prints marked so, never as a confirmed diagnosis.</summary>
 public sealed record RxDiagnosis(string Description, bool Provisional);

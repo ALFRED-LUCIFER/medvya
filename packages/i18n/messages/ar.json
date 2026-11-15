@@ -1760,6 +1760,8 @@
   "settings.profile.taxHint": "GSTIN في الهند وTRN في الإمارات.",
   "settings.profile.phone": "الهاتف",
   "settings.profile.email": "البريد الإلكتروني",
+  "settings.profile.signatureLine": "سطر التوقيع على الوصفات المطبوعة",
+  "settings.profile.signatureLineHint": "عند إيقافه، تُطبع على الوصفات عبارة تفيد بأنها صادرة من الحاسوب ولا تحتاج إلى توقيع.",
   "settings.logo.title": "الشعار",
   "settings.logo.intro": "يظهر على الوصفات الطبية والفواتير وبوابة المريض.",
   "settings.logo.alt": "شعار {name}",
@@ -5556,5 +5558,6 @@
   "printFamily.checkLetter": "تحقّق من أن هذه الرسالة أصلية",
   "printFamily.scanOrOpen": "امسح الرمز أو افتح {url}",
   "printFamily.page": "الصفحة {page} من {pages}",
-  "printFamily.corrections": "تُضاف التصحيحات كملاحق موقّعة."
+  "printFamily.corrections": "تُضاف التصحيحات كملاحق موقّعة.",
+  "printFamily.computerGenerated": "هذه الوصفة صادرة من الحاسوب ولا تحتاج إلى توقيع."
 }

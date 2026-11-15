@@ -12,6 +12,8 @@ export type Profile = {
   phone: string | null;
   email: string | null;
   hasLogo: boolean;
+  /** Printed prescriptions leave space for a handwritten signature (default); false: they say they are computer generated and need none (#1365). */
+  signatureLine?: boolean;
   /** The row version this was read at (0 before a profile exists); a save sends it back and is refused (409 "changed") if it moved on (#889). */
   version: number;
 };
@@ -45,11 +47,13 @@ export const profileSchema = z.object({
   taxNumber: optional(30),
   phone: optional(30).refine(v => v === '' || /^[0-9+() -]{6,30}$/.test(v)),
   email: optional(254).refine(v => v === '' || /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(v)),
+  signatureLine: z.boolean(),
 });
 export type ProfileForm = z.infer<typeof profileSchema>;
 
 export const toProfileForm = (p: Profile): ProfileForm => ({
   name: p.name, address: p.address ?? '', registrationNumber: p.registrationNumber ?? '', registrationExpiresOn: p.registrationExpiresOn ?? '', taxNumber: p.taxNumber ?? '', phone: p.phone ?? '', email: p.email ?? '',
+  signatureLine: p.signatureLine ?? true,
 });
 
 /** Editing a location also sets its vitals room and guest Wi-Fi (MDV-P1-111); the server refuses a password without its network. */

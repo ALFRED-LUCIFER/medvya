@@ -278,7 +278,7 @@ erDiagram
 | `OrganisationDocuments` | 8 | Id | tenant-scoped |
 | `OrganisationRequests` | 6 | TenantId | tenant-scoped |
 | `PracticeDefaults` | 13 | TenantId | tenant-scoped |
-| `Profiles` | 12 | Id | tenant-scoped |
+| `Profiles` | 13 | Id | tenant-scoped |
 | `SettingsChanges` | 8 | Id | tenant-scoped |
 | `Tenants` | 10 | Id |  |
 | `TenantIndex` | 1 | TenantId | tenant-scoped |
@@ -549,6 +549,7 @@ erDiagram
 | `Phone` | character varying(30) |  |  |
 | `RegistrationExpiresOn` | date | yes |  |
 | `RegistrationNumber` | character varying(50) |  |  |
+| `SignatureLine` | bool |  |  |
 | `TaxNumber` | character varying(30) |  |  |
 | `TenantId` | guid |  | FK to `Tenant` |
 | `xmin` | xid |  |  |

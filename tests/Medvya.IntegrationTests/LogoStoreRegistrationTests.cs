@@ -9,7 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Medvya.IntegrationTests;
 
 /// <summary>#211: on Azure only Storage:BlobEndpoint is set (managed identity); the logo store must not fall back to the fail-closed one.</summary>
-public class LogoStoreRegistrationTests
+public class LogoStoreRegistrationTests(AzuriteFixture blobs) : IClassFixture<AzuriteFixture>
 {
     static ILogoStore StoreFor(string? connectionString, string? endpoint) =>
         new ServiceCollection().AddTenancyModule("Host=unused", connectionString, endpoint).BuildServiceProvider().GetRequiredService<ILogoStore>();
@@ -39,6 +39,18 @@ public class LogoStoreRegistrationTests
         Assert.EndsWith("/practice-assets/t/logo/b", second.AbsolutePath, StringComparison.Ordinal);
         await store.LinkForAsync("t/logo/a", TimeSpan.FromHours(2));
         Assert.Equal(2, service.Keys);
+    }
+
+    /// <summary>#1365: an upload is not kept in memory (the owner's ID and registration certificates go through this store); only what a printed paper reads is.</summary>
+    [Fact]
+    public async Task AnUploadedDocumentIsNotKeptInMemory()
+    {
+        using var store = new BlobLogoStore(blobs.ConnectionString);
+        var key = $"{Guid.NewGuid()}/onboarding/{Guid.NewGuid()}";
+        await store.PutAsync(key, [0x25, 0x50, 0x44, 0x46], "application/pdf");
+        await new BlobContainerClient(blobs.ConnectionString, BlobLogoStore.Container).DeleteBlobAsync(key); // behind the store's back: a kept copy would still answer
+
+        Assert.Equal(404, (await Assert.ThrowsAsync<RequestFailedException>(() => store.ReadAsync(key))).Status);
     }
 
     sealed class CountingService() : BlobServiceClient(new Uri("https://example.blob.core.windows.net"), AzureCredentials.Shared)

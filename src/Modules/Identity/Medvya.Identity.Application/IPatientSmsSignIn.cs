@@ -1,6 +1,6 @@
 namespace Medvya.Identity.Application;
 
-/// <summary>Sent: a code went out. TooManyCodes: wait before asking again. NotSent: no SMS provider took it. Locked: five wrong codes.</summary>
+/// <summary>Sent: a code went out. TooManyCodes: wait before asking again. NotSent: no SMS provider took it, or the hourly budget for all numbers is spent. Locked: five wrong codes.</summary>
 public enum SmsSignInOutcome { Sent, TooManyCodes, NotSent, Verified, WrongCode, Locked }
 
 /// <param name="RetryAfterMinutes">For Locked and TooManyCodes: whole minutes until the number may try again.</param>

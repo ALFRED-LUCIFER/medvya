@@ -8,7 +8,8 @@ namespace Host.Api.Middleware;
 /// Pays EF Core's first-use cost (model building, query compilation, JIT of EF and Npgsql) at startup, not inside the first request of each
 /// kind: on App Service B1 the first search, board and schedule after a restart took 7-9 s (#912). In the background, like
 /// <see cref="Medvya.BuildingBlocks.Security.KeyVaultWarmup"/>, so startup and /health do not wait. Reads and writes nothing: the scope has
-/// no tenant (EF filters and row-level security match no row) and every query is LIMIT 0.
+/// no tenant (EF filters and row-level security match no row) and every query is WHERE FALSE (not Take(0): EF Core warned once per
+/// table at every start that a row limit had no order, #1365).
 /// </summary>
 public sealed partial class DatabaseWarmup(IServiceProvider services, IReadOnlyList<Type> contexts, ILogger<DatabaseWarmup> log) : IHostedService
 {
@@ -40,7 +41,7 @@ public sealed partial class DatabaseWarmup(IServiceProvider services, IReadOnlyL
                 await using var scope = services.CreateAsyncScope();
                 var db = (DbContext)scope.ServiceProvider.GetRequiredService(type);
                 foreach (var entity in db.Model.GetEntityTypes().Where(e => !e.IsOwned() && !e.HasSharedClrType && e.GetTableName() is not null))
-                    await ((IQueryable<object>)SetOf.MakeGenericMethod(entity.ClrType).Invoke(db, null)!).AsNoTracking().Take(0).ToListAsync();
+                    await ((IQueryable<object>)SetOf.MakeGenericMethod(entity.ClrType).Invoke(db, null)!).AsNoTracking().Where(_ => false).ToListAsync();
             }
             Finished(log, contexts.Count, clock.ElapsedMilliseconds);
         }

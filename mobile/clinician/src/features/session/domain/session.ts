@@ -1,10 +1,29 @@
 import { z } from 'zod';
 
 export type Role = 'doctor' | 'frontDesk';
+/** `email` is empty when signed in through the server, whose context names the person but not their email. */
 export type Staff = { id: string; name: string; initials: string; email: string; role: Role };
-export type Facility = { id: string; name: string; city: string; opens: string; closes: string; timeZone: string };
+/**
+ * `id` is the facility's id. From the server, `membershipId` is what the facility choice sends, `city` is the practice's
+ * name and there are no opening hours; the synthetic cast has hours and no membership.
+ */
+export type Facility = { id: string; name: string; city: string; opens?: string; closes?: string; timeZone: string; membershipId?: string };
 export type Session = { staff: Staff; facility: Facility };
-export type SignInStep = 'email' | 'code' | 'facility' | 'pin' | 'biometric';
+/** `browser` is sign-in through the server (system browser); `email` and `code` are the Development cast's stand-in. */
+export type SignInStep = 'browser' | 'email' | 'code' | 'facility' | 'pin' | 'biometric';
+
+/**
+ * The server's role (RoleMatrix) as the app's tab set. Only doctors get the clinical tabs; a nurse or admin gets front
+ * desk's. The tabs are convenience: the API refuses what a role may not do (MDV-P5-034 check 2).
+ */
+export const roleOf = (serverRole: string): Role => (serverRole === 'SoloDoctor' || serverRole === 'HospitalDoctor' ? 'doctor' : 'frontDesk');
+
+/** Up to two initials from the name's whole words, skipping titles and abbreviations ("Dr.", "A.") and bracketed notes. */
+export function initialsOf(name: string) {
+  const words = name.split(/\s+/).filter(w => /^[\p{L}\p{M}]+$/u.test(w));
+  const picked = words.length > 1 ? [words[0]!, words[words.length - 1]!] : words;
+  return picked.map(w => w[0]!.toLocaleUpperCase()).join('') || name.trim().slice(0, 1);
+}
 
 // Messages are i18n keys; the component translates them.
 export const emailForm = z.object({ email: z.string().trim().toLowerCase().pipe(z.email('mobile.signIn.emailInvalid')) });

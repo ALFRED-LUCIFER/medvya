@@ -7,7 +7,7 @@ import { readCopy, saveCopy, storeGeneration } from '../features/api/services/st
 import { LockScreen } from '../features/session/components/LockScreen';
 import { useSession } from '../features/session/hooks/session';
 import { useLockController } from '../features/session/hooks/useLockController';
-import { setPin } from '../features/session/services/session';
+import { saveProfile, setPin, wipeDevice } from '../features/session/services/session';
 import { TodayScreen } from '../features/today/components/TodayScreen';
 import { useTodayController } from '../features/today/hooks/useTodayController';
 import { files, keychain } from './fakes';
@@ -19,7 +19,7 @@ jest.mock('expo-local-authentication', () => ({
   hasHardwareAsync: async () => true, isEnrolledAsync: async () => true, authenticateAsync: async () => ({ success: mockBiometricWorks }),
   supportedAuthenticationTypesAsync: async () => [1], AuthenticationType: { FINGERPRINT: 1, FACIAL_RECOGNITION: 2 },
 }));
-afterEach(() => { mockBiometricWorks = false; onlineManager.setOnline(true); });
+afterEach(async () => { mockBiometricWorks = false; onlineManager.setOnline(true); await wipeDevice(); });
 
 const doctor = { staff: cast.staff[0]!, facility: cast.facilities[0]! };
 const noop = () => {};
@@ -29,9 +29,13 @@ function Today() {
 function Lock() {
   return <LockScreen {...useLockController()} />;
 }
+function Launched() {
+  const { ready, session, locked } = useSession();
+  return !ready ? null : session && locked ? <Lock /> : <Text>{session ? 'unlocked' : 'signed out'}</Text>;
+}
 function App({ biometric = false }: { biometric?: boolean }) {
-  const { session, locked, begin, lock } = useSession();
-  useEffect(() => { begin(doctor, biometric); }, []); // once, on mount
+  const { ready, session, locked, begin, lock } = useSession();
+  useEffect(() => { if (ready) begin(doctor, biometric); }, [ready]); // once, after the launch check
   if (!session) return <Text>signed out</Text>;
   return locked ? <Lock /> : <><Pressable accessibilityRole="button" onPress={lock}><Text>Lock now</Text></Pressable><Today /></>;
 }
@@ -52,7 +56,7 @@ const enterPin = async (pin: string) => {
 it('leaves nothing of the previous user on the phone after Switch user', async () => {
   await signedInThenLocked();
   expect(files.size).toBe(1); // the encrypted copy
-  expect(keychain.size).toBe(2); // its key and the PIN check value
+  expect(keychain.size).toBe(3); // its key, the PIN check value and who is signed in
   await fireEvent.press(screen.getByRole('button', { name: 'Switch user' }));
   expect(await screen.findByText('signed out')).toBeOnTheScreen();
   await waitFor(() => { expect(files.size).toBe(0); expect(keychain.size).toBe(0); });
@@ -64,6 +68,17 @@ it('wipes at launch what a session closed without signing out left behind', asyn
   await saveCopy(`today:${doctor.facility.id}`, cast.today, storeGeneration());
   await renderApp(<Text>launched</Text>);
   await waitFor(() => { expect(files.size).toBe(0); expect(keychain.size).toBe(0); });
+});
+
+it('keeps a stored session at launch and opens it locked', async () => {
+  await setPin('246810');
+  await saveCopy(`today:${doctor.facility.id}`, cast.today, storeGeneration());
+  await saveProfile(doctor, false);
+  await renderApp(<Launched />);
+  expect(await screen.findByText('Signed in as Dr. Arjun Rao. Unlock to carry on.')).toBeOnTheScreen();
+  expect(files.size).toBe(1);
+  expect(keychain.size).toBe(3);
+  expect(await readCopy(`today:${doctor.facility.id}`)).not.toBeNull();
 });
 
 it('unlocks with the right PIN and counts down the wrong ones', async () => {

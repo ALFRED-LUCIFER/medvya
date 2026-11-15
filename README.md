@@ -16,8 +16,9 @@ pnpm install && pnpm build                    # web, mobile and packages workspa
 pnpm dev                                      # clinic app on http://localhost:5173
 pnpm --filter @medvya/mobile-clinician ios    # staff app on the iOS simulator (needs Xcode; `android` needs Android Studio)
 pnpm dev:clinician                            # or dev:patient: Metro only; open in Expo Go or an installed build
-# Mobile Development builds sign in with the synthetic cast (any 6-digit code): arjun.rao@example.com (doctor),
-# reception.desk@example.com (front desk), patient +91 90000 00101. Release builds have no data until MDV-P5-033.
+# Mobile Development builds without a server sign in with the synthetic cast (any 6-digit code): arjun.rao@example.com (doctor),
+# reception.desk@example.com (front desk), patient +91 90000 00101. With EXPO_PUBLIC_MEDVYA_API=<API base URL> the staff app
+# signs in to that API in the system browser (native tokens) and reads Today from it; screens not yet wired say "not connected".
 dotnet test Medvya.sln                        # includes tenant-isolation tests on a throwaway PostgreSQL (Testcontainers)
 ```
 

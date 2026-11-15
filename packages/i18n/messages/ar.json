@@ -2420,6 +2420,7 @@
   "mobile.staff.tab.consult": "الاستشارة",
   "mobile.staff.tab.inbox": "الوارد",
   "mobile.signIn.title": "تسجيل الدخول",
+  "mobile.signIn.browserIntro": "سجّل الدخول بحساب العمل. يُفتح المتصفح لتسجيل الدخول، ثم يعيدك إلى هنا.",
   "mobile.signIn.emailIntro": "استخدم بريد العمل، ثم رمزًا من تطبيق المصادقة.",
   "mobile.signIn.email": "بريد العمل",
   "mobile.signIn.emailInvalid": "أدخل بريدًا مثل name@clinic.com",

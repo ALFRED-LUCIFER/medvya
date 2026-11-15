@@ -2421,6 +2421,7 @@
   "mobile.staff.tab.consult": "Consult",
   "mobile.staff.tab.inbox": "Inbox",
   "mobile.signIn.title": "Sign in",
+  "mobile.signIn.browserIntro": "Sign in with your work account. Your browser opens for the sign-in, then brings you back here.",
   "mobile.signIn.emailIntro": "Use your work email. Then a code from your authenticator app.",
   "mobile.signIn.email": "Work email",
   "mobile.signIn.emailInvalid": "Enter an email like name@clinic.com",

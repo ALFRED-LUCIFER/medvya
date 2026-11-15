@@ -2,23 +2,84 @@ import * as Crypto from 'expo-crypto';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as ScreenCapture from 'expo-screen-capture';
 import * as SecureStore from 'expo-secure-store';
+import * as WebBrowser from 'expo-web-browser';
 import { Platform } from 'react-native';
-import { fromCast } from '../../api/services/source';
-import { deviceOnly, wipeStore } from '../../api/services/store';
-import { unlockMethod, type Facility, type Staff } from '../domain/session';
+import { endServerSession, exchangeCode, forgetTokens, loadTokens, post, REDIRECT_URI, send } from '../../api/services/api';
+import { apiBase, fromCast } from '../../api/services/source';
+import { deviceOnly, hex, purgeExpired, wipeStore } from '../../api/services/store';
+import { initialsOf, roleOf, unlockMethod, type Facility, type Session, type Staff } from '../domain/session';
+
+/** Whether sign-in goes through the server (system browser) or, in a Development build without one, the synthetic cast. */
+export const signsInThroughServer = () => apiBase() !== null;
 
 /** Starts sign-in for a work email. Unknown emails get the same answer as known ones, so the screen cannot be used to find accounts. */
 export const startSignIn = (email: string) => fromCast(c => ({ known: c.staff.some(s => s.email === email) }));
 
-/**
- * shortcut: in Development any six-digit code signs in a cast member; the real check (authenticator code or passkey
- * against Entra, then native tokens) arrives with MDV-P5-033.
- */
+/** Development cast only: any six-digit code signs in a cast member. With a server, signInWithBrowser is the sign-in. */
 export async function verifyCode(email: string, _code: string): Promise<Staff | null> {
   return fromCast(c => c.staff.find(s => s.email === email) ?? null);
 }
 
-export const listFacilities = (_staffId: string): Promise<Facility[]> => fromCast(c => c.facilities);
+// GET /v1/me/context (ADR-004): the fields the app reads.
+type Context = {
+  user: { id: string; displayName: string };
+  memberships?: { id: string; facilityId: string; facilityName: string; tenantName: string; role: string }[];
+  active?: { membershipId: string; role: string; timeZone?: string | null } | null;
+};
+const context = () => send<Context>('/v1/me/context');
+
+const base64Url = (b64: string) => b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+/**
+ * Staff sign-in through the server (MDV-P5-033): the system browser runs the normal staff sign-in (MFA, Medvya accounts
+ * only), bound to this app by PKCE S256, and comes back to medvya-clinician://auth with a one-time code that only this
+ * verifier can exchange. Null when the person closed the browser. The role is the facility's, set when one is chosen.
+ */
+export async function signInWithBrowser(): Promise<Staff | null> {
+  const verifier = hex(Crypto.getRandomBytes(32)); // 64 characters, inside RFC 7636's 43–128
+  const challenge = base64Url(await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, verifier, { encoding: Crypto.CryptoEncoding.BASE64 }));
+  const query = `redirect_uri=${encodeURIComponent(REDIRECT_URI)}&code_challenge=${challenge}&code_challenge_method=S256`;
+  // Ephemeral on iOS: the browser keeps no sign-in cookie for the next person on a shared phone (ADR-011 §5).
+  const result = await WebBrowser.openAuthSessionAsync(`${apiBase()}/native/login?${query}`, REDIRECT_URI, { preferEphemeralSession: true });
+  if (result.type !== 'success') return null;
+  const code = /[?&]code=([^&#]+)/.exec(result.url)?.[1];
+  if (!code) throw new Error('mobile.error.generic');
+  await exchangeCode(decodeURIComponent(code), verifier);
+  const { user } = await context();
+  return { id: user.id, name: user.displayName, initials: initialsOf(user.displayName), email: '', role: 'frontDesk' };
+}
+
+export async function listFacilities(_staffId: string): Promise<Facility[]> {
+  if (!signsInThroughServer()) return fromCast(c => c.facilities);
+  return ((await context()).memberships ?? []).map(m => ({ id: m.facilityId, membershipId: m.id, name: m.facilityName, city: m.tenantName, timeZone: '' }));
+}
+
+/**
+ * Works at `facility` from now on. Through the server: POST /v1/me/facility re-scopes the session; the old access token is
+ * then refused and the client refreshes on the next call, which reads the role and time zone of that membership.
+ */
+export async function chooseFacility(staff: Staff, facility: Facility): Promise<Session> {
+  if (!signsInThroughServer()) return { staff, facility };
+  await post('/v1/me/facility', { membershipId: facility.membershipId });
+  const { active } = await context();
+  if (!active || active.membershipId !== facility.membershipId || !active.timeZone) throw new Error('mobile.error.generic');
+  return { staff: { ...staff, role: roleOf(active.role) }, facility: { ...facility, timeZone: active.timeZone } };
+}
+
+/**
+ * Who is signed in and how they unlock, so the app reopens locked instead of signed out. It holds the staff member's own
+ * name and workplace, no patient data; the tokens are kept apart (api.ts).
+ */
+const PROFILE = 'medvya.profile';
+export const saveProfile = (session: Session, biometric: boolean) => SecureStore.setItemAsync(PROFILE, JSON.stringify({ session, biometric }), deviceOnly);
+
+/** The stored session, or null when there is none, or when a server session has lost its refresh token (it cannot go on). */
+export async function restoreProfile(): Promise<{ session: Session; biometric: boolean } | null> {
+  const stored = await SecureStore.getItemAsync(PROFILE);
+  if (!stored || (signsInThroughServer() && !(await loadTokens()))) return null;
+  await purgeExpired();
+  return JSON.parse(stored) as { session: Session; biometric: boolean };
+}
 
 export async function biometricsAvailable() {
   return (await LocalAuthentication.hasHardwareAsync()) && (await LocalAuthentication.isEnrolledAsync());
@@ -51,8 +112,11 @@ export async function checkPin(pin: string) {
   return !!salt && (await pinHash(salt, pin)) === hash;
 }
 
-/** Everything this app keeps on the phone goes: the encrypted last copy, its key and the PIN (ADR-011 §3, §5). */
-export const wipeDevice = () => Promise.all([wipeStore(), SecureStore.deleteItemAsync(PIN)]);
+/** Everything this app keeps on the phone goes: the encrypted last copy, its key, the PIN, the tokens and who was signed in (ADR-011 §3, §5). */
+export const wipeDevice = () => Promise.all([wipeStore(), SecureStore.deleteItemAsync(PIN), SecureStore.deleteItemAsync(PROFILE), forgetTokens()]);
+
+/** Sign-out: the server session ends too (best effort, with the tokens held now) while the phone wipes at once. */
+export const signOutDevice = () => Promise.all([endServerSession(), wipeDevice()]);
 
 /**
  * ADR-011 §6 for the staff app: screenshots and screen recording are blocked on both platforms (FLAG_SECURE on

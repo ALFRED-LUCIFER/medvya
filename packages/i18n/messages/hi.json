@@ -2410,6 +2410,7 @@
   "mobile.staff.tab.consult": "परामर्श",
   "mobile.staff.tab.inbox": "इनबॉक्स",
   "mobile.signIn.title": "साइन इन करें",
+  "mobile.signIn.browserIntro": "अपने काम वाले खाते से साइन इन करें। साइन इन के लिए ब्राउज़र खुलेगा, फिर आपको यहीं वापस लाएगा।",
   "mobile.signIn.emailIntro": "अपना काम वाला ईमेल डालें। फिर अपने ऑथेंटिकेटर ऐप का कोड।",
   "mobile.signIn.email": "काम वाला ईमेल",
   "mobile.signIn.emailInvalid": "name@clinic.com जैसा ईमेल डालें",

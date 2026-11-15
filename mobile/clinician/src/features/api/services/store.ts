@@ -5,8 +5,7 @@ import * as SQLite from 'expo-sqlite';
 /**
  * The encrypted on-device store (ADR-011 §3): a read-only last copy of today's list, in SQLCipher, with its key in
  * secure-store. Copies older than 24 hours are never served and are deleted. Nothing else of a patient is kept on the phone.
- * shortcut: an expired copy is deleted on the next read, at sign-out or at launch, not on a timer; add a purge on
- * foreground when MDV-P5-033 lets a session outlive the app process.
+ * An expired copy is deleted on the next read, when the app comes to the foreground or reopens, and at sign-out; not on a timer.
  */
 const DB = 'medvya-copy.db';
 const KEY = 'medvya.copyKey';
@@ -23,7 +22,7 @@ function serial<T>(op: () => Promise<T>): Promise<T> {
   return next;
 }
 
-const hex = (bytes: Uint8Array) => Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+export const hex = (bytes: Uint8Array) => Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
 
 /** Closes and deletes the database file. Opening first makes sure there is a file, so a real delete failure is not hidden. */
 async function drop(open: SQLite.SQLiteDatabase | null) {
@@ -64,6 +63,12 @@ export const readCopy = <T>(key: string, now = Date.now()) => serial(async () =>
   await conn.runAsync('DELETE FROM copy WHERE saved_at <= ?', now - KEEP_MS);
   const row = await conn.getFirstAsync<{ body: string; saved_at: number }>('SELECT body, saved_at FROM copy WHERE key = ?', key);
   return row ? { body: JSON.parse(row.body) as T, savedAt: row.saved_at } : null;
+});
+
+/** Deletes copies older than 24 hours (foreground, launch) without reading any. Nothing to do when there is no store yet. */
+export const purgeExpired = (now = Date.now()) => serial(async () => {
+  if (!db && !(await SecureStore.getItemAsync(KEY))) return;
+  await (await connection()).runAsync('DELETE FROM copy WHERE saved_at <= ?', now - KEEP_MS);
 });
 
 /** Deletes the database file and its key. After this nothing the store held can be read again. */

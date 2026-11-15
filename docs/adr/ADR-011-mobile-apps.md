@@ -9,7 +9,7 @@ Doctors want the queue, the patient summary and recording on their phone. Patien
 
 ## Decision
 
-1. **Two store apps from one Expo workspace.** *Medvya Clinic* (`mobile/clinician`, teal, for doctors, nurses and front desk) and *Medvya for patients* (`mobile/patient`, indigo, so screenshots are never mistaken for the clinic app). They share `packages/tokens`, `packages/i18n` and `packages/api-client`, plus the layers of ADR-009. Native UI is `packages/ui-native`, our own components and not React Native Paper. The apps run on Development-only synthetic data until they are wired to the API.
+1. **Two store apps from one Expo workspace.** *Medvya Clinic* (`mobile/clinician`, teal, for doctors, nurses and front desk) and *Medvya for patients* (`mobile/patient`, indigo, so screenshots are never mistaken for the clinic app). They share `packages/tokens`, `packages/i18n` and `packages/api-client`, plus the layers of ADR-009. Native UI is `packages/ui-native`, our own components and not React Native Paper. The apps run on Development-only synthetic data until they are wired to the API. The staff app signs in to the API with native tokens and reads Today from it when built with a server (`EXPO_PUBLIC_MEDVYA_API`, MDV-P5-034); its other screens follow.
 
 2. **Sign-in.**
    - **Staff:** OIDC code + PKCE in the system browser through Host.Api, then bearer tokens backed by the same server-side session row as the web cookie (ADR-004, "native staff app"). Revoke, "My devices" and offboarding apply unchanged. Refresh tokens rotate, and a replay ends the session.

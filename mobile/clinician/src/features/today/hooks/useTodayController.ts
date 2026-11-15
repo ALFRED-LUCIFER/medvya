@@ -1,4 +1,4 @@
-import { useI18n } from '@medvya/i18n';
+import { useI18n, type MessageKey } from '@medvya/i18n';
 import { useQuery } from '@tanstack/react-query';
 import { errorKey } from '../../api/domain/errors';
 import { useOnline } from '../../api/hooks/useOnline';
@@ -8,11 +8,11 @@ import { orderQueue } from '../domain/today';
 import { fetchToday } from '../services/today';
 
 export function useTodayController() {
-  const { locale } = useI18n();
+  const { locale, t } = useI18n();
   const { session } = useSignedIn();
   const online = useOnline();
   // Offline the query still runs ('always'): it reads the encrypted last copy instead of the network.
-  const query = useQuery({ queryKey: ['today', session.facility.id, online], queryFn: () => fetchToday(session.facility.id, online), networkMode: 'always' });
+  const query = useQuery({ queryKey: ['today', session.facility.id, online], queryFn: () => fetchToday(session, online, c => t(`reasonCategory.${c}` as MessageKey)), networkMode: 'always' });
   const savedAt = query.data?.savedAt ?? null;
   return {
     session,

@@ -3,6 +3,7 @@ import { SignInScreen } from '../features/session/components/SignInScreen';
 import { useSession } from '../features/session/hooks/session';
 import { useSignInController } from '../features/session/hooks/useSignInController';
 import { tabsFor } from '../features/session/domain/session';
+import { wipeDevice } from '../features/session/services/session';
 import { keychain } from './fakes';
 import { renderApp } from './render';
 
@@ -11,7 +12,7 @@ jest.mock('expo-local-authentication', () => ({
   hasHardwareAsync: async () => mockHardware, isEnrolledAsync: async () => mockHardware, authenticateAsync: async () => ({ success: false }),
   supportedAuthenticationTypesAsync: async () => [1], AuthenticationType: { FINGERPRINT: 1, FACIAL_RECOGNITION: 2 },
 }));
-afterEach(() => { mockHardware = false; });
+afterEach(async () => { mockHardware = false; await wipeDevice(); });
 
 function Harness() {
   const { session, biometric } = useSession();

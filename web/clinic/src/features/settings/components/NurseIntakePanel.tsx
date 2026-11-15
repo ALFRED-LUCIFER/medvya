@@ -4,7 +4,7 @@ import { fieldError } from './fieldStyles';
 import { Section } from './Section';
 
 type Props = {
-  enabled: boolean; loading: boolean; forbidden: boolean; loadFailed: boolean; saving: boolean; saveFailed: boolean;
+  enabled: boolean; loading: boolean; forbidden: boolean; unavailable: boolean; loadFailed: boolean; saving: boolean; saveFailed: boolean;
   withNurse: number | null; confirming: boolean | null; onChange: (enabled: boolean) => void; onConfirm: () => void; onCancel: () => void;
 };
 
@@ -17,6 +17,7 @@ const switchId = 'nurse-intake-switch';
 export default function NurseIntakePanel(p: Props) {
   const { t } = useI18n();
   if (p.loading) return <p role="status">{t('settings.loading')}</p>;
+  if (p.unavailable) return <Section title={t('settings.nurseIntake.title')}><p role="status">{t('settings.nurseIntake.unavailable')}</p></Section>;
   if (p.loadFailed) return <p role="alert" className={fieldError}>{t(p.forbidden ? 'settings.forbidden' : 'settings.loadFailed')}</p>;
   const turn = p.confirming ? 'on' : 'off';
   return (

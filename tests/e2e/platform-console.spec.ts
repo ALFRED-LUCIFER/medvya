@@ -105,10 +105,10 @@ test('the audit log reads in Arabic, right to left, with actions in words', asyn
   expect(await axe(page)).toEqual([]);
 });
 
-test('a reviewer sees approvals but no team or audit pages', async ({ page }) => {
+test('a reviewer sees approvals and features but no team or audit pages', async ({ page }) => {
   await page.route('**/v1/me', r => r.fulfill({ json: owner({ role: 'Reviewer', keyVerified: true, hasKey: true, canRegister: false }) }));
   await page.goto('/');
-  await expect(page.getByRole('navigation').getByRole('link')).toHaveText(['Overview', 'Approvals']);
+  await expect(page.getByRole('navigation').getByRole('link')).toHaveText(['Overview', 'Approvals', 'Features']);
 });
 
 // MDV-P2-059 AC4: on a phone the sign-in is exactly as wide as the screen, in both directions, and every control is a 44 px target.

@@ -50,7 +50,7 @@ public static class IntakeEndpoints
             .AuditedByUseCase("intake.correct", "intake", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
         intake.MapPost("/{appointmentId:guid}/escalate", async (Guid appointmentId, [FromBody] EscalateIntake? body, [FromServices] IIntake service, CancellationToken ct) =>
                 await service.EscalateAsync(appointmentId, body ?? new EscalateIntake(null), ct) is { } view ? Results.Ok(view) : Results.NotFound())
-            .AuditedByUseCase("intake.escalate", "intake", AuditPurpose.Treatment).AddEndpointFilter(MapErrors).RequireFeature(IntakeFlag.Key);
+            .AuditedByUseCase("intake.escalate", "intake", AuditPurpose.Treatment).AddEndpointFilter(MapErrors).RequireFeature(Features.NurseIntake);
         // Allergies and patient-reported medicines (MDV-P2-008). The handoff below is impossible until every allergy has a status.
         intake.MapPost("/{appointmentId:guid}/allergies", async (Guid appointmentId, [FromBody] AddAllergy? body, [FromServices] IIntake service, CancellationToken ct) =>
                 await service.AddAllergyAsync(appointmentId, body ?? new AddAllergy(null, null, null), ct) is { } view ? Results.Ok(view) : Results.NotFound())
@@ -63,10 +63,10 @@ public static class IntakeEndpoints
             .AuditedByUseCase("intake.allergy.none", "intake", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
         intake.MapPost("/{appointmentId:guid}/medicines", async (Guid appointmentId, [FromBody] AddMedicine? body, [FromServices] IIntake service, CancellationToken ct) =>
                 await service.AddMedicineAsync(appointmentId, body ?? new AddMedicine(null, null, null, false), ct) is { } view ? Results.Ok(view) : Results.NotFound())
-            .AuditedByUseCase("intake.medicine.add", "intake", AuditPurpose.Treatment).AddEndpointFilter(MapErrors).RequireFeature(IntakeFlag.Key);
+            .AuditedByUseCase("intake.medicine.add", "intake", AuditPurpose.Treatment).AddEndpointFilter(MapErrors).RequireFeature(Features.NurseIntake);
         intake.MapPost("/{appointmentId:guid}/handoff", async (Guid appointmentId, [FromServices] IIntake service, CancellationToken ct) =>
                 await service.HandOffAsync(appointmentId, ct) is { } view ? Results.Ok(view) : Results.NotFound())
-            .AuditedByUseCase("intake.handoff", "intake", AuditPurpose.Treatment).AddEndpointFilter(MapErrors).RequireFeature(IntakeFlag.Key);
+            .AuditedByUseCase("intake.handoff", "intake", AuditPurpose.Treatment).AddEndpointFilter(MapErrors).RequireFeature(Features.NurseIntake);
 
         // The treating doctor's urgent items (feeds Today, MDV-P2-002): a doctor's capability, not the nurse's.
         app.MapGroup("/v1/intake-escalations").RequireCapability(Capability.Patient360Chart, Access.Full)

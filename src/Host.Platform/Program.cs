@@ -34,6 +34,11 @@ if (builder.Configuration.GetConnectionString("Review") is { } review)
     builder.Services.AddEmailSender(builder.Configuration, () => new Azure.Identity.ManagedIdentityCredential(Azure.Identity.ManagedIdentityId.SystemAssigned));
     builder.Services.AddAuditModule(review).AddOrganisationReviewPath(review, builder.Configuration["Storage:ConnectionString"], builder.Configuration["Storage:BlobEndpoint"]);
 }
+// Medvya's release switches (MDV-P5-041): one database per country (ConnectionStrings:Features:IN, :AE), each a login in medvya_features, which reaches
+// tenancy."FeatureReleases" and nothing else. Without one the Features endpoints fail closed.
+if (builder.Configuration.GetSection("ConnectionStrings:Features").GetChildren().Where(c => !string.IsNullOrEmpty(c.Value))
+        .ToDictionary(c => c.Key.ToUpperInvariant(), c => c.Value!) is { Count: > 0 } featureDatabases)
+    builder.Services.AddFeatureReleasePath(featureDatabases);
 builder.Services.AddHsts(o => { o.MaxAge = TimeSpan.FromDays(365); o.IncludeSubDomains = true; });
 builder.Services.AddRateLimiter(o =>
 {

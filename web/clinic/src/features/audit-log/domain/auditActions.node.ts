@@ -15,8 +15,8 @@ export const builtAtRunTime = [
   ...['Draft', 'Submitted', 'NeedsChanges', 'Approved', 'Rejected', 'Suspended'].map(s => `organisation.state.${s}`),
 ];
 
-/** Dotted literals on audit lines that are not action codes: HttpContext item keys, a SettingsChange section. */
-export const notActions = new Set(['audit.detail', 'audit.resource', 'staff.role']);
+/** Dotted literals on audit lines that are not action codes: HttpContext item keys, a SettingsChange section, feature keys (Features.cs, MDV-P5-041). */
+export const notActions = new Set(['audit.detail', 'audit.resource', 'staff.role', 'audit.log', 'data.export']);
 
 function* files(dir: string): Generator<string> {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {

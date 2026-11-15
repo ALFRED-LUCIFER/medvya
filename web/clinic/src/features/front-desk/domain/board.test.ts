@@ -132,12 +132,15 @@ describe('walk-in doctors (UX-10)', () => {
     // Away for the morning session only: still in for the afternoon.
     expect(inToday({ hours: [{ ...h('09:00', '13:00'), room: null }, { ...h('16:00', '19:00'), room: null }], unavailable: [{ ...h('09:00', '13:00'), reason: 'Leave', label: null }] })).toBe(true);
   });
-  it('offers only the doctors in today, and every doctor on a day nobody has hours (a Sunday the clinic opens)', () => {
+  it('offers only the doctors in today, and every doctor not on leave on a day nobody has hours (a Sunday the clinic opens)', () => {
     const rao = { calendarId: 'rao', calendarKind: 'Doctor' as const, name: 'Dr. Rao', hours: [{ ...h('09:00', '13:00'), room: null }], unavailable: [] };
     const menon = { ...rao, calendarId: 'menon', name: 'Dr. Menon', hours: [] };
     const room = { ...rao, calendarId: 'room', calendarKind: 'Resource' as const, name: 'Room 1' };
     expect(walkInDoctors([rao, menon, room]).map(d => d.id)).toEqual(['rao']);
     expect(walkInDoctors([{ ...rao, hours: [] }, menon, room]).map(d => d.id)).toEqual(['rao', 'menon']);
+    // On leave that day: never offered, or the patient waits for a doctor who is not coming.
+    const away = { ...menon, unavailable: [{ ...h('00:00', '23:59'), reason: 'Leave' as const, label: null }] };
+    expect(walkInDoctors([{ ...rao, hours: [] }, away, room]).map(d => d.id)).toEqual(['rao']);
   });
 });
 

@@ -195,9 +195,9 @@ export const newPatientWalkIn: WalkInChoice = { ...emptyWalkIn, visitType: 'NewC
 export const inToday = (c: Pick<ScheduleColumn, 'hours' | 'unavailable'>) =>
   c.hours.some(h => !c.unavailable.some(u => Date.parse(u.start) <= Date.parse(h.start) && Date.parse(u.end) >= Date.parse(h.end)));
 
-/** Walk-in's doctor choice: the doctors in today; when none is (nobody has hours today), every doctor. */
+/** Walk-in's doctor choice: the doctors in today; when none is (nobody has hours today), every doctor not on leave, as the server's "next available". */
 export function walkInDoctors(columns: Pick<ScheduleColumn, 'calendarId' | 'calendarKind' | 'name' | 'hours' | 'unavailable'>[]) {
-  const all = columns.filter(c => c.calendarKind === 'Doctor');
+  const all = columns.filter(c => c.calendarKind === 'Doctor' && !c.unavailable.some(u => u.reason === 'Leave'));
   const today = all.filter(inToday);
   return (today.length > 0 ? today : all).map(c => ({ id: c.calendarId, name: c.name }));
 }

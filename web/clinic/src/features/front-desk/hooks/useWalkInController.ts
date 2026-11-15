@@ -25,7 +25,7 @@ export function useWalkInController(facilityId: string, initialPatientId: string
   // Name and MRN of the chosen patient (an audited lookup), as booking confirms them.
   const patient = useQuery({ queryKey: ['booking-patient', facilityId, patientId], queryFn: () => findPatient(facilityId, patientId), enabled: patientId !== '', staleTime: Infinity });
   // The doctors to choose from: the day view's doctor columns, without those who are not in today (no hours, or on leave all day);
-  // on a day nobody has hours (a Sunday the clinic opens) every doctor, as "next available" then queues with any of them.
+  // on a day nobody has hours (a Sunday the clinic opens) every doctor not on leave, as "next available" then queues with any of them.
   const day = useQuery({ queryKey: ['schedule', facilityId, 'walk-in'], queryFn: () => fetchScheduleDay(facilityId, null) });
   const doctors = walkInDoctors(day.data?.columns ?? []);
 

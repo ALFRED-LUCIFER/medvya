@@ -1,11 +1,12 @@
 import { csrf, post, send } from '../../schedule/services/scheduleApi';
 import type { Capability } from '../../session/domain/session';
 import type { AccessReview } from '../domain/accessReview';
-import type { AssignableRole, CustomRole, RoleCatalogue, StaffMember } from '../domain/staff';
+import type { AssignableRole, CustomRole, PlanSeats, RoleCatalogue, StaffMember } from '../domain/staff';
 
 // Settings → Staff (F-10, MDV-P1-008). Ids in paths, details in bodies. The invitation link itself is only ever emailed.
 export const fetchStaff = () => send<StaffMember[]>('/v1/staff');
 export const fetchRoles = () => send<RoleCatalogue>('/v1/staff/roles');
+export const fetchPlanSeats = () => send<PlanSeats>('/v1/staff/plan');
 
 export const addStaff = (body: { email: string; role: AssignableRole; customRoleId: string | null; facilityId: string; alsoFacilityIds: string[] }) =>
   post<{ id: string; expiresAt: string }>('/v1/staff', body);

@@ -212,6 +212,38 @@ for (const [locale, text, add, role, email, next, send] of [
     expect(await axe(page)).toEqual([]);
   });
 
+// #1365 F-039: with no staff seat free, the wizard says so at its first step and does not go on, instead of refusing after the last.
+for (const [locale, text, add, role, next] of [
+  ['en', 'Your plan allows 3 doctors and 5 staff; contact Medvya to upgrade', 'Add staff member', /^Receptionist/, 'Next'],
+  ['ar', 'تتيح خطتك 3 أطباء و5 موظفين؛ تواصل مع Medvya للترقية', 'إضافة موظف', /^موظف استقبال/, 'التالي'],
+] as const)
+  test(`with no staff seat free, the first step says so and Next is off with the reason (${locale})`, async ({ page }) => {
+    await setUp(page, locale);
+    let posts = 0;
+    await page.route('**/v1/staff', r => { if (r.request().method() === 'POST') posts++; return r.fallback(); });
+    await page.route('**/v1/staff/plan', r => r.fulfill({ json: { doctors: 3, staff: 5, doctorFree: true, staffFree: false } }));
+    await page.goto('/settings?tab=staff');
+    await page.getByRole('button', { name: add }).click();
+    await expect(page.getByRole('alert').filter({ hasText: text })).toBeVisible();
+    await page.getByRole('radio', { name: role }).check();
+    const go = page.getByRole('button', { name: next });
+    await expect(go).toBeDisabled();
+    await expect(go).toHaveAccessibleDescription(text);
+    expect(posts).toBe(0);
+    expect(await axe(page)).toEqual([]);
+  });
+
+test('with a staff seat free the wizard goes on as before', async ({ page }) => {
+  await setUp(page);
+  await page.route('**/v1/staff/plan', r => r.fulfill({ json: { doctors: 3, staff: 5, doctorFree: false, staffFree: true } })); // the doctor seat is not this wizard's
+  await page.goto('/settings?tab=staff');
+  await page.getByRole('button', { name: 'Add staff member' }).click();
+  await page.getByRole('radio', { name: /^Receptionist/ }).check();
+  await page.getByRole('button', { name: 'Next' }).click();
+  await expect(page.getByLabel('Work email')).toBeVisible();
+  await expect(page.getByText('Your plan allows')).toHaveCount(0);
+});
+
 test('the offboarding form lays out right to left in Arabic', async ({ page }) => {
   await setUp(page, 'ar');
   await page.route('**/v1/staff', r => r.request().method() === 'GET' ? r.fulfill({ json: [member({ membershipId: 'c', name: 'A. Joseph (synthetic)' })] }) : r.fallback());

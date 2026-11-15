@@ -48,6 +48,7 @@ public sealed class EndpointAuditTests(PostgresFixture sql) : IClassFixture<Post
         "POST /v1/staff/",
         "POST /v1/staff/invitations/{id:guid}/resend",
         "GET /v1/staff/roles",
+        "GET /v1/staff/plan", // #1365 F-039: the plan's two limits and whether a seat is free; no person, no patient
         "POST /v1/staff/roles",
         "PUT /v1/staff/roles/{id:guid}",
         "GET /v1/staff/access-review", // MDV-P1-010: staff names, roles, last sign-in; decisions are audited in the service

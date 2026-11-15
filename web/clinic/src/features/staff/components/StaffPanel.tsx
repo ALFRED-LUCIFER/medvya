@@ -325,10 +325,10 @@ export default function StaffPanel(p: Props) {
             )}
             {p.addFailed && <p role="alert" className={fieldError}>{t('staff.error.add')}</p>}
             {p.emailFailed && <p role="alert" className={fieldError}>{t('staff.error.email')}</p>}
-            {p.planFull && <p role="alert" className={fieldError}>{p.planFull}</p>}
+            {p.planFull && <p id="staff-plan-full" role="alert" className={fieldError}>{p.planFull}</p>}
             <StickyActionBar className={cardBar}>
               {p.step !== 'role' && <Button type="button" variant="outline" onClick={p.onBack}>{t('staff.back')}</Button>}
-              {p.step !== 'permissions' && <Button type="button" disabled={!p.canContinue} onClick={p.onNext}>{t('staff.next')}</Button>}
+              {p.step !== 'permissions' && <Button type="button" disabled={!p.canContinue} aria-describedby={p.planFull ? 'staff-plan-full' : undefined} onClick={p.onNext}>{t('staff.next')}</Button>}
               {p.step === 'permissions' && <Button type="submit" loading={p.adding}>{t('staff.send')}</Button>}
               <Button type="button" variant="outline" onClick={p.onClose}>{t('settings.cancel')}</Button>
             </StickyActionBar>

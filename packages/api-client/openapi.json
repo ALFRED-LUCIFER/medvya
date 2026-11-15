@@ -4336,6 +4336,25 @@
         }
       }
     },
+    "/v1/staff/plan": {
+      "get": {
+        "tags": [
+          "Host.Api"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanSeats"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/staff/invitations/{id}/resend": {
       "post": {
         "tags": [
@@ -11280,6 +11299,39 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "PlanSeats": {
+        "required": [
+          "doctors",
+          "staff",
+          "doctorFree",
+          "staffFree"
+        ],
+        "type": "object",
+        "properties": {
+          "doctors": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "staff": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "doctorFree": {
+            "type": "boolean"
+          },
+          "staffFree": {
+            "type": "boolean"
           }
         }
       },

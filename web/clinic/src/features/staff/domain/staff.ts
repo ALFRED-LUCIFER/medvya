@@ -128,6 +128,8 @@ export type Step = 'role' | 'scope' | 'permissions';
 
 /** The plan's seat limits, as the server sends them with a `plan_limit` refusal (MDV-P1-069). */
 export type PlanLimit = { doctors: number; staff: number };
+/** The limits with whether one more doctor or member of staff still fits (GET /v1/staff/plan, #1365 F-039): asked when an add wizard opens. */
+export type PlanSeats = PlanLimit & { doctorFree: boolean; staffFree: boolean };
 /** "Your plan allows 3 doctors and 5 staff; contact Medvya to upgrade", with each count in the reader's plural form. */
 export const planFullText = ({ t, tCount }: Pick<I18n, 't' | 'tCount'>, plan: PlanLimit) =>
   t('plan.full', { doctors: tCount('plan.doctors', plan.doctors), staff: tCount('plan.staff', plan.staff) });

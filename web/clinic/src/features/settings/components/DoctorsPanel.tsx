@@ -12,7 +12,7 @@ import { Section } from './Section';
 
 type Wizard = {
   adding: boolean; step: DoctorStep; stepIndex: number; lastStep: boolean; form: UseFormReturn<DoctorForm>; fieldErrors: Record<string, FieldProblem | undefined>; errorFocusKey: number;
-  submitting: boolean; submitFailed: boolean; emailFailed: boolean; planFull: string | null; signature: File | null; signatureProblem: 'type' | 'size' | null;
+  submitting: boolean; submitFailed: boolean; emailFailed: boolean; planFull: string | null; canContinue: boolean; signature: File | null; signatureProblem: 'type' | 'size' | null;
   onPickSignature: (file: File | undefined) => void; onBack: () => void; onNext: () => void; onClose: () => void; onSubmit: FormEventHandler<HTMLFormElement>;
 };
 

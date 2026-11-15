@@ -67,6 +67,7 @@ flowchart LR
   Identity -->|"Application"| Patients
   Identity -->|"Api"| Tenancy
   Notifications -->|"Api, Application"| Audit
+  Notifications -->|"Application"| Identity
   Notifications -->|"Application, Domain"| Patients
   Notifications -->|"Application"| Scheduling
   Notifications -->|"Api, Application, Domain"| Tenancy
@@ -2655,7 +2656,7 @@ erDiagram
 | `Notifications` | 17 | Id | tenant-scoped |
 | `Attempts` | 6 | Id | tenant-scoped |
 | `Preferences` | 12 | TenantId | tenant-scoped |
-| `StaffNotifications` | 8 | Id | tenant-scoped |
+| `StaffNotifications` | 9 | Id | tenant-scoped |
 | `StaffNotificationReads` | 4 | NotificationId, UserId | tenant-scoped |
 
 <details><summary><code>notifications.Notifications</code> columns</summary>
@@ -2724,6 +2725,7 @@ erDiagram
 | `Detail` | int | yes |  |
 | `FacilityId` | guid |  | id of `tenancy.Facilities` |
 | `Kind` | character varying(30) |  |  |
+| `PushedAt` | timestamptz | yes |  |
 | `RefId` | guid | yes |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
 

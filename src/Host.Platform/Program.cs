@@ -35,7 +35,12 @@ if (builder.Configuration.GetConnectionString("Review") is { } review)
     builder.Services.AddEmailSender(builder.Configuration, () => new Azure.Identity.ManagedIdentityCredential(Azure.Identity.ManagedIdentityId.SystemAssigned));
     builder.Services.AddAuditModule(review).AddOrganisationReviewPath(review, builder.Configuration["Storage:ConnectionString"], builder.Configuration["Storage:BlobEndpoint"]);
 }
-// The Medvya-wide medicine list (MDV-P5-064): the country's shared formulary rows, on a third narrow login (medvya_formulary: read, add and update of the
+// Medvya's release switches (MDV-P5-041): one database per country (ConnectionStrings:Features:IN, :AE), each a login in medvya_features, which reaches
+// tenancy."FeatureReleases" and nothing else. Without one the Features endpoints fail closed.
+if (builder.Configuration.GetSection("ConnectionStrings:Features").GetChildren().Where(c => !string.IsNullOrEmpty(c.Value))
+        .ToDictionary(c => c.Key.ToUpperInvariant(), c => c.Value!) is { Count: > 0 } featureDatabases)
+    builder.Services.AddFeatureReleasePath(featureDatabases);
+// The Medvya-wide medicine list (MDV-P5-064): the country's shared formulary rows, on its own narrow login (medvya_formulary: read, add and update of the
 // rows with no tenant in prescribing.FormularyItems, nothing else; row-level security keeps every clinic's own rows out). Without it those endpoints fail closed.
 if (builder.Configuration.GetConnectionString("Formulary") is { } formulary)
     builder.Services.AddSharedFormularyPath(formulary);

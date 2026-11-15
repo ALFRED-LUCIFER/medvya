@@ -22,18 +22,18 @@ public sealed class SessionControlTests(PostgresFixture sql) : IClassFixture<Pos
 
     async Task Clinics()
     {
-        facilityA = await Clinic(tenantA, "Iyer Family Clinic (synthetic)", "clinic.alpha");
-        facilityB = await Clinic(tenantB, "Lakeside Clinic (synthetic)", "clinic.beta");
+        facilityA = await Clinic(tenantA, "Iyer Family Clinic (synthetic)", "billing.invoices", "clinical.nurse-intake");
+        facilityB = await Clinic(tenantB, "Lakeside Clinic (synthetic)", "clinical.nurse-intake", "billing.invoices");
     }
 
-    async Task<Guid> Clinic(Guid tenant, string name, string flag)
+    async Task<Guid> Clinic(Guid tenant, string name, string flag, string offFlag)
     {
         await using var db = sql.Context(tenant);
         var facility = new Facility { Id = Guid.NewGuid(), TenantId = tenant, Name = "Adyar (synthetic)", TimeZone = "Asia/Kolkata" };
         db.Tenants.Add(new Tenant { State = OrganisationState.Approved, Id = tenant, Name = name, CountryCode = "IN", ResidencyRegion = "centralindia" });
         db.Facilities.Add(facility);
         db.FeatureFlags.Add(new FeatureFlag { Id = Guid.NewGuid(), TenantId = tenant, Key = flag, Enabled = true, Owner = "platform", Description = "test" });
-        db.FeatureFlags.Add(new FeatureFlag { Id = Guid.NewGuid(), TenantId = tenant, Key = flag + ".off", Enabled = false, Owner = "platform", Description = "test" });
+        db.FeatureFlags.Add(new FeatureFlag { Id = Guid.NewGuid(), TenantId = tenant, Key = offFlag, Enabled = false, Owner = "platform", Description = "test" });
         await db.SaveChangesAsync();
         return facility.Id;
     }
@@ -130,7 +130,7 @@ public sealed class SessionControlTests(PostgresFixture sql) : IClassFixture<Pos
         Assert.Equal(tenantA, inA.GetProperty("tenantId").GetGuid());
         Assert.Equal(facilityA, inA.GetProperty("facilityId").GetGuid());
         Assert.Equal("Receptionist", inA.GetProperty("role").GetString());
-        Assert.Equal(["clinic.alpha"], inA.GetProperty("flags").EnumerateArray().Select(f => f.GetString()));
+        Assert.Equal(["billing.invoices"], inA.GetProperty("flags").EnumerateArray().Select(f => f.GetString()));
         Assert.Equal("Asia/Kolkata", inA.GetProperty("timeZone").GetString()); // screens that show instants use the clinic's time zone
 
         // Switch: no provider round trip, just the facility endpoint on the same session.
@@ -138,7 +138,7 @@ public sealed class SessionControlTests(PostgresFixture sql) : IClassFixture<Pos
         var inB = (await Context(browser)).GetProperty("active");
         Assert.Equal(tenantB, inB.GetProperty("tenantId").GetGuid());
         Assert.Equal("PracticeAdmin", inB.GetProperty("role").GetString());
-        Assert.Equal(["clinic.beta"], inB.GetProperty("flags").EnumerateArray().Select(f => f.GetString()));
+        Assert.Equal(["clinical.nurse-intake"], inB.GetProperty("flags").EnumerateArray().Select(f => f.GetString()));
 
         // Audited in the tenant the user entered; each tenant sees only its own rows.
         Assert.Equal(["auth.signin"], await AuditActions(tenantA, user.Id));
@@ -184,7 +184,7 @@ public sealed class SessionControlTests(PostgresFixture sql) : IClassFixture<Pos
         var json = await browser.GetStringAsync(new Uri("/v1/me/context", UriKind.Relative));
         foreach (var fragment in new[] { "\"user\":{\"id\":", "\"displayName\":", "\"memberships\":[{\"id\":", "\"tenantName\":", "\"facilityName\":",
             "\"role\":\"Receptionist\"", "\"active\":{\"membershipId\":", "\"country\":\"IN\"", "\"capabilities\":{\"RegisterBookPatients\":\"Full\"", "\"CheckInQueue\":\"Full\"",
-            "\"flags\":[\"clinic.alpha\"]" })
+            "\"flags\":[\"billing.invoices\"]" })
             Assert.Contains(fragment, json, StringComparison.Ordinal);
         Assert.DoesNotContain("ClinicalNotes", json, StringComparison.Ordinal);
     }

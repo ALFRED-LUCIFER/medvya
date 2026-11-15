@@ -131,7 +131,6 @@ public sealed class AccessRequestEndpointTests(PostgresFixture sql) : IClassFixt
     [Fact]
     public async Task OnlyAnOwnerSwitchesNurseIntakeAndEveryChangeIsAudited()
     {
-        Assert.Equal(Medvya.Encounters.Application.IntakeFlag.Key, Medvya.Tenancy.Api.SettingsEndpoints.NurseIntakeFlag); // the two modules name one flag
         foreach (var user in new[] { h.Nurse, h.Reception, h.SecondDoctor })
         {
             using var refused = await Client(user).PutAsJsonAsync(U("/v1/settings/nurse-intake"), new { enabled = true });

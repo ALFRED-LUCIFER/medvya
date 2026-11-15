@@ -25,7 +25,7 @@ BEGIN
     FOREACH r IN ARRAY ARRAY['medvya_owner', 'medvya_migrator', 'medvya_app', 'medvya_reporting', 'medvya_tenancy', 'medvya_audit',
                              'medvya_identity', 'medvya_patients', 'medvya_billing', 'medvya_scheduling', 'medvya_leads',
                              'medvya_notifications', 'medvya_encounters', 'medvya_prescribing', 'medvya_jobs', 'medvya_platform', 'medvya_review',
-                             'medvya_formulary']
+                             'medvya_features', 'medvya_formulary']
     LOOP
         IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = r) THEN
             EXECUTE format('CREATE ROLE %I NOLOGIN NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE NOREPLICATION', r);
@@ -72,7 +72,8 @@ GRANT USAGE, CREATE ON SCHEMA public TO medvya_owner;
 CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
 
 -- Role memberships need ADMIN on the module roles, which the administrator holds and the owner does not.
--- medvya_review (the console's organisation approvals, MDV-P1-064) is NOT here either: its rights are single tables, in table-rights.sql.
+-- medvya_review (the console's organisation approvals, MDV-P1-064) and medvya_features (the console's feature releases, MDV-P5-041) are NOT here
+-- either: their rights are single tables, in table-rights.sql.
 -- Nor is medvya_formulary (the console's medicine list, MDV-P5-064): one table, and row-level security limits it to the rows with no tenant.
 -- medvya_platform is NOT here: the platform console (Host.Platform, MDV-P5-040) signs in with its own login IN ROLE medvya_platform alone,
 -- so it cannot read any clinic schema, and the clinic application cannot read the console's tables.

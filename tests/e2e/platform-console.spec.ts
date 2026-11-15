@@ -105,10 +105,10 @@ test('the audit log reads in Arabic, right to left, with actions in words', asyn
   expect(await axe(page)).toEqual([]);
 });
 
-test('a reviewer sees approvals and medicines but no team or audit pages', async ({ page }) => {
+test('a reviewer sees approvals, features and medicines but no team or audit pages', async ({ page }) => {
   await page.route('**/v1/me', r => r.fulfill({ json: owner({ role: 'Reviewer', keyVerified: true, hasKey: true, canRegister: false }) }));
   await page.goto('/');
-  await expect(page.getByRole('navigation').getByRole('link')).toHaveText(['Overview', 'Approvals', 'Medicines']);
+  await expect(page.getByRole('navigation').getByRole('link')).toHaveText(['Overview', 'Approvals', 'Features', 'Medicines']);
 });
 
 // MDV-P5-064: the Medvya-wide medicine list. The server's rules (roles, reason, the narrow login, clinics' view) are tested on PostgreSQL in

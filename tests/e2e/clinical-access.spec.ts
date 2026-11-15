@@ -16,7 +16,7 @@ const pending = () => [
   { id: 'r-2', patientId: 'p-2', patientName: 'Deepak Nair (synthetic)', mrn: '000002', requestedBy: 'u-nurse', requesterName: 'R. Priya (synthetic)', reason: 'SeeingPatientToday', requestedAt: '2026-11-06T05:00:00Z' },
 ];
 
-async function open(page: Page, { locale = 'en', path = '/settings?tab=requests', refuse = '', intake = false, withNurse = 0 } = {}) {
+async function open(page: Page, { locale = 'en', path = '/settings?tab=requests', refuse = '', intake = false, withNurse = 0, released = true } = {}) {
   const state = { requests: pending(), policy: 'AllFacilityClinicians', decisions: [] as { url: string; body: string; csrf: string | undefined }[], saved: [] as string[], intake, intakeSaves: [] as boolean[], contextLoads: 0,
     queue: { order: 'Arrival', bookedFirst: false }, queueSaves: [] as unknown[] };
   await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
@@ -25,6 +25,7 @@ async function open(page: Page, { locale = 'en', path = '/settings?tab=requests'
     return r.fulfill({ json: { ...admin, active: { ...admin.active, flags: state.intake ? ['clinical.nurse-intake'] : [] } } });
   });
   await page.route('**/v1/settings/nurse-intake', r => {
+    if (!released) return r.fulfill({ status: 404 }); // Medvya has not released nurse intake to this practice (MDV-P5-041)
     if (r.request().method() === 'PUT') {
       state.intake = (JSON.parse(r.request().postData() ?? '{}') as { enabled: boolean }).enabled;
       state.intakeSaves.push(state.intake);
@@ -145,6 +146,15 @@ for (const [locale, t] of [
     await page.getByRole('dialog').getByRole('button', { name: t.off, exact: true }).click();
     await expect(toggle).toHaveAttribute('aria-checked', 'false');
     expect(state.intakeSaves).toEqual([false]);
+  });
+
+// MDV-P5-041: until Medvya releases nurse intake to the practice the server has no switch for it (404); the tab says so and offers none.
+for (const [locale, text] of [['en', 'Nurse intake is not available for your practice yet.'], ['ar', 'الاستقبال التمريضي غير متاح لعيادتك بعد.']] as const)
+  test(`an unreleased nurse intake shows no switch, axe clean (${locale})`, async ({ page }) => {
+    await open(page, { locale, path: '/settings?tab=nurse', released: false });
+    await expect(page.getByText(text)).toBeVisible();
+    await expect(page.getByRole('switch')).toHaveCount(0);
+    expect(await axe(page)).toEqual([]);
   });
 
 // MDV-P1-103: the owner chooses the queue rule in Settings -> Clinical (the server allows only an owner or practice admin and audits it).

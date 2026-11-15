@@ -6,9 +6,9 @@ import type { NavItem } from '../../shell/domain/navigation';
 
 /**
  * Platform overview. shortcut: no tenant counts, rollouts or attention list yet; they need the tenant catalogue (MDV-P5-017) and
- * rollouts (MDV-P5-041), which read the control plane through their own reviewed paths.
+ * rollout summaries, which read the control plane through their own reviewed paths.
  */
-const blurbs = { approvals: 'platform.overview.approvals', medicines: 'platform.overview.medicines', team: 'platform.overview.team', audit: 'platform.overview.audit' } as const;
+const blurbs = { approvals: 'platform.overview.approvals', features: 'platform.overview.features', medicines: 'platform.overview.medicines', team: 'platform.overview.team', audit: 'platform.overview.audit' } as const;
 
 export default function OverviewPage({ displayName, role, items }: { displayName: string; role: PlatformRole; items: NavItem[] }) {
   const { t } = useI18n();

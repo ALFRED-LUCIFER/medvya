@@ -26,7 +26,7 @@ public sealed class IntakeTests(PostgresFixture sql) : IClassFixture<PostgresFix
     {
         await h.SeedAsync();
         await h.DoctorTemplateAsync();
-        await h.Get<IFeatureFlags>(h.Admin).SetAsync(IntakeFlag.Key, true, "clinical-team", "Nurse intake (synthetic test)");
+        await h.Get<IFeatureFlags>(h.Admin).SetAsync(Features.NurseIntake, true, "clinical-team", "Nurse intake (synthetic test)");
     }
 
     public Task DisposeAsync() => h.CloseAsync();
@@ -249,7 +249,7 @@ public sealed class IntakeTests(PostgresFixture sql) : IClassFixture<PostgresFix
         Assert.Equal(AppointmentState.ReadyForDoctor, (await h.FrontDesk(h.Reception).MoveAsync(visit, new MoveVisit { State = AppointmentState.ReadyForDoctor })).State); // a repeat
 
         // A clinic without the nurse step skips it: checked in goes straight to ready for the doctor (MDV audit UX-05).
-        await h.Get<IFeatureFlags>(h.Admin).SetAsync(IntakeFlag.Key, false, "clinical-team", "Nurse intake (synthetic test)");
+        await h.Get<IFeatureFlags>(h.Admin).SetAsync(Features.NurseIntake, false, "clinical-team", "Nurse intake (synthetic test)");
         var other = await h.BookAsync(10, 20, h.SecondPatient);
         await h.FrontDesk(h.Reception).CheckInAsync(other.Id, new CheckIn());
         Assert.Equal(AppointmentState.ReadyForDoctor, (await h.FrontDesk(h.Reception).MoveAsync(other.Id, new MoveVisit { State = AppointmentState.ReadyForDoctor })).State);

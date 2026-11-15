@@ -63,8 +63,8 @@ public interface IPlatformAuditLog
 }
 
 /// <summary>
-/// Console pages that act through a reviewed path (organisations, MDV-P1-064; the shared medicine list, MDV-P5-064) log each action here, in the
-/// platform audit log, with the organisation it concerns when there is one.
+/// Console pages that act through a reviewed path (organisation approvals MDV-P1-064, feature releases MDV-P5-041, the shared medicine list MDV-P5-064)
+/// log each action here, in the platform audit log, with the organisation it concerns when there is one.
 /// </summary>
 public interface IConsoleActions
 {

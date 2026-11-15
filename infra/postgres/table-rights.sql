@@ -118,7 +118,7 @@ BEGIN
     END IF;
 END $$;
 
--- The platform console's medicine list (MDV-P5-064, ADR-014 note): the console host's third login, IN ROLE medvya_formulary alone. It reads and adds rows
+-- The platform console's medicine list (MDV-P5-064, ADR-014 note): the console host's fourth login, IN ROLE medvya_formulary alone. It reads and adds rows
 -- of prescribing.FormularyItems and updates only what a correction, a class or a deactivation changes (never the tenant, country, source or register
 -- columns), and has no right on any other table, schema-wide or by default. Row-level security binds it to the rows with no tenant, the country's shared
 -- list, even if the session sets a tenant (restrictive policy, migration SharedFormularyLogin): a clinic's own medicines stay out of reach. Granted from
@@ -130,5 +130,18 @@ BEGIN
     IF to_regclass('prescribing."FormularyItems"') IS NOT NULL THEN
         GRANT SELECT, INSERT ON prescribing."FormularyItems" TO medvya_formulary;
         GRANT UPDATE ("Generic", "Strength", "Form", "Brands", "NationalCode", "RegClass", "Atc", "DefaultSig", "Active") ON prescribing."FormularyItems" TO medvya_formulary;
+    END IF;
+END $$;
+
+-- Medvya's feature releases (MDV-P5-041): the platform console host's third login, IN ROLE medvya_features alone, one per country database. It reads and
+-- writes tenancy."FeatureReleases" (no delete: a release is set to Off, never removed) and nothing else: no other table, schema-wide or default right.
+-- The clinic application reads the table and may not change it, so a clinic request can never release a feature. Granted from scratch on each run.
+REVOKE ALL ON ALL TABLES IN SCHEMA tenancy, audit, ledger FROM medvya_features;
+GRANT USAGE ON SCHEMA tenancy TO medvya_features;
+DO $$
+BEGIN
+    IF to_regclass('tenancy."FeatureReleases"') IS NOT NULL THEN
+        GRANT SELECT, INSERT, UPDATE ON tenancy."FeatureReleases" TO medvya_features;
+        REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON tenancy."FeatureReleases" FROM medvya_tenancy;
     END IF;
 END $$;

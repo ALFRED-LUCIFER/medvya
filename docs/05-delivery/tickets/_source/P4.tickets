@@ -10,6 +10,7 @@
 @epic MDV-P4-E04 | Patient portal | P4-07 | Patients book, see released records, manage consent and authorise caregivers (incl. Arabic RTL).
 @epic MDV-P4-E05 | WhatsApp, discovery and clinic reports | P4-08, P4-09, P4-10 | Messaging patients in their channel, public profiles and owner reports without overclaiming.
 @epic MDV-P4-E06 | R4 readiness and gate | P4-02, P4-03 | External approvals, tax review, training and the R4 exit gate.
+@epic MDV-P4-E07 | AI communication middleware | P4-06, P4-09 | One conversation engine for WhatsApp AI, clinic AI chat and the support desk, tenant-isolated, using Medvya's existing services (ADR-022).
 
 === MDV-P4-001
 status: Done
@@ -429,7 +430,7 @@ prd: P4-06
 screens: C-06
 priority: SHOULD
 roles: Receptionist, Doctor, Care coordinator
-labels: messages, ai
+labels: messages, ai, ai-support
 estimate: 3
 weeks: 23-24
 depends: MDV-P4-020, MDV-P3-007
@@ -442,6 +443,8 @@ ac:
 - Clinical questions are routed to the clinician; non-clinicians cannot send clinical advice (role check on send for flagged threads).
 - SLA breach shows on the thread and in notifications.
 - Message content never appears in push notifications or logs.
+notes:
+- Built on the shared conversation model of the AI communication middleware (ADR-022, MDV-P4-042): one thread, ticket and audit model for every channel.
 
 === MDV-P4-020
 title: Patient portal authentication: OTP sign-in, portal invitations, patient session (BFF)
@@ -767,3 +770,191 @@ ac:
 - Given a pay link is sent, when the WhatsApp message is read, then it shows only the clinic name and amount.
 - Given an AutoPay charge is due, when 24 hours before, then the patient is reminded.
 - Given the gateway has not confirmed, when the desk looks at the invoice, then it is not marked paid.
+
+=== MDV-P4-035
+title: Agree ADR-022 (AI communication middleware) and check Meta WhatsApp Cloud API onboarding per tenant
+type: Spike
+epic: MDV-P4-E07
+prd: P4-09, P4-06
+covers: dep:2
+priority: MUST
+roles: Founder, Developer
+labels: ai, ai-platform, whatsapp, adr
+estimate: 1.5
+weeks: 21
+depends: MDV-P3-028
+confidence: 70 | Meta's per-tenant onboarding model and template rules decide the channel-account design; the owner must agree the module split.
+sources: docs/adr/ADR-022-ai-communication-middleware.md; docs/03-architecture/ai-features.md
+desc:
+Get the owner's agreement on ADR-022: one .NET Conversations module with channel adapters, tenant resolution from verified channel identity, AI turns in the AI service with tools executed by Medvya, two support queues on one model, and central administration without patient data. Check Meta WhatsApp Cloud API facts on the official docs (webhook verification and X-Hub-Signature-256, Embedded Signup versus numbers under one business account, template categories and approval, message windows, pricing, data location) and record them in the ADR.
+ac:
+- ADR-022 is Accepted by the owner, or amended with the reason.
+- The WhatsApp onboarding model per tenant is chosen with the Meta facts and their sources recorded.
+- What needs a person (Meta business verification, template approval: MDV-P4-032) is listed in docs/05-delivery/session-handoff.md.
+
+=== MDV-P4-036
+title: Conversations module foundation: threads, messages, assignment, human takeover, channel accounts and tenant resolution (CarePlus and ValuePlus)
+type: Story
+epic: MDV-P4-E07
+prd: P4-06, P4-09
+priority: MUST
+roles: Developer
+labels: ai, ai-platform, conversations, security
+estimate: 5
+weeks: 21-22
+depends: MDV-P4-035
+confidence: 75 | Reuses the tenancy, row-level security, audit and EnterLinkTenant patterns; the channel interface is new.
+sources: docs/adr/ADR-022-ai-communication-middleware.md#decision-proposed
+desc:
+New module src/Modules/Conversations: Conversation (channel, status, assignee, taken over by a person or not), Message (direction, sender kind, provider message id, delivery status, body encrypted at rest), Participant, ChannelAccount (tenant, channel, provider ids, Key Vault secret references), TenantAiSettings. A channel adapter interface (receive, send, delivery status). A tenant resolver that accepts only a verified channel identity or a signed-in session. Endpoints for the clinic inbox: list, read, assign, take over, hand back, close. Synthetic tenants CarePlus and ValuePlus in the seed.
+ac:
+- Every table carries tenant_id under the EF query filter and row-level security; a CarePlus user can neither read nor change a ValuePlus conversation (integration tests on real PostgreSQL, mutation-checked).
+- Tenant resolution never uses message content or a client header; an unknown channel identity is refused and audited.
+- Taking over stops AI replies on that thread until it is handed back.
+- No message text appears in logs, URLs or telemetry; ERD regenerated.
+- Every endpoint declares a policy (architecture test).
+
+=== MDV-P4-037
+title: WhatsApp Cloud API channel adapter: webhook verification, signature check, idempotent inbound, retries and delivery status
+type: Story
+epic: MDV-P4-E07
+prd: P4-09
+priority: MUST
+roles: Developer
+labels: ai, ai-whatsapp, whatsapp, security
+estimate: 4
+weeks: 22-23
+depends: MDV-P4-036, MDV-P4-032
+confidence: 65 | Meta approval and template rules are outside our control; until then only recorded payloads can be tested.
+sources: docs/adr/ADR-022-ai-communication-middleware.md; MDV-P4-028
+desc:
+GET verification (hub.mode, hub.verify_token, hub.challenge) and POST events checked with X-Hub-Signature-256 against the per-tenant app secret from Key Vault. Store each inbound message once by provider id, answer 200 quickly, process in a job. Outbound text and template sends with backoff retries; delivery and read statuses update the message. Per-tenant phone number and business account. MDV-P4-028 reminders send through this adapter.
+ac:
+- A webhook with a bad or missing signature is refused; a replayed message id is processed once (tests with recorded synthetic payloads).
+- A send that fails transiently is retried with backoff; a permanent failure marks the message failed and shows in integration health.
+- Two tenants with different numbers never see each other's events.
+- The adapter is not claimed to work with Meta until a real sandbox number is connected and recorded in the ticket.
+
+=== MDV-P4-038
+title: AI orchestration in the AI service: one conversation turn, tenant knowledge retrieval, tool requests executed by Medvya, guardrails and audit
+type: Story
+epic: MDV-P4-E07
+prd: P4-06, P4-09
+priority: MUST
+roles: Developer, Clinical safety reviewer
+labels: ai, ai-platform, safety
+estimate: 5
+weeks: 22-24
+depends: MDV-P4-036, MDV-P3-028
+confidence: 65 | The receptionist proof of concept covers intake and red flags; tool calling and retrieval are new and need evaluation cases.
+sources: docs/adr/ADR-022-ai-communication-middleware.md; src/AiService/src/medvya_ai/services/receptionist.py
+desc:
+AI service endpoint for one turn: input is the recent messages, the tenant's AI settings, retrieved clinic knowledge and the allowed tools; output is a reply or a tool request. Medvya validates and runs the tool (find slots, book, reschedule, cancel, find doctor or branch) through the existing services with the verified patient, then continues the turn. Red-flag symptoms are caught in code before any model call. No medical advice. Message text is untrusted input. Each turn records model, prompt hash, tools requested and tools run. Choose the knowledge index store (pgvector under row-level security or Azure AI Search per country).
+ac:
+- The model never receives a tool it is not allowed; a tool request outside the list is refused by Medvya (test).
+- Red-flag messages end in the emergency message and a staff alert with no model call (test).
+- Evaluation cases in CI: booking, reschedule, cancel, refusal of medical advice, prompt injection in a message, another tenant's knowledge never retrieved.
+- Each turn is audited without message text.
+
+=== MDV-P4-039
+title: Tenant knowledge base: clinic facts, services, doctors, hours and policies for the assistant, never patient data
+type: Story
+epic: MDV-P4-E07
+prd: P4-06
+priority: SHOULD
+roles: Practice admin
+labels: ai, ai-chat
+estimate: 3
+weeks: 23-24
+depends: MDV-P4-038
+confidence: 75 | Services, doctors and hours already exist in Medvya and are read, not copied; free-text policies and FAQs are new.
+sources: docs/adr/ADR-022-ai-communication-middleware.md
+desc:
+The assistant's knowledge comes from Medvya's existing services, doctors, branches and hours (read live, never copied) plus clinic-written FAQs and policies managed in clinic settings. Entries are indexed per tenant. The editor warns when an entry looks like patient data and refuses obvious identifiers.
+ac:
+- Changing a doctor's hours in Medvya changes the assistant's answer without a second edit.
+- A CarePlus assistant never answers from ValuePlus knowledge (test).
+- An FAQ entry containing a phone number or national-ID-like value is refused.
+- English, Hindi and Arabic entries; the settings screen passes axe in English and Arabic.
+
+=== MDV-P4-040
+title: WhatsApp AI for patients: book, reschedule and cancel from the live calendar, with identity check and handover to staff
+type: Story
+epic: MDV-P4-E07
+prd: P4-09
+priority: SHOULD
+roles: Patient, Receptionist
+labels: ai, ai-whatsapp, whatsapp
+estimate: 4
+weeks: 24-25
+depends: MDV-P4-037, MDV-P4-038, MDV-P4-028
+confidence: 65 | Depends on Meta approval and on patient identity matching by phone plus a one-time code.
+sources: docs/adr/ADR-022-ai-communication-middleware.md#decision-proposed
+desc:
+A patient writes to the clinic's WhatsApp number. The assistant says it is automated, matches an existing patient by verified phone number plus a one-time code before any change, and books, moves or cancels through Scheduling (one source of truth). Only appointment facts and secure links are sent. "Agent" or any red flag hands the thread to staff in the clinic inbox.
+ac:
+- No booking change without the identity check; a new patient is booked as a request for staff to confirm.
+- No result, note, diagnosis or medicine is ever sent over WhatsApp (test on the outbound path).
+- A takeover from the inbox stops the assistant immediately.
+- Journey step added for the booking flow with the adapter on recorded payloads.
+
+=== MDV-P4-041
+title: Clinic AI chat on the clinic's public page: widget, tenant key and origin allow-list, answers from the clinic's knowledge
+type: Story
+epic: MDV-P4-E07
+prd: P4-08, P4-06
+priority: COULD
+roles: Patient, Practice admin
+labels: ai, ai-chat
+estimate: 3
+weeks: 25
+depends: MDV-P4-038, MDV-P4-039
+confidence: 70 | The public profile page exists in P4-08 scope; abuse and rate limits need care on an anonymous channel.
+sources: docs/adr/ADR-022-ai-communication-middleware.md
+desc:
+A chat widget on the clinic's public profile. The tenant is resolved from a public widget key plus an origin allow-list; anonymous visitors get answers from the clinic's knowledge and can request an appointment or leave a message, which lands in the clinic inbox. No patient record is ever read on this channel.
+ac:
+- A widget key used from an origin not on the list is refused; requests are rate-limited per key and per IP.
+- The chat never reads or reveals patient records (no patient tools on this channel).
+- Keyboard, screen reader and right-to-left work; axe clean in English and Arabic.
+
+=== MDV-P4-042
+title: Support desk on the conversation model: patient-to-clinic tickets with AI drafts and clinic-to-Medvya technical tickets, kept apart
+type: Story
+epic: MDV-P4-E07
+prd: P4-06
+screens: C-06
+priority: SHOULD
+roles: Receptionist, Care coordinator, Medvya operations
+labels: ai, ai-support, support
+estimate: 4
+weeks: 25-26
+depends: MDV-P4-036, MDV-P4-038
+confidence: 70 | MDV-P4-019 already defines the clinic inbox and AI draft rules; this puts both queues on one model.
+sources: docs/adr/ADR-022-ai-communication-middleware.md; MDV-P4-019; MDV-P5-047
+desc:
+Tickets are conversations with a queue, owner, SLA and internal notes. Patient-to-clinic tickets are tenant data handled by clinic staff; the AI drafts a reply that staff approve (rules of MDV-P4-019). Clinic-to-Medvya tickets carry the tenant id and scrubbed diagnostics but no patient data, and appear in the platform console (MDV-P5-047).
+ac:
+- No AI draft is sent without staff approval; clinical questions route to a clinician.
+- A clinic-to-Medvya ticket cannot carry a patient identifier; the platform console never shows patient data (test).
+- SLA breach is visible on the ticket and in notifications.
+
+=== MDV-P4-043
+title: Communication settings for the clinic and integration health in the platform console (counts only, kill switch per tenant)
+type: Story
+epic: MDV-P4-E07
+prd: P4-09
+priority: SHOULD
+roles: Practice admin, Medvya operations
+labels: ai, ai-platform, admin, platform
+estimate: 3
+weeks: 26
+depends: MDV-P4-036, MDV-P4-037, MDV-P5-040
+confidence: 75 | The platform console and per-tenant flags exist; health counters are new.
+sources: docs/adr/ADR-022-ai-communication-middleware.md#decision-proposed; MDV-P5-017
+desc:
+Clinic settings: connected channels and their state, assistant name, languages, working hours for handover, allowed tools, opt-in text. Platform console: per-tenant webhook last seen, delivery failure rate, token expiry, template status, provisioning and a kill switch, from counts and states only. Plans gate which channels a tenant may use.
+ac:
+- The kill switch stops all AI replies and outbound sends for that tenant within one minute, audited.
+- The console shows no message text or patient data (test).
+- Settings changes are audited; only admins can change them (server-side policy).

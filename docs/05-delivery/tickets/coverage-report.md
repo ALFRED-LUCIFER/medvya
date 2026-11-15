@@ -51,10 +51,10 @@ Every requirement, screen, exit criterion, NFR, delivery-package item and depend
 | P4-03 | P4 | MUST | MDV-P4-007, MDV-P4-008, MDV-P4-009, MDV-P4-032, MDV-P4-034 |
 | P4-04 | P4 | MUST | MDV-P4-010, MDV-P4-011, MDV-P4-012, MDV-P4-013, MDV-P4-033 |
 | P4-05 | P4 | MUST | MDV-P4-014, MDV-P4-015, MDV-P4-016, MDV-P4-017, MDV-P4-018, MDV-P4-033 |
-| P4-06 | P4 | SHOULD | MDV-P4-019 |
+| P4-06 | P4 | SHOULD | MDV-P4-019, MDV-P4-035, MDV-P4-036, MDV-P4-038, MDV-P4-039, MDV-P4-041, MDV-P4-042 |
 | P4-07 | P4 | MUST | MDV-P4-020, MDV-P4-021, MDV-P4-022, MDV-P4-023, MDV-P4-024, MDV-P4-025, MDV-P4-026, MDV-P5-036, MDV-P5-037, MDV-P5-051 |
-| P4-08 | P4 | SHOULD | MDV-P4-027 |
-| P4-09 | P4 | MUST | MDV-P4-028, MDV-P4-032 |
+| P4-08 | P4 | SHOULD | MDV-P4-027, MDV-P4-041 |
+| P4-09 | P4 | MUST | MDV-P4-028, MDV-P4-032, MDV-P4-035, MDV-P4-036, MDV-P4-037, MDV-P4-038, MDV-P4-040, MDV-P4-043 |
 | P4-10 | P4 | MUST | MDV-P4-029, MDV-P4-030 |
 | P5-01 | P5 | MUST | MDV-P5-001, MDV-P5-002, MDV-P5-003, MDV-P5-004, MDV-P5-005, MDV-P5-029 |
 | P5-02 | P5 | MUST | MDV-P5-001, MDV-P5-006, MDV-P5-007 |
@@ -139,7 +139,7 @@ Every requirement, screen, exit criterion, NFR, delivery-package item and depend
 | C-03 Patient contact log & reminders | P4 | DESIGNED | MDV-P4-017 |
 | C-04 Overdue escalation | P4 | DESIGNED | MDV-P4-018 |
 | C-05 Inbound report identity match | P4 | DESIGNED | MDV-P4-014 |
-| C-06 Clinic messages inbox (AI reply draft, feedback) | P4 | DESIGNED | MDV-P4-019 |
+| C-06 Clinic messages inbox (AI reply draft, feedback) | P4 | DESIGNED | MDV-P4-019, MDV-P4-042 |
 | F-11 Services & fees · India GST/SAC, TPA tariffs · UAE CPT, VAT, | P4 | DESIGNED | MDV-P4-002 |
 | H-07 Analytics (throughput, open loops, adoption) | P4 | DESIGNED | MDV-P4-030, MDV-P7-010 |
 | N-02 Public doctor profiles & doctor discovery (SEO) | P4 | DESIGN NEEDED | MDV-P4-027 |
@@ -296,7 +296,7 @@ Every requirement, screen, exit criterion, NFR, delivery-package item and depend
 | P3 | 1 | Azure OpenAI / Speech availability in Central India and UAE North | MDV-P3-001 |
 | P3 | 2 | Legal review of recording consent in each market | MDV-P3-023 |
 | P4 | 1 | Payment gateway merchant approvals (can take weeks) | MDV-P4-007, MDV-P4-032 |
-| P4 | 2 | WhatsApp Business API template approval | MDV-P4-028, MDV-P4-032 |
+| P4 | 2 | WhatsApp Business API template approval | MDV-P4-028, MDV-P4-032, MDV-P4-035 |
 | P5 | 1 | Regulator onboarding and conformance testing (Malaffi, NABIDH, Riayati, eClaimLink, Shafafiya) controls UAE dates; India launch can proceed independently | MDV-P5-010, MDV-P5-012 |
 | P5 | 2 | Card-reader hardware sourcing | MDV-P5-011 |
 | P6 | 1 | Hardware partner and certification | MDV-P6-001 |

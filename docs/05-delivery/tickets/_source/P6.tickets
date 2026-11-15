@@ -126,7 +126,7 @@ prd: P6-02
 screens: A-07
 priority: SHOULD
 roles: Doctor
-labels: ai, voice, privacy
+labels: ai, voice, privacy, ai-voice
 estimate: 4
 weeks: 38-40
 depends: MDV-P6-003
@@ -148,7 +148,7 @@ screens: A-04
 covers: dep:2
 priority: MUST
 roles: Doctor
-labels: ai, languages
+labels: ai, languages, ai-notes
 estimate: 4
 weeks: 35-38
 depends: MDV-P3-018
@@ -169,7 +169,7 @@ prd: P6-05
 covers: exit:1
 priority: MUST
 roles: Developer, Clinical advisor
-labels: ai-quality, red-team
+labels: ai-quality, red-team, ai, ai-notes
 estimate: 3
 weeks: 36-40
 depends: MDV-P6-007, MDV-P5-014
@@ -190,7 +190,7 @@ prd: P6-04
 screens: N-10
 priority: SHOULD
 roles: Patient, Receptionist
-labels: voice, outbound
+labels: voice, outbound, ai, ai-voice
 estimate: 3
 weeks: 39-41
 depends: MDV-P5-015

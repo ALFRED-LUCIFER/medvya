@@ -19,7 +19,7 @@ prd: P3-07, P3-03
 covers: dep:1
 priority: MUST
 roles: Developer
-labels: ai, spike, adr
+labels: ai, spike, adr, ai-notes
 estimate: 2
 weeks: 13
 depends: MDV-P0-003
@@ -41,7 +41,7 @@ prd: P3-01
 screens: H-09
 priority: MUST
 roles: Practice admin
-labels: consent, admin
+labels: consent, admin, ai, ai-notes
 estimate: 2
 weeks: 13
 depends: MDV-P1-019
@@ -64,7 +64,7 @@ screens: A-02
 covers: exit:3
 priority: MUST
 roles: Doctor
-labels: consent, capture
+labels: consent, capture, ai, ai-notes
 estimate: 3
 weeks: 13-14
 depends: MDV-P3-002, MDV-P2-009
@@ -87,7 +87,7 @@ prd: P3-01
 screens: A-09
 priority: MUST
 roles: Doctor
-labels: consent, safety
+labels: consent, safety, ai, ai-notes
 estimate: 1.5
 weeks: 15
 depends: MDV-P3-005
@@ -109,7 +109,7 @@ prd: P3-02
 screens: A-03, X-01
 priority: MUST
 roles: Doctor
-labels: capture, audio, mobile
+labels: capture, audio, mobile, ai, ai-notes
 estimate: 3
 weeks: 14-15
 depends: MDV-P3-003
@@ -132,7 +132,7 @@ prd: P3-02
 screens: A-06
 priority: MUST
 roles: Doctor
-labels: upload, resilience
+labels: upload, resilience, ai, ai-notes
 estimate: 3
 weeks: 15
 depends: MDV-P3-005
@@ -154,7 +154,7 @@ epic: MDV-P3-E03
 prd: P3-07
 priority: MUST
 roles: Developer
-labels: ai-worker, service-bus, security
+labels: ai-worker, service-bus, security, ai, ai-notes
 estimate: 3
 weeks: 14-15
 depends: MDV-P3-001
@@ -176,7 +176,7 @@ prd: P3-03
 covers: nfr:1
 priority: MUST
 roles: System
-labels: transcription, ai
+labels: transcription, ai, ai-notes
 estimate: 3
 weeks: 15-16
 depends: MDV-P3-007, MDV-P3-006
@@ -198,7 +198,7 @@ prd: P3-03
 screens: A-04
 priority: MUST
 roles: Doctor
-labels: transcript, speakers, safety
+labels: transcript, speakers, safety, ai, ai-notes
 estimate: 2.5
 weeks: 16
 depends: MDV-P3-008
@@ -220,7 +220,7 @@ prd: P3-03
 screens: A-10
 priority: MUST
 roles: Doctor
-labels: speakers, safety
+labels: speakers, safety, ai, ai-notes
 estimate: 1.5
 weeks: 16
 depends: MDV-P3-009
@@ -240,7 +240,7 @@ epic: MDV-P3-E04
 prd: P3-04
 priority: MUST
 roles: System
-labels: ai, drafting, safety
+labels: ai, drafting, safety, ai-notes
 estimate: 4
 weeks: 16-17
 depends: MDV-P3-008, MDV-P2-025
@@ -263,7 +263,7 @@ prd: P3-04
 screens: A-05
 priority: MUST
 roles: Doctor
-labels: review, evidence, signing
+labels: review, evidence, signing, ai, ai-notes
 estimate: 4
 weeks: 17-18
 depends: MDV-P3-011, MDV-P2-012
@@ -286,7 +286,7 @@ prd: P3-04
 screens: A-05
 priority: MUST
 roles: Doctor
-labels: review, templates
+labels: review, templates, ai, ai-notes
 estimate: 1.5
 weeks: 18
 depends: MDV-P3-012
@@ -307,7 +307,7 @@ prd: P3-05
 screens: A-01
 priority: SHOULD
 roles: Doctor
-labels: brief, ai
+labels: brief, ai, ai-notes
 estimate: 2.5
 weeks: 18-19
 depends: MDV-P3-011, MDV-P2-004
@@ -329,7 +329,7 @@ prd: P3-06
 screens: A-08
 priority: MUST
 roles: Doctor
-labels: safety, ai
+labels: safety, ai, ai-notes
 estimate: 1.5
 weeks: 17
 depends: MDV-P3-008
@@ -350,7 +350,7 @@ prd: P3-06
 screens: A-06
 priority: MUST
 roles: Doctor
-labels: resilience, fallback
+labels: resilience, fallback, ai, ai-notes
 estimate: 1.5
 weeks: 16
 depends: MDV-P3-007, MDV-P2-009
@@ -371,7 +371,7 @@ prd: P3-06
 screens: A-09
 priority: MUST
 roles: Doctor
-labels: safety, identity
+labels: safety, identity, ai, ai-notes
 estimate: 1.5
 weeks: 17
 depends: MDV-P3-008
@@ -392,7 +392,7 @@ prd: P3-07
 covers: exit:1
 priority: MUST
 roles: Developer, Clinical advisor
-labels: ai-quality, evals, ci
+labels: ai-quality, evals, ci, ai, ai-notes
 estimate: 4
 weeks: 14-19
 depends: MDV-P3-011
@@ -413,7 +413,7 @@ epic: MDV-P3-E06
 prd: P3-07
 priority: MUST
 roles: System, Practice admin
-labels: retention, privacy
+labels: retention, privacy, ai, ai-notes
 estimate: 1.5
 weeks: 18
 depends: MDV-P3-006, MDV-P3-002
@@ -433,7 +433,7 @@ epic: MDV-P3-E04
 prd: P3-08
 priority: SHOULD
 roles: Doctor
-labels: dictation
+labels: dictation, ai, ai-notes
 estimate: 2
 weeks: 19
 depends: MDV-P3-012
@@ -454,7 +454,7 @@ prd: P3-02
 screens: X-01
 priority: MUST
 roles: Doctor
-labels: mobile, review
+labels: mobile, review, ai, ai-notes
 estimate: 2.5
 weeks: 18-19
 depends: MDV-P3-012, MDV-P3-005
@@ -475,7 +475,7 @@ prd: P3-07
 covers: nfr:2, nfr:3
 priority: MUST
 roles: Founder
-labels: legal, ai, vendors
+labels: legal, ai, vendors, ai-notes
 estimate: 0.5
 weeks: 13-15
 depends: MDV-P3-001
@@ -496,7 +496,7 @@ prd: P3-01
 covers: dep:2
 priority: MUST
 roles: Founder, external counsel
-labels: legal, consent
+labels: legal, consent, ai, ai-notes
 estimate: 0.5
 weeks: 13-14
 depends: MDV-P1-044
@@ -517,7 +517,7 @@ prd: P3-06, P3-07
 covers: pkg:1, pkg:2, pkg:3
 priority: MUST
 roles: Founder, Clinical advisor
-labels: safety, training
+labels: safety, training, ai, ai-notes
 estimate: 1
 weeks: 19
 depends: MDV-P3-018, MDV-P3-023
@@ -538,7 +538,7 @@ prd: P3-07
 covers: nfr:1
 priority: MUST
 roles: Developer
-labels: performance, ai
+labels: performance, ai, ai-notes
 estimate: 1.5
 weeks: 19
 depends: MDV-P3-011
@@ -558,7 +558,7 @@ prd: P3-04
 covers: exit:2, exit:4
 priority: MUST
 roles: Founder, pilot clinicians
-labels: metrics, ai-quality
+labels: metrics, ai-quality, ai, ai-notes
 estimate: 1.5
 weeks: 19-20
 depends: MDV-P3-013
@@ -579,7 +579,7 @@ prd: P3-04
 covers: exit:1, exit:2, exit:3, exit:4
 priority: MUST
 roles: Founder, Clinical safety reviewer, pilot clinicians
-labels: release, gate, pilot
+labels: release, gate, pilot, ai, ai-notes
 estimate: 1.5
 weeks: 20
 depends: MDV-P3-018, MDV-P3-024, MDV-P3-026, MDV-P3-003

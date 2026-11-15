@@ -56,7 +56,7 @@ Locally the integration tests skip when no database is reachable; in CI (`CI` se
 | Sessions and consent | `POST /sessions`, `GET /sessions/{id}`, `POST /sessions/{id}/participants`, `GET /consent-notice`, `POST /sessions/{id}/consents` (stop vs withdraw: [decision 0001](docs/decisions/0001-stop-vs-withdraw.md)) |
 | Recording | `POST /sessions/{id}/segments`, `PUT …/segments/{n}/chunks/{seq}` (SHA-256 checked), `POST …/segments/{n}/complete`, `POST /sessions/{id}/finish` |
 | Draft and review | `GET /sessions/{id}/result`, `GET …/facts/{fact}/evidence-audio`, `PATCH /facts/{id}`, `PATCH /sessions/{id}/speakers`, `PATCH …/transcript/turns/{turn}`, `POST …/reprocess`, `POST /sessions/{id}/notes` (manual note), `PATCH /sessions/{id}/note` |
-| Not used by Medvya | approve, export, analytics, privacy requests: Medvya signs, prints and handles data requests itself. The receptionist intake (`/receptionist/conversations`) is the starting point for the AI chat work (planned ADR-022) |
+| Not used by Medvya | approve, export, analytics, privacy requests: Medvya signs, prints and handles data requests itself. The receptionist intake (`/receptionist/conversations`) is the starting point for the conversation turns of the AI communication middleware ([ADR-022](../../docs/adr/ADR-022-ai-communication-middleware.md), MDV-P4-038) |
 
 ## Documents
 

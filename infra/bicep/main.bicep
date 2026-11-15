@@ -502,11 +502,18 @@ resource app 'Microsoft.Web/sites@2023-12-01' = {
 
 // Platform console (MDV-P5-040, ADR-014): Host.Platform serving web/platform-admin, on the same plan and VNet. Company sign-on (OIDC) then the
 // member's own security key. Each database login is its own Entra identity: the system identity is the console's login (medvya_platform, no
-// clinic schema); consoleReviewDb is the narrow organisation-review login (medvya_review, MDV-P1-064). One identity in both would be one wider login.
-// shortcut: the console's medicine list (medvya_formulary, ConnectionStrings__Formulary, #1358) and feature releases (medvya_features,
-// ConnectionStrings__Features__IN, #1359) get an identity each like consoleReviewDb once their roles are on main; until then those pages fail closed.
+// clinic schema); consoleReviewDb is the organisation-review login (medvya_review, MDV-P1-064) and consoleFeaturesDb the feature-release login
+// (medvya_features, MDV-P5-041) of this country's database. One identity in two roles would be one wider login.
+// shortcut: the console's medicine list (medvya_formulary, ConnectionStrings__Formulary, #1358) gets an identity like these once its role is on
+// main; until then that page fails closed.
 resource consoleReviewDb 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: 'id-review-${name}'
+  location: location
+  tags: tags
+}
+
+resource consoleFeaturesDb 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+  name: 'id-features-${name}'
   location: location
   tags: tags
 }
@@ -524,7 +531,7 @@ resource console 'Microsoft.Web/sites@2023-12-01' = {
   name: consoleName
   location: location
   tags: tags
-  identity: { type: 'SystemAssigned, UserAssigned', userAssignedIdentities: { '${consoleReviewDb.id}': {} } }
+  identity: { type: 'SystemAssigned, UserAssigned', userAssignedIdentities: { '${consoleReviewDb.id}': {}, '${consoleFeaturesDb.id}': {} } }
   properties: {
     serverFarmId: plan.id
     httpsOnly: true
@@ -548,9 +555,11 @@ resource console 'Microsoft.Web/sites@2023-12-01' = {
         // Entra puts the stable object id in "oid" and this issuer in "iss"; only this person, only while the team is empty.
         { name: 'Platform__BootstrapOwner__Issuer', value: consoleIssuer }
         { name: 'Platform__BootstrapOwner__Subject', value: consoleOwnerObjectId }
-        // No password: the system identity signs in as the console's login (its name is the app's name); the review login names its own identity.
+        // No password: the system identity signs in as the console's login (its name is the app's name); the other logins name their own identity.
         { name: 'ConnectionStrings__Platform', value: '${consoleDb};Username=${consoleName}' }
         { name: 'ConnectionStrings__Review', value: '${consoleDb};Username=${consoleReviewDb.name};Entra Client Id=${consoleReviewDb.properties.clientId}' }
+        // Release switches per country database; this deployment is one country's (the UAE one sets its own :AE).
+        { name: 'ConnectionStrings__Features__${country}', value: '${consoleDb};Username=${consoleFeaturesDb.name};Entra Client Id=${consoleFeaturesDb.properties.clientId}' }
         // Organisation documents (practice-assets, read only) through a user-delegation link signed with the system identity.
         { name: 'Storage__BlobEndpoint', value: storage.properties.primaryEndpoints.blob }
       ])
@@ -626,6 +635,7 @@ AZURE_CLIENT_ID="$ADMIN_CLIENT_ID" ./Medvya.DbMigrate entra "$db;Database=postgr
 AZURE_CLIENT_ID="$ADMIN_CLIENT_ID" ./Medvya.DbMigrate entra "$db;Database=postgres;Username=$ADMIN_NAME" medvya_app "$APP_NAME" "$APP_OBJECT_ID"
 AZURE_CLIENT_ID="$ADMIN_CLIENT_ID" ./Medvya.DbMigrate entra "$db;Database=postgres;Username=$ADMIN_NAME" medvya_platform "$CONSOLE_NAME" "$CONSOLE_OBJECT_ID"
 AZURE_CLIENT_ID="$ADMIN_CLIENT_ID" ./Medvya.DbMigrate entra "$db;Database=postgres;Username=$ADMIN_NAME" medvya_review "$REVIEW_NAME" "$REVIEW_OBJECT_ID"
+AZURE_CLIENT_ID="$ADMIN_CLIENT_ID" ./Medvya.DbMigrate entra "$db;Database=postgres;Username=$ADMIN_NAME" medvya_features "$FEATURES_NAME" "$FEATURES_OBJECT_ID"
 AZURE_CLIENT_ID="$MIGRATOR_CLIENT_ID" ./Medvya.DbMigrate migrate "$db;Database=$PGDATABASE;Username=$MIGRATOR_NAME"
 '''
 
@@ -664,6 +674,8 @@ resource dbJob 'Microsoft.App/jobs@2024-03-01' = {
           { name: 'CONSOLE_OBJECT_ID', value: console.identity.principalId }
           { name: 'REVIEW_NAME', value: consoleReviewDb.name }
           { name: 'REVIEW_OBJECT_ID', value: consoleReviewDb.properties.principalId }
+          { name: 'FEATURES_NAME', value: consoleFeaturesDb.name }
+          { name: 'FEATURES_OBJECT_ID', value: consoleFeaturesDb.properties.principalId }
           { name: 'DOTNET_SYSTEM_GLOBALIZATION_INVARIANT', value: '1' }
         ]
       }]

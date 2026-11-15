@@ -48,10 +48,11 @@ public class DatabaseRoleTests(PostgresFixture sql) : IClassFixture<PostgresFixt
         await Assert.ThrowsAsync<ArgumentException>(() => Medvya.DbMigrate.DatabaseMigrator.MapEntraPrincipalAsync(admin, "medvya_owner", "app-medvya-test", oid));
     }
 
-    // ADR-014: the console's two logins, each its own identity. A module role (a whole clinic schema) or the owner is never handed out.
+    // ADR-014: the console's logins, each its own identity. A module role (a whole clinic schema) or the owner is never handed out.
     [Theory]
     [InlineData("medvya_platform", true)]
     [InlineData("medvya_review", true)]
+    [InlineData("medvya_features", true)]
     [InlineData("medvya_patients", false)]
     [InlineData("medvya_owner", false)]
     public async Task OnlyLoginRolesCanBeMappedToAnEntraIdentity(string role, bool allowed)

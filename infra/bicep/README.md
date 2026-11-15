@@ -62,7 +62,7 @@ The API serves the built clinic app from `wwwroot/app` under `/app/` (the public
 
 ## Platform console (MDV-P5-040, ADR-014)
 
-A second web app, `console-medvya-<env>-<suffix>`, runs `Host.Platform` with `web/platform-admin` on the same plan and VNet. Its system identity is the database login `IN ROLE medvya_platform`; the user-assigned identity `id-review-*` is the login `IN ROLE medvya_review`; the database job maps both. The template reads Key Vault secret `platform-console-client-secret` (an `existing` resource, so the secret must be in the vault before an apply) and needs the parameters `consoleClientId` and `consoleOwnerObjectId`. All of it is written by `infra/entra/console-app.sh` and the steps in `docs/runbooks/platform-console-azure.md`; do them before the next `infra-dev` run.
+A second web app, `console-medvya-<env>-<suffix>`, runs `Host.Platform` with `web/platform-admin` on the same plan and VNet. Its system identity is the database login `IN ROLE medvya_platform`; the user-assigned identities `id-review-*` and `id-features-*` are the logins `IN ROLE medvya_review` and `IN ROLE medvya_features`; the database job maps all three. The template reads Key Vault secret `platform-console-client-secret` (an `existing` resource, so the secret must be in the vault before an apply) and needs the parameters `consoleClientId` and `consoleOwnerObjectId`. All of it is written by `infra/entra/console-app.sh` and the steps in `docs/runbooks/platform-console-azure.md`; do them before the next `infra-dev` run.
 
 ## Manual Entra settings (not in Bicep)
 

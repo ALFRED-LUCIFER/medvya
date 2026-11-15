@@ -7,7 +7,7 @@ using Npgsql;
 // migrate <connection>                              module migrations, then the Hangfire tables. Run as the medvya_migrator login.
 // entra   <connection to database postgres> <medvya_role> <principal name> <object id>
 //                                                    Azure: makes a managed identity a login IN ROLE medvya_app / _migrator / _reporting,
-//                                                    or one of the console's logins (_platform, _review; DatabaseMigrator.LoginRoles).
+//                                                    or one of the console's logins (_platform, _review, _features; DatabaseMigrator.LoginRoles).
 // counts  <connection>                              row count per table (counts only, no data read), for the restore drill.
 // An Azure host without a password in the connection string signs in with an Entra token (PostgresDataSources).
 const string Usage = "usage: db-migrate admin <connection> [medvya_role=password ...] | db-migrate migrate <connection> | db-migrate entra <connection> <medvya_role> <principal name> <object id> | db-migrate counts <connection>";

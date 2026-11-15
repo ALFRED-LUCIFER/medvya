@@ -18,7 +18,7 @@ const list = (doctors: object[]) => ({
 });
 
 async function setUp(page: Page, locale = 'en') {
-  const state = { doctors: [existing] as object[], added: null as unknown, resubmitted: null as unknown, signature: null as string | null };
+  const state = { doctors: [existing] as object[], added: null as unknown, resubmitted: null as unknown, signature: null as string | null, room: null as unknown };
   await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
   await page.route('**/v1/me/context', r => r.fulfill({ json: admin }));
   await page.route('**/v1/settings/locations', r => r.fulfill({ json: [{ id: 'f-1', name: 'Adyar (synthetic)', address: null, timeZone: 'Asia/Kolkata' }] }));
@@ -36,6 +36,10 @@ async function setUp(page: Page, locale = 'en') {
     state.resubmitted = r.request().postDataJSON();
     state.doctors = [{ ...existing, expired: false, attestedAt: '2026-11-10T09:00:00Z' }];
     return r.fulfill({ json: state.doctors[0] });
+  });
+  await page.route('**/v1/settings/doctors/*/room', async r => {
+    state.room = r.request().postDataJSON();
+    return r.fulfill({ json: { ...existing, room: (state.room as { room: string | null }).room } });
   });
   await page.route('**/v1/settings/doctors/*/signature', async r => {
     state.signature = r.request().headers()['content-type'] ?? null;
@@ -113,6 +117,7 @@ test('Add doctor: six steps, fees prefilled in whole currency units, then one re
   await page.getByRole('button', { name: 'Next' }).click();
 
   await expect(page.getByText('Step 3 of 6: Schedule')).toBeVisible();
+  await page.getByLabel('Room', { exact: true }).fill('Room 2'); // MDV-P1-111: where the doctor sits at this location
   await page.getByRole('button', { name: 'Next' }).click();
 
   await expect(page.getByText('Step 4 of 6: Default fees')).toBeVisible();
@@ -133,7 +138,7 @@ test('Add doctor: six steps, fees prefilled in whole currency units, then one re
   await expect(page.getByText('Dr. Sana Khan (synthetic) was added and the invitation was sent.')).toBeVisible();
   expect(state.added).toMatchObject({
     fullName: 'Dr. Sana Khan (synthetic)', email: 'sana.khan@example.test', authority: 'TNMC', licenceNumber: '84213', category: 'Permanent', expiresOn: '2031-12-31', attested: true,
-    newVisitFee: 50000, followUpFee: 30000, facilityId: 'f-1', qualifications: null,
+    newVisitFee: 50000, followUpFee: 30000, facilityId: 'f-1', qualifications: null, room: 'Room 2',
   });
   expect(state.signature).toBe('image/png');
 });
@@ -162,3 +167,17 @@ for (const locale of ['en', 'ar'])
     await page.screenshot({ path: info.outputPath(`add-doctor-${locale}.png`) });
     expect(new Set(tops).size, `tops ${tops.join(', ')}`).toBe(1);
   });
+
+// MDV-P1-111: each doctor row is one location; its room is changed there and sent alone (blank clears it).
+test('a listed doctor\'s room at their location is saved from the doctors list', async ({ page }) => {
+  const state = await setUp(page);
+  await page.goto('/settings?tab=doctors');
+  const room = page.getByLabel(/^Room at /);
+  await room.fill('Room 4');
+  await page.getByRole('button', { name: 'Save room' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Saved' })).toBeVisible();
+  expect(state.room).toEqual({ room: 'Room 4' });
+  await room.fill('  ');
+  await page.getByRole('button', { name: 'Save room' }).click();
+  await expect.poll(() => state.room).toEqual({ room: null });
+});

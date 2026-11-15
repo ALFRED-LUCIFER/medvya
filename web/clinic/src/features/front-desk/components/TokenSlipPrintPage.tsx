@@ -85,7 +85,7 @@ function WifiStub({ wifi }: { wifi: NonNullable<TokenSlip['wifi']> }) {
   return (
     <section aria-labelledby="token-slip-wifi">
       <div className="relative -mx-[4mm] mb-[3.5mm] mt-[4mm] border-t-[1pt] border-dashed border-black">
-        <h2 id="token-slip-wifi" className="absolute start-[4mm] top-[-2.4mm] bg-white px-[1mm] text-[6.5pt] font-bold leading-none">
+        <h2 id="token-slip-wifi" className="absolute start-[4mm] top-0 -translate-y-1/2 bg-white px-[1mm] text-[6.5pt] font-bold leading-none">
           {t(wifi.daily ? 'tokenSlip.wifi.title' : 'tokenSlip.wifi.titleGuest')}
         </h2>
       </div>

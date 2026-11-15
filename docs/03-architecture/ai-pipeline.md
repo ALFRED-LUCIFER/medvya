@@ -2,6 +2,8 @@
 
 Sources: PRD v2 P3, Azure Architecture "Ambient note request flow", Software Architecture §3 and §10.
 
+> **Runtime ([ADR-021](../adr/ADR-021-ai-service.md)):** the pipeline runs in the Python AI service `src/AiService` (FastAPI API plus job worker), not a .NET worker. Only Medvya's API calls it. Where this page and the service differ today (worker database access, upload path), ADR-021 lists what must change before real patient data.
+
 ## Flow
 
 1. **Capture.** Starts only after per-encounter recording consent. The browser/phone records encrypted chunks and uploads them via a short-lived scoped SAS (one encounter, one blob prefix). Chunk manifest has sequence numbers and SHA-256.

@@ -308,7 +308,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P2-053](P2-doctor-workspace/MDV-P2-053.md) | Clinic today for the owner: five counts the system can stand behind and a needs-attention list | P2 | wk 12–12 | 68% |
 | [MDV-P2-059](P2-doctor-workspace/MDV-P2-059.md) | Adopt PageHeader, Card and Section, PageMessage and EmptyState across the clinic app and the platform console | P2 | wk 12–13 | 75% |
 
-## Week 13 · 18 Jan 2027 – 22 Jan 2027 · load 64.8 dev-days ⚠ over capacity
+## Week 13 · 18 Jan 2027 – 22 Jan 2027 · load 66.8 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -348,6 +348,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P3-003](P3-ai-scribe/MDV-P3-003.md) | Per-encounter recording consent with device selection; decline goes straight to manual note (A-02, E-04) | P3 | wk 13–14 | 86% |
 | [MDV-P3-022](P3-ai-scribe/MDV-P3-022.md) | AI vendor DPA, no-training guarantee and regional processing confirmed per country | P3 | wk 13–15 | 75% |
 | [MDV-P3-023](P3-ai-scribe/MDV-P3-023.md) | Legal review of recording consent in each market | P3 | wk 13–14 | 60% |
+| [MDV-P3-028](P3-ai-scribe/MDV-P3-028.md) | Import the AI service (Python FastAPI, from HealthOps) into src/AiService with ADR-021 and its own CI job | P3 | wk 13–13 | 90% |
 
 ## Week 14 · 25 Jan 2027 – 29 Jan 2027 · load 34.5 dev-days ⚠ over capacity
 
@@ -404,7 +405,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P3-018](P3-ai-scribe/MDV-P3-018.md) | De-identified evaluation set and CI gate before any prompt or model change | P3 | wk 14–19 | 70% |
 | [MDV-P3-022](P3-ai-scribe/MDV-P3-022.md) | AI vendor DPA, no-training guarantee and regional processing confirmed per country | P3 | wk 13–15 | 75% |
 
-## Week 16 · 08 Feb 2027 – 12 Feb 2027 · load 35.7 dev-days ⚠ over capacity
+## Week 16 · 08 Feb 2027 – 12 Feb 2027 · load 37.7 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -426,8 +427,9 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P3-011](P3-ai-scribe/MDV-P3-011.md) | Draft note generation with JSON schema, evidence links and "unknown stays blank" | P3 | wk 16–17 | 72% |
 | [MDV-P3-016](P3-ai-scribe/MDV-P3-016.md) | AI unavailable → editable manual note with no data loss (A-06) | P3 | wk 16–16 | 88% |
 | [MDV-P3-018](P3-ai-scribe/MDV-P3-018.md) | De-identified evaluation set and CI gate before any prompt or model change | P3 | wk 14–19 | 70% |
+| [MDV-P3-029](P3-ai-scribe/MDV-P3-029.md) | ai-notes in Medvya: the Encounters module calls the AI service and puts the draft into the consult note for review | P3 | wk 16–17 | 75% |
 
-## Week 17 · 15 Feb 2027 – 19 Feb 2027 · load 11.7 dev-days ⚠ over capacity
+## Week 17 · 15 Feb 2027 – 19 Feb 2027 · load 15.2 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -436,11 +438,13 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P3-015](P3-ai-scribe/MDV-P3-015.md) | Emergency-symptom warning as a prompt, not triage (A-08) | P3 | wk 17–17 | 84% |
 | [MDV-P3-017](P3-ai-scribe/MDV-P3-017.md) | Wrong-patient suspicion locks the session; re-binding needs a reason and is audited (A-09) | P3 | wk 17–17 | 82% |
 | [MDV-P3-018](P3-ai-scribe/MDV-P3-018.md) | De-identified evaluation set and CI gate before any prompt or model change | P3 | wk 14–19 | 70% |
+| [MDV-P3-029](P3-ai-scribe/MDV-P3-029.md) | ai-notes in Medvya: the Encounters module calls the AI service and puts the draft into the consult note for review | P3 | wk 16–17 | 75% |
+| [MDV-P3-030](P3-ai-scribe/MDV-P3-030.md) | AI service on Azure India dev and its pilot conditions (service identity, Key Vault key, allow-list telemetry, in-region Foundry) | P3 | wk 17–18 | 70% |
 | [MDV-P4-001](P4-clinic-operations/MDV-P4-001.md) | Money and legal document numbering foundation (minor units, DOC_SEQUENCE per country and financial year) | P4 | wk 17–17 | 88% |
 | [MDV-P4-002](P4-clinic-operations/MDV-P4-002.md) | Services and fees catalogue with price versions, India GST/SAC, UAE CPT/VAT, payer price lists and packages (F-11) | P4 | wk 17–18 | 72% |
 | [MDV-P4-032](P4-clinic-operations/MDV-P4-032.md) | Apply for payment gateway merchant accounts and WhatsApp Business template approvals | P4 | wk 17–17 | 60% |
 
-## Week 18 · 22 Feb 2027 – 26 Feb 2027 · load 12.7 dev-days ⚠ over capacity
+## Week 18 · 22 Feb 2027 – 26 Feb 2027 · load 14.2 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -450,6 +454,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P3-018](P3-ai-scribe/MDV-P3-018.md) | De-identified evaluation set and CI gate before any prompt or model change | P3 | wk 14–19 | 70% |
 | [MDV-P3-019](P3-ai-scribe/MDV-P3-019.md) | Audio retention purge and legal hold | P3 | wk 18–18 | 85% |
 | [MDV-P3-021](P3-ai-scribe/MDV-P3-021.md) | Mobile capture and note review (swipe to accept, evidence bottom sheet) (X-01) | P3 | wk 18–19 | 84% |
+| [MDV-P3-030](P3-ai-scribe/MDV-P3-030.md) | AI service on Azure India dev and its pilot conditions (service identity, Key Vault key, allow-list telemetry, in-region Foundry) | P3 | wk 17–18 | 70% |
 | [MDV-P4-002](P4-clinic-operations/MDV-P4-002.md) | Services and fees catalogue with price versions, India GST/SAC, UAE CPT/VAT, payer price lists and packages (F-11) | P4 | wk 17–18 | 72% |
 | [MDV-P4-003](P4-clinic-operations/MDV-P4-003.md) | Price list import tool (billing setup service) | P4 | wk 18–18 | 85% |
 | [MDV-P4-004](P4-clinic-operations/MDV-P4-004.md) | Charge capture and invoice lifecycle (draft → issued → paid/failed/refunded), separate from clinical sign-off (P-06) | P4 | wk 18–19 | 86% |

@@ -1,0 +1,121 @@
+{
+ "id": "06_dose_correction_noisy",
+ "slice": "negatives-doses-noisy",
+ "turns": [
+  {
+   "idx": 0,
+   "speaker_role": "doctor",
+   "locale": "en-IN",
+   "original_text": "Amlodipine five milligrams, not fifty, once daily."
+  },
+  {
+   "idx": 1,
+   "speaker_role": "patient",
+   "locale": "en-IN",
+   "original_text": "[noise] ... and the blood pressure?"
+  },
+  {
+   "idx": 2,
+   "speaker_role": "doctor",
+   "locale": "en-IN",
+   "original_text": "Temperature not taken today; BP is 150 by 90."
+  }
+ ],
+ "asr_hypothesis": [
+  "Amlodipine five milligrams not fifteen once daily",
+  "and the blood pressure",
+  "Temperature not taken today BP is 150 by 90"
+ ],
+ "model_output": {
+  "note": {
+   "chief_complaint": "",
+   "hpi": "",
+   "subjective": "",
+   "objective": "",
+   "assessment": "",
+   "plan": "",
+   "summary": "synthetic"
+  },
+  "missing_or_uncertain": [],
+  "facts": [
+   {
+    "category": "medication",
+    "label": "amlodipine",
+    "polarity": "present",
+    "body_site": null,
+    "value_numeric": null,
+    "value_unit": null,
+    "detail": null,
+    "confidence": 0.9,
+    "evidence": [
+     {
+      "segment_idx": 0,
+      "quote": "Amlodipine five milligrams, not fifty, once daily"
+     }
+    ],
+    "medication": {
+     "name_as_spoken": "amlodipine",
+     "generic_name": "amlodipine",
+     "strength_value": 50,
+     "strength_unit": "mg",
+     "dose_text": null,
+     "frequency_code": "OD",
+     "frequency_text": "once daily",
+     "duration_value": null,
+     "duration_unit": null,
+     "route": "oral",
+     "instructions": null
+    }
+   },
+   {
+    "category": "vital",
+    "label": "temperature",
+    "polarity": "present",
+    "body_site": null,
+    "value_numeric": 98.6,
+    "value_unit": "F",
+    "detail": null,
+    "confidence": 0.9,
+    "evidence": [
+     {
+      "segment_idx": 2,
+      "quote": "Temperature not taken today"
+     }
+    ],
+    "medication": null
+   },
+   {
+    "category": "vital",
+    "label": "blood pressure",
+    "polarity": "present",
+    "body_site": null,
+    "value_numeric": 150,
+    "value_unit": "mmHg",
+    "detail": null,
+    "confidence": 0.9,
+    "evidence": [
+     {
+      "segment_idx": 2,
+      "quote": "BP is 150 by 90"
+     }
+    ],
+    "medication": null
+   }
+  ]
+ },
+ "gold_facts": [
+  {
+   "category": "medication",
+   "label": "amlodipine"
+  },
+  {
+   "category": "vital",
+   "label": "temperature",
+   "polarity": "absent"
+  },
+  {
+   "category": "vital",
+   "label": "blood pressure"
+  }
+ ]
+}

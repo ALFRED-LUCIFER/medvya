@@ -40,11 +40,11 @@ Every requirement, screen, exit criterion, NFR, delivery-package item and depend
 | P2-08 | P2 | MUST | MDV-P1-087, MDV-P1-108, MDV-P2-021, MDV-P2-022 |
 | P3-01 | P3 | MUST | MDV-P3-002, MDV-P3-003, MDV-P3-004, MDV-P3-023 |
 | P3-02 | P3 | MUST | MDV-P3-005, MDV-P3-006, MDV-P3-021 |
-| P3-03 | P3 | MUST | MDV-P3-001, MDV-P3-008, MDV-P3-009, MDV-P3-010 |
-| P3-04 | P3 | MUST | MDV-P3-011, MDV-P3-012, MDV-P3-013, MDV-P3-026, MDV-P3-027 |
-| P3-05 | P3 | SHOULD | MDV-P3-014 |
+| P3-03 | P3 | MUST | MDV-P3-001, MDV-P3-008, MDV-P3-009, MDV-P3-010, MDV-P3-028 |
+| P3-04 | P3 | MUST | MDV-P3-011, MDV-P3-012, MDV-P3-013, MDV-P3-026, MDV-P3-027, MDV-P3-029 |
+| P3-05 | P3 | SHOULD | MDV-P3-014, MDV-P3-029 |
 | P3-06 | P3 | MUST | MDV-P3-015, MDV-P3-016, MDV-P3-017, MDV-P3-024 |
-| P3-07 | P3 | MUST | MDV-P3-001, MDV-P3-007, MDV-P3-018, MDV-P3-019, MDV-P3-022, MDV-P3-024, MDV-P3-025 |
+| P3-07 | P3 | MUST | MDV-P3-001, MDV-P3-007, MDV-P3-018, MDV-P3-019, MDV-P3-022, MDV-P3-024, MDV-P3-025, MDV-P3-028, MDV-P3-030 |
 | P3-08 | P3 | SHOULD | MDV-P3-020 |
 | P4-01 | P4 | MUST | MDV-P4-002, MDV-P4-003 |
 | P4-02 | P4 | MUST | MDV-P4-001, MDV-P4-004, MDV-P4-005, MDV-P4-006, MDV-P4-031 |
@@ -127,7 +127,7 @@ Every requirement, screen, exit criterion, NFR, delivery-package item and depend
 | A-02 Recording consent & device selection | P3 | DESIGNED | MDV-P3-003 |
 | A-03 Live AI consultation | P3 | DESIGNED | MDV-P3-005 |
 | A-04 Multi-speaker transcript review | P3 | DESIGNED | MDV-P3-009, MDV-P6-007 |
-| A-05 AI note & source-evidence review | P3 | DESIGNED | MDV-P3-012, MDV-P3-013 |
+| A-05 AI note & source-evidence review | P3 | DESIGNED | MDV-P3-012, MDV-P3-013, MDV-P3-029 |
 | A-06 Upload/sync progress · failed upload · AI unavailable | P3 | DESIGNED | MDV-P3-006, MDV-P3-016 |
 | A-08 Emergency symptom warning | P3 | DESIGNED | MDV-P3-015 |
 | A-09 Consent revoked · patient changed | P3 | DESIGNED | MDV-P3-004, MDV-P3-017 |
@@ -239,7 +239,7 @@ Every requirement, screen, exit criterion, NFR, delivery-package item and depend
 | P2 | 3 | Prescription PDF rendered server-side and stored with hash | MDV-P2-017 |
 | P3 | 1 | Draft ready ≤ 60 s (p50) after recording stops | MDV-P3-008, MDV-P3-025 |
 | P3 | 2 | No training on customer data without separate lawful basis | MDV-P3-022 |
-| P3 | 3 | AI vendor DPA and regional processing confirmed per country | MDV-P3-022 |
+| P3 | 3 | AI vendor DPA and regional processing confirmed per country | MDV-P3-022, MDV-P3-030 |
 | P4 | 1 | Money stored as integer minor units; payment webhooks idempotent | MDV-P4-001, MDV-P4-007 |
 | P4 | 2 | Portal p95 < 2 s on mobile; OTP sign-in for patients | MDV-P4-020 |
 | P4 | 3 | Released-result rules: doctor controls what patients see and when | MDV-P4-015, MDV-P4-021, MDV-P4-022 |

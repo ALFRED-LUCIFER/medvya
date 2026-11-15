@@ -1,0 +1,70 @@
+[project]
+name = "medvya-ai-service"
+version = "0.1.0"
+description = "Medvya AI clinical voice scribe API and worker"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "alembic>=1.20.1",
+    "asyncpg>=0.32.0",
+    "azure-monitor-opentelemetry>=1.8.12",
+    "azure-storage-blob>=12.31.1",
+    "cryptography>=50.0.2",
+    "fastapi>=0.162.2",
+    "fpdf2>=2.9.0",
+    "httpx>=0.28.1",
+    "openai>=3.46.0",
+    "opentelemetry-sdk>=1.45.2",
+    "pydantic>=2.14.3",
+    "pydantic-settings>=2.16.2",
+    "pyjwt>=2.15.1",
+    "sqlalchemy[asyncio]>=2.1.8",
+    "uharfbuzz>=0.57.0",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/medvya_ai"]
+
+[dependency-groups]
+dev = [
+    "mypy>=2.4.1",
+    "pytest>=9.2.0",
+    "pytest-asyncio>=1.4.1.post1",
+    "ruff>=0.17.4",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+asyncio_default_test_loop_scope = "function"
+markers = [
+    "integration: needs PostgreSQL (auto-skipped when unreachable)",
+    "live: calls real Azure services (off by default)",
+]
+addopts = "-m 'not live'"
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S", "ASYNC", "SIM", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106"]
+"migrations/**" = ["S608", "E501"]
+"src/medvya_ai/extraction/prompts.py" = ["E501"]
+"src/medvya_ai/services/receptionist.py" = ["E501"]  # system prompt text
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+plugins = ["pydantic.mypy"]
+mypy_path = "src"
+packages = ["medvya_ai"]

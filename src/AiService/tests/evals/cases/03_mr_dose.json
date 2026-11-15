@@ -1,0 +1,139 @@
+{
+ "id": "03_mr_dose",
+ "slice": "mr",
+ "turns": [
+  {
+   "idx": 0,
+   "speaker_role": "patient",
+   "locale": "mr-IN",
+   "original_text": "मला दोन दिवसांपासून ताप आहे.",
+   "english_text": "I have had fever for two days."
+  },
+  {
+   "idx": 1,
+   "speaker_role": "doctor",
+   "locale": "mr-IN",
+   "original_text": "मेटफॉर्मिन घेत आहात का?",
+   "english_text": "Are you taking metformin?"
+  },
+  {
+   "idx": 2,
+   "speaker_role": "patient",
+   "locale": "mr-IN",
+   "original_text": "नाही, मेटफॉर्मिन घेत नाही.",
+   "english_text": "No, I am not taking metformin."
+  },
+  {
+   "idx": 3,
+   "speaker_role": "doctor",
+   "locale": "mr-IN",
+   "original_text": "पॅरासिटामॉल 650 mg दिवसातून तीन वेळा घ्या.",
+   "english_text": "Take paracetamol 650 mg three times a day."
+  }
+ ],
+ "model_output": {
+  "note": {
+   "chief_complaint": "",
+   "hpi": "",
+   "subjective": "",
+   "objective": "",
+   "assessment": "",
+   "plan": "",
+   "summary": "synthetic"
+  },
+  "missing_or_uncertain": [],
+  "facts": [
+   {
+    "category": "symptom",
+    "label": "fever",
+    "polarity": "present",
+    "body_site": null,
+    "value_numeric": null,
+    "value_unit": null,
+    "detail": null,
+    "confidence": 0.9,
+    "evidence": [
+     {
+      "segment_idx": 0,
+      "quote": "fever for two days"
+     }
+    ],
+    "medication": null
+   },
+   {
+    "category": "medication",
+    "label": "metformin",
+    "polarity": "present",
+    "body_site": null,
+    "value_numeric": null,
+    "value_unit": null,
+    "detail": null,
+    "confidence": 0.9,
+    "evidence": [
+     {
+      "segment_idx": 2,
+      "quote": "not taking metformin"
+     }
+    ],
+    "medication": {
+     "name_as_spoken": "metformin",
+     "generic_name": "metformin",
+     "strength_value": null,
+     "strength_unit": null,
+     "dose_text": null,
+     "frequency_code": null,
+     "frequency_text": null,
+     "duration_value": null,
+     "duration_unit": null,
+     "route": null,
+     "instructions": null
+    }
+   },
+   {
+    "category": "medication",
+    "label": "paracetamol",
+    "polarity": "present",
+    "body_site": null,
+    "value_numeric": null,
+    "value_unit": null,
+    "detail": null,
+    "confidence": 0.9,
+    "evidence": [
+     {
+      "segment_idx": 3,
+      "quote": "paracetamol 650 mg three times a day"
+     }
+    ],
+    "medication": {
+     "name_as_spoken": "paracetamol",
+     "generic_name": "paracetamol",
+     "strength_value": 650,
+     "strength_unit": "mg",
+     "dose_text": null,
+     "frequency_code": "TDS",
+     "frequency_text": "three times a day",
+     "duration_value": null,
+     "duration_unit": null,
+     "route": "oral",
+     "instructions": null
+    }
+   }
+  ]
+ },
+ "gold_facts": [
+  {
+   "category": "symptom",
+   "label": "fever"
+  },
+  {
+   "category": "medication",
+   "label": "metformin",
+   "polarity": "absent"
+  },
+  {
+   "category": "medication",
+   "label": "paracetamol",
+   "strength_value": 650
+  }
+ ]
+}

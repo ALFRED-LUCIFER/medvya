@@ -1,0 +1,141 @@
+{
+ "id": "05_three_speakers_overlap",
+ "slice": "3-speaker-overlap",
+ "turns": [
+  {
+   "idx": 0,
+   "speaker_role": "doctor",
+   "locale": "en-IN",
+   "original_text": "How is the chest pain now?"
+  },
+  {
+   "idx": 1,
+   "speaker_role": "companion",
+   "locale": "en-IN",
+   "original_text": "He still has chest pain at night."
+  },
+  {
+   "idx": 2,
+   "speaker_role": "patient",
+   "locale": "en-IN",
+   "original_text": "No, I do not have chest pain any more, only some breathlessness on stairs."
+  },
+  {
+   "idx": 3,
+   "speaker_role": "doctor",
+   "locale": "en-IN",
+   "original_text": "We will do an ECG today, I am not starting any new medicine yet."
+  }
+ ],
+ "model_output": {
+  "note": {
+   "chief_complaint": "",
+   "hpi": "",
+   "subjective": "",
+   "objective": "",
+   "assessment": "",
+   "plan": "",
+   "summary": "synthetic"
+  },
+  "missing_or_uncertain": [
+   "companion reports chest pain, patient denies"
+  ],
+  "facts": [
+   {
+    "category": "symptom",
+    "label": "chest pain",
+    "polarity": "present",
+    "body_site": null,
+    "value_numeric": null,
+    "value_unit": null,
+    "detail": null,
+    "confidence": 0.9,
+    "evidence": [
+     {
+      "segment_idx": 2,
+      "quote": "chest pain"
+     }
+    ],
+    "medication": null
+   },
+   {
+    "category": "symptom",
+    "label": "breathlessness",
+    "polarity": "present",
+    "body_site": null,
+    "value_numeric": null,
+    "value_unit": null,
+    "detail": null,
+    "confidence": 0.9,
+    "evidence": [
+     {
+      "segment_idx": 2,
+      "quote": "breathlessness on stairs"
+     }
+    ],
+    "medication": null
+   },
+   {
+    "category": "investigation",
+    "label": "ECG",
+    "polarity": "present",
+    "body_site": null,
+    "value_numeric": null,
+    "value_unit": null,
+    "detail": null,
+    "confidence": 0.9,
+    "evidence": [
+     {
+      "segment_idx": 3,
+      "quote": "do an ECG today"
+     }
+    ],
+    "medication": null
+   },
+   {
+    "category": "medication",
+    "label": "aspirin",
+    "polarity": "present",
+    "body_site": null,
+    "value_numeric": null,
+    "value_unit": null,
+    "detail": null,
+    "confidence": 0.9,
+    "evidence": [
+     {
+      "segment_idx": 3,
+      "quote": "not starting any new medicine"
+     }
+    ],
+    "medication": {
+     "name_as_spoken": "aspirin",
+     "generic_name": "aspirin",
+     "strength_value": null,
+     "strength_unit": null,
+     "dose_text": null,
+     "frequency_code": null,
+     "frequency_text": null,
+     "duration_value": null,
+     "duration_unit": null,
+     "route": null,
+     "instructions": null
+    }
+   }
+  ]
+ },
+ "gold_facts": [
+  {
+   "category": "symptom",
+   "label": "chest pain",
+   "polarity": "uncertain"
+  },
+  {
+   "category": "symptom",
+   "label": "breathlessness"
+  },
+  {
+   "category": "investigation",
+   "label": "ECG"
+  }
+ ]
+}

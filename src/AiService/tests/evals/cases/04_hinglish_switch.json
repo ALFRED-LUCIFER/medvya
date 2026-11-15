@@ -1,0 +1,187 @@
+{
+ "id": "04_hinglish_switch",
+ "slice": "en-hi-switch",
+ "turns": [
+  {
+   "idx": 0,
+   "speaker_role": "patient",
+   "locale": "hi-IN",
+   "original_text": "Doctor sahab, mujhe teen din se bukhar hai aur body pain bhi.",
+   "english_text": "Doctor, I have had fever for three days and body pain too."
+  },
+  {
+   "idx": 1,
+   "speaker_role": "doctor",
+   "locale": "en-IN",
+   "original_text": "Any vomiting? Ulti hui?",
+   "english_text": "Any vomiting? Did you vomit?"
+  },
+  {
+   "idx": 2,
+   "speaker_role": "patient",
+   "locale": "hi-IN",
+   "original_text": "Nahi, ulti nahi hui.",
+   "english_text": "No, no vomiting."
+  },
+  {
+   "idx": 3,
+   "speaker_role": "doctor",
+   "locale": "en-IN",
+   "original_text": "Okay. Dolo 650 one tablet SOS for fever, and get a CBC done."
+  }
+ ],
+ "model_output": {
+  "note": {
+   "chief_complaint": "",
+   "hpi": "",
+   "subjective": "",
+   "objective": "",
+   "assessment": "",
+   "plan": "",
+   "summary": "synthetic"
+  },
+  "missing_or_uncertain": [
+   "dengue suspected"
+  ],
+  "facts": [
+   {
+    "category": "symptom",
+    "label": "fever",
+    "polarity": "present",
+    "body_site": null,
+    "value_numeric": null,
+    "value_unit": null,
+    "detail": null,
+    "confidence": 0.9,
+    "evidence": [
+     {
+      "segment_idx": 0,
+      "quote": "fever for three days"
+     }
+    ],
+    "medication": null
+   },
+   {
+    "category": "symptom",
+    "label": "body pain",
+    "polarity": "present",
+    "body_site": null,
+    "value_numeric": null,
+    "value_unit": null,
+    "detail": null,
+    "confidence": 0.9,
+    "evidence": [
+     {
+      "segment_idx": 0,
+      "quote": "body pain"
+     }
+    ],
+    "medication": null
+   },
+   {
+    "category": "symptom",
+    "label": "vomiting",
+    "polarity": "absent",
+    "body_site": null,
+    "value_numeric": null,
+    "value_unit": null,
+    "detail": null,
+    "confidence": 0.9,
+    "evidence": [
+     {
+      "segment_idx": 2,
+      "quote": "no vomiting"
+     }
+    ],
+    "medication": null
+   },
+   {
+    "category": "medication",
+    "label": "Dolo",
+    "polarity": "present",
+    "body_site": null,
+    "value_numeric": null,
+    "value_unit": null,
+    "detail": null,
+    "confidence": 0.9,
+    "evidence": [
+     {
+      "segment_idx": 3,
+      "quote": "Dolo 650 one tablet SOS"
+     }
+    ],
+    "medication": {
+     "name_as_spoken": "Dolo",
+     "generic_name": "dolo",
+     "strength_value": 650,
+     "strength_unit": "mg",
+     "dose_text": null,
+     "frequency_code": "SOS",
+     "frequency_text": "SOS",
+     "duration_value": null,
+     "duration_unit": null,
+     "route": "oral",
+     "instructions": null
+    }
+   },
+   {
+    "category": "investigation",
+    "label": "CBC",
+    "polarity": "present",
+    "body_site": null,
+    "value_numeric": null,
+    "value_unit": null,
+    "detail": null,
+    "confidence": 0.9,
+    "evidence": [
+     {
+      "segment_idx": 3,
+      "quote": "get a CBC done"
+     }
+    ],
+    "medication": null
+   },
+   {
+    "category": "diagnosis",
+    "label": "dengue",
+    "polarity": "present",
+    "body_site": null,
+    "value_numeric": null,
+    "value_unit": null,
+    "detail": null,
+    "confidence": 0.9,
+    "evidence": [
+     {
+      "segment_idx": 3,
+      "quote": "dengue suspected"
+     }
+    ],
+    "medication": null
+   }
+  ]
+ },
+ "gold_facts": [
+  {
+   "category": "symptom",
+   "label": "fever"
+  },
+  {
+   "category": "symptom",
+   "label": "body pain"
+  },
+  {
+   "category": "symptom",
+   "label": "vomiting",
+   "polarity": "absent"
+  },
+  {
+   "category": "medication",
+   "label": "Dolo",
+   "strength_value": 650
+  },
+  {
+   "category": "investigation",
+   "label": "CBC"
+  }
+ ]
+}

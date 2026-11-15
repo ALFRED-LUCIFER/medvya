@@ -1,0 +1,121 @@
+{
+ "id": "01_en_fever",
+ "slice": "en",
+ "turns": [
+  {
+   "idx": 0,
+   "speaker_role": "doctor",
+   "locale": "en-IN",
+   "original_text": "What brings you in today?"
+  },
+  {
+   "idx": 1,
+   "speaker_role": "patient",
+   "locale": "en-IN",
+   "original_text": "I have had fever and a headache for two days."
+  },
+  {
+   "idx": 2,
+   "speaker_role": "doctor",
+   "locale": "en-IN",
+   "original_text": "Take tablet paracetamol 500 mg twice a day for three days."
+  }
+ ],
+ "asr_hypothesis": [
+  "What brings you in today",
+  "I have had fever and headache for two days",
+  "Take tablet paracetamol 500 mg twice a day for three days"
+ ],
+ "model_output": {
+  "note": {
+   "chief_complaint": "",
+   "hpi": "",
+   "subjective": "",
+   "objective": "",
+   "assessment": "",
+   "plan": "",
+   "summary": "synthetic"
+  },
+  "missing_or_uncertain": [],
+  "facts": [
+   {
+    "category": "symptom",
+    "label": "fever",
+    "polarity": "present",
+    "body_site": null,
+    "value_numeric": null,
+    "value_unit": null,
+    "detail": null,
+    "confidence": 0.9,
+    "evidence": [
+     {
+      "segment_idx": 1,
+      "quote": "fever and a headache"
+     }
+    ],
+    "medication": null
+   },
+   {
+    "category": "symptom",
+    "label": "headache",
+    "polarity": "present",
+    "body_site": null,
+    "value_numeric": null,
+    "value_unit": null,
+    "detail": null,
+    "confidence": 0.9,
+    "evidence": [
+     {
+      "segment_idx": 1,
+      "quote": "fever and a headache"
+     }
+    ],
+    "medication": null
+   },
+   {
+    "category": "medication",
+    "label": "paracetamol",
+    "polarity": "present",
+    "body_site": null,
+    "value_numeric": null,
+    "value_unit": null,
+    "detail": null,
+    "confidence": 0.9,
+    "evidence": [
+     {
+      "segment_idx": 2,
+      "quote": "paracetamol 500 mg twice a day for three days"
+     }
+    ],
+    "medication": {
+     "name_as_spoken": "paracetamol",
+     "generic_name": "paracetamol",
+     "strength_value": 500,
+     "strength_unit": "mg",
+     "dose_text": null,
+     "frequency_code": "BD",
+     "frequency_text": "twice a day",
+     "duration_value": 3,
+     "duration_unit": "day",
+     "route": "oral",
+     "instructions": null
+    }
+   }
+  ]
+ },
+ "gold_facts": [
+  {
+   "category": "symptom",
+   "label": "fever"
+  },
+  {
+   "category": "symptom",
+   "label": "headache"
+  },
+  {
+   "category": "medication",
+   "label": "paracetamol",
+   "strength_value": 500
+  }
+ ]
+}

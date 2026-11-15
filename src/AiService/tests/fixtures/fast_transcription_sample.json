@@ -1,0 +1,22 @@
+{
+  "durationMilliseconds": 21000,
+  "combinedPhrases": [
+    {"channel": 0, "text": "Hello, tell me what is troubling you. Mujhe do din se bukhar hai. Take tablet paracetamol twice a day."}
+  ],
+  "phrases": [
+    {"channel": 0, "speaker": 1, "offsetMilliseconds": 960, "durationMilliseconds": 2400,
+     "text": "Hello, tell me what is troubling you.",
+     "words": [{"text": "Hello,", "offsetMilliseconds": 960, "durationMilliseconds": 400}],
+     "locale": "en-IN", "confidence": 0.93616915},
+    {"channel": 0, "speaker": 2, "offsetMilliseconds": 4100, "durationMilliseconds": 3000,
+     "text": "Mujhe do din se bukhar hai.",
+     "words": [], "locale": "hi-IN", "confidence": 0.8123},
+    {"channel": 0, "speaker": 1, "offsetMilliseconds": 8000, "durationMilliseconds": 2500,
+     "text": "Take tablet paracetamol twice a day.",
+     "words": [], "locale": "en-IN", "confidence": 0.9},
+    {"channel": 0, "offsetMilliseconds": 12000, "durationMilliseconds": 500,
+     "text": "No speaker field here.", "locale": "en-IN"},
+    {"channel": 0, "speaker": 2, "offsetMilliseconds": 13000, "durationMilliseconds": 400,
+     "text": "   ", "locale": "en-IN", "confidence": 0.1}
+  ]
+}

@@ -8,9 +8,9 @@
 **Day one:** Record a consented consultation on phone or desktop, review a draft note with evidence links, correct it and sign.  
 **Goal:** Medvya drafts the note from the conversation; the doctor checks each statement against its source and signs. Nothing AI-generated is saved without explicit approval.
 
-**Tickets:** 27 · **Estimate:** 57.5 dev-days vs **40 working days** in the window (OVER by 17.5 days: needs scope trade-off or overlap) · **Average confidence:** 80%
+**Tickets:** 30 · **Estimate:** 66.5 dev-days vs **40 working days** in the window (OVER by 26.5 days: needs scope trade-off or overlap) · **Average confidence:** 80%
 
-**Status:** To do 27
+**Status:** To do 30
 
 ## Epics
 
@@ -32,6 +32,7 @@
 | [MDV-P3-003](MDV-P3-003.md) | To do | Per-encounter recording consent with device selection; decline goes straight to manual note (A-02, E-04) | Story | MUST | P3-01 | A-02 | 3 | 13–14 | 18 Jan → 29 Jan 2027 | 86% High |
 | [MDV-P3-022](MDV-P3-022.md) | To do | AI vendor DPA, no-training guarantee and regional processing confirmed per country | Chore | MUST | P3-07 | — | 0.5 | 13–15 | 18 Jan → 05 Feb 2027 | 75% Medium |
 | [MDV-P3-023](MDV-P3-023.md) | To do | Legal review of recording consent in each market | Chore | MUST | P3-01 | — | 0.5 | 13–14 | 18 Jan → 29 Jan 2027 | 60% Low |
+| [MDV-P3-028](MDV-P3-028.md) | To do | Import the AI service (Python FastAPI, from HealthOps) into src/AiService with ADR-021 and its own CI job | Task | MUST | P3-03, P3-07 | — | 2 | 13–13 | 18 Jan → 22 Jan 2027 | 90% High |
 | [MDV-P3-005](MDV-P3-005.md) | To do | Capture on phone (mobile web) or desktop mic with timer, pause, consent indicator and warnings (A-03, X-01) | Story | MUST | P3-02 | A-03, X-01 | 3 | 14–15 | 25 Jan → 05 Feb 2027 | 80% Medium |
 | [MDV-P3-007](MDV-P3-007.md) | To do | Azure Service Bus and .NET AI worker skeleton without database credentials (scoped job + callback) | Task | MUST | P3-07 | — | 3 | 14–15 | 25 Jan → 05 Feb 2027 | 85% High |
 | [MDV-P3-018](MDV-P3-018.md) | To do | De-identified evaluation set and CI gate before any prompt or model change | Task | MUST | P3-07 | — | 4 | 14–19 | 25 Jan → 05 Mar 2027 | 70% Medium |
@@ -42,9 +43,11 @@
 | [MDV-P3-010](MDV-P3-010.md) | To do | Overlapping speech and unconfirmed speaker handling (A-10) | Story | MUST | P3-03 | A-10 | 1.5 | 16–16 | 08 Feb → 12 Feb 2027 | 85% High |
 | [MDV-P3-011](MDV-P3-011.md) | To do | Draft note generation with JSON schema, evidence links and "unknown stays blank" | Story | MUST | P3-04 | — | 4 | 16–17 | 08 Feb → 19 Feb 2027 | 72% Medium |
 | [MDV-P3-016](MDV-P3-016.md) | To do | AI unavailable → editable manual note with no data loss (A-06) | Story | MUST | P3-06 | A-06 | 1.5 | 16–16 | 08 Feb → 12 Feb 2027 | 88% High |
+| [MDV-P3-029](MDV-P3-029.md) | To do | ai-notes in Medvya: the Encounters module calls the AI service and puts the draft into the consult note for review | Story | MUST | P3-04, P3-05 | A-05 | 4 | 16–17 | 08 Feb → 19 Feb 2027 | 75% Medium |
 | [MDV-P3-012](MDV-P3-012.md) | To do | Note review with evidence panel and audio replay; accept/edit per field; sign gated on 0 unresolved (A-05) | Story | MUST | P3-04 | A-05 | 4 | 17–18 | 15 Feb → 26 Feb 2027 | 86% High |
 | [MDV-P3-015](MDV-P3-015.md) | To do | Emergency-symptom warning as a prompt, not triage (A-08) | Story | MUST | P3-06 | A-08 | 1.5 | 17–17 | 15 Feb → 19 Feb 2027 | 84% Medium |
 | [MDV-P3-017](MDV-P3-017.md) | To do | Wrong-patient suspicion locks the session; re-binding needs a reason and is audited (A-09) | Story | MUST | P3-06 | A-09 | 1.5 | 17–17 | 15 Feb → 19 Feb 2027 | 82% Medium |
+| [MDV-P3-030](MDV-P3-030.md) | To do | AI service on Azure India dev and its pilot conditions (service identity, Key Vault key, allow-list telemetry, in-region Foundry) | Task | MUST | P3-07 | — | 3 | 17–18 | 15 Feb → 26 Feb 2027 | 70% Medium |
 | [MDV-P3-013](MDV-P3-013.md) | To do | Template switch and regeneration with confirmation; clinician edits tracked | Story | MUST | P3-04 | A-05 | 1.5 | 18–18 | 22 Feb → 26 Feb 2027 | 82% Medium |
 | [MDV-P3-014](MDV-P3-014.md) | To do | Pre-visit brief: verified chart facts visibly separate from AI summary (A-01) | Story | SHOULD | P3-05 | A-01 | 2.5 | 18–19 | 22 Feb → 05 Mar 2027 | 80% Medium |
 | [MDV-P3-019](MDV-P3-019.md) | To do | Audio retention purge and legal hold | Task | MUST | P3-07 | — | 1.5 | 18–18 | 22 Feb → 26 Feb 2027 | 85% High |

@@ -7,7 +7,7 @@ import { readCopy, saveCopy, storeGeneration } from '../features/api/services/st
 import { LockScreen } from '../features/session/components/LockScreen';
 import { useSession } from '../features/session/hooks/session';
 import { useLockController } from '../features/session/hooks/useLockController';
-import { saveProfile, setPin, wipeDevice } from '../features/session/services/session';
+import { countPinTry, pinTries, saveProfile, setPin, wipeDevice } from '../features/session/services/session';
 import { TodayScreen } from '../features/today/components/TodayScreen';
 import { useTodayController } from '../features/today/hooks/useTodayController';
 import { files, keychain } from './fakes';
@@ -104,6 +104,47 @@ it('signs out and wipes the phone after five wrong PINs', async () => {
     expect(await screen.findByText(`Wrong PIN. Tries left before this phone is cleared: ${4 - i}`)).toBeOnTheScreen();
   }
   await enterPin('111111');
+  expect(await screen.findByText('signed out')).toBeOnTheScreen();
+  await waitFor(() => { expect(files.size).toBe(0); expect(keychain.size).toBe(0); });
+});
+
+it('keeps counting wrong PINs across a relaunch, so force-quitting gives back no guesses', async () => {
+  await signedInThenLocked();
+  for (let i = 0; i < 4; i++) {
+    await enterPin('111111');
+    expect(await screen.findByText(`Wrong PIN. Tries left before this phone is cleared: ${4 - i}`)).toBeOnTheScreen();
+  }
+  await screen.unmount(); // force-quit, then the app opens again
+  await renderApp(<Launched />);
+  await enterPin('111111');
+  expect(await screen.findByText('signed out')).toBeOnTheScreen();
+  await waitFor(() => { expect(files.size).toBe(0); expect(keychain.size).toBe(0); }); // the try count goes with the rest
+});
+
+it('starts the count again after a right PIN or the fingerprint', async () => {
+  await signedInThenLocked(true);
+  await fireEvent.press(screen.getByRole('button', { name: 'Unlock' })); // the fingerprint fails: PIN offered
+  for (let i = 0; i < 4; i++) {
+    await enterPin('111111');
+    expect(await screen.findByText(`Wrong PIN. Tries left before this phone is cleared: ${4 - i}`)).toBeOnTheScreen();
+  }
+  await enterPin('246810');
+  expect(await screen.findByRole('button', { name: 'Lock now' })).toBeOnTheScreen();
+  expect(await pinTries()).toBe(0);
+  await countPinTry();
+  await fireEvent.press(screen.getByRole('button', { name: 'Lock now' }));
+  mockBiometricWorks = true;
+  await fireEvent.press(screen.getByRole('button', { name: 'Unlock' }));
+  expect(await screen.findByRole('button', { name: 'Lock now' })).toBeOnTheScreen();
+  expect(await pinTries()).toBe(0);
+});
+
+it('wipes the phone at launch when the failed-PIN limit was reached before the app closed', async () => {
+  await setPin('246810');
+  await saveCopy(`today:${doctor.facility.id}`, cast.today, storeGeneration());
+  await saveProfile(doctor, false);
+  for (let i = 0; i < 5; i++) await countPinTry(); // the fifth try was counted, then the app was killed mid-check
+  await renderApp(<Launched />);
   expect(await screen.findByText('signed out')).toBeOnTheScreen();
   await waitFor(() => { expect(files.size).toBe(0); expect(keychain.size).toBe(0); });
 });

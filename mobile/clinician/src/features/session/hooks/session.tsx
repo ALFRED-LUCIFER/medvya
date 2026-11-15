@@ -4,7 +4,7 @@ import { onSessionEnded } from '../../api/services/api';
 import { purgeExpired } from '../../api/services/store';
 import { shouldLock, type Session } from '../domain/session';
 import { onForeground } from '../services/appState';
-import { restoreProfile, saveProfile, signOutDevice, wipeDevice } from '../services/session';
+import { restoreProfile, saveProfile, signOutDevice } from '../services/session';
 
 // shortcut: duplicated in mobile/patient; both move to packages/auth-client with native tokens (MDV-P5-033).
 type SessionState = {
@@ -35,13 +35,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [queryClient]);
   useEffect(() => onSessionEnded(signOut), [signOut]);
 
-  // A stored session reopens locked: the app cannot know how long it was closed. Without one, anything on the phone is left
-  // from a session that ended without a sign-out, so it goes.
+  // A stored session reopens locked: the app cannot know how long it was closed. Without one (or at the failed-PIN limit),
+  // anything on the phone is left from a session that ended without a sign-out, so it goes, with the server session if any.
   useEffect(() => {
     void (async () => {
       const stored = await restoreProfile().catch(() => null);
       if (stored) { setSession(stored.session); setBiometric(stored.biometric); setLocked(true); }
-      else await wipeDevice().catch(() => undefined);
+      else await signOutDevice().catch(() => undefined);
       setReady(true);
     })();
   }, []);

@@ -7,7 +7,7 @@ import { Platform } from 'react-native';
 import { endServerSession, exchangeCode, forgetTokens, loadTokens, post, REDIRECT_URI, send } from '../../api/services/api';
 import { apiBase, fromCast } from '../../api/services/source';
 import { deviceOnly, hex, purgeExpired, wipeStore } from '../../api/services/store';
-import { initialsOf, roleOf, unlockMethod, type Facility, type Session, type Staff } from '../domain/session';
+import { initialsOf, pinTriesLeft, roleOf, unlockMethod, type Facility, type Session, type Staff } from '../domain/session';
 
 /** Whether sign-in goes through the server (system browser) or, in a Development build without one, the synthetic cast. */
 export const signsInThroughServer = () => apiBase() !== null;
@@ -73,10 +73,13 @@ export async function chooseFacility(staff: Staff, facility: Facility): Promise<
 const PROFILE = 'medvya.profile';
 export const saveProfile = (session: Session, biometric: boolean) => SecureStore.setItemAsync(PROFILE, JSON.stringify({ session, biometric }), deviceOnly);
 
-/** The stored session, or null when there is none, or when a server session has lost its refresh token (it cannot go on). */
+/**
+ * The stored session, or null when there is none, when a server session has lost its refresh token (it cannot go on), or
+ * when the failed-PIN limit was reached before the app closed (the caller then signs out and wipes the phone).
+ */
 export async function restoreProfile(): Promise<{ session: Session; biometric: boolean } | null> {
   const stored = await SecureStore.getItemAsync(PROFILE);
-  if (!stored || (signsInThroughServer() && !(await loadTokens()))) return null;
+  if (!stored || (signsInThroughServer() && !(await loadTokens())) || pinTriesLeft(await pinTries()) === 0) return null;
   await purgeExpired();
   return JSON.parse(stored) as { session: Session; biometric: boolean };
 }
@@ -112,8 +115,24 @@ export async function checkPin(pin: string) {
   return !!salt && (await pinHash(salt, pin)) === hash;
 }
 
-/** Everything this app keeps on the phone goes: the encrypted last copy, its key, the PIN, the tokens and who was signed in (ADR-011 §3, §5). */
-export const wipeDevice = () => Promise.all([wipeStore(), SecureStore.deleteItemAsync(PIN), SecureStore.deleteItemAsync(PROFILE), forgetTokens()]);
+/** PIN tries since the last unlock. Kept in secure-store, so a relaunch does not reset the failed-PIN limit (ADR-011 §3). */
+const PIN_TRIES_KEY = 'medvya.pin-tries';
+export const pinTries = async () => Number((await SecureStore.getItemAsync(PIN_TRIES_KEY)) ?? 0);
+export const resetPinTries = () => SecureStore.deleteItemAsync(PIN_TRIES_KEY);
+let counting: Promise<unknown> = Promise.resolve();
+/** Counts a try before its PIN is checked (killing the app mid-check still counts), one at a time: two checks at once count two. */
+export function countPinTry(): Promise<number> {
+  const next = counting.then(async () => {
+    const n = (await pinTries()) + 1;
+    await SecureStore.setItemAsync(PIN_TRIES_KEY, String(n), deviceOnly);
+    return n;
+  });
+  counting = next.catch(() => undefined);
+  return next;
+}
+
+/** Everything this app keeps on the phone goes: the encrypted last copy, its key, the PIN and its tries, the tokens and who was signed in (ADR-011 §3, §5). */
+export const wipeDevice = () => Promise.all([wipeStore(), SecureStore.deleteItemAsync(PIN), resetPinTries(), SecureStore.deleteItemAsync(PROFILE), forgetTokens()]);
 
 /** Sign-out: the server session ends too (best effort, with the tokens held now) while the phone wipes at once. */
 export const signOutDevice = () => Promise.all([endServerSession(), wipeDevice()]);

@@ -18,7 +18,7 @@ Doctors want the queue, the patient summary and recording on their phone. Patien
    - **Session length:** a native session lasts at most 30 days and ends after 7 days unused. Browser sessions keep 8 h and the tenant's idle timeout.
 
 3. **What a phone may keep.** This is the one exception to AGENTS.md 1.2, and nothing beyond it is allowed:
-   - **Secure-store** (Keychain / Android Keystore): the refresh token, the device key and the PIN check value. The access token stays in memory only.
+   - **Secure-store** (Keychain / Android Keystore): the refresh token, the device key, the PIN check value and the count of PIN tries since the last unlock (so a relaunch does not reset the failed-PIN limit). The access token stays in memory only.
    - **Encrypted SQLite**, with its key in secure-store:
      - *Staff app:* today's list and the patient summaries opened today (read-only last copy), and recording chunks not yet uploaded.
      - *Patient app:* only the signed-in person's own last copy (and their proxied family members'), plus bookings waiting to sync.

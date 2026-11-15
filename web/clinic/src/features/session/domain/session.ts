@@ -31,7 +31,29 @@ export type MeContext = {
   accessEnded?: boolean;
   /** The membership the user last worked at (from their own sessions, MDV-P1-059); always one of `memberships`. */
   lastMembershipId?: string | null;
+  /** When this browser session ends if nothing more is done (#1365 F-057); older servers leave it out, and then nothing is warned. */
+  session?: SessionEnd | null;
 };
+
+/**
+ * The server's own reckoning at the moment it answered: seconds until the session ends, whether using the app still moves that
+ * (not once the 8-hour limit comes first), and the clinic's idle time-out.
+ */
+export type SessionEnd = { endsInSeconds: number; extendable: boolean; idleTimeoutSeconds: number };
+
+/** How long before the end the app says so: two minutes, or half the time-out where a clinic's is shorter than four. */
+const noticeSeconds = (end: SessionEnd) => Math.min(120, end.idleTimeoutSeconds / 2);
+export const endingSoon = (end: SessionEnd | null | undefined): boolean => !!end && end.endsInSeconds <= noticeSeconds(end);
+
+/**
+ * When to ask the server again: each minute, sooner when the notice is due before that, and right after the end once it is showing,
+ * so "signed out" appears when it happens. Never under five seconds apart.
+ */
+export function nextPollMs(end: SessionEnd | null | undefined): number {
+  if (!end) return 60_000;
+  const seconds = endingSoon(end) ? end.endsInSeconds + 1 : end.endsInSeconds - noticeSeconds(end);
+  return Math.min(60_000, Math.max(5_000, seconds * 1000));
+}
 
 /** The signed-in user's working context; fields the server left out are filled so nothing downstream guesses. */
 export type Session = {
@@ -70,10 +92,19 @@ export function toSession(me: MeContext): Session {
 export const seeAccess: readonly Access[] = ['Read', 'Own', 'Limited', 'Full', 'Sign', 'Config'];
 
 /** What the client knows about its session: none, one that ended under it (F-05a), or a working context. */
-export type SessionStatus = { kind: 'signedOut' } | { kind: 'expired' } | { kind: 'signedIn'; me: MeContext };
+export type SessionStatus = { kind: 'signedOut' } | { kind: 'expired'; idle?: true } | { kind: 'signedIn'; me: MeContext; end?: SessionEnd | null };
 
-/** No session now: "expired" if this tab had one (idle timeout, revoked), otherwise simply signed out. */
-export function nextSession(hadSession: boolean, me: MeContext | null): SessionStatus {
-  if (me) return { kind: 'signedIn', me };
-  return hadSession ? { kind: 'expired' } : { kind: 'signedOut' };
+/**
+ * No session now: "expired" if this tab had one (idle timeout, revoked), otherwise simply signed out. The end time is kept beside `me`,
+ * not in it: it changes with every answer, and the working context must keep its identity while nothing about it changed.
+ * `before` is what the tab knew last: an idle notice that was showing means the session ended for lack of use, and the page says so.
+ * shortcut: after a reload the reason is gone and the page gives the general explanation; keep it per tab if desks ask why.
+ */
+export function nextSession(hadSession: boolean, me: MeContext | null, before?: SessionStatus): SessionStatus {
+  if (me) {
+    const { session: end, ...context } = me;
+    return end ? { kind: 'signedIn', me: context, end } : { kind: 'signedIn', me: context };
+  }
+  if (!hadSession) return { kind: 'signedOut' };
+  return before?.kind === 'signedIn' && endingSoon(before.end) && before.end?.extendable ? { kind: 'expired', idle: true } : { kind: 'expired' };
 }

@@ -237,6 +237,41 @@ public sealed class SessionControlTests(PostgresFixture sql) : IClassFixture<Pos
         Assert.False((await Context(browser)).GetProperty("accessEnded").GetBoolean());
     }
 
+    // #1365 F-057: the app can warn before the idle sign-out only if the server says when it comes, and "Stay signed in" must really move it.
+    [Fact]
+    public async Task TheContextSaysWhenTheSessionEndsAndOnlyRealActivityMovesIt()
+    {
+        await Clinics();
+        var user = await Account("K. Lakshmi");
+        using var browser = await SignedIn(user);
+        await Choose(browser, await Member(user, tenantA, facilityA, Role.PracticeAdmin));
+        var session = await SessionOf(user.Id);
+        async Task<(int EndsIn, bool Extendable, int Timeout)> EndAsync(bool passive)
+        {
+            using var read = new HttpRequestMessage(HttpMethod.Get, new Uri("/v1/me/context", UriKind.Relative));
+            if (passive) read.Headers.Add(SessionControl.PassiveHeader, "1");
+            var end = (await (await browser.SendAsync(read)).Content.ReadFromJsonAsync<JsonElement>()).GetProperty("session");
+            return (end.GetProperty("endsInSeconds").GetInt32(), end.GetProperty("extendable").GetBoolean(), end.GetProperty("idleTimeoutSeconds").GetInt32());
+        }
+
+        // Thirteen idle minutes of the clinic's fifteen: about two are left, and the status poll that asks does not add any.
+        await Age(session.Id, TimeSpan.FromMinutes(13));
+        var (left, extendable, timeout) = await EndAsync(passive: true);
+        Assert.InRange(left, 100, 120);
+        Assert.True(extendable);
+        Assert.Equal(StaffSession.DefaultIdleTimeoutMinutes * 60, timeout);
+        Assert.InRange((await EndAsync(passive: true)).EndsIn, 100, 120);
+
+        // "Stay signed in" is a read that counts: the full time-out is ahead again.
+        Assert.InRange((await EndAsync(passive: false)).EndsIn, timeout - 20, timeout);
+
+        // Ten minutes before the 8-hour cap the cap ends the session, and no activity moves it.
+        await Age(session.Id, TimeSpan.Zero, StaffSession.MaxLifetime - TimeSpan.FromMinutes(10));
+        var atCap = await EndAsync(passive: false);
+        Assert.InRange(atCap.EndsIn, 580, 600);
+        Assert.False(atCap.Extendable);
+    }
+
     [Fact]
     public async Task IdleTimeoutEndsTheSessionAndBackgroundPollsDoNotKeepItAlive()
     {

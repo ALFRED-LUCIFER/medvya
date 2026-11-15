@@ -15,6 +15,7 @@ import OrganisationNotice from '../features/onboarding/components/OrganisationNo
 import { organisationPath } from '../features/onboarding/domain/organisationRequest';
 import LanguageSwitcher from '../features/locale/components/LanguageSwitcher';
 import FacilityPicker from '../features/session/components/FacilityPicker';
+import SessionEndingNotice from '../features/session/components/SessionEndingNotice';
 import SessionExpiredPage from '../features/session/components/SessionExpiredPage';
 import AppShell from '../features/shell/components/AppShell';
 import MorePage from '../features/shell/components/MorePage';
@@ -129,7 +130,7 @@ export default function App({ locale, onLocaleChange }: Props) {
 
   // F-05a: an ended session replaces every screen; signing in again comes back to this route.
   const routes = shell.loading ? <Route path="*" element={<ShellMessage standalone busy title={t('shell.loading')} />} />
-    : shell.expired ? <Route path="*" element={<SessionExpiredPage languageSwitcher={switcher} onSignIn={shell.signIn}
+    : shell.expired ? <Route path="*" element={<SessionExpiredPage languageSwitcher={switcher} idle={shell.expiredIdle} onSignIn={shell.signIn}
         onOtherAccount={() => { shell.forgetEndedSession(); navigate('/', { replace: true }); }} />} />
     : !shell.session ? <>
         <Route path="/" element={<SignInRoute switcher={switcher} />} />
@@ -153,7 +154,7 @@ export default function App({ locale, onLocaleChange }: Props) {
         {/* With one clinic there is no other to switch to: the picker (also reached right after the automatic choice) goes on to the screen asked for. */}
         <Route path="/choose-facility" element={shell.session.memberships.length > 1 ? picker : <Navigate to={from ?? '/'} replace />} />
         <Route element={
-          <AppShell banner={strip} displayName={account.displayName} onSignOut={account.onSignOut} onLocaleChange={onLocaleChange} onMyDevices={() => navigate(devicesPath)}
+          <AppShell banner={<>{strip}{shell.ending && <SessionEndingNotice {...shell.ending} />}</>} displayName={account.displayName} onSignOut={account.onSignOut} onLocaleChange={onLocaleChange} onMyDevices={() => navigate(devicesPath)}
             onChangeFacility={account.canSwitchFacility ? () => navigate('/choose-facility') : undefined}
             otherFacilities={others.map(m => ({ id: m.id, name: m.tenantId === active.tenantId ? m.facilityName : t('session.picker.facility', { tenant: m.tenantName, facility: m.facilityName }) }))}
             onSwitchFacility={switchTo} switchingFacility={shell.choosingId !== null}

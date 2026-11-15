@@ -2921,6 +2921,38 @@
         }
       }
     },
+    "/v1/front-desk/elsewhere": {
+      "get": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "facilityId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ElsewhereCount"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/queue/tv": {
       "get": {
         "tags": [
@@ -9859,6 +9891,36 @@
               "type": "string",
               "format": "uuid"
             }
+          }
+        }
+      },
+      "ElsewhereCount": {
+        "required": [
+          "facilityId",
+          "waiting",
+          "today"
+        ],
+        "type": "object",
+        "properties": {
+          "facilityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "waiting": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "today": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },

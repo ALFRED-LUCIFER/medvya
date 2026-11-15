@@ -1,13 +1,13 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
-import { Activity, FilePen, Pill, Siren, CircleAlert, CircleCheck, CircleHelp, type LucideIcon } from 'lucide-react';
+import { Activity, FilePen, MapPin, Pill, Siren, CircleAlert, CircleCheck, CircleHelp, type LucideIcon } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, Card, Chip, cn, FrontDeskTag, PageContainer, PageHeader, PageMessage, SegmentedControl, statusIcons, statuses, type Status } from '@medvya/ui';
+import { Banner, Button, buttonVariants, Card, Chip, cn, FrontDeskTag, PageContainer, PageHeader, PageMessage, SegmentedControl, statusIcons, statuses, type Status } from '@medvya/ui';
 import { aheadWords, type BoardCard, type BoardColumn, type LiveStatus } from '../../front-desk/domain/board';
 import { canConsult } from '../../encounters/domain/encounter';
 import type { AllergyState } from '../../patient360/domain/chart';
 import { authoriseTarget } from '../../prescription/domain/authorisation';
-import { ageOn, type PendingNote, type PendingRx, type Scope } from '../domain/today';
+import { ageOn, type ElsewhereLine, type PendingNote, type PendingRx, type Scope } from '../domain/today';
 
 // A status is always an icon and words, never colour alone; icons come from the shared status map (MDV-P5-057).
 
@@ -21,6 +21,8 @@ type Props = {
   escalations: Record<string, string>; escalationsFailed: boolean;
   /** The visits with an open escalation, in queue order: pinned above Next patient (MDV-P1-103). */
   escalated: BoardCard[];
+  /** The doctor's own patients at their other locations (#1365 F-061): counts only; onSwitch works there. */
+  elsewhere: ElsewhereLine[]; onSwitch: (membershipId: string) => void; switchingTo: string | null;
   /** Patient 360 of a patient. */
   chartPath: (patientId: string) => string;
   loading: boolean; offline: boolean; online: boolean; live: LiveStatus; forbidden: boolean; failed: boolean; onRetry: () => void;
@@ -38,7 +40,7 @@ type Props = {
 
 /** D-01 Doctor Today: the next patient, then the day's visits, mine or the clinic's. Names and times only; no clinical content. */
 export default function DoctorTodayPage(p: Props) {
-  const { t, formatDay } = useI18n();
+  const { t, tCount, formatDay } = useI18n();
   return (
     <PageContainer width="fluid" fit>
       {/* The title is fixed and the day is secondary text that arrives without moving the row (MDV-P2-059 AC2); no eyebrow repeating the menu item. */}
@@ -47,6 +49,13 @@ export default function DoctorTodayPage(p: Props) {
         {/* Under the title, as the board's view switch: the 48 px track would make the title row taller than 44 px (MDV-P2-059). */}
         <SegmentedControl label={t('today.scope')} value={p.scope} onValueChange={p.onScope} options={(['mine', 'clinic'] as const).map(s => ({ value: s, label: t(`today.scope.${s}`) }))} />
       </PageHeader>
+      {/* Said whatever this location's day holds, "No visits today" included: the patients are waiting somewhere else. */}
+      {p.elsewhere.map(e => (
+        <Banner key={e.membershipId} tone={e.waiting > 0 ? 'warning' : 'info'} icon={MapPin} title={e.facilityName}
+          action={<Button variant="outline" loading={p.switchingTo === e.membershipId} disabled={p.switchingTo !== null} onClick={() => p.onSwitch(e.membershipId)}>{t('today.elsewhere.switch', { location: e.facilityName })}</Button>}>
+          {e.waiting > 0 ? tCount('today.elsewhere.waiting', e.waiting) : tCount('today.elsewhere.today', e.today)}
+        </Banner>
+      ))}
       {p.escalationsFailed && <p role="alert" className="text-sm font-semibold text-danger-700">{t('today.escalation.error')}</p>}
       <Body {...p} pending={<><PendingNotes {...p} /><PendingPrescriptions {...p} /></>} />
     </PageContainer>

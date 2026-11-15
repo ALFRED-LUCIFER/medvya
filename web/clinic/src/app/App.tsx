@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import type { Locale } from '@medvya/i18n';
 import { I18nProvider, useI18n } from '@medvya/i18n';
 import { SystemState } from '@medvya/ui';
@@ -94,6 +94,10 @@ export default function App({ locale, onLocaleChange }: Props) {
     canSwitchFacility: (shell.session?.memberships.length ?? 0) > 1 };
   const toHome = () => navigate('/');
   const active = shell.session?.active;
+  // The memberships to switch to from the top bar, and of those the organisation's own other locations, which My day asks about (#1365 F-061).
+  const others = useMemo(() => (shell.session?.memberships ?? []).filter(m => m.id !== active?.membershipId), [shell.session, active?.membershipId]);
+  const otherLocations = useMemo(() => others.filter(m => m.tenantId === active?.tenantId), [others, active?.tenantId]);
+  const switchTo = (id: string) => shell.chooseFacility(id, () => navigate('/', { replace: true }));
   // The routes below drawn without the shell: signed out, choosing a facility, and the public and gallery pages.
   const inShell = !shell.loading && !shell.expired && !!active && !/^\/(?:__ui|invite|verify|rx|choose-facility)(?:\/|$)/.test(location.pathname);
   // Signed in at a facility, rules and formats follow the tenant's country (from the server, never the client).
@@ -151,6 +155,8 @@ export default function App({ locale, onLocaleChange }: Props) {
         <Route element={
           <AppShell banner={strip} displayName={account.displayName} onSignOut={account.onSignOut} onLocaleChange={onLocaleChange} onMyDevices={() => navigate(devicesPath)}
             onChangeFacility={account.canSwitchFacility ? () => navigate('/choose-facility') : undefined}
+            otherFacilities={others.map(m => ({ id: m.id, name: m.tenantId === active.tenantId ? m.facilityName : t('session.picker.facility', { tenant: m.tenantName, facility: m.facilityName }) }))}
+            onSwitchFacility={switchTo} switchingFacility={shell.choosingId !== null}
             role={active.role} facilityName={active.facilityName} items={shell.items} tabs={shell.tabs} searchPath={searchPath}
             globalSearch={searchPath && clinical
               ? <GlobalSearchRoute startVisitPath={walkInPath} bookPath={pathOf('schedule')} registerPath={registerPath} /> : undefined}
@@ -164,7 +170,7 @@ export default function App({ locale, onLocaleChange }: Props) {
             ? <ScheduleRoute facilityId={active.facilityId} userId={shell.session?.user.id ?? ''} userName={shell.session?.user.displayName ?? ''} canBook={active.capabilities.RegisterBookPatients === 'Full'}
                 canCheckIn={active.capabilities.CheckInQueue === 'Full'} registerPath={registerPath} leavePath={leavePath} />
             // My day (MDV-P2-002, named in MDV-P2-051): the doctor's own day, never the board.
-            : i.id === 'today' ? <TodayRoute facilityId={active.facilityId} online={online} userId={shell.session?.user.id ?? ''} />
+            : i.id === 'today' ? <TodayRoute facilityId={active.facilityId} online={online} userId={shell.session?.user.id ?? ''} otherLocations={otherLocations} onSwitch={switchTo} switchingTo={shell.choosingId} />
             : i.id === 'frontDesk'
             ? <FrontDeskRoute facilityId={active.facilityId} online={online} userId={shell.session?.user.id ?? ''} canMove={active.capabilities.CheckInQueue === 'Full'} canCancel={active.capabilities.RegisterBookPatients === 'Full'}
                 registerPath={registerPath} walkInPath={walkInPath} waitlistPath={waitlistPath} bookPath={active.capabilities.RegisterBookPatients === 'Full' ? pathOf('schedule') : null} billingPath={shell.items.find(b => b.id === 'billing')?.path ?? null}

@@ -67,8 +67,14 @@ public sealed class SchedulingContext(
     public async Task RequireAsync(Guid facilityId, SchedulingAccess.Need need, CancellationToken cancellationToken)
     {
         if (facilityId == Guid.Empty) throw new SchedulingValidationException([new("facilityId", "required")]);
+        if (!await AllowsAsync(facilityId, need, cancellationToken)) throw new SchedulingAccessDeniedException();
+    }
+
+    /// <summary>Whether the caller's membership at the facility grants the need: the check behind <see cref="RequireAsync"/>, for a list that leaves a facility out instead of refusing.</summary>
+    public async Task<bool> AllowsAsync(Guid facilityId, SchedulingAccess.Need need, CancellationToken cancellationToken)
+    {
         var granted = await access.AccessAsync(need.Capability, facilityId, cancellationToken);
-        if (!need.Levels.Contains(granted)) throw new SchedulingAccessDeniedException();
+        return need.Levels.Contains(granted);
     }
 
     public async Task<(FacilityInfo Facility, TimeZoneInfo Zone)> FacilityAsync(Guid facilityId, CancellationToken cancellationToken)

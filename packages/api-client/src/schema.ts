@@ -3486,6 +3486,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/front-desk/elsewhere": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    facilityId?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ElsewhereCount"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/queue/tv": {
         parameters: {
             query?: never;
@@ -9656,6 +9693,14 @@ export interface components {
         DuplicateResolution: {
             decision: components["schemas"]["DuplicateDecision"];
             candidateIds: string[];
+        };
+        ElsewhereCount: {
+            /** Format: uuid */
+            facilityId: string;
+            /** Format: int32 */
+            waiting: number | string;
+            /** Format: int32 */
+            today: number | string;
         };
         EscalateIntake: {
             reason: null | string;

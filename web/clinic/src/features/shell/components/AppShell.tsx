@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
 import { Link, NavLink } from 'react-router';
-import { Bell, Menu, Search } from 'lucide-react';
+import { Bell, ChevronDown, Menu, Search } from 'lucide-react';
 import { useI18n, type Locale } from '@medvya/i18n';
-import { AccountMenu, Button, buttonVariants, cn, NavRailItem } from '@medvya/ui';
+import { AccountMenu, Button, buttonVariants, cn, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, NavRailItem } from '@medvya/ui';
 import type { Role } from '../../session/domain/session';
 import type { NavItem } from '../domain/navigation';
 import { navIcons, railColour } from './navIcons';
@@ -20,6 +20,11 @@ type Props = {
   onMyDevices: () => void;
   /** Only with more than one active membership: the facility picker (MDV-P0-012). */
   onChangeFacility?: () => void;
+  /** The user's other memberships, already named: with any, the top bar's location name is the switcher (#1365 F-061), on a phone too. */
+  otherFacilities?: { id: string; name: string }[];
+  onSwitchFacility?: (membershipId: string) => void;
+  /** A switch is under way: the switcher waits. */
+  switchingFacility?: boolean;
   /** Patient search target (D-02 header entry), when this membership may search patients. */
   searchPath?: string | null;
   /** The ⌘K patient search (D-02, MDV-P2-003), composed by the app for roles that treat patients; it replaces the plain link to the directory. */
@@ -37,8 +42,8 @@ type Props = {
  * search, bell and the account menu (56 px on phones, account in More).
  */
 export default function AppShell({ displayName, role, facilityName, items, tabs, onLocaleChange, onSignOut, onMyDevices, onChangeFacility,
-  searchPath, globalSearch, notifications, banner, children }: Props) {
-  const { t } = useI18n();
+  otherFacilities = [], onSwitchFacility, switchingFacility = false, searchPath, globalSearch, notifications, banner, children }: Props) {
+  const { t, dir } = useI18n();
   // Settings is pinned to the foot of the menu (design: Medvya Web sidebar); it stays last in reading order.
   const main = items.filter(i => i.id !== 'settings');
   const foot = items.filter(i => i.id === 'settings');
@@ -92,7 +97,23 @@ export default function AppShell({ displayName, role, facilityName, items, tabs,
 
       <div className="flex min-w-0 flex-col">
         <header data-pinned="top" className="sticky top-0 z-10 flex h-(--shell-top) items-center gap-3 border-b bg-card px-4 md:px-6 print:hidden">
-          <p className="min-w-0 max-w-none flex-1 truncate font-bold">{facilityName}</p>
+          {otherFacilities.length > 0 && onSwitchFacility ? (
+            // The location name is the switcher, as the picker promises ("You can switch later from the top bar"): a menu, so the keyboard reaches it.
+            <div className="flex min-w-0 flex-1">
+              <DropdownMenu dir={dir}>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" disabled={switchingFacility} className="-ms-2.5 min-w-0 max-w-full justify-start font-bold">
+                    <span className="truncate">{facilityName}</span>
+                    <span className="sr-only">{t('session.switchFacility')}</span>
+                    <ChevronDown aria-hidden />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  {otherFacilities.map(f => <DropdownMenuItem key={f.id} onSelect={() => onSwitchFacility(f.id)}>{t('shell.switchTo', { location: f.name })}</DropdownMenuItem>)}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          ) : <p className="min-w-0 max-w-none flex-1 truncate font-bold">{facilityName}</p>}
           {globalSearch ?? (searchPath && (
             <Link to={searchPath} className={cn(buttonVariants({ variant: 'outline' }), 'max-sm:size-control max-sm:px-0')}>
               <Search aria-hidden /><span className="max-sm:sr-only">{t('patients.search.open')}</span>

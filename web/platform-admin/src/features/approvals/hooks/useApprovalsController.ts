@@ -77,8 +77,8 @@ export function useApprovalsController(role: PlatformRole) {
       onCheck: (id: string, on: boolean) => setChecked(c => (on ? [...c, id] : c.filter(x => x !== id))),
       pending, form: reason, busy: act.isPending, problem: problem ? t(problem) : null, sent,
       onStart: (action: Action) => {
-        act.reset(); setSent(null); setPending(action);
-        reason.reset({ reason: t(`platform.approvals.preset.${action}` as MessageKey) });
+        // The reason starts empty: the operator writes why, in their own words (F-032).
+        act.reset(); setSent(null); setPending(action); reason.reset();
       },
       onCancel: () => { setPending(null); act.reset(); },
       onConfirm: reason.handleSubmit(({ reason: text }) => { if (pending) act.mutate({ action: pending, text }); }),

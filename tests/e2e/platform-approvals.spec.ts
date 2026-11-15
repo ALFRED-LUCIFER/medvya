@@ -94,7 +94,10 @@ test('a reviewer opens a request, reads a document in the private viewer, approv
   await expect(approve).toBeDisabled();
   await tickAll(page);
   await approve.click();
-  await expect(page.getByLabel('Reason (saved in the audit log)')).toHaveValue('Documents checked and in order.'); // preset wording, editable
+  // F-032: the reason starts empty, and a refused Confirm says why: nothing is sent, the summary takes focus and names the field.
+  await expect(page.getByLabel('Reason (saved in the audit log)')).toHaveValue('');
+  await page.getByRole('button', { name: 'Approve and email the owner' }).click();
+  await expect(page.getByRole('group', { name: 'There is a problem' }).getByRole('link')).toHaveText(['Reason (saved in the audit log): Give a reason of at least 5 characters.']);
   await page.getByLabel('Reason (saved in the audit log)').fill('no');
   await page.getByRole('button', { name: 'Approve and email the owner' }).click();
   await expect(page.getByRole('group', { name: 'There is a problem' })).toBeFocused(); // MDV-P2-058
@@ -211,6 +214,10 @@ for (const locale of ['en', 'ar'])
       const approve = bar.getByRole('button', { name: t(locale, 'platform.approvals.action.approve'), exact: true });
       await tickAll(page);
       await commitVisible(page, approve);
+      // F-052: one filled button per view. Approve is it; Reject is outlined and says what it does in words and icon, not by colour alone.
+      await expect(bar.locator('[data-variant=default], [data-variant=destructive]')).toHaveCount(1);
+      await expect(bar.getByRole('button', { name: t(locale, 'platform.approvals.action.reject'), exact: true })).toHaveAttribute('data-variant', 'outline');
+      expect(await axe(page)).toEqual([]);
       await approve.click();
       await expect(bar).toHaveCount(1);
       await commitVisible(page, bar.getByRole('button', { name: t(locale, 'platform.approvals.confirm.approve.confirm') }));

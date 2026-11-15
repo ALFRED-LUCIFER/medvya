@@ -68,6 +68,9 @@ export const isCurrent = (s: RxAuthorisationState | null) => !!s?.authorised && 
 export const secondLanguages = ['none', 'hi', 'ta', 'ar'] as const;
 export type SecondLanguage = (typeof secondLanguages)[number];
 
+/** The paper a print-family page prints on (MDV-P1-111). */
+export type PaperSize = 'A4' | 'A5';
+
 /** Dark modules of the QR code as [x, y], from the server's rows ('1' dark), quiet zone included. */
 export const qrCells = (rows: string[]): [number, number][] => rows.flatMap((row, y) => [...row].flatMap((c, x): [number, number][] => (c === '1' ? [[x, y]] : [])));
 

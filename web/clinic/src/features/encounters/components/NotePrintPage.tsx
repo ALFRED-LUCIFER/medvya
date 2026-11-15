@@ -3,10 +3,9 @@ import { FileDown, Printer } from 'lucide-react';
 import { ltr, useI18n } from '@medvya/i18n';
 import { Button, buttonVariants, PageContainer, PageHeader, PageMessage } from '@medvya/ui';
 import type { EncounterBanner } from '../domain/encounter';
-import { notesSection, sectionLabelKey, vitalNameKey, type NoteRecord, type NoteTemplate, type NoteView } from '../domain/note';
-import { Versions } from './NoteHistory';
-import { StructuredField } from './NoteParts';
-import { isStructured } from '../domain/structured';
+import { notesSection, sectionLabelKey, vitalNameKey, type NoteRecord, type NoteSection, type NoteTemplate, type NoteView } from '../domain/note';
+import { answeredItems, answerLabelKey, isStructured, itemLabelKey } from '../domain/structured';
+import PaperPrintPage, { Ident, Masthead, Meta, PaperFooter, Row, Rows, Signature } from '../../prescription/components/PaperPrintPage';
 
 type Props = {
   banner: EncounterBanner | null; note: NoteView | null; template: NoteTemplate | null; loading: boolean; failed: boolean;
@@ -15,54 +14,67 @@ type Props = {
 };
 
 /**
- * E-06 print view: the signed note as plain headings and paragraphs (readable by a screen reader, reflows at 200 % zoom), then every addendum
- * in order, in black on white. Print uses the browser; the PDF is the server's stored copy with the identifiers on every page.
- * MDV-P2-049: the one h1 names the clinic, then the signer with their licence; what was recorded at signing (vitals, allergies, diagnoses,
- * medicines) follows the identifiers, from the signed version only, in the same words and order as the PDF.
+ * E-06 print view in the print family layout (MDV-P1-111): the signed note as labelled rows a screen reader reads in order (reflows at 200 %
+ * zoom), then each addendum as its own row. Print uses the browser; the PDF is the server's stored copy with the identifiers on every page.
+ * MDV-P2-049: the one h1 names the clinic, the signer with their licence sits at the end; what was recorded at signing (vitals, allergies,
+ * diagnoses, medicines) follows the patient, from the signed version only, in the same words and order as the PDF.
  */
 export default function NotePrintPage(p: Props) {
-  const { t, formatCalendarDate } = useI18n();
+  const { t, formatDate, formatTime, formatCalendarDate } = useI18n();
   if (p.loading) return <PageContainer width="form"><PageHeader title={t('notePrint.title')} /><PageMessage kind="busy">{t('notePrint.loading')}</PageMessage></PageContainer>;
   if (p.failed || !p.note?.signature || !p.template || !p.banner)
     return <PageContainer width="form"><PageHeader title={t('notePrint.title')} /><PageMessage kind="error">{t('notePrint.loadFailed')}</PageMessage></PageContainer>;
   const { note, banner } = p;
   const signer = note.signature!;
-  return (
-    <div className="flex max-w-[720px] flex-col gap-4">
-      <div className="flex flex-wrap gap-3 print:hidden">
-        <Button onClick={p.onPrint}><Printer aria-hidden className="size-4" />{t('notePrint.print')}</Button>
-        <Button variant="outline" loading={p.downloading} onClick={p.onPdf}><FileDown aria-hidden className="size-4" />{t('notePrint.pdf')}</Button>
-        <Link to={p.consultPath} className={buttonVariants({ variant: 'outline' })}>{t('notePrint.back')}</Link>
-      </div>
-      {p.pdfProblem && <p role="alert" className="font-bold text-danger-700 print:hidden">{t(p.pdfProblem === 'unsupported' ? 'notePrint.pdfUnsupported' : 'notePrint.pdfFailed')}</p>}
-      <article aria-label={t('notePrint.title')} className="flex flex-col gap-4 rounded-xl border bg-white p-6 text-black print:rounded-none print:border-0 print:p-0">
-        {/* The header's h1 truncates to one line; on the print it wraps instead, so the clinic's name is never cut. */}
-        <PageHeader title={<span className="whitespace-normal">{note.facilityName ? t('notePrint.heading', { facility: note.facilityName }) : t('notePrint.title')}</span>}
-          className="border-b-2 border-black pb-2">
-          {signer.signerName && <p className="font-bold">{signer.signerLicence ? t('notePrint.doctor', { name: signer.signerName, licence: ltr(signer.signerLicence) }) : signer.signerName}</p>}
-          <p className="font-bold">{banner.patient.fullName}</p>
-          <p className="flex flex-wrap gap-x-4">
-            <span>{t('consult.banner.mrn', { mrn: ltr(banner.patient.mrn) })}</span>
-            <span>{t('consult.banner.dob', { date: formatCalendarDate(banner.patient.dateOfBirth) })}</span>
-          </p>
-        </PageHeader>
-        <AtSigning record={note.atSigning ?? null} timeZone={banner.timeZone} />
-        {[...p.template.sections, notesSection].filter(s => note.sections[s.id]).map(s => isStructured(s) ? (
-          <section key={s.id}><StructuredField section={s} text={note.sections[s.id]!} readOnly heading onChange={() => undefined} /></section>
-        ) : (
-          <section key={s.id} aria-labelledby={`print-${s.id}`}>
-            <h2 id={`print-${s.id}`} className="font-extrabold">{t(sectionLabelKey(s.id))}</h2>
-            <p className="whitespace-pre-wrap">{note.sections[s.id]}</p>
-          </section>
-        ))}
-        <section aria-labelledby="print-versions">
-          <h2 id="print-versions" className="mb-1 font-extrabold">{t('noteHistory.title')}</h2>
-          <Versions signature={p.note.signature} addenda={note.addenda ?? []} timeZone={banner.timeZone} />
-        </section>
-        <p className="border-t border-black pt-2 text-sm font-bold">{t('notePrint.corrections')}</p>
-      </article>
+  const date = (iso: string) => formatDate(new Date(iso), banner.timeZone), time = (iso: string) => formatTime(new Date(iso), banner.timeZone);
+  const signed = `${date(signer.signedAt)} ${time(signer.signedAt)}`;
+  const reg = signer.signerLicence ? t('paper.reg', { number: ltr(signer.signerLicence) }) : null;
+  const toolbar = <>
+    <div className="flex flex-wrap gap-3">
+      <Button onClick={p.onPrint}><Printer aria-hidden className="size-4" />{t('notePrint.print')}</Button>
+      <Button variant="outline" loading={p.downloading} onClick={p.onPdf}><FileDown aria-hidden className="size-4" />{t('notePrint.pdf')}</Button>
+      <Link to={p.consultPath} className={buttonVariants({ variant: 'outline' })}>{t('notePrint.back')}</Link>
     </div>
+    {p.pdfProblem && <p role="alert" className="font-bold text-danger-700">{t(p.pdfProblem === 'unsupported' ? 'notePrint.pdfUnsupported' : 'notePrint.pdfFailed')}</p>}
+  </>;
+  // shortcut: the note data has no clinic logo, address, phone or verify QR code; the server PDF is the stored copy (MDV-P1-111).
+  return (
+    <PaperPrintPage label={t('notePrint.title')} toolbar={toolbar}>
+      <Masthead clinic={note.facilityName ?? t('notePrint.title')} doctor={signer.signerName ? { name: signer.signerName, lines: [reg] } : null} />
+      <Meta title={t('notePrint.title')}>{t('paper.noteMeta', { version: signer.versionNo, when: signed })}</Meta>
+      <Rows>
+        <Row id="print-patient" label={t('paper.row.patient')}>
+          <Ident name={banner.patient.fullName} sub={t('paper.ident', { sex: t(`patients.sex.${banner.patient.sexAtBirth}`), age: banner.patient.ageYears,
+            mrn: ltr(banner.patient.mrn), dob: formatCalendarDate(banner.patient.dateOfBirth) })} />
+        </Row>
+        <Row id="print-at-signing" label={t('notePrint.atSigning')}><AtSigning record={note.atSigning ?? null} timeZone={banner.timeZone} /></Row>
+        {[...p.template.sections, notesSection].filter(s => note.sections[s.id]).map(s => (
+          <Row key={s.id} id={`print-${s.id}`} label={t(sectionLabelKey(s.id))}>
+            {isStructured(s) ? <Answers section={s} text={note.sections[s.id]!} /> : <p className="whitespace-pre-wrap">{note.sections[s.id]}</p>}
+          </Row>
+        ))}
+        {(note.addenda ?? []).map(a => (
+          <Row key={a.versionNo} id={`print-addendum-${a.versionNo}`} label={t('noteHistory.addendum', { amends: String(a.amendsVersionNo) })}>
+            <p className="text-ink-700">{t(a.signerName ? 'noteHistory.signed' : 'noteHistory.signedOther',
+              { version: String(a.versionNo), name: a.signerName ?? '', date: date(a.signedAt), time: time(a.signedAt) })}</p>
+            <p>{t('noteHistory.reason', { reason: a.reason })}</p>
+            <p className="whitespace-pre-wrap">{a.text}</p>
+          </Row>
+        ))}
+      </Rows>
+      {signer.signerName && <Signature name={signer.signerName} lines={[reg, t('paper.signed', { when: signed })]} />}
+      <PaperFooter><p className="font-bold text-ink-900">{t('notePrint.corrections')}</p></PaperFooter>
+    </PaperPrintPage>
   );
+}
+
+/** A structured section's answered items: the print shows what was answered, never the empty choices. */
+function Answers({ section, text }: { section: NoteSection; text: string }) {
+  const { t } = useI18n();
+  const answered = answeredItems(section, text);
+  return answered.length === 0 ? <p className="text-ink-700">{t('structured.noneAnswered')}</p>
+    : <ul className="list-disc ps-5">{answered.map(a => <li key={a.id}>{t(a.note ? 'noteTemplates.answerLineNote' : 'noteTemplates.answerLine',
+      { item: t(itemLabelKey(a.id)), answer: t(answerLabelKey(a.answer)), note: a.note ?? '' })}</li>)}</ul>;
 }
 
 /** MDV-P2-049: the record kept at signing. Allergies in words: listed, no known allergies, or not recorded (never "none"). */
@@ -85,8 +97,7 @@ function AtSigning({ record, timeZone }: { record: NoteRecord | null; timeZone: 
       lines: record.medicines.map(m => t('notePrint.medicine', { medicine: m.dose ? `${m.name} ${m.dose}` : m.name, number: ltr(m.number) })) },
   ];
   return (
-    <section aria-labelledby="print-at-signing" className="flex flex-col gap-2">
-      <h2 id="print-at-signing" className="font-extrabold">{t('notePrint.atSigning')}</h2>
+    <div className="flex flex-col gap-[3pt]">
       {lists.map(l => (
         <section key={l.id} aria-labelledby={`print-${l.id}`}>
           <h3 id={`print-${l.id}`} className="font-bold">{l.title}</h3>
@@ -94,6 +105,6 @@ function AtSigning({ record, timeZone }: { record: NoteRecord | null; timeZone: 
           {'after' in l && l.after && <p>{l.after}</p>}
         </section>
       ))}
-    </section>
+    </div>
   );
 }

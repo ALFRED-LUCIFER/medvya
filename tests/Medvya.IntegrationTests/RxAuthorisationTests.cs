@@ -567,7 +567,7 @@ public sealed class RxAuthorisationTests(PostgresFixture sql, AzuriteFixture blo
         using var pdf = await PdfAsync();
         Assert.Equal(HttpStatusCode.OK, pdf.StatusCode);
         var text = string.Join(' ', PdfPages.Read(await pdf.Content.ReadAsByteArrayAsync(), PlainPdf.A4.Margin).Select(p => p.Text));
-        foreach (var expected in new[] { "1. Metformin", "Change the dose from 500 mg to 1000 mg.", "Reason: HbA1c above target (synthetic)", "2. Prednisolone", "Last dose on 28 Oct 2026." })
+        foreach (var expected in new[] { "1 METFORMIN", "Change the dose from 500 mg to 1000 mg.", "Reason: HbA1c above target (synthetic)", "2 PREDNISOLONE", "Last dose on 28 Oct 2026." })
             Assert.Contains(expected, text, StringComparison.Ordinal);
     }
 
@@ -592,7 +592,7 @@ public sealed class RxAuthorisationTests(PostgresFixture sql, AzuriteFixture blo
         using (var pdf = await PdfAsync())
         {
             var text = string.Join(' ', PdfPages.Read(await pdf.Content.ReadAsByteArrayAsync(), PlainPdf.A4.Margin).Select(p => p.Text));
-            foreach (var expected in new[] { "Advice for the patient", "Drink plenty of water (synthetic).", "Advice is in English: there is no reviewed translation" })
+            foreach (var expected in new[] { "ADVICE", "Drink plenty of water (synthetic).", "Advice is in English: there is no reviewed translation" })
                 Assert.Contains(expected, text, StringComparison.Ordinal);
         }
 
@@ -606,7 +606,7 @@ public sealed class RxAuthorisationTests(PostgresFixture sql, AzuriteFixture blo
         Assert.Equal(0, await foreign.RxAdvice.IgnoreQueryFilters().CountAsync());
     }
 
-    // SAFETY mutation check: drop page.Header() from PlainPdf.Write and the per-page identifier checks fail.
+    // SAFETY mutation check: move the patient row out of page.Header() in PlainPdf.Write (into the content) and the per-page identifier checks fail.
     [Fact]
     public async Task ThePdfRendersServerSideOnA4AndA5WithTheLicenceAndIsStoredWithItsHash()
     {
@@ -631,7 +631,7 @@ public sealed class RxAuthorisationTests(PostgresFixture sql, AzuriteFixture blo
             Assert.Equal(hash, r.Headers.GetValues("X-Content-SHA256").Single());
             hashes.Add(hash);
             var pages = PdfPages.Read(bytes, paper.Margin);
-            string[] markers = ["Licence 84213 · Tamil Nadu Medical Council", "MRN 000001", "Dr. Arjun Rao (synthetic) · MBBS, MD (General Medicine)"];
+            string[] markers = ["Reg. 84213 · Tamil Nadu Medical Council", "MRN 000001", "Dr. Arjun Rao (synthetic)", "MBBS, MD (General Medicine)", "PATIENT"];
             Assert.True(paper == PlainPdf.A4 || pages.Count >= 2, $"{paper.Name}: {pages.Count} page(s)");
             Assert.All(pages, page =>
             {
@@ -641,13 +641,13 @@ public sealed class RxAuthorisationTests(PostgresFixture sql, AzuriteFixture blo
                     Assert.Contains(marker, page.Text, StringComparison.Ordinal);
             });
             var text = string.Join(' ', pages.Select(x => x.Text));
-            foreach (var expected in new[] { "1. Metformin 500 mg Tablet", "Take 1 tablet by mouth twice a day after food", "Schedule H drug. Warning", "Allergies: no known allergies" })
+            foreach (var expected in new[] { "1 METFORMIN 500 mg Tablet", "Take 1 tablet by mouth twice a day after food", "Schedule H drug. Warning", "ALLERGY", "No known allergies" })
                 Assert.Contains(expected, text, StringComparison.Ordinal);
             Assert.Contains("https://clinic.test/app/verify/rx/", text.Replace(" ", "", StringComparison.Ordinal), StringComparison.Ordinal); // A5 wraps the long link
             var packed = text.Replace(" ", "", StringComparison.Ordinal); // wrapping may break a line anywhere
-            foreach (var expected in new[] { "IyerFamilyClinic(synthetic)·Adyar(synthetic)", "Diagnosis:Hypertension(synthetic)(provisional)", "Follow-up:onorafter", "Signature:____", "Authorisedby" })
+            foreach (var expected in new[] { "IyerFamilyClinic(synthetic)·Adyar(synthetic)", "DIAGNOSIS", "Hypertension(synthetic)(provisional)", "FOLLOW-UP", "Onorafter", "Reg.84213Authorised" })
                 Assert.Contains(expected, packed, StringComparison.Ordinal);
-            Assert.Matches(@"·Age\d+·MRN", packed);
+            Assert.Matches(@"·\d+years·MRN", packed);
             Assert.DoesNotMatch("[0-9a-f]{64}", packed); // the content hash is on the QR verify page, not on the patient's copy (MDV-AUDIT-1097)
             Assert.True(pages[^1].Shapes > 200, "the QR code is drawn"); // a version 5+ code has hundreds of dark modules
         }
@@ -696,8 +696,8 @@ public sealed class RxAuthorisationTests(PostgresFixture sql, AzuriteFixture blo
         var pages = await PagesAsync();
         Assert.True(pages.Count >= 2, $"{pages.Count} page(s)");
         // The logo heads every page; the signature sits once, under the authorisation line.
-        Assert.All(pages, p => Assert.Equal(p.Text.Contains("Authorised by", StringComparison.Ordinal) ? 2 : 1, p.Images));
-        Assert.Single(pages, p => p.Text.Contains("Authorised by", StringComparison.Ordinal));
+        Assert.All(pages, p => Assert.Equal(p.Text.Contains("Authorised ", StringComparison.Ordinal) ? 2 : 1, p.Images)); // the meta row says "authorised", lower case
+        Assert.Single(pages, p => p.Text.Contains("Authorised ", StringComparison.Ordinal));
         Assert.All(pages, p => Assert.True(p.InsideMargins));
     }
 

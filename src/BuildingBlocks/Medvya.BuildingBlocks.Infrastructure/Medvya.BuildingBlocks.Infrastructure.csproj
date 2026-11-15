@@ -9,7 +9,7 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" /> <!-- EmailSetup binds configuration; both hosts share it -->
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Fonts\*.ttf" LogicalName="Medvya.Fonts.%(Filename)%(Extension)" /> <!-- Noto, SIL Open Font Licence (Fonts/OFL.txt) -->
+    <EmbeddedResource Include="Fonts\*.ttf" LogicalName="Medvya.Fonts.%(Filename)%(Extension)" /> <!-- Noto (Fonts/OFL.txt) and Manrope (static instances of @fontsource-variable/manrope 5.3.0, Fonts/OFL-Manrope.txt), SIL Open Font Licence -->
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Medvya.BuildingBlocks.Domain\Medvya.BuildingBlocks.Domain.csproj" />

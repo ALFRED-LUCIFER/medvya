@@ -587,7 +587,7 @@ public sealed class PrescriptionService(
             [.. rx.Lines.Select(l => new RxPrintLine(l.Discontinue, l.Medicine, l.Strength, l.Form, l.Sig, l.PrintRequirements, l.Reason))], url, QrRows.Of(url), RxPdfDocument.LayoutVersion,
             rx.Advice is null ? null : new RxAdviceView(rx.Advice, patient.PreferredLanguage, patient.PreferredLanguage is null or "en"),
             PaperIssuer.Age(rx.AuthorisedAt, facility.TimeZone, patient.DateOfBirth),
-            [.. plan.Diagnoses.Select(d => new RxDiagnosis(d.Description, d.Provisional))], plan.FollowUpOn);
+            [.. plan.Diagnoses.Select(d => new RxDiagnosis(d.Description, d.Provisional))], plan.FollowUpOn, facility.Address, facility.Phone);
     }
 
     static RxAuthorisationView View(AuthorisedPrescription p, PrescriptionCancellation? c = null) => new(p.VersionNo, p.Number(), p.AuthorisedBy, p.AuthorisedAt, p.ContentHash,

@@ -7,82 +7,71 @@ using Medvya.Tenancy.Application;
 namespace Medvya.Prescribing.Infrastructure;
 
 /// <summary>
-/// The authorised prescription as an English PDF on A4 or A5 (MDV-P2-017, E-10): clinic, doctor with qualifications and licence on every page with
-/// the patient's identifiers and the Rx number, then the chart's allergies, each medicine by its generic name with its instruction and the notes its
-/// regulatory class needs, the medicines to stop, the diagnoses, advice, follow-up, a signature line, the authorisation and the QR code that verifies it (its content hash is on that page, not on the paper).
+/// The authorised prescription as an English PDF on A4 or A5 (MDV-P2-017, E-10) in the print family layout (MDV-P1-111): clinic with address and phone,
+/// doctor with qualifications and registration, the Rx number and the patient's identifiers on every page; then labelled rows: the chart's allergies
+/// (a listed allergy in the red block with a shield and the word), the diagnoses, each medicine numbered by its generic name in capitals with its
+/// instruction and the notes its regulatory class needs boxed under it, the medicines to stop, advice and follow-up; the signature box with the
+/// registration repeated, and the QR code that verifies it in the footer (its content hash is on that page, not on the paper).
 /// Copy comes from the shared English catalogue (packages/i18n/messages/en.json); the server never invents wording.
 /// Written by <see cref="PlainPdf"/>: names, medicines and notes in Hindi, Tamil or Arabic print shaped; text no embedded font has is refused.
 /// shortcut: the PDF's instructions are English only (owner decision 11 Nov 2026: the pharmacist explains them); add a translator-reviewed
 /// patient-language line if pilot clinics ask for it.
-/// The clinic logo heads every page and the doctor's signature image sits under the authorisation line, when each was uploaded (Tenancy settings).
+/// The clinic logo heads every page and the doctor's signature image sits in the signature box, when each was uploaded (Tenancy settings).
 /// shortcut: brand names are not printed, because the composer does not choose one (generic only); print "generic (brand)" once it does.
 /// </summary>
 public static class RxPdfDocument
 {
     /// <summary>The layout a doctor approves (exit gate 4): raise it whenever what the paper shows or where changes, so each doctor approves again.</summary>
-    public const int LayoutVersion = 3; // 2: the logo and the signature image; 3: age, diagnosis, follow-up, a signature line, the hash on the verify page
+    public const int LayoutVersion = 4; // 2: the logo and the signature image; 3: age, diagnosis, follow-up, a signature line, the hash on the verify page; 4: the print family layout
 
     /// <exception cref="PdfUnsupportedTextException"/>
     public static byte[] Render(RxPrintView v, PlainPdf.Paper paper, PrintImages images)
     {
         var zone = TimeZoneInfo.FindSystemTimeZoneById(v.TimeZone);
         var when = TimeZoneInfo.ConvertTime(v.Authorisation.AuthorisedAt, zone).ToString("dd MMM yyyy, HH:mm", CultureInfo.InvariantCulture);
-        string[] header =
+        var mast = new PlainPdf.Masthead(v.Clinic, v.ClinicAddress, v.ClinicPhone, images.Logo, v.Doctor,
+            [.. new[] { v.Qualifications }.OfType<string>(), Text("printFamily.reg", ("number", v.LicenceNumber), ("authority", v.LicenceAuthority))]);
+        var meta = new PlainPdf.Meta(Text("rxPrint.title"), v.Authorisation.Number,
+            Text("printFamily.rxMeta", ("version", v.Authorisation.VersionNo.ToString(CultureInfo.InvariantCulture)), ("when", when), ("zone", zone.Id)));
+        var patient = new PlainPdf.Row(Text("printFamily.label.patient"), Patient(v.Patient.FullName, v.Patient.SexAtBirth, v.Patient.Mrn, v.Patient.DateOfBirth, v.PatientAge));
+
+        List<PlainPdf.Row> rows =
         [
-            v.Clinic,
-            v.Qualifications is null ? v.Doctor : Text("rxPrint.doctor", ("name", v.Doctor), ("qualifications", v.Qualifications)),
-            Text("rxPrint.licence", ("number", v.LicenceNumber), ("authority", v.LicenceAuthority)),
-            Text("rxPrint.patient", ("name", v.Patient.FullName), ("sex", Text($"rxPrint.sex.{v.Patient.SexAtBirth}")), ("age", v.PatientAge.ToString(CultureInfo.InvariantCulture)), ("mrn", v.Patient.Mrn),
-                ("dob", v.Patient.DateOfBirth.ToString("dd MMM yyyy", CultureInfo.InvariantCulture))),
-            Text("rxPrint.number", ("number", v.Authorisation.Number), ("version", v.Authorisation.VersionNo.ToString(CultureInfo.InvariantCulture)), ("when", when), ("zone", zone.Id)),
-        ];
-        List<(string Text, bool Bold)> body =
-        [
-            (v.Allergies switch
+            new(Text("printFamily.label.allergy"), v.Allergies switch
             {
-                ChartAllergies.Listed => Text("rxPrint.allergies", ("list", string.Join(", ", v.AllergySubstances))),
-                ChartAllergies.NoKnownAllergies => Text("rxPrint.allergiesNone"),
-                _ => Text("rxPrint.allergiesNotRecorded"),
-            }, true),
-            ("", false),
+                ChartAllergies.Listed => PlainPdf.Allergy(Text("printFamily.allergy"), string.Join(", ", v.AllergySubstances)),
+                ChartAllergies.NoKnownAllergies => PlainPdf.Lines((Text("banner.noAllergies"), PlainPdf.Tone.Body)),
+                _ => PlainPdf.Lines((Text("banner.allergiesNotRecorded"), PlainPdf.Tone.Body)),
+            }),
         ];
         if (v.Diagnoses is { Count: > 0 } diagnoses)
-        {
-            body.Add((Text("rxPrint.diagnosis", ("list", string.Join(", ", diagnoses.Select(d => d.Provisional ? Text("rxPrint.diagnosisProvisional", ("name", d.Description)) : d.Description)))), false));
-            body.Add(("", false));
-        }
-        var n = 0;
-        foreach (var l in v.Lines.Where(l => !l.Discontinue))
-        {
-            body.Add(($"{++n}. {string.Join(' ', new[] { l.Medicine, l.Strength, l.Form }.Where(x => !string.IsNullOrEmpty(x)))}", true));
-            body.Add((l.Sig["en"], false));
-            body.AddRange(l.PrintRequirements.Select(r => (Text($"rxPrint.requirement.{r}"), false)));
-            if (l.Reason is { } why) body.Add((Text("rxPrint.reason", ("reason", why)), false)); // a change or taper from the reconciliation
-            body.Add(("", false));
-        }
-        foreach (var l in v.Lines.Where(l => l.Discontinue))
-        {
-            body.Add((Text("rxPrint.stop", ("medicine", l.Medicine)), true));
-            if (l.Reason is { } reason) body.Add((Text("rxPrint.reason", ("reason", reason)), false));
-            body.Add(("", false));
-        }
+            rows.Add(new(Text("printFamily.label.diagnosis"), PlainPdf.Lines((string.Join(" · ",
+                diagnoses.Select(d => d.Provisional ? Text("rxPrint.diagnosisProvisional", ("name", d.Description)) : d.Description)), PlainPdf.Tone.Body))));
+        var medicines = v.Lines.Where(l => !l.Discontinue).Select(l => new PlainPdf.Item(l.Medicine.ToUpperInvariant(),
+            string.Join(' ', new[] { l.Strength, l.Form }.Where(x => !string.IsNullOrEmpty(x))),
+            [l.Sig["en"], .. l.Reason is { } why ? [Text("rxPrint.reason", ("reason", why))] : Array.Empty<string>()], // a change or taper from the reconciliation
+            [.. l.PrintRequirements.Select(r => Text($"rxPrint.requirement.{r}"))])).ToList();
+        if (medicines.Count > 0) rows.Add(new(Text("rxPrint.medicines"), PlainPdf.Items(medicines, paper)));
+        var stops = v.Lines.Where(l => l.Discontinue).ToList();
+        if (stops.Count > 0)
+            rows.Add(new(Text("printFamily.label.stop"), PlainPdf.Pairs(stops.Select(l => (l.Medicine.ToUpperInvariant(),
+                l.Reason is { } reason ? $"· {Text("rxPrint.reason", ("reason", reason))}" : null)))));
         if (v.Advice is { Text: { } advice } a)
-        {
-            body.Add((Text("rxPrint.advice"), true));
-            body.Add((advice, false));
-            if (!a.InPatientLanguage) body.Add((Text("rxPrint.adviceInEnglish"), false));
-            body.Add(("", false));
-        }
-        if (v.FollowUpOn is { } due) body.AddRange([(Text("rxPrint.followUp", ("date", due.ToString("dd MMM yyyy", CultureInfo.InvariantCulture))), true), ("", false)]);
-        body.AddRange([
-            (Text("rxPrint.verify", ("url", v.VerifyUrl)), false),
-            ("", false),
-            (Text("rxPrint.signature"), false), // the line to sign; the signature image, when uploaded, follows the authorisation line
-            (Text("rxPrint.authorised", ("name", v.Doctor), ("when", when)), true), // the signature image follows it
-        ]);
-        return PlainPdf.Write(header, body, (page, pages) => Text("rxPrint.footer", ("number", v.Authorisation.Number),
-            ("page", page.ToString(CultureInfo.InvariantCulture)), ("pages", pages.ToString(CultureInfo.InvariantCulture))), paper, v.Qr, images.Logo, images.Signature);
+            rows.Add(new(Text("printFamily.label.advice"), a.InPatientLanguage ? PlainPdf.Lines((advice, PlainPdf.Tone.Body))
+                : PlainPdf.Lines((advice, PlainPdf.Tone.Body), (Text("rxPrint.adviceInEnglish"), PlainPdf.Tone.Small))));
+        if (v.FollowUpOn is { } due)
+            rows.Add(new(Text("printFamily.label.followUp"), PlainPdf.Lines((Text("printFamily.followUpOn", ("date", due.ToString("dd MMM yyyy", CultureInfo.InvariantCulture))), PlainPdf.Tone.Strong))));
+
+        var sign = new PlainPdf.Signature(images.Signature, v.Doctor, [Text("printFamily.regShort", ("number", v.LicenceNumber)), Text("printFamily.authorisedAt", ("when", when))]);
+        var footer = new PlainPdf.Footer(v.Qr, Text("printFamily.checkRx"), Text("printFamily.scanOrOpen", ("url", v.VerifyUrl)), null, v.Authorisation.Number,
+            (page, pages) => Text("printFamily.page", ("page", page.ToString(CultureInfo.InvariantCulture)), ("pages", pages.ToString(CultureInfo.InvariantCulture))));
+        return PlainPdf.Write(paper, mast, meta, patient, rows, sign, footer);
     }
+
+    /// <summary>The patient row of every paper: the name, then sex, age, MRN and date of birth.</summary>
+    internal static Action<QuestPDF.Infrastructure.IContainer> Patient(string name, string sex, string mrn, DateOnly dob, int age) => PlainPdf.Lines((name, PlainPdf.Tone.Name),
+        (Text("printFamily.patient", ("sex", Text($"rxPrint.sex.{sex}")), ("age", age.ToString(CultureInfo.InvariantCulture)), ("mrn", mrn),
+            ("dob", dob.ToString("dd MMM yyyy", CultureInfo.InvariantCulture))), PlainPdf.Tone.Muted));
 
     static string Text(string key, params (string Name, string Value)[] values) => PaperText.Get(key, values);
 }

@@ -5,14 +5,17 @@ using Medvya.BuildingBlocks.Infrastructure;
 using Medvya.Encounters.Application;
 using Medvya.Encounters.Domain;
 using Medvya.Patients.Application;
+using Medvya.Tenancy.Application;
+using Tone = Medvya.BuildingBlocks.Infrastructure.PlainPdf.Tone;
 
 namespace Medvya.Encounters.Infrastructure;
 
 /// <summary>
-/// The signed note as an A4 PDF (MDV-P2-013, E-06): the patient's name, MRN and date of birth at the top of every page, version 1 with its signer
-/// block, what was recorded at signing (MDV-P2-049: vitals, allergies, diagnoses, medicines, as the print view shows them), then each addendum in
-/// order with its reason and signer, and "Corrections are added as signed addenda" at the foot of every page. The signer's uploaded signature image
-/// (Tenancy settings, when there is one) sits under version 1's signed-by line, and the practice's logo heads the page as on the prescription; each medicine carries its prescription's number (MDV-P2-049 Q9).
+/// The signed note as an A4 PDF (MDV-P2-013, E-06) in the print family frame (MDV-P1-111): the clinic and the version 1 signer in the masthead, the
+/// patient's name, MRN and date of birth on every page, then labelled rows: version 1's signer and hash, what was recorded at signing (MDV-P2-049:
+/// vitals, allergies, diagnoses, medicines, as the print view shows them), each section, the signature box (the signer's uploaded signature image,
+/// when there is one), then each addendum as its own labelled row with its reason and signer; "Corrections are added as signed addenda" in the
+/// footer of every page. Each medicine carries its prescription's number (MDV-P2-049 Q9).
 /// Copy comes from the shared English catalogue (packages/i18n/messages/en.json); the server never invents wording.
 /// Written by <see cref="PlainPdf"/>: Hindi, Tamil and Arabic print shaped; text no embedded font has is refused with <see cref="NotePdfUnsupportedTextException"/>.
 /// </summary>
@@ -25,43 +28,48 @@ public static class SignedNotePdfDocument
         return JsonSerializer.Deserialize<Dictionary<string, string>>(stream)!;
     });
 
-    /// <summary>One signed version as printed: the signer's name and licence are looked up by the caller (ids only are stored).</summary>
-    public sealed record Version(SignedNoteVersion Row, string SignerName, string? SignerLicence = null);
+    /// <summary>One signed version as printed: the signer's name is looked up by the caller (ids only are stored).</summary>
+    public sealed record Version(SignedNoteVersion Row, string SignerName);
 
+    /// <summary>Renders the note; <paramref name="signer"/> is version 1's signer's profile and registration at this facility (null: none, the name alone prints).</summary>
     /// <exception cref="NotePdfUnsupportedTextException"/>
-    public static byte[] Render(PatientSummary patient, string facilityName, TimeZoneInfo zone, NoteTemplate template, IReadOnlyList<Version> versions, byte[]? signature = null, byte[]? logo = null)
+    public static byte[] Render(PatientSummary patient, FacilityInfo facility, NoteTemplate template, IReadOnlyList<Version> versions, PrintImages images, PrescriberInfo? signer)
     {
+        var zone = TimeZoneInfo.FindSystemTimeZoneById(facility.TimeZone);
         var original = versions[0];
         string When(DateTimeOffset at) => Text("notePdf.when", ("date", TimeZoneInfo.ConvertTime(at, zone).ToString("dd MMM yyyy, HH:mm", CultureInfo.InvariantCulture)), ("zone", zone.Id));
-        List<(string Text, bool Bold)> body =
+        static PlainPdf.Row Row(string label, params (string, Tone)[] lines) => new(label, PlainPdf.Lines(lines));
+        List<PlainPdf.Row> rows =
         [
-            (Text("notePdf.signedBy", ("version", "1"), ("name", original.SignerName), ("when", When(original.Row.SignedAt))), true),
-            (Text("notePdf.hash", ("hash", original.Row.ContentHash)), false),
-            ("", false),
+            Row(Text("printFamily.label.signed"), (Text("notePdf.signedBy", ("version", "1"), ("name", original.SignerName), ("when", When(original.Row.SignedAt))), Tone.Strong),
+                (Text("notePdf.hash", ("hash", original.Row.ContentHash)), Tone.Small)),
             .. Record(original.Row.AtSigning, zone),
         ];
         foreach (var section in template.Sections.Append(NoteTemplates.Notes))
             if (original.Row.Sections.TryGetValue(section.Id, out var text))
-                body.AddRange([(Text($"noteTemplates.section.{section.Id}"), true), .. Lines(section, text), ("", false)]);
+                rows.Add(Row(Text($"noteTemplates.section.{section.Id}"), [.. Lines(section, text)]));
+        var signAfter = rows.Count - 1; // version 1 is signed here; each addendum carries its own signer
         foreach (var a in versions.Skip(1))
-            body.AddRange([
-                (Text("notePdf.addendum", ("version", a.Row.VersionNo.ToString(CultureInfo.InvariantCulture)), ("name", a.SignerName), ("when", When(a.Row.SignedAt))), true),
-                (Text("notePdf.reason", ("reason", a.Row.Reason ?? "")), false),
-                (a.Row.Sections[SignedNoteVersion.AddendumSection], false),
-                (Text("notePdf.hash", ("hash", a.Row.ContentHash)), false),
-                ("", false),
-            ]);
-        string[] header =
-        [
-            patient.FullName,
-            Text("notePdf.patient", ("mrn", patient.Mrn), ("dob", patient.DateOfBirth.ToString("dd MMM yyyy", CultureInfo.InvariantCulture))),
-            Text("notePdf.title", ("facility", facilityName), ("version", versions[^1].Row.VersionNo.ToString(CultureInfo.InvariantCulture))),
-            original.SignerLicence is { } licence ? Text("notePrint.doctor", ("name", original.SignerName), ("licence", licence)) : original.SignerName,
-        ];
+            rows.Add(Row(Text("printFamily.label.addendum"),
+                (Text("notePdf.addendum", ("version", a.Row.VersionNo.ToString(CultureInfo.InvariantCulture)), ("name", a.SignerName), ("when", When(a.Row.SignedAt))), Tone.Strong),
+                (Text("notePdf.reason", ("reason", a.Row.Reason ?? "")), Tone.Muted),
+                (a.Row.Sections[SignedNoteVersion.AddendumSection], Tone.Body),
+                (Text("notePdf.hash", ("hash", a.Row.ContentHash)), Tone.Small)));
+
+        var signedOn = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(original.Row.SignedAt, zone).DateTime);
+        var mast = new PlainPdf.Masthead(facility.Name, facility.Address, facility.Phone, images.Logo, signer?.FullName ?? original.SignerName, signer is null ? []
+            : [.. new[] { signer.Qualifications }.OfType<string>(), Text("printFamily.reg", ("number", signer.LicenceNumber), ("authority", signer.LicenceAuthority))]);
+        var meta = new PlainPdf.Meta(Text("printFamily.noteTitle"), null, Text("printFamily.noteMeta", ("version", versions[^1].Row.VersionNo.ToString(CultureInfo.InvariantCulture))));
+        var who = Row(Text("printFamily.label.patient"), (patient.FullName, Tone.Name), (Text("printFamily.patient", ("sex", Text($"rxPrint.sex.{patient.SexAtBirth}")),
+            ("age", CountryRules.AgeOn(signedOn, patient.DateOfBirth).ToString(CultureInfo.InvariantCulture)), ("mrn", patient.Mrn),
+            ("dob", patient.DateOfBirth.ToString("dd MMM yyyy", CultureInfo.InvariantCulture))), Tone.Muted));
+        var sign = new PlainPdf.Signature(images.Signature, signer?.FullName ?? original.SignerName,
+            [.. signer is null ? Array.Empty<string>() : [Text("printFamily.regShort", ("number", signer.LicenceNumber))], Text("printFamily.signedAt", ("when", When(original.Row.SignedAt)))]);
+        var footer = new PlainPdf.Footer(null, Text("printFamily.corrections"), null, null, null,
+            (page, pages) => Text("printFamily.page", ("page", page.ToString(CultureInfo.InvariantCulture)), ("pages", pages.ToString(CultureInfo.InvariantCulture))));
         try
         {
-            return PlainPdf.Write(header, body, (page, pages) => Text("notePdf.footer", ("page", page.ToString(CultureInfo.InvariantCulture)), ("pages", pages.ToString(CultureInfo.InvariantCulture))),
-                logo: logo, signature: signature, signatureAfter: 0); // body line 0 is version 1's signed-by line
+            return PlainPdf.Write(PlainPdf.A4, mast, meta, who, rows, sign, footer, signAfter);
         }
         catch (PdfUnsupportedTextException)
         {
@@ -73,9 +81,9 @@ public static class SignedNotePdfDocument
     /// MDV-P2-049: the record kept at signing, in the print view's words and order. A note signed before it was kept says so; today's chart is
     /// never read in its place. Allergies: listed, no known allergies, or not recorded (never "none").
     /// </summary>
-    static IEnumerable<(string, bool)> Record(NoteAtSigning? r, TimeZoneInfo zone)
+    static IEnumerable<PlainPdf.Row> Record(NoteAtSigning? r, TimeZoneInfo zone)
     {
-        if (r is null) return [(Text("notePrint.notCaptured"), false), ("", false)];
+        if (r is null) return [new(Text("notePrint.atSigning"), PlainPdf.Lines((Text("notePrint.notCaptured"), Tone.Body)))];
         string Source(VitalAtSigning v)
         {
             var at = TimeZoneInfo.ConvertTime(v.TakenAt, zone);
@@ -93,25 +101,24 @@ public static class SignedNotePdfDocument
         string Diagnosis(DiagnosisAtSigning d) => Text("notePrint.diagnosis", ("description", d.Description), ("code", d.Icd10Code ?? Text("problems.uncoded")),
             ("status", Text($"problems.status.{d.Status}")), ("verification", Text($"problems.verification.{d.Verification}")), ("source", Text($"timeline.source.{d.Source}")));
         string Medicine(MedicineAtSigning m) => Text("notePrint.medicine", ("medicine", m.Dose is null ? m.Name : $"{m.Name} {m.Dose}"), ("number", RxNumber.Of(m.PrescriptionId)));
+        static Action<QuestPDF.Infrastructure.IContainer> Body(IEnumerable<string> lines) => PlainPdf.Lines([.. lines.Select(x => (x, Tone.Body))]);
         return [
-            (Text("notePrint.atSigning"), true),
-            (Text("noteAssist.vitals.title"), true),
-            .. r.Vitals.Count == 0 ? [(Text("notePrint.vitalsEmpty"), false)] : r.Vitals.Select(v => (Vital(v), false)),
-            .. r.Vitals.Any(v => v.Code == ObservationCode.Weight) ? Array.Empty<(string, bool)>() : [(Text("notePrint.weightNotRecorded"), false)], // Q9: weight is always on the print, said when not taken
-            (Text("patient360.allergies"), true),
-            .. r.Allergies.Count > 0 ? r.Allergies.Select(a => (Allergy(a), false)) : [(Text(r.AllergiesRecorded ? "banner.noAllergies" : "banner.allergiesNotRecorded"), false)],
-            (Text("problems.title"), true),
-            .. r.Diagnoses.Count == 0 ? [(Text("problems.empty"), false)] : r.Diagnoses.Select(d => (Diagnosis(d), false)),
-            (Text("rxPrint.medicines"), true),
-            .. r.Medicines.Count == 0 ? [(Text("notePrint.medicinesEmpty"), false)] : r.Medicines.Select(m => (Medicine(m), false)),
-            ("", false),
+            new(Text("printFamily.label.vitals"), PlainPdf.Lines([
+                (Text("notePrint.atSigning"), Tone.Small),
+                .. (r.Vitals.Count == 0 ? [Text("notePrint.vitalsEmpty")] : r.Vitals.Select(Vital)).Select(x => (x, Tone.Body)),
+                .. r.Vitals.Any(v => v.Code == ObservationCode.Weight) ? Array.Empty<(string, Tone)>() : [(Text("notePrint.weightNotRecorded"), Tone.Body)], // Q9: weight is always on the print, said when not taken
+            ])),
+            new(Text("patient360.allergies"), r.Allergies.Count > 0 ? PlainPdf.Allergy(Text("printFamily.allergy"), string.Join("; ", r.Allergies.Select(Allergy)))
+                : Body([Text(r.AllergiesRecorded ? "banner.noAllergies" : "banner.allergiesNotRecorded")])),
+            new(Text("printFamily.label.diagnoses"), Body(r.Diagnoses.Count == 0 ? [Text("problems.empty")] : r.Diagnoses.Select(Diagnosis))),
+            new(Text("rxPrint.medicines"), Body(r.Medicines.Count == 0 ? [Text("notePrint.medicinesEmpty")] : r.Medicines.Select(Medicine))),
         ];
     }
 
     /// <summary>A text section as written; a structured one (MDV-P2-042) a line per answered item in words. An unanswered item is not printed.</summary>
-    static IEnumerable<(string, bool)> Lines(NoteSection section, string text) => section.Kind == SectionKind.Text ? [(text, false)]
+    static IEnumerable<(string, Tone)> Lines(NoteSection section, string text) => section.Kind == SectionKind.Text ? [(text, Tone.Body)]
         : StructuredAnswers.Read(section, text).Select(a => (Text(a.Note is null ? "noteTemplates.answerLine" : "noteTemplates.answerLineNote", ("item", Text($"noteTemplates.item.{a.Item}")),
-            ("answer", Text($"noteTemplates.answer.{a.Value}")), ("note", a.Note ?? "")), false));
+            ("answer", Text($"noteTemplates.answer.{a.Value}")), ("note", a.Note ?? "")), Tone.Body));
 
     static string Text(string key, params (string Name, string Value)[] values) =>
         values.Aggregate(Catalog.Value.GetValueOrDefault(key) ?? throw new KeyNotFoundException($"Message key '{key}' is not in en.json."),

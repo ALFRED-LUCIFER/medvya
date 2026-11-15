@@ -741,7 +741,7 @@ ac:
 - Given a receptionist signs in, when the tabs load, then clinical-only tabs are absent and their API calls return 403.
 - Given the phone is offline, when the doctor opens Today, then the last copy shows with an offline banner and no edit action.
 - Given a patient has an allergy, when the summary opens, then the allergy shows as text and icon, not colour alone.
-- Given the staff app is open, when someone takes a screenshot, then Android blocks it and iOS blurs the app switcher and audits the screenshot (ADR-011 §6).
+- Given the staff app is open, when someone takes a screenshot or records the screen, then Android and iOS 13+ block it and iOS blurs the app switcher (ADR-011 §6, amended 15 Nov 2026: blocked, not detected and audited).
 - Given the phone is revoked or the user switches, when the app next talks to the server, then the encrypted store is wiped and nothing of the previous user remains (ADR-011 §3, §5).
 
 === MDV-P5-035

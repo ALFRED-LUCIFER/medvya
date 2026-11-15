@@ -26,6 +26,8 @@ const people: Person[] = [
 
 /** Mobile numbers that have records. Synthetic test numbers, never real ones. */
 const accounts: { phone: string; people: string[] }[] = [{ phone: '+919000000101', people: ['pt-meera', 'pt-kavya'] }];
+/** A number whose fifth wrong code was just entered: its next code is refused with the minutes still to wait (MDV-P5-033). */
+const lockedNumber = { phone: '+919000000199', retryAfterMinutes: 15 };
 
 const home: Home = {
   nextVisit: { id: 'v-next', at: at(49, '03:50:00'), doctor: 'Dr. Arjun Rao', reason: '3-month diabetes review' },
@@ -70,5 +72,5 @@ const profile: Profile = {
   ],
 };
 
-export const cast = { clinic, people, accounts, home, visits, records, messages, profile };
+export const cast = { clinic, people, accounts, lockedNumber, home, visits, records, messages, profile };
 export type Cast = typeof cast;

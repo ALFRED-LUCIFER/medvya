@@ -1,11 +1,15 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { onSessionEnded } from '../../api/services/api';
+import { purgeExpired } from '../../api/services/store';
 import { shouldLock, type Session } from '../domain/session';
 import { onForeground } from '../services/appState';
-import { wipeDevice } from '../services/session';
+import { restoreProfile, saveProfile, signOutDevice } from '../services/session';
 
 // shortcut: duplicated in mobile/patient; both move to packages/auth-client with native tokens (MDV-P5-033).
 type SessionState = {
+  /** False until the stored session (if any) is read at launch: nothing is shown before, so sign-in never flashes. */
+  ready: boolean;
   session: Session | null;
   locked: boolean;
   biometric: boolean;
@@ -16,36 +20,46 @@ type SessionState = {
 };
 const SessionContext = createContext<SessionState | null>(null);
 
-/**
- * Who is signed in, and the 15-minute lock.
- * shortcut: the session lives in memory, so closing the app signs out; tokens in expo-secure-store come with MDV-P5-033.
- */
+/** Who is signed in, and the 15-minute lock. The session is kept in secure-store, so the app reopens locked, not signed out. */
 export function SessionProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
+  const [ready, setReady] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
   const [locked, setLocked] = useState(false);
   const [biometric, setBiometric] = useState(false);
   const backgroundedAt = useRef<number | null>(null);
 
-  // The session lives in memory, so anything on the phone at launch is left from a session that ended without a sign-out.
-  // shortcut: once MDV-P5-033 keeps the session in secure-store, wipe here only when no session is stored.
-  useEffect(() => { void wipeDevice(); }, []);
+  // Sign-out, Switch user, the failed-PIN limit and a revoke (a refused refresh) all end here: nothing cached outlives the session (ADR-011 §3, §5).
+  const signOut = useCallback(() => {
+    setSession(null); setLocked(false); setBiometric(false); queryClient.clear(); void signOutDevice();
+  }, [queryClient]);
+  useEffect(() => onSessionEnded(signOut), [signOut]);
+
+  // A stored session reopens locked: the app cannot know how long it was closed. Without one (or at the failed-PIN limit),
+  // anything on the phone is left from a session that ended without a sign-out, so it goes, with the server session if any.
+  useEffect(() => {
+    void (async () => {
+      const stored = await restoreProfile().catch(() => null);
+      if (stored) { setSession(stored.session); setBiometric(stored.biometric); setLocked(true); }
+      else await signOutDevice().catch(() => undefined);
+      setReady(true);
+    })();
+  }, []);
 
   useEffect(() => onForeground(active => {
     if (!active) { backgroundedAt.current = Date.now(); return; }
     if (shouldLock(backgroundedAt.current, Date.now())) setLocked(true);
     backgroundedAt.current = null;
+    void purgeExpired().catch(() => undefined);
   }), []);
 
   const value = useMemo<SessionState>(() => ({
-    session, locked, biometric,
-    begin: (s, b) => { setSession(s); setBiometric(b); setLocked(false); },
+    ready, session, locked, biometric,
+    begin: (s, b) => { setSession(s); setBiometric(b); setLocked(false); void saveProfile(s, b).catch(() => undefined); }, // unsaved, the next launch asks to sign in again
     lock: () => setLocked(true),
     unlock: () => setLocked(false),
-    // Sign-out, Switch user and the failed-PIN limit all end here: nothing cached outlives the session (ADR-011 §3, §5).
-    // shortcut: a revoke (the first 401 from a refresh) has no signal until native tokens (MDV-P5-033); that path must call signOut.
-    signOut: () => { setSession(null); setLocked(false); setBiometric(false); queryClient.clear(); void wipeDevice(); },
-  }), [session, locked, biometric, queryClient]);
+    signOut,
+  }), [ready, session, locked, biometric, signOut]);
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }
 

@@ -19,13 +19,13 @@ export function AccountScreen(vm: Props) {
       <View style={styles.identity}>
         <Avatar initials={vm.staff.initials} size={64} />
         <Text variant="title">{vm.staff.name}</Text>
-        <Text variant="caption">{ltr(vm.staff.email)}</Text>
+        {vm.staff.email ? <Text variant="caption">{ltr(vm.staff.email)}</Text> : null}
         <Chip label={t(`mobile.role.${vm.staff.role}`)} tone="brand" icon="badge" />
       </View>
 
       <Section title={t('mobile.account.workplace')}>
         <Card style={styles.list}>
-          <ListRow title={vm.facility.name} subtitle={t('mobile.signIn.facilityLine', { city: vm.facility.city, opens: vm.facility.opens, closes: vm.facility.closes })}
+          <ListRow title={vm.facility.name} subtitle={vm.facility.opens && vm.facility.closes ? t('mobile.signIn.facilityLine', { city: vm.facility.city, opens: vm.facility.opens, closes: vm.facility.closes }) : vm.facility.city}
             leading={<Icon name="storefront" color={theme.color.brand700} />} />
         </Card>
       </Section>

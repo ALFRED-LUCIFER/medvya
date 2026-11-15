@@ -6,8 +6,8 @@ namespace Medvya.Notifications.Application;
 /// <summary>
 /// The wording of secure-link messages (MDV-P2-020): the clinic, the link or code, and its expiry. Never the patient's name, a medicine or any
 /// clinical detail; "a document", not "your prescription", so a lock-screen preview says nothing about care. The registered SMS template keys are
-/// "SecureLink.{lang}" and "SecureCode.{lang}" (SmsOptions.DltTemplateIds).
-/// shortcut: Hindi and Arabic are working translations and the DLT registration of these two templates is a person task with MDV-P1-045.
+/// "SecureLink.{lang}", "SecureCode.{lang}" and "SignInCode.{lang}" (SmsOptions.DltTemplateIds).
+/// shortcut: Hindi and Arabic are working translations and the DLT registration of these templates is a person task with MDV-P1-045.
 /// </summary>
 public static class SecureLinkCatalog
 {
@@ -67,5 +67,19 @@ public static class SecureLinkCatalog
     {
         var lang = MessageCatalog.Language(languageTag);
         return new("", string.Format(Culture(lang), Texts[lang].Code, code, clinic), $"SecureCode.{lang}");
+    }
+
+    static readonly Dictionary<string, string> SignInTexts = new()
+    {
+        ["en"] = "{0} is your Medvya sign-in code. It expires in 10 minutes. Never share it with anyone.",
+        ["hi"] = "{0} आपका Medvya साइन-इन कोड है। यह 10 मिनट में समाप्त हो जाएगा। इसे किसी के साथ साझा न करें।",
+        ["ar"] = "{0} هو رمز تسجيل الدخول إلى Medvya. تنتهي صلاحيته خلال 10 دقائق. لا تشاركه مع أي أحد.",
+    };
+
+    /// <summary>The patient app's sign-in code (MDV-P5-033): the code and its expiry only, no clinic and nothing about care.</summary>
+    public static RenderedMessage SignInCode(string? languageTag, string code)
+    {
+        var lang = MessageCatalog.Language(languageTag);
+        return new("", string.Format(Culture(lang), SignInTexts[lang], code), $"SignInCode.{lang}");
     }
 }

@@ -3330,6 +3330,50 @@
         }
       }
     },
+    "/v1/patient-sign-in/code": {
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CodeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/patient-sign-in/verify": {
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/v1/onboarding": {
       "get": {
         "tags": [
@@ -9091,6 +9135,34 @@
           }
         }
       },
+      "CodeRequest": {
+        "required": [
+          "countryCode",
+          "mobile",
+          "language"
+        ],
+        "type": "object",
+        "properties": {
+          "countryCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "mobile": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "language": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "CompletionRequest": {
         "type": "object",
         "properties": {
@@ -13918,6 +13990,34 @@
             "format": "int32"
           },
           "instructions": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "VerifyRequest": {
+        "required": [
+          "countryCode",
+          "mobile",
+          "code"
+        ],
+        "type": "object",
+        "properties": {
+          "countryCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "mobile": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "code": {
             "type": [
               "null",
               "string"

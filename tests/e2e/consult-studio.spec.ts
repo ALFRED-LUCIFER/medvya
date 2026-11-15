@@ -192,6 +192,45 @@ for (const locale of ['en', 'ar'])
     expect(await axe(page)).toEqual([]);
   });
 
+// MDV-P2-067 AC6 (AC1 in words): the Notes Sheet from the bottom bar in every language, every string from the catalogue (no key shown), right to left
+// in Arabic, axe clean with the Sheet open; typing saves with the note and Done gives focus back to the button, which now says notes are written.
+const keyText = /\b(studio|noteTemplates|noteEditor|patientBanner)\.[\w.]+/;
+for (const locale of ['en', 'hi', 'ar'])
+  test(`the Notes Sheet is translated, right to left in Arabic and axe clean while open (${locale})`, async ({ page }) => {
+    const mock = await open(page, { version: 1, sections: { chiefComplaint: 'Thirst', plan: 'Rest' } }, locale);
+    const tr = (key: string) => t(locale, key);
+    if (locale !== 'en') for (const key of ['studio.notes.open', 'studio.notes.hint', 'studio.notes.done']) expect(tr(key)).not.toBe(t('en', key)); // a real translation
+    await expect(page.locator('html')).toHaveAttribute('dir', locale === 'ar' ? 'rtl' : 'ltr');
+    await page.getByRole('button', { name: tr('studio.notes.open'), exact: true }).click();
+    const sheet = page.getByRole('dialog', { name: tr('noteTemplates.section.notes') });
+    await expect(sheet).toContainText(tr('studio.notes.hint'));
+    await expect(sheet.getByRole('button', { name: tr('patientBanner.close') })).toBeVisible();
+    await sheet.getByRole('textbox', { name: tr('noteTemplates.section.notes') }).fill('Asks about fasting during the festival (synthetic)');
+    await expect.poll(() => mock.puts.at(-1)?.sections.notes).toBe('Asks about fasting during the festival (synthetic)');
+    await expect(sheet.getByRole('status')).toHaveText(new RegExp(`^${t(locale, 'noteEditor.save.saved', { time: 'TIME' }).replace('TIME', '\\d\\d:\\d\\d')}$`));
+    expect(await sheet.innerText()).not.toMatch(keyText);
+    expect(await axe(page)).toEqual([]);
+    await sheet.getByRole('button', { name: tr('studio.notes.done') }).click();
+    await expect(page.getByRole('button', { name: tr('studio.notes.written') })).toBeFocused();
+  });
+
+// MDV-P2-067 AC3: signed, the Sheet shows the notes with no box, axe clean; the print view has them under Notes.
+test('a signed note\'s Notes Sheet is read-only and axe clean; the print view shows the notes under Notes', async ({ page }) => {
+  const notes = 'Asks about fasting during the festival (synthetic)';
+  await open(page, { version: 2, status: 'Signed', recordingConsent: 'Declined', facilityName: 'Iyer Family Clinic · Adyar',
+    signature: { versionNo: 1, signedBy: 'u-rao', signedAt: at, contentHash: 'a'.repeat(64), signerName: 'Dr Asha Raman (synthetic)' },
+    sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest', notes } });
+  await page.getByRole('button', { name: 'Notes · written' }).click();
+  const sheet = page.getByRole('dialog', { name: 'Notes' });
+  await expect(sheet).toContainText(notes);
+  await expect(sheet).toContainText('Signed with the note. A change is made as an addendum.');
+  await expect(sheet.getByRole('textbox')).toHaveCount(0);
+  expect(await axe(page)).toEqual([]);
+  await sheet.getByRole('button', { name: 'Done' }).click();
+  await page.goto('/consult/e-1/note/print');
+  await expect(page.getByRole('article').getByRole('region', { name: 'Notes' })).toHaveText(`Notes${notes}`);
+});
+
 // MDV-P2-042: the structured review of systems (History) and examination by system (Examination), and the template suggested for the patient.
 const ros = (page: Page) => note(page).getByRole('group', { name: 'Review of systems' });
 const exam = (page: Page) => note(page).getByRole('group', { name: 'Examination by system' });

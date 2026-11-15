@@ -1,4 +1,4 @@
-import { codeForm, emailForm, LOCK_AFTER_MS, newPinForm, offersPin, PIN_TRIES, pinTriesLeft, shouldLock, tabsFor, unlockMethod } from './session';
+import { codeForm, emailForm, initialsOf, LOCK_AFTER_MS, newPinForm, offersPin, PIN_TRIES, pinTriesLeft, roleOf, shouldLock, tabsFor, unlockMethod } from './session';
 
 it('gives front desk no clinical tab', () => {
   expect(tabsFor('frontDesk')).not.toContain('consult');
@@ -43,4 +43,17 @@ it('takes a six-digit PIN typed the same twice', () => {
   expect(newPinForm.safeParse({ pin: '246810', confirm: '246810' }).success).toBe(true);
   expect(newPinForm.safeParse({ pin: '246810', confirm: '246811' }).error?.issues[0]?.message).toBe('mobile.pin.mismatch');
   expect(newPinForm.safeParse({ pin: '2468', confirm: '2468' }).success).toBe(false);
+});
+
+it('gives only doctors the clinical tabs from the server role (the API still decides)', () => {
+  expect(roleOf('SoloDoctor')).toBe('doctor');
+  expect(roleOf('HospitalDoctor')).toBe('doctor');
+  for (const r of ['Receptionist', 'Nurse', 'PracticeAdmin', 'Unknown']) expect(roleOf(r)).toBe('frontDesk');
+});
+
+it('takes initials from whole words, skipping titles, abbreviations and notes', () => {
+  expect(initialsOf('Dr. Arjun Rao (synthetic)')).toBe('AR');
+  expect(initialsOf('A. Joseph')).toBe('J');
+  expect(initialsOf('Meera')).toBe('M');
+  expect(initialsOf('?')).toBe('?');
 });

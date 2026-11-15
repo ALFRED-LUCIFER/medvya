@@ -143,4 +143,10 @@ public interface ISecureLinkMessages
 
     /// <summary>A one-time code by SMS to the patient's registered mobile, whoever opened the link.</summary>
     Task SendCodeAsync(Guid patientId, Guid facilityId, string code, Guid reference, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The patient app's sign-in code (MDV-P5-033) to the number the person typed, outside any clinic: the default sender, no tenant. The number
+    /// is used for this send only, never stored or logged.
+    /// </summary>
+    Task SendSignInCodeAsync(string mobile, string countryCode, string? languageTag, string code, Guid reference, CancellationToken cancellationToken = default);
 }

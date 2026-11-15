@@ -38,6 +38,13 @@ public sealed class SmsOptions
     /// (MDV-P1-045, a person task); a template without an id is not sent in India.
     /// </summary>
     public Dictionary<string, string> DltTemplateIds { get; set; } = [];
+
+    /// <summary>
+    /// Patient sign-in codes sent in any hour, all numbers together (MDV-P5-033): a cost cap against SMS pumping. Above it, a request answers
+    /// 503 send_failed and nothing is sent.
+    /// </summary>
+    // shortcut: 300 is a guess at a pilot's peak (a few clinics' patients signing in), not a measured figure; set it from the SMS provider's spend alert once the provider is chosen (Q-03, MDV-P1-045).
+    public int SignInCodesPerHour { get; set; } = 300;
 }
 
 /// <summary>

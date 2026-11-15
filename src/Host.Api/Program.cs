@@ -158,6 +158,7 @@ if (app.Services.GetService<IRecurringJobManager>() is { } recurring && app.Serv
 }
 app.MapPublicSite();
 app.MapInvitations();
+app.MapPatientSignIn();
 app.MapOnboarding();
 app.MapPracticeSettings();
 app.MapDoctors();

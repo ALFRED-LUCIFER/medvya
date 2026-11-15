@@ -247,7 +247,7 @@ export default function App({ locale, onLocaleChange }: Props) {
               <Route path={`${searchPath}/:patientId/complete`} element={<TabletOnly title={t('registration.complete.title')}><CompleteRegistrationRoute country={country} /></TabletOnly>} />}
           </>}
           {/* My devices (MDV-P0-012): any signed-in member; the server only ever lists and ends the caller's own sessions. */}
-          <Route path={devicesPath} element={<MyDevicesRoute timeZone={active.timeZone} />} />
+          <Route path={devicesPath} element={<MyDevicesRoute timeZone={active.timeZone} prescriber={active.capabilities.PrescriptionsOrders === 'Sign'} />} />
           <Route path="/more" element={<MorePage {...account} devicesPath={devicesPath} role={active.role} facilityName={active.facilityName} items={shell.items} />} />
           {/* A screen the app has but this role may not open says so; anything else is "Page not found" (MDV-P1-096). */}
           <Route path="*" element={refusedAddress(location.pathname, active)

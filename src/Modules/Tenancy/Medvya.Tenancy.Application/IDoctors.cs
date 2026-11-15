@@ -78,7 +78,12 @@ public interface IDoctors
 
     Task<bool> RemoveSignatureAsync(Guid doctorId, CancellationToken cancellationToken = default);
 
+    /// <summary>The signed-in doctor's own profile at the location they work in now, and whether it has a signature image. Null when the caller is not a doctor here.</summary>
+    Task<OwnSignature?> OwnSignatureAsync(CancellationToken cancellationToken = default);
+
     /// <summary>Sets (or, blank, clears) the doctor's room at the doctor's location, audited. Null when there is no such doctor.</summary>
     /// <exception cref="SettingsValidationException"/>
     Task<DoctorView?> SetRoomAsync(Guid doctorId, string? room, CancellationToken cancellationToken = default);
 }
+
+public sealed record OwnSignature(Guid DoctorId, bool HasSignature);

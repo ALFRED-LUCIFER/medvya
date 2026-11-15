@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useI18n } from '@medvya/i18n';
 import { Button, PageContainer, PageHeader, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState } from '@medvya/ui';
 import { fieldError } from '../../settings/components/fieldStyles';
@@ -6,6 +7,8 @@ import { canEnd, deviceColumns, type DeviceSession } from '../domain/devices';
 type Props = {
   devices: DeviceSession[]; loading: boolean; failed: boolean; endingId: string | null; endFailed: boolean; ended: boolean;
   timeZone?: string; onEnd: (id: string) => void;
+  /** More of the person's own account under the list (a doctor's signature image). */
+  children?: ReactNode;
 };
 
 /** My devices (MDV-P0-012): where this account is signed in, and a way to end any other session, e.g. a shared desk PC left signed in. */
@@ -44,6 +47,7 @@ export default function MyDevicesPage(p: Props) {
           </TableBody>
         </Table>
       </TableState>
+      {p.children}
     </PageContainer>
   );
 }

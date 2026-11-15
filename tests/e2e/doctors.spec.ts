@@ -143,7 +143,7 @@ test('the signature image: a doctor uploads their own; for a colleague the admin
   await page.goto('/settings?tab=doctors');
   const own = page.getByRole('listitem').filter({ hasText: 'Dr. Arjun Rao (synthetic)' });
   const colleague = page.getByRole('listitem').filter({ hasText: 'Dr. Sana Khan (synthetic)' });
-  await expect(colleague.getByText('Only the doctor adds or replaces this image, from their own sign-in.')).toBeVisible();
+  await expect(colleague.getByText('Only the doctor adds or replaces this image, from My devices in their own sign-in.')).toBeVisible();
   await expect(colleague.locator('input[type=file]')).toHaveCount(0);
   await expect(colleague.getByRole('button', { name: 'Remove signature image' })).toBeVisible();
   await expect(own.getByText('Only the doctor adds or replaces this image')).toHaveCount(0);

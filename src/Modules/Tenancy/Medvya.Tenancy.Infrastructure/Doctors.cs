@@ -12,7 +12,7 @@ namespace Medvya.Tenancy.Infrastructure;
 /// Doctors added in clinic mode (MDV-P1-007). Adding creates the Invited membership, profile, licence (attested by the owner, ADR-016) and invitation in
 /// one transaction through <see cref="IInvitations"/>. The signature image goes to the same private container as logos under its own key.
 /// </summary>
-public sealed class Doctors(TenancyDbContext db, ICurrentTenant tenant, ICurrentUser user, IInvitations invitations, IAuditLog audit, ILogoStore store, TimeProvider clock)
+public sealed class Doctors(TenancyDbContext db, ICurrentTenant tenant, ICurrentUser user, ICurrentFacility facility, IInvitations invitations, IAuditLog audit, ILogoStore store, TimeProvider clock)
     : IDoctors
 {
     const long MaxFeeMinor = 100_000_000;
@@ -134,6 +134,12 @@ public sealed class Doctors(TenancyDbContext db, ICurrentTenant tenant, ICurrent
         await store.DeleteAsync(key, cancellationToken);
         return true;
     }
+
+    public Task<OwnSignature?> OwnSignatureAsync(CancellationToken cancellationToken = default) =>
+        (from m in db.Memberships.AsNoTracking()
+         join p in db.DoctorProfiles.AsNoTracking() on m.Id equals p.MembershipId
+         where m.UserId != null && m.UserId == user.UserId && m.FacilityId == facility.FacilityId
+         select new OwnSignature(m.Id, p.SignatureKey != null)).SingleOrDefaultAsync(cancellationToken);
 
     public async Task<DoctorView?> SetRoomAsync(Guid doctorId, string? room, CancellationToken cancellationToken = default)
     {

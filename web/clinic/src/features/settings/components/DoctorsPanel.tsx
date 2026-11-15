@@ -9,6 +9,7 @@ import { licenceFields } from '../domain/doctors';
 import DoctorWizard, { LicenceFields, StepErrorSummary } from './DoctorWizard';
 import { fieldError, fieldGrid } from './fieldStyles';
 import { Section } from './Section';
+import SignatureImage from './SignatureImage';
 
 type Wizard = {
   adding: boolean; step: DoctorStep; stepIndex: number; lastStep: boolean; form: UseFormReturn<DoctorForm>; fieldErrors: Record<string, FieldProblem | undefined>; errorFocusKey: number;
@@ -128,23 +129,8 @@ function DoctorRow({ doctor: d, ...p }: Props & { doctor: Doctor }) {
         {p.roomSavedId === d.id && <span role="status">{t('settings.saved')}</span>}
         {p.roomFailedId === d.id && <span role="alert" className={fieldError}>{t('settings.saveFailed')}</span>}
       </form>
-      <div className="flex flex-col gap-2">
-        <p className="font-bold">{d.hasSignature ? t('doctors.signature.has') : t('doctors.signature.none')}</p>
-        <p className="text-sm text-muted-foreground">{t('doctors.signature.notice')}</p>
-        {/* Only the doctor adds or replaces their own image; an administrator may remove one. */}
-        {!d.ownSignature && <p className="text-sm text-muted-foreground">{t('doctors.signature.ownOnly')}</p>}
-        {!d.ownSignature && problem && <p role="alert" className={fieldError}>{t(`doctors.signature.error.${problem}`)}</p>}
-        <div className="flex flex-wrap items-end gap-3">
-          {d.ownSignature && (
-            <Field id={`sig-${d.id}`} label={d.hasSignature ? t('doctors.signature.replace') : t('doctors.signature.choose')} hint={t('doctors.signature.hint')}
-              error={problem ? t(`doctors.signature.error.${problem}`) : undefined} className="min-w-60">
-              <Input type="file" accept="image/png,image/jpeg" className="h-auto py-2" disabled={busy}
-                onChange={e => { p.onSignature(d.id, e.currentTarget.files?.[0]); e.currentTarget.value = ''; }} />
-            </Field>
-          )}
-          {d.hasSignature && <Button type="button" variant="outline" loading={busy} onClick={() => p.onRemoveSignature(d.id)}>{t('doctors.signature.remove')}</Button>}
-        </div>
-      </div>
+      <SignatureImage id={d.id} hasSignature={d.hasSignature} own={d.ownSignature} problem={problem} busy={busy}
+        onChoose={file => p.onSignature(d.id, file)} onRemove={() => p.onRemoveSignature(d.id)} />
     </li>
   );
 }

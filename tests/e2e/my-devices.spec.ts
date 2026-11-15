@@ -11,8 +11,15 @@ const receptionist = {
   active: { membershipId: 'm-1', tenantId: 't-1', facilityId: facility, role: 'Receptionist', flags: [] as string[], timeZone: 'Asia/Kolkata', capabilities: { RegisterBookPatients: 'Full', CheckInQueue: 'Full' } },
 };
 
-async function open(page: Page, locale = 'en') {
+// #1365: a doctor who does not administer the practice keeps their own signature image on this page.
+const doctor = {
+  ...receptionist, user: { id: 'u-sana', displayName: 'Dr. Sana Khan (synthetic)' },
+  active: { ...receptionist.active, role: 'HospitalDoctor', capabilities: { ClinicalNotes: 'Sign', PrescriptionsOrders: 'Sign' } },
+};
+
+async function open(page: Page, locale = 'en', me: object = receptionist) {
   const state = {
+    signature: false, uploaded: [] as (string | undefined)[], signatureAsked: 0,
     sessions: [
       { id: 'desk', device: 'Edge on Windows', createdAt: '2026-11-12T04:00:00Z', lastSeenAt: '2026-11-12T09:30:00Z', current: false },
       { id: 'here', device: 'Chrome on macOS', createdAt: '2026-11-13T03:30:00Z', lastSeenAt: '2026-11-13T05:00:00Z', current: true },
@@ -20,7 +27,14 @@ async function open(page: Page, locale = 'en') {
     ended: [] as { id: string; csrf: string | undefined }[],
   };
   await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
-  await page.route('**/v1/me/context', r => r.fulfill({ json: receptionist }));
+  await page.route('**/v1/me/context', r => r.fulfill({ json: me }));
+  await page.route('**/v1/me/signature', r => {
+    const method = r.request().method();
+    if (method === 'GET') { state.signatureAsked++; return r.fulfill({ json: { hasSignature: state.signature } }); }
+    if (method === 'PUT') state.uploaded.push(r.request().headers()['content-type']);
+    state.signature = method === 'PUT';
+    return r.fulfill({ status: 204 });
+  });
   await page.route('**/v1/me/sessions', r => r.fulfill({ json: state.sessions }));
   await page.route('**/v1/me/sessions/*', r => {
     const id = r.request().url().split('/').at(-1)!;
@@ -56,11 +70,30 @@ test('every staff role reaches it from the account menu', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'My devices' })).toBeVisible();
 });
 
+test('a doctor adds and removes their own signature image here; other staff have no such section', async ({ page }) => {
+  const state = await open(page, 'en', doctor);
+  const section = page.getByRole('region', { name: 'Your signature image' });
+  await expect(section.getByText('No signature image')).toBeVisible();
+  await section.getByLabel('Signature image', { exact: true }).setInputFiles({ name: 'signature.gif', mimeType: 'image/gif', buffer: Buffer.from('GIF89a') });
+  await expect(section.getByText('Choose a PNG or JPEG image.')).toBeVisible();
+  await section.getByLabel('Signature image', { exact: true }).setInputFiles({ name: 'signature.png', mimeType: 'image/png', buffer: Buffer.from('synthetic') });
+  await expect(section.getByText('Signature image saved')).toBeVisible();
+  expect(state.uploaded).toEqual(['image/png']);
+  await section.getByRole('button', { name: 'Remove signature image' }).click();
+  await expect(section.getByText('No signature image')).toBeVisible();
+
+  const desk = await open(page);
+  await expect(page.getByRole('heading', { name: 'My devices' })).toBeVisible();
+  await expect(page.getByText('Your signature image')).toHaveCount(0);
+  expect(desk.signatureAsked).toBe(0);
+});
+
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 for (const locale of ['en', 'ar'])
   test(`axe finds no violations on My devices (${locale}); control-size targets`, async ({ page }) => {
-    await open(page, locale);
+    await open(page, locale, doctor);
     await expect(page.getByRole('heading', { name: locale === 'ar' ? 'أجهزتي' : 'My devices' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: locale === 'ar' ? 'صورة توقيعك' : 'Your signature image' })).toBeVisible();
     if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
     for (const b of await page.getByRole('table').getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
     await page.addScriptTag({ path: axePath });

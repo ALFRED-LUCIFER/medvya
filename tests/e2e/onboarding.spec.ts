@@ -32,11 +32,13 @@ test('a visitor from the region selector signs up: the country is carried into m
 
 test('the create-account answers fill the new draft once, then leave the browser (MDV-P1-059)', async ({ page }) => {
   const api = await mockOnboarding(page);
-  const prefill = { profile: { fullName: 'Omar Haddad (synthetic)', mode: 'Clinic' }, clinic: { name: 'Lakeside Clinic (synthetic)', address: 'Abu Dhabi' } };
+  const prefill = { profile: { fullName: 'Omar Haddad (synthetic)', mode: 'Clinic' }, clinic: { name: 'Lakeside Clinic (synthetic)', address: 'Abu Dhabi', contactEmail: 'owner@example.test' } };
   await page.addInitScript(p => { if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1'); sessionStorage.setItem('medvya.signUp', p); } }, JSON.stringify(prefill));
   await page.goto('/onboarding?country=AE');
-  await page.getByRole('button', { name: 'Start setup' }).click();
+  // #1365 F-022: straight from create account the country is not asked again, and the work email is already the request's contact email.
   await expect(page.getByLabel('Full name')).toHaveValue('Omar Haddad (synthetic)');
+  await expect(page.getByLabel('Email Medvya writes to about this request')).toHaveValue('owner@example.test');
+  await expect(page.getByRole('button', { name: 'Start setup' })).toHaveCount(0);
   expect(api.saves[0]).toMatchObject({ step: 1, data: prefill });
   expect(await page.evaluate(() => sessionStorage.getItem('medvya.signUp'))).toBeNull();
 });

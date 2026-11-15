@@ -45,8 +45,13 @@ export async function startDraft(country: Country): Promise<Draft> {
   } catch { return draft; } // only a convenience: the draft exists, so the wizard opens empty rather than failing to start
 }
 
-// Per tab, the owner's own answers only (practice name, city, their name and role): no patient data, removed as soon as it is read.
+// Per tab, the owner's own answers only (practice name, city, their name, role and work email): no patient data, removed as soon as it is read.
 const prefillKey = 'medvya.signUp';
+
+/** This tab came from create account: the country was chosen there, so the wizard starts without asking it again (#1365 F-022). */
+export function cameFromSignUp() {
+  try { return sessionStorage.getItem(prefillKey) !== null; } catch { return false; }
+}
 
 function takePrefill(): OnboardingData | null {
   try {

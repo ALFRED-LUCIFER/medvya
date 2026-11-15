@@ -249,7 +249,8 @@ export default function App({ locale, onLocaleChange }: Props) {
           <Route path={devicesPath} element={<MyDevicesRoute timeZone={active.timeZone} />} />
           <Route path="/more" element={<MorePage {...account} devicesPath={devicesPath} role={active.role} facilityName={active.facilityName} items={shell.items} />} />
           {/* A screen the app has but this role may not open says so; anything else is "Page not found" (MDV-P1-096). */}
-          <Route path="*" element={refusedAddress(location.pathname, active) ? <DeniedPage onHome={toHome} /> : <NotFoundPage onHome={toHome} />} />
+          <Route path="*" element={refusedAddress(location.pathname, active)
+            ? <DeniedPage onHome={toHome} organisationState={active.organisationState} requestPath={active.capabilities.StaffRolesIntegrations === 'Config' ? organisationPath : undefined} /> : <NotFoundPage onHome={toHome} />} />
         </Route>
       </>;
 

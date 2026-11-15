@@ -51,6 +51,8 @@ jobs:
         app: [clinician, patient]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false # the build step needs no git token; do not leave one on disk beside EXPO_TOKEN
       - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -61,5 +63,8 @@ jobs:
         working-directory: mobile/${{ matrix.app }}
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        # eas-cli is pinned here and through npx's exact version, not the expo-github-action: one fewer third-party action that sees the token.
+        # eas-cli by npx's exact version, not the expo-github-action: one fewer third-party action that sees the token.
+        # shortcut: npx pins eas-cli but not its dependency tree, and 27.2.0's tree has high advisories (node-forge, tar, minimatch,
+        # nanoid, joi); move to an exact devDependency (lockfile-pinned, run with pnpm exec) at eas-cli 27.8.0 or later, whose tree
+        # audits clean, once that release is old enough to trust (session-handoff §8).
         run: npx --yes eas-cli@27.2.0 build --profile preview --platform all --non-interactive --no-wait

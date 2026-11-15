@@ -1,5 +1,5 @@
 import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
-import { forgetTokens, send } from '../features/api/services/api';
+import { forgetTokens, send, signIn as grantSignIn } from '../features/api/services/api';
 import { HomeScreen } from '../features/home/components/HomeScreen';
 import { useHomeController } from '../features/home/hooks/useHomeController';
 import { ProfileScreen } from '../features/profile/components/ProfileScreen';
@@ -131,4 +131,12 @@ it('at launch, ends and wipes a session left on the phone by an app that was clo
   await waitFor(() => expect(keychain.size).toBe(0));
   expect(JSON.parse(server.calls.find(c => c.path === '/v1/patient-sign-in/refresh')!.body)).toEqual({ refreshToken: 'refresh-0' });
   await waitFor(() => expect(server.calls.find(c => c.path === '/v1/patient/logout')?.auth).toBe('Bearer access-1'));
+});
+
+it('ends on the server a token pair that arrives after the phone signed out, and keeps none of it', async () => {
+  server.access = 'access-9';
+  const late = grantSignIn(async () => { await forgetTokens(); return { access_token: 'access-9', refresh_token: 'refresh-9' }; });
+  await expect(late).rejects.toThrow();
+  expect(server.calls.find(c => c.path === '/v1/patient/logout')?.auth).toBe('Bearer access-9');
+  expect(keychain.size).toBe(0);
 });

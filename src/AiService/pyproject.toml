@@ -9,10 +9,10 @@ dependencies = [
     "azure-monitor-opentelemetry>=1.8.12",
     "azure-storage-blob>=12.31.1",
     "cryptography>=50.0.2",
-    "fastapi>=0.162.2",
+    "fastapi>=0.162.5",
     "fpdf2>=2.9.0",
     "httpx>=0.28.1",
-    "openai>=3.46.0",
+    "openai>=3.50.0",
     "opentelemetry-sdk>=1.45.2",
     "pydantic>=2.14.3",
     "pydantic-settings>=2.16.2",
@@ -33,8 +33,8 @@ packages = ["src/medvya_ai"]
 dev = [
     "mypy>=2.4.1",
     "pytest>=9.2.0",
-    "pytest-asyncio>=1.4.1.post1",
-    "ruff>=0.17.4",
+    "pytest-asyncio>=1.5.0",
+    "ruff>=0.17.5",
 ]
 
 [tool.pytest.ini_options]

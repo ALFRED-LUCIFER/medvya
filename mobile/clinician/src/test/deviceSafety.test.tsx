@@ -1,5 +1,6 @@
 import { onlineManager } from '@tanstack/react-query';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
+import * as SecureStore from 'expo-secure-store';
 import { useEffect } from 'react';
 import { Pressable, Text } from 'react-native';
 import { cast } from '../dev/cast';
@@ -147,6 +148,15 @@ it('wipes the phone at launch when the failed-PIN limit was reached before the a
   await renderApp(<Launched />);
   expect(await screen.findByText('signed out')).toBeOnTheScreen();
   await waitFor(() => { expect(files.size).toBe(0); expect(keychain.size).toBe(0); });
+});
+
+it('treats an unreadable failed-PIN count as the limit and wipes at launch', async () => {
+  await setPin('246810');
+  await saveProfile(doctor, false);
+  await SecureStore.setItemAsync('medvya.pin-tries', 'not-a-number');
+  await renderApp(<Launched />);
+  expect(await screen.findByText('signed out')).toBeOnTheScreen();
+  await waitFor(() => expect(keychain.size).toBe(0));
 });
 
 it('offers the PIN when the fingerprint does not unlock', async () => {

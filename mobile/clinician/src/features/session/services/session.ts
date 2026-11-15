@@ -7,7 +7,7 @@ import { Platform } from 'react-native';
 import { endServerSession, exchangeCode, forgetTokens, loadTokens, post, REDIRECT_URI, send } from '../../api/services/api';
 import { apiBase, fromCast } from '../../api/services/source';
 import { deviceOnly, hex, purgeExpired, wipeStore } from '../../api/services/store';
-import { initialsOf, pinTriesLeft, roleOf, unlockMethod, type Facility, type Session, type Staff } from '../domain/session';
+import { initialsOf, PIN_TRIES, pinTriesLeft, roleOf, unlockMethod, type Facility, type Session, type Staff } from '../domain/session';
 
 /** Whether sign-in goes through the server (system browser) or, in a Development build without one, the synthetic cast. */
 export const signsInThroughServer = () => apiBase() !== null;
@@ -117,7 +117,11 @@ export async function checkPin(pin: string) {
 
 /** PIN tries since the last unlock. Kept in secure-store, so a relaunch does not reset the failed-PIN limit (ADR-011 §3). */
 const PIN_TRIES_KEY = 'medvya.pin-tries';
-export const pinTries = async () => Number((await SecureStore.getItemAsync(PIN_TRIES_KEY)) ?? 0);
+// An unreadable count is the limit: a damaged or tampered counter must never give back guesses.
+export const pinTries = async () => {
+  const n = Number((await SecureStore.getItemAsync(PIN_TRIES_KEY)) ?? 0);
+  return Number.isInteger(n) && n >= 0 ? n : PIN_TRIES;
+};
 export const resetPinTries = () => SecureStore.deleteItemAsync(PIN_TRIES_KEY);
 let counting: Promise<unknown> = Promise.resolve();
 /** Counts a try before its PIN is checked (killing the app mid-check still counts), one at a time: two checks at once count two. */

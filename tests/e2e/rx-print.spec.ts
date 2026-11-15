@@ -27,6 +27,14 @@ test('authorising asks for the step-up, then the prescription prints with the li
   await expect(paper).toContainText('Dr. Arjun Rao (synthetic) · MBBS, MD (General Medicine)');
   await expect(paper).toContainText(/Licence \W?84213\W? · Tamil Nadu Medical Council/); // the number is isolated left to right
   await expect(paper).toContainText('000001');
+  // #1365 F-068: the letterhead, the visit date, the verify address as two lines, and no bare signature line without a signature image.
+  await expect(paper.getByText('12 Beach Road (synthetic)')).toContainText('Adyar, Chennai 600020');
+  await expect(paper).toContainText(/Phone \W?044 5550 0100\W? · Registration no\. \W?TN\/CE\/2026\/00042/);
+  await expect(paper).toContainText('Visit date: 19 Oct 2026');
+  await expect(paper.getByText('https://clinic.test/app/verify/rx/', { exact: true })).toBeVisible();
+  await expect(paper.getByText('synthetic-token', { exact: true })).toBeVisible();
+  await expect(paper).toContainText(/Signed electronically by Dr\. Arjun Rao \(synthetic\) on /);
+  await expect(paper).not.toContainText('Signature:');
   await expect(paper).toContainText('Schedule H drug. Warning');
   await expect(paper).toContainText('Stop: Atorvastatin');
   await expect(paper.getByRole('img', { name: 'QR code to check this prescription is valid' })).toBeVisible();

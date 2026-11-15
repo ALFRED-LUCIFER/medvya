@@ -27,6 +27,10 @@ export type RxPrint = {
   patient: { fullName: string; mrn: string; dateOfBirth: string; sexAtBirth: 'Female' | 'Male' | 'Other' };
   allergies: 'NotRecorded' | 'NoKnownAllergies' | 'Listed'; allergySubstances: string[]; lines: RxPrintLine[]; verifyUrl: string; qr: string[]; layoutVersion: number;
   advice: RxAdvice | null; patientAge: number; diagnoses: { description: string; provisional: boolean }[]; followUpOn: string | null;
+  /** The letterhead (#1365 F-068): each is null when the practice never entered it. `visitDate` is the facility's calendar day. */
+  visitDate: string | null; clinicAddress: string | null; clinicPhone: string | null; clinicRegistration: string | null;
+  /** The doctor's signature image prints on the PDF; without one the paper says it was signed electronically. */
+  signatureOnFile: boolean;
 };
 /** The advice for the patient (MDV-P2-043). `inPatientLanguage` false: it prints in English with a note (no reviewed translation exists). */
 export type RxAdvice = { text: string | null; patientLanguage: string | null; inPatientLanguage: boolean };
@@ -67,6 +71,12 @@ export const isCurrent = (s: RxAuthorisationState | null) => !!s?.authorised && 
 /** The second print language beside English: none, or one of the pilot languages. Arabic prints right to left. */
 export const secondLanguages = ['none', 'hi', 'ta', 'ar'] as const;
 export type SecondLanguage = (typeof secondLanguages)[number];
+
+/** The verify address as the paper prints it: up to its last "/", then the code, each on its own line so no line break ever adds a hyphen. */
+export const verifyAddress = (url: string): string[] => {
+  const cut = url.lastIndexOf('/') + 1;
+  return [url.slice(0, cut), url.slice(cut)].filter(Boolean);
+};
 
 /** Dark modules of the QR code as [x, y], from the server's rows ('1' dark), quiet zone included. */
 export const qrCells = (rows: string[]): [number, number][] => rows.flatMap((row, y) => [...row].flatMap((c, x): [number, number][] => (c === '1' ? [[x, y]] : [])));

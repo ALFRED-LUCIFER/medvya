@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import { FileDown, Printer, ShieldCheck } from 'lucide-react';
 import { ltr, useI18n } from '@medvya/i18n';
 import { Button, buttonVariants, Field, PageHeader, PageMessage, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
-import { qrCells, secondLanguages, type RxLayout, type RxPrint, type RxPrintLine, type SecondLanguage } from '../domain/authorisation';
+import { qrCells, secondLanguages, verifyAddress, type RxLayout, type RxPrint, type RxPrintLine, type SecondLanguage } from '../domain/authorisation';
 import { directionOf } from '../domain/prescription';
 
 type Props = {
@@ -20,6 +20,8 @@ type Props = {
  * E-10 printed prescription (MDV-P2-017): the authorised prescription in black on white, as plain headings, lists and text (readable by a screen
  * reader, reflows at 200 % zoom). Each instruction is in English plus the chosen second language (Arabic right to left). Print uses the browser;
  * the PDF is the server's stored English copy. The doctor approves the layout as their own once (exit gate 4).
+ * The letterhead, the visit date, the verify address on two lines and the signing words follow the PDF (#1365 F-068).
+ * shortcut: the logo and the signature image are on the PDF only; show them here when the print view gets a signed image link.
  */
 export default function RxPrintPage(p: Props) {
   const { t, formatDate, formatTime, formatCalendarDate } = useI18n();
@@ -59,10 +61,15 @@ export default function RxPrintPage(p: Props) {
       <article aria-label={v.clinic} className="flex flex-col gap-4 rounded-xl border bg-white p-6 text-black print:rounded-none print:border-0 print:p-0">
         {/* On paper the clinic name wraps; it is never cut. */}
         <PageHeader className="border-b-2 border-black pb-2 [&_h1]:whitespace-normal" title={v.clinic}>
+          {v.clinicAddress && <p className="whitespace-pre-line">{v.clinicAddress}</p>}
+          {(v.clinicPhone || v.clinicRegistration) && (
+            <p>{[v.clinicPhone && t('rxPrint.phone', { phone: ltr(v.clinicPhone) }), v.clinicRegistration && t('rxPrint.registration', { number: ltr(v.clinicRegistration) })].filter(Boolean).join(' · ')}</p>
+          )}
           <p className="font-bold">{v.qualifications ? t('rxPrint.doctor', { name: v.doctor, qualifications: v.qualifications }) : v.doctor}</p>
           <p>{t('rxPrint.licence', { number: ltr(v.licenceNumber), authority: v.licenceAuthority })}</p>
           <p>{t('rxPrint.patient', { name: v.patient.fullName, sex: t(`rxPrint.sex.${v.patient.sexAtBirth}`), age: v.patientAge, mrn: ltr(v.patient.mrn), dob: formatCalendarDate(v.patient.dateOfBirth) })}</p>
           <p>{t('rxPrint.number', { number: ltr(v.authorisation.number), version: v.authorisation.versionNo, when, zone: v.timeZone })}</p>
+          {v.visitDate && <p>{t('rxPrint.visitDate', { date: formatCalendarDate(v.visitDate) })}</p>}
         </PageHeader>
         <p className="font-bold">
           {v.allergies === 'Listed' ? t('rxPrint.allergies', { list: v.allergySubstances.join(', ') })
@@ -95,9 +102,14 @@ export default function RxPrintPage(p: Props) {
             <g className="fill-black">{qrCells(v.qr).map(([x, y]) => <rect key={`${x}-${y}`} x={x} y={y} width={1} height={1} />)}</g>
           </svg>
           <div className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
-            <p>{t('rxPrint.signature')}</p>
-            <p className="font-bold">{t('rxPrint.authorised', { name: v.doctor, when })}</p>
-            <p className="break-all">{t('rxPrint.verify', { url: v.verifyUrl })}</p>
+            {v.signatureOnFile
+              ? <><p>{t('rxPrint.signature')}</p><p className="font-bold">{t('rxPrint.authorised', { name: v.doctor, when })}</p></>
+              : <p className="font-bold">{t('rxPrint.signedElectronically', { name: v.doctor, when })}</p>}
+            <p>
+              {t('rxPrint.verify')}
+              {/* The address, then the code: a line may break anywhere but never gains a hyphen. */}
+              {verifyAddress(v.verifyUrl).map(part => <span key={part} dir="ltr" className="block break-all text-start">{part}</span>)}
+            </p>
           </div>
         </footer>
       </article>

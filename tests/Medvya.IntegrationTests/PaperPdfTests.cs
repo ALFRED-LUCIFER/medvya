@@ -103,6 +103,11 @@ public sealed partial class PaperPdfTests(PostgresFixture sql, AzuriteFixture bl
     public async Task TheSlipIsAStoredHashChainedPaperWhoseQrCheckSaysWhatItIsButNeverWhoseItIs()
     {
         var doctor = Client(h.Doctor);
+        await using (var tenancy = sql.Context(h.Tenant)) // #1365 F-068: the practice's details head the slip
+        {
+            tenancy.Profiles.Add(new Medvya.Tenancy.Domain.PracticeProfile { Id = Guid.NewGuid(), TenantId = h.Tenant, Address = "12 Beach Road (synthetic)", RegistrationNumber = "TN/CE/2026/00042", ChangedAt = DateTimeOffset.UtcNow });
+            await tenancy.SaveChangesAsync();
+        }
         using (var none = await doctor.PostAsync(U($"/v1/encounters/{encounter}/orders/slip/pdf"), null)) Assert.Equal(HttpStatusCode.NotFound, none.StatusCode); // nothing placed
         using (var add = await doctor.PostAsJsonAsync(U($"/v1/encounters/{encounter}/orders"), new { kind = "Lab", name = "HbA1c", note = "उपवास 10 घंटे (synthetic)" })) Assert.Equal(HttpStatusCode.OK, add.StatusCode);
         using (var add = await doctor.PostAsJsonAsync(U($"/v1/encounters/{encounter}/orders"), new { kind = "Lab", name = "Lipid profile" })) Assert.Equal(HttpStatusCode.OK, add.StatusCode);
@@ -113,7 +118,7 @@ public sealed partial class PaperPdfTests(PostgresFixture sql, AzuriteFixture bl
         {
             var pdf = await ReadAsync(r);
             (token, sha) = (pdf.Token, pdf.Sha);
-            foreach (var expected in new[] { "Adyar (synthetic)", "Investigation slip", "MRN 000001", "Send to: Metro Diagnostics (synthetic)", "1. HbA1c (Lab)", "2. Lipid profile (Lab)",
+            foreach (var expected in new[] { "Adyar (synthetic)", "12 Beach Road (synthetic)", "Registration no. TN/CE/2026/00042", "Investigation slip", "MRN 000001", "Send to: Metro Diagnostics (synthetic)", "1. HbA1c (Lab)", "2. Lipid profile (Lab)",
                          "Bring this slip to the lab.", "Ordered by Dr. Arjun Rao (synthetic)", "SHA-256 of this paper's content:" })
                 Assert.Contains(expected, pdf.Text, StringComparison.Ordinal);
             Assert.Contains("उपवास", pdf.Text, StringComparison.Ordinal); // the Hindi note prints shaped

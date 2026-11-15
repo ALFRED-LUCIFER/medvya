@@ -95,7 +95,7 @@ public sealed partial class OnboardingTests(PostgresFixture sql) : IClassFixture
 
     static Uri Api(string path = "") => new($"/v1/onboarding{path}", UriKind.Relative);
 
-    static object Data(string number = "84213", string authority = "TNMC", string gstin = "", object? team = null) => new
+    static object Data(string number = "84213", string authority = "TNMC", string gstin = "33AAAAA0000A1Z9", object? team = null) => new
     {
         profile = new { fullName = "Arjun Rao (synthetic)", mode = "Solo", specialties = new[] { "general-practice", "diabetes" }, qualifications = "MBBS", languages = "English, Tamil" },
         licence = new { authority, number, certificateName = "council-certificate.pdf", attested = true, expiresOn = "2099-01-01" },

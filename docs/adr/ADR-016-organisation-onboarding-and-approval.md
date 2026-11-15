@@ -19,7 +19,7 @@ That model does not scale for a platform and does not match how clinics work. Me
 
 ## Organisation types and required documents (DECIDED 10 Nov 2026; counsel confirms per country)
 
-One build serves both types: Hospital is the Clinic flow plus extra documents. Field formats reuse `OnboardingRules` (India council list and registration number, UAE DoH/DHA/MOHAP licence, GSTIN optional format, TRN 15 digits). Counsel (MDV-P1-044, MDV-P2-022) confirms the lists per country before they are used with a real clinic.
+One build serves both types: Hospital is the Clinic flow plus extra documents. Field formats reuse `OnboardingRules` (India council list and registration number, UAE DoH/DHA/MOHAP licence, GSTIN format and check character, TRN 15 digits; a Clinic gives its registration number and tax number in the wizard, because it uploads both certificates and the reviewer compares them, pilot audit #1365). Counsel (MDV-P1-044, MDV-P2-022) confirms the lists per country before they are used with a real clinic.
 
 | Document or item | Clinic | Hospital |
 |---|---|---|

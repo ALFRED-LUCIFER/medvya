@@ -118,6 +118,8 @@ test('errors appear under the field and are announced; a server error keeps the 
   await page.getByLabel('A clinic').check();
   await page.getByLabel('Email Medvya writes to about this request').fill('desk@example.test');
   await page.getByLabel(/^Address/).fill('12 Test Street');
+  await page.getByLabel('Clinical establishment registration').fill('CE-0001'); // a clinic gives the numbers of the certificates it uploads (ADR-016)
+  await page.getByLabel('GSTIN').fill('33AAAAA0000A1Z9');
   await page.getByLabel('Paediatrics').check();
   await page.getByRole('combobox', { name: 'Medical council' }).click();
   await page.getByRole('option', { name: /TNMC/ }).click();
@@ -140,6 +142,12 @@ test('an owner who is not a doctor gives no licence and needs no specialty', asy
   await page.getByLabel('A clinic').check();
   await page.getByLabel('Email Medvya writes to about this request').fill('desk@example.test');
   await page.getByLabel(/^Address/).fill('1 Test Road');
+  // F-030: a clinic cannot go on without the numbers of its two certificates; they are asked on the page, not under More details.
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await expect(page.locator('#registrationNumber-error')).toHaveText('This is required.');
+  await expect(page.locator('#taxId-error')).toHaveText('This is required.');
+  await page.getByLabel('Clinical establishment registration').fill('CE-0001'); // a clinic gives the numbers of the certificates it uploads (ADR-016)
+  await page.getByLabel('GSTIN').fill('33AAAAA0000A1Z9');
   await page.getByRole('button', { name: 'Continue' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'When are you open, and what do you charge?' })).toBeVisible();
 });
@@ -190,6 +198,10 @@ test('the wizard works from the keyboard at 768 px', async ({ page }) => {
   await page.keyboard.type('1 Test Road');
   await page.keyboard.press('Tab');
   await page.keyboard.type('desk@example.test');
+  await page.keyboard.press('Tab');
+  await page.keyboard.type('CE-0001');
+  await page.keyboard.press('Tab');
+  await page.keyboard.type('33AAAAA0000A1Z9');
   await page.keyboard.press('Enter'); // Enter in a field submits the step
   await expect(page.getByRole('heading', { level: 1, name: 'When are you open, and what do you charge?' })).toBeVisible();
   await page.getByRole('switch', { name: /Sunday/ }).focus();
@@ -235,7 +247,8 @@ for (const locale of ['en', 'ar'])
       await mockOnboarding(page, { step: 1, data: {} });
       await page.goto('/onboarding');
       const optional = locale === 'en' ? '(optional)' : '(اختياري)';
-      await expect(page.locator('label[for=taxId]')).toContainText(optional);
+      await expect(page.locator('label[for=qualifications]')).toContainText(optional);
+      await expect(page.locator('label[for=taxId]')).not.toContainText(optional); // F-030: required of a clinic
       await expect(page.locator('label[for=fullName]')).not.toContainText(optional);
       expect(await page.locator('main label, main legend').allTextContents()).not.toContainEqual(expect.stringContaining('*'));
       await page.locator('form button[type=submit]').click();

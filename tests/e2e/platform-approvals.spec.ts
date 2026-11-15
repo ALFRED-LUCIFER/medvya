@@ -25,8 +25,8 @@ const hospitalDocs = [doc('h1', 'HospitalRegistration'), doc('h2', 'TaxRegistrat
 type Org = { id: string; name: string; type: 'Clinic' | 'Hospital'; state: string; docs: ReturnType<typeof doc>[]; tax: string };
 async function mock(page: Page, role: string) {
   const orgs: Org[] = [
-    { id: 'o-clinic', name: 'Rao Clinic (synthetic)', type: 'Clinic', state: 'Submitted', docs: clinicDocs, tax: '27AAPFU0939F1ZV' },
-    { id: 'o-hospital', name: 'Lakeview Hospital (synthetic)', type: 'Hospital', state: 'Submitted', docs: hospitalDocs, tax: '27AAPFU0939F1ZV' },
+    { id: 'o-clinic', name: 'Rao Clinic (synthetic)', type: 'Clinic', state: 'Submitted', docs: clinicDocs, tax: '27AAAAA0000A1Z2' },
+    { id: 'o-hospital', name: 'Lakeview Hospital (synthetic)', type: 'Hospital', state: 'Submitted', docs: hospitalDocs, tax: '27AAAAA0000A1Z2' },
     { id: 'o-done', name: 'Menon Clinic (synthetic)', type: 'Clinic', state: 'Approved', docs: clinicDocs, tax: '12345' },
   ];
   const api = { posts: [] as { path: string; body: { reason: string; checkedDocuments?: string[] } }[], opened: [] as string[], filters: [] as string[] };

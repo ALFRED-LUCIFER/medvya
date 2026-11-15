@@ -309,6 +309,10 @@ namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<string>("NurseRoom")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
                     b.Property<string>("TaxNumber")
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
@@ -320,6 +324,17 @@ namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
+
+                    b.Property<bool>("WifiDaily")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("WifiNetwork")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("WifiPassword")
+                        .HasMaxLength(63)
+                        .HasColumnType("character varying(63)");
 
                     b.HasKey("Id");
 

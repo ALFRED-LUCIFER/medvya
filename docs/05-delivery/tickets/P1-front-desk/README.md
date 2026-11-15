@@ -8,9 +8,9 @@
 **Day one:** Register patients, book, reschedule and cancel appointments, check patients in, run the waiting room and send automatic confirmations and reminders.  
 **Goal:** A clinic can run its entire appointment day in Medvya. This is the workflow to validate with real clinics before anything clinical is built on top.
 
-**Tickets:** 109 · **Estimate:** 226.5 dev-days vs **35 working days** in the window (OVER by 191.5 days: needs scope trade-off or overlap) · **Average confidence:** 77%
+**Tickets:** 110 · **Estimate:** 231.5 dev-days vs **35 working days** in the window (OVER by 196.5 days: needs scope trade-off or overlap) · **Average confidence:** 77%
 
-**Status:** To do 81 · Partly done 16 · Done 12
+**Status:** To do 82 · Partly done 16 · Done 12
 
 ## Epics
 
@@ -116,6 +116,7 @@
 | [MDV-P1-039](MDV-P1-039.md) | To do | Production deployment for the launch country and a production tenant per pilot clinic | Task | MUST | P1-02 | — | 1.5 | 9–9 | 21 Dec → 25 Dec 2026 | 70% Medium |
 | [MDV-P1-040](MDV-P1-040.md) | To do | Reception training (30 min), one-page desk card and support channel with named contact | Chore | MUST | P1-08 | — | 1.5 | 9–9 | 21 Dec → 25 Dec 2026 | 88% High |
 | [MDV-P1-041](MDV-P1-041.md) | To do | Baseline metrics capture and in-product measurement (check-in time, no-shows, double bookings, reminder delivery) | Task | MUST | P1-08, P1-09 | — | 1.5 | 9–10 | 21 Dec → 01 Jan 2027 | 84% Medium |
+| [MDV-P1-111](MDV-P1-111.md) | To do | Print and email family: one layout for the token slip, prescription, slip, letter, note and emails; the doctor's room and the vitals room | Story | MUST | P1-08 | P-05, E-10, F-08 | 5 | 9–9 | 21 Dec → 25 Dec 2026 | 75% Medium |
 | [MDV-P1-042](MDV-P1-042.md) | To do | R1 pilot (2 consecutive weeks of real bookings), exit gate review and release notes | Gate | MUST | P1-06, P1-08 | — | 2 | 10–10 | 28 Dec → 01 Jan 2027 | 65% Medium |
 | [MDV-P1-047](MDV-P1-047.md) | To do | Safe retries: idempotency keys, request timeouts and bounded retry (merges the proposed P1-047 and P1-048) | Story | SHOULD | P1-06 | — | 5 | 11–11 | 04 Jan → 08 Jan 2027 | 80% Medium |
 | [MDV-P1-052](MDV-P1-052.md) | To do | Front-desk fixes from the live walk-through, round 2 (queue displays, cancelled slot, walk-in, schedule, log, reminders, invitations, polish) | Task | MUST | P1-08 | — | 6 | 11–11 | 04 Jan → 08 Jan 2027 | 85% High |

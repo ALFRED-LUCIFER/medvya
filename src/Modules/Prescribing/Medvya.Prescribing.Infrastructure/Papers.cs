@@ -38,7 +38,7 @@ public sealed class PaperIssuer(
         var code = RxVerifyToken.NewCode();
         var url = $"{PrescriptionService.VerifyBase(options.Value)}/verify/paper/{RxVerifyToken.Token(tenantId, code)}";
         var hash = Convert.ToHexStringLower(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(content)));
-        var pdf = render(new Paper(url, PrescriptionService.Qr(url), hash, await facilities.PrintImagesAsync(doctorId, facilityId, cancellationToken)));
+        var pdf = render(new Paper(url, QrRows.Of(url), hash, await facilities.PrintImagesAsync(doctorId, facilityId, cancellationToken)));
         var id = Guid.CreateVersion7();
         var key = $"{tenantId}/paper/{id}"; // ids only, no names in blob paths
         // Written before the row: a failed save leaves only an unreachable blob, never a row without its copy.

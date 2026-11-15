@@ -267,7 +267,7 @@ erDiagram
 | `CustomRoles` | 6 | Id | tenant-scoped |
 | `DoctorLicences` | 10 | MembershipId | tenant-scoped |
 | `DoctorProfiles` | 11 | MembershipId | tenant-scoped |
-| `Facilities` | 8 | Id | tenant-scoped |
+| `Facilities` | 12 | Id | tenant-scoped |
 | `FeatureFlags` | 10 | Id | tenant-scoped |
 | `FeatureReleases` | 11 | Id |  |
 | `Invitations` | 11 | Id | tenant-scoped |
@@ -394,9 +394,13 @@ erDiagram
 | `CertificateKey` | character varying(200) |  |  |
 | `CertificateName` | character varying(200) |  |  |
 | `Name` | character varying(200) |  |  |
+| `NurseRoom` | character varying(50) |  |  |
 | `TaxNumber` | character varying(20) |  |  |
 | `TenantId` | guid |  | FK to `Tenant` |
 | `TimeZone` | character varying(64) |  |  |
+| `WifiDaily` | bool |  |  |
+| `WifiNetwork` | character varying(32) |  |  |
+| `WifiPassword` | character varying(63) |  |  |
 
 </details>
 
@@ -1040,7 +1044,7 @@ erDiagram
 | `ScheduleExceptions` | 12 | Id | tenant-scoped |
 | `Resources` | 6 | Id | tenant-scoped |
 | `ScheduleSlots` | 6 | Id | tenant-scoped |
-| `Templates` | 8 | Id | tenant-scoped |
+| `Templates` | 9 | Id | tenant-scoped |
 | `SlotHolds` | 9 | Id | tenant-scoped |
 | `VisitStatusEvents` | 10 | Id | tenant-scoped |
 | `Waitlist` | 21 | Id | tenant-scoped |
@@ -1233,6 +1237,7 @@ erDiagram
 | `ChangedAt` | timestamptz |  |  |
 | `ChangedBy` | guid | yes | id of `identity.Users` |
 | `FacilityId` | guid |  | id of `tenancy.Facilities` |
+| `Room` | character varying(50) |  |  |
 | `SlotMinutes` | int |  |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
 

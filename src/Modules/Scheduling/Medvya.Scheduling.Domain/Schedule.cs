@@ -41,6 +41,8 @@ public sealed class ScheduleTemplate
     [Classification(DataClass.Internal)] public CalendarKind CalendarKind { get; init; }
     /// <summary>Default slot length in minutes (15, 20, 30 …); a multiple of 5.</summary>
     [Classification(DataClass.Internal)] public int SlotMinutes { get; set; }
+    /// <summary>The room this doctor (or resource) works in at this location, e.g. "Room 2" (MDV-P1-111); a session's own room wins over it.</summary>
+    [Classification(DataClass.Internal)] public string? Room { get; set; }
     [Classification(DataClass.Internal)] public List<WorkingHours> Hours { get; set; } = [];
     [Classification(DataClass.Internal)] public List<ScheduleBreak> Breaks { get; set; } = [];
     /// <summary>Length per visit type when it is not one slot, e.g. new consultation 40 min = 2 slots of 20.</summary>

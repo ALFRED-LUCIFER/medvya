@@ -43,6 +43,7 @@ public sealed class SchedulingDbContext(DbContextOptions<SchedulingDbContext> op
         modelBuilder.Entity<ScheduleTemplate>(e =>
         {
             e.Property(x => x.CalendarKind).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.Room).HasMaxLength(50);
             e.OwnsMany(x => x.Hours, o => o.ToJson());
             e.OwnsMany(x => x.Breaks, o => o.ToJson());
             e.OwnsMany(x => x.VisitLengths, o =>

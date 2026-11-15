@@ -519,6 +519,10 @@ namespace Medvya.Scheduling.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("FacilityId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Room")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
                     b.Property<int>("SlotMinutes")
                         .HasColumnType("integer");
 

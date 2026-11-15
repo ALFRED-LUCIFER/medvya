@@ -65,6 +65,9 @@ public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options,
             e.Property(x => x.TaxNumber).HasMaxLength(20);
             e.Property(x => x.CertificateName).HasMaxLength(200);
             e.Property(x => x.CertificateKey).HasMaxLength(200);
+            e.Property(x => x.NurseRoom).HasMaxLength(50);
+            e.Property(x => x.WifiNetwork).HasMaxLength(32); // the longest SSID
+            e.Property(x => x.WifiPassword).HasMaxLength(63); // the longest WPA passphrase
             e.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
             e.HasAlternateKey(x => new { x.TenantId, x.Id }); // the target of the membership's (TenantId, FacilityId) key (#890)
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);

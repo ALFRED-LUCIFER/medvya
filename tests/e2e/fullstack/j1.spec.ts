@@ -31,7 +31,7 @@ test('J1: a new clinic owner sets up the practice, Medvya approves it, then a pa
     await page.getByRole('button', { name: 'Continue' }).click();
     await page.getByRole('link', { name: /New synthetic person/ }).click();
     await page.waitForURL(/\/app\/onboarding/);
-    await page.getByRole('button', { name: 'Start setup' }).click();
+    // The country came from sign-up, so onboarding opens on step 1 without asking again (#1365 F-022).
     // The create-account answers (MDV-P1-059) are already in the draft: practice type, name, practice name, and the city as the address start.
     await expect(page.getByLabel('Full name')).toHaveValue('Arjun Menon (synthetic)');
     await expect(page.getByLabel('Practice name')).toHaveValue(`Menon Clinic ${n} (synthetic)`);

@@ -9712,6 +9712,8 @@ export interface components {
             /** Format: int64 */
             followUpFee: number | string;
             currency: string;
+            /** @default false */
+            ownSignature: boolean;
         };
         /** @enum {unknown} */
         DocumentType: "LabReport" | "Imaging" | "Prescription" | "Referral" | "Other";

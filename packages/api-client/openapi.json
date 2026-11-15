@@ -9842,6 +9842,10 @@
           },
           "currency": {
             "type": "string"
+          },
+          "ownSignature": {
+            "type": "boolean",
+            "default": false
           }
         }
       },

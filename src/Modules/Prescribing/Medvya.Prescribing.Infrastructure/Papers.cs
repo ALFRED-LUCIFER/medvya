@@ -27,8 +27,11 @@ public sealed class PaperIssuer(
     PrescribingDbContext db, IFacilityDirectory facilities, IDocumentStore files, IAuditLog audit, ICurrentTenant tenant, ICurrentUser user, TimeProvider clock,
     IOptions<PrescribingOptions> options)
 {
-    /// <summary>What the paper prints besides its content: the verify link and its QR rows, the content hash, and the images.</summary>
-    public sealed record Paper(string VerifyUrl, string[] Qr, string ContentHash, PrintImages Images);
+    /// <summary>
+    /// What the paper prints besides its content: the verify link and its QR rows, the content hash, the images, the clinic's address and phone, and the
+    /// doctor's qualifications and registration (null: no doctor profile at this facility).
+    /// </summary>
+    public sealed record Paper(string VerifyUrl, string[] Qr, string ContentHash, PrintImages Images, FacilityInfo Facility, PrescriberInfo? Doctor);
 
     /// <exception cref="PdfUnsupportedTextException"/>
     public async Task<PaperPdf> IssueAsync(PaperKind kind, Guid facilityId, Guid sourceId, Guid doctorId, int items, object content, Func<Paper, byte[]> render,
@@ -38,7 +41,9 @@ public sealed class PaperIssuer(
         var code = RxVerifyToken.NewCode();
         var url = $"{PrescriptionService.VerifyBase(options.Value)}/verify/paper/{RxVerifyToken.Token(tenantId, code)}";
         var hash = Convert.ToHexStringLower(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(content)));
-        var pdf = render(new Paper(url, PrescriptionService.Qr(url), hash, await facilities.PrintImagesAsync(doctorId, facilityId, cancellationToken)));
+        var facility = await facilities.FindAsync(facilityId, cancellationToken) ?? throw new InvalidOperationException("Facility not in this tenant.");
+        var pdf = render(new Paper(url, QrRows.Of(url), hash, await facilities.PrintImagesAsync(doctorId, facilityId, cancellationToken), facility,
+            await facilities.PrescriberAsync(doctorId, facilityId, cancellationToken)));
         var id = Guid.CreateVersion7();
         var key = $"{tenantId}/paper/{id}"; // ids only, no names in blob paths
         // Written before the row: a failed save leaves only an unreachable blob, never a row without its copy.
@@ -95,62 +100,53 @@ public sealed class PaperVerification(
 }
 
 /// <summary>
-/// The slip and the letter as English PDFs on A4 (MDV-P2-018/019): clinic and patient identifiers on every page, the content, the content hash and the
-/// verify link, then the doctor's line with the signature image under it and the QR code. Names and free text in Hindi, Tamil or Arabic print shaped.
+/// The slip and the letter as English PDFs on A4 (MDV-P2-018/019) in the print family layout (MDV-P1-111): the clinic and doctor, the title and the
+/// patient's identifiers on every page, the content as labelled rows, the signature box, and the footer with the verify QR code, link and content hash.
+/// Names and free text in Hindi, Tamil or Arabic print shaped.
 /// shortcut: English wording only (owner decision of 11 Nov 2026, as for the prescription); A4 only, add A5 if clinics ask.
 /// </summary>
 public static class PaperPdfDocument
 {
     static string T(string key, params (string, string)[] values) => PaperText.Get(key, values);
 
-    static string Patient(string name, string sex, string mrn, DateOnly dob, int age) =>
-        T("rxPrint.patient", ("name", name), ("sex", T($"rxPrint.sex.{sex}")), ("age", age.ToString(CultureInfo.InvariantCulture)), ("mrn", mrn), ("dob", dob.ToString("dd MMM yyyy", CultureInfo.InvariantCulture)));
-
-    static byte[] Write(string title, string[] header, List<(string, bool)> body, string signedLine, PaperIssuer.Paper paper)
+    static byte[] Write(string title, string check, string when, string? doctorName, Action<QuestPDF.Infrastructure.IContainer> patient, List<PlainPdf.Row> rows,
+        PaperIssuer.Paper paper)
     {
-        body.AddRange([
-            (T("paper.hash", ("hash", paper.ContentHash)), false),
-            (T("paper.verify", ("url", paper.VerifyUrl)), false),
-            ("", false),
-            (signedLine, true), // the signature image follows it
-        ]);
-        return PlainPdf.Write(header, body, (page, pages) => T("paper.footer", ("title", title), ("page", page.ToString(CultureInfo.InvariantCulture)),
-            ("pages", pages.ToString(CultureInfo.InvariantCulture))), PlainPdf.A4, paper.Qr, paper.Images.Logo, paper.Images.Signature);
+        var doctor = paper.Doctor?.FullName ?? doctorName ?? "";
+        var mast = new PlainPdf.Masthead(paper.Facility.Name, paper.Facility.Address, paper.Facility.Phone, paper.Images.Logo, doctor, paper.Doctor is { } d
+            ? [.. new[] { d.Qualifications }.OfType<string>(), T("printFamily.reg", ("number", d.LicenceNumber), ("authority", d.LicenceAuthority))] : []);
+        var sign = new PlainPdf.Signature(paper.Images.Signature, doctor,
+            [.. paper.Doctor is { } r ? [T("printFamily.regShort", ("number", r.LicenceNumber))] : Array.Empty<string>(), when]);
+        var footer = new PlainPdf.Footer(paper.Qr, check, T("printFamily.scanOrOpen", ("url", paper.VerifyUrl)), T("paper.hash", ("hash", paper.ContentHash)), null,
+            (page, pages) => T("printFamily.page", ("page", page.ToString(CultureInfo.InvariantCulture)), ("pages", pages.ToString(CultureInfo.InvariantCulture))));
+        return PlainPdf.Write(PlainPdf.A4, mast, new PlainPdf.Meta(title, null, when), new PlainPdf.Row(T("printFamily.label.patient"), patient), rows, sign, footer);
     }
 
     /// <exception cref="PdfUnsupportedTextException"/>
     public static byte[] Slip(OrderSlip s, string timeZone, PaperIssuer.Paper paper)
     {
-        var title = T("orders.slip.title");
-        var header = new List<string> { s.FacilityName, title, Patient(s.Patient.FullName, s.Patient.SexAtBirth, s.Patient.Mrn, s.Patient.DateOfBirth, PaperIssuer.Age(s.OrderedAt, timeZone, s.Patient.DateOfBirth)) };
-        if (s.Destination is { } lab) header.Add(T("paper.slip.lab", ("lab", lab)));
-        List<(string, bool)> body = [(T("orders.slip.tests"), true)];
-        var n = 0;
-        foreach (var o in s.Orders)
-        {
-            body.Add(($"{++n}. {o.Name} ({T($"orders.kind.{o.Kind}")})", true));
-            if (o.Note is { } note) body.Add((note, false));
-        }
-        body.AddRange([("", false), (T("orders.slip.notice"), true), ("", false)]);
-        return Write(title, [.. header], body, T("paper.slip.orderedBy", ("name", s.DoctorName ?? ""), ("when", PaperIssuer.When(s.OrderedAt, timeZone))), paper);
+        List<PlainPdf.Row> rows = [];
+        if (s.Destination is { } lab) rows.Add(new(T("orders.slip.lab"), PlainPdf.Lines((lab, PlainPdf.Tone.Body))));
+        rows.Add(new(T("orders.slip.tests"), PlainPdf.Items([.. s.Orders.Select(o => new PlainPdf.Item(o.Name, T($"orders.kind.{o.Kind}"), o.Note is { } note ? [note] : [], []))])));
+        rows.Add(new(T("printFamily.label.bring"), PlainPdf.Lines((T("orders.slip.notice"), PlainPdf.Tone.Strong))));
+        return Write(T("orders.slip.title"), T("printFamily.checkPaper"), T("printFamily.orderedAt", ("when", PaperIssuer.When(s.OrderedAt, timeZone))), s.DoctorName,
+            RxPdfDocument.Patient(s.Patient.FullName, s.Patient.SexAtBirth, s.Patient.Mrn, s.Patient.DateOfBirth, PaperIssuer.Age(s.OrderedAt, timeZone, s.Patient.DateOfBirth)), rows, paper);
     }
 
     /// <exception cref="PdfUnsupportedTextException"/>
     public static byte[] Letter(ReferralLetter l, string timeZone, PaperIssuer.Paper paper)
     {
-        var title = T("referrals.letter.title");
-        string[] header = [l.FacilityName, title, Patient(l.Patient.FullName, l.Patient.SexAtBirth, l.Patient.Mrn, l.Patient.DateOfBirth, PaperIssuer.Age(l.At, timeZone, l.Patient.DateOfBirth)),
-            T("paper.letter.to", ("provider", l.Provider), ("urgency", T($"referrals.urgency.{l.Urgency}")))];
-        List<(string, bool)> body = [];
-        if (l.Reason is { } reason) body.AddRange([(T("referrals.letter.reason"), true), (reason, false), ("", false)]);
+        List<PlainPdf.Row> rows = [new(T("referrals.letter.to"), PlainPdf.Pairs([(l.Provider, $"· {T($"referrals.urgency.{l.Urgency}")}")]))];
+        if (l.Reason is { } reason) rows.Add(new(T("printFamily.label.reason"), PlainPdf.Lines((reason, PlainPdf.Tone.Body))));
         foreach (var section in l.Sections)
         {
-            body.Add((T($"referrals.section.{section.Section}"), true));
-            if (section.Lines.Count == 0) body.Add((T("referrals.letter.none"), false));
-            body.AddRange(section.Lines.Select(x => ($"• {x.Text} [{T($"timeline.source.{x.Source}")}]", false)));
-            body.Add(("", false));
+            var lines = section.Lines.Select(x => $"{x.Text} [{T($"timeline.source.{x.Source}")}]").ToList();
+            rows.Add(new(T($"referrals.section.{section.Section}"), lines.Count == 0 ? PlainPdf.Lines((T("referrals.letter.none"), PlainPdf.Tone.Body))
+                : section.Section == ReferralSection.Allergies ? PlainPdf.Allergy(T("printFamily.allergy"), string.Join("; ", lines))
+                : PlainPdf.Lines([.. lines.Select(x => (x, PlainPdf.Tone.Body))])));
         }
-        body.AddRange([(T("referrals.letter.notice"), true), ("", false)]);
-        return Write(title, header, body, T("paper.letter.from", ("name", l.DoctorName ?? ""), ("when", PaperIssuer.When(l.At, timeZone))), paper);
+        rows.Add(new(T("printFamily.label.note"), PlainPdf.Lines((T("referrals.letter.notice"), PlainPdf.Tone.Muted))));
+        return Write(T("referrals.letter.title"), T("printFamily.checkLetter"), PaperIssuer.When(l.At, timeZone), l.DoctorName,
+            RxPdfDocument.Patient(l.Patient.FullName, l.Patient.SexAtBirth, l.Patient.Mrn, l.Patient.DateOfBirth, PaperIssuer.Age(l.At, timeZone, l.Patient.DateOfBirth)), rows, paper);
     }
 }

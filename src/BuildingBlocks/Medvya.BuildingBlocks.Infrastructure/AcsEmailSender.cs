@@ -24,8 +24,16 @@ public sealed class AcsEmailSender(IOptions<AcsEmailOptions> options, TokenCrede
         var o = options.Value;
         if (string.IsNullOrWhiteSpace(o.Endpoint) || string.IsNullOrWhiteSpace(o.From))
             throw new InvalidOperationException("Email is not configured (Email:Acs:Endpoint and Email:Acs:From).");
-        var mail = new Azure.Communication.Email.EmailMessage(o.From, message.To, new EmailContent(message.Subject) { PlainText = message.Body });
+        await new EmailClient(new Uri(o.Endpoint), credential).SendAsync(WaitUntil.Started, Compose(o.From, message), cancellationToken);
+    }
+
+    /// <summary>The service's message: plain text and HTML side by side, the logo as an inline attachment the HTML names by Content-ID.</summary>
+    internal static Azure.Communication.Email.EmailMessage Compose(string from, Domain.EmailMessage message)
+    {
+        var mail = new Azure.Communication.Email.EmailMessage(from, message.To, new EmailContent(message.Subject) { PlainText = message.Body, Html = message.Html });
+        if (message.Html is not null && message.Logo is { } logo)
+            mail.Attachments.Add(new EmailAttachment("logo.png", "image/png", new BinaryData(logo)) { ContentId = EmailHtml.LogoId });
         foreach (var (name, value) in message.Headers ?? new Dictionary<string, string>()) mail.Headers.Add(name, value);
-        await new EmailClient(new Uri(o.Endpoint), credential).SendAsync(WaitUntil.Started, mail, cancellationToken);
+        return mail;
     }
 }

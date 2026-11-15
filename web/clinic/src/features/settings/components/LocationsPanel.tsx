@@ -1,5 +1,5 @@
 import { useI18n, type MessageKey } from '@medvya/i18n';
-import { Button, ErrorSummary, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, StickyActionBar, Textarea } from '@medvya/ui';
+import { Button, ErrorSummary, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, StickyActionBar, Switch, Textarea } from '@medvya/ui';
 import { timeZones } from '../domain/settings';
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
@@ -39,6 +39,9 @@ export default function LocationsPanel(p: Props) {
     { id: 'location-address', label: t('settings.locations.address'), message: errors.address && t('settings.error.tooLong') },
     { id: 'location-tax', label: t('settings.locations.taxNumber'), message: errors.taxNumber && t(errors.taxNumber.message as MessageKey) },
     { id: 'location-certificate', label: t('settings.locations.certificate'), message: p.certificateError ? t(p.certificateError) : undefined },
+    { id: 'location-nurse-room', label: t('settings.locations.nurseRoom'), message: errors.nurseRoom && t('settings.error.tooLong') },
+    { id: 'location-wifi-network', label: t('settings.locations.wifiNetwork'), message: errors.wifiNetwork && t('settings.error.tooLong') },
+    { id: 'location-wifi-password', label: t('settings.locations.wifiPassword'), message: errors.wifiPassword && t('settings.error.tooLong') },
   ];
   const error = (id: string) => fields.find(f => f.id === id)?.message || undefined;
   const zone = p.form.watch('timeZone');
@@ -76,6 +79,26 @@ export default function LocationsPanel(p: Props) {
           <Field id="location-address" label={t('settings.locations.address')} error={error('location-address')} className="md:col-span-2">
             <Textarea rows={2} {...p.form.register('address')} />
           </Field>
+          {editing && (
+            <>
+              {/* MDV-P1-111: where patients go for vitals, and the guest Wi-Fi printed on the token slip. */}
+              <Field id="location-nurse-room" label={t('settings.locations.nurseRoom')} hint={t('settings.locations.nurseRoomHint')} error={error('location-nurse-room')}>
+                <Input autoComplete="off" placeholder={t('settings.schedules.roomPlaceholder')} {...p.form.register('nurseRoom')} />
+              </Field>
+              <h4 className="col-span-full font-bold">{t('settings.locations.wifi')}</h4>
+              <p className="col-span-full text-muted-foreground">{t('settings.locations.wifiIntro')}</p>
+              <Field id="location-wifi-network" label={t('settings.locations.wifiNetwork')} error={error('location-wifi-network')}>
+                <Input autoComplete="off" dir="ltr" {...p.form.register('wifiNetwork')} />
+              </Field>
+              <Field id="location-wifi-password" label={t('settings.locations.wifiPassword')} error={error('location-wifi-password')}>
+                <Input autoComplete="off" dir="ltr" spellCheck={false} {...p.form.register('wifiPassword')} />
+              </Field>
+              <label className="col-span-full flex min-h-control items-center gap-3">
+                <Switch checked={p.form.watch('wifiDaily')} onCheckedChange={on => p.form.setValue('wifiDaily', on, { shouldDirty: true })} />
+                <span>{t('settings.locations.wifiDaily')}</span>
+              </label>
+            </>
+          )}
           {!editing && (
             <>
               <Field id="location-tax" label={t('settings.locations.taxNumber')} required hint={t('settings.locations.taxNumberHint')} error={error('location-tax')}>

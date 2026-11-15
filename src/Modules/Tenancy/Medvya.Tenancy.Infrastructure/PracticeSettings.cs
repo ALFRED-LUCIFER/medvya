@@ -63,7 +63,8 @@ public sealed class PracticeSettings(
     }
 
     public async Task<IReadOnlyList<LocationView>> ListLocationsAsync(CancellationToken cancellationToken = default) =>
-        await db.Facilities.AsNoTracking().OrderBy(f => f.Name).Select(f => new LocationView(f.Id, f.Name, f.Address, f.TimeZone)).ToListAsync(cancellationToken);
+        await db.Facilities.AsNoTracking().OrderBy(f => f.Name).Select(f => new LocationView(f.Id, f.Name, f.Address, f.TimeZone, f.NurseRoom, f.WifiNetwork, f.WifiPassword, f.WifiDaily))
+            .ToListAsync(cancellationToken);
 
     public async Task<LocationView> AddLocationAsync(AddLocation command, CancellationToken cancellationToken = default)
     {
@@ -117,10 +118,19 @@ public sealed class PracticeSettings(
         var site = await db.Facilities.SingleOrDefaultAsync(f => f.Id == facilityId, cancellationToken);
         if (site is null) return null;
         var (name, address, zone) = ValidLocation(command, requireZone: false);
-        var before = new LocationView(site.Id, site.Name, site.Address, site.TimeZone);
-        (site.Name, site.Address, site.TimeZone) = (name, address, zone ?? site.TimeZone);
-        var after = new LocationView(site.Id, site.Name, site.Address, site.TimeZone);
-        await SaveAuditedAsync("settings.location.update", "location", site.Id, before, after, cancellationToken);
+        var (room, network, password) = (Clean(command.NurseRoom), Clean(command.WifiNetwork), Clean(command.WifiPassword));
+        var errors = new List<ValidationError>();
+        Max(errors, "nurseRoom", room, 50);
+        Max(errors, "wifiNetwork", network, 32);
+        Max(errors, "wifiPassword", password, 63);
+        if (password is not null && network is null) errors.Add(new("wifiNetwork", "required"));
+        SettingsValidationException.ThrowIfAny(errors);
+        var before = View(site);
+        (site.Name, site.Address, site.TimeZone, site.NurseRoom) = (name, address, zone ?? site.TimeZone, room);
+        (site.WifiNetwork, site.WifiPassword, site.WifiDaily) = (network, password, network is not null && command.WifiDaily);
+        var after = View(site);
+        // The audit keeps whether a guest password is set, not the password: it is printed for patients, but has no place in the audit trail.
+        await SaveAuditedAsync("settings.location.update", "location", site.Id, Audited(before), Audited(after), cancellationToken);
         return after;
     }
 
@@ -269,6 +279,10 @@ public sealed class PracticeSettings(
         SettingsValidationException.ThrowIfAny(errors);
         return (name!, address, zone);
     }
+
+    static LocationView View(Facility f) => new(f.Id, f.Name, f.Address, f.TimeZone, f.NurseRoom, f.WifiNetwork, f.WifiPassword, f.WifiDaily);
+
+    static LocationView Audited(LocationView v) => v with { WifiPassword = v.WifiPassword is null ? null : "set" };
 
     static ProfileView ViewOf(Tenant clinic, PracticeProfile? p) =>
         new(clinic.Name, p?.Address, p?.RegistrationNumber, p?.TaxNumber, p?.Phone, p?.Email, p?.LogoKey is not null, p?.RegistrationExpiresOn);

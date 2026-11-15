@@ -268,8 +268,8 @@ erDiagram
 | `Closures` | 5 | Id | tenant-scoped |
 | `CustomRoles` | 6 | Id | tenant-scoped |
 | `DoctorLicences` | 10 | MembershipId | tenant-scoped |
-| `DoctorProfiles` | 11 | MembershipId | tenant-scoped |
-| `Facilities` | 8 | Id | tenant-scoped |
+| `DoctorProfiles` | 12 | MembershipId | tenant-scoped |
+| `Facilities` | 12 | Id | tenant-scoped |
 | `FeatureFlags` | 10 | Id | tenant-scoped |
 | `FeatureReleases` | 11 | Id |  |
 | `Invitations` | 11 | Id | tenant-scoped |
@@ -381,6 +381,7 @@ erDiagram
 | `Languages` | character varying(200) |  |  |
 | `NewVisitFeeMinor` | bigint |  |  |
 | `Qualifications` | character varying(200) |  |  |
+| `Room` | character varying(50) |  |  |
 | `SignatureKey` | character varying(200) |  |  |
 | `Specialty` | character varying(100) |  |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
@@ -396,9 +397,13 @@ erDiagram
 | `CertificateKey` | character varying(200) |  |  |
 | `CertificateName` | character varying(200) |  |  |
 | `Name` | character varying(200) |  |  |
+| `NurseRoom` | character varying(50) |  |  |
 | `TaxNumber` | character varying(20) |  |  |
 | `TenantId` | guid |  | FK to `Tenant` |
 | `TimeZone` | character varying(64) |  |  |
+| `WifiDaily` | bool |  |  |
+| `WifiNetwork` | character varying(32) |  |  |
+| `WifiPassword` | character varying(63) |  |  |
 
 </details>
 

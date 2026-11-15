@@ -208,7 +208,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P1-098](P1-front-desk/MDV-P1-098.md) | Phone rule: under 768 px clinical writes say Open this on a tablet or computer | P1 | wk 8–8 | 65% |
 | [MDV-P1-099](P1-front-desk/MDV-P1-099.md) | Queue in the consultation: tokens and ages only, escalations first, and a Next button on tablets | P1 | wk 8–8 | 62% |
 
-## Week 9 · 21 Dec 2026 – 25 Dec 2026 · load 21.7 dev-days ⚠ over capacity
+## Week 9 · 21 Dec 2026 – 25 Dec 2026 · load 26.7 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -218,6 +218,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P1-039](P1-front-desk/MDV-P1-039.md) | Production deployment for the launch country and a production tenant per pilot clinic | P1 | wk 9–9 | 70% |
 | [MDV-P1-040](P1-front-desk/MDV-P1-040.md) | Reception training (30 min), one-page desk card and support channel with named contact | P1 | wk 9–9 | 88% |
 | [MDV-P1-041](P1-front-desk/MDV-P1-041.md) | Baseline metrics capture and in-product measurement (check-in time, no-shows, double bookings, reminder delivery) | P1 | wk 9–10 | 84% |
+| [MDV-P1-111](P1-front-desk/MDV-P1-111.md) | Print and email family: one layout for the token slip, prescription, slip, letter, note and emails; the doctor's room and the vitals room | P1 | wk 9–9 | 75% |
 | [MDV-P2-001](P2-doctor-workspace/MDV-P2-001.md) | Encounters module: start a consultation from the board/Today, bound to one patient and appointment | P2 | wk 9–9 | 88% |
 | [MDV-P2-002](P2-doctor-workspace/MDV-P2-002.md) | Doctor Today (D-01): schedule, patient flags, pending notes, inbox counts | P2 | wk 9–10 | 86% |
 | [MDV-P2-021](P2-doctor-workspace/MDV-P2-021.md) | Clinical safety case and hazard log with a named clinical safety reviewer | P2 | wk 9–10 | 78% |

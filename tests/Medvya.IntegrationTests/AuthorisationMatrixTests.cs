@@ -302,6 +302,7 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.PracticeAdmin, new("DELETE", "/v1/settings/closures/{closure}")),
         (Role.PracticeAdmin, new("PUT", "/v1/settings/doctors/{doctor}/licence", """{"authority":"Synthetic council","number":"SYN-0000","category":"MBBS","expiresOn":"2030-01-01","certificateName":"licence.pdf"}""")),
         (Role.PracticeAdmin, new("DELETE", "/v1/settings/doctors/{doctor}/signature")),
+        (Role.PracticeAdmin, new("PUT", "/v1/settings/doctors/{doctor}/room", """{"room":"Room 2"}""")), // MDV-P1-111
     ];
 
     /// <summary>Routes with an id that are not in <see cref="CrossTenant"/>, and why. The guard below fails on any route missing from both.</summary>

@@ -36,18 +36,23 @@ public sealed class QueueService(SchedulingDbContext db, SchedulingContext conte
             .ToDictionaryAsync(t => t.CalendarId, t => t.SlotMinutes, cancellationToken);
         var places = await ordering.PlacesAsync(queue.Select(q => q.Visit), info.Queue, cancellationToken);
 
-        // Now: the latest call-in of each doctor, newest first.
-        var now = queue.Where(q => q.Visit.State == AppointmentState.InConsult).GroupBy(q => q.Visit.CalendarId)
-            .Select(g => g.MaxBy(q => q.Visit.ChangedAt)).OrderByDescending(q => q.Visit.ChangedAt)
-            .Select(q => new QueueTvNow(q.Token, q.Visit.Room, names.GetValueOrDefault(q.Visit.CalendarId, ""))).ToList();
+        // Now: the latest call-in of each doctor and the latest call to each vitals room (MDV-P1-111), newest first.
+        var now = queue.Where(q => q.Visit.State == AppointmentState.InConsult).GroupBy(q => q.Visit.CalendarId).Select(g => g.MaxBy(q => q.Visit.ChangedAt))
+            .Concat(queue.Where(q => q.Visit is { State: AppointmentState.WithNurse, Room: not null }).GroupBy(q => q.Visit.Room).Select(g => g.MaxBy(q => q.Visit.ChangedAt)))
+            .OrderByDescending(q => q.Visit.ChangedAt)
+            .Select(q => new QueueTvNow(q.Token, q.Visit.Room, names.GetValueOrDefault(q.Visit.CalendarId, ""), q.Visit.State == AppointmentState.WithNurse)).ToList();
         // Next: each doctor's waiting tokens in their place in that doctor's queue (MDV-P1-103), after whoever is with the doctor now; each
         // names its doctor, since a reassigned token keeps its letter, and how many wait ahead of it.
         var busy = queue.Where(q => q.Visit.State == AppointmentState.InConsult).Select(q => q.Visit.CalendarId).ToHashSet();
+        // Each doctor's room now, read once per doctor: where a waiting token will go (MDV-P1-111).
+        var rooms = new Dictionary<Guid, string?>();
+        foreach (var first in queue.Where(q => places.ContainsKey(q.Visit.Id)).GroupBy(q => q.Visit.CalendarId).Select(g => g.First().Visit))
+            rooms[first.CalendarId] = await context.RoomAsync(first, zone, context.Now, cancellationToken);
         var next = queue.Where(q => places.ContainsKey(q.Visit.Id)).Select(q =>
             {
                 var ahead = places[q.Visit.Id] - 1;
                 var minutes = slots.GetValueOrDefault(q.Visit.CalendarId, DefaultSlotMinutes);
-                return new QueueTvNext(q.Token, RoundUp((ahead + (busy.Contains(q.Visit.CalendarId) ? 1 : 0)) * minutes), names.GetValueOrDefault(q.Visit.CalendarId, ""), ahead);
+                return new QueueTvNext(q.Token, RoundUp((ahead + (busy.Contains(q.Visit.CalendarId) ? 1 : 0)) * minutes), names.GetValueOrDefault(q.Visit.CalendarId, ""), ahead, rooms.GetValueOrDefault(q.Visit.CalendarId));
             })
             .OrderBy(n => n.WaitMinutes).ThenBy(n => n.Ahead).Take(MaxNext).ToList();
         return new(now, next);

@@ -3985,6 +3985,39 @@
         }
       }
     },
+    "/v1/settings/doctors/{id}/room": {
+      "put": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DoctorRoom"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/v1/organisation/request": {
       "get": {
         "tags": [
@@ -7619,6 +7652,12 @@
               "string"
             ],
             "format": "int64"
+          },
+          "room": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -9743,6 +9782,20 @@
           }
         }
       },
+      "DoctorRoom": {
+        "required": [
+          "room"
+        ],
+        "type": "object",
+        "properties": {
+          "room": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "DoctorView": {
         "required": [
           "id",
@@ -9863,6 +9916,12 @@
           },
           "currency": {
             "type": "string"
+          },
+          "room": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -10524,6 +10583,28 @@
           },
           "timeZone": {
             "type": "string"
+          },
+          "nurseRoom": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "wifiNetwork": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "wifiPassword": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "wifiDaily": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -11573,6 +11654,12 @@
               "string"
             ],
             "format": "int32"
+          },
+          "room": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -11595,6 +11682,10 @@
           },
           "doctor": {
             "type": "string"
+          },
+          "vitals": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -12562,6 +12653,27 @@
               "null",
               "string"
             ]
+          },
+          "nurseRoom": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "wifiNetwork": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "wifiPassword": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "wifiDaily": {
+            "type": "boolean"
           }
         }
       },
@@ -13555,7 +13667,13 @@
           "doctorName",
           "issuedAt",
           "timeZone",
-          "ahead"
+          "ahead",
+          "address",
+          "phone",
+          "room",
+          "vitalsRoom",
+          "logo",
+          "wifi"
         ],
         "type": "object",
         "properties": {
@@ -13583,6 +13701,75 @@
               "string"
             ],
             "format": "int32"
+          },
+          "address": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "phone": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "room": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "vitalsRoom": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "logo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "wifi": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/TokenSlipWifi"
+              }
+            ]
+          }
+        }
+      },
+      "TokenSlipWifi": {
+        "required": [
+          "network",
+          "password",
+          "daily",
+          "qr"
+        ],
+        "type": "object",
+        "properties": {
+          "network": {
+            "type": "string"
+          },
+          "password": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "daily": {
+            "type": "boolean"
+          },
+          "qr": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },

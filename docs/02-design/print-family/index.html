@@ -1,0 +1,593 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Medvya Print Family</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+Arabic:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js" integrity="sha512-ZDSPMa/JM1D+7kdg2x3BsruQ6T/JpJo3jWDWkCZsP+5yVyp1KfESqLI+7RqB5k24F7p2cV7i2YHh/890y6P6Sw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<style>
+/* Medvya tokens (packages/tokens/src/tokens.json). The papers are always white paper; only the page around them themes. */
+:root {
+  --brand-950: #102a43; --brand-800: #0b5c55; --brand-700: #0f766e; --brand-50: #e7f6f4;
+  --ink-900: #142536; --ink-700: #334e68; --ink-600: #506579; --ink-400: #8296a8; --ink-200: #cbd6e0; --ink-100: #edf1f5;
+  --line: #dfe7ed; --line-strong: #76899c; --danger-700: #b42333; --danger-50: #fdecee; --danger-200: #f3b9c0;
+  --page: #f7fafc; --page-ink: #142536; --page-muted: #506579; --page-line: #dfe7ed; --page-card: #ffffff;
+  --sans: "Manrope", "Noto Sans Arabic", system-ui, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --ease: cubic-bezier(0.23, 1, 0.32, 1);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --page: #0b1622; --page-ink: #e6edf3; --page-muted: #9fb3c8; --page-line: #1e3a55; --page-card: #102a43; color-scheme: dark; }
+}
+:root[data-theme="dark"] { --page: #0b1622; --page-ink: #e6edf3; --page-muted: #9fb3c8; --page-line: #1e3a55; --page-card: #102a43; color-scheme: dark; }
+
+* { box-sizing: border-box; }
+html { -webkit-font-smoothing: antialiased; }
+body { margin: 0; background: var(--page); color: var(--page-ink); font: 500 14px/20px var(--sans); }
+::selection { background: var(--brand-50); color: var(--brand-950); }
+a { color: inherit; text-underline-offset: 3px; }
+:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+
+/* ---------- page chrome ---------- */
+.wrap { padding-block: 32px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); max-width: 1440px; margin: 0 auto; }
+@media (min-width: 768px) { .wrap { padding-block: 48px 96px; padding-left: max(32px, env(safe-area-inset-left, 0px)); padding-right: max(32px, env(safe-area-inset-right, 0px)); } }
+header.top { display: grid; gap: 12px; margin-bottom: 40px; }
+header.top h1 { margin: 0; font-size: 30px; line-height: 36px; font-weight: 800; letter-spacing: -0.01em; text-wrap: balance; }
+header.top p { margin: 0; color: var(--page-muted); max-width: 68ch; font-size: 16px; line-height: 24px; }
+nav.toc { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+nav.toc a { text-decoration: none; border: 1px solid var(--page-line); border-radius: 999px; padding: 8px 14px; min-height: 36px; font-weight: 600; background: var(--page-card); transition: border-color 150ms var(--ease); }
+nav.toc a:hover { border-color: var(--line-strong); }
+section.piece { border-top: 1px solid var(--page-line); padding-top: 32px; margin-top: 56px; }
+section.piece > h2 { margin: 0 0 4px; font-size: 20px; line-height: 28px; font-weight: 700; }
+section.piece > .lead { margin: 0 0 24px; color: var(--page-muted); max-width: 72ch; }
+.stage { display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start; }
+.specimen { display: grid; gap: 10px; }
+.specimen > figcaption { font-size: 12px; line-height: 16px; font-weight: 600; color: var(--page-muted); }
+.notes { display: grid; gap: 16px; max-width: 72ch; margin-top: 28px; }
+@media (min-width: 1024px) { .notes { grid-template-columns: 1fr 1fr; max-width: none; } }
+.notes div { background: var(--page-card); border: 1px solid var(--page-line); border-radius: 12px; padding: 16px; }
+.notes h3 { margin: 0 0 8px; font-size: 14px; line-height: 20px; font-weight: 700; }
+.notes ul { margin: 0; padding-inline-start: 18px; color: var(--page-muted); }
+.notes li + li { margin-top: 6px; }
+
+/* ---------- shared paper grammar: hanging labels ---------- */
+.paper { background: #fff; color: var(--ink-900); box-shadow: 0 1px 2px rgba(16,42,67,.08), 0 8px 24px rgba(16,42,67,.10); font-family: var(--sans); font-variant-numeric: tabular-nums; }
+.paper [lang="ar"], .paper[lang="ar"] { font-family: "Noto Sans Arabic", var(--sans); }
+.lbl { font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-600); }
+.paper[lang="ar"] .lbl { text-transform: none; letter-spacing: 0; }
+.mono { font-family: var(--mono); font-weight: 500; font-size: 0.94em; }
+.qr svg { display: block; width: 100%; height: auto; }
+
+/* ---------- token slip: 80 mm thermal, monochrome ---------- */
+.slip { width: 80mm; padding: 5mm 4mm 6mm; color: #000; }
+.slip .lbl { color: #000; font-size: 6.5pt; }
+.slip .mast { display: flex; gap: 2.5mm; align-items: center; }
+.slip .mast svg { width: 9mm; height: 9mm; flex: none; }
+.slip .clinic { font-size: 11pt; line-height: 1.15; font-weight: 800; }
+.slip .addr { font-size: 7pt; line-height: 1.3; margin-top: .5mm; }
+.slip .rule { height: 0; border-top: 1.4pt solid #000; margin: 3mm 0 3.5mm; }
+.slip .rows { display: grid; grid-template-columns: 15mm 1fr; column-gap: 3mm; row-gap: 2mm; align-items: baseline; }
+.paper[lang="ar"].slip .lbl, .slip[lang="ar"] .wifi dt { font-size: 7.5pt; }
+.slip .token { font-family: var(--sans); font-variant-numeric: tabular-nums; font-size: 46pt; line-height: .95; font-weight: 800; letter-spacing: -0.02em; }
+.slip .val { font-size: 9.5pt; line-height: 1.3; font-weight: 600; }
+.slip .ahead { font-size: 12pt; font-weight: 800; }
+.slip .notice { font-size: 8.5pt; line-height: 1.35; font-weight: 600; margin: 3.5mm 0 0; }
+.slip .tear { margin: 4mm -4mm 3.5mm; border-top: 1pt dashed #000; position: relative; }
+.slip .tear span { position: absolute; inset-inline-start: 4mm; top: -2.4mm; background: #fff; padding-inline: 1mm; font-size: 6.5pt; font-weight: 700; }
+.slip .wifi { display: grid; grid-template-columns: 24mm 1fr; column-gap: 3.5mm; align-items: start; }
+.slip .wifi .qr { width: 24mm; }
+.slip .wifi .head { display: flex; gap: 1.5mm; align-items: center; font-size: 9.5pt; font-weight: 800; margin-bottom: 1.5mm; }
+.slip .wifi .head svg { width: 4mm; height: 4mm; }
+.slip .wifi dl { margin: 0; display: grid; gap: 1.2mm; }
+.slip .wifi dt { font-size: 6.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+.slip[lang="ar"] .wifi dt { text-transform: none; letter-spacing: 0; }
+.slip .wifi dd { margin: 0; font-size: 10pt; font-weight: 800; word-break: break-all; }
+.slip .wifi .today { font-size: 7pt; font-weight: 600; margin-top: 1.5mm; }
+
+/* ---------- A4 / A5 sheets, scaled to their frame with container units ---------- */
+.frame { container-type: inline-size; width: 100%; }
+.frame.a4 { max-width: 794px; }   /* A4 at 96 dpi */
+.frame.a5 { max-width: 559px; }   /* A5 at 96 dpi */
+.frame.thumb { max-width: 560px; }
+.sheet { --mm: calc(100cqw / 210); --pt: calc(var(--mm) * 0.3528); aspect-ratio: 210 / 297; padding: calc(var(--mm) * 18) calc(var(--mm) * 19) calc(var(--mm) * 14); display: flex; flex-direction: column; font-size: calc(var(--pt) * 10); line-height: 1.38; overflow: hidden; }
+.a5 .sheet { --mm: calc(100cqw / 148); padding: calc(var(--mm) * 11) calc(var(--mm) * 12) calc(var(--mm) * 9); }
+.sheet .lbl { font-size: calc(var(--pt) * 6.8); padding-top: calc(var(--pt) * 2.2); }
+
+.mast { display: flex; justify-content: space-between; gap: calc(var(--mm) * 6); align-items: flex-start; }
+.mast .who { display: flex; gap: calc(var(--mm) * 3.5); align-items: center; min-width: 0; }
+.mast .who svg { width: calc(var(--mm) * 13); height: calc(var(--mm) * 13); flex: none; }
+.mast .clinic { font-size: calc(var(--pt) * 15); line-height: 1.15; font-weight: 800; color: var(--brand-950); letter-spacing: -0.01em; }
+.mast .addr { font-size: calc(var(--pt) * 7.6); color: var(--ink-600); margin-top: calc(var(--pt) * 2); }
+.mast .doc { text-align: end; }
+.mast .doc b { display: block; font-size: calc(var(--pt) * 11); font-weight: 800; color: var(--ink-900); }
+.mast .doc span { display: block; font-size: calc(var(--pt) * 7.6); color: var(--ink-700); }
+.trule { border-top: calc(var(--pt) * 2) solid var(--brand-700); margin: calc(var(--mm) * 4.5) 0 0; }
+.meta { display: flex; justify-content: space-between; gap: calc(var(--mm) * 4); font-size: calc(var(--pt) * 7.6); color: var(--ink-600); padding: calc(var(--pt) * 4) 0 calc(var(--mm) * 5); }
+.meta .title { font-size: calc(var(--pt) * 7.6); font-weight: 800; color: var(--brand-700); text-transform: uppercase; letter-spacing: 0.1em; }
+.meta .mono { color: var(--ink-900); }
+
+.hang { display: grid; grid-template-columns: calc(var(--mm) * 27) 1fr; column-gap: calc(var(--mm) * 5); }
+.a5 .hang { grid-template-columns: calc(var(--mm) * 21) 1fr; column-gap: calc(var(--mm) * 4); }
+.hang > .lbl, .hang > .val { padding-block: calc(var(--mm) * 2.6); border-top: calc(var(--pt) * .5) solid var(--line); }
+.hang > .lbl { padding-top: calc(var(--mm) * 2.6 + var(--pt) * 2.2); }
+.hang > .first { border-top: 0; }
+.ident b { font-size: calc(var(--pt) * 11.5); font-weight: 800; }
+.ident .sub { color: var(--ink-700); }
+.ident .sub .mono { color: var(--ink-900); }
+.allergy { display: inline-flex; gap: calc(var(--mm) * 1.8); align-items: center; background: var(--danger-50); border: calc(var(--pt) * .8) solid var(--danger-200); color: var(--danger-700); font-weight: 800; padding: calc(var(--pt) * 3.5) calc(var(--pt) * 7); border-radius: calc(var(--pt) * 3); }
+.allergy svg { width: calc(var(--pt) * 11); height: calc(var(--pt) * 11); flex: none; }
+.allergy span { color: var(--ink-900); font-weight: 700; }
+
+ol.meds { list-style: none; margin: 0; padding: 0; display: grid; gap: calc(var(--mm) * 3.4); }
+ol.meds li { display: grid; grid-template-columns: calc(var(--pt) * 14) 1fr; }
+ol.meds .n { font-weight: 800; color: var(--brand-700); }
+ol.meds .drug { font-size: calc(var(--pt) * 11); font-weight: 800; letter-spacing: 0.01em; }
+ol.meds .drug small { font-size: calc(var(--pt) * 9.5); font-weight: 600; color: var(--ink-700); letter-spacing: 0; }
+ol.meds .sig { margin-top: calc(var(--pt) * 1); }
+ol.meds .warn { margin-top: calc(var(--pt) * 2.5); font-size: calc(var(--pt) * 7.2); line-height: 1.35; color: var(--ink-700); border: calc(var(--pt) * .6) solid var(--ink-200); border-radius: calc(var(--pt) * 2.5); padding: calc(var(--pt) * 3.5) calc(var(--pt) * 6); }
+ol.meds .warn b { color: var(--ink-900); }
+.stop b { font-weight: 800; }
+.stop .why { color: var(--ink-700); }
+.muted { color: var(--ink-700); }
+.small { font-size: calc(var(--pt) * 7.6); color: var(--ink-600); }
+
+.sign { margin-top: auto; display: flex; justify-content: flex-end; padding-top: calc(var(--mm) * 6); }
+.sign .box { width: calc(var(--mm) * 62); text-align: start; }
+.a5 .sign .box { width: calc(var(--mm) * 56); }
+.sign svg { width: calc(var(--mm) * 34); height: calc(var(--mm) * 11); display: block; margin-bottom: calc(var(--pt) * -2); }
+.sign .line { border-top: calc(var(--pt) * .7) solid var(--ink-900); padding-top: calc(var(--pt) * 3); }
+.sign b { display: block; font-weight: 800; }
+.sign span { display: block; font-size: calc(var(--pt) * 7.6); color: var(--ink-700); }
+
+.foot { margin-top: calc(var(--mm) * 6); border-top: calc(var(--pt) * .5) solid var(--line); padding-top: calc(var(--mm) * 3.5); display: grid; grid-template-columns: calc(var(--mm) * 21) 1fr auto; gap: calc(var(--mm) * 4); align-items: center; font-size: calc(var(--pt) * 7.4); color: var(--ink-600); }
+.a5 .foot { grid-template-columns: calc(var(--mm) * 18) 1fr auto; margin-top: calc(var(--mm) * 3); padding-top: calc(var(--mm) * 2.5); }
+/* A5: the same type on a smaller page, so the rhythm tightens to keep a typical prescription on one page; a longer one flows to page 2 under the repeated masthead. */
+.a5 .hang > .lbl, .a5 .hang > .val { padding-block: calc(var(--mm) * 1.7); }
+.a5 .hang > .lbl { padding-top: calc(var(--mm) * 1.7 + var(--pt) * 2.2); }
+.a5 ol.meds { gap: calc(var(--mm) * 2.2); }
+.a5 .meta { padding-bottom: calc(var(--mm) * 3); }
+.a5 .sign { padding-top: calc(var(--mm) * 2); }
+.a5 .sign svg { height: calc(var(--mm) * 9); }
+.foot .qr { width: 100%; }
+.foot b { color: var(--ink-900); display: block; font-size: calc(var(--pt) * 8); }
+.foot .url { font-family: var(--mono); color: var(--ink-900); word-break: break-all; }
+.foot .page { text-align: end; white-space: nowrap; }
+.foot .hash { font-family: var(--mono); font-size: calc(var(--pt) * 6.4); word-break: break-all; }
+.letter p { margin: 0 0 calc(var(--pt) * 5); }
+.letter p:last-child { margin: 0; }
+
+/* ---------- email ---------- */
+.client { width: 100%; max-width: 640px; background: var(--page-card); border: 1px solid var(--page-line); border-radius: 12px; overflow: hidden; }
+.client .bar { padding: 14px 18px; border-bottom: 1px solid var(--page-line); display: grid; gap: 2px; font-size: 13px; line-height: 18px; }
+.client .bar b { font-size: 15px; line-height: 22px; }
+.client .bar span { color: var(--page-muted); }
+.client .body { background: #eef2f5; padding: 24px 12px; }
+.mail { max-width: 600px; margin: 0 auto; background: #fff; color: var(--ink-900); border-radius: 12px; overflow: hidden; font-family: var(--sans); font-variant-numeric: tabular-nums; }
+.mail[lang="ar"] { font-family: "Noto Sans Arabic", var(--sans); }
+.mail .m-head { padding: 24px 28px 18px; display: flex; gap: 12px; align-items: center; border-bottom: 2px solid var(--brand-700); }
+.mail .m-head svg { width: 36px; height: 36px; flex: none; }
+.mail .m-head b { display: block; font-size: 17px; line-height: 22px; font-weight: 800; color: var(--brand-950); }
+.mail .m-head span { display: block; font-size: 12px; line-height: 16px; color: var(--ink-600); }
+.mail .m-body { padding: 26px 28px 8px; }
+.mail h2 { margin: 0 0 8px; font-size: 22px; line-height: 28px; font-weight: 800; letter-spacing: -0.01em; color: var(--ink-900); }
+.mail p { margin: 0 0 16px; font-size: 16px; line-height: 24px; }
+.mail .facts { display: grid; grid-template-columns: 96px 1fr; margin: 6px 0 22px; }
+.mail .facts > * { padding: 11px 0; border-top: 1px solid var(--line); }
+.mail .facts > .first { border-top: 0; }
+.mail .facts .lbl { font-size: 11px; line-height: 16px; padding-top: 14px; }
+.mail[lang="ar"] .facts .lbl { font-size: 12px; }
+.mail .facts .v { font-size: 16px; line-height: 24px; font-weight: 700; }
+.mail .facts .v span { display: block; font-weight: 500; font-size: 14px; line-height: 20px; color: var(--ink-700); }
+.mail .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 22px; border-radius: 10px; background: var(--brand-700); color: #fff; font-weight: 700; font-size: 15px; text-decoration: none; }
+.mail .fallback { font-size: 13px; line-height: 18px; color: var(--ink-600); margin-top: 14px; }
+.mail .fallback .mono { color: var(--ink-900); word-break: break-all; }
+.mail .m-foot { padding: 18px 28px 24px; margin-top: 16px; background: #f7fafc; border-top: 1px solid var(--line); font-size: 12px; line-height: 18px; color: var(--ink-600); }
+.mail .m-foot p { font-size: 12px; line-height: 18px; margin: 0 0 6px; }
+.mail .m-foot p:last-child { margin: 0; }
+</style>
+</head>
+<body>
+
+<!-- Reused drawings -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <!-- Sample clinic logo: the clinic uploads its own in Settings; this stands in for it. -->
+    <symbol id="logo" viewBox="0 0 48 48"><rect width="48" height="48" rx="12" fill="#0f766e"/><path d="M24 11c-6 6-9 11.5-9 16.5a9 9 0 0 0 18 0C33 22.5 30 17 24 11Z" fill="#e7f6f4"/><path d="M24 20v17M24 29l-4.5-4M24 33l4.5-4" stroke="#0f766e" stroke-width="2.4" stroke-linecap="round" fill="none"/></symbol>
+    <symbol id="logo-mono" viewBox="0 0 48 48"><rect width="48" height="48" rx="12" fill="#000"/><path d="M24 11c-6 6-9 11.5-9 16.5a9 9 0 0 0 18 0C33 22.5 30 17 24 11Z" fill="#fff"/><path d="M24 20v17M24 29l-4.5-4M24 33l4.5-4" stroke="#000" stroke-width="2.4" stroke-linecap="round" fill="none"/></symbol>
+    <symbol id="shield" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/><path d="M12 8v4M12 16h.01" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol>
+    <symbol id="wifi" viewBox="0 0 24 24"><path d="M12 20h.01M2 8.82a15 15 0 0 1 20 0M5 12.86a10 10 0 0 1 14 0M8.5 16.43a5 5 0 0 1 7 0" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="signature" viewBox="0 0 170 55"><path d="M6 40c10-2 16-22 22-30 4-5 6 2 3 10-4 11-9 21-6 22 4 1 10-13 14-14 3-1 1 9 4 9s7-9 11-9c3 0 2 6 5 6 4 0 7-7 12-8 4-1 3 5 7 5 6 0 10-10 16-11 4 0 2 7 6 7 7 0 14-9 22-10M40 47c25-4 60-6 110-9" fill="none" stroke="#1d2f6f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+  <header class="top">
+    <h1>Medvya print and email family</h1>
+    <p>One layout for every paper and email a clinic sends. The clinic's logo and name lead, a teal rule sits under them, and small labels hang in the start margin beside one calm column, so a patient, pharmacist or lab finds who sent it, who it is for and what to do in that order. Every person, clinic and number here is synthetic.</p>
+    <nav class="toc" aria-label="Pieces">
+      <a href="#token">Token slip</a><a href="#rx">Prescription</a><a href="#papers">Lab slip and letter</a><a href="#email">Emails</a>
+    </nav>
+  </header>
+
+  <!-- ===================== TOKEN SLIP ===================== -->
+  <section class="piece" id="token" aria-labelledby="token-h">
+    <h2 id="token-h">Token slip · 80 mm thermal receipt</h2>
+    <p class="lead">Shown at real size. Black only, because thermal printers print one colour. The token is the biggest thing on the slip. Below the dashed line, today's Wi-Fi: scan the code to join, or type the password. Nothing about the patient is printed.</p>
+    <div class="stage">
+      <figure class="specimen" style="margin:0">
+        <article class="paper slip" lang="en" aria-label="Token slip, English">
+          <div class="mast">
+            <svg aria-hidden="true"><use href="#logo-mono"/></svg>
+            <div><div class="clinic">Iyer Family Clinic</div><div class="addr">Kasturba Nagar, Adyar, Chennai · 044 2441 0000</div></div>
+          </div>
+          <div class="rule"></div>
+          <div class="rows">
+            <span class="lbl">Token</span><span class="token mono" dir="ltr">A-07</span>
+            <span class="lbl">Doctor</span><span class="val">Dr. Arjun Rao</span>
+            <span class="lbl">Room</span><span class="ahead">Room 2</span>
+            <span class="lbl">Queue</span><span class="ahead">3 ahead of you</span>
+            <span class="lbl">Issued</span><span class="val">15 Nov 2026 · 10:42</span>
+          </div>
+          <p class="notice">Please wait to be called by this token.</p>
+          <div class="tear"><span>Wi-Fi for today</span></div>
+          <div class="wifi">
+            <div class="qr" data-qr="WIFI:T:WPA;S:IyerClinic-Guest;P:mango-1511;;" aria-label="QR code to join the clinic Wi-Fi" role="img"></div>
+            <div>
+              <div class="head"><svg aria-hidden="true"><use href="#wifi"/></svg>Scan to join</div>
+              <dl>
+                <div><dt>Network</dt><dd>IyerClinic-Guest</dd></div>
+                <div><dt>Password</dt><dd class="mono">mango-1511</dd></div>
+              </dl>
+              <div class="today">Today only. It changes every day.</div>
+            </div>
+          </div>
+        </article>
+        <figcaption>English · 80 mm</figcaption>
+      </figure>
+
+      <figure class="specimen" style="margin:0">
+        <article class="paper slip" lang="ar" dir="rtl" aria-label="قسيمة رقم الدور">
+          <div class="mast">
+            <svg aria-hidden="true"><use href="#logo-mono"/></svg>
+            <div><div class="clinic">عيادة النور العائلية</div><div class="addr">الخالدية، أبوظبي · <bdi dir="ltr">02 665 0000</bdi></div></div>
+          </div>
+          <div class="rule"></div>
+          <div class="rows">
+            <span class="lbl">رقم الدور</span><bdi class="token mono" dir="ltr">A-07</bdi>
+            <span class="lbl">الطبيب</span><span class="val">د. عمر حداد</span>
+            <span class="lbl">الغرفة</span><span class="ahead">غرفة 3</span>
+            <span class="lbl">الدور</span><span class="ahead">أمامك 3 مرضى</span>
+            <span class="lbl">وقت الإصدار</span><span class="val">15 نوفمبر 2026 · <bdi dir="ltr">10:42</bdi></span>
+          </div>
+          <p class="notice">يُرجى الانتظار حتى يُنادى هذا الرقم.</p>
+          <div class="tear"><span>واي فاي اليوم</span></div>
+          <div class="wifi">
+            <div class="qr" data-qr="WIFI:T:WPA;S:AlNoor-Guest;P:palm-1511;;" aria-label="رمز QR للاتصال بشبكة واي فاي العيادة" role="img"></div>
+            <div>
+              <div class="head"><svg aria-hidden="true"><use href="#wifi"/></svg>امسح للاتصال</div>
+              <dl>
+                <div><dt>اسم الشبكة</dt><dd dir="ltr" style="text-align:end">AlNoor-Guest</dd></div>
+                <div><dt>كلمة المرور</dt><dd class="mono" dir="ltr" style="text-align:end">palm-1511</dd></div>
+              </dl>
+              <div class="today">لليوم فقط. تتغير كل يوم.</div>
+            </div>
+          </div>
+        </article>
+        <figcaption>Arabic, right to left · 80 mm</figcaption>
+      </figure>
+    </div>
+    <div class="notes">
+      <div><h3>What changes from today</h3><ul>
+        <li>The token goes from a 30 px line to the full width of the slip, so it reads from across the room.</li>
+        <li>Clinic logo (re-drawn in black), address and phone head the slip.</li>
+        <li>"3 ahead of you" is bold, because that is the patient's real question.</li>
+        <li>A tear-off Wi-Fi stub with a join code that works on iPhone and Android cameras.</li>
+      </ul></div>
+      <div><h3>Needed to build it</h3><ul>
+        <li>Wi-Fi network and password per location in Settings, with an option to change the password daily. The slip leaves out the stub when no Wi-Fi is set.</li>
+        <li>The doctor's room, clinic address and phone in the slip data. The room is already on the front-desk board; the slip carries only the clinic name today. No room set: the row is left out.</li>
+        <li>Print the QR code on the clinic's own thermal printer and scan it with two or three phones before going live: thermal paper can blur fine detail.</li>
+      </ul></div>
+    </div>
+  </section>
+
+  <!-- ===================== PRESCRIPTION ===================== -->
+  <section class="piece" id="rx" aria-labelledby="rx-h">
+    <h2 id="rx-h">Prescription · A4 and A5</h2>
+    <p class="lead">The same fields and wording as today's prescription, now laid out. The doctor's name, qualifications and registration sit top right where a pharmacist looks first. Allergy is a red block with a shield and the word "Allergy". Medicines are numbered, with the generic name in capitals as NMC guidance asks. The registration number repeats under the signature. The verify QR code is at the foot.</p>
+    <div class="stage">
+      <figure class="specimen" style="margin:0;flex:1 1 560px;max-width:794px">
+        <div class="frame a4">
+          <article class="paper sheet" lang="en" aria-label="Prescription, A4">
+            <div class="mast">
+              <div class="who"><svg aria-hidden="true"><use href="#logo"/></svg>
+                <div><div class="clinic">Iyer Family Clinic</div><div class="addr">12 Kasturba Nagar 1st Street, Adyar, Chennai 600020 · 044 2441 0000</div></div></div>
+              <div class="doc"><b>Dr. Arjun Rao</b><span>MBBS, MD (General Medicine)</span><span>Reg. TNMC 84213 · Tamil Nadu Medical Council</span></div>
+            </div>
+            <div class="trule"></div>
+            <div class="meta"><span class="title">Prescription</span><span><span class="mono">RX-2611-0042</span> · version 1 · authorised 15 Nov 2026, 10:58 (Asia/Kolkata)</span></div>
+
+            <div class="hang">
+              <span class="lbl first">Patient</span>
+              <div class="val first ident"><b>Meera Iyer</b><div class="sub">Female · 54 years · MRN <span class="mono">DQ-10-4482</span> · Born 12 Mar 1972</div></div>
+
+              <span class="lbl">Allergy</span>
+              <div class="val"><span class="allergy"><svg aria-hidden="true"><use href="#shield"/></svg>Allergy: <span>Penicillin</span></span></div>
+
+              <span class="lbl">Diagnosis</span>
+              <div class="val">Type 2 diabetes mellitus · Acute pharyngitis <span class="muted">(provisional)</span></div>
+
+              <span class="lbl">Medicines</span>
+              <div class="val">
+                <ol class="meds">
+                  <li><span class="n">1</span><div><div class="drug">AZITHROMYCIN <small>500 mg tablet</small></div><div class="sig">1 tablet once a day after food, for 3 days</div><div class="warn"><b>Schedule H drug.</b> Warning: to be sold by retail on the prescription of a Registered Medical Practitioner only.</div></div></li>
+                  <li><span class="n">2</span><div><div class="drug">METFORMIN <small>500 mg tablet</small></div><div class="sig">1 tablet twice a day with breakfast and dinner, continue</div></div></li>
+                  <li><span class="n">3</span><div><div class="drug">PARACETAMOL <small>650 mg tablet</small></div><div class="sig">1 tablet when needed for fever, at most 3 in a day</div></div></li>
+                </ol>
+              </div>
+
+              <span class="lbl">Stop</span>
+              <div class="val stop"><b>GLIMEPIRIDE 1 mg</b> <span class="why">· Reason: low sugar readings at home</span></div>
+
+              <span class="lbl">Advice</span>
+              <div class="val">Warm fluids and salt-water gargles. Check fasting sugar every morning and bring the readings to the next visit.</div>
+
+              <span class="lbl">Follow-up</span>
+              <div class="val"><b>On or after 22 Nov 2026</b></div>
+            </div>
+
+            <div class="sign"><div class="box">
+              <svg aria-hidden="true"><use href="#signature"/></svg>
+              <div class="line"><b>Dr. Arjun Rao</b><span>Reg. TNMC 84213</span><span>Authorised 15 Nov 2026, 10:58</span></div>
+            </div></div>
+
+            <div class="foot">
+              <div class="qr" data-qr="https://verify.medvya.example/rx/7Q2K9XMB" role="img" aria-label="QR code to check this prescription is valid"></div>
+              <div><b>Check this prescription is valid</b>Scan the code or open <span class="url">verify.medvya.example/rx/7Q2K9XMB</span></div>
+              <div class="page"><span class="mono">RX-2611-0042</span><br>Page 1 of 1</div>
+            </div>
+          </article>
+        </div>
+        <figcaption>A4 · 210 × 297 mm</figcaption>
+      </figure>
+
+      <figure class="specimen" style="margin:0;flex:1 1 400px;max-width:559px">
+        <div class="frame a5">
+          <article class="paper sheet" lang="en" aria-label="Prescription, A5">
+            <div class="mast">
+              <div class="who"><svg aria-hidden="true"><use href="#logo"/></svg>
+                <div><div class="clinic">Iyer Family Clinic</div><div class="addr">Adyar, Chennai 600020 · 044 2441 0000</div></div></div>
+              <div class="doc"><b>Dr. Arjun Rao</b><span>MBBS, MD (General Medicine)</span><span>Reg. TNMC 84213</span></div>
+            </div>
+            <div class="trule"></div>
+            <div class="meta"><span class="title">Prescription</span><span><span class="mono">RX-2611-0042</span> · v1 · 15 Nov 2026, 10:58</span></div>
+            <div class="hang">
+              <span class="lbl first">Patient</span>
+              <div class="val first ident"><b>Meera Iyer</b><div class="sub">F · 54 y · MRN <span class="mono">DQ-10-4482</span> · 12 Mar 1972</div></div>
+              <span class="lbl">Allergy</span>
+              <div class="val"><span class="allergy"><svg aria-hidden="true"><use href="#shield"/></svg>Allergy: <span>Penicillin</span></span></div>
+              <span class="lbl">Diagnosis</span>
+              <div class="val">Type 2 diabetes mellitus · Acute pharyngitis <span class="muted">(provisional)</span></div>
+              <span class="lbl">Medicines</span>
+              <div class="val"><ol class="meds">
+                <li><span class="n">1</span><div><div class="drug">AZITHROMYCIN <small>500 mg tablet</small></div><div class="sig">1 tablet once a day after food, for 3 days</div><div class="warn"><b>Schedule H drug.</b> To be sold by retail on the prescription of a Registered Medical Practitioner only.</div></div></li>
+                <li><span class="n">2</span><div><div class="drug">METFORMIN <small>500 mg tablet</small></div><div class="sig">1 tablet twice a day with meals, continue</div></div></li>
+                <li><span class="n">3</span><div><div class="drug">PARACETAMOL <small>650 mg tablet</small></div><div class="sig">1 tablet when needed for fever, at most 3 a day</div></div></li>
+              </ol></div>
+              <span class="lbl">Stop</span>
+              <div class="val stop"><b>GLIMEPIRIDE 1 mg</b> <span class="why">· Reason: low sugar readings at home</span></div>
+              <span class="lbl">Advice</span>
+              <div class="val">Warm fluids and salt-water gargles. Check fasting sugar every morning and bring the readings to the next visit.</div>
+              <span class="lbl">Follow-up</span>
+              <div class="val"><b>On or after 22 Nov 2026</b></div>
+            </div>
+            <div class="sign"><div class="box">
+              <svg aria-hidden="true"><use href="#signature"/></svg>
+              <div class="line"><b>Dr. Arjun Rao</b><span>Reg. TNMC 84213 · 15 Nov 2026, 10:58</span></div>
+            </div></div>
+            <div class="foot">
+              <div class="qr" data-qr="https://verify.medvya.example/rx/7Q2K9XMB" role="img" aria-label="QR code to check this prescription is valid"></div>
+              <div><b>Check it is valid</b><span class="url">verify.medvya.example/rx/7Q2K9XMB</span></div>
+              <div class="page">Page 1 of 1</div>
+            </div>
+          </article>
+        </div>
+        <figcaption>A5 · 148 × 210 mm, same type size, tighter margins</figcaption>
+      </figure>
+    </div>
+    <div class="notes">
+      <div><h3>What changes from today</h3><ul>
+        <li>One column of run-on lines becomes labelled rows: Patient, Allergy, Diagnosis, Medicines, Stop, Advice, Follow-up.</li>
+        <li>The doctor block moves top right. The registration number is printed again under the signature, as the NMC regulations of 2 Aug 2023 ask.</li>
+        <li>The generic name is in capitals, with strength and form after it in lighter type. Schedule warnings sit in a box under their own medicine.</li>
+        <li>The verify link, QR code and page number share one footer instead of three separate lines.</li>
+      </ul></div>
+      <div><h3>Before it ships</h3><ul>
+        <li>Clinical sign-off: the allergy block and the capitals change how the paper reads, even though the fields and wording stay the same.</li>
+        <li>Raise <code>RxPdfDocument.LayoutVersion</code> to 4, so every doctor approves the new layout again.</li>
+        <li><code>PlainPdf</code> becomes a small set of QuestPDF building blocks (masthead, labelled row, signature, footer) shared by every paper.</li>
+        <li>A UAE clinic gets the same layout with its licence authority (for example DoH) in the doctor block.</li>
+      </ul></div>
+    </div>
+  </section>
+
+  <!-- ===================== OTHER PAPERS ===================== -->
+  <section class="piece" id="papers" aria-labelledby="papers-h">
+    <h2 id="papers-h">Investigation slip and referral letter · A4</h2>
+    <p class="lead">Same masthead, rule, labelled rows, signature and footer. Only the title and the rows change. The signed consultation note uses the same frame, with each addendum as its own labelled row.</p>
+    <div class="stage">
+      <figure class="specimen" style="margin:0;flex:1 1 420px;max-width:560px">
+        <div class="frame thumb">
+          <article class="paper sheet" lang="en" aria-label="Investigation slip">
+            <div class="mast">
+              <div class="who"><svg aria-hidden="true"><use href="#logo"/></svg><div><div class="clinic">Iyer Family Clinic</div><div class="addr">12 Kasturba Nagar 1st Street, Adyar, Chennai 600020 · 044 2441 0000</div></div></div>
+              <div class="doc"><b>Dr. Arjun Rao</b><span>MBBS, MD (General Medicine)</span><span>Reg. TNMC 84213</span></div>
+            </div>
+            <div class="trule"></div>
+            <div class="meta"><span class="title">Investigation slip</span><span>Ordered 15 Nov 2026, 10:56</span></div>
+            <div class="hang">
+              <span class="lbl first">Patient</span><div class="val first ident"><b>Meera Iyer</b><div class="sub">Female · 54 years · MRN <span class="mono">DQ-10-4482</span> · Born 12 Mar 1972</div></div>
+              <span class="lbl">Send to</span><div class="val">Adyar Diagnostics, 4 Gandhi Nagar Main Road</div>
+              <span class="lbl">Tests</span><div class="val"><ol class="meds">
+                <li><span class="n">1</span><div><div class="drug">HbA1c <small>Lab</small></div></div></li>
+                <li><span class="n">2</span><div><div class="drug">Fasting blood glucose <small>Lab</small></div><div class="sig">Fast for 10 hours before the sample</div></div></li>
+                <li><span class="n">3</span><div><div class="drug">Throat swab culture <small>Lab</small></div></div></li>
+              </ol></div>
+              <span class="lbl">Bring</span><div class="val"><b>Bring this slip to the lab.</b></div>
+            </div>
+            <div class="sign"><div class="box"><svg aria-hidden="true"><use href="#signature"/></svg><div class="line"><b>Dr. Arjun Rao</b><span>Reg. TNMC 84213 · Ordered 15 Nov 2026, 10:56</span></div></div></div>
+            <div class="foot">
+              <div class="qr" data-qr="https://verify.medvya.example/paper/K4M8P2QW" role="img" aria-label="QR code to check this paper is genuine"></div>
+              <div><b>Check this paper is genuine</b><span class="url">verify.medvya.example/paper/K4M8P2QW</span><div class="hash">SHA-256 3f9a…c21e</div></div>
+              <div class="page">Page 1 of 1</div>
+            </div>
+          </article>
+        </div>
+        <figcaption>Investigation slip</figcaption>
+      </figure>
+
+      <figure class="specimen" style="margin:0;flex:1 1 420px;max-width:560px">
+        <div class="frame thumb">
+          <article class="paper sheet letter" lang="en" aria-label="Referral letter">
+            <div class="mast">
+              <div class="who"><svg aria-hidden="true"><use href="#logo"/></svg><div><div class="clinic">Iyer Family Clinic</div><div class="addr">12 Kasturba Nagar 1st Street, Adyar, Chennai 600020 · 044 2441 0000</div></div></div>
+              <div class="doc"><b>Dr. Arjun Rao</b><span>MBBS, MD (General Medicine)</span><span>Reg. TNMC 84213</span></div>
+            </div>
+            <div class="trule"></div>
+            <div class="meta"><span class="title">Referral letter</span><span>15 Nov 2026</span></div>
+            <div class="hang">
+              <span class="lbl first">To</span><div class="val first"><b>Dr. K. Subramanian</b>, Endocrinology, Adyar Medical Centre · <span class="muted">Routine</span></div>
+              <span class="lbl">Patient</span><div class="val ident"><b>Meera Iyer</b><div class="sub">Female · 54 years · MRN <span class="mono">DQ-10-4482</span> · Born 12 Mar 1972</div></div>
+              <span class="lbl">Allergy</span><div class="val"><span class="allergy"><svg aria-hidden="true"><use href="#shield"/></svg>Allergy: <span>Penicillin</span></span></div>
+              <span class="lbl">Reason</span><div class="val">Review of diabetes control: HbA1c 7.9 % on metformin; glimepiride stopped after low readings.</div>
+              <span class="lbl">Letter</span><div class="val"><p>Dear Dr. Subramanian,</p><p>Thank you for seeing Mrs Iyer, who has had type 2 diabetes for nine years. Home readings show fasting sugars of 140 to 170 mg/dL. I would value your advice on adding a second agent.</p><p>Current medicines and recent results are attached.</p></div>
+            </div>
+            <div class="sign"><div class="box"><svg aria-hidden="true"><use href="#signature"/></svg><div class="line"><b>Dr. Arjun Rao</b><span>Reg. TNMC 84213 · 15 Nov 2026</span></div></div></div>
+            <div class="foot">
+              <div class="qr" data-qr="https://verify.medvya.example/paper/R7T3N9VX" role="img" aria-label="QR code to check this letter is genuine"></div>
+              <div><b>Check this letter is genuine</b><span class="url">verify.medvya.example/paper/R7T3N9VX</span></div>
+              <div class="page">Page 1 of 1</div>
+            </div>
+          </article>
+        </div>
+        <figcaption>Referral letter</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ===================== EMAILS ===================== -->
+  <section class="piece" id="email" aria-labelledby="email-h">
+    <h2 id="email-h">Emails</h2>
+    <p class="lead">The same masthead and labelled rows in a 600 px email, sent as HTML with the plain-text copy beside it. Patient emails still name only the clinic, the date and the time: no doctor, reason or medical detail. One teal button only where there is something to do.</p>
+    <div class="stage">
+      <figure class="specimen" style="margin:0;flex:1 1 480px;max-width:640px">
+        <div class="client">
+          <div class="bar"><b>Iyer Family Clinic: Appointment reminder</b><span>From Iyer Family Clinic · to the patient's email address</span></div>
+          <div class="body">
+            <article class="mail" lang="en" aria-label="Appointment reminder email">
+              <div class="m-head"><svg aria-hidden="true"><use href="#logo"/></svg><div><b>Iyer Family Clinic</b><span>Adyar, Chennai</span></div></div>
+              <div class="m-body">
+                <h2>Appointment reminder</h2>
+                <p>Reminder: your appointment at Iyer Family Clinic is on Mon 17 Nov 2026 at 10:30.</p>
+                <div class="facts">
+                  <span class="lbl first">Date</span><div class="v first">Monday 17 November 2026</div>
+                  <span class="lbl">Time</span><div class="v">10:30<span>India Standard Time</span></div>
+                  <span class="lbl">Clinic</span><div class="v">Iyer Family Clinic<span>12 Kasturba Nagar 1st Street, Adyar, Chennai 600020</span></div>
+                  <span class="lbl">Change</span><div class="v">Call 044 2441 0000<span>To move or cancel, call the clinic.</span></div>
+                </div>
+              </div>
+              <div class="m-foot">
+                <p>Sent by Iyer Family Clinic through Medvya. This email has no medical details.</p>
+                <p>You get it because you agreed to appointment emails. To stop them, tell the clinic.</p>
+              </div>
+            </article>
+          </div>
+        </div>
+        <figcaption>Appointment reminder, English</figcaption>
+      </figure>
+
+      <figure class="specimen" style="margin:0;flex:1 1 480px;max-width:640px">
+        <div class="client">
+          <div class="bar"><b>Invitation to join Iyer Family Clinic on Medvya</b><span>From Medvya · to a new staff member</span></div>
+          <div class="body">
+            <article class="mail" lang="en" aria-label="Staff invitation email">
+              <div class="m-head"><svg aria-hidden="true"><use href="#logo"/></svg><div><b>Iyer Family Clinic</b><span>on Medvya</span></div></div>
+              <div class="m-body">
+                <h2>Join Iyer Family Clinic</h2>
+                <p>You have been invited to join Iyer Family Clinic on Medvya.</p>
+                <div class="facts">
+                  <span class="lbl first">Role</span><div class="v first">Receptionist</div>
+                  <span class="lbl">Location</span><div class="v">Adyar</div>
+                  <span class="lbl">Expires</span><div class="v">18 Nov 2026, 10:42<span>Asia/Kolkata</span></div>
+                </div>
+                <a class="btn" href="#email">Accept the invitation</a>
+                <p class="fallback">If the button does not work, open this link: <span class="mono">medvya.example/invite/••••••</span></p>
+                <p style="font-size:14px;line-height:20px;color:var(--ink-700)">The link works once. If you were not expecting this invitation, ignore this email.</p>
+              </div>
+              <div class="m-foot"><p>Medvya · clinic software for India and the UAE.</p></div>
+            </article>
+          </div>
+        </div>
+        <figcaption>Staff invitation</figcaption>
+      </figure>
+
+      <figure class="specimen" style="margin:0;flex:1 1 480px;max-width:640px">
+        <div class="client">
+          <div class="bar" dir="rtl" lang="ar"><b>عيادة النور العائلية: تذكير بالموعد</b><span>من عيادة النور العائلية</span></div>
+          <div class="body">
+            <article class="mail" lang="ar" dir="rtl" aria-label="رسالة تذكير بالموعد">
+              <div class="m-head"><svg aria-hidden="true"><use href="#logo"/></svg><div><b>عيادة النور العائلية</b><span>الخالدية، أبوظبي</span></div></div>
+              <div class="m-body">
+                <h2>تذكير بالموعد</h2>
+                <p>تذكير: موعدك في عيادة النور العائلية بتاريخ 17 نوفمبر 2026 الساعة <bdi dir="ltr">10:30</bdi>.</p>
+                <div class="facts">
+                  <span class="lbl first">التاريخ</span><div class="v first">الاثنين 17 نوفمبر 2026</div>
+                  <span class="lbl">الوقت</span><div class="v"><bdi dir="ltr">10:30</bdi><span>بتوقيت الإمارات</span></div>
+                  <span class="lbl">العيادة</span><div class="v">عيادة النور العائلية<span>شارع الخالدية، أبوظبي</span></div>
+                  <span class="lbl">للتغيير</span><div class="v">اتصل على <bdi dir="ltr">02 665 0000</bdi><span>لنقل الموعد أو إلغائه، اتصل بالعيادة.</span></div>
+                </div>
+              </div>
+              <div class="m-foot">
+                <p>أرسلتها عيادة النور العائلية عبر Medvya. لا يحتوي هذا البريد على أي تفاصيل طبية.</p>
+                <p>تصلك لأنك وافقت على رسائل المواعيد. لإيقافها، أبلغ العيادة.</p>
+              </div>
+            </article>
+          </div>
+        </div>
+        <figcaption>Appointment reminder, Arabic (working translation)</figcaption>
+      </figure>
+    </div>
+    <div class="notes">
+      <div><h3>What changes from today</h3><ul>
+        <li>Plain text becomes branded HTML with the clinic logo, and the plain-text copy is still sent for clients that block HTML.</li>
+        <li>The date and time are spelt out and the time zone is named, so nobody misreads 17/11 or 11/17.</li>
+        <li>Clinic address and phone (clinic details, not patient details) tell the patient how to change the visit.</li>
+        <li>The footer says why the email came and how to stop it.</li>
+      </ul></div>
+      <div><h3>Needed to build it</h3><ul>
+        <li><code>EmailMessage</code> gains an HTML body next to the text body; SMTP, SendGrid and Azure Communication Services all accept both.</li>
+        <li>Table-based HTML with inline styles, because Outlook and Gmail ignore modern CSS. The logo is a transparent PNG at 2×, with the clinic name as its alt text.</li>
+        <li>The SMS text stays exactly as registered under DLT; only the email gains layout.</li>
+      </ul></div>
+    </div>
+  </section>
+</div>
+
+<script>
+// Draw each QR code as one SVG path (the same way PlainPdf draws it), from data-qr. Medium error correction suits thermal and laser paper;
+// the white border is the 4 modules the QR standard asks for, or phones misread codes printed close to text.
+document.querySelectorAll('[data-qr]').forEach(function (el) {
+  if (typeof qrcode !== 'function') { el.textContent = 'QR'; return; }
+  var q = qrcode(0, 'M'); q.addData(el.getAttribute('data-qr')); q.make();
+  var n = q.getModuleCount(), quiet = 4, d = '';
+  for (var r = 0; r < n; r++) for (var c = 0; c < n; c++) if (q.isDark(r, c)) d += 'M' + (c + quiet) + ' ' + (r + quiet) + 'h1v1h-1z';
+  var size = n + quiet * 2;
+  el.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + size + ' ' + size + '" shape-rendering="crispEdges" aria-hidden="true"><rect width="' + size + '" height="' + size + '" fill="#fff"/><path d="' + d + '" fill="#000"/></svg>';
+});
+</script>
+</body>
+</html>

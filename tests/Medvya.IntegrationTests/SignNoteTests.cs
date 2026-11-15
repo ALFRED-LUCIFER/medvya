@@ -627,7 +627,7 @@ public sealed class SignNoteTests(PostgresFixture sql) : IClassFixture<PostgresF
         Assert.Equal(PostgresErrorCodes.CheckViolation, (ex.InnerException as PostgresException)?.SqlState);
     }
 
-    // SAFETY mutation check: drop page.Header() from PlainPdf.Write and the per-page identifier checks fail.
+    // SAFETY mutation check: move the patient row out of page.Header() in PlainPdf.Write (into the content) and the per-page identifier checks fail.
     [Fact]
     public async Task ThePdfIsRenderedServerSideWithIdentifiersOnEveryPageAndStoredWithItsHash()
     {
@@ -646,7 +646,7 @@ public sealed class SignNoteTests(PostgresFixture sql) : IClassFixture<PostgresF
 
         Assert.StartsWith("%PDF-", Encoding.ASCII.GetString(bytes, 0, 5), StringComparison.Ordinal);
         var pages = PdfPages.Read(bytes, PlainPdf.A4.Margin);
-        string[] markers = ["MRN 000001", "Date of birth 12 Mar 1972", "Meera Lakshmi Venkataraman Iyer (synthetic)", "Corrections are added as signed addenda."];
+        string[] markers = ["MRN 000001", "Born 12 Mar 1972", "Meera Lakshmi Venkataraman Iyer (synthetic)", "Corrections are added as signed addenda."];
         Assert.True(pages.Count >= 2, $"{pages.Count} page(s)");
         Assert.All(pages, page =>
         {

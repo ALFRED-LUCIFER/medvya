@@ -171,7 +171,18 @@ export const endKinds = (state: AppointmentState, canCancel: boolean): EndKind[]
 
 // MDV-P2-046: GET /v1/appointments/{id}/token-slip (IFrontDeskService.TokenSlipAsync). Nothing about the patient, by design.
 // ahead: patients before this one in the doctor's queue when printed (MDV-P1-103); null once the patient is no longer waiting.
-export type TokenSlip = { clinicName: string; token: string; doctorName: string; issuedAt: string; timeZone: string; ahead: number | null };
+/** GET /v1/appointments/{id}/token-slip (IFrontDeskService.cs): clinic, token, doctor, rooms, time and guest Wi-Fi. Nothing about the patient. */
+export type TokenSlip = {
+  clinicName: string; token: string; doctorName: string; issuedAt: string; timeZone: string; ahead: number | null;
+  address?: string | null; phone?: string | null; room?: string | null; vitalsRoom?: string | null;
+  /** The practice logo as a PNG data URL. */
+  logo?: string | null;
+  /** qr: the join code's rows ('1' dark). daily: the desk changes the password every day. */
+  wifi?: { network: string; password: string | null; daily: boolean; qr: string[] } | null;
+};
+
+/** The slip's own words for the queue: "You are next" or "3 ahead of you" (MDV-P1-111). */
+export const slipAheadWords = ({ t, tCount }: Pick<I18n, 't' | 'tCount'>, ahead: number) => (ahead === 0 ? t('tokenSlip.next') : tCount('tokenSlip.ahead', ahead));
 
 /** How many wait before a patient in their doctor's queue (decision 10, MDV-P1-103), in words: "Next in line" or "2 ahead". */
 export const aheadWords = ({ t, tCount }: Pick<I18n, 't' | 'tCount'>, ahead: number) => (ahead === 0 ? t('queue.next') : tCount('queue.ahead', ahead));

@@ -16,6 +16,7 @@ public sealed class Doctors(TenancyDbContext db, ICurrentTenant tenant, ICurrent
     : IDoctors
 {
     const long MaxFeeMinor = 100_000_000;
+    const int MaxRoom = 50;
 
     Guid TenantId => tenant.TenantId ?? throw new InvalidOperationException("No tenant context.");
 
@@ -44,6 +45,8 @@ public sealed class Doctors(TenancyDbContext db, ICurrentTenant tenant, ICurrent
         if (!command.Attested) errors.Add(new("attested", "required"));
         Fee(errors, "newVisitFee", command.NewVisitFee);
         Fee(errors, "followUpFee", command.FollowUpFee);
+        var room = Clean(command.Room);
+        Text(errors, "room", room, MaxRoom, false);
         SettingsValidationException.ThrowIfAny(errors);
         if (!await db.Facilities.AnyAsync(f => f.Id == command.FacilityId, cancellationToken)) return null;
 
@@ -57,6 +60,7 @@ public sealed class Doctors(TenancyDbContext db, ICurrentTenant tenant, ICurrent
             {
                 MembershipId = m.Id, TenantId = TenantId, FullName = name!, Specialty = specialty, Qualifications = qualifications, Languages = languages,
                 NewVisitFeeMinor = command.NewVisitFee!.Value, FollowUpFeeMinor = command.FollowUpFee!.Value, ChangedBy = user.UserId, ChangedAt = now,
+                Room = m.FacilityId == command.FacilityId ? room : null, // a room belongs to one location
             });
             db.DoctorLicences.Add(new DoctorLicence
             {
@@ -128,6 +132,20 @@ public sealed class Doctors(TenancyDbContext db, ICurrentTenant tenant, ICurrent
         return true;
     }
 
+    public async Task<DoctorView?> SetRoomAsync(Guid doctorId, string? room, CancellationToken cancellationToken = default)
+    {
+        var profile = await db.DoctorProfiles.SingleOrDefaultAsync(p => p.MembershipId == doctorId, cancellationToken);
+        if (profile is null) return null;
+        var errors = new List<ValidationError>();
+        Text(errors, "room", room = Clean(room), MaxRoom, false);
+        SettingsValidationException.ThrowIfAny(errors);
+        var before = profile.Room;
+        (profile.Room, profile.ChangedBy, profile.ChangedAt) = (room, user.UserId, clock.GetUtcNow());
+        await SettingsAudit.SaveAsync(db, audit, TenantId, user.UserId, profile.ChangedAt, "settings.doctor.room.update", "doctor", doctorId,
+            new { room = before }, new { room }, cancellationToken);
+        return (await QueryAsync(doctorId, (await RulesAsync(cancellationToken)).Currency, cancellationToken))[0];
+    }
+
     async Task<OnboardingRules> RulesAsync(CancellationToken ct) =>
         OnboardingRules.For(await db.Tenants.Select(t => t.CountryCode).SingleAsync(ct)) ?? throw new InvalidOperationException("Unsupported country.");
 
@@ -147,7 +165,7 @@ public sealed class Doctors(TenancyDbContext db, ICurrentTenant tenant, ICurrent
         return [.. rows.Select(r => new DoctorView(
             r.Id, r.p.FullName, r.p.Specialty, r.p.Qualifications, r.p.Languages, r.FacilityId, r.Facility, r.Status,
             r.Licence.Authority, r.Licence.Number, r.Licence.Category, r.Licence.ExpiresOn, LicenceRules.IsExpired(r.Licence, today), r.Licence.AttestedBy, r.attester, r.Licence.AttestedAt,
-            r.p.SignatureKey is not null, r.p.NewVisitFeeMinor, r.p.FollowUpFeeMinor, currency))];
+            r.p.SignatureKey is not null, r.p.NewVisitFeeMinor, r.p.FollowUpFeeMinor, currency, r.p.Room))];
     }
 
     void Licence(List<ValidationError> errors, OnboardingRules rules, string? authority, string? number, string? category, DateOnly? expiresOn, string? certificate) =>

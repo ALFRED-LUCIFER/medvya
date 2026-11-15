@@ -703,7 +703,14 @@ for (const locale of ['en', 'ar'])
 
 // MDV-P2-046: the token slip. Reprint sits on a waiting card with a token; the slip names the clinic, token, doctor, how many are ahead
 // in that doctor's queue (MDV-P1-103), date and time, and nothing about the patient. The server's field list and the void-token refusal are proven in FrontDeskEndpointTests.
-const slip = { clinicName: 'Iyer Family Clinic · Adyar', token: 'A-07', doctorName: 'Dr. Arjun Rao (synthetic)', issuedAt: ist('10:20'), timeZone: 'Asia/Kolkata', ahead: 2 };
+// MDV-P1-111: the print family layout adds the clinic's address and phone, the doctor's room, the vitals room and the guest Wi-Fi stub.
+const qr = Array.from({ length: 29 }, (_, y) => Array.from({ length: 29 }, (_, x) => ((x * 7 + y * 3) % 5 === 0 ? '1' : '0')).join(''));
+const slip = {
+  clinicName: 'Iyer Family Clinic · Adyar', token: 'A-07', doctorName: 'Dr. Arjun Rao (synthetic)', issuedAt: ist('10:20'), timeZone: 'Asia/Kolkata', ahead: 2,
+  address: 'Kasturba Nagar, Adyar, Chennai', phone: '044 2441 0000', room: 'Room 2', vitalsRoom: 'Room 1', logo: null,
+  wifi: { network: 'IyerClinic-Guest', password: 'mango-1511', daily: true, qr },
+};
+const plainSlip = { ...slip, address: null, phone: null, room: null, vitalsRoom: null, wifi: null };
 for (const locale of ['en', 'ar'])
   test(`Reprint opens the same token's slip: clinic, token, doctor and time, no patient details, axe clean (${locale})`, async ({ page }) => {
     const reads: string[] = [];
@@ -720,7 +727,14 @@ for (const locale of ['en', 'ar'])
     await expect(paper).toContainText('A-07');
     await expect(paper).toContainText('Iyer Family Clinic · Adyar');
     await expect(paper).toContainText('Dr. Arjun Rao (synthetic)');
-    await expect(paper).toContainText(locale === 'ar' ? 'قبله مريضان' : '2 ahead'); // the Arabic dual, in words
+    await expect(paper).toContainText(locale === 'ar' ? 'أمامك مريضان' : '2 ahead of you'); // the Arabic dual, in words
+    await expect(paper).toContainText('Room 2'); // the doctor's room (MDV-P1-111)
+    await expect(paper).toContainText('Room 1'); // the vitals room
+    await expect(paper).toContainText('044 2441 0000');
+    await expect(paper.getByRole('img', { name: locale === 'ar' ? 'رمز QR للاتصال بشبكة واي فاي العيادة' : 'QR code to join the clinic Wi-Fi' })).toBeVisible();
+    await expect(paper).toContainText('IyerClinic-Guest');
+    await expect(paper).toContainText('mango-1511');
+    await expect(paper).toContainText(locale === 'ar' ? 'لليوم فقط. تتغير كل يوم.' : 'Today only. It changes every day.');
     await expect(paper).toContainText('10:20'); // issued, in facility time although the device is in New York
     // The test fails if a patient detail is added: no name, MRN, phone or reason.
     for (const leak of ['Farhan', 'Qureshi', 'APT-A2', '+91', 'General', '1972']) await expect(paper).not.toContainText(leak);
@@ -732,8 +746,10 @@ for (const locale of ['en', 'ar'])
 
 // Founder decision, 15 Nov 2026: the patient gets a small physical token. The slip prints on an 80 mm receipt page, as one page.
 // Mutation check: drop the receiptPage style from TokenSlipPrintPage.tsx and the page is A4 (595 pt wide), so this fails.
-test('the token slip prints as one 80 mm receipt with the token and no patient details', async ({ page }) => {
-  await page.route('**/v1/appointments/*/token-slip', r => r.fulfill({ json: slip }));
+// 110 mm without the Wi-Fi stub, 160 mm with it (MDV-P1-111): always one page.
+for (const [kind, json, height] of [['without', plainSlip, 110], ['with', slip, 160]] as const)
+test(`the token slip prints as one 80 mm receipt with the token and no patient details, ${kind} the Wi-Fi stub`, async ({ page }) => {
+  await page.route('**/v1/appointments/*/token-slip', r => r.fulfill({ json }));
   await page.route('**/v1/me/context', r => r.fulfill({ json: reception }));
   await page.goto('/front-desk/token/a2');
   await expect(page.getByRole('article', { name: /A-07/ })).toBeVisible();
@@ -741,12 +757,13 @@ test('the token slip prints as one 80 mm receipt with the token and no patient d
   const boxes = [...pdf.matchAll(/\/MediaBox\s*\[\s*0 0 ([\d.]+) ([\d.]+)\s*\]/g)].map(m => [Number(m[1]), Number(m[2])]);
   expect(boxes).toHaveLength(1); // one page
   expect(boxes[0]![0]).toBeCloseTo(80 / 25.4 * 72, 0); // 80 mm wide (226.8 pt)
-  expect(boxes[0]![1]).toBeCloseTo(120 / 25.4 * 72, 0);
+  expect(Math.abs(boxes[0]![1]! - height / 25.4 * 72)).toBeLessThan(1); // Chrome rounds the page height to whole pixels
   await page.emulateMedia({ media: 'print' });
   await expect(page.getByRole('button', { name: 'Print', exact: true })).toBeHidden(); // only the slip is on the paper
   const paper = page.getByRole('article', { name: /A-07/ });
   for (const leak of ['Farhan', 'Qureshi', '+91']) await expect(paper).not.toContainText(leak);
   expect((await paper.boundingBox())!.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+  expect((await paper.boundingBox())!.height).toBeLessThanOrEqual(height / 25.4 * 96); // the slip fits its page (CSS px at 96 per inch)
 });
 
 test('a void token (the visit was cancelled or the patient left) is refused by the server and says so', async ({ page }) => {

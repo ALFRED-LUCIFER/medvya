@@ -18,7 +18,9 @@ public sealed record SaveProfile
     public uint? Version { get; init; }
 }
 
-public sealed record LocationView(Guid Id, string Name, string? Address, string TimeZone);
+/// <param name="NurseRoom">Where patients go for vitals (MDV-P1-111). The Wi-Fi fields are the guest network printed on token slips.</param>
+public sealed record LocationView(Guid Id, string Name, string? Address, string TimeZone, string? NurseRoom = null, string? WifiNetwork = null, string? WifiPassword = null,
+    bool WifiDaily = false);
 
 public sealed record SaveLocation
 {
@@ -26,6 +28,12 @@ public sealed record SaveLocation
     public string? Address { get; init; }
     /// <summary>IANA id (Asia/Kolkata, Asia/Dubai); required for a new location, unchanged when null on an update.</summary>
     public string? TimeZone { get; init; }
+    /// <summary>On an update, blank clears it, as for the address (MDV-P1-111).</summary>
+    public string? NurseRoom { get; init; }
+    /// <summary>The guest network printed on token slips; blank leaves the slip's Wi-Fi stub out and clears the password.</summary>
+    public string? WifiNetwork { get; init; }
+    public string? WifiPassword { get; init; }
+    public bool WifiDaily { get; init; }
 }
 
 /// <summary>

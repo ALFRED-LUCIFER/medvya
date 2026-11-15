@@ -25,7 +25,7 @@ Every requirement, screen, exit criterion, NFR, delivery-package item and depend
 | P1-05 | P1 | MUST | MDV-P1-013, MDV-P1-014, MDV-P1-015, MDV-P1-016, MDV-P1-017, MDV-P1-018, MDV-P1-020, MDV-P1-038, MDV-P1-072, MDV-P1-085, MDV-P1-101, MDV-P2-058, MDV-P2-063 |
 | P1-06 | P1 | MUST | MDV-P1-021, MDV-P1-023, MDV-P1-024, MDV-P1-025, MDV-P1-026, MDV-P1-027, MDV-P1-037, MDV-P1-042, MDV-P1-047, MDV-P1-097, MDV-P1-102, MDV-P1-110 |
 | P1-07 | P1 | MUST | MDV-P1-021, MDV-P1-022, MDV-P1-037 |
-| P1-08 | P1 | MUST | MDV-P1-028, MDV-P1-029, MDV-P1-030, MDV-P1-031, MDV-P1-036, MDV-P1-040, MDV-P1-041, MDV-P1-042, MDV-P1-049, MDV-P1-050, MDV-P1-051, MDV-P1-052, MDV-P1-095, MDV-P1-100, MDV-P1-103, MDV-P1-106, MDV-P2-046, MDV-P2-052, MDV-P2-053 |
+| P1-08 | P1 | MUST | MDV-P1-028, MDV-P1-029, MDV-P1-030, MDV-P1-031, MDV-P1-036, MDV-P1-040, MDV-P1-041, MDV-P1-042, MDV-P1-049, MDV-P1-050, MDV-P1-051, MDV-P1-052, MDV-P1-095, MDV-P1-100, MDV-P1-103, MDV-P1-106, MDV-P1-111, MDV-P2-046, MDV-P2-052, MDV-P2-053 |
 | P1-09 | P1 | MUST | MDV-P1-032, MDV-P1-033, MDV-P1-034, MDV-P1-041, MDV-P1-045 |
 | P1-10 | P1 | MUST | MDV-P1-035, MDV-P2-050 |
 | P1-11 | P1 | MUST | MDV-P1-009, MDV-P1-010, MDV-P1-038, MDV-P1-107 |
@@ -100,7 +100,7 @@ Every requirement, screen, exit criterion, NFR, delivery-package item and depend
 | F-02 Country & data residency selector | P1 | DESIGNED | MDV-P1-002 |
 | F-04 Solo doctor onboarding (licence, schedule, invite) | P1 | DESIGNED | MDV-P1-004, MDV-P1-059, MDV-P1-061, MDV-P1-062, MDV-P1-063, MDV-P1-066 |
 | F-07 Trust centre & demo request | P1 | DESIGNED | MDV-P1-003, MDV-P1-057, MDV-P1-058 |
-| F-08 Practice settings (profile, availability, staff, services, n | P1 | DESIGNED | MDV-P1-005, MDV-P1-006, MDV-P1-019, MDV-P1-063, MDV-P1-066, MDV-P1-069, MDV-P1-070, MDV-P2-055 |
+| F-08 Practice settings (profile, availability, staff, services, n | P1 | DESIGNED | MDV-P1-005, MDV-P1-006, MDV-P1-019, MDV-P1-063, MDV-P1-066, MDV-P1-069, MDV-P1-070, MDV-P1-111, MDV-P2-055 |
 | F-09 Add doctor (clinic mode): licence, schedule, fees, access, s | P1 | DESIGNED | MDV-P1-007, MDV-P1-065, MDV-P1-069, MDV-P1-071 |
 | F-10 Add staff & roles (scope, permissions, invite, custom roles) | P1 | DESIGNED | MDV-P1-008, MDV-P1-009, MDV-P1-071, MDV-P1-107 |
 | F-12 Practice access log | P1 | DESIGNED | MDV-P1-035, MDV-P2-050 |
@@ -108,7 +108,7 @@ Every requirement, screen, exit criterion, NFR, delivery-package item and depend
 | P-02 Register patient · India (ABHA) & UAE (Emirates ID) | P1 | DESIGNED | MDV-P1-013, MDV-P1-014, MDV-P1-015, MDV-P1-016, MDV-P1-018, MDV-P1-019, MDV-P1-020, MDV-P1-072, MDV-P2-058 |
 | P-03 Duplicate / merge review | P1 | DESIGNED | MDV-P1-017, MDV-P1-072, MDV-P1-101 |
 | P-04 Day/week calendar · walk-in · reschedule · no-show | P1 | DESIGNED | MDV-P1-011, MDV-P1-012, MDV-P1-021, MDV-P1-023, MDV-P1-024, MDV-P1-025, MDV-P1-026, MDV-P1-097, MDV-P1-101, MDV-P1-102 |
-| P-05 Waitlist & room queue · queue TV display | P1 | DESIGNED | MDV-P1-027, MDV-P1-031, MDV-P1-100, MDV-P1-103, MDV-P2-046 |
+| P-05 Waitlist & room queue · queue TV display | P1 | DESIGNED | MDV-P1-027, MDV-P1-031, MDV-P1-100, MDV-P1-103, MDV-P1-111, MDV-P2-046 |
 | D-01 Doctor Today | P2 | DESIGNED | MDV-P1-090, MDV-P1-099, MDV-P1-103, MDV-P2-002, MDV-P2-051 |
 | D-02 Global privacy-safe search (⌘K) | P2 | DESIGNED | MDV-P1-101, MDV-P2-003 |
 | E-01 Patient 360 | P2 | DESIGNED | MDV-P1-092, MDV-P2-004, MDV-P2-031, MDV-P2-032, MDV-P2-033, MDV-P2-034, MDV-P2-035, MDV-P2-036, MDV-P2-037, MDV-P2-038, MDV-P2-051, MDV-P2-061 |
@@ -119,7 +119,7 @@ Every requirement, screen, exit criterion, NFR, delivery-package item and depend
 | E-06 Signed note · addendum · print | P2 | DESIGNED | MDV-P1-091, MDV-P1-109, MDV-P2-012, MDV-P2-013, MDV-P2-044, MDV-P2-049, MDV-P2-067 |
 | E-07 Diagnosis coding & meds reconciliation | P2 | DESIGNED | MDV-P1-094, MDV-P2-010, MDV-P2-011 |
 | E-09 Referral out / in with status | P2 | DESIGNED | MDV-P2-019 |
-| E-10 Printed prescription · e-Rx to pharmacy · multilingual | P2 | DESIGNED | MDV-P2-017, MDV-P2-020 |
+| E-10 Printed prescription · e-Rx to pharmacy · multilingual | P2 | DESIGNED | MDV-P1-111, MDV-P2-017, MDV-P2-020 |
 | E-11 Add medicine while prescribing (dose builder, safety checks) | P2 | DESIGNED | MDV-P1-087, MDV-P1-088, MDV-P2-015, MDV-P2-016, MDV-P2-039, MDV-P2-040 |
 | F-13 Medicines & formulary · India Schedule H/H1/X · UAE drug cod | P2 | DESIGNED | MDV-P1-088, MDV-P2-014 |
 | N-01 Nurse intake: vitals, allergies, meds | P2 | DESIGNED | MDV-P1-092, MDV-P1-104, MDV-P2-007, MDV-P2-008, MDV-P2-031, MDV-P2-048 |

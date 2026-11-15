@@ -1,5 +1,7 @@
 using System.Net;
 using System.Net.Mail;
+using System.Net.Mime;
+using System.Text;
 using Medvya.BuildingBlocks.Domain;
 using Microsoft.Extensions.Options;
 
@@ -20,7 +22,8 @@ public sealed class SmtpOptions
 }
 
 /// <summary>
-/// Sends through System.Net.Mail: enough for plain-text transactional mail over STARTTLS, so no mail library is needed.
+/// Sends through System.Net.Mail: enough for transactional mail over STARTTLS, so no mail library is needed. With an HTML copy the message is
+/// multipart/alternative (plain text first) and the logo rides inside the HTML part as an inline image (cid:logo).
 /// Fails closed: without a configured host and sender nothing is sent and the caller's request fails.
 /// </summary>
 public sealed class SmtpEmailSender(IOptions<SmtpOptions> options) : IEmailSender
@@ -33,6 +36,12 @@ public sealed class SmtpEmailSender(IOptions<SmtpOptions> options) : IEmailSende
         using var smtp = new SmtpClient(o.Host, o.Port) { EnableSsl = o.EnableSsl, DeliveryMethod = SmtpDeliveryMethod.Network };
         if (!string.IsNullOrEmpty(o.UserName)) smtp.Credentials = new NetworkCredential(o.UserName, o.Password);
         using var mail = new MailMessage(new MailAddress(o.From, message.FromName), new MailAddress(message.To)) { Subject = message.Subject, Body = message.Body };
+        if (message.Html is { } html)
+        {
+            var view = AlternateView.CreateAlternateViewFromString(html, Encoding.UTF8, MediaTypeNames.Text.Html);
+            if (message.Logo is { } logo) view.LinkedResources.Add(new LinkedResource(new MemoryStream(logo), MediaTypeNames.Image.Png) { ContentId = EmailHtml.LogoId });
+            mail.AlternateViews.Add(view); // disposed with the message
+        }
         foreach (var (name, value) in message.Headers ?? new Dictionary<string, string>()) mail.Headers.Add(name, value);
         await smtp.SendMailAsync(mail, cancellationToken);
     }

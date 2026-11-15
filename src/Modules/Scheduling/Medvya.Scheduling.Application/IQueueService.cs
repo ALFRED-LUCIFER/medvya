@@ -8,13 +8,15 @@ namespace Medvya.Scheduling.Application;
 public sealed record QueueTv(IReadOnlyList<QueueTvNow> Now, IReadOnlyList<QueueTvNext> Next);
 
 /// <summary>A token called in: where to go and to whom. Room is null when the doctor's session has none.</summary>
-public sealed record QueueTvNow(string Token, string? Room, string Doctor);
+/// <param name="Vitals">Called to the location's vitals room by the nurse (MDV-P1-111), not in to the doctor.</param>
+public sealed record QueueTvNow(string Token, string? Room, string Doctor, bool Vitals = false);
 
 /// <summary>
 /// A waiting token, about how many minutes until it is called, the doctor whose queue it is in (it may have been reassigned, MDV-P1-103)
-/// and how many patients wait ahead of it in that doctor's queue (0: next in line; decision 10).
+/// and how many patients wait ahead of it in that doctor's queue (0: next in line; decision 10). Room: where it will go, the doctor's room
+/// (MDV-P1-111); null when none is set.
 /// </summary>
-public sealed record QueueTvNext(string Token, int WaitMinutes, string Doctor, int Ahead);
+public sealed record QueueTvNext(string Token, int WaitMinutes, string Doctor, int Ahead, string? Room = null);
 
 /// <summary>Adds a TV for the facility; Name says where it hangs ("Waiting room TV").</summary>
 public sealed class CreateDisplay

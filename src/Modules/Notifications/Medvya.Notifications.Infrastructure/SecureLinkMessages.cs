@@ -22,14 +22,19 @@ public sealed partial class SecureLinkMessages(
         var address = channel == NotificationChannel.Email ? contact?.Email : contact?.Mobile;
         if (contact is null || string.IsNullOrWhiteSpace(address)) throw new SecureLinkNotSentException("no_address");
         var facility = await FacilityAsync(facilityId, cancellationToken);
-        var message = SecureLinkCatalog.Link(contact.PreferredLanguage, facility.Name, url, Local(expiresAt, facility.TimeZone));
-        await SendAsync(channel, contact.CountryCode, address, message, facility.Name, reference, Tenant, cancellationToken);
+        var local = Local(expiresAt, facility.TimeZone);
+        var message = SecureLinkCatalog.Link(contact.PreferredLanguage, facility.Name, url, local);
+        await SendAsync(channel, contact.CountryCode, address, message, facility.Name, reference, Tenant, cancellationToken,
+            sender => SecureLinkCatalog.LinkEmail(contact.PreferredLanguage, message, sender, facility.Name, url, local, facility.TimeZone));
     }
 
     public async Task SendLinkToPharmacyAsync(string email, Guid facilityId, string url, DateTimeOffset expiresAt, CancellationToken cancellationToken = default)
     {
         var facility = await FacilityAsync(facilityId, cancellationToken);
-        await SendAsync(NotificationChannel.Email, "", email, SecureLinkCatalog.PharmacyLink(facility.Name, url, Local(expiresAt, facility.TimeZone)), facility.Name, Guid.Empty, Tenant, cancellationToken);
+        var local = Local(expiresAt, facility.TimeZone);
+        var message = SecureLinkCatalog.PharmacyLink(facility.Name, url, local);
+        await SendAsync(NotificationChannel.Email, "", email, message, facility.Name, Guid.Empty, Tenant, cancellationToken,
+            sender => SecureLinkCatalog.PharmacyLinkEmail(message, sender, facility.Name, url, local, facility.TimeZone));
     }
 
     public async Task SendCodeAsync(Guid patientId, Guid facilityId, string code, Guid reference, CancellationToken cancellationToken = default)
@@ -51,14 +56,18 @@ public sealed partial class SecureLinkMessages(
     static DateTimeOffset Local(DateTimeOffset at, string timeZone) => TimeZoneInfo.ConvertTime(at, TimeZoneInfo.FindSystemTimeZoneById(timeZone));
 
     /// <param name="tenantId">Null outside a clinic (patient sign-in): the default sender, and the reference names no tenant.</param>
-    async Task SendAsync(NotificationChannel channel, string countryCode, string to, RenderedMessage message, string clinic, Guid reference, Guid? tenantId, CancellationToken ct)
+    /// <param name="html">The HTML copy for an email, given the sender name; SMS has none.</param>
+    async Task SendAsync(NotificationChannel channel, string countryCode, string to, RenderedMessage message, string clinic, Guid reference, Guid? tenantId, CancellationToken ct,
+        Func<string, EmailView>? html = null)
     {
         try
         {
             if (channel == NotificationChannel.Email)
             {
                 var sender = (await preferences.GetAsync(ct)).SenderFor(clinic);
-                await email.SendAsync(new EmailMessage(to, $"{sender}: {message.Subject}", message.Body, null, sender), ct);
+                var logo = html is null ? null : await facilities.LogoAsync(ct);
+                await email.SendAsync(new EmailMessage(to, $"{sender}: {message.Subject}", message.Body, null, sender,
+                    html is null ? null : EmailHtml.Render(html(sender), logo is not null), logo), ct);
             }
             else
             {

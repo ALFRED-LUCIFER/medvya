@@ -28,6 +28,8 @@ public static class DoctorEndpoints
             await request.Body.CopyToAsync(buffer, ct);
             return await d.SetSignatureAsync(id, buffer.ToArray(), ct) ? Results.NoContent() : Results.NotFound();
         });
+        g.MapPut("/{id:guid}/room", async (Guid id, [FromBody] DoctorRoom body, [FromServices] IDoctors d, CancellationToken ct) =>
+            await d.SetRoomAsync(id, body.Room, ct) is { } v ? Results.Ok(v) : Results.NotFound());
         g.MapDelete("/{id:guid}/signature", async (Guid id, [FromServices] IDoctors d, CancellationToken ct) =>
             await d.RemoveSignatureAsync(id, ct) ? Results.NoContent() : Results.NotFound());
 

@@ -107,8 +107,7 @@ test.describe('at 375 px', () => {
       const share = page.getByRole('region', { name: t(locale, 'rxShare.title') });
       await share.getByRole('button', { name: t(locale, 'rxShare.send') }).click();
       await expect(share.getByRole('status')).toBeVisible();
-      // shortcut: the printed prescription above the shares (RxPrintPage's QR footer) makes this page 13 px too wide at 375 px, so only the
-      // shares table's own box is checked here; check the whole page once the print preview fits a phone.
-      await expectStacked(page, page.getByRole('region', { name: t(locale, 'rxShare.tableLabel') }), [t(locale, 'rxShare.col.sharedAt')], { wholePage: false });
+      // MDV-P1-111: the print preview fits a phone now, so the whole page is checked, not only the shares table.
+      await expectStacked(page, page.getByRole('region', { name: t(locale, 'rxShare.tableLabel') }), [t(locale, 'rxShare.col.sharedAt')]);
     });
 });

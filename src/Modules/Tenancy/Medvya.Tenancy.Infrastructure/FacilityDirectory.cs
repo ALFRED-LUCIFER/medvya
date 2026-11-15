@@ -11,11 +11,13 @@ public sealed class FacilityDirectory(TenancyDbContext db, ILogoStore store) : I
 
     public async Task<FacilityInfo?> FindAsync(Guid facilityId, CancellationToken cancellationToken = default)
     {
-        var facility = await db.Facilities.AsNoTracking().Where(f => f.Id == facilityId).Select(f => new { f.Id, f.Name, f.TimeZone }).SingleOrDefaultAsync(cancellationToken);
-        if (facility is null) return null;
+        var f = await db.Facilities.AsNoTracking().SingleOrDefaultAsync(x => x.Id == facilityId, cancellationToken);
+        if (f is null) return null;
         // The tenant filter and row-level security leave exactly this tenant's row.
         var tenant = await db.Tenants.AsNoTracking().Select(t => new { t.Name, t.QueueOrder, t.BookedFirst }).SingleAsync(cancellationToken);
-        return new FacilityInfo(facility.Id, facility.Name, facility.TimeZone, tenant.Name, new(tenant.QueueOrder, tenant.BookedFirst));
+        var profile = await db.Profiles.AsNoTracking().Select(p => new { p.Address, p.Phone }).SingleOrDefaultAsync(cancellationToken);
+        return new FacilityInfo(f.Id, f.Name, f.TimeZone, tenant.Name, new(tenant.QueueOrder, tenant.BookedFirst), f.Address ?? profile?.Address, profile?.Phone, f.NurseRoom,
+            f.WifiNetwork is { } network ? new GuestWifi(network, f.WifiPassword, f.WifiDaily) : null);
     }
 
     public Task<Role?> ActiveRoleAsync(Guid userId, Guid facilityId, CancellationToken cancellationToken = default) =>
@@ -31,6 +33,12 @@ public sealed class FacilityDirectory(TenancyDbContext db, ILogoStore store) : I
     public async Task<PrescriberInfo?> PrescriberAsync(Guid userId, Guid facilityId, CancellationToken cancellationToken = default) =>
         (await PrescribersAsync(facilityId, [userId], cancellationToken)).GetValueOrDefault(userId);
 
+    public Task<string?> DoctorRoomAsync(Guid userId, Guid facilityId, CancellationToken cancellationToken = default) =>
+        (from m in db.Memberships.AsNoTracking()
+         join p in db.DoctorProfiles.AsNoTracking() on m.Id equals p.MembershipId
+         where m.FacilityId == facilityId && m.UserId == userId
+         select p.Room).FirstOrDefaultAsync(cancellationToken);
+
     public async Task<PrintImages> PrintImagesAsync(Guid userId, Guid facilityId, CancellationToken cancellationToken = default)
     {
         var logo = await db.Profiles.AsNoTracking().Select(p => p.LogoKey).SingleOrDefaultAsync(cancellationToken);
@@ -39,6 +47,16 @@ public sealed class FacilityDirectory(TenancyDbContext db, ILogoStore store) : I
                                where m.FacilityId == facilityId && m.UserId == userId
                                select p.SignatureKey).SingleOrDefaultAsync(cancellationToken);
         return new(logo is null ? null : await store.ReadAsync(logo, cancellationToken), signature is null ? null : await store.ReadAsync(signature, cancellationToken));
+    }
+
+    public Task<byte[]?> LogoAsync(CancellationToken cancellationToken = default) => Logo(db, store, cancellationToken);
+
+    internal static async Task<byte[]?> Logo(TenancyDbContext db, ILogoStore store, CancellationToken cancellationToken)
+    {
+        var key = await db.Profiles.AsNoTracking().Select(p => p.LogoKey).SingleOrDefaultAsync(cancellationToken);
+        if (key is null) return null;
+        try { return await store.ReadAsync(key, cancellationToken); }
+        catch (Exception e) when (e is not OperationCanceledException) { return null; } // the email goes out with the name only
     }
 
     public async Task<IReadOnlyDictionary<Guid, PrescriberInfo>> PrescribersAsync(Guid facilityId, IReadOnlyCollection<Guid> userIds, CancellationToken cancellationToken = default)

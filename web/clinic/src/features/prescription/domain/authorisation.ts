@@ -26,6 +26,8 @@ export type RxPrint = {
   authorisation: RxAuthorisation; clinic: string; timeZone: string; doctor: string; qualifications: string | null; licenceNumber: string; licenceAuthority: string;
   patient: { fullName: string; mrn: string; dateOfBirth: string; sexAtBirth: 'Female' | 'Male' | 'Other' };
   allergies: 'NotRecorded' | 'NoKnownAllergies' | 'Listed'; allergySubstances: string[]; lines: RxPrintLine[]; verifyUrl: string; qr: string[]; layoutVersion: number;
+  /** The location's address and the practice phone, under the clinic name (MDV-P1-111). */
+  clinicAddress?: string | null; clinicPhone?: string | null;
   advice: RxAdvice | null; patientAge: number; diagnoses: { description: string; provisional: boolean }[]; followUpOn: string | null;
 };
 /** The advice for the patient (MDV-P2-043). `inPatientLanguage` false: it prints in English with a note (no reviewed translation exists). */
@@ -67,6 +69,9 @@ export const isCurrent = (s: RxAuthorisationState | null) => !!s?.authorised && 
 /** The second print language beside English: none, or one of the pilot languages. Arabic prints right to left. */
 export const secondLanguages = ['none', 'hi', 'ta', 'ar'] as const;
 export type SecondLanguage = (typeof secondLanguages)[number];
+
+/** The paper a print-family page prints on (MDV-P1-111). */
+export type PaperSize = 'A4' | 'A5';
 
 /** Dark modules of the QR code as [x, y], from the server's rows ('1' dark), quiet zone included. */
 export const qrCells = (rows: string[]): [number, number][] => rows.flatMap((row, y) => [...row].flatMap((c, x): [number, number][] => (c === '1' ? [[x, y]] : [])));

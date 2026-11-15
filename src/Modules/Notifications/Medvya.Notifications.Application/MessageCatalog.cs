@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
+using Medvya.BuildingBlocks.Domain;
 using Medvya.Notifications.Domain;
 
 namespace Medvya.Notifications.Application;
@@ -66,6 +67,30 @@ public static partial class MessageCatalog
         },
     };
 
+    /// <summary>Words only the HTML email uses (MDV-P1-111): the SMS and plain-text bodies above never change. SentBy takes the clinic.</summary>
+    internal sealed record EmailWords(string Date, string Time, string Clinic, string Change, string Call, string ChangeHow, string Phone, string SentBy, string Why);
+
+    internal static readonly Dictionary<string, EmailWords> Words = new()
+    {
+        ["en"] = new("Date", "Time", "Clinic", "Change", "Call ", "To move or cancel, call the clinic.", "Phone",
+            "Sent by {0} through Medvya. This email has no medical details.", "You get it because you agreed to appointment emails. To stop them, tell the clinic."),
+        ["hi"] = new("तारीख", "समय", "क्लिनिक", "बदलाव", "कॉल करें: ", "समय बदलने या रद्द करने के लिए क्लिनिक को कॉल करें।", "फ़ोन",
+            "{0} ने Medvya के ज़रिए भेजा। इस ईमेल में कोई चिकित्सा जानकारी नहीं है।", "यह आपको इसलिए मिला क्योंकि आपने अपॉइंटमेंट ईमेल के लिए सहमति दी थी। इन्हें बंद करने के लिए क्लिनिक को बताएँ।"),
+        ["ar"] = new("التاريخ", "الوقت", "العيادة", "للتغيير", "اتصل على ", "لنقل الموعد أو إلغائه، اتصل بالعيادة.", "الهاتف",
+            "أرسلتها {0} عبر Medvya. لا يحتوي هذا البريد على أي تفاصيل طبية.", "تصلك لأنك وافقت على رسائل المواعيد. لإيقافها، أبلغ العيادة."),
+    };
+
+    /// <summary>The facility's time zone by name, so nobody misreads the time; an unknown zone shows its id.</summary>
+    static readonly Dictionary<string, Dictionary<string, string>> Zones = new()
+    {
+        ["Asia/Kolkata"] = new() { ["en"] = "India Standard Time", ["hi"] = "भारतीय मानक समय", ["ar"] = "بتوقيت الهند" },
+        ["Asia/Dubai"] = new() { ["en"] = "Gulf Standard Time", ["hi"] = "खाड़ी मानक समय", ["ar"] = "بتوقيت الإمارات" },
+    };
+
+    internal static string ZoneName(string timeZone, string lang) => Zones.GetValueOrDefault(timeZone)?.GetValueOrDefault(lang) ?? timeZone;
+
+    internal static CultureInfo Culture(string lang) => CultureInfo.GetCultureInfo(lang switch { "hi" => "hi-IN", "ar" => "ar-AE", _ => "en-IN" });
+
     /// <summary>One regex per registered text: literal parts exact, each slot 1-30 characters.</summary>
     static readonly Dictionary<string, Regex> Matchers = Texts.SelectMany(g => g.Value.Select(l => (Key: $"{g.Key}.{l.Key}", l.Value.Text)))
         .ToDictionary(t => t.Key, t => new Regex("^" + string.Join(".{1," + MaxSlotLength + "}", t.Text.Split(Slot).Select(Regex.Escape)) + "$", RegexOptions.CultureInvariant | RegexOptions.Singleline, TimeSpan.FromMilliseconds(50)));
@@ -84,10 +109,33 @@ public static partial class MessageCatalog
         var lang = Language(languageTag);
         var group = Group(kind);
         var (subject, text) = Texts[group][lang];
-        var culture = CultureInfo.GetCultureInfo(lang switch { "hi" => "hi-IN", "ar" => "ar-AE", _ => "en-IN" });
+        var culture = Culture(lang);
         var values = new[] { Clamp(clinic), localStart.ToString("d MMM yyyy", culture), localStart.ToString("h:mm tt", culture) };
         var i = 0;
         return new RenderedMessage(subject, SlotPattern().Replace(text, _ => values[i++]), $"{group}.{lang}");
+    }
+
+    /// <summary>
+    /// The HTML copy of a rendered appointment message: the same sentence, then the date spelt out, the time with its zone named, the clinic with its
+    /// address and how to reach it. Still only the clinic, the date and the time about the visit: no doctor, reason or medical detail.
+    /// </summary>
+    /// <param name="sender">The practice's sender name (the masthead); <paramref name="location"/> is the facility, shown under it when different.</param>
+    public static EmailView Email(NotificationKind kind, string? languageTag, RenderedMessage text, string sender, string location, DateTimeOffset localStart, string timeZone,
+        string? address, string? phone)
+    {
+        var lang = Language(languageTag);
+        var w = Words[lang];
+        var culture = Culture(lang);
+        List<EmailFact> facts =
+        [
+            new(w.Date, localStart.ToString("dddd d MMMM yyyy", culture)),
+            new(w.Time, localStart.ToString("h:mm tt", culture), ZoneName(timeZone, lang)),
+            new(w.Clinic, location, address),
+        ];
+        if (!string.IsNullOrWhiteSpace(phone))
+            facts.Add(Group(kind) is "Confirmation" or "Rescheduled" or "Reminder" ? new(w.Change, w.Call, w.ChangeHow, phone) : new(w.Phone, "", null, phone));
+        return new(lang, sender, location == sender ? null : location, text.Subject, [text.Body], facts, null, [],
+            [string.Format(culture, w.SentBy, sender), w.Why]);
     }
 
     /// <summary>Every template in one language with its slots named {clinic}, {date}, {time}: what the settings screen shows. No patient values.</summary>

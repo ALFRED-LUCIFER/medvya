@@ -20,7 +20,8 @@ namespace Medvya.Notifications.Infrastructure;
 /// shortcut: the email goes to the practice contact address only (no per-owner address list), and nothing is sent when it is unset; the in-app item always is.
 /// </summary>
 public sealed partial class ComplianceReminders(
-    NotificationsDbContext db, IComplianceFacts facts, ICurrentTenant tenant, IEmailSender email, IAuditLog audit, TimeProvider clock, ILogger<ComplianceReminders> log) : IComplianceReminders
+    NotificationsDbContext db, IComplianceFacts facts, ICurrentTenant tenant, IEmailSender email, IAuditLog audit, IFacilityDirectory facilities, TimeProvider clock,
+    ILogger<ComplianceReminders> log) : IComplianceReminders
 {
     /// <summary>Days before expiry at which a reminder is due, smallest first.</summary>
     static readonly int[] Steps = [0, 7, 30, 60];
@@ -36,11 +37,13 @@ public sealed partial class ComplianceReminders(
         var read = await facts.ReadAsync(today, cancellationToken);
         var raised = 0;
         var failed = 0;
+        byte[]? logo = null;
+        if (read.ContactEmail is not null && read.Licences.Count + (read.RegistrationExpiresOn is null ? 0 : 1) > 0) logo = await facilities.LogoAsync(cancellationToken);
         foreach (var l in read.Licences)
         {
             if (StepFor(l.ExpiresOn.DayNumber - today.DayNumber) is not { } step) continue;
             try { raised += await RaiseAsync(tenantId, l.FacilityId, StaffNotificationKind.LicenceExpiring, l.MembershipId, step, $"licence:{l.MembershipId:N}:{l.ExpiresOn:yyyyMMdd}:{step}", "compliance.licence_expiry.notify", now,
-                    read.ContactEmail is { } to ? ct => email.SendAsync(LicenceMail(to, read.ClinicName, step), ct) : null, cancellationToken); }
+                    read.ContactEmail is { } to ? ct => email.SendAsync(LicenceMail(to, read.ClinicName, step, logo), ct) : null, cancellationToken); }
             catch (Exception e) when (e is not OperationCanceledException) { failed++; Failed(log, tenantId, e.GetType().Name); } // the type only: messages can carry addresses
         }
         // The practice's own registration: one item per location (each location's admins see it), the email once.
@@ -48,7 +51,7 @@ public sealed partial class ComplianceReminders(
             foreach (var (facility, i) in read.FacilityIds.Select((f, i) => (f, i)))
             {
                 try { raised += await RaiseAsync(tenantId, facility, StaffNotificationKind.RegistrationExpiring, null, regStep, $"registration:{facility:N}:{expires:yyyyMMdd}:{regStep}", "compliance.registration_expiry.notify", now,
-                        i == 0 && read.ContactEmail is { } to ? ct => email.SendAsync(RegistrationMail(to, read.ClinicName, regStep), ct) : null, cancellationToken); }
+                        i == 0 && read.ContactEmail is { } to ? ct => email.SendAsync(RegistrationMail(to, read.ClinicName, regStep, logo), ct) : null, cancellationToken); }
                 catch (Exception e) when (e is not OperationCanceledException) { failed++; Failed(log, tenantId, e.GetType().Name); }
             }
         if (read.ReviewDueQuarter is { } quarter)
@@ -76,22 +79,21 @@ public sealed partial class ComplianceReminders(
         return 1;
     }
 
-    static EmailMessage LicenceMail(string to, string clinic, int step) => new(to,
+    static EmailMessage LicenceMail(string to, string clinic, int step, byte[]? logo) => Mail(to, clinic, logo,
         step <= 0 ? $"A doctor's licence at {clinic} expires today or has expired" : $"A doctor's licence at {clinic} expires in {step} days or less",
-        $"""
-        A doctor's registration (licence) at {clinic} {(step <= 0 ? "expires today or has already expired" : $"expires within {step} days")}.
+        $"A doctor's registration (licence) at {clinic} {(step <= 0 ? "expires today or has already expired" : $"expires within {step} days")}.",
+        "After it expires the doctor can no longer record or sign in Medvya until the renewed licence is added and verified.",
+        "Open Settings, Doctors in Medvya, choose the doctor and add the renewed licence.");
 
-        After it expires the doctor can no longer record or sign in Medvya until the renewed licence is added and verified.
-        Open Settings, Doctors in Medvya, choose the doctor and add the renewed licence.
-        """);
-
-    static EmailMessage RegistrationMail(string to, string clinic, int step) => new(to,
+    static EmailMessage RegistrationMail(string to, string clinic, int step, byte[]? logo) => Mail(to, clinic, logo,
         step <= 0 ? $"The registration of {clinic} expires today or has expired" : $"The registration of {clinic} expires in {step} days or less",
-        $"""
-        The clinic registration of {clinic} {(step <= 0 ? "expires today or has already expired" : $"expires within {step} days")}.
+        $"The clinic registration of {clinic} {(step <= 0 ? "expires today or has already expired" : $"expires within {step} days")}.",
+        "Renew it with the issuing authority, then enter the new expiry date in Medvya under Settings, Profile.");
 
-        Renew it with the issuing authority, then enter the new expiry date in Medvya under Settings, Profile.
-        """);
+    // Plain text: the first line, a blank line, then the rest one per line (as before). HTML: the clinic's masthead, each line a paragraph.
+    static EmailMessage Mail(string to, string clinic, byte[]? logo, string subject, string first, params string[] rest) =>
+        new(to, subject, $"{first}\n\n{string.Join('\n', rest)}", Html: EmailHtml.Render(new EmailView("en", clinic, "on Medvya", subject, [first, .. rest], [], null, [], [EmailHtml.MedvyaFooter]), logo is not null),
+            Logo: logo);
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Compliance reminder failed for tenant {TenantId}: {ErrorType}.")]
     static partial void Failed(ILogger logger, Guid tenantId, string errorType);

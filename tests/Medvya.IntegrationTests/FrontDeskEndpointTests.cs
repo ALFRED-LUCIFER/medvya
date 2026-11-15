@@ -4,6 +4,7 @@ using System.Security.Claims;
 using System.Text.Json;
 using Medvya.Audit.Application;
 using Medvya.Audit.Domain;
+using Medvya.Tenancy.Domain;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -203,7 +204,8 @@ public sealed class FrontDeskEndpointTests(PostgresFixture sql) : IClassFixture<
         var body = await slip.Content.ReadAsStringAsync();
         var json = JsonDocument.Parse(body).RootElement;
         // Exactly these fields: the slip leaves the clinic in the patient's hand, so a name, MRN, phone or reason must never join them.
-        Assert.Equal(["clinicName", "token", "doctorName", "issuedAt", "timeZone", "ahead"], json.EnumerateObject().Select(p => p.Name));
+        Assert.Equal(["clinicName", "token", "doctorName", "issuedAt", "timeZone", "ahead", "address", "phone", "room", "vitalsRoom", "logo", "wifi"],
+            json.EnumerateObject().Select(p => p.Name)); // clinic details, rooms and the guest Wi-Fi (MDV-P1-111): places, never the patient
         Assert.Equal(token, json.GetProperty("token").GetString());
         Assert.Equal(0, json.GetProperty("ahead").GetInt32()); // the only patient waiting for the doctor: next in line (MDV-P1-103)
         Assert.False(string.IsNullOrEmpty(json.GetProperty("doctorName").GetString()));
@@ -226,4 +228,58 @@ public sealed class FrontDeskEndpointTests(PostgresFixture sql) : IClassFixture<
         Assert.Equal((HttpStatusCode.Conflict, "token_void"), await Refused(visit.Id, reception));
         Assert.Contains("appointment.token_slip.read", await AuditActions());
     }
+
+    // MDV-P1-111, mutation checks: drop the doctor's room from SchedulingContext.RoomAsync and the slip and call-in lose "Room 2"; drop the
+    // nurse room in FrontDeskService.MoveAsync and the visit with the nurse has no room; keep the room on the handoff and Ready for doctor shows Room 1.
+    [Fact]
+    public async Task TheDoctorsRoomTheVitalsRoomAndTheGuestWifiReachTheSlipBoardAndCallIn()
+    {
+        await using (var db = sql.Context(h.Tenant))
+        {
+            var membership = await db.Memberships.SingleAsync(m => m.UserId == h.Doctor);
+            db.DoctorProfiles.Add(new DoctorProfile { MembershipId = membership.Id, TenantId = h.Tenant, FullName = "Dr. Arjun Rao (synthetic)", Room = "Room 2" });
+            await db.SaveChangesAsync();
+        }
+        await h.Settings(h.Admin).UpdateLocationAsync(h.Facility, new()
+        {
+            Name = "Adyar (synthetic)", Address = "12 Kasturba Nagar 1st Street, Adyar", NurseRoom = "Room 1", WifiNetwork = "IyerClinic;Guest", WifiPassword = "mango-1511", WifiDaily = true,
+        });
+        await h.StepsAsync(nurse: true, billing: false);
+        // Sessions without their own room, so the doctor's room applies (a session's room still wins: EncounterTests, "Room 3").
+        var template = h.DoctorTemplate();
+        await h.Schedule(h.Admin).SaveTemplateAsync(template with { Hours = [.. template.Hours.Select(w => w with { Room = null })] });
+        var visit = await h.BookAsync(9);
+        var reception = Client(h.Reception);
+        (await reception.PostAsJsonAsync($"/v1/appointments/{visit.Id}/check-in", new { elapsedMs = 9000 })).EnsureSuccessStatusCode();
+
+        var slip = JsonDocument.Parse(await reception.GetStringAsync($"/v1/appointments/{visit.Id}/token-slip")).RootElement;
+        Assert.Equal("Room 2", slip.GetProperty("room").GetString()); // where the doctor sits, before the call-in
+        Assert.Equal("Room 1", slip.GetProperty("vitalsRoom").GetString());
+        Assert.Equal("12 Kasturba Nagar 1st Street, Adyar", slip.GetProperty("address").GetString());
+        var wifi = slip.GetProperty("wifi");
+        Assert.Equal(("IyerClinic;Guest", "mango-1511", true), (wifi.GetProperty("network").GetString(), wifi.GetProperty("password").GetString(), wifi.GetProperty("daily").GetBoolean()));
+        Assert.True(wifi.GetProperty("qr").GetArrayLength() > 20); // the join code's rows
+
+        async Task<string?> RoomOnBoard()
+        {
+            var board = JsonDocument.Parse(await reception.GetStringAsync($"/v1/front-desk/board?facilityId={h.Facility}")).RootElement;
+            return board.GetProperty("cards").EnumerateArray().Single(c => c.GetProperty("id").GetGuid() == visit.Id).GetProperty("room").GetString();
+        }
+        async Task Move(string state) => (await reception.PostAsJsonAsync($"/v1/appointments/{visit.Id}/status", new { state })).EnsureSuccessStatusCode();
+        await Move("WithNurse");
+        Assert.Equal("Room 1", await RoomOnBoard());
+        Assert.Equal("Room 2", JsonDocument.Parse(await reception.GetStringAsync($"/v1/appointments/{visit.Id}/token-slip")).RootElement.GetProperty("room").GetString()); // never the vitals room
+        await h.StepsAsync(nurse: false, billing: false); // the intake's handoff check is the nurse's own path, not this test's
+        await Move("ReadyForDoctor");
+        Assert.Null(await RoomOnBoard());
+        await Move("InConsult");
+        Assert.Equal("Room 2", await RoomOnBoard());
+    }
+
+    [Theory]
+    [InlineData("IyerClinic-Guest", "mango-1511", "WIFI:T:WPA;S:IyerClinic-Guest;P:mango-1511;;")]
+    [InlineData("Clinic;Guest", "a\\b,c:d\"e", "WIFI:T:WPA;S:Clinic\\;Guest;P:a\\\\b\\,c\\:d\\\"e;;")]
+    [InlineData("Open", null, "WIFI:T:nopass;S:Open;;")]
+    public void TheWifiCodeEscapesWhatPhonesWouldMisread(string network, string? password, string expected) =>
+        Assert.Equal(expected, Medvya.Scheduling.Application.GuestWifiCode.Text(network, password));
 }

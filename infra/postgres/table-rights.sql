@@ -23,6 +23,10 @@ BEGIN
     IF to_regclass('platform."AuditEntries"') IS NOT NULL THEN
         REVOKE UPDATE, DELETE, TRUNCATE ON platform."AuditEntries" FROM medvya_platform;
     END IF;
+    -- Plan versions are append-only too (MDV-P5-042, ADR-019): an edit adds the next version; what a subscriber agreed to never changes.
+    IF to_regclass('platform."PlanVersions"') IS NOT NULL THEN
+        REVOKE UPDATE, DELETE, TRUNCATE ON platform."PlanVersions", platform."PlanPrices" FROM medvya_platform;
+    END IF;
 
     -- The chain trigger lists a tenant's first row in ledger."Chains"; ledger."Tables" stays read-only (roles.sql).
     IF to_regclass('ledger."Chains"') IS NOT NULL THEN

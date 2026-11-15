@@ -5,11 +5,17 @@ import AuditPage from '../features/audit/components/AuditPage';
 import { useAuditController } from '../features/audit/hooks/useAuditController';
 import FeaturesPage from '../features/features/components/FeaturesPage';
 import { useFeaturesController } from '../features/features/hooks/useFeaturesController';
+import PlansPage from '../features/plans/components/PlansPage';
+import { usePlansController } from '../features/plans/hooks/usePlansController';
 import TeamPage from '../features/team/components/TeamPage';
 import { useTeamController } from '../features/team/hooks/useTeamController';
 
 export function TeamRoute() {
   return <TeamPage vm={useTeamController()} />;
+}
+
+export function PlansRoute({ canEdit }: { canEdit: boolean }) {
+  return <PlansPage vm={usePlansController(canEdit)} />;
 }
 
 export function AuditRoute({ canExport }: { canExport: boolean }) {

@@ -105,10 +105,10 @@ test('the audit log reads in Arabic, right to left, with actions in words', asyn
   expect(await axe(page)).toEqual([]);
 });
 
-test('a reviewer sees approvals and features but no team or audit pages', async ({ page }) => {
+test('a reviewer sees approvals, features and plans but no team or audit pages', async ({ page }) => {
   await page.route('**/v1/me', r => r.fulfill({ json: owner({ role: 'Reviewer', keyVerified: true, hasKey: true, canRegister: false }) }));
   await page.goto('/');
-  await expect(page.getByRole('navigation').getByRole('link')).toHaveText(['Overview', 'Approvals', 'Features']);
+  await expect(page.getByRole('navigation').getByRole('link')).toHaveText(['Overview', 'Approvals', 'Features', 'Plans']);
 });
 
 // MDV-P2-059 AC4: on a phone the sign-in is exactly as wide as the screen, in both directions, and every control is a 44 px target.
@@ -127,7 +127,7 @@ for (const locale of ['en', 'ar']) {
 }
 
 // MDV-P2-059 AC1 and AC6: every console page has one h1, in the shared 44 px header row, at the same height, with content from 130 px.
-const consolePages = ['/', '/approvals', '/team', '/audit'];
+const consolePages = ['/', '/approvals', '/plans', '/team', '/audit'];
 for (const locale of ['en', 'ar']) {
   test(`every ${locale} console page puts its one title in the same 44 px row`, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
@@ -136,6 +136,7 @@ for (const locale of ['en', 'ar']) {
     await page.route('**/v1/team', r => r.fulfill({ json: team }));
     await page.route('**/v1/audit**', r => r.fulfill({ json: audit }));
     await page.route('**/v1/organisations/?filter=*', r => r.fulfill({ json: [] }));
+    await page.route('**/v1/plans', r => r.fulfill({ json: [] }));
     const tops = new Set<number>();
     for (const path of consolePages) {
       await page.goto(path);

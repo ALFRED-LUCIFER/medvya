@@ -757,7 +757,7 @@ test(`the token slip prints as one 80 mm receipt with the token and no patient d
   const boxes = [...pdf.matchAll(/\/MediaBox\s*\[\s*0 0 ([\d.]+) ([\d.]+)\s*\]/g)].map(m => [Number(m[1]), Number(m[2])]);
   expect(boxes).toHaveLength(1); // one page
   expect(boxes[0]![0]).toBeCloseTo(80 / 25.4 * 72, 0); // 80 mm wide (226.8 pt)
-  expect(Math.abs(boxes[0]![1] - height / 25.4 * 72)).toBeLessThan(1); // Chrome rounds the page height to whole pixels
+  expect(Math.abs(boxes[0]![1]! - height / 25.4 * 72)).toBeLessThan(1); // Chrome rounds the page height to whole pixels
   await page.emulateMedia({ media: 'print' });
   await expect(page.getByRole('button', { name: 'Print', exact: true })).toBeHidden(); // only the slip is on the paper
   const paper = page.getByRole('article', { name: /A-07/ });

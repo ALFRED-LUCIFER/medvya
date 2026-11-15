@@ -58,11 +58,14 @@ async function mock(page: Page, role: string) {
   return api;
 }
 
-/** MDV-P5-044: the reviewer ticks every document as checked; approve waits for that. */
+/** MDV-P5-044: the reviewer opens every document and ticks it as checked; approve waits for that. A box is off until its document was opened. */
 async function tickAll(page: Page) {
-  const boxes = page.getByRole('region', { name: /List of documents|قائمة المستندات/ }).getByRole('checkbox');
-  await expect(boxes.first()).toBeVisible(); // the request has loaded
-  for (const box of await boxes.all()) await box.check();
+  const rows = page.getByRole('region', { name: /List of documents|قائمة المستندات/ }).getByRole('row').filter({ has: page.getByRole('checkbox') });
+  await expect(rows.first()).toBeVisible(); // the request has loaded
+  for (const row of await rows.all()) {
+    if (await row.getByRole('checkbox').isDisabled()) await row.getByRole('button').click();
+    await row.getByRole('checkbox').check();
+  }
 }
 
 test('a reviewer opens a request, reads a document in the private viewer, approves with a reason and sees the email', async ({ page }) => {
@@ -90,9 +93,15 @@ test('a reviewer opens a request, reads a document in the private viewer, approv
   const approve = page.getByRole('button', { name: 'Approve', exact: true });
   await expect(approve).toBeDisabled();
   await expect(approve).toHaveAccessibleDescription('Open and read each document and tick it as checked before you approve.');
-  await page.getByRole('checkbox', { name: 'Checked: Clinic registration certificate' }).check();
+  await page.getByRole('checkbox', { name: 'Checked: Clinic registration certificate' }).check(); // opened above
   await expect(approve).toBeDisabled();
+  // A document that was not opened cannot be ticked: the box is off and says why.
+  const unopened = page.getByRole('region', { name: 'List of documents' }).getByRole('checkbox', { disabled: true });
+  await expect(unopened).toHaveCount(3);
+  await expect(unopened.first()).toHaveAccessibleDescription('Open it first.');
+  expect(await axe(page)).toEqual([]);
   await tickAll(page);
+  expect(api.opened).toEqual(['d1', 'd2', 'd3', 'd4']);
   await approve.click();
   // F-032: the reason starts empty, and a refused Confirm says why: nothing is sent, the summary takes focus and names the field.
   await expect(page.getByLabel('Reason (saved in the audit log)')).toHaveValue('');

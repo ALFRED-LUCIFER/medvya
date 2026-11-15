@@ -76,6 +76,12 @@ public interface IConsoleActions
     Task RecordAsync(string action, string resourceType, Guid resourceId, Guid? subjectTenantId, string? reason, string? subjectName = null, string? detail = null,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// The resources of an organisation for which the signed-in member has an <paramref name="action"/> entry at or after <paramref name="since"/>
+    /// (any time when null): for example the documents of a request this member opened since it was submitted.
+    /// </summary>
+    Task<IReadOnlySet<Guid>> RecordedAsync(string action, Guid subjectTenantId, DateTimeOffset? since, CancellationToken cancellationToken = default);
+
     /// <summary>Display names of console members, for a history that records them as actors. Unknown ids are left out.</summary>
     Task<IReadOnlyDictionary<Guid, string>> MemberNamesAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default);
 }
@@ -99,10 +105,11 @@ public enum KeyRegistration { Registered, Refused, SyncedPasskey }
 public interface IPlatformSignIn
 {
     /// <summary>
-    /// Null when this company account is not a console member (or the link does not fit it). <paramref name="name"/> and <paramref name="email"/>
+    /// Null when this company account is not a console member (or the link does not fit it, or was issued to another address).
+    /// <paramref name="emails"/> are the addresses the provider vouches for; <paramref name="name"/> and <paramref name="email"/>
     /// are the person's, from the company sign-on: the member row takes them, so the audit log names who acted.
     /// </summary>
-    Task<ConsoleSession?> SignOnAsync(string issuer, string subject, string? linkToken, string? name, string? email, CancellationToken cancellationToken = default);
+    Task<ConsoleSession?> SignOnAsync(string issuer, string subject, IReadOnlyCollection<string> emails, string? linkToken, string? name, string? email, CancellationToken cancellationToken = default);
     /// <summary>The live session, or null when it has ended, been revoked, or the member has lost access.</summary>
     Task<SessionState?> ValidateAsync(Guid sessionId, Guid memberId, bool activity, CancellationToken cancellationToken = default);
     /// <summary>Assertion options, or null when the member has no live key.</summary>

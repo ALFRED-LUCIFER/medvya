@@ -82,7 +82,7 @@ public static partial class ConsoleAuthentication
         var name = principal.FindFirst("name")?.Value;
         var email = principal.FindFirst("email")?.Value ?? principal.FindFirst("preferred_username")?.Value;
         var session = issuer is null || subject is null ? null
-            : await ctx.HttpContext.RequestServices.GetRequiredService<IPlatformSignIn>().SignOnAsync(issuer, subject, link, name, email, ctx.HttpContext.RequestAborted);
+            : await ctx.HttpContext.RequestServices.GetRequiredService<IPlatformSignIn>().SignOnAsync(issuer, subject, ProviderEmails.Of(principal), link, name, email, ctx.HttpContext.RequestAborted);
         if (session is null)
         {
             SignOnRefused(ctx.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(ConsoleAuthentication)));

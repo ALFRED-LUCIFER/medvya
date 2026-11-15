@@ -93,11 +93,14 @@ public sealed class Doctors(TenancyDbContext db, ICurrentTenant tenant, ICurrent
         return (await QueryAsync(doctorId, rules.Currency, cancellationToken))[0];
     }
 
-    public async Task<bool> SetSignatureAsync(Guid doctorId, byte[] content, CancellationToken cancellationToken = default)
+    public async Task<bool?> SetSignatureAsync(Guid doctorId, byte[] content, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(content);
         var profile = await db.DoctorProfiles.SingleOrDefaultAsync(p => p.MembershipId == doctorId, cancellationToken);
-        if (profile is null) return false;
+        if (profile is null) return null;
+        // The image stands for the doctor on a printed prescription, so only the doctor puts it there; an administrator may remove one.
+        // Remove this and DoctorTests.OnlyTheDoctorSetsTheirOwnSignatureImage fails.
+        if (!await db.Memberships.AnyAsync(m => m.Id == doctorId && m.UserId != null && m.UserId == user.UserId, cancellationToken)) return false;
         var type = LogoImage.ContentTypeOf(content);
         var errors = new List<ValidationError>();
         if (content.Length == 0 || content.Length > LogoImage.MaxBytes) errors.Add(new("signature", "too_large"));
@@ -142,12 +145,12 @@ public sealed class Doctors(TenancyDbContext db, ICurrentTenant tenant, ICurrent
             orderby p.FullName
             // Who attested, by the name of their own doctor profile; an owner who is not a doctor has none and the screen says "the owner".
             let attester = (from am in db.Memberships join ap in db.DoctorProfiles on am.Id equals ap.MembershipId where am.UserId == l.AttestedBy select ap.FullName).FirstOrDefault()
-            select new { m.Id, p, m.FacilityId, Facility = f.Name, m.Status, Licence = l, attester }).ToListAsync(ct);
+            select new { m.Id, m.UserId, p, m.FacilityId, Facility = f.Name, m.Status, Licence = l, attester }).ToListAsync(ct);
         var today = DateOnly.FromDateTime(clock.GetUtcNow().UtcDateTime);
         return [.. rows.Select(r => new DoctorView(
             r.Id, r.p.FullName, r.p.Specialty, r.p.Qualifications, r.p.Languages, r.FacilityId, r.Facility, r.Status,
             r.Licence.Authority, r.Licence.Number, r.Licence.Category, r.Licence.ExpiresOn, LicenceRules.IsExpired(r.Licence, today), r.Licence.AttestedBy, r.attester, r.Licence.AttestedAt,
-            r.p.SignatureKey is not null, r.p.NewVisitFeeMinor, r.p.FollowUpFeeMinor, currency))];
+            r.p.SignatureKey is not null, r.p.NewVisitFeeMinor, r.p.FollowUpFeeMinor, currency, r.UserId is not null && r.UserId == user.UserId))];
     }
 
     void Licence(List<ValidationError> errors, OnboardingRules rules, string? authority, string? number, string? category, DateOnly? expiresOn, string? certificate) =>

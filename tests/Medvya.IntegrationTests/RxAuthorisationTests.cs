@@ -442,6 +442,40 @@ public sealed class RxAuthorisationTests(PostgresFixture sql, AzuriteFixture blo
     Task<HttpResponseMessage> CancelAsync(Guid user, object body, int? reauthMinutesAgo = 0) =>
         Client(user, reauthMinutesAgo).PostAsJsonAsync(U($"/v1/encounters/{encounter}/prescription/cancellation"), body);
 
+    // The author cancels with a reason; so may another doctor who treats the patient, and then the record and the audit name that doctor and
+    // keep the reason. SAFETY mutation check: make the reason optional in PrescriptionService.CancelAsync (Text(..., required: false)) and the
+    // colleague's cancellation without a reason goes through.
+    [Fact]
+    public async Task AnotherDoctorCancelsAPrescriptionOnlyWithAReasonRecordedUnderTheirOwnName()
+    {
+        await PrescribeAsync("Metformin", Twice);
+        using (await AuthoriseAsync(h.Doctor)) { }
+        foreach (var body in new object[] { new { }, new { reason = "  " } })
+        {
+            using var r = await CancelAsync(h.SecondDoctor, body);
+            Assert.Equal(HttpStatusCode.BadRequest, r.StatusCode);
+        }
+        await using (var db = sql.Prescribing(h.Tenant)) Assert.Equal(0, await db.PrescriptionCancellations.CountAsync());
+
+        using (var ok = await CancelAsync(h.SecondDoctor, new { reason = "Patient reported a reaction (synthetic)" }))
+            Assert.Equal(HttpStatusCode.OK, ok.StatusCode);
+        await using (var db = sql.Prescribing(h.Tenant))
+        {
+            var row = await db.PrescriptionCancellations.SingleAsync();
+            Assert.Equal(("Patient reported a reaction (synthetic)", h.SecondDoctor), (row.Reason, row.CancelledBy));
+            Assert.Equal(h.Doctor, (await db.AuthorisedPrescriptions.SingleAsync(p => p.Id == row.PrescriptionId)).AuthorisedBy);
+        }
+        Assert.Equal([(Guid?)h.SecondDoctor], (await AuditAsync("rx.cancel")).Where(e => e.Outcome == AuditOutcome.Allowed).Select(e => e.ActorUserId));
+
+        // Without a care relationship the colleague cancels nothing, reason or not.
+        await PrescribeAsync("Amlodipine", Twice);
+        using (await AuthoriseAsync(h.Doctor)) { }
+        await h.Settings(h.Admin).SaveClinicalAccessAsync(ClinicalAccessPolicy.AssignedOnly);
+        using (var refused = await CancelAsync(h.SecondDoctor, new { reason = "Synthetic" }))
+            Assert.Equal((HttpStatusCode.Forbidden, "no_care_relationship"), (refused.StatusCode, await Code(refused)));
+        await using (var db = sql.Prescribing(h.Tenant)) Assert.Equal(1, await db.PrescriptionCancellations.CountAsync());
+    }
+
     // SAFETY mutation check: remove RequireFreshReauth from PrescriptionService.CancelAsync and the stale cancellations go through; drop the cancelled
     // throw in PrintableAsync and the cancelled prescription prints; drop the cancellation look-up in PrescriptionVerification and it verifies as valid;
     // drop AddLedger for PrescriptionCancellations (migration RxCancellations) and the database UPDATE succeeds.

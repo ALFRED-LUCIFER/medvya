@@ -28,7 +28,8 @@ import TabletOnly from './TabletOnly';
 
 // Not on the schedule's first render (MDV-P1-023, 2.5 s budget): the component gallery, the front desk and the nurse screens load when opened.
 const FrontDeskRoute = lazy(() => import('./FrontDeskRoute'));
-const UiGallery = lazy(() => import('../dev/UiGallery'));
+// Development and the mocked e2e runs only (they use the Vite dev server): a production build has neither the route nor its chunk.
+const UiGallery = import.meta.env.DEV ? lazy(() => import('../dev/UiGallery')) : null;
 const NurseQueueRoute = lazy(() => import('./NurseRoutes').then(m => ({ default: m.NurseQueueRoute })));
 const NurseIntakeRoute = lazy(() => import('./NurseRoutes').then(m => ({ default: m.NurseIntakeRoute })));
 // Loaded on demand: invitations bring the form stack (React Hook Form, Zod) that most sessions never need.
@@ -254,7 +255,7 @@ export default function App({ locale, onLocaleChange }: Props) {
         <LoadErrorBoundary fallback={online ? <main className="grid min-h-screen place-items-center p-4"><SystemState state="offline" onAction={reload} /></main> : inShell && strip}>
           <Suspense fallback={<ShellMessage standalone busy title={t('shell.loading')} />}>
             <Routes>
-              <Route path="/__ui" element={<UiGallery switcher={switcher} />} />
+              {UiGallery && <Route path="/__ui" element={<UiGallery switcher={switcher} />} />}
               {/* Public and token-based (F-06): the same page whether or not someone is signed in. */}
               <Route path="/invite/:token" element={<InvitationRoute switcher={switcher} />} />
               {/* The QR code on a printed prescription (MDV-P2-017): public, validity only. */}

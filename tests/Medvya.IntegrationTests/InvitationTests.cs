@@ -118,11 +118,11 @@ public sealed partial class InvitationTests(PostgresFixture sql) : IClassFixture
     static Task<HttpResponseMessage> Preview(HttpClient client, string token) =>
         client.PostAsJsonAsync(new Uri("/v1/invitations/preview", UriKind.Relative), new { token });
 
-    /// <summary>Join: login with the invitation → dev provider → callback. Returns the callback response.</summary>
-    static async Task<HttpResponseMessage> Join(HttpClient browser, string token, string loginHint = "new")
+    /// <summary>Join: login with the invitation → dev provider (which reports <paramref name="email"/> for the account) → callback. Returns the callback response.</summary>
+    static async Task<HttpResponseMessage> Join(HttpClient browser, string token, string loginHint = "new", string? email = "joseph@example.test")
     {
         var challenge = await browser.GetAsync(new Uri($"/bff/login?returnUrl=%2F&invitation={token}", UriKind.Relative));
-        var authorize = await browser.GetAsync(new Uri($"{challenge.Headers.Location}&login_hint={loginHint}"));
+        var authorize = await browser.GetAsync(new Uri($"{challenge.Headers.Location}&login_hint={loginHint}{(email is null ? "" : $"&email={Uri.EscapeDataString(email)}")}"));
         return await browser.GetAsync(authorize.Headers.Location);
     }
 
@@ -180,6 +180,36 @@ public sealed partial class InvitationTests(PostgresFixture sql) : IClassFixture
         using var second = Browser();
         Assert.Equal(HttpStatusCode.NotFound, (await Preview(second, token)).StatusCode);
         Assert.Equal("/?signin=failed", (await Join(second, token)).Headers.Location!.OriginalString);
+        Assert.Equal(users + 1, await UserCount());
+    }
+
+    [Fact]
+    public async Task AnInvitationIsAcceptedOnlyByTheAccountWithTheInvitedAddress()
+    {
+        var (id, token) = await InviteReceptionist();
+        var users = await UserCount();
+
+        // Another address, or an account the provider reports no address for: refused with its own reason, and nothing is created.
+        foreach (var email in new[] { "someone.else@example.test", "joseph@example.test.invalid", null })
+        {
+            using var other = Browser();
+            Assert.Equal("/?signin=invitation", (await Join(other, token, email: email)).Headers.Location!.OriginalString);
+            Assert.Equal(HttpStatusCode.Unauthorized, (await other.GetAsync(new Uri("/v1/me/context", UriKind.Relative))).StatusCode);
+        }
+        Assert.Equal(users, await UserCount());
+        await using (var db = sql.Context(tenantA))
+        {
+            var invitation = await db.Invitations.SingleAsync(i => i.Id == id);
+            Assert.Null(invitation.AcceptedAt);
+            var membership = await db.Memberships.SingleAsync(m => m.Id == invitation.MembershipId);
+            Assert.Equal((MembershipStatus.Invited, (Guid?)null), (membership.Status, membership.UserId));
+        }
+        await using (var audit = sql.Audit(tenantA)) // each refusal is in the clinic's access log, with no actor and no address
+            Assert.Equal(3, await audit.Events.CountAsync(e => e.ResourceId == id && e.Action == "invitation.accept" && e.Outcome == Medvya.Audit.Domain.AuditOutcome.Denied && e.ActorUserId == null));
+
+        // The invited address joins, however the provider spells its case.
+        using var browser = Browser();
+        Assert.Equal("/", (await Join(browser, token, email: "Joseph@Example.TEST")).Headers.Location!.OriginalString);
         Assert.Equal(users + 1, await UserCount());
     }
 

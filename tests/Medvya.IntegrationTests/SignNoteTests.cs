@@ -334,6 +334,25 @@ public sealed class SignNoteTests(PostgresFixture sql) : IClassFixture<PostgresF
         Assert.Equal((NoteStatus.Draft, 0), ((await NoteAsync()).Status, await SignedRowsAsync()));
     }
 
+    // SAFETY mutation check: remove the LeadClinicianId check in ConsultNoteService.SignAsync and the colleague's signature is accepted.
+    [Fact]
+    public async Task OnlyTheDoctorWhoHeldTheConsultationSignsItsNote()
+    {
+        var version = await SaveDraftAsync(Complete);
+        // A colleague who may treat the patient (the clinic's default access) still does not sign another doctor's consultation.
+        using (var colleague = await SignAsync(h.SecondDoctor, version))
+        {
+            Assert.Equal(HttpStatusCode.Forbidden, colleague.StatusCode);
+            Assert.Equal("no_access", (await Json(colleague)).GetProperty("code").GetString());
+        }
+        Assert.Equal((NoteStatus.Draft, 0), ((await NoteAsync()).Status, await SignedRowsAsync()));
+
+        using var own = await SignAsync(h.Doctor, version);
+        Assert.True(own.IsSuccessStatusCode, await own.Content.ReadAsStringAsync());
+        await using var db = sql.Encounters(h.Tenant);
+        Assert.Equal(h.Doctor, (await db.SignedNoteVersions.SingleAsync()).SignedBy);
+    }
+
     // SAFETY mutation check: remove the Status == Signed guard in ConsultNoteService.SaveAsync and the 409 case fails (the trigger would answer 500);
     // drop the TR_ConsultNotes_SignedImmutable trigger (migration SignedNotes) and the direct-database cases fail.
     [Fact]

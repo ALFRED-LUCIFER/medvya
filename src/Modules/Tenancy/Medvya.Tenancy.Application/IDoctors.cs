@@ -6,7 +6,9 @@ namespace Medvya.Tenancy.Application;
 public sealed record DoctorView(
     Guid Id, string FullName, string? Specialty, string? Qualifications, string? Languages, Guid FacilityId, string FacilityName, MembershipStatus Status,
     string Authority, string Number, string? Category, DateOnly? ExpiresOn, bool Expired, Guid? AttestedBy, string? AttestedByName, DateTimeOffset AttestedAt,
-    bool HasSignature, long NewVisitFee, long FollowUpFee, string Currency);
+    bool HasSignature, long NewVisitFee, long FollowUpFee, string Currency,
+    // True for the signed-in doctor's own row: only they set or replace their signature image.
+    bool OwnSignature = false);
 
 public sealed record FeeDefaults(long NewVisitFee, long FollowUpFee, string Currency);
 
@@ -63,9 +65,12 @@ public interface IDoctors
     /// <exception cref="SettingsValidationException"/>
     Task<DoctorView?> ResubmitLicenceAsync(Guid doctorId, ResubmitLicence command, CancellationToken cancellationToken = default);
 
-    /// <summary>Stores the signature image (PNG or JPEG, as for logos) privately. False when there is no such doctor.</summary>
+    /// <summary>
+    /// Stores the signature image (PNG or JPEG, as for logos) privately. Only the doctor sets their own: false for anyone else, and for a
+    /// doctor who has not joined yet. Null when there is no such doctor.
+    /// </summary>
     /// <exception cref="SettingsValidationException"/>
-    Task<bool> SetSignatureAsync(Guid doctorId, byte[] content, CancellationToken cancellationToken = default);
+    Task<bool?> SetSignatureAsync(Guid doctorId, byte[] content, CancellationToken cancellationToken = default);
 
     Task<bool> RemoveSignatureAsync(Guid doctorId, CancellationToken cancellationToken = default);
 }

@@ -79,8 +79,8 @@ export function rememberSession(had: boolean) {
   try { if (had) sessionStorage.setItem(marker, '1'); else sessionStorage.removeItem(marker); } catch { /* storage blocked: F-05a then shows only within the page's lifetime */ }
 }
 
-/** Why the server sent the user back: ?signin=mfa (no second factor, #912) or ?signin=failed (any other reason, which stays server-side). */
+/** Why the server sent the user back: ?signin=mfa (no second factor, #912), ?signin=invitation (invited at another address) or ?signin=failed (any other reason, which stays server-side). */
 export function signInFailure(): SignInFailure | null {
   const reason = new URLSearchParams(window.location.search).get('signin');
-  return reason === 'mfa' || reason === 'failed' ? reason : null;
+  return reason === 'mfa' || reason === 'invitation' || reason === 'failed' ? reason : null;
 }

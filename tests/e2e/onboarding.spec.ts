@@ -98,6 +98,16 @@ test('a finish whose answer was lost succeeds on the second try with the same pr
   await expect.poll(() => api.chose).toBe('m-1');
 });
 
+// #1365: the server limits organisations awaiting approval per account (409) and finishes per minute (429); each refusal is said in words.
+test('a finish refused by the per-account limits says why, and the answers stay', async ({ page }) => {
+  const api = await mockOnboarding(page);
+  const refusals = [409, 429];
+  await page.route('**/v1/onboarding/finish', r => (refusals.length ? r.fulfill({ status: refusals.shift()!, json: { code: 'too_many_unapproved' } }) : r.fallback()));
+  await page.goto('/onboarding?country=IN');
+  await completeWizard(page, { refusals: [/You already have two organisations waiting for approval from Medvya/, /Too many attempts\. Wait a minute, then try again\./] });
+  expect(api.finished).toBe(true); // the third try reached the server's finish
+});
+
 test('errors appear under the field and are announced; a server error keeps the person on the step', async ({ page }) => {
   await mockOnboarding(page, { step: 1, data: {} });
   await page.goto('/onboarding');

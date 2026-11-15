@@ -70,10 +70,11 @@ public static partial class StaffAuthentication
                     return Task.CompletedTask;
                 };
                 // A refused or broken sign-in returns to the app with a generic error; the reason is only in the logs. The one exception is a
-                // missing second factor (#912): the person can fix that themselves, and it says nothing about their Medvya account.
+                // missing second factor (#912) and an invitation sent to another address: the person can fix those themselves, and neither
+                // says anything about a Medvya account.
                 o.Events.OnRemoteFailure = ctx =>
                 {
-                    var reason = ctx.Failure?.Message == MfaRequired ? "mfa" : "failed";
+                    var reason = ctx.Failure?.Message switch { MfaRequired => "mfa", InvitationForAnotherAccount => "invitation", _ => "failed" };
                     ctx.Response.Redirect($"{AppPath(ctx.HttpContext.RequestServices.GetRequiredService<IConfiguration>())}?signin={reason}");
                     ctx.HandleResponse();
                     return Task.CompletedTask;
@@ -84,6 +85,7 @@ public static partial class StaffAuthentication
     }
 
     const string MfaRequired = "Multi-factor authentication is required.";
+    const string InvitationForAnotherAccount = "The invitation was sent to another address.";
 
     // Accept only accounts that exist in Medvya and signed in with MFA; replace the provider's claims with ours.
     static async Task OnTokenValidated(TokenValidatedContext ctx)
@@ -123,11 +125,11 @@ public static partial class StaffAuthentication
         // Joining by invitation (MDV-P0-013): the token rode in the protected OIDC state.
         if (issuer is not null && subject is not null && ctx.Properties?.Items.TryGetValue(InvitationSignIn.Item, out var invitation) == true && invitation is not null)
         {
-            user = await InvitationSignIn.AcceptAsync(ctx.HttpContext, invitation, issuer, subject, principal.FindFirst("name")?.Value, user);
+            (user, var wrongAccount) = await InvitationSignIn.AcceptAsync(ctx.HttpContext, invitation, issuer, subject, principal.FindFirst("name")?.Value, ProviderEmails.Of(principal), user);
             if (user is null)
             {
-                SignInRefusedInvitation(log);
-                ctx.Fail("The invitation cannot be used.");
+                if (wrongAccount) SignInRefusedInvitationAddress(log); else SignInRefusedInvitation(log);
+                ctx.Fail(wrongAccount ? InvitationForAnotherAccount : "The invitation cannot be used.");
                 return;
             }
         }
@@ -156,6 +158,9 @@ public static partial class StaffAuthentication
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Sign-in refused: the invitation cannot be used")]
     static partial void SignInRefusedInvitation(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Sign-in refused: the invitation was sent to another address than the account's")]
+    static partial void SignInRefusedInvitationAddress(ILogger logger);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Sign-in refused: no Medvya account for this sign-in")]
     static partial void SignInRefusedUnknownAccount(ILogger logger);

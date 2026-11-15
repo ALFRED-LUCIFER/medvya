@@ -4,8 +4,8 @@ import { z } from 'zod';
 export const signInSchema = z.object({ email: z.email().max(254) });
 export type SignInForm = z.infer<typeof signInSchema>;
 
-/** Why a sign-in came back refused: no second factor (the person can add one, #912), or any other reason (kept server-side). */
-export type SignInFailure = 'mfa' | 'failed';
+/** Why a sign-in came back refused: no second factor (the person can add one, #912), an invitation sent to another address than the account's, or any other reason (kept server-side). */
+export type SignInFailure = 'mfa' | 'invitation' | 'failed';
 
 /** Where a person adds a second factor to their Microsoft account. */
 export const securityInfoUrl = 'https://aka.ms/mysecurityinfo';

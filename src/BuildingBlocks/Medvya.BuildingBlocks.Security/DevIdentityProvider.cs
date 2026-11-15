@@ -29,7 +29,7 @@ public static class DevIdentityProvider
     /// <summary>login_hint value that signs in as a brand-new synthetic person, to test accepting an invitation (MDV-P0-013).</summary>
     public const string NewAccount = "new";
 
-    sealed record Grant(string Subject, string? Name, string ClientId, string RedirectUri, string? Nonce, string Challenge, bool Mfa, DateTimeOffset Expires);
+    sealed record Grant(string Subject, string? Name, string? Email, string ClientId, string RedirectUri, string? Nonce, string Challenge, bool Mfa, DateTimeOffset Expires);
 
     public static WebApplication MapDevIdentityProvider(this WebApplication app, string issuer, Func<HttpContext, Task<IReadOnlyList<DevAccount>>> accounts)
     {
@@ -60,9 +60,10 @@ public static class DevIdentityProvider
         dev.MapGet("/jwks", () => Results.Json(new { keys = new[] { JsonWebKeyConverter.ConvertFromRSASecurityKey(key) } }));
 
         // Without login_hint: a list of seeded users plus "new account". With it: issue a one-time code and return to the app.
-        // no_mfa=true signs in without MFA, so tests can prove the app refuses that.
+        // no_mfa=true signs in without MFA, so tests can prove the app refuses that. email=… is the address the provider reports for
+        // the account (this provider stores none), so a person can join by an invitation sent to that address.
         dev.MapGet("/authorize", async (HttpRequest r, string client_id, string redirect_uri, string state,
-            string code_challenge, string? code_challenge_method, string? nonce, string? login_hint, bool? no_mfa) =>
+            string code_challenge, string? code_challenge_method, string? nonce, string? login_hint, bool? no_mfa, string? email) =>
         {
             if (code_challenge_method != "S256" || !Uri.TryCreate(redirect_uri, UriKind.Absolute, out var back) || !back.IsLoopback)
                 return Results.BadRequest("PKCE S256 and a loopback redirect_uri are required.");
@@ -70,12 +71,18 @@ public static class DevIdentityProvider
             // An email hint comes from the app's sign-in page (MDV-P1-059); this provider has no emails, so it still shows the list.
             if (login_hint is null || login_hint.Contains('@', StringComparison.Ordinal))
             {
-                var query = QueryString.Create(r.Query.Where(q => q.Key != "login_hint"));
+                var query = QueryString.Create(r.Query.Where(q => q.Key is not ("login_hint" or "email")));
                 var html = new StringBuilder("<!doctype html><title>Dev sign-in</title><h1>Development sign-in (synthetic users)</h1><ul>");
                 foreach (var u in users)
                     html.Append(CultureInfo.InvariantCulture, $"<li><a href=\"{WebUtility.HtmlEncode($"{r.Path}{query}&login_hint={Uri.EscapeDataString(u.Subject)}")}\">{WebUtility.HtmlEncode(u.DisplayName)}</a></li>");
                 html.Append(CultureInfo.InvariantCulture, $"<li><a href=\"{WebUtility.HtmlEncode($"{r.Path}{query}&login_hint={NewAccount}")}\">New synthetic person (not yet a Medvya user)</a></li>");
-                return Results.Content(html.Append("</ul>").ToString(), "text/html");
+                // shortcut: only a new person can be given an email here; a seeded user joining a second clinic by invitation adds
+                // &email=… to a list link by hand. Give the seeded users addresses when a local journey needs that.
+                html.Append(CultureInfo.InvariantCulture, $"</ul><form method=\"get\" action=\"{WebUtility.HtmlEncode(r.Path)}\">");
+                foreach (var q in r.Query.Where(q => q.Key is not ("login_hint" or "email")))
+                    html.Append(CultureInfo.InvariantCulture, $"<input type=\"hidden\" name=\"{WebUtility.HtmlEncode(q.Key)}\" value=\"{WebUtility.HtmlEncode(q.Value.ToString())}\">");
+                html.Append(CultureInfo.InvariantCulture, $"<input type=\"hidden\" name=\"login_hint\" value=\"{NewAccount}\"><label>Invited email <input type=\"email\" name=\"email\" required></label> <button>Join as a new synthetic person with this email</button></form>");
+                return Results.Content(html.ToString(), "text/html");
             }
             // A fresh provider account each time: Medvya refuses it unless the sign-in carries a valid invitation.
             var (subject, name) = login_hint == NewAccount
@@ -83,7 +90,7 @@ public static class DevIdentityProvider
                 : (login_hint, null);
             if (name is null && users.All(u => u.Subject != subject)) return Results.BadRequest("Unknown user.");
             var code = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
-            grants[code] = new Grant(subject, name, client_id, redirect_uri, nonce, code_challenge, no_mfa != true, DateTimeOffset.UtcNow.AddMinutes(2));
+            grants[code] = new Grant(subject, name, email, client_id, redirect_uri, nonce, code_challenge, no_mfa != true, DateTimeOffset.UtcNow.AddMinutes(2));
             return Results.Redirect($"{redirect_uri}?code={code}&state={Uri.EscapeDataString(state)}");
         });
 
@@ -120,6 +127,7 @@ public static class DevIdentityProvider
     {
         var claims = new Dictionary<string, object> { ["sub"] = g.Subject, ["amr"] = g.Mfa ? MfaMethods : PasswordOnly, ["nonce"] = g.Nonce ?? "" };
         if (g.Name is not null) claims["name"] = g.Name;
+        if (g.Email is not null) claims["email"] = g.Email;
         return claims;
     }
 }

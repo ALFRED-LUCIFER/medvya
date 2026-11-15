@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { activeWindowMs, apiFetch, maxRetries, RequestTimeoutError, timeoutMs } from './apiClient';
+import { activeWindowMs, apiFetch, maxRefusedWaitMs, maxRetries, RequestTimeoutError, timeoutMs } from './apiClient';
 
 const answer = (status: number) => new Response('{}', { status });
+const refused = (seconds: number) => new Response('{}', { status: 429, headers: { 'Retry-After': String(seconds) } });
 const never = (_: string, init: RequestInit) => new Promise<Response>((_res, rej) => init.signal!.addEventListener('abort', () => rej(new DOMException('x', 'AbortError'))));
 
 beforeEach(() => { vi.useFakeTimers(); vi.spyOn(Math, 'random').mockReturnValue(0.5); });
@@ -58,14 +59,37 @@ describe('apiFetch', () => {
 
   // #1365: a rate-limited read comes back by itself once the server's Retry-After has passed.
   it('waits for Retry-After on a 429, then asks again', async () => {
-    const f = vi.fn().mockResolvedValueOnce(new Response('{}', { status: 429, headers: { 'Retry-After': '7' } })).mockResolvedValueOnce(answer(200));
+    const f = vi.fn().mockResolvedValueOnce(refused(2)).mockResolvedValueOnce(answer(200));
     vi.stubGlobal('fetch', f);
     const p = apiFetch('/v1/x');
-    await vi.advanceTimersByTimeAsync(6_999);
+    await vi.advanceTimersByTimeAsync(1_999);
     expect(f).toHaveBeenCalledTimes(1);
     await vi.advanceTimersByTimeAsync(1);
     expect(f).toHaveBeenCalledTimes(2);
     expect((await p).status).toBe(200);
+  });
+
+  it('waits at most five seconds on 429s in all, then hands the 429 to the screen', async () => {
+    const f = vi.fn().mockResolvedValueOnce(refused(60));
+    vi.stubGlobal('fetch', f);
+    expect((await apiFetch('/v1/x')).status).toBe(429); // a minute is longer than anyone waits: at once, no timer
+    f.mockResolvedValueOnce(refused(3)).mockResolvedValueOnce(refused(3));
+    const p = apiFetch('/v1/x');
+    await vi.advanceTimersByTimeAsync(3_000);
+    expect((await p).status).toBe(429); // 3 s waited, 3 s more would pass the 5 s budget
+    expect(f).toHaveBeenCalledTimes(3);
+    expect(maxRefusedWaitMs).toBe(5_000);
+  });
+
+  it('stops waiting on a 429 the moment the caller aborts', async () => {
+    const f = vi.fn().mockResolvedValue(refused(4));
+    vi.stubGlobal('fetch', f);
+    const c = new AbortController();
+    const p = apiFetch('/v1/x', { signal: c.signal }).then((v) => v, (e: unknown) => e);
+    await vi.advanceTimersByTimeAsync(500);
+    c.abort();
+    expect(((await p) as DOMException).name).toBe('AbortError');
+    expect(f).toHaveBeenCalledTimes(1);
   });
 
   it('hands a 429 that keeps coming to the screen after the bounded retries, and never repeats a refused write', async () => {

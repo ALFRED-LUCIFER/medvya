@@ -3,11 +3,22 @@ export const timeoutMs = 15_000;
 export const maxRetries = 2;
 const retriableStatus = new Set([429, 502, 503, 504]);
 const backoffMs = (attempt: number) => Math.random() * 400 * 2 ** attempt;
-// A 429 (rate limit, #1365) says when to come back: wait that long, at most the server's one-minute window. Nothing was done, so asking again is safe.
+// A 429 (rate limit, #1365) says when to come back. Nothing was done, so asking again is safe, but only within 5 s of waiting in all: a
+// person reads a longer pause as a frozen screen, and the server's windows are a minute, so a longer Retry-After goes straight to the
+// screen's error state instead (they can try again themselves).
+export const maxRefusedWaitMs = 5_000;
 const refusedWaitMs = (res: Response) => {
   const seconds = Number(res.headers.get('Retry-After'));
-  return seconds > 0 ? Math.min(seconds, 60) * 1000 : null;
+  return seconds > 0 ? seconds * 1000 : null;
 };
+
+// Every wait between tries ends at once when the caller gives up (the screen closed, the query was cancelled).
+const sleep = (ms: number, signal: AbortSignal | null | undefined) => new Promise<void>((resolve, reject) => {
+  const stop = () => { clearTimeout(id); reject(signal?.reason); };
+  const id = setTimeout(() => { signal?.removeEventListener('abort', stop); resolve(); }, ms);
+  signal?.addEventListener('abort', stop, { once: true });
+  if (signal?.aborted) stop();
+});
 
 /** The request got no answer in time. Carries no URL or body, so nothing patient-related can leak through it. */
 export class RequestTimeoutError extends Error {
@@ -49,15 +60,20 @@ async function attempt(url: string, { timeout = timeoutMs, ...rest }: RequestIni
 /** `timeout` overrides the shared timeout for one call that is known to be slow (the set-up finish). */
 export async function apiFetch(url: string, init: RequestInit & { timeout?: number } = {}): Promise<Response> {
   const retries = safeToRepeat(init) ? maxRetries : 0;
+  let refusedBudget = maxRefusedWaitMs;
   for (let n = 0; ; n++) {
     let wait = backoffMs(n);
     try {
       const res = await attempt(url, init);
       if (n >= retries || !retriableStatus.has(res.status)) return res;
-      if (res.status === 429) wait = refusedWaitMs(res) ?? wait;
+      if (res.status === 429) {
+        wait = refusedWaitMs(res) ?? wait;
+        if (wait > refusedBudget) return res;
+        refusedBudget -= wait;
+      }
     } catch (e) {
       if (n >= retries || init.signal?.aborted) throw e;
     }
-    await new Promise((r) => setTimeout(r, wait));
+    await sleep(wait, init.signal);
   }
 }

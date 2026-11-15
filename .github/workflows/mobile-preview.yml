@@ -1,0 +1,65 @@
+name: mobile-preview
+
+# EAS preview builds of both Expo apps (MDV-P5-032): an Android APK and an iOS simulator build each, internal distribution,
+# so no Apple signing is needed. Runs on main, not on every PR: one run is four cloud builds, and the Expo plan's monthly
+# build allowance would last days at PR rate. Every PR already type-checks, lints, tests and bundles both apps (pr.yml web-checks).
+# --no-wait queues the builds and ends; their result and download links are on expo.dev.
+# Until a person creates the Expo projects and adds the EXPO_TOKEN secret (docs/05-delivery/session-handoff.md §8), the build job is skipped.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'mobile/**'
+      - 'packages/**'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/mobile-preview.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-preview-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  account:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      ready: ${{ steps.token.outputs.ready }}
+    steps:
+      - id: token
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -n "$EXPO_TOKEN" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::EAS preview builds skipped: the EXPO_TOKEN secret is not set yet (person steps in docs/05-delivery/session-handoff.md §8)."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  eas-preview:
+    needs: account
+    if: needs.account.outputs.ready == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [clinician, patient]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile # eas reads the app config, which loads the Expo config plugins
+      - name: Queue the ${{ matrix.app }} preview build
+        working-directory: mobile/${{ matrix.app }}
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        # eas-cli is pinned here and through npx's exact version, not the expo-github-action: one fewer third-party action that sees the token.
+        run: npx --yes eas-cli@27.2.0 build --profile preview --platform all --non-interactive --no-wait

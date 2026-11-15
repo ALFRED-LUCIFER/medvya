@@ -24,13 +24,13 @@
     <PackageVersion Include="Azure.Communication.Email" Version="1.1.0" />
         <!-- Transitive via Hangfire.Core 1.8; 11.0.1 has GHSA-5crp-9r3c-p9vr. -->
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.4" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.14" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.15" />
     <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
     <!-- Transitive via Fido2 in the test projects; 9.0.0 has GHSA-vmv3-wvjp-wqpj (CVE-2026-118747), fixed in 10.0.15. -->
     <PackageVersion Include="System.Formats.Cbor" Version="10.0.15" />
     <!-- Jobs on PostgreSQL (ADR-012): reminders and the outbox publisher, MDV-P1-032. -->
     <!-- WebAuthn security keys for the platform console (MDV-P5-040): the attestation and assertion checks are not ours to hand-roll. -->
-    <PackageVersion Include="Fido2" Version="4.3.2" />
+    <PackageVersion Include="Fido2" Version="4.3.3" />
     <PackageVersion Include="Hangfire.AspNetCore" Version="1.8.25" />
     <PackageVersion Include="Hangfire.PostgreSql" Version="1.21.1" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.15" />
@@ -38,10 +38,10 @@
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.15" />
     <!-- Tests only: a real SignalR client against the test host (board hub authorisation and delivery, MDV-P1-029). -->
     <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client" Version="11.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.ApiDescription.Server" Version="10.0.14" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.14" />
+    <PackageVersion Include="Microsoft.Extensions.ApiDescription.Server" Version="10.0.15" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.15" />
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.12.0" />
     <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.20.1" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.20.1" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.20.1" />

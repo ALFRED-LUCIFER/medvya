@@ -172,6 +172,80 @@ public sealed partial class PatientSmsSignInTests : IClassFixture<PostgresFixtur
         Assert.Empty(sms.Sent);
     }
 
+    /// <summary>Holds the send until released and keeps the token it was given, so a test can see whether the caller could cancel it.</summary>
+    sealed class HeldSms : ISmsGateway
+    {
+        public TaskCompletionSource<CancellationToken> Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public async Task SendAsync(SmsMessage message, CancellationToken cancellationToken = default)
+        {
+            Entered.TrySetResult(cancellationToken);
+            await Release.Task;
+        }
+    }
+
+    [Fact]
+    public async Task ASendIsCountedBeforeItGoesOutAndAHangUpCannotCancelIt()
+    {
+        var held = new HeldSms();
+        using var app = factory.WithWebHostBuilder(b => b.ConfigureTestServices(s => s.AddSingleton<ISmsGateway>(held)));
+        using var client = app.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost") });
+        using var hangUp = new CancellationTokenSource();
+        var request = client.PostAsJsonAsync(U("/v1/patient-sign-in/code"), new { countryCode = "IN", mobile = number, language = "en" }, hangUp.Token);
+
+        var sendToken = await held.Entered.Task.WaitAsync(TimeSpan.FromSeconds(30));
+        // While the provider holds the SMS, the send is already counted and committed, so a dropped request cannot skip the limits.
+        await using (var db = sql.Identity())
+        {
+            var row = await db.SmsSignIns.AsNoTracking().SingleAsync(r => r.PhoneHash == SmsSignInRules.HashPhone("+91" + number));
+            Assert.Equal(1, row.CodesSent);
+            Assert.Equal(clock.GetUtcNow(), row.LastSentAt);
+            Assert.NotNull(row.CodeHash);
+        }
+        Assert.False(sendToken.CanBeCanceled); // the caller hanging up cannot cancel an SMS that may already be on its way
+
+        await hangUp.CancelAsync();
+        held.Release.SetResult();
+        try { await request.WaitAsync(TimeSpan.FromSeconds(30)); } catch (OperationCanceledException) { } // either way the caller is gone
+        Assert.Equal(("too_many_codes", 1), await Body(await RequestCode(number))); // the resend wait applies
+    }
+
+    [Fact]
+    public async Task AboveTheHourlyBudgetForAllNumbersNothingIsSent()
+    {
+        clock.Advance(TimeSpan.FromDays(30)); // past every other test's sends
+        using var app = factory.WithWebHostBuilder(b => b.UseSetting("Notifications:Sms:SignInCodesPerHour", "2"));
+        Task<HttpResponseMessage> Ask(string mobile) =>
+            app.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost") })
+                .PostAsJsonAsync(U("/v1/patient-sign-in/code"), new { countryCode = "IN", mobile, language = "en" });
+
+        Assert.Equal(HttpStatusCode.Accepted, (await Ask("8" + number[1..])).StatusCode);
+        Assert.Equal(HttpStatusCode.Accepted, (await Ask("7" + number[1..])).StatusCode);
+        var over = await Ask(number);
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, over.StatusCode);
+        Assert.Equal(("send_failed", (int?)null), await Body(over));
+        Assert.Equal(2, sms.Sent.Count);
+
+        clock.Advance(TimeSpan.FromMinutes(61));
+        Assert.Equal(HttpStatusCode.Accepted, (await Ask(number)).StatusCode);
+    }
+
+    [Fact]
+    public async Task ParallelWrongCodesCountOneByOneSoNoMoreThanFiveAreTried()
+    {
+        await RequestCode(number);
+        var code = LastCode();
+        var answers = await Task.WhenAll(Enumerable.Range(0, 10).Select(async _ => await Body(await Verify(number, Wrong(code)))));
+
+        Assert.Equal(SmsSignInRules.MaxWrongCodes - 1, answers.Count(a => a.Error == "wrong_code"));
+        Assert.Equal(10 - (SmsSignInRules.MaxWrongCodes - 1), answers.Count(a => a.Error == "locked"));
+        await using var db = sql.Identity();
+        var row = await db.SmsSignIns.AsNoTracking().SingleAsync(r => r.PhoneHash == SmsSignInRules.HashPhone("+91" + number));
+        Assert.Equal(SmsSignInRules.MaxWrongCodes, row.WrongCodes);
+        Assert.Equal(clock.GetUtcNow() + SmsSignInRules.LockPeriod, row.LockedUntil);
+        Assert.Equal("locked", (await Body(await Verify(number, code))).Error);
+    }
+
     [Fact]
     public void TheEndpointsArePublicAndLimitedPerClient()
     {

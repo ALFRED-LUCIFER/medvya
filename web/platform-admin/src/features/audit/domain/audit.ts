@@ -22,6 +22,8 @@ const actionKeys = {
   'organisation.suspend': 'platform.audit.action.organisation_suspend',
   'organisation.reinstate': 'platform.audit.action.organisation_reinstate',
   'organisation.document.view': 'platform.audit.action.organisation_document_view',
+  'plan.version.create': 'platform.audit.action.plan_version_create',
+  'organisation.document.checked': 'platform.audit.action.organisation_document_checked',
   'medicine.add': 'platform.audit.action.medicine_add',
   'medicine.correct': 'platform.audit.action.medicine_correct',
   'medicine.class': 'platform.audit.action.medicine_class',

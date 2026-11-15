@@ -4,7 +4,7 @@ namespace Host.Api.PublicSite;
 
 /// <summary>
 /// Approved plans and prices on the public site, from PublicSite/pricing.json (reloads on change).
-/// shortcut: plans read from pricing.json, move to console plans when MDV-P5-042 lands.
+/// shortcut: plans read from pricing.json, not the console's plan versions (MDV-P5-042); read those when MDV-P5-050 lands.
 /// </summary>
 public sealed class PricingContent
 {

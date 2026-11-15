@@ -7,11 +7,17 @@ import FeaturesPage from '../features/features/components/FeaturesPage';
 import { useFeaturesController } from '../features/features/hooks/useFeaturesController';
 import MedicinesPage from '../features/medicines/components/MedicinesPage';
 import { useMedicinesController } from '../features/medicines/hooks/useMedicinesController';
+import PlansPage from '../features/plans/components/PlansPage';
+import { usePlansController } from '../features/plans/hooks/usePlansController';
 import TeamPage from '../features/team/components/TeamPage';
 import { useTeamController } from '../features/team/hooks/useTeamController';
 
 export function TeamRoute() {
   return <TeamPage vm={useTeamController()} />;
+}
+
+export function PlansRoute({ canEdit }: { canEdit: boolean }) {
+  return <PlansPage vm={usePlansController(canEdit)} />;
 }
 
 export function AuditRoute({ canExport }: { canExport: boolean }) {

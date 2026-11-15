@@ -8,9 +8,9 @@
 **Day one:** Switch from the old system without closing, with history migrated, insurance checked at the desk and a paid subscription.  
 **Goal:** Everything a clinic owner needs to say yes: their data moved, no downtime, regulator-ready, learnable in one shift, and no lock-in.
 
-**Tickets:** 65 · **Estimate:** 176.5 dev-days vs **45 working days** in the window (OVER by 131.5 days: needs scope trade-off or overlap) · **Average confidence:** 66%
+**Tickets:** 66 · **Estimate:** 176 dev-days vs **45 working days** in the window (OVER by 131 days: needs scope trade-off or overlap) · **Average confidence:** 66%
 
-**Status:** To do 65
+**Status:** To do 66
 
 ## Epics
 
@@ -45,7 +45,7 @@
 | [MDV-P5-054](MDV-P5-054.md) | To do | Later: date and time pickers and a combobox in the app language; dark and high contrast only after the tone tokens | Story | COULD | P5-10 | X-02 | 4 | 24–24 | 05 Apr → 09 Apr 2027 | 55% Low |
 | [MDV-P5-003](MDV-P5-003.md) | To do | Migration mapping: AI-proposed column and code mappings (LOINC, ICD-10, formulary) approved by a person; reusable vendor templates (N-04) | Story | MUST | P5-01 | N-04 | 4 | 25–26 | 12 Apr → 23 Apr 2027 | 62% Low |
 | [MDV-P5-006](MDV-P5-006.md) | To do | Data-quality queue: problems grouped by type and fixed by rule; reversible (N-05) | Story | MUST | P5-02 | N-05 | 3 | 25–26 | 12 Apr → 23 Apr 2027 | 65% Medium |
-| [MDV-P5-016](MDV-P5-016.md) | To do | Medvya subscription: plans, trial, subscription invoices with GST/VAT, seat counts, dunning (N-11) | Story | MUST | P5-07 | N-11 | 4 | 25–27 | 12 Apr → 30 Apr 2027 | 60% Low |
+| [MDV-P5-016](MDV-P5-016.md) | To do | Medvya subscription pricing decision recorded (ADR-019); building it is MDV-P5-042, MDV-P5-043 and MDV-P5-065 (N-11) | Story | MUST | P5-07 | N-11 | 0.5 | 25–27 | 12 Apr → 30 Apr 2027 | 90% High |
 | [MDV-P5-004](MDV-P5-004.md) | To do | Migration dry run into a test tenant and owner-signed dry-run report (N-04) | Story | MUST | P5-01 | N-04 | 2.5 | 26–26 | 19 Apr → 23 Apr 2027 | 72% Medium |
 | [MDV-P5-007](MDV-P5-007.md) | To do | Duplicate scoring incl. Arabic–English name spellings, bulk merge for high confidence, desk confirmation for borderline (N-05) | Story | MUST | P5-02 | N-05 | 3 | 26–27 | 19 Apr → 30 Apr 2027 | 68% Medium |
 | [MDV-P5-017](MDV-P5-017.md) | To do | Platform operations console: tenant catalogue, onboarding automation, per-tenant flags, time-boxed audited support access visible to the clinic (N-12) | Story | MUST | P5-08 | N-12 | 4 | 26–28 | 19 Apr → 07 May 2027 | 65% Medium |
@@ -71,6 +71,7 @@
 | [MDV-P5-032](MDV-P5-032.md) | To do | Mobile foundation: `mobile/` Expo workspace, shared tokens and i18n, RTL, CI and EAS builds | Story | MUST | P8-06 | — | 4 | 28–29 | 03 May → 14 May 2027 | 70% Medium |
 | [MDV-P5-033](MDV-P5-033.md) | To do | Mobile backend: native token sign-in, device registry, push registry and remote revoke | Story | MUST | P8-06 | — | 3.5 | 28–30 | 03 May → 21 May 2027 | 70% Medium |
 | [MDV-P5-047](MDV-P5-047.md) | To do | Service requests: Help in the clinic app, support inbox with SLA, internal notes, diagnostics | Story | MUST | P5-09 | N-13 | 3.5 | 28–30 | 03 May → 21 May 2027 | 65% Medium |
+| [MDV-P5-065](MDV-P5-065.md) | To do | Collect Medvya subscription payments through the P4-007 (Razorpay) and P4-008 (UAE) adapters | Story | MUST | P5-07 | N-11 | 3 | 28–30 | 03 May → 21 May 2027 | 55% Low |
 | [MDV-P5-066](MDV-P5-066.md) | To do | Import Common Drug Codes for India by release into the Medvya-wide medicine list | Story | MUST | P5-08 | N-12 | 3 | 28–30 | 03 May → 21 May 2027 | 40% Low |
 | [MDV-P5-010](MDV-P5-010.md) | To do | UAE claims via eClaimLink (Dubai) / Shafafiya (Abu Dhabi) for the launch emirate (P-14) | Story | MUST | P5-03 | P-14 | 4 | 29–31 | 10 May → 28 May 2027 | 45% Low |
 | [MDV-P5-013](MDV-P5-013.md) | To do | Regulator e-prescription and e-sick leave; letters and certificates from templates (N-09) | Story | MUST | P5-04 | N-09 | 3 | 29–30 | 10 May → 21 May 2027 | 50% Low |

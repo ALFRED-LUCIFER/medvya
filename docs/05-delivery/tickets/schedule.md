@@ -546,7 +546,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P5-002](P5-commercial-launch/MDV-P5-002.md) | Migration: read-only source connection via self-hosted integration runtime (Oracle, SQL Server, MySQL, CSV/Excel) (N-04) | P5 | wk 24–25 | 65% |
 | [MDV-P5-054](P5-commercial-launch/MDV-P5-054.md) | Later: date and time pickers and a combobox in the app language; dark and high contrast only after the tone tokens | P5 | wk 24–24 | 55% |
 
-## Week 25 · 12 Apr 2027 – 16 Apr 2027 · load 9.3 dev-days ⚠ over capacity
+## Week 25 · 12 Apr 2027 – 16 Apr 2027 · load 8.2 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -555,9 +555,9 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P5-002](P5-commercial-launch/MDV-P5-002.md) | Migration: read-only source connection via self-hosted integration runtime (Oracle, SQL Server, MySQL, CSV/Excel) (N-04) | P5 | wk 24–25 | 65% |
 | [MDV-P5-003](P5-commercial-launch/MDV-P5-003.md) | Migration mapping: AI-proposed column and code mappings (LOINC, ICD-10, formulary) approved by a person; reusable vendor templates (N-04) | P5 | wk 25–26 | 62% |
 | [MDV-P5-006](P5-commercial-launch/MDV-P5-006.md) | Data-quality queue: problems grouped by type and fixed by rule; reversible (N-05) | P5 | wk 25–26 | 65% |
-| [MDV-P5-016](P5-commercial-launch/MDV-P5-016.md) | Medvya subscription: plans, trial, subscription invoices with GST/VAT, seat counts, dunning (N-11) | P5 | wk 25–27 | 60% |
+| [MDV-P5-016](P5-commercial-launch/MDV-P5-016.md) | Medvya subscription pricing decision recorded (ADR-019); building it is MDV-P5-042, MDV-P5-043 and MDV-P5-065 (N-11) | P5 | wk 25–27 | 90% |
 
-## Week 26 · 19 Apr 2027 – 23 Apr 2027 · load 15.3 dev-days ⚠ over capacity
+## Week 26 · 19 Apr 2027 – 23 Apr 2027 · load 14.2 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -566,21 +566,21 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P5-004](P5-commercial-launch/MDV-P5-004.md) | Migration dry run into a test tenant and owner-signed dry-run report (N-04) | P5 | wk 26–26 | 72% |
 | [MDV-P5-006](P5-commercial-launch/MDV-P5-006.md) | Data-quality queue: problems grouped by type and fixed by rule; reversible (N-05) | P5 | wk 25–26 | 65% |
 | [MDV-P5-007](P5-commercial-launch/MDV-P5-007.md) | Duplicate scoring incl. Arabic–English name spellings, bulk merge for high confidence, desk confirmation for borderline (N-05) | P5 | wk 26–27 | 68% |
-| [MDV-P5-016](P5-commercial-launch/MDV-P5-016.md) | Medvya subscription: plans, trial, subscription invoices with GST/VAT, seat counts, dunning (N-11) | P5 | wk 25–27 | 60% |
+| [MDV-P5-016](P5-commercial-launch/MDV-P5-016.md) | Medvya subscription pricing decision recorded (ADR-019); building it is MDV-P5-042, MDV-P5-043 and MDV-P5-065 (N-11) | P5 | wk 25–27 | 90% |
 | [MDV-P5-017](P5-commercial-launch/MDV-P5-017.md) | Platform operations console: tenant catalogue, onboarding automation, per-tenant flags, time-boxed audited support access visible to the clinic (N-12) | P5 | wk 26–28 | 65% |
 | [MDV-P5-031](P5-commercial-launch/MDV-P5-031.md) | Mobile ADR and threat model: two Expo store apps (Medvya Clinic, Medvya for patients) from one repo | P5 | wk 26–27 | 80% |
 | [MDV-P5-040](P5-commercial-launch/MDV-P5-040.md) | Platform console shell (`web/platform-admin`): company sign-on plus security key, platform roles, reason on every action, no PHI | P5 | wk 26–28 | 65% |
 | [MDV-P5-042](P5-commercial-launch/MDV-P5-042.md) | Plans and entitlements: versioned plans, India and UAE prices, seats, trial days, 30 days' notice | P5 | wk 26–28 | 70% |
 | [MDV-P5-050](P5-commercial-launch/MDV-P5-050.md) | Public pricing page with 14-day trial, monthly and yearly toggle and country currency | P5 | wk 26–27 | 75% |
 
-## Week 27 · 26 Apr 2027 – 30 Apr 2027 · load 17.1 dev-days ⚠ over capacity
+## Week 27 · 26 Apr 2027 – 30 Apr 2027 · load 15.9 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
 | [MDV-P5-005](P5-commercial-launch/MDV-P5-005.md) | Day-one load, change-data-capture parallel run and background backfill (N-04) | P5 | wk 27–29 | 58% |
 | [MDV-P5-007](P5-commercial-launch/MDV-P5-007.md) | Duplicate scoring incl. Arabic–English name spellings, bulk merge for high confidence, desk confirmation for borderline (N-05) | P5 | wk 26–27 | 68% |
 | [MDV-P5-008](P5-commercial-launch/MDV-P5-008.md) | Insurance coverage and live eligibility with co-pay estimate at the desk (P-08) | P5 | wk 27–28 | 58% |
-| [MDV-P5-016](P5-commercial-launch/MDV-P5-016.md) | Medvya subscription: plans, trial, subscription invoices with GST/VAT, seat counts, dunning (N-11) | P5 | wk 25–27 | 60% |
+| [MDV-P5-016](P5-commercial-launch/MDV-P5-016.md) | Medvya subscription pricing decision recorded (ADR-019); building it is MDV-P5-042, MDV-P5-043 and MDV-P5-065 (N-11) | P5 | wk 25–27 | 90% |
 | [MDV-P5-017](P5-commercial-launch/MDV-P5-017.md) | Platform operations console: tenant catalogue, onboarding automation, per-tenant flags, time-boxed audited support access visible to the clinic (N-12) | P5 | wk 26–28 | 65% |
 | [MDV-P5-024](P5-commercial-launch/MDV-P5-024.md) | Security operations: incident response with DPDP/UAE breach notification, Defender + Sentinel alerts to on-call, Customer Lockbox, VDP, ADHICS evidence, ISO 27001 gap assessment | P5 | wk 27–30 | 70% |
 | [MDV-P5-028](P5-commercial-launch/MDV-P5-028.md) | Commercial readiness: order form and SLA signed with the first paying clinic | P5 | wk 27–27 | 65% |
@@ -594,7 +594,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P5-050](P5-commercial-launch/MDV-P5-050.md) | Public pricing page with 14-day trial, monthly and yearly toggle and country currency | P5 | wk 26–27 | 75% |
 | [MDV-P5-064](P5-commercial-launch/MDV-P5-064.md) | Medvya-wide medicine list: console Medicines page, Not verified class, register-ready model | P5 | wk 27–29 | 70% |
 
-## Week 28 · 03 May 2027 – 07 May 2027 · load 24.5 dev-days ⚠ over capacity
+## Week 28 · 03 May 2027 – 07 May 2027 · load 25.5 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -618,9 +618,10 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P5-046](P5-commercial-launch/MDV-P5-046.md) | Legal documents: versioned terms, privacy notice and DPA, re-acceptance gate that pauses booking only | P5 | wk 27–29 | 65% |
 | [MDV-P5-047](P5-commercial-launch/MDV-P5-047.md) | Service requests: Help in the clinic app, support inbox with SLA, internal notes, diagnostics | P5 | wk 28–30 | 65% |
 | [MDV-P5-064](P5-commercial-launch/MDV-P5-064.md) | Medvya-wide medicine list: console Medicines page, Not verified class, register-ready model | P5 | wk 27–29 | 70% |
+| [MDV-P5-065](P5-commercial-launch/MDV-P5-065.md) | Collect Medvya subscription payments through the P4-007 (Razorpay) and P4-008 (UAE) adapters | P5 | wk 28–30 | 55% |
 | [MDV-P5-066](P5-commercial-launch/MDV-P5-066.md) | Import Common Drug Codes for India by release into the Medvya-wide medicine list | P5 | wk 28–30 | 40% |
 
-## Week 29 · 10 May 2027 – 14 May 2027 · load 34.6 dev-days ⚠ over capacity
+## Week 29 · 10 May 2027 – 14 May 2027 · load 35.6 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -651,9 +652,10 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P5-047](P5-commercial-launch/MDV-P5-047.md) | Service requests: Help in the clinic app, support inbox with SLA, internal notes, diagnostics | P5 | wk 28–30 | 65% |
 | [MDV-P5-049](P5-commercial-launch/MDV-P5-049.md) | Data requests and offboarding runs from the console without opening records | P5 | wk 29–31 | 65% |
 | [MDV-P5-064](P5-commercial-launch/MDV-P5-064.md) | Medvya-wide medicine list: console Medicines page, Not verified class, register-ready model | P5 | wk 27–29 | 70% |
+| [MDV-P5-065](P5-commercial-launch/MDV-P5-065.md) | Collect Medvya subscription payments through the P4-007 (Razorpay) and P4-008 (UAE) adapters | P5 | wk 28–30 | 55% |
 | [MDV-P5-066](P5-commercial-launch/MDV-P5-066.md) | Import Common Drug Codes for India by release into the Medvya-wide medicine list | P5 | wk 28–30 | 40% |
 
-## Week 30 · 17 May 2027 – 21 May 2027 · load 29.9 dev-days ⚠ over capacity
+## Week 30 · 17 May 2027 – 21 May 2027 · load 30.9 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -681,6 +683,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P5-049](P5-commercial-launch/MDV-P5-049.md) | Data requests and offboarding runs from the console without opening records | P5 | wk 29–31 | 65% |
 | [MDV-P5-051](P5-commercial-launch/MDV-P5-051.md) | Patient app trackers: BP and sugar log, a child's growth and vaccines, and a private cycle tracker (PT-09) | P5 | wk 30–30 | 68% |
 | [MDV-P5-052](P5-commercial-launch/MDV-P5-052.md) | Platform console switches for the new chart sections and the patient-app trackers | P5 | wk 30–30 | 80% |
+| [MDV-P5-065](P5-commercial-launch/MDV-P5-065.md) | Collect Medvya subscription payments through the P4-007 (Razorpay) and P4-008 (UAE) adapters | P5 | wk 28–30 | 55% |
 | [MDV-P5-066](P5-commercial-launch/MDV-P5-066.md) | Import Common Drug Codes for India by release into the Medvya-wide medicine list | P5 | wk 28–30 | 40% |
 
 ## Week 31 · 24 May 2027 – 28 May 2027 · load 15.8 dev-days ⚠ over capacity

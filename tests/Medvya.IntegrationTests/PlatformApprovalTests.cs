@@ -20,7 +20,8 @@ namespace Medvya.IntegrationTests;
 /// MDV-P1-064 (ADR-016, ADR-014 note): the console's organisation approvals on real PostgreSQL, through the console host and its narrow medvya_review login.
 /// Mutation checks: let every console role decide (PlatformPolicies.OrganisationDecide to Console) and the Support and Finance steps fail; drop the
 /// organisation's own transition or DPA rule in OrganisationStates and the refusal steps fail; drop the platform audit call and the audit steps fail;
-/// grant medvya_review a patients table in table-rights.sql and TheReviewLoginCannotReadClinicData fails.
+/// grant medvya_review a patients table in table-rights.sql and TheReviewLoginCannotReadClinicData fails; drop the document-tick check in
+/// OrganisationApprovalEndpoints (MDV-P5-044) and ApprovingNeedsEveryDocumentTicked fails.
 /// </summary>
 public sealed class PlatformApprovalTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IDisposable
 {
@@ -94,8 +95,16 @@ public sealed class PlatformApprovalTests(PostgresFixture sql) : IClassFixture<P
         return await db.Tenants.Select(t => t.State).SingleAsync();
     }
 
-    static Task<HttpResponseMessage> Decide(HttpClient c, Guid id, string route, string? reason = "Registration certificate and GSTIN checked") =>
-        PlatformConsoleTests.Post(c, $"/v1/organisations/{id}/{route}", new { reason });
+    /// <summary>A decision; an approve ticks every document of the request as checked unless <paramref name="checkedDocuments"/> says which.</summary>
+    async Task<HttpResponseMessage> Decide(HttpClient c, Guid id, string route, string? reason = "Registration certificate and GSTIN checked", Guid[]? checkedDocuments = null)
+    {
+        if (route == "approve" && checkedDocuments is null)
+            await using (var db = sql.Context(id)) checkedDocuments = [.. await db.OrganisationDocuments.Select(d => d.Id).ToListAsync()];
+        return await PlatformConsoleTests.Post(c, $"/v1/organisations/{id}/{route}", new { reason, checkedDocuments });
+    }
+
+    /// <summary>The platform log without the per-document ticks, which <see cref="ApprovingNeedsEveryDocumentTickedAndRecordsEachTickWithTheDecision"/> covers.</summary>
+    async Task<List<PlatformAuditEntry>> Decisions(Guid id) => [.. (await PlatformAudit(id)).Where(a => a.Action != "organisation.document.checked")];
 
     async Task<List<Medvya.Platform.Domain.PlatformAuditEntry>> PlatformAudit(Guid id)
     {
@@ -118,7 +127,7 @@ public sealed class PlatformApprovalTests(PostgresFixture sql) : IClassFixture<P
         // The organisation's own audit trail names the operator (the platform member); the platform log names the action and the organisation.
         await using (var audit = sql.Audit(id))
             Assert.Single(await audit.Events.Where(e => e.Action == "organisation.state.Approved").ToListAsync());
-        var entry = Assert.Single(await PlatformAudit(id));
+        var entry = Assert.Single(await Decisions(id));
         Assert.Equal("organisation.approve", entry.Action);
         Assert.Equal("Registration certificate and GSTIN checked", entry.Reason);
         Assert.NotNull(entry.ActorMemberId);
@@ -185,6 +194,36 @@ public sealed class PlatformApprovalTests(PostgresFixture sql) : IClassFixture<P
     }
 
     [Fact]
+    public async Task ApprovingNeedsEveryDocumentTickedAndRecordsEachTickWithTheDecision()
+    {
+        var (id, last) = await Org();
+        Guid[] all;
+        await using (var db = sql.Context(id)) all = [.. (await db.OrganisationDocuments.Select(d => d.Id).ToListAsync()).Order()];
+        using var c = await Console(PlatformRole.Reviewer);
+        foreach (var partial in new[] { Array.Empty<Guid>(), all.Where(d => d != last).Append(Guid.NewGuid()).ToArray() })
+        {
+            var refused = await Decide(c, id, "approve", checkedDocuments: partial);
+            Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
+            Assert.Equal("unchecked", (await refused.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("errors").GetProperty("documents")[0].GetString());
+        }
+        Assert.Equal(HttpStatusCode.BadRequest, (await PlatformConsoleTests.Post(c, $"/v1/organisations/{id}/approve", new { reason = "Documents checked and in order" })).StatusCode);
+        Assert.Equal(OrganisationState.Submitted, await State(id));
+        Assert.Empty(await PlatformAudit(id));
+
+        Assert.Equal(HttpStatusCode.OK, (await Decide(c, id, "approve", checkedDocuments: all)).StatusCode);
+        Assert.Equal(OrganisationState.Approved, await State(id));
+        // Reviewer, documents checked and time: one entry per ticked document beside the decision, same operator.
+        var log = await PlatformAudit(id);
+        var ticks = log.Where(a => a.Action == "organisation.document.checked").ToList();
+        Assert.Equal(all, ticks.Select(a => a.ResourceId!.Value).Order());
+        var decision = Assert.Single(log, a => a.Action == "organisation.approve");
+        Assert.All(ticks, a => Assert.Equal(decision.ActorMemberId, a.ActorMemberId));
+        // Only approve asks for ticks; the other decisions do not record any.
+        Assert.Equal(HttpStatusCode.OK, (await Decide(c, id, "suspend", "Complaint under review by Medvya")).StatusCode);
+        Assert.Equal(all.Length, (await PlatformAudit(id)).Count(a => a.Action == "organisation.document.checked"));
+    }
+
+    [Fact]
     public async Task OnlyTheMovesTheStateMachineAllowsHappenAndSuspendThenReinstateRoundTrips()
     {
         var (id, _) = await Org();
@@ -203,7 +242,13 @@ public sealed class PlatformApprovalTests(PostgresFixture sql) : IClassFixture<P
         Assert.Equal(OrganisationState.Suspended, await State(id));
         Assert.Equal(HttpStatusCode.OK, (await Decide(c, id, "reinstate", "Complaint closed, no action needed")).StatusCode);
         Assert.Equal(OrganisationState.Approved, await State(id));
-        Assert.Equal(["organisation.approve", "organisation.suspend", "organisation.reinstate"], (await PlatformAudit(id)).Select(a => a.Action));
+        Assert.Equal(["organisation.approve", "organisation.suspend", "organisation.reinstate"], (await Decisions(id)).Select(a => a.Action));
+        // Suspending (with the reason) and reinstating each email the practice owner.
+        var mails = sent.Where(m => m.To == "desk@review-clinic.example").ToList();
+        Assert.Equal(3, mails.Count);
+        Assert.EndsWith("is suspended on Medvya", mails[1].Subject, StringComparison.Ordinal);
+        Assert.Contains("Complaint under review by Medvya", mails[1].Body, StringComparison.Ordinal);
+        Assert.EndsWith("is approved on Medvya", mails[2].Subject, StringComparison.Ordinal);
 
         var (rejected, _) = await Org();
         Assert.Equal(HttpStatusCode.OK, (await Decide(c, rejected, "reject", "Registration certificate is not legible")).StatusCode);

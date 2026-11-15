@@ -21,6 +21,8 @@ public static class PlatformPolicies
     public const string OrganisationRead = Console, OrganisationDecide = "platform.organisation.decide";
     /// <summary>Feature releases (MDV-P5-041): every console role reads; only owner and operations change a release.</summary>
     public const string FeatureRead = Console, FeatureChange = "platform.feature.change";
+    /// <summary>Plans (MDV-P5-042, ADR-019): every console role reads; only owner and finance save a new version.</summary>
+    public const string PlansRead = Console, PlansEdit = "platform.plans.edit";
     /// <summary>The Medvya-wide medicine list (MDV-P5-064): every console role reads; only owner and operations change it.</summary>
     public const string MedicinesRead = Console, MedicinesWrite = "platform.medicines.write";
 
@@ -35,6 +37,7 @@ public static class PlatformPolicies
             .AddPolicy(Owner, p => p.Combine(console).RequireClaim(RoleClaim, nameof(PlatformRole.Owner)))
             .AddPolicy(OrganisationDecide, p => p.Combine(console).RequireClaim(RoleClaim, nameof(PlatformRole.Owner), nameof(PlatformRole.Operations), nameof(PlatformRole.Reviewer)))
             .AddPolicy(FeatureChange, p => p.Combine(console).RequireClaim(RoleClaim, nameof(PlatformRole.Owner), nameof(PlatformRole.Operations)))
+            .AddPolicy(PlansEdit, p => p.Combine(console).RequireClaim(RoleClaim, nameof(PlatformRole.Owner), nameof(PlatformRole.Finance)))
             .AddPolicy(AuditRead, p => p.Combine(console).RequireClaim(RoleClaim, nameof(PlatformRole.Owner), nameof(PlatformRole.Operations)))
             .AddPolicy(MedicinesWrite, p => p.Combine(console).RequireClaim(RoleClaim, nameof(PlatformRole.Owner), nameof(PlatformRole.Operations)));
     }
@@ -88,6 +91,15 @@ public static class PlatformEndpoints
 
         app.MapOrganisationApprovals();
         app.MapFeatureReleases();
+        app.MapGet("/v1/plans", ([FromServices] IPlatformPlans plans, CancellationToken ct) => plans.ListAsync(ct)).RequireAuthorization(PlatformPolicies.PlansRead);
+        app.Actions("/v1/plans").RequireAuthorization(PlatformPolicies.PlansEdit)
+            .MapPost("/{code}/versions", async (string code, [FromBody] PlanEdit body, [FromServices] IPlatformPlans plans, CancellationToken ct) =>
+                await plans.SaveAsync(code, body, PlatformReason.Valid(body.Reason)!, ct) switch
+                {
+                    (PlanOutcome.Saved, var saved) => Results.Created((string?)null, saved),
+                    (PlanOutcome.NotFound, _) => Results.NotFound(),
+                    _ => Results.Problem(statusCode: StatusCodes.Status409Conflict, title: "The plan has a newer version"),
+                });
         app.MapMedicineList();
         app.Actions("/v1/audit").RequireAuthorization(PlatformPolicies.Owner)
             .MapPost("/export", async ([FromBody] ReasonBody body, [FromServices] IPlatformAuditLog log, CancellationToken ct) =>

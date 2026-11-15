@@ -12,6 +12,9 @@
     <EmbeddedResource Include="Fonts\*.ttf" LogicalName="Medvya.Fonts.%(Filename)%(Extension)" /> <!-- Noto, SIL Open Font Licence (Fonts/OFL.txt) -->
   </ItemGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="Medvya.IntegrationTests" /> <!-- AcsEmailSender.Compose only: the service cannot be called from tests -->
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\Medvya.BuildingBlocks.Domain\Medvya.BuildingBlocks.Domain.csproj" />
   </ItemGroup>
 </Project>

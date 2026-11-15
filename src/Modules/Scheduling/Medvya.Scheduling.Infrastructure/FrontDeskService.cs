@@ -254,7 +254,7 @@ public sealed partial class FrontDeskService(
         // The doctor's room: where the patient was called in, else where the doctor sits today (never the vitals room the visit may be in).
         var room = visit.State >= AppointmentState.InConsult && visit.Room is { } called ? called : await context.RoomAsync(visit, zone, context.Now, cancellationToken);
         var vitals = (await context.StepsAsync(cancellationToken)).Nurse ? facility.NurseRoom : null;
-        var logo = await context.LogoAsync(visit.FacilityId, cancellationToken);
+        var logo = await context.LogoAsync(cancellationToken);
         var wifi = facility.Wifi is { } w ? new TokenSlipWifi(w.Network, w.Password, w.Daily, QrRows.Of(GuestWifiCode.Text(w.Network, w.Password))) : null;
         return new(facility.Name, QueueToken.Format(token.Prefix, token.Number), doctor, token.IssuedAt, facility.TimeZone,
             places.TryGetValue(visit.Id, out var place) ? place - 1 : null, facility.Address, facility.Phone, room, vitals,

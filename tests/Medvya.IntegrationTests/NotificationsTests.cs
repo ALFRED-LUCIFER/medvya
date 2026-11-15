@@ -191,7 +191,7 @@ public sealed partial class NotificationsTests(PostgresFixture sql) : IClassFixt
         var sms = Assert.Single(smsGateway.Sent);
         Assert.Equal("1107000000000000001", sms.TemplateId);
         Assert.Equal("ADYCLN", sms.Sender);
-        foreach (var body in email.Sent.Select(m => m.Subject + m.Body).Append(sms.Text))
+        foreach (var body in email.Sent.Select(m => m.Subject + m.Body + m.Html).Append(sms.Text))
         {
             Assert.DoesNotContain("Meera", body); // patient name
             Assert.DoesNotContain("000001", body); // MRN
@@ -200,6 +200,32 @@ public sealed partial class NotificationsTests(PostgresFixture sql) : IClassFixt
             Assert.DoesNotContain("example.test", body); // address
         }
         Assert.NotEmpty(await RowsAsync(visit.Id));
+    }
+
+    [Fact]
+    public async Task AnEmailCarriesTheBrandedHtmlBesideTheSameTextWithTheClinicsLogoAddressAndPhone()
+    {
+        await using (var db = sql.Context(h.Tenant))
+        {
+            db.Profiles.Add(new Medvya.Tenancy.Domain.PracticeProfile
+            {
+                Id = Guid.CreateVersion7(), TenantId = h.Tenant, Address = "12 Kasturba Nagar 1st Street, Adyar, Chennai 600020", Phone = "044 2441 0000", LogoKey = "synthetic/logo",
+            });
+            await db.SaveChangesAsync();
+        }
+        h.Logos.Stored["synthetic/logo"] = ([0x89, 0x50, 0x4E, 0x47], "image/png");
+        await BookTuesdayAsync();
+        await RunJobAsync();
+
+        var mail = Assert.Single(email.Sent);
+        Assert.Equal(MessageCatalog.Render(NotificationKind.Confirmation, "hi", "Adyar (synthetic)", Tuesday(10).ToOffset(TimeSpan.FromHours(5.5))).Body, mail.Body); // the text is unchanged
+        Assert.NotNull(mail.Html);
+        Assert.Contains("""<html lang="hi" dir="ltr">""", mail.Html, StringComparison.Ordinal);
+        Assert.Contains(mail.Body, mail.Html, StringComparison.Ordinal);
+        Assert.Contains("12 Kasturba Nagar 1st Street", mail.Html, StringComparison.Ordinal);
+        Assert.Contains("044 2441 0000", mail.Html, StringComparison.Ordinal);
+        Assert.Contains("src=\"cid:logo\"", mail.Html, StringComparison.Ordinal);
+        Assert.Equal([0x89, 0x50, 0x4E, 0x47], mail.Logo);
     }
 
     [Fact]

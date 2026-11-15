@@ -46,6 +46,9 @@ public interface IFacilityDirectory
     /// <summary>The doctor's room at this facility (MDV-P1-111); null when none is set or the id is not a doctor's (a resource).</summary>
     Task<string?> DoctorRoomAsync(Guid userId, Guid facilityId, CancellationToken cancellationToken = default);
 
+    /// <summary>The practice logo (PNG) for an email masthead; null when none was uploaded or it cannot be read, because a logo never holds up a message.</summary>
+    Task<byte[]?> LogoAsync(CancellationToken cancellationToken = default);
+
     /// <summary>Holidays of the facility between two facility-local dates (inclusive), name by date. Bookings on these dates are refused (MDV-P1-005).</summary>
     Task<IReadOnlyDictionary<DateOnly, string>> ClosuresAsync(Guid facilityId, DateOnly first, DateOnly last, CancellationToken cancellationToken = default);
 }

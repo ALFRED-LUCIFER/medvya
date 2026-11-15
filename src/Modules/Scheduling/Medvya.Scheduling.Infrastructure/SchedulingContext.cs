@@ -102,8 +102,7 @@ public sealed class SchedulingContext(
     }
 
     /// <summary>The practice logo as stored (PNG), for the token slip; null without one.</summary>
-    public async Task<byte[]?> LogoAsync(Guid facilityId, CancellationToken cancellationToken) =>
-        (await facilities.PrintImagesAsync(Guid.Empty, facilityId, cancellationToken)).Logo; // no user: the logo only, no signature
+    public Task<byte[]?> LogoAsync(CancellationToken cancellationToken) => facilities.LogoAsync(cancellationToken);
 
     /// <summary>Doctors first, then resources, each by name: the column order of the day view.</summary>
     public async Task<List<Calendar>> CalendarsAsync(Guid facilityId, CancellationToken cancellationToken)

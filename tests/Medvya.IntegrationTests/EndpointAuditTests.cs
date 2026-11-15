@@ -89,6 +89,7 @@ public sealed class EndpointAuditTests(PostgresFixture sql) : IClassFixture<Post
         "PUT /v1/settings/doctors/{id:guid}/licence",
         "PUT /v1/settings/doctors/{id:guid}/signature",
         "DELETE /v1/settings/doctors/{id:guid}/signature",
+        "PUT /v1/settings/doctors/{id:guid}/room", // MDV-P1-111: a room name, no patient data; audited inside the service (settings.doctor.room.update)
         // Onboarding request (MDV-P1-062): the organisation's type, IT contact and documents, no patient data; every change is audited inside the service (OrganisationRequestTests).
         "GET /v1/organisation/request/",
         "PUT /v1/organisation/request/it-contact",

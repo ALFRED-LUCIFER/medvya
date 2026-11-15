@@ -53,6 +53,10 @@ export default function NotePrintPage(p: Props) {
             {isStructured(s) ? <Answers section={s} text={note.sections[s.id]!} /> : <p className="whitespace-pre-wrap">{note.sections[s.id]}</p>}
           </Row>
         ))}
+      </Rows>
+      {/* Version 1's signature closes version 1's content, before any addendum, as on the server PDF: it never seems to cover another's addendum. */}
+      {signer.signerName && <div><Signature name={signer.signerName} lines={[reg, t('paper.signed', { when: signed })]} /></div>}
+      <Rows>
         {(note.addenda ?? []).map(a => (
           <Row key={a.versionNo} id={`print-addendum-${a.versionNo}`} label={t('noteHistory.addendum', { amends: String(a.amendsVersionNo) })}>
             <p className="text-ink-700">{t(a.signerName ? 'noteHistory.signed' : 'noteHistory.signedOther',
@@ -62,7 +66,6 @@ export default function NotePrintPage(p: Props) {
           </Row>
         ))}
       </Rows>
-      {signer.signerName && <Signature name={signer.signerName} lines={[reg, t('paper.signed', { when: signed })]} />}
       <PaperFooter><p className="font-bold text-ink-900">{t('notePrint.corrections')}</p></PaperFooter>
     </PaperPrintPage>
   );

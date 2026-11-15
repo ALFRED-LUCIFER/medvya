@@ -8,7 +8,7 @@ import { renderApp } from './render';
 // The router keeps a signed-in screen mounted for a render after sign-out; that render must not crash.
 function SignedInScreen() {
   const { session, signOut } = useSignedIn();
-  return <Pressable accessibilityRole="button" onPress={signOut}><Text>{session.person.name}</Text></Pressable>;
+  return <Pressable accessibilityRole="button" onPress={signOut}><Text>{session.person?.name}</Text></Pressable>;
 }
 function Harness() {
   const { session, begin } = useSession();

@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Encodings.Web;
 using Medvya.Identity.Application;
+using Medvya.Identity.Domain;
 using Medvya.Tenancy.Application;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -108,7 +109,9 @@ public static partial class NativeAuthentication
                 var form = await http.Request.ReadFormAsync(http.RequestAborted);
                 return form["grant_type"].ToString() switch
                 {
-                    "authorization_code" => await ExchangeCodeAsync(http, form["code"].ToString(), form["code_verifier"].ToString(), form["redirect_uri"].ToString()),
+                    "authorization_code" => await ExchangeCodeAsync(http, form["code"].ToString(), form["code_verifier"].ToString(), form["redirect_uri"].ToString(),
+                        // An app that does not say what it is keeps the system browser's label.
+                        form.ContainsKey("platform") ? StaffSession.AppLabel(form["platform"].ToString(), form["app_version"].ToString()) : null),
                     "refresh_token" => await RefreshAsync(http, form["refresh_token"].ToString()),
                     _ => Results.BadRequest(),
                 };
@@ -118,7 +121,8 @@ public static partial class NativeAuthentication
         return app;
     }
 
-    static async Task<IResult> ExchangeCodeAsync(HttpContext http, string code, string verifier, string redirectUri)
+    /// <param name="device">The app's own platform and version (device registration, MDV-P5-033); replaces the system browser's label in My devices.</param>
+    static async Task<IResult> ExchangeCodeAsync(HttpContext http, string code, string verifier, string redirectUri, string? device)
     {
         var ticket = code.Length is > 0 and <= 2048 ? Format(http.RequestServices, CodePurpose).Unprotect(code) : null;
         string? Item(string key) => ticket?.Properties.Items.TryGetValue(key, out var value) == true ? value : null;
@@ -128,14 +132,14 @@ public static partial class NativeAuthentication
             || Base64Url.EncodeToString(SHA256.HashData(Encoding.ASCII.GetBytes(verifier))) != Item(ChallengeItem)
             || !Guid.TryParse(Item("sid"), out var sessionId) || !Guid.TryParse(Item("uid"), out var userId) || Item("secret") is not { } secret)
             return InvalidGrant();
-        return await IssueAsync(http, sessionId, userId, SHA256.HashData(Base64Url.DecodeFromChars(secret)));
+        return await IssueAsync(http, sessionId, userId, SHA256.HashData(Base64Url.DecodeFromChars(secret)), device);
     }
 
     static async Task<IResult> RefreshAsync(HttpContext http, string refreshToken) =>
         RefreshToken.Read(refreshToken) is { } token ? await IssueAsync(http, token.SessionId, token.UserId, token.Hash) : InvalidGrant();
 
     /// <summary>Rotates the session's secret from <paramref name="presented"/> to a new refresh token and issues a token pair.</summary>
-    static async Task<IResult> IssueAsync(HttpContext http, Guid sessionId, Guid userId, byte[] presented)
+    static async Task<IResult> IssueAsync(HttpContext http, Guid sessionId, Guid userId, byte[] presented, string? device = null)
     {
         var sessions = http.RequestServices.GetRequiredService<IStaffSessions>();
         // No activity yet: a forged token (session and user ids are not secret) must neither keep the session alive nor end it (#883).
@@ -156,6 +160,8 @@ public static partial class NativeAuthentication
             RefreshReplayed(http.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(NativeAuthentication)));
             return InvalidGrant();
         }
+        // shortcut: no device key is registered, as for patients (Medvya.Identity.Api.PatientAuthentication.StartAsync says why and when).
+        if (device is not null) await sessions.LabelDeviceAsync(sessionId, device, http.RequestAborted);
         var access = Format(http.RequestServices, AccessPurpose).Protect(new AuthenticationTicket(principal,
             new AuthenticationProperties { ExpiresUtc = DateTimeOffset.UtcNow + AccessLifetime }, Scheme));
         http.Response.Headers.CacheControl = "no-store";
@@ -190,30 +196,4 @@ public static partial class NativeAuthentication
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Native refresh token or sign-in code reused; the session was ended")]
     static partial void RefreshReplayed(ILogger logger);
-}
-
-/// <summary>
-/// Refresh token = base64url(session id ‖ user id ‖ 32 random bytes). The ids say which session a replayed token belonged to,
-/// so it can be ended; they grant nothing alone. Only the SHA-256 of the whole token is stored, so it survives restarts and key loss.
-/// </summary>
-public static class RefreshToken
-{
-    const int IdBytes = 16, RandomBytes = 32, Length = IdBytes * 2 + RandomBytes;
-
-    public static (string Token, byte[] Hash) New(Guid sessionId, Guid userId)
-    {
-        var bytes = new byte[Length];
-        sessionId.TryWriteBytes(bytes);
-        userId.TryWriteBytes(bytes.AsSpan(IdBytes));
-        RandomNumberGenerator.Fill(bytes.AsSpan(IdBytes * 2));
-        return (Base64Url.EncodeToString(bytes), SHA256.HashData(bytes));
-    }
-
-    public static (Guid SessionId, Guid UserId, byte[] Hash)? Read(string? token)
-    {
-        if (token is null || token.Length > 128 || !Base64Url.IsValid(token, out var length) || length != Length) return null;
-        Span<byte> bytes = stackalloc byte[Length];
-        if (!Base64Url.TryDecodeFromChars(token, bytes, out var written) || written != Length) return null;
-        return (new Guid(bytes[..IdBytes]), new Guid(bytes[IdBytes..(IdBytes * 2)]), SHA256.HashData(bytes));
-    }
 }

@@ -2,7 +2,7 @@ import { locales, ltr, useI18n, type Locale, type MessageKey } from '@medvya/i18
 import { AppHeader, Avatar, Button, Card, Icon, ListRow, Loading, Screen, Section, StateMessage, Text } from '@medvya/ui-native';
 import { theme } from '@medvya/tokens';
 import { StyleSheet, View } from 'react-native';
-import type { Person, Session } from '../../session/domain/session';
+import { clinicLine, type Person, type Session } from '../../session/domain/session';
 import type { Profile } from '../domain/profile';
 
 type Props = {
@@ -16,11 +16,11 @@ export function ProfileScreen(vm: Props) {
   const { t, formatDate } = useI18n();
   const divider = (i: number) => (i > 0 ? styles.divider : undefined);
   return (
-    <Screen header={<AppHeader title={t('mobile.patient.tab.profile')} subtitle={`${vm.session.clinic.name} · ${vm.session.clinic.branch}`} initials={vm.session.person.initials} />}
+    <Screen header={<AppHeader title={t('mobile.patient.tab.profile')} subtitle={clinicLine(vm.session)} initials={vm.session.person?.initials ?? t('mobile.monogram')} />}
       footer={<Button label={t('mobile.account.signOut')} variant="secondary" icon="logout" onPress={vm.onSignOut} />}>
       <View style={styles.identity}>
-        <Avatar initials={vm.session.person.initials} size={64} />
-        <Text variant="title">{vm.session.person.name}</Text>
+        <Avatar initials={vm.session.person?.initials ?? t('mobile.monogram')} size={64} />
+        {vm.session.person ? <Text variant="title">{vm.session.person.name}</Text> : null}
         <Text variant="caption">{ltr(vm.phone)}</Text>
       </View>
 
@@ -32,7 +32,7 @@ export function ProfileScreen(vm: Props) {
           {vm.family.map((p, i) => (
             <View key={p.id} style={divider(i)}>
               <ListRow title={p.name} leading={<Avatar initials={p.initials} size={36} />}
-                subtitle={p.id === vm.session.person.id ? t('mobile.profile.you')
+                subtitle={p.id === vm.session.person?.id ? t('mobile.profile.you')
                   : p.proxyUntil ? t('mobile.profile.proxyUntil', { date: formatDate(new Date(`${p.proxyUntil}T12:00:00Z`), 'UTC') })
                   : t('mobile.profile.notLinked')} />
             </View>

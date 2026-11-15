@@ -5,7 +5,7 @@
 
 Jira-style tickets for every PRD v2 phase (P0–P8). The source of truth is `docs/05-delivery/tickets/_source/*.tickets`. Run `python3 -I tools/tickets/build.py` to regenerate the ticket files, [schedule.md](schedule.md), [jira-import.csv](jira-import.csv) and [coverage-report.md](coverage-report.md).
 
-**376 tickets** in 53 epics · **891.75 dev-days** estimated · confidence: High 102 · Medium 212 · Low 62 · coverage: ✅ every requirement, screen, exit criterion, NFR, package item and dependency is ticketed
+**391 tickets** in 54 epics · **939.75 dev-days** estimated · confidence: High 102 · Medium 218 · Low 71 · coverage: ✅ every requirement, screen, exit criterion, NFR, package item and dependency is ticketed
 
 Conventions, Definition of Ready/Done and the confidence scale: [docs/05-delivery](../README.md).
 
@@ -19,7 +19,7 @@ Conventions, Definition of Ready/Done and the confidence scale: [docs/05-deliver
 | P5 Commercial launch v1.0 | [P5-commercial-launch](P5-commercial-launch/README.md) | 05 Apr 2027 → 04 Jun 2027 | 66 | 0 | 0 | 176 | 45 | 66% |
 | P6 Wearable capture and advanced AI | [P6-clip-advanced-ai](P6-clip-advanced-ai/README.md) | 07 Jun 2027 → 13 Aug 2027 | 10 | 0 | 0 | 32 | 50 | 59% |
 | P7 Hospital enterprise and integrations | [P7-hospital-enterprise](P7-hospital-enterprise/README.md) | 28 Jun 2027 → 17 Dec 2027 | 13 | 0 | 0 | 48 | 125 | 66% |
-| P8 Scale and specialty features | [P8-scale-specialty](P8-scale-specialty/README.md) | 18 Oct 2027 → 14 Jan 2028 | 7 | 0 | 0 | 33 | 65 | 56% |
+| P8 Scale and specialty features | [P8-scale-specialty](P8-scale-specialty/README.md) | 18 Oct 2027 → 14 Jan 2028 | 22 | 0 | 0 | 81 | 65 | 60% |
 
 ## Capacity check (read this before committing to dates)
 
@@ -39,14 +39,14 @@ PRD v2 plans **v1.0 GA in week 32** for one full-time developer with AI help, ab
 | [MDV-P8-005](P8-scale-specialty/MDV-P8-005.md) | Remaining UAE health exchanges (the two not used at launch) (N-07) | 45% | Regulator onboarding per exchange. |
 | [MDV-P8-006](P8-scale-specialty/MDV-P8-006.md) | Front-desk extras: kiosk/QR self check-in, clinic letter inbox, offline read and draft (N-16) | 45% | DESIGN NEEDED; offline mode has significant security implications. |
 | [MDV-P8-007](P8-scale-specialty/MDV-P8-007.md) | Platform: public FHIR APIs, saved migration templates per vendor, specialty templates | 45% | Broad bucket; each item needs its own intake. |
+| [MDV-P8-021](P8-scale-specialty/MDV-P8-021.md) | Materials stock and sterilisation log | 45% | Inventory is new to Medvya; scope needs an intake record. |
 | [MDV-P5-013](P5-commercial-launch/MDV-P5-013.md) | Regulator e-prescription and e-sick leave; letters and certificates from templates (N-09) | 50% | Regulator formats/APIs per emirate unknown until onboarding; letters/certificates are straightforward. |
 | [MDV-P5-015](P5-commercial-launch/MDV-P5-015.md) | Voice appointment assistant v1 (inbound): book/move/cancel from the live calendar, identity check, no medical advice, staff handover (N-10) | 50% | New capability with telephony (ACS + SIP trunk), multilingual speech and strict safety rules; design needed. |
 | [MDV-P5-035](P5-commercial-launch/MDV-P5-035.md) | Staff app: consent script, background recording with offline queue, AI note review and sign | 50% | Design exists (6 Nov 2026); build estimate not yet calibrated. |
 | [MDV-P7-007](P7-hospital-enterprise/MDV-P7-007.md) | Lab feeds (HL7 v2 ORU/ORM over MLLP/VPN) and imaging viewer links (N-15) | 50% | DESIGN NEEDED for N-15; lab vendor specifics unknown. |
 | [MDV-P7-013](P7-hospital-enterprise/MDV-P7-013.md) | R7 hospital pilot, clinical sign-off and release | 50% | Hospital-driven timeline. |
+| [MDV-P8-016](P8-scale-specialty/MDV-P8-016.md) | Dental imaging: X-rays and photos on the tooth, with a viewer | 50% | Upload and viewer build on documents; CBCT (DICOM) needs a spike. |
+| [MDV-P8-022](P8-scale-specialty/MDV-P8-022.md) | Dental pilot gate: a dentist walks a dental journey and signs off | 50% | Needs a pilot dentist. |
 | [MDV-P1-046](P1-front-desk/MDV-P1-046.md) | Start UAE regulator onboarding applications early (risk mitigation) | 55% | Requirements and timelines are controlled by regulators; mitigation step named in PRD v2 risk register. |
 | [MDV-P1-051](P1-front-desk/MDV-P1-051.md) | Encrypted read-only schedule cache for outages (needs an ADR first) | 55% | Storing any patient data in the browser needs a recorded decision; build only if pilot clinics report outages long enough that a paper sheet is not enough. |
 | [MDV-P1-072](P1-front-desk/MDV-P1-072.md) | Shared patient record across an organisation's locations: one MRN and one chart, search across locations, location in the access log | 55% | Decided 10 Nov 2026; touches registration, duplicates, search, merge and access rules, so the estimate is the least certain. |
-| [MDV-P1-108](P1-front-desk/MDV-P1-108.md) | UX validation sessions with the pilot doctor, nurse, receptionist and owner: the 21 decisions, the brand list, the training date and the device check | 55% | Needs the pilot clinic's people and time; nothing here can be done by code. |
-| [MDV-P4-027](P4-clinic-operations/MDV-P4-027.md) | Public doctor and clinic profiles with live availability, indexed for search (N-02, design needed) | 55% | DESIGN NEEDED: no screen exists; scope comes only from the October plan line item. |
-| [MDV-P4-034](P4-clinic-operations/MDV-P4-034.md) | UPI AutoPay for packages, secure pay link by WhatsApp, Apple Pay and Google Pay in the UAE | 55% | Design exists (6 Nov 2026); build estimate not yet calibrated. |

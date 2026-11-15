@@ -10,7 +10,7 @@ type Props = { session: Session; messages: Message[] | null; loading: boolean; e
 // Sending arrives with MDV-P5-037; the composer is shown disabled so the screen reads as it will work.
 export function MessagesScreen(vm: Props) {
   const { t, formatTime } = useI18n();
-  const header = <AppHeader title={vm.session.clinic.name} subtitle={t('mobile.messages.subtitle')} initials={vm.session.person.initials} />;
+  const header = <AppHeader title={vm.session.clinic?.name ?? t('mobile.patient.tab.messages')} subtitle={t('mobile.messages.subtitle')} initials={vm.session.person?.initials ?? t('mobile.monogram')} />;
   return (
     <Screen header={header} footer={
       <View style={styles.composer}>
@@ -28,7 +28,7 @@ export function MessagesScreen(vm: Props) {
           <View key={m.id} style={[styles.bubble, m.from === 'me' ? styles.mine : styles.theirs]}>
             <Text tone={m.from === 'me' ? theme.color.card : theme.color.ink900}>{m.text}</Text>
             <Text variant="caption" tone={m.from === 'me' ? theme.color.patient50 : theme.color.ink600}>
-              {t('mobile.messages.meta', { who: m.from === 'me' ? t('mobile.messages.you') : m.author, time: formatTime(new Date(m.at), vm.session.clinic.timeZone) })}
+              {t('mobile.messages.meta', { who: m.from === 'me' ? t('mobile.messages.you') : m.author, time: formatTime(new Date(m.at), vm.session.clinic?.timeZone) })}
             </Text>
           </View>
         ))}

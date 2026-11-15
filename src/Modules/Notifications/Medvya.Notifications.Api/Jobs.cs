@@ -47,6 +47,9 @@ public sealed partial class NotificationJobs(IServiceProvider services, ILogger<
                     // The sender holds back all but cancellations until the owner accepts the terms (MDV-P1-019).
                     await scope.ServiceProvider.GetRequiredService<INotificationSender>().SendDueAsync(Batch, cancellationToken);
                 }
+                // Push what is new in the notification centre (MDV-P5-038) before the reminders below, which throw when an email fails:
+                // an email outage must not hold pushes back. A reminder raised below is pushed on the next run, a minute later.
+                await scope.ServiceProvider.GetRequiredService<IStaffPush>().SendDueAsync(Batch, cancellationToken);
                 // Licence expiry and access review reminders for the owners (MDV-P1-010); idempotent, so every minute is fine.
                 await scope.ServiceProvider.GetRequiredService<IComplianceReminders>().RunAsync(cancellationToken);
             }

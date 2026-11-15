@@ -19,6 +19,7 @@
     <ProjectReference Include="..\Medvya.Identity.Application\Medvya.Identity.Application.csproj" />
     <ProjectReference Include="..\..\Tenancy\Medvya.Tenancy.Api\Medvya.Tenancy.Api.csproj" />
     <ProjectReference Include="..\..\Patients\Medvya.Patients.Application\Medvya.Patients.Application.csproj" />
+    <ProjectReference Include="..\..\Audit\Medvya.Audit.Application\Medvya.Audit.Application.csproj" />
   </ItemGroup>
 
 </Project>

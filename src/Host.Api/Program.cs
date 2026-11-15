@@ -48,7 +48,9 @@ builder.AddStaffAuthentication();
 builder.AddNativeAuthentication(); // the staff app's bearer tokens, on the same server-side sessions (MDV-P5-033)
 // Waiting-room TVs sign in with a display token, never a staff session (MDV-P1-031).
 builder.Services.AddAuthentication().AddQueueDisplay();
-builder.Services.AddAuthorizationBuilder().AddStaffPolicies().AddOperationsPolicies(builder.Configuration).AddStaffAdminPolicy().AddQueueDisplayPolicy();
+// The patient app's bearer tokens after a right SMS code: their own scheme and policy, never a staff session (MDV-P5-033, ADR-020).
+builder.Services.AddAuthentication().AddPatientBearer();
+builder.Services.AddAuthorizationBuilder().AddStaffPolicies().AddOperationsPolicies(builder.Configuration).AddStaffAdminPolicy().AddQueueDisplayPolicy().AddPatientPolicy();
 // Enums travel as names ("Receptionist"), never as numbers that shift when an enum changes.
 builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddEmailSender(builder.Configuration, () => new Azure.Identity.ManagedIdentityCredential(Azure.Identity.ManagedIdentityId.SystemAssigned));
@@ -68,7 +70,7 @@ if (builder.Configuration.GetConnectionString("Medvya") is { } sql)
     builder.Services.AddAuditModule(sql).AddDeniedAccessAudit().AddTenancyModule(sql, builder.Configuration["Storage:ConnectionString"], builder.Configuration["Storage:BlobEndpoint"],
         builder.Configuration.GetSection("Features:InternalOrganisations").Get<Guid[]>()) // Medvya's own test organisations: the Internal release stage (MDV-P5-041)
         .AddIdentityModule(sql).AddPatientsModule(sql).AddSchedulingModule(sql).AddEncountersModule(sql, builder.Configuration, builder.Environment.IsDevelopment()).AddPrescribingModule(sql)
-        .AddNotificationsModule(sql, smsSink: builder.Environment.IsDevelopment() && builder.Configuration["Notifications:Sms:Provider"] == "Sink")
+        .AddNotificationsModule(sql, smsSink: builder.Environment.IsDevelopment() && builder.Configuration["Notifications:Sms:Provider"] == "Sink", pushLog: builder.Environment.IsDevelopment())
         .AddScoped<IReminderConsent, PatientReminderConsent>() // after the module: replaces its deny-all default (MDV-P1-019)
         .AddLeadsModule(sql, builder.Configuration.GetSection("Leads:Email").Get<LeadsEmailOptions>() ?? new()).AddCapabilityPolicies();
     DatabaseWarmup.AddTo(builder.Services); // after the modules: it warms the DbContexts they registered (#912)
@@ -160,6 +162,7 @@ if (app.Services.GetService<RecurringJobRegistration>() is { } recurring && app.
 app.MapPublicSite();
 app.MapInvitations();
 app.MapPatientSignIn();
+app.MapPatientSession();
 app.MapOnboarding();
 app.MapPracticeSettings();
 app.MapDoctors();

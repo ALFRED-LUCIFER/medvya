@@ -15,7 +15,8 @@ public static class IdentityModule
             .AddScoped<IStaffUsers, StaffUsers>()
             .AddScoped<IStaffSessions, StaffSessions>()
             .AddScoped<IOnboardingDrafts, OnboardingDrafts>()
-            .AddScoped<IPatientSmsSignIn, PatientSmsSignIn>();
+            .AddScoped<IPatientSmsSignIn, PatientSmsSignIn>()
+            .AddScoped<IPatientSessions, PatientSessions>();
 }
 
 sealed class StaffUsers(IdentityDbContext db) : IStaffUsers

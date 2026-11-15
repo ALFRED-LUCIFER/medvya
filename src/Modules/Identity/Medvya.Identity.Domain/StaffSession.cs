@@ -60,6 +60,17 @@ public sealed class StaffSession
         return idle < cap ? (idle, true) : (cap, false);
     }
 
+    /// <summary>
+    /// "Medvya app 1.2.0 on iOS": what a native app reports about itself at sign-in (MDV-P5-033 device registration), for My devices.
+    /// Anything but "ios" or "android" and a plain version number is dropped, so the label never carries free text.
+    /// </summary>
+    public static string AppLabel(string? platform, string? appVersion)
+    {
+        var os = platform switch { "ios" => "iOS", "android" => "Android", _ => "unknown device" };
+        var version = appVersion is { Length: > 0 and <= 20 } && appVersion.All(c => char.IsAsciiDigit(c) || c == '.') ? appVersion + " " : "";
+        return $"Medvya app {version}on {os}";
+    }
+
     /// <summary>"Chrome on Windows" style label from a User-Agent; unknown parts stay generic.</summary>
     public static string DeviceLabel(string? userAgent)
     {

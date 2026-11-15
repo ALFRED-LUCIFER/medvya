@@ -335,6 +335,28 @@
         }
       }
     },
+    "/v1/patient-sign-in/refresh": {
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/v1/queue/tv/session": {
       "post": {
         "tags": [
@@ -3438,6 +3460,30 @@
           },
           "required": true
         },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/patient/me": {
+      "get": {
+        "tags": [
+          "Host.Api"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/patient/logout": {
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
         "responses": {
           "200": {
             "description": "OK"
@@ -12339,6 +12385,20 @@
           null
         ]
       },
+      "RefreshRequest": {
+        "required": [
+          "refreshToken"
+        ],
+        "type": "object",
+        "properties": {
+          "refreshToken": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "RegisterRequest": {
         "type": "object",
         "properties": {
@@ -14231,6 +14291,18 @@
             ]
           },
           "code": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "platform": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "appVersion": {
             "type": [
               "null",
               "string"

@@ -3,5 +3,6 @@ module.exports = {
   // The first render in a file pays the cold transform of expo and react-native: 0.6 s idle, over 5 s on a shared CI runner (#930).
   testTimeout: 20000,
   preset: 'jest-expo',
+  setupFiles: ['<rootDir>/src/test/setup.ts'],
   moduleNameMapper: { '^react$': require.resolve('react'), '^react/(.*)$': `${require.resolve('react').replace(/index\.js$/, '')}$1` },
 };

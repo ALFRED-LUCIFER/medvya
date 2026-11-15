@@ -2,7 +2,7 @@ import { useI18n, type MessageKey } from '@medvya/i18n';
 import { AppHeader, Card, Chip, ListRow, Loading, Screen, Segmented, StateMessage, Text, type IconName, type Tone } from '@medvya/ui-native';
 import { theme } from '@medvya/tokens';
 import { StyleSheet, View } from 'react-native';
-import type { Session } from '../../session/domain/session';
+import { clinicLine, type Session } from '../../session/domain/session';
 import type { Records, RecordsTab, Result } from '../domain/records';
 
 type Props = { session: Session; tab: RecordsTab; onTab: (t: RecordsTab) => void; records: Records | null; loading: boolean; error: string | null };
@@ -17,7 +17,7 @@ const flagLook: Record<Result['flag'], { tone: Tone; icon: IconName }> = {
 export function RecordsScreen(vm: Props) {
   const { t, formatDate } = useI18n();
   const day = (d: string) => formatDate(new Date(`${d}T12:00:00Z`), 'UTC');
-  const header = <AppHeader title={t('mobile.patient.tab.records')} subtitle={`${vm.session.clinic.name} · ${vm.session.clinic.branch}`} initials={vm.session.person.initials} />;
+  const header = <AppHeader title={t('mobile.patient.tab.records')} subtitle={clinicLine(vm.session)} initials={vm.session.person?.initials ?? t('mobile.monogram')} />;
   return (
     <Screen header={header}>
       <Segmented value={vm.tab} onChange={vm.onTab} options={[

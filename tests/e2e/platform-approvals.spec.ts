@@ -29,7 +29,7 @@ async function mock(page: Page, role: string) {
     { id: 'o-hospital', name: 'Lakeview Hospital (synthetic)', type: 'Hospital', state: 'Submitted', docs: hospitalDocs, tax: '27AAPFU0939F1ZV' },
     { id: 'o-done', name: 'Menon Clinic (synthetic)', type: 'Clinic', state: 'Approved', docs: clinicDocs, tax: '12345' },
   ];
-  const api = { posts: [] as { path: string; body: { reason: string } }[], opened: [] as string[], filters: [] as string[] };
+  const api = { posts: [] as { path: string; body: { reason: string; checkedDocuments?: string[] } }[], opened: [] as string[], filters: [] as string[] };
   await page.route('**/v1/me', r => r.fulfill({ json: me(role) }));
   await page.route('**/v1/organisations/?filter=*', r => {
     const filter = new URL(r.request().url()).searchParams.get('filter')!;
@@ -48,7 +48,7 @@ async function mock(page: Page, role: string) {
   await page.route('**/v1/organisations/*/documents/*', r => { api.opened.push(r.request().url().split('/').pop()!); return r.fulfill({ body: png, contentType: 'image/png' }); });
   await page.route('**/v1/organisations/*/*', r => {
     if (r.request().method() !== 'POST') return r.fallback();
-    const body = r.request().postDataJSON() as { reason: string };
+    const body = r.request().postDataJSON() as { reason: string; checkedDocuments?: string[] };
     api.posts.push({ path: new URL(r.request().url()).pathname, body });
     const approve = r.request().url().endsWith('/approve');
     return r.fulfill({ json: approve
@@ -56,6 +56,13 @@ async function mock(page: Page, role: string) {
       : { subject: 'Medvya needs changes to the request for Rao Clinic (synthetic)', body: `Reason: ${body.reason}` } });
   });
   return api;
+}
+
+/** MDV-P5-044: the reviewer ticks every document as checked; approve waits for that. */
+async function tickAll(page: Page) {
+  const boxes = page.getByRole('region', { name: /List of documents|قائمة المستندات/ }).getByRole('checkbox');
+  await expect(boxes.first()).toBeVisible(); // the request has loaded
+  for (const box of await boxes.all()) await box.check();
 }
 
 test('a reviewer opens a request, reads a document in the private viewer, approves with a reason and sees the email', async ({ page }) => {
@@ -79,7 +86,14 @@ test('a reviewer opens a request, reads a document in the private viewer, approv
   await viewer.getByRole('button', { name: 'Close viewer' }).click();
   await expect(viewer).toHaveCount(0);
 
-  await page.getByRole('button', { name: 'Approve', exact: true }).click();
+  // Approve waits until the reviewer has ticked every document as checked; the ticks go with the decision.
+  const approve = page.getByRole('button', { name: 'Approve', exact: true });
+  await expect(approve).toBeDisabled();
+  await expect(approve).toHaveAccessibleDescription('Open and read each document and tick it as checked before you approve.');
+  await page.getByRole('checkbox', { name: 'Checked: Clinic registration certificate' }).check();
+  await expect(approve).toBeDisabled();
+  await tickAll(page);
+  await approve.click();
   await expect(page.getByLabel('Reason (saved in the audit log)')).toHaveValue('Documents checked and in order.'); // preset wording, editable
   await page.getByLabel('Reason (saved in the audit log)').fill('no');
   await page.getByRole('button', { name: 'Approve and email the owner' }).click();
@@ -90,7 +104,7 @@ test('a reviewer opens a request, reads a document in the private viewer, approv
   await page.getByRole('button', { name: 'Approve and email the owner' }).click();
   await expect(page.getByText('Done. The decision is logged and the applicant was emailed.')).toBeVisible();
   await expect(page.getByText('Rao Clinic (synthetic) is approved on Medvya')).toBeVisible();
-  expect(api.posts).toEqual([{ path: '/v1/organisations/o-clinic/approve', body: { reason: 'Registration certificate and GSTIN checked' } }]);
+  expect(api.posts).toEqual([{ path: '/v1/organisations/o-clinic/approve', body: { reason: 'Registration certificate and GSTIN checked', checkedDocuments: ['d1', 'd2', 'd3', 'd4'] } }]);
   expect(await axe(page)).toEqual([]);
 });
 
@@ -136,6 +150,7 @@ for (const role of ['Support', 'Finance']) {
     await expect(page.getByText('Your role can read requests but not decide them.')).toBeVisible();
     for (const name of ['Approve', 'Ask for changes', 'Reject', 'Suspend organisation…', 'Reinstate organisation'])
       await expect(page.getByRole('button', { name })).toHaveCount(0);
+    await expect(page.getByRole('checkbox')).toHaveCount(0); // no ticks to record for a role that cannot decide
     await page.getByRole('button', { name: 'Open Clinic registration certificate' }).click();
     await expect(page.getByRole('img', { name: 'Document viewer' })).toBeVisible();
     expect(api.posts).toEqual([]);
@@ -152,6 +167,7 @@ test('the queue and a request read in Arabic, right to left, axe clean', async (
   await expect(page.getByRole('button', { name: 'موافقة', exact: true })).toBeVisible();
   await expect(page.getByRole('tab', { name: 'قيد الانتظار' })).toBeVisible();
   expect(await axe(page)).toEqual([]);
+  await tickAll(page);
   await page.getByRole('button', { name: 'موافقة', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'الموافقة على هذه المنظمة' })).toBeVisible();
   expect(await axe(page)).toEqual([]);
@@ -193,6 +209,7 @@ for (const locale of ['en', 'ar'])
       await page.goto('/approvals/o-clinic');
       const bar = page.locator('[data-slot=sticky-action-bar]');
       const approve = bar.getByRole('button', { name: t(locale, 'platform.approvals.action.approve'), exact: true });
+      await tickAll(page);
       await commitVisible(page, approve);
       await approve.click();
       await expect(bar).toHaveCount(1);

@@ -21,9 +21,11 @@ export function useLockController() {
   // The count itself is a ref: two PIN checks finishing in one render would both read the same state and count one try.
   const tries = useRef(0);
   const form = useForm<PinForm>({ resolver: zodResolver(pinForm), defaultValues: { pin: '' } });
-  const attempt = useMutation({ mutationFn: () => unlockWithBiometrics(t('mobile.lock.prompt'), t('mobile.pin.use')), onSuccess: ok => { if (ok) unlock(); } });
+  // Both checks run on the phone: 'always', or TanStack pauses them offline and the lock never opens.
+  const attempt = useMutation({ mutationFn: () => unlockWithBiometrics(t('mobile.lock.prompt'), t('mobile.pin.use')), networkMode: 'always', onSuccess: ok => { if (ok) unlock(); } });
   const check = useMutation({
     mutationFn: checkPin,
+    networkMode: 'always',
     onSuccess: ok => {
       if (ok) { unlock(); return; }
       form.reset();

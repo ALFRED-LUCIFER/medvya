@@ -33,8 +33,9 @@ export function useSignInController() {
   });
   const facilities = useQuery({ queryKey: ['facilities', staff?.id], queryFn: () => listFacilities(staff!.id), enabled: !!staff });
   const canBiometric = useQuery({ queryKey: ['biometrics-available'], queryFn: biometricsAvailable, enabled: step === 'biometric' });
-  const savePin = useMutation({ mutationFn: setPin, onSuccess: () => { pinFormApi.reset(); setStep('biometric'); } });
-  const enable = useMutation({ mutationFn: () => unlockWithBiometrics(t('mobile.lock.prompt'), t('mobile.pin.use')), onSuccess: ok => { if (ok) finish(true); } });
+  // On-phone steps: 'always', so a dropped connection after the code does not leave them paused.
+  const savePin = useMutation({ mutationFn: setPin, networkMode: 'always', onSuccess: () => { pinFormApi.reset(); setStep('biometric'); } });
+  const enable = useMutation({ mutationFn: () => unlockWithBiometrics(t('mobile.lock.prompt'), t('mobile.pin.use')), networkMode: 'always', onSuccess: ok => { if (ok) finish(true); } });
 
   function finish(biometric: boolean) {
     if (staff && facility) begin({ staff, facility }, biometric);

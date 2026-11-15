@@ -32,12 +32,12 @@ async function open(page: Page, refusal?: { status: number; errors: Record<strin
 test('the owner adds a second branch with tax number and certificate, and it appears in the list', async ({ page }) => {
   const posted = await open(page);
   await page.getByLabel('Location name').fill('Velachery (synthetic)');
-  await page.getByLabel('Tax number of this location').fill('27AAAAA0000A1Z5');
+  await page.getByLabel('Tax number of this location').fill('27AAAAA0000A1Z2');
   await page.getByLabel('Registration certificate').setInputFiles(certificate);
   await page.getByRole('button', { name: 'Add location' }).click();
   await expect(page.getByRole('status').filter({ hasText: 'Location added: Velachery (synthetic).' })).toBeVisible();
   await expect(page.getByRole('listitem').filter({ hasText: 'Velachery (synthetic)' }).filter({ has: page.getByRole('button', { name: 'Edit Velachery (synthetic)' }) })).toBeVisible();
-  expect(posted[0]).toMatchObject({ name: 'Velachery (synthetic)', countryCode: 'IN', taxNumber: '27AAAAA0000A1Z5', certificateName: 'registration.pdf' });
+  expect(posted[0]).toMatchObject({ name: 'Velachery (synthetic)', countryCode: 'IN', taxNumber: '27AAAAA0000A1Z2', certificateName: 'registration.pdf' });
   expect(typeof posted[0]?.certificate).toBe('string');
 });
 
@@ -60,7 +60,7 @@ test('a missing certificate and a server refusal are announced under the field o
 test('a location in another country is refused with a plain message', async ({ page }) => {
   await open(page, { status: 400, errors: { countryCode: ['mismatch'] } });
   await page.getByLabel('Location name').fill('Dubai (synthetic)');
-  await page.getByLabel('Tax number of this location').fill('27AAAAA0000A1Z5');
+  await page.getByLabel('Tax number of this location').fill('27AAAAA0000A1Z2');
   await page.getByLabel('Registration certificate').setInputFiles(certificate);
   await page.getByRole('button', { name: 'Add location' }).click();
   await expect(page.getByRole('alert').filter({ hasText: 'same country as your organisation' })).toBeVisible();

@@ -27,6 +27,19 @@ public sealed class MembershipDirectory(string connectionString, ICurrentUser us
             m => m.UserId == userId && (m.Status == MembershipStatus.Suspended || m.Status == MembershipStatus.Offboarded), cancellationToken);
     }
 
+    public async Task<int> UnapprovedOwnedAsync(CancellationToken cancellationToken = default)
+    {
+        if (user.UserId is not { } userId) return 0;
+        await using var connection = await OpenForUser(connectionString, userId, cancellationToken);
+        await using var db = new TenancyDbContext(new DbContextOptionsBuilder<TenancyDbContext>().UseNpgsql(connection).Options, new NoTenant());
+        return await (
+            from m in db.Memberships.IgnoreQueryFilters()
+            join t in db.Tenants.IgnoreQueryFilters() on m.TenantId equals t.Id
+            where m.UserId == userId && m.IsOwner && m.Status == MembershipStatus.Active
+                && (t.State == OrganisationState.Draft || t.State == OrganisationState.Submitted || t.State == OrganisationState.NeedsChanges)
+            select t.Id).Distinct().CountAsync(cancellationToken);
+    }
+
     // A connection that carries the user and no tenant: the only kind that reads across tenants.
     static async Task<NpgsqlConnection> OpenForUser(string connectionString, Guid userId, CancellationToken cancellationToken)
     {

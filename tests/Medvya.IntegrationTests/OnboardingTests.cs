@@ -427,6 +427,43 @@ public sealed partial class OnboardingTests(PostgresFixture sql) : IClassFixture
         Assert.Equal(HttpStatusCode.OK, (await browser.PostAsJsonAsync(Api(), new { country = "AE" })).StatusCode);
     }
 
+    // SAFETY mutation check: remove the UnapprovedOwnedAsync check in OnboardingEndpoints and the third organisation is created; remove
+    // RequireUserRateLimit from /finish and the sixth call in a minute is answered.
+    [Fact]
+    public async Task AnAccountOwnsAtMostTwoOrganisationsAwaitingApprovalAndFinishesAFewTimesAMinute()
+    {
+        using var browser = Browser();
+        await SignIn(browser, "new", signUp: true);
+        async Task<HttpResponseMessage> Practice()
+        {
+            await browser.PostAsJsonAsync(Api(), new { country = "IN" });
+            Assert.Equal(HttpStatusCode.NoContent, (await browser.PutAsJsonAsync(Api(), new { step = 5, validate = 3, data = Data() })).StatusCode);
+            return await browser.PostAsync(Api("/finish"), null);
+        }
+        async Task<List<Guid>> Tenants() =>
+            [.. (await Json(await browser.GetAsync(new Uri("/v1/me/context", UriKind.Relative)))).GetProperty("memberships").EnumerateArray().Select(m => m.GetProperty("tenantId").GetGuid())];
+
+        // A second practice while the first still waits for approval is fine; a third is not, and its draft is kept.
+        for (var i = 0; i < Medvya.Tenancy.Api.OnboardingEndpoints.MaxUnapprovedOrganisations; i++) Assert.Equal(HttpStatusCode.OK, (await Practice()).StatusCode);
+        var refused = await Practice();
+        Assert.Equal(HttpStatusCode.Conflict, refused.StatusCode);
+        Assert.Equal("too_many_unapproved", (await Json(refused)).GetProperty("code").GetString());
+        var tenants = await Tenants();
+        Assert.Equal(2, tenants.Count);
+        Assert.Equal(HttpStatusCode.OK, (await browser.GetAsync(Api())).StatusCode);
+
+        // Once Medvya has approved one, the kept draft finishes.
+        await using (var db = sql.Context(tenants[0]))
+            await db.Tenants.ExecuteUpdateAsync(s => s.SetProperty(t => t.State, OrganisationState.Approved));
+        Assert.Equal(HttpStatusCode.OK, (await browser.PostAsync(Api("/finish"), null)).StatusCode);
+        Assert.Equal(3, (await Tenants()).Count);
+
+        // Four calls so far. A fifth within the minute is answered (a repeat names the practice already made); the sixth is refused.
+        Assert.Equal(HttpStatusCode.OK, (await browser.PostAsync(Api("/finish"), null)).StatusCode);
+        Assert.Equal(HttpStatusCode.TooManyRequests, (await browser.PostAsync(Api("/finish"), null)).StatusCode);
+        Assert.Equal(3, (await Tenants()).Count);
+    }
+
     [Fact]
     public async Task SigningInWithoutSignUpStillRefusesAnUnknownAccount()
     {

@@ -30,7 +30,7 @@ export function useOnboardingController(initialCountry: Country, onFinished: (re
   const values = useWatch({ control: form.control }) as WizardForm;
   const [country, setCountry] = useState<Country>(initialCountry);
   const [saveState, setSaveState] = useState<SaveState>('idle');
-  const [problem, setProblem] = useState<'check' | 'finish' | 'later' | null>(null);
+  const [problem, setProblem] = useState<'check' | 'finish' | 'later' | 'tooMany' | 'rateLimited' | null>(null);
   // Each failed Continue (the step's own check or the server's): the error summary takes focus once.
   const [failures, setFailures] = useState(0);
   const [done, setDone] = useState<FinishResult | null>(null);
@@ -104,7 +104,8 @@ export function useOnboardingController(initialCountry: Country, onFinished: (re
         if (first !== null && first !== step) setStep(first);
         setProblem('check');
         setFailures(n => n + 1);
-      } else setProblem('finish');
+      // The server's limits on new organisations per account: too many awaiting approval (409), or too many attempts in a minute (429).
+      } else setProblem(e instanceof ApiError && e.status === 409 ? 'tooMany' : e instanceof ApiError && e.status === 429 ? 'rateLimited' : 'finish');
     }
   };
 

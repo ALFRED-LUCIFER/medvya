@@ -19,7 +19,7 @@ type Props = {
   index: number;
   last: boolean;
   saveState: 'idle' | 'saving' | 'saved' | 'failed';
-  problem: 'check' | 'finish' | 'later' | null;
+  problem: 'check' | 'finish' | 'later' | 'tooMany' | 'rateLimited' | null;
   /** Changes once per failed Continue: the error summary takes focus then. */
   errorFocusKey: number;
   working: boolean;

@@ -204,6 +204,8 @@
   "onboarding.saveFailed": "لم يُحفظ بعد. تحقق من اتصالك؛ سنحاول مجددًا أثناء الكتابة.",
   "onboarding.problem.check": "بعض الحقول تحتاج إلى انتباهك. صحّحها للمتابعة.",
   "onboarding.problem.finish": "تعذّر إنهاء الإعداد. إجاباتك محفوظة؛ حاول مرة أخرى.",
+  "onboarding.problem.tooMany": "لديك بالفعل منظمتان بانتظار موافقة Medvya. إجاباتك محفوظة: أكمل هذه المنظمة بعد الموافقة على إحداهما.",
+  "onboarding.problem.rateLimited": "محاولات كثيرة جدًا. انتظر دقيقة ثم حاول مرة أخرى.",
   "onboarding.done.invitesFailed": "تعذّر إرسال {n} دعوة. يمكنك إرسالها مجددًا من قسم الموظفين.",
   "onboarding.choose": "اختر",
   "onboarding.mode.legend": "ما نوع ممارستك؟",

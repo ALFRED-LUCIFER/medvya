@@ -205,6 +205,8 @@
   "onboarding.saveFailed": "Not saved yet. Check your connection; we will try again as you type.",
   "onboarding.problem.check": "Some fields need your attention. Correct them to continue.",
   "onboarding.problem.finish": "We could not finish setting up. Your answers are saved; try again.",
+  "onboarding.problem.tooMany": "You already have two organisations waiting for approval from Medvya. Your answers are saved: finish this one when one of them has been approved.",
+  "onboarding.problem.rateLimited": "Too many attempts. Wait a minute, then try again.",
   "onboarding.done.invitesFailed": "{n} invitation(s) could not be sent. You can send them again from Staff.",
   "onboarding.choose": "Choose",
   "onboarding.mode.legend": "What kind of practice is it?",

@@ -128,6 +128,8 @@ builder.Services.AddUserRateLimit(PatientEndpoints.RecordRateLimit, builder.Conf
 builder.Services.AddUserRateLimit(PatientEndpoints.DuplicateCheckRateLimit, builder.Configuration.GetValue("RateLimiting:DuplicateChecksPerMinute", 60));
 // Joining the live board: once per page load and per reconnect; a client looping on it is refused. Per user, after sign-in.
 builder.Services.AddUserRateLimit(BoardHub.WatchRateLimit, builder.Configuration.GetValue("RateLimiting:BoardWatchPerMinute", 30));
+// Finishing sign-up creates an organisation: once per practice, plus a retry after a slow answer. Per user, after sign-in.
+builder.Services.AddUserRateLimit(OnboardingEndpoints.FinishRateLimit, builder.Configuration.GetValue("RateLimiting:OnboardingFinishPerMinute", 5));
 
 builder.Services.AddWebApp();
 

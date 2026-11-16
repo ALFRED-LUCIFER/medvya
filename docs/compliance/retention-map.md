@@ -1,6 +1,6 @@
 # Record-retention map per country (MDV-P0-024)
 
-Proposed defaults. **Every row needs counsel confirmation (⚖) before real data of that class** (P1 demographics, P2 clinical, P3 audio). Retention is enforced by scheduled jobs (MDV-P3-019, MDV-P5-025). A legal hold always blocks deletion. Deletions are logged without PHI.
+Proposed defaults. **Every row needs counsel confirmation (⚖) before real data of that class** (P1 demographics, P2 clinical, P3 audio). Retention is enforced by scheduled jobs (MDV-P3-019, MDV-P5-025). A legal hold always blocks deletion. Deletions are logged without PHI. Nothing enforces retention yet: patient requests (access, correction, erasure) follow the manual [data-subject-requests runbook](../runbooks/data-subject-requests.md) until [ADR-024](../adr/ADR-024-patient-data-requests-and-erasure.md) (proposed: crypto-shredding, ids-only ledger) is decided and built.
 
 | Data class | India default | UAE default | Basis to confirm ⚖ | Enforced by |
 |---|---|---|---|---|
@@ -14,6 +14,6 @@ Proposed defaults. **Every row needs counsel confirmation (⚖) before real data
 | Application logs/telemetry (PHI-free) | 90 days | 90 days | Operational need | Log Analytics workspace setting (MDV-P0-006) |
 | Staff accounts | Deactivate on offboarding; delete profile after 2 years unless referenced by audit | Same | Contract | MDV-P1-009 |
 | Demo requests and waitlist (public site) | 2 years after the last contact, then delete | Same | **Decided**: stated in the privacy notice on both forms (notice 2026-10-23, MDV-P1-002/003). Purpose limitation (sales follow-up); notice wording still goes to counsel (MDV-P1-044) | Not yet automated (MDV-P5-025) |
-| Backups | PITR 35 days; LTR per country rule; in-country only | Same | Business continuity | MDV-P0-019 |
+| Backups | PITR 35 days in production (7 in dev); in-country only | Same | Business continuity | MDV-P0-019 |
 
 > These figures are planning defaults from the design sources (H-06: audio 30 days, audit 7 years) plus common practice. They are **not legal advice** and must not be presented to customers as compliance claims.

@@ -6,8 +6,8 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
-export const root = resolve(here, '..');
-const require = createRequire(resolve(here, '../../../tests/e2e/package.json'));
+export const root = resolve(here, '../../docs/product-ux-audit');
+const require = createRequire(resolve(here, '../../tests/e2e/package.json'));
 export const { chromium } = require('@playwright/test');
 export const origin = 'http://localhost:5391';
 export const now = new Date(Date.parse('2026-11-03T04:00:00Z') + 30 * 60_000);

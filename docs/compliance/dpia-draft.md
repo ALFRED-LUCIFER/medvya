@@ -15,7 +15,7 @@ Medvya is a cloud platform used by clinics (the **Data Fiduciaries** for their p
 | Consent | Separate, versioned consents (treatment, reminders per channel, sharing/ABHA/HIE, portal, marketing). **Recording consent per encounter.** Withdrawal honoured and recorded |
 | Accuracy | Duplicate checks, merge review with approvers, correction requests (P5-12) |
 | Storage limitation | Retention map below. Audio 30 days by default. Scheduled deletion with legal hold |
-| Security | 12-layer database protection, Always Encrypted for national IDs, RLS, audit ledger, PHI-free telemetry ([threat model](threat-model.md)) |
+| Security | PostgreSQL Flexible Server in Central India (private network, Entra sign-in only, customer-managed key); tenant isolation by EF query filters and FORCE ROW LEVEL SECURITY (ADR-012); national IDs encrypted by the application (AES-256-GCM, per-tenant keys wrapped in Key Vault, blind index for lookup); hash-chained audit ledger with daily signed digests in immutable Blob; allow-list scrubbed telemetry; Data Protection keys in Blob wrapped by Key Vault ([threat model](threat-model.md)) |
 | Accountability | Append-only audit; access log visible to clinic owners (F-12); this DPIA, reviewed per phase |
 
 ## 3 · Rights of data principals
@@ -34,7 +34,7 @@ A guardian is required when age < 18 (registration), and portal access for minor
 | R2 | Staff snooping on records without care relationship | Medium | High | Relationship/purpose checks, audit of every read, owner access log, break-glass review | Low–Medium |
 | R3 | Recording without valid consent | Low | High | Capture blocked without per-encounter receipt; revocation stops capture | Low |
 | R4 | AI fabricates clinical facts that enter the record | Medium | High | Evidence links, validators, clinician must accept each field and sign; eval CI gate | Low |
-| R5 | Breach of national IDs | Low | High | Always Encrypted; keys only usable by the API identity | Low |
+| R5 | Breach of national IDs | Low | High | Application-level AES-256-GCM envelope encryption; per-tenant data keys wrapped by a Key Vault key only the API identity can use; database and backups hold ciphertext only | Low |
 | R6 | Disclosure via messaging previews | Medium | Medium | Templates without clinical data; generic push copy | Low |
 | R7 | Cross-border transfer (incl. AI inference, support access) | Low | High | Country deployments; deny-cross-region policy; in-region AI; audited, time-boxed support access | Low |
 | R8 | Wrong-patient merge or attach | Medium | High | Name+DOB+identifier matching (phone never alone), approvers, reversible merges, wrong-patient lock | Low–Medium |

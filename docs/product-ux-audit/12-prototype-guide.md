@@ -18,7 +18,7 @@ The dark bar at the top is not part of the product. It holds:
 
 Resize the window to see the tablet layouts: under 1180 px the doctor's queue becomes a "Next" button; under 860 px the chart panel becomes a drawer; under 560 px the rail becomes bottom tabs.
 
-To rebuild it after an edit, change `medvya-workspace-concept.src.html` and run `python3 -I docs/product-ux-audit/tools/concept-build.py` (the only difference between the two files is the embedded font). `node docs/product-ux-audit/tools/concept-capture.mjs` renders the previews again.
+To rebuild it after an edit, change `medvya-workspace-concept.src.html` and run `python3 -I tools/product-ux-audit/concept-build.py` (the only difference between the two files is the embedded font). `node tools/product-ux-audit/concept-capture.mjs` renders the previews again.
 
 ## Why these three screens
 

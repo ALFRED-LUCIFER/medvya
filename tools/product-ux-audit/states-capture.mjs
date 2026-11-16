@@ -1,5 +1,5 @@
 // Reviewer B (visual and interaction): read-only screenshots of interaction states the main capture did not cover.
-// Run: node docs/product-ux-audit/tools/states-capture.mjs   → docs/product-ux-audit/screenshots/local-stack/states/<topic>/<width>-<state>.png
+// Run: node tools/product-ux-audit/states-capture.mjs   → docs/product-ux-audit/screenshots/local-stack/states/<topic>/<width>-<state>.png
 // Never clicks a control that writes clinic data: only Tab, hover, opening menus/dialogs, submitting an EMPTY registration step (client-side validation), and simulated slow/failed GETs.
 import { createRequire } from 'node:module';
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -7,8 +7,8 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const root = resolve(here, '..');
-const require = createRequire(resolve(here, '../../../tests/e2e/package.json'));
+const root = resolve(here, '../../docs/product-ux-audit');
+const require = createRequire(resolve(here, '../../tests/e2e/package.json'));
 const { chromium } = require('@playwright/test');
 const origin = 'http://localhost:5391';
 const now = new Date(Date.parse('2026-11-03T04:00:00Z') + 30 * 60_000);

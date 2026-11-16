@@ -71,7 +71,7 @@ public static class CatalogueEndpoints
         }
         catch (DbUpdateConcurrencyException)
         {
-            return Results.Problem(statusCode: StatusCodes.Status409Conflict, title: "This service was changed by someone else. Reload and try again.",
+            return Results.Problem(statusCode: StatusCodes.Status409Conflict, title: "This was changed by someone else. Reload and try again.",
                 extensions: new Dictionary<string, object?> { ["code"] = "changed" });
         }
     }

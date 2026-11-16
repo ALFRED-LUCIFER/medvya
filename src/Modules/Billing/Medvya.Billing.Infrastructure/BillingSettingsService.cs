@@ -15,13 +15,15 @@ public sealed class BillingSettingsService(BillingDbContext db, ICurrentTenant t
     : IBillingSettings
 {
     public async Task<BillingSettingsView> GetAsync(CancellationToken cancellationToken = default) =>
-        View(await db.Settings.AsNoTracking().SingleOrDefaultAsync(cancellationToken) ?? new BillingSettings());
+        await db.Settings.AsNoTracking().Select(s => new { s, Version = EF.Property<uint>(s, "xmin") }).SingleOrDefaultAsync(cancellationToken) is { } row
+            ? View(row.s, row.Version) : View(new BillingSettings(), 0); // 0: nothing saved yet
 
     public async Task<BillingSettingsView> SaveAsync(SaveBillingSettings command, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
         var rules = BillingCountryRules.For(await staff.TenantCountryAsync(cancellationToken) ?? throw new InvalidOperationException("No tenant country."));
         var errors = new List<(string, string)>();
+        if (command.Version is null) errors.Add(("version", "required")); // a save says which version it read, so it never overwrites a change it has not seen (#889)
         var prefixes = new[] { ("invoicePrefix", command.InvoicePrefix), ("receiptPrefix", command.ReceiptPrefix), ("creditNotePrefix", command.CreditNotePrefix) };
         foreach (var (field, prefix) in prefixes)
         {
@@ -41,23 +43,35 @@ public sealed class BillingSettingsService(BillingDbContext db, ICurrentTenant t
 
         var tenantId = tenant.TenantId ?? throw new InvalidOperationException("No tenant context.");
         var settings = await db.Settings.SingleOrDefaultAsync(cancellationToken);
-        if (settings is null) db.Settings.Add(settings = new BillingSettings { TenantId = tenantId });
+        if (settings is null)
+        {
+            if (command.Version is > 0) throw new DbUpdateConcurrencyException(); // the editor read a row that is gone: not ours to recreate blindly
+            db.Settings.Add(settings = new BillingSettings { TenantId = tenantId });
+        }
+        else db.Entry(settings).Property<uint>("xmin").OriginalValue = command.Version!.Value; // refused at save if the row moved on
         (settings.InvoicePrefix, settings.ReceiptPrefix, settings.CreditNotePrefix) = (command.InvoicePrefix!.Trim(), command.ReceiptPrefix!.Trim(), command.CreditNotePrefix!.Trim());
         (settings.PaymentMethods, settings.DiscountReasons) = (methods, reasons);
         (settings.MaxDiscountPercent, settings.PaymentLinkExpiryMinutes) = (command.MaxDiscountPercent!.Value, command.PaymentLinkExpiryMinutes!.Value);
         (settings.ChangedBy, settings.ChangedAt) = (user.UserId, clock.GetUtcNow());
 
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
-        await db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException e) when (e.InnerException is Npgsql.PostgresException { SqlState: Npgsql.PostgresErrorCodes.UniqueViolation })
+        {
+            throw new DbUpdateConcurrencyException(); // two first saves at once: the later one read no row, so it is the stale one (409)
+        }
         await audit.WriteAsync(new AuditEvent
         {
             Id = Guid.CreateVersion7(), TenantId = tenantId, ActorUserId = user.UserId, Action = "billing.settings.update", ResourceType = "billing_settings", ResourceId = tenantId,
             Purpose = AuditPurpose.Operations, Outcome = AuditOutcome.Allowed, OccurredAt = settings.ChangedAt, FacilityId = facility.FacilityId,
         }, tx.GetDbTransaction(), cancellationToken);
         await tx.CommitAsync(cancellationToken);
-        return View(settings);
+        return View(settings, db.Entry(settings).Property<uint>("xmin").CurrentValue);
     }
 
-    static BillingSettingsView View(BillingSettings s) =>
-        new(s.InvoicePrefix, s.ReceiptPrefix, s.CreditNotePrefix, s.PaymentMethods, s.DiscountReasons, s.MaxDiscountPercent, s.PaymentLinkExpiryMinutes);
+    static BillingSettingsView View(BillingSettings s, uint version) =>
+        new(s.InvoicePrefix, s.ReceiptPrefix, s.CreditNotePrefix, s.PaymentMethods, s.DiscountReasons, s.MaxDiscountPercent, s.PaymentLinkExpiryMinutes, version);
 }

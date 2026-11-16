@@ -188,7 +188,8 @@ function ServiceEditor({ p, tax, money, formatDate }: {
         {p.formError && <p role="alert" className={fieldError}>{t(`billing.error.${p.formError}`)}</p>}
         {p.saved && <p role="status" className="flex items-center gap-2"><CircleCheck aria-hidden className="size-5" />{t('billing.services.saved')}</p>}
       </>}>
-        {p.service && <Button variant="outline" loading={p.archiving} onClick={p.onArchive}>{t(p.service.archivedAt ? 'billing.services.unarchive' : 'billing.services.archive')}</Button>}
+        {/* A consultation service holds every doctor's fee: renamed, never archived (the server refuses it too). */}
+        {p.service && !p.service.consultationKind && <Button variant="outline" loading={p.archiving} onClick={p.onArchive}>{t(p.service.archivedAt ? 'billing.services.unarchive' : 'billing.services.archive')}</Button>}
         <Button type="submit" form="service-form" loading={p.saving}>{t('billing.services.save')}</Button>
       </StickyActionBar>
     </SheetContent>

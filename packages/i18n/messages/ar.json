@@ -5666,5 +5666,7 @@
   "audit.actionName.billing.service.unarchive": "استعادة خدمة",
   "audit.actionName.billing.service.update": "تعديل خدمة",
   "audit.actionName.billing.settings.read": "عرض إعدادات الفوترة",
-  "audit.actionName.billing.settings.update": "تعديل إعدادات الفوترة"
+  "audit.actionName.billing.settings.update": "تعديل إعدادات الفوترة",
+  "billing.error.fixed": "خدمة الاستشارة تحمل أجر كل طبيب: يمكن تغيير اسمها، لا أرشفتها ولا تغيير نوعها.",
+  "billing.settings.changed": "غيّر شخص آخر هذه الإعدادات. أعد التحميل وحاول مرة أخرى."
 }

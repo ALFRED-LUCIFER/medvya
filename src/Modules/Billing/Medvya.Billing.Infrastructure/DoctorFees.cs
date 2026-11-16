@@ -59,17 +59,20 @@ public sealed class DoctorFees(BillingDbContext db, ICurrentTenant tenant, ICurr
         AmountMinor = amount, Currency = currency, EffectiveFrom = now, CreatedBy = user.UserId, CreatedAt = now,
     };
 
-    /// <summary>The active consultation service of the kind, created (staged) when the clinic has none yet.</summary>
+    /// <summary>
+    /// The active consultation service of the kind, created when the clinic has none yet. Insert-if-absent on the one-per-kind index: a second doctor
+    /// added at the same moment waits for the first transaction, then finds its service instead of failing on the index.
+    /// </summary>
     async Task<Guid> ServiceIdAsync(BillingDbContext shared, ConsultationKind kind, DateTimeOffset now, CancellationToken cancellationToken)
     {
-        if (await shared.Services.Where(s => s.ConsultationKind == kind && s.ArchivedAt == null).Select(s => (Guid?)s.Id).SingleOrDefaultAsync(cancellationToken) is { } id) return id;
-        var service = new Service
-        {
-            Id = Guid.CreateVersion7(), TenantId = tenant.TenantId ?? throw new InvalidOperationException("No tenant context."), Name = DefaultNames[kind],
-            Category = ServiceCategory.Consultation, TaxTreatment = TaxTreatment.Exempt, ConsultationKind = kind, CreatedBy = user.UserId, CreatedAt = now, ChangedBy = user.UserId, ChangedAt = now,
-        };
-        shared.Services.Add(service);
-        return service.Id;
+        var (id, tenantId, kindName) = (Guid.CreateVersion7(), tenant.TenantId ?? throw new InvalidOperationException("No tenant context."), kind.ToString());
+        var (name, category, tax) = (DefaultNames[kind], nameof(ServiceCategory.Consultation), nameof(TaxTreatment.Exempt));
+        await shared.Database.ExecuteSqlAsync($"""
+            INSERT INTO billing."Services" ("Id", "TenantId", "Name", "Category", "TaxTreatment", "ConsultationKind", "CreatedBy", "CreatedAt", "ChangedBy", "ChangedAt")
+            VALUES ({id}, {tenantId}, {name}, {category}, {tax}, {kindName}, {user.UserId}, {now}, {user.UserId}, {now})
+            ON CONFLICT ("TenantId", "ConsultationKind") WHERE "ConsultationKind" IS NOT NULL AND "ArchivedAt" IS NULL DO NOTHING
+            """, cancellationToken);
+        return await shared.Services.Where(s => s.ConsultationKind == kind && s.ArchivedAt == null).Select(s => s.Id).SingleAsync(cancellationToken);
     }
 
     static ConsultationFees Fees(ILookup<ConsultationKind, PriceVersion> byKind, Guid? doctorId, DateTimeOffset now) =>

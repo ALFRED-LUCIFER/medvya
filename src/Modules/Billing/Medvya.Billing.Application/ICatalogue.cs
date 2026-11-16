@@ -57,13 +57,14 @@ public interface ICatalogue
     /// <exception cref="BillingValidationException"/>
     Task<ServiceView> CreateAsync(SaveService command, CancellationToken cancellationToken = default);
 
-    /// <summary>Edits everything but the price. Null when there is no such service.</summary>
+    /// <summary>Edits everything but the price and a consultation kind once set ("consultationKind:fixed"). Null when there is no such service.</summary>
     /// <exception cref="BillingValidationException"/>
     /// <remarks>Throws EF's DbUpdateConcurrencyException when someone else saved it since <see cref="SaveService.Version"/> (the endpoint answers 409).</remarks>
     Task<ServiceView?> UpdateAsync(Guid id, SaveService command, CancellationToken cancellationToken = default);
 
     /// <summary>Archives (or brings back) a service; null when there is none.</summary>
-    /// <exception cref="BillingValidationException">Bringing back a consultation service while another of its kind is active.</exception>
+    /// <exception cref="BillingValidationException">"consultationKind:fixed": archiving a consultation service (it holds every doctor's fee);
+    /// "consultationKind:taken": bringing one back while another of its kind is active.</exception>
     Task<ServiceView?> ArchiveAsync(Guid id, bool archived, CancellationToken cancellationToken = default);
 
     /// <summary>Every version, newest first; null when there is no such service.</summary>
@@ -77,9 +78,10 @@ public interface ICatalogue
     Task<ResolvedPrice?> ResolvePriceAsync(Guid serviceId, Guid? doctorId, DateTimeOffset at, CancellationToken cancellationToken = default);
 }
 
+/// <summary><see cref="Version"/>: the row version a save must send back (0 before the first save); a save from an older version is refused (409, #889).</summary>
 public sealed record BillingSettingsView(
     string InvoicePrefix, string ReceiptPrefix, string CreditNotePrefix, IReadOnlyList<PaymentMethod> PaymentMethods, IReadOnlyList<string> DiscountReasons,
-    int MaxDiscountPercent, int PaymentLinkExpiryMinutes);
+    int MaxDiscountPercent, int PaymentLinkExpiryMinutes, uint Version);
 
 public sealed record SaveBillingSettings
 {
@@ -90,6 +92,8 @@ public sealed record SaveBillingSettings
     public IReadOnlyList<string>? DiscountReasons { get; init; }
     public int? MaxDiscountPercent { get; init; }
     public int? PaymentLinkExpiryMinutes { get; init; }
+    /// <summary>Required: the version the editor read (<see cref="BillingSettingsView.Version"/>).</summary>
+    public uint? Version { get; init; }
 }
 
 /// <summary>The tenant's billing settings (MDV-P4-002), with defaults until first saved.</summary>
@@ -98,5 +102,6 @@ public interface IBillingSettings
     Task<BillingSettingsView> GetAsync(CancellationToken cancellationToken = default);
 
     /// <exception cref="BillingValidationException"/>
+    /// <remarks>Throws EF's DbUpdateConcurrencyException when the settings changed since <see cref="SaveBillingSettings.Version"/> (the endpoint answers 409).</remarks>
     Task<BillingSettingsView> SaveAsync(SaveBillingSettings command, CancellationToken cancellationToken = default);
 }

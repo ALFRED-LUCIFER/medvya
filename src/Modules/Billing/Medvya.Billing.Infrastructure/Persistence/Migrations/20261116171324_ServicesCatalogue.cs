@@ -115,8 +115,10 @@ namespace Medvya.Billing.Infrastructure.Persistence.Migrations
         /// <summary>
         /// The one copy of the fees Tenancy kept before the catalogue held them (MDV-P4-002): each tenant's onboarding defaults become the clinic default of the two
         /// consultation services, and each doctor profile's fees that doctor's own price, from when they were last set. Run here, at deploy, as the owner inside each
-        /// tenant (row-level security binds the owner too), like OrganisationStateAndAttestation. Idempotent: a tenant or doctor that already has prices is skipped.
-        /// The only read of Tenancy's tables from Billing, once; the app never does it.
+        /// tenant (row-level security binds the owner too), with the per-tenant loop of Tenancy's OrganisationStateAndAttestation (which reads only its own tables).
+        /// Idempotent: a tenant or doctor that already has prices is skipped. Reading Tenancy's tables from a Billing migration is the AGENTS.md 3.1 exception for a
+        /// one-time data copy (read-only, tenant by tenant under row-level security); the app never does it. db-migrate runs Tenancy's migrations first, so the
+        /// fee columns must not be dropped before every environment has applied this one.
         /// </summary>
         public const string CopyFeesFromTenancy = """
             DO $$

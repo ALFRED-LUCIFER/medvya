@@ -5625,5 +5625,7 @@
   "audit.actionName.billing.service.unarchive": "सेवा वापस लाई गई",
   "audit.actionName.billing.service.update": "सेवा बदली गई",
   "audit.actionName.billing.settings.read": "बिलिंग सेटिंग्स देखी गईं",
-  "audit.actionName.billing.settings.update": "बिलिंग सेटिंग्स बदली गईं"
+  "audit.actionName.billing.settings.update": "बिलिंग सेटिंग्स बदली गईं",
+  "billing.error.fixed": "परामर्श सेवा में हर डॉक्टर का शुल्क होता है: इसका नाम बदला जा सकता है, इसे संग्रहीत या दूसरे प्रकार में नहीं बदला जा सकता।",
+  "billing.settings.changed": "किसी और ने ये सेटिंग्स बदल दीं। फिर से लोड करके कोशिश करें।"
 }

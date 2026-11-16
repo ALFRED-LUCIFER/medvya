@@ -5669,5 +5669,7 @@
   "audit.actionName.billing.service.unarchive": "Service brought back",
   "audit.actionName.billing.service.update": "Service changed",
   "audit.actionName.billing.settings.read": "Billing settings viewed",
-  "audit.actionName.billing.settings.update": "Billing settings changed"
+  "audit.actionName.billing.settings.update": "Billing settings changed",
+  "billing.error.fixed": "A consultation service carries every doctor's fee: it can be renamed, not archived or changed to another kind.",
+  "billing.settings.changed": "Someone else changed these settings. Reload and try again."
 }

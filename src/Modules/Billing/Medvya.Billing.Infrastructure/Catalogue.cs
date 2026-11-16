@@ -58,6 +58,8 @@ public sealed partial class Catalogue(BillingDbContext db, ICurrentTenant tenant
     {
         if (await db.Services.SingleOrDefaultAsync(s => s.Id == id, cancellationToken) is not { } service) return null;
         if (archived == service.ArchivedAt is not null) return await ViewAsync(service, cancellationToken);
+        // A consultation service carries every doctor's fee: archiving it would take them all away. It can be renamed, never archived.
+        if (archived && service.ConsultationKind is not null) throw new BillingValidationException([("consultationKind", "fixed")]);
         if (!archived && service.ConsultationKind is { } kind && await KindTakenAsync(kind, id, cancellationToken))
             throw new BillingValidationException([("consultationKind", "taken")]);
         (service.ArchivedAt, service.ChangedBy, service.ChangedAt) = (archived ? clock.GetUtcNow() : null, user.UserId, clock.GetUtcNow());
@@ -128,7 +130,9 @@ public sealed partial class Catalogue(BillingDbContext db, ICurrentTenant tenant
         if (tax == TaxTreatment.Taxable && c.GstRateBasisPoints is null) errors.Add(("gstRateBasisPoints", "required"));
         else if (tax == TaxTreatment.Taxable && c.GstRateBasisPoints is < 0 or > Service.MaxGstRateBasisPoints) errors.Add(("gstRateBasisPoints", "range"));
         if (c.DurationMinutes is < 1 or > Service.MaxDurationMinutes) errors.Add(("durationMinutes", "range"));
-        if (c.ConsultationKind is { } kind && (!Enum.IsDefined(kind) || await KindTakenAsync(kind, service.Id, cancellationToken)))
+        // A service's consultation kind is set once: changing or clearing it would move or drop every doctor's fee.
+        if (service.ConsultationKind is { } kept && c.ConsultationKind != kept) errors.Add(("consultationKind", "fixed"));
+        else if (service.ConsultationKind is null && c.ConsultationKind is { } kind && (!Enum.IsDefined(kind) || await KindTakenAsync(kind, service.Id, cancellationToken)))
             errors.Add(("consultationKind", "taken"));
         BillingValidationException.ThrowIfAny(errors);
         (service.Name, service.Category, service.Code, service.Sac, service.TaxTreatment) = (name!, c.Category!.Value, code, sac, tax);

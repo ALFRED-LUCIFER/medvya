@@ -8,7 +8,7 @@ import { paymentMethods, type BillingSettingsForm } from '../domain/billingSetti
 
 type Props = {
   form: UseFormReturn<BillingSettingsForm>; loading: boolean; loadFailed: boolean;
-  saving: boolean; saved: boolean; saveFailed: boolean; onSubmit: FormEventHandler<HTMLFormElement>;
+  saving: boolean; saved: boolean; saveFailed: 'changed' | 'failed' | null; onSubmit: FormEventHandler<HTMLFormElement>;
 };
 
 /** Settings, Billing (MDV-P4-002): document prefixes, how bills can be paid, discount reasons and the payment link's life. Round-off is the country's rule. */
@@ -53,7 +53,7 @@ export default function BillingSettingsPanel(p: Props) {
         <p className="text-sm text-muted-foreground">{t('billing.settings.roundOff')}</p>
         <StickyActionBar className={cardBar} status={<>
           {p.saved && <p role="status">{t('settings.saved')}</p>}
-          {p.saveFailed && <p role="alert" className={fieldError}>{t('settings.saveFailed')}</p>}
+          {p.saveFailed && <p role="alert" className={fieldError}>{t(p.saveFailed === 'changed' ? 'billing.settings.changed' : 'settings.saveFailed')}</p>}
         </>}>
           <Button type="submit" loading={p.saving}>{t('settings.save')}</Button>
         </StickyActionBar>

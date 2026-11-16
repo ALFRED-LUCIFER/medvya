@@ -17,14 +17,14 @@ export function useBillingSettingsController() {
   const form = useForm<BillingSettingsForm>({ resolver: zodResolver(billingSettingsSchema) });
   const { reset } = form;
   useEffect(() => { if (query.data) reset(toSettingsForm(query.data)); }, [query.data, reset]);
-  const [saveFailed, setSaveFailed] = useState(false);
+  const [saveFailed, setSaveFailed] = useState<'changed' | 'failed' | null>(null);
   const save = useMutation({
-    mutationFn: (values: BillingSettingsForm) => saveBillingSettings(toSettingsBody(values)),
-    onSuccess: data => { setSaveFailed(false); queryClient.setQueryData(key, data); },
+    mutationFn: (values: BillingSettingsForm) => saveBillingSettings(toSettingsBody(values, query.data?.version ?? 0)),
+    onSuccess: data => { setSaveFailed(null); queryClient.setQueryData(key, data); },
     onError: e => {
       const { field, code } = catalogueProblem(e instanceof ApiError ? e.code : undefined);
       if (field && fields.includes(field)) form.setError(field as keyof BillingSettingsForm, { type: 'server', message: code });
-      else setSaveFailed(true);
+      else setSaveFailed(code === 'changed' ? 'changed' : 'failed');
     },
   });
   return {

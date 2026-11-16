@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Npgsql;
@@ -123,19 +124,61 @@ public sealed class BillingCatalogueTests(PostgresFixture sql) : IClassFixture<P
     [Fact]
     public async Task OnlyOneActiveServicePerConsultationKindAndArchivedOnesLeaveTheList()
     {
-        var first = await Catalogue().CreateAsync(new SaveService { Name = "Consultation (synthetic)", Category = ServiceCategory.Consultation, ConsultationKind = ConsultationKind.New });
+        await Catalogue().CreateAsync(new SaveService { Name = "Consultation (synthetic)", Category = ServiceCategory.Consultation, ConsultationKind = ConsultationKind.New });
         var taken = await Assert.ThrowsAsync<BillingValidationException>(() =>
             Catalogue().CreateAsync(new SaveService { Name = "Second consultation (synthetic)", Category = ServiceCategory.Consultation, ConsultationKind = ConsultationKind.New }));
         Assert.Equal([("consultationKind", "taken")], taken.Errors);
 
-        await Catalogue().ArchiveAsync(first.Id, true);
-        Assert.DoesNotContain(await Catalogue().ListAsync(false), s => s.Id == first.Id);
-        Assert.NotNull((await Catalogue().ListAsync(true)).Single(s => s.Id == first.Id).ArchivedAt);
-        var second = await Catalogue().CreateAsync(new SaveService { Name = "Second consultation (synthetic)", Category = ServiceCategory.Consultation, ConsultationKind = ConsultationKind.New });
-        var back = await Assert.ThrowsAsync<BillingValidationException>(() => Catalogue().ArchiveAsync(first.Id, false));
-        Assert.Equal([("consultationKind", "taken")], back.Errors);
-        Assert.Null((await Catalogue().ArchiveAsync(second.Id, false))!.ArchivedAt);
+        var ecg = await Ecg();
+        await Catalogue().ArchiveAsync(ecg.Id, true);
+        Assert.DoesNotContain(await Catalogue().ListAsync(false), s => s.Id == ecg.Id);
+        Assert.NotNull((await Catalogue().ListAsync(true)).Single(s => s.Id == ecg.Id).ArchivedAt);
+        Assert.Null((await Catalogue().ArchiveAsync(ecg.Id, false))!.ArchivedAt);
     }
+
+    /// <summary>A consultation service holds every doctor's fee: it is renamed, never archived, and its kind never changes or goes.</summary>
+    [Fact]
+    public async Task AConsultationServiceCannotBeArchivedOrLoseItsKind()
+    {
+        var consult = await Catalogue().CreateAsync(new SaveService { Name = "Consultation (synthetic)", Category = ServiceCategory.Consultation, ConsultationKind = ConsultationKind.New });
+        await Catalogue().AddPriceAsync(consult.Id, new AddPrice { DoctorId = Guid.NewGuid(), AmountMinor = 60_000 });
+
+        var archive = await Assert.ThrowsAsync<BillingValidationException>(() => Catalogue().ArchiveAsync(consult.Id, true));
+        Assert.Equal([("consultationKind", "fixed")], archive.Errors);
+        var edit = new SaveService { Name = "New patient visit (synthetic)", Category = ServiceCategory.Consultation, Version = consult.Version };
+        foreach (var kind in new ConsultationKind?[] { null, ConsultationKind.FollowUp })
+        {
+            var changed = await Assert.ThrowsAsync<BillingValidationException>(() => Catalogue().UpdateAsync(consult.Id, edit with { ConsultationKind = kind }));
+            Assert.Equal([("consultationKind", "fixed")], changed.Errors);
+        }
+        var renamed = (await Catalogue().UpdateAsync(consult.Id, edit with { ConsultationKind = ConsultationKind.New }))!;
+        Assert.Equal(("New patient visit (synthetic)", (ConsultationKind?)ConsultationKind.New, (DateTimeOffset?)null), (renamed.Name, renamed.ConsultationKind, renamed.ArchivedAt));
+    }
+
+    /// <summary>Two doctors added at the same moment in a clinic with no consultation services yet: one creates them, the other waits and uses them.</summary>
+    [Fact]
+    public async Task TwoDoctorFeesSavedAtOnceCreateTheConsultationServicesOnce()
+    {
+        Guid first = Guid.NewGuid(), second = Guid.NewGuid();
+        var fees = new Medvya.Billing.Infrastructure.DoctorFees(sql.Billing(h.Tenant), new PostgresFixture.FixedTenant(h.Tenant), new FixedUser(h.Admin), TimeProvider.System);
+        await using var a = sql.Billing(h.Tenant);
+        await using var b = sql.Billing(h.Tenant);
+        await using var txA = await a.Database.BeginTransactionAsync();
+        await using var txB = await b.Database.BeginTransactionAsync();
+        await fees.SetAsync(first, "IN", 50_000, 30_000, txA.GetDbTransaction());
+        var waiting = fees.SetAsync(second, "IN", 70_000, 40_000, txB.GetDbTransaction()); // blocks on the one-per-kind index until A ends
+        await Task.Delay(200);
+        Assert.False(waiting.IsCompleted);
+        await txA.CommitAsync();
+        await waiting;
+        await txB.CommitAsync();
+
+        Assert.Equal(2, (await Catalogue().ListAsync(true)).Count(s => s.ConsultationKind is not null));
+        var both = await h.Get<IDoctorFees>(h.Admin, s => s.Replace(ServiceDescriptor.Singleton<TimeProvider>(TimeProvider.System))).ForDoctorsAsync([first, second]);
+        Assert.Equal((new ConsultationFees(50_000, 30_000), new ConsultationFees(70_000, 40_000)), (both[first], both[second]));
+    }
+
+    sealed class FixedUser(Guid id) : ICurrentUser { public Guid? UserId => id; }
 
     // ---- Settings ----
 
@@ -151,18 +194,43 @@ public sealed class BillingCatalogueTests(PostgresFixture sql) : IClassFixture<P
         {
             InvoicePrefix = "INVOICE", ReceiptPrefix = "", CreditNotePrefix = "cn", PaymentMethods = [], MaxDiscountPercent = 101, PaymentLinkExpiryMinutes = 10,
         }));
-        Assert.Equal([("invoicePrefix", "format"), ("receiptPrefix", "required"), ("creditNotePrefix", "format"), ("paymentMethods", "required"),
+        Assert.Equal([("version", "required"), ("invoicePrefix", "format"), ("receiptPrefix", "required"), ("creditNotePrefix", "format"), ("paymentMethods", "required"),
             ("maxDiscountPercent", "range"), ("paymentLinkExpiryMinutes", "range")], refused.Errors);
 
         await settings.SaveAsync(new SaveBillingSettings
         {
             InvoicePrefix = "INB", ReceiptPrefix = "RCT", CreditNotePrefix = "CN", PaymentMethods = [PaymentMethod.Cash, PaymentMethod.RazorpayLink],
-            DiscountReasons = ["Staff family", " staff family ", "Senior citizen"], MaxDiscountPercent = 15, PaymentLinkExpiryMinutes = 30,
+            DiscountReasons = ["Staff family", " staff family ", "Senior citizen"], MaxDiscountPercent = 15, PaymentLinkExpiryMinutes = 30, Version = defaults.Version,
         });
         var saved = await h.Get<IBillingSettings>(h.Admin).GetAsync();
         Assert.Equal(("INB", 15, 30), (saved.InvoicePrefix, saved.MaxDiscountPercent, saved.PaymentLinkExpiryMinutes));
         Assert.Equal(["Staff family", "Senior citizen"], saved.DiscountReasons);
         Assert.Equal([PaymentMethod.Cash, PaymentMethod.RazorpayLink], saved.PaymentMethods);
+    }
+
+    /// <summary>Two administrators editing at once: the later save, from the version both read, is refused instead of silently undoing the first (#889).</summary>
+    [Fact]
+    public async Task ASettingsSaveFromAnOlderVersionIsRefused()
+    {
+        var read = await h.Get<IBillingSettings>(h.Admin).GetAsync();
+        Assert.Equal(0u, read.Version); // nothing saved yet
+        SaveBillingSettings Save(int max, uint version) => new()
+        {
+            InvoicePrefix = "INV", ReceiptPrefix = "RCT", CreditNotePrefix = "CN", PaymentMethods = [PaymentMethod.Cash], MaxDiscountPercent = max, PaymentLinkExpiryMinutes = 60, Version = version,
+        };
+
+        // Two first saves at once: one creates the row, the other (which read no row) is refused, not a 500.
+        var firsts = await Task.WhenAll(Enumerable.Range(12, 2).Select(async max =>
+        {
+            try { return (await h.Get<IBillingSettings>(h.Admin).SaveAsync(Save(max, 0))).Version; }
+            catch (DbUpdateConcurrencyException) { return (uint?)null; }
+        }));
+        var saved = Assert.Single(firsts, v => v is not null)!.Value;
+
+        var current = await h.Get<IBillingSettings>(h.Admin).SaveAsync(Save(20, saved));
+        await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => h.Get<IBillingSettings>(h.Admin).SaveAsync(Save(30, saved))); // stale: read before the save above
+        await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => h.Get<IBillingSettings>(h.Admin).SaveAsync(Save(30, 0))); // a "first" save when a row exists
+        Assert.Equal((20, current.Version), ((await h.Get<IBillingSettings>(h.Admin).GetAsync()).MaxDiscountPercent, (await h.Get<IBillingSettings>(h.Admin).GetAsync()).Version));
     }
 
     // ---- Tenant isolation ----
@@ -175,7 +243,7 @@ public sealed class BillingCatalogueTests(PostgresFixture sql) : IClassFixture<P
         await Catalogue().AddPriceAsync(ecg.Id, new AddPrice { AmountMinor = 50_000 });
         await h.Get<IBillingSettings>(h.Admin).SaveAsync(new SaveBillingSettings
         {
-            InvoicePrefix = "INV", ReceiptPrefix = "RCT", CreditNotePrefix = "CN", PaymentMethods = [PaymentMethod.Cash], MaxDiscountPercent = 10, PaymentLinkExpiryMinutes = 60,
+            InvoicePrefix = "INV", ReceiptPrefix = "RCT", CreditNotePrefix = "CN", PaymentMethods = [PaymentMethod.Cash], MaxDiscountPercent = 10, PaymentLinkExpiryMinutes = 60, Version = 0,
         });
 
         var other = Guid.NewGuid();

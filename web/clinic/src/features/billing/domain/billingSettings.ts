@@ -6,6 +6,8 @@ export type PaymentMethod = (typeof paymentMethods)[number];
 export type BillingSettings = {
   invoicePrefix: string; receiptPrefix: string; creditNotePrefix: string; paymentMethods: PaymentMethod[]; discountReasons: string[];
   maxDiscountPercent: number; paymentLinkExpiryMinutes: number;
+  /** The row version read; a save sends it back and is refused (409 "changed") if someone saved in between (#889). */
+  version: number;
 };
 
 const whole = (min: number, max: number) => z.string().trim().regex(/^\d{1,4}$/).refine(v => Number(v) >= min && Number(v) <= max);
@@ -26,7 +28,7 @@ export const toSettingsForm = (s: BillingSettings): BillingSettingsForm => ({
   discountReasons: s.discountReasons.join('\n'), maxDiscountPercent: String(s.maxDiscountPercent), paymentLinkExpiryMinutes: String(s.paymentLinkExpiryMinutes),
 });
 
-export const toSettingsBody = (f: BillingSettingsForm) => ({
+export const toSettingsBody = (f: BillingSettingsForm, version: number) => ({ version,
   invoicePrefix: f.invoicePrefix.trim(), receiptPrefix: f.receiptPrefix.trim(), creditNotePrefix: f.creditNotePrefix.trim(), paymentMethods: f.paymentMethods,
   discountReasons: f.discountReasons.split('\n').map(r => r.trim()).filter(Boolean),
   maxDiscountPercent: Number(f.maxDiscountPercent), paymentLinkExpiryMinutes: Number(f.paymentLinkExpiryMinutes),

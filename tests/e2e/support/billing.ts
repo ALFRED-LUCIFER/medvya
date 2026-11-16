@@ -21,7 +21,7 @@ export async function mockBilling(page: Page, { country = 'IN', flags, locale = 
     'svc-new': [{ id: 'pv-1', doctorId: null, amountMinor: 50_000, currency, effectiveFrom: '2026-09-01T00:00:00Z', createdAt: '2026-09-01T00:00:00Z' }],
   };
   const posts: { path: string; body: unknown }[] = [];
-  let settings = { invoicePrefix: 'INV', receiptPrefix: 'RCT', creditNotePrefix: 'CN', paymentMethods: ['Cash', 'Card', 'UpiDirect'], discountReasons: [] as string[], maxDiscountPercent: 10, paymentLinkExpiryMinutes: 60 };
+  let settings = { invoicePrefix: 'INV', receiptPrefix: 'RCT', creditNotePrefix: 'CN', paymentMethods: ['Cash', 'Card', 'UpiDirect'], discountReasons: [] as string[], maxDiscountPercent: 10, paymentLinkExpiryMinutes: 60, version: 0 };
 
   await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
   await page.route('**/v1/me/context', r => r.fulfill({ json: billingOwner(country, flags) }));
@@ -58,7 +58,8 @@ export async function mockBilling(page: Page, { country = 'IN', flags, locale = 
       const body = r.request().postDataJSON() as typeof settings;
       posts.push({ path: 'billing', body });
       if (body.invoicePrefix.length > 3) return r.fulfill({ status: 400, json: { errors: { invoicePrefix: ['format'] } } });
-      settings = body;
+      if (body.version !== settings.version) return r.fulfill({ status: 409, json: { code: 'changed' } });
+      settings = { ...body, version: settings.version + 1 };
     }
     return r.fulfill({ json: settings });
   });

@@ -15,7 +15,7 @@ public sealed class PracticeDefaults
     [Classification(DataClass.Public)] public string? Languages { get; set; }
     [Classification(DataClass.Internal)] public int SlotMinutes { get; set; }
     /// <summary>No longer written or read: fees live in the Billing catalogue (MDV-P4-002), which copied these once (migration ServicesCatalogue).</summary>
-    // shortcut: column kept for one release so a rollback still finds the fees; drop it with the first migration after billing reaches Everyone (MDV-P4-004).
+    // shortcut: column kept, unused; drop only after every environment has applied Billing's ServicesCatalogue migration (db-migrate runs Tenancy's migrations first, so an earlier drop breaks the copy).
     [Classification(DataClass.Internal)] public long NewVisitFeeMinor { get; set; }
     [Classification(DataClass.Internal)] public long FollowUpFeeMinor { get; set; }
     [Classification(DataClass.Internal)] public required string Currency { get; init; }
@@ -62,7 +62,7 @@ public sealed class DoctorProfile
     [Classification(DataClass.Public)] public string? Qualifications { get; set; }
     [Classification(DataClass.Public)] public string? Languages { get; set; }
     /// <summary>No longer written or read: the doctor's fees are their prices in the Billing catalogue (MDV-P4-002), copied once by migration ServicesCatalogue.</summary>
-    // shortcut: column kept for one release so a rollback still finds the fees; drop it with the first migration after billing reaches Everyone (MDV-P4-004).
+    // shortcut: column kept, unused; drop only after every environment has applied Billing's ServicesCatalogue migration (db-migrate runs Tenancy's migrations first, so an earlier drop breaks the copy).
     [Classification(DataClass.Internal)] public long NewVisitFeeMinor { get; set; }
     [Classification(DataClass.Internal)] public long FollowUpFeeMinor { get; set; }
     /// <summary>The room this doctor sees patients in at this location, e.g. "Room 2" (MDV-P1-111): on the board, the TV and the token slip.</summary>

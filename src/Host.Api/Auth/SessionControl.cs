@@ -204,8 +204,13 @@ public static class SessionControl
                 ? Results.NoContent() : Results.NotFound()).RequireAuthorization();
 
         // Tenant admin ends a staff member's sessions in this tenant only; their sessions in other clinics are not this tenant's to end.
-        app.MapDelete("/v1/staff/{userId:guid}/sessions", async (Guid userId, HttpContext http, [FromServices] IStaffSessions sessions) =>
+        // Like every staff change (StaffRoster): only an administrator of staff at a location where the person works; anyone else gets 404.
+        app.MapDelete("/v1/staff/{userId:guid}/sessions", async (Guid userId, HttpContext http, [FromServices] IStaffSessions sessions, [FromServices] IStaffRoster roster, [FromServices] IStaffAccess access) =>
         {
+            var administers = false;
+            foreach (var facility in (await roster.ListAsync(http.RequestAborted)).Where(r => r.UserId == userId).Select(r => r.FacilityId).Distinct())
+                administers = administers || await access.AccessAsync(Capability.StaffRolesIntegrations, facility, http.RequestAborted) == Access.Config;
+            if (!administers) return Results.NotFound();
             await WriteAuditAsync(http, "session.revoke", "staff_user", userId);
             await sessions.RevokeInTenantAsync(userId, Read(http.User, TenantClaim)!.Value, http.RequestAborted);
             return Results.NoContent();

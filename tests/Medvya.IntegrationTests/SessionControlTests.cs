@@ -384,6 +384,31 @@ public sealed class SessionControlTests(PostgresFixture sql) : IClassFixture<Pos
         Assert.Equal(HttpStatusCode.OK, await ContextStatus(adminBrowser));
     }
 
+    // SAFETY: mutation check: removed the location check in DELETE /v1/staff/{userId}/sessions -> AnAdminOfOneLocationCannotSignOutStaffOfAnother failed.
+    [Fact]
+    public async Task AnAdminOfOneLocationCannotSignOutStaffOfAnother()
+    {
+        await Clinics();
+        var branch = Guid.NewGuid();
+        await using (var db = sql.Context(tenantA))
+        {
+            db.Facilities.Add(new Facility { Id = branch, TenantId = tenantA, Name = "Velachery (synthetic)", TimeZone = "Asia/Kolkata" });
+            await db.SaveChangesAsync();
+        }
+        var admin = await Account("K. Lakshmi");
+        var staff = await Account("A. Joseph");
+        var adminMembership = await Member(admin, tenantA, facilityA, Role.PracticeAdmin);
+        var staffAtBranch = await Member(staff, tenantA, branch, Role.Receptionist);
+        using var staffBrowser = await SignedIn(staff);
+        await Choose(staffBrowser, staffAtBranch);
+        using var adminBrowser = await SignedIn(admin);
+        await Choose(adminBrowser, adminMembership);
+
+        Assert.Equal(HttpStatusCode.NotFound, (await Send(adminBrowser, HttpMethod.Delete, $"/v1/staff/{staff.Id}/sessions")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, await ContextStatus(staffBrowser)); // the other location's staff stay signed in
+        Assert.DoesNotContain("session.revoke", await AuditActions(tenantA, admin.Id));
+    }
+
     [Fact]
     public async Task SigningOutBeforeChoosingAFacilityIsAuditedInThePlatformChain()
     {

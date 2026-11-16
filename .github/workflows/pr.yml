@@ -29,6 +29,7 @@ jobs:
       web: ${{ steps.f.outputs.web }}
       e2e: ${{ steps.f.outputs.e2e }}
       ai: ${{ steps.f.outputs.ai }}
+      infra: ${{ steps.f.outputs.infra }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -43,46 +44,57 @@ jobs:
           # PR: HEAD is the merge commit, its first parent the base tip. Push to main: the commits the push added (squash merge = one).
           if [ "$EVENT" = "pull_request" ]; then base=HEAD^1; else base="$BEFORE"; fi
           if ! git cat-file -e "$base^{commit}" 2>/dev/null; then
-            echo "backend=true" >> "$GITHUB_OUTPUT"; echo "web=true" >> "$GITHUB_OUTPUT"; echo "e2e=true" >> "$GITHUB_OUTPUT"; echo "ai=true" >> "$GITHUB_OUTPUT"; exit 0   # no usable base: run everything
+            echo "backend=true" >> "$GITHUB_OUTPUT"; echo "web=true" >> "$GITHUB_OUTPUT"; echo "e2e=true" >> "$GITHUB_OUTPUT"; echo "ai=true" >> "$GITHUB_OUTPUT"; echo "infra=true" >> "$GITHUB_OUTPUT"; exit 0   # no usable base: run everything
           fi
-          passed() { [ "$(gh api "repos/$GITHUB_REPOSITORY/commits/$1/check-runs?check_name=$2" --jq '.check_runs|sort_by(.started_at)|last|.conclusion')" = success ]; }
+          # The whole pr run on that commit, newest first: every job, not only the check names branch protection lists.
+          passed() { [ "$(gh run list -R "$GITHUB_REPOSITORY" --workflow pr.yml --commit "$1" --event pull_request --json conclusion --jq '.[0].conclusion')" = success ]; }
           if [ "$EVENT" = push ] && pr=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" --jq '.[0].number // empty') && [ -n "$pr" ] \
              && git fetch -q origin "refs/pull/$pr/head" && head=$(git rev-parse FETCH_HEAD); then
             # The merged PR's own runs still going on its head prove nothing now and hold runners that open PRs wait for (#1249).
             gh run list --commit "$head" --event pull_request --json databaseId,status --jq '.[]|select(.status!="completed")|.databaseId' | xargs -r -n1 gh run cancel || true
             # A squash merge of a PR that was up to date with main has the PR head's tree; when that head passed, this exact code is already tested.
             if [ "$(git rev-parse "$head^{tree}")" = "$(git rev-parse 'HEAD^{tree}')" ] && git merge-base --is-ancestor "$BEFORE" "$head" \
-               && passed "$head" dotnet && passed "$head" web; then
+               && passed "$head"; then
               echo "Same tree as the head of PR #$pr ($head), which was up to date and green: nothing to run again"
-              echo "backend=false" >> "$GITHUB_OUTPUT"; echo "web=false" >> "$GITHUB_OUTPUT"; echo "e2e=false" >> "$GITHUB_OUTPUT"; echo "ai=false" >> "$GITHUB_OUTPUT"; exit 0
+              echo "backend=false" >> "$GITHUB_OUTPUT"; echo "web=false" >> "$GITHUB_OUTPUT"; echo "e2e=false" >> "$GITHUB_OUTPUT"; echo "ai=false" >> "$GITHUB_OUTPUT"; echo "infra=false" >> "$GITHUB_OUTPUT"; exit 0
             fi
           fi
           files=$(git diff --name-only "$base" HEAD)
           echo "$files"
           has() { echo "$files" | grep -Eq "$1" && echo true || echo false; }
-          # infra/postgres only: the integration fixture applies roles.sql; Bicep and Entra scripts are not built or tested here.
+          # infra/postgres: the integration fixture applies roles.sql. Bicep compiles and lints in the infra job; Entra scripts are not tested here.
           # src/AiService is Python (ADR-021): it runs the ai-service job, not the .NET build.
           ai=$(has '^(src/AiService/|\.github/)'); echo "ai=$ai" >> "$GITHUB_OUTPUT"
           files=$(echo "$files" | grep -v '^src/AiService/' || true)
-          echo "backend=$(has '^(src/|tests/Medvya\.|Directory\.|global\.json|Medvya\.sln|dotnet-tools\.json|infra/postgres/|tools/erd/|docs/03-architecture/erd\.md|packages/api-client/|\.github/)')" >> "$GITHUB_OUTPUT"
+          echo "backend=$(has '^(src/|tests/Medvya\.|Directory\.|global\.json|Medvya\.sln|dotnet-tools\.json|infra/postgres/|tools/erd/|tools/(db-migrate|synthetic-data-generator)/|tools/check-contract\.sh|docs/03-architecture/erd\.md|packages/api-client/|\.github/)')" >> "$GITHUB_OUTPUT"
           echo "web=$(has '^(web/|mobile/|packages/|tests/e2e/|package\.json|pnpm-|tools/check-synthetic/|tools/check-ui-drift/|\.github/)')" >> "$GITHUB_OUTPUT"
           # The browser suite drives the web apps only; no web screen imports mobile/ (ADR-013), so a mobile-only change skips it (#1129).
-          echo "e2e=$(has '^(web/|packages/|tests/e2e/|package\.json|pnpm-|\.github/)')" >> "$GITHUB_OUTPUT"
+          echo "e2e=$(has '^(web/|packages/|tests/e2e/|docs/02-design/journeys\.md|package\.json|pnpm-|\.github/)')" >> "$GITHUB_OUTPUT"
+          echo "infra=$(has '^(infra/bicep/|\.github/)')" >> "$GITHUB_OUTPUT"
 
   dotnet-checks:
     needs: changes
     if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: ERD is current
         # a model or migration change must regenerate docs/03-architecture/erd.md in the same PR (AGENTS.md 3.6)
         run: python3 -I tools/erd/generate.py --check
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
           global-json-file: global.json
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: pnpm
       - run: dotnet build Medvya.sln # analyzers run as part of the build; warnings are errors (Directory.Build.props)
+      - name: API contract (the generated TypeScript client matches what Host.Api exports, packages/api-client)
+        run: pnpm install --frozen-lockfile && bash tools/check-contract.sh
       - run: dotnet test tests/Medvya.ArchitectureTests --no-build && dotnet test tests/Medvya.SecurityTests --no-build
       - name: Vulnerable NuGet packages
         # shortcut: substitutes for GitHub dependency review, which needs Advanced Security on private repos
@@ -106,6 +118,8 @@ jobs:
       PROJECT: tests/Medvya.IntegrationTests/Medvya.IntegrationTests.csproj
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
           global-json-file: global.json
@@ -138,6 +152,8 @@ jobs:
         working-directory: src/AiService
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - run: pipx install uv==0.11.8 # pinned on PyPI; uv installs the Python in .python-version
       - run: uv sync --frozen
       - run: uv run ruff check . && uv run ruff format --check . && uv run mypy
@@ -158,7 +174,9 @@ jobs:
 
   dotnet:
     # The required check name: passes only when the checks, every integration shard and the AI service passed (a skipped change counts as pass).
-    needs: [changes, dotnet-checks, dotnet-integration, ai-service]
+    # Every condition ends in `|| exit 1`: a failed test inside an if-body or an && list does not stop bash -e, and once let this
+    # check pass while dotnet-checks had failed (#1395).
+    needs: [changes, dotnet-checks, dotnet-integration, ai-service, infra]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -166,9 +184,41 @@ jobs:
       - run: |
           [ "${{ needs.changes.result }}" = success ] || exit 1
           if [ "${{ needs.changes.outputs.backend }}" = true ]; then
-            [ "${{ needs.dotnet-checks.result }}" = success ] && [ "${{ needs.dotnet-integration.result }}" = success ]
+            [ "${{ needs.dotnet-checks.result }}" = success ] || exit 1
+            [ "${{ needs.dotnet-integration.result }}" = success ] || exit 1
           fi
-          if [ "${{ needs.changes.outputs.ai }}" = true ]; then [ "${{ needs.ai-service.result }}" = success ]; fi
+          if [ "${{ needs.changes.outputs.ai }}" = true ]; then [ "${{ needs.ai-service.result }}" = success ] || exit 1; fi
+          if [ "${{ needs.changes.outputs.infra }}" = true ]; then [ "${{ needs.infra.result }}" = success ] || exit 1; fi
+
+  infra:
+    # The Bicep templates and each environment's parameters compile, and the linter passes (warnings are errors here too).
+    needs: changes
+    if: needs.changes.outputs.infra == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Bicep build and lint
+        # The .bicepparam files read their ids from the environment; dummy values are enough to compile them.
+        env:
+          DB_ADMIN_OBJECT_ID: 00000000-0000-0000-0000-000000000000
+          DB_ADMIN_LOGIN: ci
+          ALERT_EMAIL: ci@example.invalid
+          OIDC_CLIENT_ID: 00000000-0000-0000-0000-000000000000
+          DEPLOY_PRINCIPAL_ID: 00000000-0000-0000-0000-000000000000
+          CONSOLE_CLIENT_ID: 00000000-0000-0000-0000-000000000000
+          CONSOLE_OWNER_OBJECT_ID: 00000000-0000-0000-0000-000000000000
+        run: |
+          set -euo pipefail
+          az bicep install
+          # lint compiles too; it exits 0 on warnings, so any "<file>(line,col) : Warning|Error" line fails the step.
+          for f in infra/bicep/*.bicep infra/bicep/*.bicepparam; do
+            out=$(az bicep lint -f "$f" 2>&1) || { echo "$out"; exit 1; }
+            echo "$out"; if echo "$out" | grep -qE '\) : (Warning|Error) '; then echo "::error::$f has Bicep warnings"; exit 1; fi
+          done
+          for f in infra/bicep/*.bicepparam; do az bicep build-params -f "$f" --stdout > /dev/null; done
 
   web-checks:
     needs: changes
@@ -177,6 +227,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -197,7 +249,8 @@ jobs:
 
   web-e2e:
     # Playwright split over 5 machines (one 14 min run, then 3 shards of 5-8 min). The performance budget runs alone on its own machine:
-    # with project dependencies Playwright puts every test in shard 1, so shards pass --project=chromium.
+    # with project dependencies Playwright puts every test in shard 1, so shards pass --project=chromium and --project=touch (the
+    # control-size tests again on a coarse pointer, MDV-P2-062), neither of which has dependencies.
     needs: changes
     if: needs.changes.outputs.e2e == 'true'
     runs-on: ubuntu-latest
@@ -205,9 +258,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        args: ['--project=chromium --shard=1/5', '--project=chromium --shard=2/5', '--project=chromium --shard=3/5', '--project=chromium --shard=4/5', '--project=chromium --shard=5/5', '--project=performance --no-deps']
+        args: ['--project=chromium --project=touch --shard=1/5', '--project=chromium --project=touch --shard=2/5', '--project=chromium --project=touch --shard=3/5', '--project=chromium --project=touch --shard=4/5', '--project=chromium --project=touch --shard=5/5', '--project=performance --no-deps']
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -226,8 +281,8 @@ jobs:
           retention-days: 7
 
   web:
-    # The required check name: passes only when docs, the checks and every e2e job passed (a skipped web change counts as pass).
-    needs: [changes, docs, web-checks, web-e2e]
+    # The required check name: passes only when docs, the checks and every e2e job (browser-only and full stack) passed (a skipped web change counts as pass).
+    needs: [changes, docs, web-checks, web-e2e, web-fullstack]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -235,33 +290,24 @@ jobs:
       - run: |
           [ "${{ needs.changes.result }}" = success ] || exit 1
           [ "${{ needs.docs.result }}" = success ] || exit 1   # synthetic data, links, legal marker: docs is not a required check by name
-          if [ "${{ needs.changes.outputs.web }}" = true ]; then [ "${{ needs.web-checks.result }}" = success ]; fi
-          if [ "${{ needs.changes.outputs.e2e }}" = true ]; then [ "${{ needs.web-e2e.result }}" = success ]; fi
+          if [ "${{ needs.changes.outputs.web }}" = true ]; then [ "${{ needs.web-checks.result }}" = success ] || exit 1; fi
+          if [ "${{ needs.changes.outputs.e2e }}" = true ]; then [ "${{ needs.web-e2e.result }}" = success ] || exit 1; fi
+          if [ "${{ needs.changes.outputs.backend }}" = true ] || [ "${{ needs.changes.outputs.e2e }}" = true ]; then [ "${{ needs.web-fullstack.result }}" = success ] || exit 1; fi
 
-  contract:
-    # The generated TypeScript client must match what Host.Api exports (packages/api-client). Not a required check yet.
+  web-fullstack:
+    # The journeys against the real Host.Api and PostgreSQL (fullstack-e2e.yml, also nightly). It runs when the API or the web apps change:
+    # #1163 changed only src/ and merged with J2 broken (#1232).
     needs: changes
-    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.web == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
-        with:
-          global-json-file: global.json
-      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: bash tools/check-contract.sh
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.e2e == 'true'
+    uses: ./.github/workflows/fullstack-e2e.yml
 
   docs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Synthetic data only (runs here too so a docs-only change is still scanned)
         run: node tools/check-synthetic/check.mjs --self-test && node tools/check-synthetic/check.mjs
       - name: Relative Markdown links resolve
@@ -280,6 +326,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          persist-credentials: false
       # shortcut: gitleaks stands in for GitHub secret scanning + push protection (Advanced Security on private repos); switch when the repo gets it
       - uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
         env:

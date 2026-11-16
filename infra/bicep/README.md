@@ -1,10 +1,10 @@
-# infra/bicep: India dev environment (MDV-P0-006)
+# infra/bicep: India dev and test environments (MDV-P0-006)
 
-`main.bicep` is the cheapest viable dev environment in Central India. It is for synthetic data only; the `shortcut:` comment at the top lists what is deliberately missing.
+`main.bicep` is the cheapest viable environment in Central India; `dev.bicepparam` and `test.bicepparam` hold each environment's values (ids come from GitHub environment variables through `readEnvironmentVariable`). It is for synthetic data only; the `shortcut:` comment at the top lists what is deliberately missing. Environments, identities and the release flow: `docs/runbooks/environments.md`. CI compiles and lints every file here on each change (`pr.yml`, job `infra`).
 
-**Apply from CI:** run the `infra-dev` workflow (Actions → infra-dev → Run workflow, from `main`). It prints the what-if, then waits for a reviewer on the `dev-infra` environment before the real deployment. One-time setup (the repository is public, so the two personal values are secrets, masked in logs):
+**Apply from CI:** run the `infra` workflow (Actions → infra → Run workflow, from `main`, environment `dev` or `test`). Both jobs run on the `<env>-infra` GitHub environment: approve the what-if (it changes nothing and prints resource ids only), read it, then approve the deployment. One-time setup (the repository is public, so the two personal values are secrets, masked in logs):
 
-1. The CI identity (`AZURE_CLIENT_ID`) gets **Owner** on `rg-medvya-dev-in`: the template creates role and policy assignments.
+1. The infra identity (`AZURE_CLIENT_ID` of `dev-infra`) gets **Owner** on `rg-medvya-dev-in`: the template creates role and policy assignments. The app deploy identity (environment `dev`) needs only Contributor (`docs/runbooks/environments.md`).
 2. Federated credential for the new environment: `az ad app federated-credential create --id <AZURE_CLIENT_ID> --parameters '{"name":"github-dev-infra","issuer":"https://token.actions.githubusercontent.com","subject":"repo:ALFRED-LUCIFER/medvya:environment:dev-infra","audiences":["api://AzureADTokenExchange"]}'`
 3. GitHub environment `dev-infra` with yourself as required reviewer, the same `AZURE_*` variables as `dev`, and on both environments the variables `AZURE_DB_ADMIN_OBJECT_ID`, `STAFF_SIGNIN_CLIENT_ID`, `AZURE_DEPLOY_PRINCIPAL_ID`, `CONSOLE_SIGNIN_CLIENT_ID`, `CONSOLE_OWNER_OBJECT_ID`. Repository secrets `ALERT_EMAIL` and `AZURE_DB_ADMIN_LOGIN`.
 
@@ -14,12 +14,13 @@ By hand, with the same parameters, the commands are:
 
 ```
 az group create -n rg-medvya-dev-in -l centralindia
-az deployment group what-if -g rg-medvya-dev-in -f infra/bicep/main.bicep -p dbAdminObjectId=<entra object id> dbAdminLogin=<upn> alertEmail=<email> oidcClientId=<app registration client id> deployPrincipalId=<object id of the deploy service principal> consoleClientId=<console app registration client id> consoleOwnerObjectId=<first console owner's object id>
-az deployment group create  -g rg-medvya-dev-in -f infra/bicep/main.bicep -p <same parameters>
+export DB_ADMIN_OBJECT_ID=<entra object id> DB_ADMIN_LOGIN=<upn> ALERT_EMAIL=<email> OIDC_CLIENT_ID=<app registration client id> DEPLOY_PRINCIPAL_ID=<object id of the deploy service principal> CONSOLE_CLIENT_ID=<console app registration client id> CONSOLE_OWNER_OBJECT_ID=<first console owner's object id>
+az deployment group what-if -g rg-medvya-dev-in -p infra/bicep/dev.bicepparam
+az deployment group create  -g rg-medvya-dev-in -p infra/bicep/dev.bicepparam
 ```
 
 - Sign-in is a single-tenant Entra app registration. Its client secret lives only in Key Vault (`oidc-client-secret`); the web app reads it through a Key Vault reference.
-- Cost guard: a monthly budget (default 3,500 INR: the B1 plan and the B1ms PostgreSQL server need it) mails alerts at 50/80/100 %; Log Analytics is capped at 0.1 GB/day.
+- Cost guard: a monthly budget (default 3,500 INR: the B1 plan and the B1ms PostgreSQL server need it; test 2,500) mails alerts at 50/80/100 %. Log Analytics keeps 90 days and is capped per day (dev 1 GB, test 0.5 GB, prod no cap); an alert mails the owner when the cap is reached, because telemetry and the 5xx alert are blind until it resets.
 - No secret value belongs in this folder.
 
 ## Database (MDV-P0-038)
@@ -30,8 +31,8 @@ az deployment group create  -g rg-medvya-dev-in -f infra/bicep/main.bicep -p <sa
 - **Entra-only:** password authentication is off. `dbAdminObjectId` / `dbAdminLogin` is the only administrator; the app's managed identity is mapped to a least-privilege role by that administrator, never made an administrator.
 - **Customer-managed key:** key `medvya-postgres-storage` in the vault; a user-assigned identity holds Crypto Service Encryption User on that key only.
 - **In country:** the module takes `country` (`IN` or `AE`) and fails the deployment if the region, or the geo-backup pair when `geoRedundantBackup` is on, is outside it. The Azure Policy assignment `allowed-locations-in` already evaluates PostgreSQL servers (it checks the location of every resource).
-- **Production defaults** (`env=prod`): zone-redundant HA, General Purpose SKU, 35-day point-in-time restore. Dev: Burstable, no HA, 7 days.
-- **Server parameters:** TLS 1.2+, `log_connections`, `log_disconnections`, pgaudit (`read, write, ddl, role`), extensions allow-list `pgcrypto`, `pg_stat_statements`, `pgaudit`, `pg_trgm`. After the first deployment restart the server once so `shared_preload_libraries` takes effect.
+- **Production defaults** (`env=prod`): zone-redundant HA, General Purpose SKU, 35-day point-in-time restore, geo-redundant backup (needs the paired-region key first: `shortcut:` in `postgres.bicep`). Dev and test: Burstable, no HA, 7 days, no geo backup.
+- **Server parameters:** TLS 1.2+, `log_connections`, `log_disconnections`, `log_error_verbosity = terse` (no DETAIL lines, which quote row values), pgaudit (`write, ddl, role`), extensions allow-list `pgcrypto`, `pg_stat_statements`, `pgaudit`, `pg_trgm`. After the first deployment restart the server once so `shared_preload_libraries` takes effect.
 - Restore drill: `docs/runbooks/postgres-restore-drill.md`.
 
 ## App settings and the deploy job (MDV-P0-042)
@@ -40,23 +41,23 @@ The app reads exactly what the template sets: `ConnectionStrings__Medvya` (host,
 
 The database is private, so a laptop or a GitHub runner cannot reach it. `job-db-<env>-<suffix>` (Container Apps job in `snet-jobs`) does every database step of a deploy. The workflow uploads a self-contained `db-migrate` to container `deploy` and starts the job. The job then runs `roles.sql` and maps the app and migrator logins as `id-dbadmin-*` (a second Entra administrator, used only by this job), and migrates as `id-migrate-*` (a login `IN ROLE medvya_migrator`). The workflow ships the app only after the job succeeds. Its console log is in Log Analytics (`ContainerAppConsoleLogs_CL`). See `docs/03-architecture/database-security.md`.
 
-**Ledger digests:** container `ledger-digests` has version-level immutability with a time-based retention policy (`ledgerDigestRetentionDays`: 7 in dev, 3650 in prod). Nobody can overwrite or delete a digest inside that window. The app holds the custom role "Medvya ledger digest writer" on that container: read and add, no delete. Bicep creates the policy **unlocked**, because locking is an action, not a property. Lock it once per environment, after the first deployment. Locking is **irreversible**: the period can then only grow, and the storage account cannot be deleted while it holds digests under retention.
+**Ledger digests:** container `ledger-digests` has version-level immutability with a time-based retention policy (`ledgerDigestRetentionDays`: 7 in dev, 1 in test, 3650 in prod). Nobody can overwrite or delete a digest inside that window. The app holds the custom role "Medvya ledger digest writer" on that container: read and add, no delete. Bicep creates the policy **unlocked**, because locking is an action, not a property. Lock it once per environment, after the first deployment. **Never lock test:** a locked policy keeps its storage account, and so the resource group, undeletable. Locking is **irreversible**: the period can then only grow, and the storage account cannot be deleted while it holds digests under retention.
 
 ```
 etag=$(az storage container immutability-policy show --account-name <storage> -c ledger-digests --query etag -o tsv)
 az storage container immutability-policy lock --account-name <storage> -c ledger-digests --if-match "$etag"
 ```
 
-**Plan cap (MDV-P1-069):** `Plan__Doctors` and `Plan__Staff` come from the parameters `planDoctors` and `planStaff`: 3 and 5 in dev (the pilot audit sets up a clinic with 3 doctors and 5 other staff), 1 and 2 (the starter plan, also the app's default when the settings are absent) in any other environment. The app refuses to start when a value is not a whole number, doctors is under 1 or staff is under 0.
+**Plan cap (MDV-P1-069):** `Plan__Doctors` and `Plan__Staff` come from the parameters `planDoctors` and `planStaff`: 3 and 5 in dev and test (the pilot audit sets up a clinic with 3 doctors and 5 other staff), 1 and 2 (the starter plan, also the app's default when the settings are absent) in any other environment. The app refuses to start when a value is not a whole number, doctors is under 1 or staff is under 0.
 
-After the lock, every deployment of that environment passes `ledgerDigestPolicyLocked=true`. Azure refuses any write to a locked policy, even an unchanged one, so without it the deployment fails. Dev was locked on 13 Nov 2026, and `infra-dev.yml` passes it.
+After the lock, every deployment of that environment passes `ledgerDigestPolicyLocked=true`. Azure refuses any write to a locked policy, even an unchanged one, so without it the deployment fails. Dev was locked on 13 Nov 2026, and `dev.bicepparam` passes it.
 
 **First deployment of an environment, once** (values never echoed or committed):
 
 1. `openssl rand -base64 32 | tr -d '\n' > /tmp/k && az keyvault secret set --vault-name <kv> --name audit-digest-key --file /tmp/k -o none && rm /tmp/k`
 2. The app's identity needs **Key Vault Secrets User** on the vault for the two Key Vault references (`oidc-client-secret`, `audit-digest-key`). In dev it was granted by hand; it is not in the template because a second assignment with the same role and scope would fail the deployment.
 3. Deploy the template, then restart the PostgreSQL server once (`shared_preload_libraries`).
-4. Set the `dev` environment variables `AZURE_STORAGE_ACCOUNT` and `AZURE_DB_JOB` (outputs `storageAccount`, `dbJob`) and delete `AZURE_SQL_SERVER`. Then run `deploy-dev`.
+4. Set the `dev` environment variables `AZURE_STORAGE_ACCOUNT` and `AZURE_DB_JOB` (outputs `storageAccount`, `dbJob`) and delete `AZURE_SQL_SERVER`. Then run the `release` workflow.
 
 ## Web app (MDV-P0-007)
 
@@ -64,7 +65,7 @@ The API serves the built clinic app from `wwwroot/app` under `/app/` (the public
 
 ## Platform console (MDV-P5-040, ADR-014)
 
-A second web app, `console-medvya-<env>-<suffix>`, runs `Host.Platform` with `web/platform-admin` on the same plan and VNet. Its system identity is the database login `IN ROLE medvya_platform`; the user-assigned identities `id-review-*`, `id-features-*` and `id-formulary-*` are the logins `IN ROLE medvya_review`, `medvya_features` and `medvya_formulary`; the database job maps all four. The template reads Key Vault secret `platform-console-client-secret` (an `existing` resource, so the secret must be in the vault before an apply) and needs the parameters `consoleClientId` and `consoleOwnerObjectId`. All of it is written by `infra/entra/console-app.sh` and the steps in `docs/runbooks/platform-console-azure.md`; do them before the next `infra-dev` run.
+A second web app, `console-medvya-<env>-<suffix>`, runs `Host.Platform` with `web/platform-admin` on the same plan and VNet. Its system identity is the database login `IN ROLE medvya_platform`; the user-assigned identities `id-review-*`, `id-features-*` and `id-formulary-*` are the logins `IN ROLE medvya_review`, `medvya_features` and `medvya_formulary`; the database job maps all four. The template reads Key Vault secret `platform-console-client-secret` (an `existing` resource, so the secret must be in the vault before an apply) and needs the parameters `consoleClientId` and `consoleOwnerObjectId`. All of it is written by `infra/entra/console-app.sh` and the steps in `docs/runbooks/platform-console-azure.md`; do them before the next `infra` run.
 
 ## Manual Entra settings (not in Bicep)
 

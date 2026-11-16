@@ -1,29 +1,17 @@
 name: fullstack-e2e
 
 # MDV-P0-029: the browser against the real Host.Api and a real PostgreSQL in Docker, no mocked APIs (tests/e2e/fullstack).
-# Not a required check yet: it runs nightly, on demand, and on PRs that touch the code it exercises, until it has a record of being stable on the
-# runners. Then move the job into pr.yml (the timeout below is its budget). Synthetic data only; nothing here touches Azure.
+# A required check: pr.yml calls this workflow (job web-fullstack, inside the `web` aggregate) on any change to the API, the web apps or
+# the journeys; it also runs nightly and on demand. Synthetic data only; nothing here touches Azure.
+# No concurrency group: called from a push to main, cancelling would turn a verified main run red (pr.yml keeps main runs whole, #1249).
 on:
   schedule:
     - cron: '17 21 * * *'
   workflow_dispatch:
-  pull_request:
-    paths:
-      # The code under test too: #1163 changed only src/ and merged with J2 broken (MDV-P0-028 regression, #1232).
-      - 'src/**'
-      - 'web/**'
-      - 'packages/**'
-      - 'tests/e2e/fullstack/**'
-      - 'tests/e2e/journeys/storyboard.ts' # the full-stack J2 to J6 specs read their steps through it
-      - 'docs/02-design/journeys.md'
-      - '.github/workflows/fullstack-e2e.yml'
+  workflow_call:
 
 permissions:
   contents: read
-
-concurrency:
-  group: fullstack-e2e-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
   fullstack:
@@ -31,6 +19,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
           global-json-file: global.json

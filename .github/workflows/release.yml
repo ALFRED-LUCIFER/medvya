@@ -1,0 +1,116 @@
+name: release
+
+# Build once, promote the same build (docs/runbooks/environments.md). A tag `v*` on main (or a manual run from main) builds the clinic app,
+# the console and the database migrator in `build`, which has NO Azure identity: pnpm install scripts and NuGet build targets never run
+# next to a token that can change Azure. Each environment then deploys that one artifact through deploy-env.yml, which signs in with
+# GitHub OIDC to that environment's own deploy identity. Order: test (automatic) -> dev (required reviewer). Production comes later as a
+# third job after dev (MDV-P1-039); deploy-env.yml's draft-terms check stops it until counsel signs off (MDV-P1-044).
+# The database is private (MDV-P0-038), so no runner connects to it: the migrator runs as a Container Apps job inside the VNet (MDV-P0-042).
+# shortcut: no staging slot; the web app ships inside the API (/app/). Staging with a slot swap comes with production (MDV-P1-039).
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45 # up to 25 waiting for CI, then about 10 to build
+    permissions:
+      contents: read
+      actions: read # to wait for the pr run on this commit
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # the guard below needs main's history
+          persist-credentials: false
+      # Only code that is on main ships: a tag on another commit, or a manual run from a branch, stops here.
+      - name: Refuse commits that are not on main
+        id: version
+        run: |
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || { echo "::error::$GITHUB_SHA is not on main; tag a commit on main"; exit 1; }
+          # A manual run from main is named after the last release and the commits since (0.0.19-24-g5955422), never 0.0.0-main (UX-08).
+          if [ "$GITHUB_REF_TYPE" = tag ]; then v="$GITHUB_REF_NAME"; else v=$(git describe --tags --match 'v[0-9]*' 2>/dev/null || echo v0.0.0-main); fi
+          echo "VERSION=${v#v}" >> "$GITHUB_ENV"
+          echo "version=${v#v}" >> "$GITHUB_OUTPUT"
+      # main can hold a commit CI never passed (a merge that was not up to date, a run still going): only a verified commit ships (#1249).
+      - name: Refuse a commit whose CI is not green
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # A release started right after a merge waits for that commit's pr run (up to 25 minutes) instead of failing on a run
+          # that has not finished yet. It still ships only when the run ends green.
+          for i in $(seq 1 50); do
+            running=$(gh run list -R "$GITHUB_REPOSITORY" --workflow pr.yml --commit "$GITHUB_SHA" --json status --jq '[.[]|select(.status!="completed")]|length')
+            [ "$running" = 0 ] && break
+            echo "CI on $GITHUB_SHA is still running; waiting ($i/50)"; sleep 30
+          done
+          # The newest pr run on this commit, as a whole: every job (dotnet, web, secrets and what they aggregate), not only check names.
+          got=$(gh run list -R "$GITHUB_REPOSITORY" --workflow pr.yml --commit "$GITHUB_SHA" --json conclusion --jq '.[0].conclusion // "never run"')
+          [ "$got" = success ] || { echo "::error::the pr run on $GITHUB_SHA is '$got'; release a commit on main whose pr run is green"; exit 1; }
+      # The build itself is for dev; deploy-env.yml checks the draft-terms marker again for any environment beyond dev and test (MDV-P1-044).
+      - run: bash tools/check-legal-marker.sh dev
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          global-json-file: global.json
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile && pnpm --filter clinic --filter platform-admin build
+      # /health reports this version plus the commit (+sha), which the smoke test checks.
+      # ReadyToRun (precompiled, needs the runtime id): a restart on the one-core B1 JITs less before the first requests answer (#912).
+      # The build-time OpenAPI export is skipped: nothing serves it, PR CI checks it, and it fails on a runtime-specific publish off Linux x64.
+      - run: dotnet publish src/Host.Api -c Release -r linux-x64 --self-contained false -p:PublishReadyToRun=true -p:OpenApiGenerateDocuments=false -o publish -p:Version="$VERSION"
+      # The API serves the built web app under /app/ (same origin as the sign-in cookie).
+      - run: mkdir -p publish/wwwroot/app && cp -R web/clinic/dist/. publish/wwwroot/app/
+      # The console host serves its built app at its root (static files, fallback to index.html).
+      - run: |
+          dotnet publish src/Host.Platform -c Release -r linux-x64 --self-contained false -p:PublishReadyToRun=true -o publish-platform -p:Version="$VERSION"
+          mkdir -p publish-platform/wwwroot && cp -R web/platform-admin/dist/. publish-platform/wwwroot/
+          test -f publish-platform/wwwroot/index.html
+      # Self-contained, so the job's image needs no .NET.
+      - run: |
+          dotnet publish tools/db-migrate -c Release -r linux-x64 --self-contained -o db-migrate
+          tar -czf db-migrate.tar.gz -C db-migrate .
+      # One tarball: the artifact zip would drop file modes; every environment gets these exact bytes.
+      - run: tar -czf release.tar.gz publish publish-platform db-migrate.tar.gz
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release
+          path: release.tar.gz
+          if-no-files-found: error
+          retention-days: 30 # a later environment can still be approved within GitHub's 30-day wait
+
+  # Skipped cleanly (green, nothing deployed) while the test environment has no AZURE_WEBAPP_NAME: until it is provisioned, dev deploys
+  # straight after the build.
+  deploy-test:
+    needs: build
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/deploy-env.yml
+    with:
+      environment: test
+      version: ${{ needs.build.outputs.version }}
+      optional: true
+
+  deploy-dev:
+    needs: [build, deploy-test]
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/deploy-env.yml
+    with:
+      environment: dev
+      version: ${{ needs.build.outputs.version }}

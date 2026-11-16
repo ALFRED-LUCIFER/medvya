@@ -39,8 +39,14 @@ test('invitee sees the clinic, role, capabilities and facility, and Join starts 
   await setUp(page, preview);
   let posted = '';
   await page.route('**/v1/invitations/preview', r => { posted = r.request().postData() ?? ''; return r.fulfill({ json: preview }); });
-  await page.route('**/bff/login**', r => r.fulfill({ body: 'signing in' }));
-  await page.goto(`/invite/${token}`);
+  let started = '';
+  await page.route('**/bff/login**', r => {
+    if (r.request().method() !== 'POST') return r.fulfill({ body: 'signing in' });
+    started = r.request().postData() ?? '';
+    return r.fulfill({ json: { location: '/bff/login/provider' } });
+  });
+  await page.goto(`/invite#t=${token}`);
+  await expect(page).toHaveURL('/invite'); // #1417: the page takes the token and drops it from the address bar
 
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Join Iyer Family Clinic (synthetic)');
   await expect(page.getByText('Dr. Arjun Rao (synthetic) invited you as Receptionist.')).toBeVisible();
@@ -52,12 +58,13 @@ test('invitee sees the clinic, role, capabilities and facility, and Join starts 
   expect(JSON.parse(posted)).toEqual({ token }); // the token goes in the body, not a URL
 
   await page.getByRole('button', { name: 'Sign in & join' }).click();
-  await expect(page).toHaveURL(`/bff/login?returnUrl=%2F&invitation=${token}`);
+  await expect(page).toHaveURL('/bff/login/provider');
+  expect(JSON.parse(started)).toEqual({ returnUrl: '/', invitation: token }); // the sign-in start carries the token in its body, never a URL
 });
 
 test('an expired, revoked or used link shows the expired state and nothing to join', async ({ page }) => {
   await setUp(page, null);
-  await page.goto(`/invite/${token}`);
+  await page.goto(`/invite#t=${token}`);
   await expect(page.getByRole('alert').filter({ hasText: 'Ask your admin to resend the invitation.' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Sign in & join' })).toHaveCount(0);
 });
@@ -73,7 +80,7 @@ test('/admin/staff answers Page not found; staff are added from Settings', async
 for (const locale of ['en', 'ar'])
   test(`axe finds no violations on the invitation page (${locale})`, async ({ page }) => {
     await setUp(page, { ...preview, licenceVerificationRequired: true }, locale);
-    await page.goto(`/invite/${token}`);
+    await page.goto(`/invite#t=${token}`);
     // The page itself, not the loading fallback of the lazy route (which also has a heading).
     await expect(page.getByRole('button', { name: locale === 'ar' ? 'سجّل الدخول وانضم' : 'Sign in & join' })).toBeVisible();
     if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');

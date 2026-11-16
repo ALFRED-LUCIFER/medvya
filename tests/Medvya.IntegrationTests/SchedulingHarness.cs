@@ -71,7 +71,7 @@ internal sealed class SchedulingHarness(PostgresFixture sql)
                 (Admin, Role.PracticeAdmin, Facility), (Nurse, Role.Nurse, Facility), (PortalUser, Role.Patient, Facility), (Elsewhere, Role.PracticeAdmin, OtherFacility),
                 (CareCoordinator, Role.CareCoordinator, Facility), (HospitalIt, Role.HospitalIt, Facility),
             })
-                db.Memberships.Add(new Membership { Id = Guid.NewGuid(), TenantId = Tenant, UserId = user, FacilityId = at, Role = role, Status = MembershipStatus.Active });
+                db.Memberships.Add(new Membership { Id = Guid.NewGuid(), TenantId = Tenant, UserId = user, FacilityId = at, Role = role, Status = MembershipStatus.Active, IsOwner = user == Admin }); // the practice admin owns the practice
             await db.SaveChangesAsync();
         }
         await using (var identity = sql.Identity())

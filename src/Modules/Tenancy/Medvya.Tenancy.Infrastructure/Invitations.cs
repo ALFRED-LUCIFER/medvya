@@ -123,7 +123,7 @@ public sealed partial class Invitations(TenancyDbContext db, ICurrentTenant tena
         // audit write rolls the invitation back; the email goes first so a failed send leaves nothing behind.
         // A commit that fails after the email went out leaves a link that shows the expired state, which is harmless.
         var logo = logos is null ? null : await FacilityDirectory.Logo(db, logos, cancellationToken);
-        var message = Email(email, clinic, membership.Role, facility, $"{baseUrl.TrimEnd('/')}/invite/{token}", invitation.ExpiresAt, logo);
+        var message = Email(email, clinic, membership.Role, facility, $"{baseUrl.TrimEnd('/')}/invite#t={token}", invitation.ExpiresAt, logo);
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
         if (superseded is null) await (plan ?? new()).EnsureRoomAsync(db, tenantId, membership.Role, cancellationToken); // a resend adds no seat
         await db.SaveChangesAsync(cancellationToken);

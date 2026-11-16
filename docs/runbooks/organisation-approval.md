@@ -30,7 +30,7 @@ All under `/v1/operations/organisations`, all need a signed-in session and, for 
 | `POST /{tenantId}/reinstate` | Suspended back to Approved, with a reason (400 `state:transition` for any other state). |
 | `POST /{tenantId}/suspend` | Approved to Suspended. Existing records stay readable for care under way; new registration, booking and signing are refused. |
 
-Every `POST` takes `{ "reason": "..." }` of **5 to 500 characters**, in plain words and never personal details (400 with `reason:required`, `reason:too_short` or `reason:too_long` otherwise). A move the state machine does not allow answers 400 with `state:transition`; an unknown organisation id answers 404.
+Every `POST` takes `{ "reason": "..." }` of **5 to 500 characters**, in plain words and never personal details (400 with `reason:required`, `reason:too_short` or `reason:too_long` otherwise). A move the state machine does not allow answers 400 with `state:transition`; an unknown organisation id answers 404. Every `POST` also needs an identity step-up in the last 5 minutes (`POST /bff/reauth`, then sign in again at Entra), as signing a note does; otherwise 403 with `code: reauth_required` and nothing changes (#1417, until the console with its security keys runs on Azure).
 
 Example, with a session cookie from signing in as the operator:
 

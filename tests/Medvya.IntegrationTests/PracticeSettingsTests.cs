@@ -377,7 +377,7 @@ public sealed class PracticeSettingsTests(PostgresFixture sql) : IClassFixture<P
         await settings.AddClosureAsync(new AddClosure { FacilityId = h.Facility, Date = new(2026, 11, 8), Name = "Diwali" });
         var duplicate = await Assert.ThrowsAsync<SettingsValidationException>(() => settings.AddClosureAsync(new AddClosure { FacilityId = h.Facility, Date = new(2026, 11, 8), Name = "Again" }));
         Assert.Equal("date:duplicate", $"{duplicate.Errors[0].Field}:{duplicate.Errors[0].Code}");
-        await settings.AddClosureAsync(new AddClosure { FacilityId = h.OtherFacility, Date = new(2026, 11, 8), Name = "Diwali" }); // the other location is its own
+        await h.Settings(h.Elsewhere).AddClosureAsync(new AddClosure { FacilityId = h.OtherFacility, Date = new(2026, 11, 8), Name = "Diwali" }); // the other location is its own
         Assert.Equal("name:required", (await Assert.ThrowsAsync<SettingsValidationException>(() =>
             settings.AddClosureAsync(new AddClosure { FacilityId = h.Facility, Date = new(2026, 11, 9), Name = " " }))).Errors.Select(e => $"{e.Field}:{e.Code}").Single());
         Assert.Null(await settings.AddClosureAsync(new AddClosure { FacilityId = Guid.NewGuid(), Date = new(2026, 11, 9), Name = "Nowhere" }));
@@ -385,6 +385,25 @@ public sealed class PracticeSettingsTests(PostgresFixture sql) : IClassFixture<P
 
         await using var audit = sql.Audit(h.Tenant);
         Assert.Equal(["settings.closure.create", "settings.closure.create"], await audit.Events.Select(e => e.Action).ToListAsync());
+    }
+
+    // SAFETY: mutation check: made PracticeSettings.AdministersAsync always true (location, hours, add and remove holiday)
+    // -> AnAdministratorOfOneLocationCannotChangeAnother failed.
+    [Fact]
+    public async Task AnAdministratorOfOneLocationCannotChangeAnother()
+    {
+        var closure = await h.Settings(h.Elsewhere).AddClosureAsync(new AddClosure { FacilityId = h.OtherFacility, Date = new(2026, 11, 8), Name = "Diwali" });
+        var admin = h.Settings(h.Admin); // administers Adyar only; Velachery is h.Elsewhere's
+        Assert.Null(await admin.UpdateLocationAsync(h.OtherFacility, new SaveLocation { Name = "Taken over" }));
+        Assert.Null(await admin.SetHoursAsync(h.OtherFacility, [new(DayOfWeek.Monday, new(9, 0), new(10, 0))]));
+        Assert.Null(await admin.AddClosureAsync(new AddClosure { FacilityId = h.OtherFacility, Date = new(2026, 11, 9), Name = "Closed" }));
+        Assert.False(await admin.RemoveClosureAsync(closure!.Id));
+
+        await using var db = sql.Context(h.Tenant);
+        Assert.Equal("Velachery (synthetic)", (await db.Facilities.SingleAsync(f => f.Id == h.OtherFacility)).Name);
+        Assert.Empty(await db.OperatingHours.Where(o => o.FacilityId == h.OtherFacility).ToListAsync());
+        Assert.Equal([closure.Id], await db.Closures.Where(c => c.FacilityId == h.OtherFacility).Select(c => c.Id).ToListAsync());
+        Assert.NotNull(await h.Settings(h.Elsewhere).UpdateLocationAsync(h.OtherFacility, new SaveLocation { Name = "Velachery North (synthetic)" })); // its own administrator can
     }
 
     HoldSlot Hold(DateTimeOffset start) => new() { FacilityId = h.Facility, CalendarId = h.Doctor, Start = start, VisitType = Scheduling.Domain.VisitType.FollowUp };

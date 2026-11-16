@@ -2452,6 +2452,7 @@
   "mobile.error.generic": "कुछ गड़बड़ हुई। फिर से कोशिश करें।",
   "mobile.error.notConnected": "यह बिल्ड अभी Medvya से जुड़ा नहीं है।",
   "mobile.error.offline": "आप ऑफ़लाइन हैं और इस फ़ोन पर पिछले 24 घंटों की कोई कॉपी नहीं है।",
+  "mobile.error.upgradeRequired": "ऐप का यह संस्करण बहुत पुराना है। Medvya का उपयोग जारी रखने के लिए इसे ऐप स्टोर से अपडेट करें।",
   "mobile.sex.F": "म",
   "mobile.sex.M": "पु",
   "mobile.role.doctor": "डॉक्टर",

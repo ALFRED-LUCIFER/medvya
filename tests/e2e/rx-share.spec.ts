@@ -46,7 +46,7 @@ test('the doctor shares the prescription with the patient and a pharmacy, then r
 
 test('the link page opens the PDF only with the code, and says when a link is unknown or replaced', async ({ page }) => {
   const bodies = await mockSharedLink(page);
-  await page.goto('/rx/synthetic-link');
+  await page.goto('/rx#t=synthetic-link');
   await expect(page.getByRole('heading', { name: 'Shared prescription' })).toBeVisible();
   await expect(page.getByText('If you are a pharmacy, ask the patient for the code.')).toBeVisible();
   await page.getByRole('button', { name: 'Text me the code' }).click();
@@ -61,10 +61,12 @@ test('the link page opens the PDF only with the code, and says when a link is un
   await expect(page.getByText('The PDF is saved on this device.')).toBeVisible();
   expect(bodies).toEqual([{ token: 'synthetic-link' }, { token: 'synthetic-link', code: '111111' }, { token: 'synthetic-link', code: '482913' }]); // in the body, never the URL
 
-  await page.goto('/rx/replaced-link');
+  await page.goto('about:blank'); // a fresh load: on the same page a new fragment alone would not reload it
+  await page.goto('/rx#t=replaced-link');
   await page.getByRole('button', { name: 'Text me the code' }).click();
   await expect(page.getByRole('alert')).toContainText('Do not dispense from this link.');
-  await page.goto('/rx/made-up');
+  await page.goto('about:blank');
+  await page.goto('/rx#t=made-up');
   await page.getByRole('button', { name: 'Text me the code' }).click();
   await expect(page.getByRole('alert')).toContainText('This link is not valid or has expired.');
 });
@@ -90,7 +92,7 @@ for (const locale of ['en', 'ar'])
     expect(await axeViolations(page)).toEqual([]);
 
     await mockSharedLink(page);
-    await page.goto('/rx/synthetic-link');
+    await page.goto('/rx#t=synthetic-link');
     await page.getByRole('button', { name: locale === 'ar' ? 'أرسل لي الرمز' : 'Text me the code' }).click();
     await expect(page.getByRole('status')).toBeVisible();
     expect(await axeViolations(page)).toEqual([]);

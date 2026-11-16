@@ -22,7 +22,7 @@ jest.mock('expo-local-authentication', () => ({
 
 type Reply = [status: number, body?: unknown];
 /** A stand-in for Host.Api's patient sign-in endpoints, as the contract describes them. */
-const server = { revoked: false, issued: 0, access: '', code: [202] as Reply, verify: null as Reply | null, calls: [] as { path: string; auth: string | null; body: string }[] };
+const server = { revoked: false, issued: 0, access: '', code: [202] as Reply, verify: null as Reply | null, calls: [] as { path: string; auth: string | null; body: string; version?: string }[] };
 const reply = (status: number, body?: unknown) => ({ ok: status >= 200 && status < 300, status, json: async () => body });
 function issue() {
   server.issued++;
@@ -30,9 +30,10 @@ function issue() {
   return reply(200, { access_token: server.access, token_type: 'Bearer', expires_in: 900, refresh_token: `refresh-${server.issued}` });
 }
 function fakeFetch(url: string, init: RequestInit = {}) {
-  const auth = ((init.headers ?? {}) as Record<string, string>).Authorization ?? null;
+  const headers = (init.headers ?? {}) as Record<string, string>;
+  const auth = headers.Authorization ?? null;
   const path = url.replace(API, '');
-  server.calls.push({ path, auth, body: String(init.body ?? '') });
+  server.calls.push({ path, auth, body: String(init.body ?? ''), version: headers['X-Medvya-App-Version'] });
   if (path === '/v1/patient-sign-in/code') return reply(...server.code);
   if (path === '/v1/patient-sign-in/verify') return server.verify ? reply(...server.verify) : issue();
   if (path === '/v1/patient-sign-in/refresh') return server.revoked ? reply(400, { error: 'invalid_grant' }) : issue();
@@ -89,12 +90,14 @@ it('signs in with the SMS code, keeps the refresh token on this device only and 
   expect(keychain.get('medvya.refresh')).toEqual({ value: 'refresh-1', options: { keychainAccessible: WHEN_UNLOCKED_THIS_DEVICE_ONLY } });
   expect(server.calls.find(c => c.path === '/v1/patient/me')?.auth).toBe('Bearer access-1');
   expect(server.calls.every(c => !/access-|refresh-/.test(c.path))).toBe(true); // tokens never in a URL
+  expect(server.calls.every(c => c.version === '1.2.3')).toBe(true); // every request names the build, so the API can retire an old one (#1417)
 });
 
 it.each<[string, 'code' | 'verify', Reply, string]>([
   ['the number is locked', 'code', [429, { error: 'locked', retryAfterMinutes: 15 }], 'Too many wrong codes. Try again in 15 minutes.'],
   ['too many codes were sent', 'code', [429, { error: 'too_many_codes', retryAfterMinutes: 30 }], 'Too many codes were sent to this number. Try again in 30 minutes.'],
   ['the SMS could not be sent', 'code', [503, { error: 'send_failed' }], 'We could not send the code just now. Try again in a little while.'],
+  ['this build is too old to use', 'code', [426, { code: 'app.upgrade_required' }], 'This version of the app is too old. Update it from the app store to keep using Medvya.'],
   ['the code is wrong', 'verify', [400, { error: 'wrong_code' }], 'That code did not work. Check the app and try again.'],
   ['five wrong codes locked the number', 'verify', [429, { error: 'locked', retryAfterMinutes: 1 }], 'Too many wrong codes. Try again in 1 minute.'],
 ])('says in plain words when %s, and keeps no token', async (_, endpoint, answer, words) => {

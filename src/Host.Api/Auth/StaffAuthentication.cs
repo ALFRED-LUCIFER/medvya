@@ -189,12 +189,12 @@ public static partial class StaffAuthentication
 
     public static WebApplication MapStaffSession(this WebApplication app)
     {
-        // No-hint start: deploy smoke test, invitation links, passkey and organisation buttons. The work email never rides in a Medvya
-        // URL (App Service logs, browser history and proxies keep URLs, AGENTS.md 1.2), so a query-string hint is refused, not read.
-        app.MapGet("/bff/login", (string? returnUrl, string? invitation, bool? signup, HttpRequest request, IConfiguration config) =>
-                request.Query.ContainsKey("loginHint")
-                    ? Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: "Send the login hint in the request body")
-                    : Results.Challenge(SignInProperties(returnUrl, invitation, signup, config), [OpenIdConnectDefaults.AuthenticationScheme]))
+        // No-hint start: deploy smoke test, passkey and organisation buttons. Neither the work email nor an invitation token rides in a Medvya
+        // URL (App Service logs, browser history and proxies keep URLs, AGENTS.md 1.2; #1417), so either in the query string is refused, not read.
+        app.MapGet("/bff/login", (string? returnUrl, bool? signup, HttpRequest request, IConfiguration config) =>
+                request.Query.ContainsKey("loginHint") || request.Query.ContainsKey("invitation")
+                    ? Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: "Send the login hint or invitation in the request body")
+                    : Results.Challenge(SignInProperties(returnUrl, null, signup, config), [OpenIdConnectDefaults.AuthenticationScheme]))
             .AllowAnonymous()
             .RequireRateLimiting(SignInRateLimit);
 

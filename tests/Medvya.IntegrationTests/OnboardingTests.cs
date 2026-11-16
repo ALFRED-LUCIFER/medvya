@@ -226,8 +226,8 @@ public sealed partial class OnboardingTests(PostgresFixture sql) : IClassFixture
         // and consultations (MDV-P1-061). Mutation check: invite with another role in /finish and this fails.
         var token = LinkToken().Match(outbox.Sent.Single(m => m.To == "joseph@example.test").Body).Groups[1].Value;
         using var desk = Browser();
-        var challenge = await desk.GetAsync(new Uri($"/bff/login?returnUrl=%2F&invitation={token}", UriKind.Relative));
-        var authorize = await desk.GetAsync(new Uri($"{challenge.Headers.Location}&login_hint=new&email=joseph%40example.test")); // the invited address
+        var provider = await InvitationTests.StartJoin(desk, token);
+        var authorize = await desk.GetAsync(new Uri($"{provider}&login_hint=new&email=joseph%40example.test")); // the invited address
         Assert.Equal("/", (await desk.GetAsync(authorize.Headers.Location)).Headers.Location?.OriginalString);
         var deskMembership = Assert.Single((await Json(await desk.GetAsync(new Uri("/v1/me/context", UriKind.Relative)))).GetProperty("memberships").EnumerateArray());
         Assert.Equal("Receptionist", deskMembership.GetProperty("role").GetString());
@@ -240,7 +240,7 @@ public sealed partial class OnboardingTests(PostgresFixture sql) : IClassFixture
         Assert.Equal(HttpStatusCode.NotFound, (await browser.GetAsync(visit)).StatusCode); // the doctor gets past the policy: the refusal is the role's
     }
 
-    [GeneratedRegex(@"https://clinic\.test/invite/([A-Za-z0-9_-]+)")]
+    [GeneratedRegex(@"https://clinic\.test/invite#t=([A-Za-z0-9_-]+)")]
     private static partial Regex LinkToken();
 
     /// <summary>A new person with a valid draft that invites <paramref name="invitee"/>, one click from finishing.</summary>

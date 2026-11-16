@@ -1,0 +1,790 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Medvya Billing Papers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Courier+Prime&family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+Arabic:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js" integrity="sha512-ZDSPMa/JM1D+7kdg2x3BsruQ6T/JpJo3jWDWkCZsP+5yVyp1KfESqLI+7RqB5k24F7p2cV7i2YHh/890y6P6Sw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<style>
+/* Medvya tokens (packages/tokens/src/tokens.json). The papers are always white paper; only the page around them themes. */
+:root {
+  --brand-950: #102a43; --brand-800: #0b5c55; --brand-700: #0f766e; --brand-50: #e7f6f4;
+  --ink-900: #142536; --ink-700: #334e68; --ink-600: #506579; --ink-400: #8296a8; --ink-200: #cbd6e0; --ink-100: #edf1f5;
+  --line: #dfe7ed; --line-strong: #76899c; --danger-700: #b42333; --danger-50: #fdecee; --danger-200: #f3b9c0;
+  --page: #f7fafc; --page-ink: #142536; --page-muted: #506579; --page-line: #dfe7ed; --page-card: #ffffff;
+  --sans: "Manrope", "Noto Sans Arabic", system-ui, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --ease: cubic-bezier(0.23, 1, 0.32, 1);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --page: #0b1622; --page-ink: #e6edf3; --page-muted: #9fb3c8; --page-line: #1e3a55; --page-card: #102a43; color-scheme: dark; }
+}
+:root[data-theme="dark"] { --page: #0b1622; --page-ink: #e6edf3; --page-muted: #9fb3c8; --page-line: #1e3a55; --page-card: #102a43; color-scheme: dark; }
+
+* { box-sizing: border-box; }
+html { -webkit-font-smoothing: antialiased; }
+body { margin: 0; background: var(--page); color: var(--page-ink); font: 500 14px/20px var(--sans); }
+::selection { background: var(--brand-50); color: var(--brand-950); }
+a { color: inherit; text-underline-offset: 3px; }
+:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+
+/* ---------- page chrome ---------- */
+.wrap { padding-block: 32px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); max-width: 1440px; margin: 0 auto; }
+@media (min-width: 768px) { .wrap { padding-block: 48px 96px; padding-left: max(32px, env(safe-area-inset-left, 0px)); padding-right: max(32px, env(safe-area-inset-right, 0px)); } }
+header.top { display: grid; gap: 12px; margin-bottom: 40px; }
+header.top h1 { margin: 0; font-size: 30px; line-height: 36px; font-weight: 800; letter-spacing: -0.01em; text-wrap: balance; }
+header.top p { margin: 0; color: var(--page-muted); max-width: 68ch; font-size: 16px; line-height: 24px; }
+nav.toc { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+nav.toc a { text-decoration: none; border: 1px solid var(--page-line); border-radius: 999px; padding: 8px 14px; min-height: 36px; font-weight: 600; background: var(--page-card); transition: border-color 150ms var(--ease); }
+nav.toc a:hover { border-color: var(--line-strong); }
+section.piece { border-top: 1px solid var(--page-line); padding-top: 32px; margin-top: 56px; }
+section.piece > h2 { margin: 0 0 4px; font-size: 20px; line-height: 28px; font-weight: 700; }
+section.piece > .lead { margin: 0 0 24px; color: var(--page-muted); max-width: 72ch; }
+.stage { display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start; }
+.specimen { display: grid; gap: 10px; }
+.specimen > figcaption { font-size: 12px; line-height: 16px; font-weight: 600; color: var(--page-muted); }
+.notes { display: grid; gap: 16px; max-width: 72ch; margin-top: 28px; }
+@media (min-width: 1024px) { .notes { grid-template-columns: 1fr 1fr; max-width: none; } }
+.notes div { background: var(--page-card); border: 1px solid var(--page-line); border-radius: 12px; padding: 16px; }
+.notes h3 { margin: 0 0 8px; font-size: 14px; line-height: 20px; font-weight: 700; }
+.notes ul { margin: 0; padding-inline-start: 18px; color: var(--page-muted); }
+.notes li + li { margin-top: 6px; }
+
+/* ---------- shared paper grammar: hanging labels ---------- */
+.paper { background: #fff; color: var(--ink-900); box-shadow: 0 1px 2px rgba(16,42,67,.08), 0 8px 24px rgba(16,42,67,.10); font-family: var(--sans); font-variant-numeric: tabular-nums; }
+.paper [lang="ar"], .paper[lang="ar"] { font-family: "Noto Sans Arabic", var(--sans); }
+.lbl { font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-600); }
+.paper[lang="ar"] .lbl { text-transform: none; letter-spacing: 0; }
+.mono { font-family: var(--mono); font-weight: 500; font-size: 0.94em; }
+.qr svg { display: block; width: 100%; height: auto; }
+
+/* ---------- token slip: 80 mm thermal, monochrome ---------- */
+.slip { width: 80mm; padding: 5mm 4mm 6mm; color: #000; }
+.slip .lbl { color: #000; font-size: 6.5pt; }
+.slip .mast { display: flex; gap: 2.5mm; align-items: center; }
+.slip .mast svg { width: 9mm; height: 9mm; flex: none; }
+.slip .clinic { font-size: 11pt; line-height: 1.15; font-weight: 800; }
+.slip .addr { font-size: 7pt; line-height: 1.3; margin-top: .5mm; }
+.slip .rule { height: 0; border-top: 1.4pt solid #000; margin: 3mm 0 3.5mm; }
+.slip .rows { display: grid; grid-template-columns: 15mm 1fr; column-gap: 3mm; row-gap: 2mm; align-items: baseline; }
+.paper[lang="ar"].slip .lbl, .slip[lang="ar"] .wifi dt { font-size: 7.5pt; }
+.slip .token { font-family: var(--sans); font-variant-numeric: tabular-nums; font-size: 46pt; line-height: .95; font-weight: 800; letter-spacing: -0.02em; }
+.slip .val { font-size: 9.5pt; line-height: 1.3; font-weight: 600; }
+.slip .ahead { font-size: 12pt; font-weight: 800; }
+.slip .notice { font-size: 8.5pt; line-height: 1.35; font-weight: 600; margin: 3.5mm 0 0; }
+.slip .tear { margin: 4mm -4mm 3.5mm; border-top: 1pt dashed #000; position: relative; }
+.slip .tear span { position: absolute; inset-inline-start: 4mm; top: -2.4mm; background: #fff; padding-inline: 1mm; font-size: 6.5pt; font-weight: 700; }
+.slip .wifi { display: grid; grid-template-columns: 24mm 1fr; column-gap: 3.5mm; align-items: start; }
+.slip .wifi .qr { width: 24mm; }
+.slip .wifi .head { display: flex; gap: 1.5mm; align-items: center; font-size: 9.5pt; font-weight: 800; margin-bottom: 1.5mm; }
+.slip .wifi .head svg { width: 4mm; height: 4mm; }
+.slip .wifi dl { margin: 0; display: grid; gap: 1.2mm; }
+.slip .wifi dt { font-size: 6.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+.slip[lang="ar"] .wifi dt { text-transform: none; letter-spacing: 0; }
+.slip .wifi dd { margin: 0; font-size: 10pt; font-weight: 800; word-break: break-all; }
+.slip .wifi .today { font-size: 7pt; font-weight: 600; margin-top: 1.5mm; }
+
+/* ---------- A4 / A5 sheets, scaled to their frame with container units ---------- */
+.frame { container-type: inline-size; width: 100%; }
+.frame.a4 { max-width: 794px; }   /* A4 at 96 dpi */
+.frame.a5 { max-width: 559px; }   /* A5 at 96 dpi */
+.frame.thumb { max-width: 560px; }
+.sheet { --mm: calc(100cqw / 210); --pt: calc(var(--mm) * 0.3528); aspect-ratio: 210 / 297; padding: calc(var(--mm) * 18) calc(var(--mm) * 19) calc(var(--mm) * 14); display: flex; flex-direction: column; font-size: calc(var(--pt) * 10); line-height: 1.38; overflow: hidden; }
+.a5 .sheet { --mm: calc(100cqw / 148); padding: calc(var(--mm) * 11) calc(var(--mm) * 12) calc(var(--mm) * 9); }
+.sheet .lbl { font-size: calc(var(--pt) * 6.8); padding-top: calc(var(--pt) * 2.2); }
+
+.mast { display: flex; justify-content: space-between; gap: calc(var(--mm) * 6); align-items: flex-start; }
+.mast .who { display: flex; gap: calc(var(--mm) * 3.5); align-items: center; min-width: 0; }
+.mast .who svg { width: calc(var(--mm) * 13); height: calc(var(--mm) * 13); flex: none; }
+.mast .clinic { font-size: calc(var(--pt) * 15); line-height: 1.15; font-weight: 800; color: var(--brand-950); letter-spacing: -0.01em; }
+.mast .addr { font-size: calc(var(--pt) * 7.6); color: var(--ink-600); margin-top: calc(var(--pt) * 2); }
+.mast .doc { text-align: end; }
+.mast .doc b { display: block; font-size: calc(var(--pt) * 11); font-weight: 800; color: var(--ink-900); }
+.mast .doc span { display: block; font-size: calc(var(--pt) * 7.6); color: var(--ink-700); }
+.trule { border-top: calc(var(--pt) * 2) solid var(--brand-700); margin: calc(var(--mm) * 4.5) 0 0; }
+.meta { display: flex; justify-content: space-between; gap: calc(var(--mm) * 4); font-size: calc(var(--pt) * 7.6); color: var(--ink-600); padding: calc(var(--pt) * 4) 0 calc(var(--mm) * 5); }
+.meta .title { font-size: calc(var(--pt) * 7.6); font-weight: 800; color: var(--brand-700); text-transform: uppercase; letter-spacing: 0.1em; }
+.meta .mono { color: var(--ink-900); }
+
+.hang { display: grid; grid-template-columns: calc(var(--mm) * 27) 1fr; column-gap: calc(var(--mm) * 5); }
+.a5 .hang { grid-template-columns: calc(var(--mm) * 21) 1fr; column-gap: calc(var(--mm) * 4); }
+.hang > .lbl, .hang > .val { padding-block: calc(var(--mm) * 2.6); border-top: calc(var(--pt) * .5) solid var(--line); }
+.hang > .lbl { padding-top: calc(var(--mm) * 2.6 + var(--pt) * 2.2); }
+.hang > .first { border-top: 0; }
+.ident b { font-size: calc(var(--pt) * 11.5); font-weight: 800; }
+.ident .sub { color: var(--ink-700); }
+.ident .sub .mono { color: var(--ink-900); }
+.allergy { display: inline-flex; gap: calc(var(--mm) * 1.8); align-items: center; background: var(--danger-50); border: calc(var(--pt) * .8) solid var(--danger-200); color: var(--danger-700); font-weight: 800; padding: calc(var(--pt) * 3.5) calc(var(--pt) * 7); border-radius: calc(var(--pt) * 3); }
+.allergy svg { width: calc(var(--pt) * 11); height: calc(var(--pt) * 11); flex: none; }
+.allergy span { color: var(--ink-900); font-weight: 700; }
+
+ol.meds { list-style: none; margin: 0; padding: 0; display: grid; gap: calc(var(--mm) * 3.4); }
+ol.meds li { display: grid; grid-template-columns: calc(var(--pt) * 14) 1fr; }
+ol.meds .n { font-weight: 800; color: var(--brand-700); }
+ol.meds .drug { font-size: calc(var(--pt) * 11); font-weight: 800; letter-spacing: 0.01em; }
+ol.meds .drug small { font-size: calc(var(--pt) * 9.5); font-weight: 600; color: var(--ink-700); letter-spacing: 0; }
+ol.meds .sig { margin-top: calc(var(--pt) * 1); }
+ol.meds .warn { margin-top: calc(var(--pt) * 2.5); font-size: calc(var(--pt) * 7.2); line-height: 1.35; color: var(--ink-700); border: calc(var(--pt) * .6) solid var(--ink-200); border-radius: calc(var(--pt) * 2.5); padding: calc(var(--pt) * 3.5) calc(var(--pt) * 6); }
+ol.meds .warn b { color: var(--ink-900); }
+.stop b { font-weight: 800; }
+.stop .why { color: var(--ink-700); }
+.muted { color: var(--ink-700); }
+.small { font-size: calc(var(--pt) * 7.6); color: var(--ink-600); }
+
+.sign { margin-top: auto; display: flex; justify-content: flex-end; padding-top: calc(var(--mm) * 6); }
+.sign .box { width: calc(var(--mm) * 62); text-align: start; }
+.a5 .sign .box { width: calc(var(--mm) * 56); }
+.sign svg { width: calc(var(--mm) * 34); height: calc(var(--mm) * 11); display: block; margin-bottom: calc(var(--pt) * -2); }
+.sign .line { border-top: calc(var(--pt) * .7) solid var(--ink-900); padding-top: calc(var(--pt) * 3); }
+.sign b { display: block; font-weight: 800; }
+.sign span { display: block; font-size: calc(var(--pt) * 7.6); color: var(--ink-700); }
+
+.foot { margin-top: calc(var(--mm) * 6); border-top: calc(var(--pt) * .5) solid var(--line); padding-top: calc(var(--mm) * 3.5); display: grid; grid-template-columns: calc(var(--mm) * 21) 1fr auto; gap: calc(var(--mm) * 4); align-items: center; font-size: calc(var(--pt) * 7.4); color: var(--ink-600); }
+.a5 .foot { grid-template-columns: calc(var(--mm) * 18) 1fr auto; margin-top: calc(var(--mm) * 3); padding-top: calc(var(--mm) * 2.5); }
+/* A5: the same type on a smaller page, so the rhythm tightens to keep a typical prescription on one page; a longer one flows to page 2 under the repeated masthead. */
+.a5 .hang > .lbl, .a5 .hang > .val { padding-block: calc(var(--mm) * 1.7); }
+.a5 .hang > .lbl { padding-top: calc(var(--mm) * 1.7 + var(--pt) * 2.2); }
+.a5 ol.meds { gap: calc(var(--mm) * 2.2); }
+.a5 .meta { padding-bottom: calc(var(--mm) * 3); }
+.a5 .sign { padding-top: calc(var(--mm) * 2); }
+.a5 .sign svg { height: calc(var(--mm) * 9); }
+.foot .qr { width: 100%; }
+.foot b { color: var(--ink-900); display: block; font-size: calc(var(--pt) * 8); }
+.foot .url { font-family: var(--mono); color: var(--ink-900); word-break: break-all; }
+.foot .page { text-align: end; white-space: nowrap; }
+.foot .hash { font-family: var(--mono); font-size: calc(var(--pt) * 6.4); word-break: break-all; }
+.letter p { margin: 0 0 calc(var(--pt) * 5); }
+.letter p:last-child { margin: 0; }
+
+/* ---------- email ---------- */
+.client { width: 100%; max-width: 640px; background: var(--page-card); border: 1px solid var(--page-line); border-radius: 12px; overflow: hidden; }
+.client .bar { padding: 14px 18px; border-bottom: 1px solid var(--page-line); display: grid; gap: 2px; font-size: 13px; line-height: 18px; }
+.client .bar b { font-size: 15px; line-height: 22px; }
+.client .bar span { color: var(--page-muted); }
+.client .body { background: #eef2f5; padding: 24px 12px; }
+.mail { max-width: 600px; margin: 0 auto; background: #fff; color: var(--ink-900); border-radius: 12px; overflow: hidden; font-family: var(--sans); font-variant-numeric: tabular-nums; }
+.mail[lang="ar"] { font-family: "Noto Sans Arabic", var(--sans); }
+.mail .m-head { padding: 24px 28px 18px; display: flex; gap: 12px; align-items: center; border-bottom: 2px solid var(--brand-700); }
+.mail .m-head svg { width: 36px; height: 36px; flex: none; }
+.mail .m-head b { display: block; font-size: 17px; line-height: 22px; font-weight: 800; color: var(--brand-950); }
+.mail .m-head span { display: block; font-size: 12px; line-height: 16px; color: var(--ink-600); }
+.mail .m-body { padding: 26px 28px 8px; }
+.mail h2 { margin: 0 0 8px; font-size: 22px; line-height: 28px; font-weight: 800; letter-spacing: -0.01em; color: var(--ink-900); }
+.mail p { margin: 0 0 16px; font-size: 16px; line-height: 24px; }
+.mail .facts { display: grid; grid-template-columns: 96px 1fr; margin: 6px 0 22px; }
+.mail .facts > * { padding: 11px 0; border-top: 1px solid var(--line); }
+.mail .facts > .first { border-top: 0; }
+.mail .facts .lbl { font-size: 11px; line-height: 16px; padding-top: 14px; }
+.mail[lang="ar"] .facts .lbl { font-size: 12px; }
+.mail .facts .v { font-size: 16px; line-height: 24px; font-weight: 700; }
+.mail .facts .v span { display: block; font-weight: 500; font-size: 14px; line-height: 20px; color: var(--ink-700); }
+.mail .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 22px; border-radius: 10px; background: var(--brand-700); color: #fff; font-weight: 700; font-size: 15px; text-decoration: none; }
+.mail .fallback { font-size: 13px; line-height: 18px; color: var(--ink-600); margin-top: 14px; }
+.mail .fallback .mono { color: var(--ink-900); word-break: break-all; }
+.mail .m-foot { padding: 18px 28px 24px; margin-top: 16px; background: #f7fafc; border-top: 1px solid var(--line); font-size: 12px; line-height: 18px; color: var(--ink-600); }
+.mail .m-foot p { font-size: 12px; line-height: 18px; margin: 0 0 6px; }
+.mail .m-foot p:last-child { margin: 0; }
+
+/* ---------- billing additions (same grammar as the print family) ---------- */
+.back { display: inline-flex; margin-bottom: 4px; color: var(--page-muted); font-weight: 600; }
+.paper .num { font-variant-numeric: tabular-nums; text-align: end; white-space: nowrap; }
+.doc-title { display: flex; align-items: baseline; gap: calc(var(--mm) * 3); }
+.doc-title .alt { font-family: "Noto Sans Arabic", var(--sans); font-size: calc(var(--pt) * 9); font-weight: 700; color: var(--brand-700); letter-spacing: 0; text-transform: none; }
+.reg { font-size: calc(var(--pt) * 7.2); color: var(--ink-700); margin-top: calc(var(--pt) * 1.5); }
+.kv { display: grid; grid-template-columns: max-content 1fr; column-gap: calc(var(--mm) * 3); row-gap: calc(var(--pt) * 1.5); }
+.kv dt { color: var(--ink-600); }
+.kv dd { margin: 0; font-weight: 600; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: calc(var(--mm) * 6); }
+
+table.lines { width: 100%; border-collapse: collapse; font-size: calc(var(--pt) * 9); }
+table.lines th { font-size: calc(var(--pt) * 6.8); font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-600); text-align: start; padding: 0 0 calc(var(--pt) * 3); border-bottom: calc(var(--pt) * .7) solid var(--ink-900); }
+table.lines th.num { text-align: end; }
+table.lines td { padding: calc(var(--pt) * 4) 0; border-bottom: calc(var(--pt) * .5) solid var(--line); vertical-align: top; }
+table.lines td + td, table.lines th + th { padding-inline-start: calc(var(--mm) * 3); }
+table.lines .svc b { font-weight: 700; }
+table.lines .svc span { display: block; color: var(--ink-600); font-size: calc(var(--pt) * 7.4); }
+
+.totals { margin-inline-start: auto; width: 52%; margin-top: calc(var(--mm) * 3); display: grid; grid-template-columns: 1fr auto; row-gap: calc(var(--pt) * 2.5); font-size: calc(var(--pt) * 9); }
+.totals .grand { font-size: calc(var(--pt) * 12); font-weight: 800; border-top: calc(var(--pt) * .9) solid var(--ink-900); padding-top: calc(var(--pt) * 4); margin-top: calc(var(--pt) * 2); }
+.totals .split { color: var(--ink-700); }
+.words { margin-top: calc(var(--mm) * 3); font-size: calc(var(--pt) * 8.4); }
+.words b { font-weight: 700; }
+.taxnote { margin-top: calc(var(--pt) * 3); font-size: calc(var(--pt) * 7.4); color: var(--ink-700); }
+
+.pay { margin-top: calc(var(--mm) * 5); display: grid; grid-template-columns: calc(var(--mm) * 30) 1fr; gap: calc(var(--mm) * 5); align-items: center; border: calc(var(--pt) * .8) solid var(--ink-200); border-radius: calc(var(--pt) * 5); padding: calc(var(--mm) * 3.5) calc(var(--mm) * 5); }
+.pay .amt { font-size: calc(var(--pt) * 15); font-weight: 800; color: var(--ink-900); }
+.pay .how { font-size: calc(var(--pt) * 8.4); color: var(--ink-700); margin-top: calc(var(--pt) * 2); }
+.pay .link { font-family: var(--mono); font-size: calc(var(--pt) * 8.4); color: var(--ink-900); margin-top: calc(var(--pt) * 3); }
+.pay .apps { font-size: calc(var(--pt) * 7.2); color: var(--ink-600); margin-top: calc(var(--pt) * 3); }
+.status { display: inline-flex; align-items: center; gap: calc(var(--pt) * 3); font-size: calc(var(--pt) * 7.4); font-weight: 800; text-transform: uppercase; letter-spacing: .08em; padding: calc(var(--pt) * 2.5) calc(var(--pt) * 6); border-radius: 999px; border: calc(var(--pt) * .8) solid currentColor; }
+.status.due { color: #975a16; }
+.status.paid { color: #087f5b; }
+.status svg { width: calc(var(--pt) * 9); height: calc(var(--pt) * 9); }
+
+/* thermal receipt rows */
+.slip .tline { display: grid; grid-template-columns: 1fr auto; column-gap: 3mm; font-size: 9pt; line-height: 1.35; padding: 1.2mm 0; }
+.slip .tline small { display: block; font-size: 7pt; font-weight: 600; }
+.slip .tline .num { text-align: end; font-weight: 700; }
+.slip .thin { border-top: .8pt solid #000; margin: 2mm 0; }
+.slip .dash { border-top: 1pt dashed #000; margin: 2.5mm 0; }
+.slip .big { display: grid; grid-template-columns: 1fr auto; align-items: baseline; font-size: 10pt; font-weight: 800; }
+.slip .big .num { font-size: 17pt; }
+.slip .meta2 { display: grid; grid-template-columns: max-content 1fr; column-gap: 3mm; row-gap: .8mm; font-size: 8pt; line-height: 1.3; }
+.slip .meta2 dt { font-weight: 700; }
+.slip .meta2 dd { margin: 0; }
+.slip .stamp { border: 1.4pt solid #000; padding: 2mm; text-align: center; font-weight: 800; font-size: 11pt; letter-spacing: .06em; margin-top: 3mm; }
+.slip .stamp small { display: block; font-size: 7.5pt; font-weight: 600; letter-spacing: 0; margin-top: .6mm; }
+.slip .fine { font-size: 7pt; line-height: 1.35; margin-top: 3mm; }
+.slip .title2 { font-size: 10pt; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.slip[lang="ar"] .title2 { letter-spacing: 0; }
+.slip.w58 { width: 58mm; padding: 4mm 3mm 5mm; }
+
+/* dot-matrix continuous stationery, 2-ply */
+.dmx-stack { position: relative; padding: 0 0 18px 18px; max-width: 100%; overflow-x: auto; }
+.dmx { --hole: 9px; position: relative; width: max-content; padding: 22px 34px; background: #fffef9;
+  background-image: radial-gradient(circle at 12px 18px, var(--page) 4.5px, transparent 5px), radial-gradient(circle at calc(100% - 12px) 18px, var(--page) 4.5px, transparent 5px);
+  background-size: 100% 25.4px; background-repeat: repeat-y; box-shadow: 0 1px 2px rgba(16,42,67,.08), 0 8px 24px rgba(16,42,67,.10); }
+.dmx::before, .dmx::after { content: ""; position: absolute; top: 0; bottom: 0; width: 24px; border-inline-end: 1px dashed #c9c3b3; }
+.dmx::before { inset-inline-start: 0; }
+.dmx::after { inset-inline-end: 0; border-inline-end: 0; border-inline-start: 1px dashed #c9c3b3; }
+.dmx pre { margin: 0; font: 400 12.5px/17px "Courier Prime", "Courier New", monospace; color: #1b1b1b; letter-spacing: .02em; text-shadow: 0 0 .4px rgba(0,0,0,.6); }
+.dmx.copy { position: absolute; inset: 18px auto auto 0; background-color: #fdf3c7; z-index: -1; }
+.dmx.copy pre { color: #23408e; opacity: .85; filter: blur(.25px); }
+.dmx-wrap { position: relative; isolation: isolate; }
+
+/* payment flow */
+.flow { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); counter-reset: step; max-width: 1100px; }
+.flow li { list-style: none; background: var(--page-card); border: 1px solid var(--page-line); border-radius: 12px; padding: 16px; counter-increment: step; }
+.flow li::before { content: counter(step); display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 999px; background: var(--brand-700); color: #fff; font-weight: 800; font-size: 12px; margin-bottom: 10px; }
+.flow b { display: block; margin-bottom: 4px; }
+.flow span { color: var(--page-muted); }
+.flow .tag { display: inline-block; margin-top: 8px; font-size: 12px; line-height: 16px; font-weight: 700; padding: 2px 8px; border-radius: 6px; border: 1px solid var(--page-line); color: var(--page-ink); }
+
+/* email additions */
+.mail .total { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 16px 0 4px; border-top: 2px solid var(--ink-900); margin-bottom: 18px; }
+.mail .total span { font-size: 14px; font-weight: 700; color: var(--ink-700); }
+.mail .total b { font-size: 28px; line-height: 34px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.mail .chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; line-height: 16px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; padding: 4px 10px; border-radius: 999px; border: 1px solid currentColor; margin-bottom: 12px; }
+.mail .chip.paid { color: #087f5b; } .mail .chip.due { color: #975a16; } .mail .chip.ref { color: #334e68; }
+.mail .chip svg { width: 14px; height: 14px; }
+.mail .secure { font-size: 13px; line-height: 18px; color: var(--ink-600); margin-top: 14px; }
+
+/* checklist */
+.gaps { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); max-width: 1200px; }
+.gaps div { background: var(--page-card); border: 1px solid var(--page-line); border-radius: 12px; padding: 16px; }
+.gaps h3 { margin: 0 0 6px; font-size: 14px; line-height: 20px; font-weight: 700; }
+.gaps p { margin: 0; color: var(--page-muted); }
+.gaps .who { display: inline-block; margin-top: 10px; font-size: 12px; line-height: 16px; font-weight: 700; color: var(--page-ink); }
+/* thermal mastheads keep their own sizes in black (the A4 .mast rules use the sheet's --pt, which a slip has none of) */
+.slip .mast { justify-content: flex-start; }
+.slip .mast .clinic { font-size: 11pt; color: #000; }
+.slip .mast .addr { font-size: 7pt; color: #000; margin-top: .5mm; }
+.paper .mono { white-space: nowrap; }
+.flow { padding: 0; margin: 0; }
+.flow span { display: block; }
+.flow .tag { display: inline-block; }
+</style>
+</head>
+<body>
+
+<!-- Reused drawings -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <!-- Sample clinic logo: the clinic uploads its own in Settings; this stands in for it. -->
+    <symbol id="logo" viewBox="0 0 48 48"><rect width="48" height="48" rx="12" fill="#0f766e"/><path d="M24 11c-6 6-9 11.5-9 16.5a9 9 0 0 0 18 0C33 22.5 30 17 24 11Z" fill="#e7f6f4"/><path d="M24 20v17M24 29l-4.5-4M24 33l4.5-4" stroke="#0f766e" stroke-width="2.4" stroke-linecap="round" fill="none"/></symbol>
+    <symbol id="logo-mono" viewBox="0 0 48 48"><rect width="48" height="48" rx="12" fill="#000"/><path d="M24 11c-6 6-9 11.5-9 16.5a9 9 0 0 0 18 0C33 22.5 30 17 24 11Z" fill="#fff"/><path d="M24 20v17M24 29l-4.5-4M24 33l4.5-4" stroke="#000" stroke-width="2.4" stroke-linecap="round" fill="none"/></symbol>
+    <symbol id="shield" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/><path d="M12 8v4M12 16h.01" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol>
+    <symbol id="wifi" viewBox="0 0 24 24"><path d="M12 20h.01M2 8.82a15 15 0 0 1 20 0M5 12.86a10 10 0 0 1 14 0M8.5 16.43a5 5 0 0 1 7 0" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="signature" viewBox="0 0 170 55"><path d="M6 40c10-2 16-22 22-30 4-5 6 2 3 10-4 11-9 21-6 22 4 1 10-13 14-14 3-1 1 9 4 9s7-9 11-9c3 0 2 6 5 6 4 0 7-7 12-8 4-1 3 5 7 5 6 0 10-10 16-11 4 0 2 7 6 7 7 0 14-9 22-10M40 47c25-4 60-6 110-9" fill="none" stroke="#1d2f6f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M12 7v5l3 2" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol>
+    <symbol id="check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+  <header class="top">
+    <h1>Medvya billing papers and emails</h1>
+    <p>Bills, receipts, the day-close report and the payment emails, in the same layout as the prescription and token slip: the clinic leads, a teal rule, labels hanging in the start margin. Payment in India runs through Razorpay (UPI, card, net banking). Every person, clinic, number, GSTIN and payment reference here is synthetic, and the payment QR codes point nowhere.</p>
+    <nav class="toc" aria-label="Pieces">
+      <a href="#bill">A4 bill</a><a href="#uae">UAE tax invoice</a><a href="#thermal">Thermal receipts</a><a href="#dmx">Dot-matrix carbon copy</a><a href="#email">Emails</a><a href="#flow">How a Razorpay payment flows</a><a href="#gaps">What else is missing</a>
+    </nav>
+  </header>
+
+  <!-- ===================== A4 BILL (INDIA) ===================== -->
+  <section class="piece" id="bill" aria-labelledby="bill-h">
+    <h2 id="bill-h">Bill of supply · A4, India, payment due</h2>
+    <p class="lead">What the desk prints or the patient opens before paying. The payment box carries a UPI QR code from Razorpay with the amount already filled in, and the same link that goes out by email and SMS. Consultation and diagnostics are exempt health care, so this is a bill of supply, not a tax invoice. Once paid, the payment box becomes a "Paid" line with the Razorpay reference.</p>
+    <div class="stage">
+      <figure class="specimen" style="margin:0;flex:1 1 560px;max-width:794px">
+        <div class="frame a4">
+          <article class="paper sheet" lang="en" aria-label="Bill of supply, A4">
+            <div class="mast">
+              <div class="who"><svg aria-hidden="true"><use href="#logo"/></svg>
+                <div><div class="clinic">Iyer Family Clinic</div><div class="addr">12 Kasturba Nagar 1st Street, Adyar, Chennai, Tamil Nadu 600020 · 044 2441 0000</div><div class="reg">GSTIN 33ABCDE1234F1Z5 · Clinical establishment reg. TN-CE-2021-008812</div></div></div>
+              <div class="doc"><b>Bill of supply</b><span class="mono">INV/26-27/00342</span><span>16 Nov 2026, 10:46 IST</span></div>
+            </div>
+            <div class="trule"></div>
+            <div class="meta"><span class="title">Original for recipient</span><span>Place of supply: Tamil Nadu (33)</span></div>
+
+            <div class="hang">
+              <span class="lbl first">Billed to</span>
+              <div class="val first ident"><b>Meera Iyer</b><div class="sub">Female · 54 years · MRN <span class="mono">DQ-10-4482</span></div></div>
+              <span class="lbl">Doctor</span>
+              <div class="val">Dr. Arjun Rao · MBBS, MD · Reg. TNMC 84213</div>
+              <span class="lbl">Visit</span>
+              <div class="val">16 Nov 2026 · <span class="mono">ENC-20441</span></div>
+              <span class="lbl">Services</span>
+              <div class="val">
+                <table class="lines">
+                  <thead><tr><th scope="col">Service</th><th scope="col">SAC</th><th scope="col" class="num">Qty</th><th scope="col" class="num">Rate</th><th scope="col" class="num">Amount ₹</th></tr></thead>
+                  <tbody>
+                    <tr><td class="svc"><b>Consultation, follow-up</b><span>Exempt</span></td><td class="mono">999312</td><td class="num">1</td><td class="num">600.00</td><td class="num">600.00</td></tr>
+                    <tr><td class="svc"><b>ECG, 12-lead</b><span>Exempt</span></td><td class="mono">999317</td><td class="num">1</td><td class="num">350.00</td><td class="num">350.00</td></tr>
+                    <tr><td class="svc"><b>Nebulisation</b><span>Exempt</span></td><td class="mono">999312</td><td class="num">1</td><td class="num">200.00</td><td class="num">200.00</td></tr>
+                  </tbody>
+                </table>
+                <div class="totals">
+                  <span>Sub-total</span><span class="num">1,150.00</span>
+                  <span>Round off</span><span class="num">0.00</span>
+                  <span class="grand">Total ₹</span><span class="grand num">1,150.00</span>
+                </div>
+                <div class="words"><b>Amount in words:</b> Rupees One Thousand One Hundred Fifty only</div>
+                <div class="taxnote">Health care services by a clinical establishment are exempt from GST.</div>
+              </div>
+            </div>
+
+            <div class="pay">
+              <div class="qr" data-qr="upi://pay?pa=sample@invalid&pn=Iyer%20Family%20Clinic&am=1150.00&cu=INR&tn=INV-26-27-00342" role="img" aria-label="UPI QR code to pay this bill"></div>
+              <div>
+                <span class="status due"><svg aria-hidden="true"><use href="#clock"/></svg>Payment due</span>
+                <div class="amt" style="margin-top:calc(var(--pt)*4)">Pay ₹1,150.00</div>
+                <div class="how">Scan with any UPI app, or open the link to pay by UPI, card or net banking.</div>
+                <div class="link">rzp.io/rzp/sample-link</div>
+                <div class="apps">Payments are taken by Razorpay. The clinic never sees your card number or UPI PIN.</div>
+              </div>
+            </div>
+
+            <div class="sign"><div class="box">
+              <svg aria-hidden="true"><use href="#signature"/></svg>
+              <div class="line"><b>For Iyer Family Clinic</b><span>Authorised signatory · A. Joseph, front desk</span></div>
+            </div></div>
+
+            <div class="foot" style="grid-template-columns:1fr auto">
+              <div><b>Check this bill is genuine</b><span class="url">verify.medvya.example/b/H3Q7M2KA</span></div>
+              <div class="page"><span class="mono">INV/26-27/00342</span><br>Page 1 of 1</div>
+            </div>
+          </article>
+        </div>
+        <figcaption>A4 · bill of supply, unpaid, with Razorpay UPI QR</figcaption>
+      </figure>
+    </div>
+    <div class="notes">
+      <div><h3>Choices in this design</h3><ul>
+        <li>The document's own name, number and date sit top right, where the doctor's block sits on the prescription.</li>
+        <li>Services are the one real table on any Medvya paper: amounts right-aligned in tabular figures, the total in the heaviest weight.</li>
+        <li>Only the payment box has a QR code. A second "check it is genuine" QR beside it would confuse a patient, so that one is a short link in the footer.</li>
+        <li>The round-off line always prints, even at 0.00, so the patient sees the rule (MDV-P4-004).</li>
+      </ul></div>
+      <div><h3>Same layout, other documents</h3><ul>
+        <li><b>Invoice-cum-bill of supply</b>: when a bill mixes exempt care with a taxable item, the title changes and each taxable line adds its GST rate and CGST/SGST amounts.</li>
+        <li><b>Credit note</b>: title "Credit note", an "Against INV/26-27/00342" row and negative amounts; the payment box says where the refund went.</li>
+        <li><b>Advance receipt</b> and <b>patient statement</b>: same masthead, a "Package" or "Period" row, and a running balance column.</li>
+        <li><b>Reprint</b>: "DUPLICATE" replaces "Original for recipient", and the reprint is logged.</li>
+      </ul></div>
+    </div>
+  </section>
+
+  <!-- ===================== UAE TAX INVOICE A5 ===================== -->
+  <section class="piece" id="uae" aria-labelledby="uae-h">
+    <h2 id="uae-h">Tax invoice · A5, UAE, insurer and co-pay</h2>
+    <p class="lead">The UAE version on A5: TRN and DoH facility number in the masthead, the title in English and Arabic, the insurer and claim, VAT per line, and the split between what the insurer pays and what the patient paid. The Emirates ID is masked.</p>
+    <div class="stage">
+      <figure class="specimen" style="margin:0;flex:1 1 400px;max-width:559px">
+        <div class="frame a5">
+          <article class="paper sheet" lang="en" aria-label="Tax invoice, A5, UAE">
+            <div class="mast">
+              <div class="who"><svg aria-hidden="true"><use href="#logo"/></svg>
+                <div><div class="clinic">Al Noor Family Clinic</div><div class="addr">Villa 22, Khalifa City A, Abu Dhabi · +971 2 555 0100</div><div class="reg">TRN 100234567800003 · DoH facility MF-4471</div></div></div>
+              <div class="doc"><b>Tax invoice</b><span lang="ar" style="font-family:'Noto Sans Arabic',var(--sans);font-weight:700;color:var(--brand-700)">فاتورة ضريبية</span><span class="mono">TI-AD-03381</span></div>
+            </div>
+            <div class="trule"></div>
+            <div class="meta"><span class="title">Original</span><span>16 Nov 2026, 10:46 (Gulf Standard Time)</span></div>
+            <div class="hang">
+              <span class="lbl first">Billed to</span>
+              <div class="val first ident"><b>Fatima Al Mansoori</b><div class="sub">F · 38 y · MRN <span class="mono">DQ-AE-0218</span> · EID <span class="mono">784-••••-•••••••-3</span></div></div>
+              <span class="lbl">Payer</span>
+              <div class="val">Daman Enhanced · member ••4471 · claim <span class="mono">DAMAN-CLM-77120</span></div>
+              <span class="lbl">Clinician</span>
+              <div class="val">Dr. Omar Haddad · DoH GD-29918</div>
+              <span class="lbl">Services</span>
+              <div class="val">
+                <table class="lines">
+                  <thead><tr><th scope="col">Service</th><th scope="col" class="num">VAT</th><th scope="col" class="num">AED</th></tr></thead>
+                  <tbody>
+                    <tr><td class="svc"><b>GP consultation</b><span>CPT 99213</span></td><td class="num">0 %</td><td class="num">300.00</td></tr>
+                    <tr><td class="svc"><b>Nebuliser treatment</b><span>CPT 94640</span></td><td class="num">0 %</td><td class="num">150.00</td></tr>
+                    <tr><td class="svc"><b>Medical report</b><span>Not covered</span></td><td class="num">5 %</td><td class="num">100.00</td></tr>
+                  </tbody>
+                </table>
+                <div class="totals" style="width:66%">
+                  <span>Excluding VAT</span><span class="num">550.00</span>
+                  <span>VAT 5 %</span><span class="num">5.00</span>
+                  <span class="grand">Total AED</span><span class="grand num">555.00</span>
+                  <span class="split">Insurer pays</span><span class="num split">400.00</span>
+                  <span class="split"><b>Patient paid</b> · card ••4421</span><span class="num"><b>155.00</b></span>
+                </div>
+                <div class="words"><b>Amount in words:</b> UAE Dirham Five Hundred Fifty-Five only</div>
+              </div>
+            </div>
+            <div class="foot" style="grid-template-columns:1fr auto">
+              <div><b>Paid · receipt RC-AD-03381</b>Card on terminal, ref 88120••41, 10:45</div>
+              <div class="page">Page 1 of 1</div>
+            </div>
+          </article>
+        </div>
+        <figcaption>A5 · UAE tax invoice, bilingual title</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ===================== THERMAL ===================== -->
+  <section class="piece" id="thermal" aria-labelledby="thermal-h">
+    <h2 id="thermal-h">Thermal receipts · 80 mm and 58 mm</h2>
+    <p class="lead">Real size, black only. The receipt the desk hands over once Razorpay confirms the payment, the same on the smaller 58 mm roll, the UAE receipt in Arabic, and the day-close report the receptionist prints when counting the drawer.</p>
+    <div class="stage">
+      <figure class="specimen" style="margin:0">
+        <article class="paper slip" lang="en" aria-label="Payment receipt, 80 mm">
+          <div class="mast"><svg aria-hidden="true"><use href="#logo-mono"/></svg><div><div class="clinic">Iyer Family Clinic</div><div class="addr">Adyar, Chennai · 044 2441 0000<br>GSTIN 33ABCDE1234F1Z5</div></div></div>
+          <div class="rule"></div>
+          <div class="title2">Payment receipt</div>
+          <dl class="meta2" style="margin-top:2mm">
+            <dt>Receipt</dt><dd class="mono">RCT/26-27/00318</dd>
+            <dt>Against</dt><dd class="mono">INV/26-27/00342</dd>
+            <dt>Date</dt><dd>16 Nov 2026 · 10:46</dd>
+            <dt>Patient</dt><dd>Meera Iyer · MRN DQ-10-4482</dd>
+          </dl>
+          <div class="thin"></div>
+          <div class="tline"><span>Consultation, follow-up<small>SAC 999312 · exempt</small></span><span class="num">600.00</span></div>
+          <div class="tline"><span>ECG, 12-lead<small>SAC 999317 · exempt</small></span><span class="num">350.00</span></div>
+          <div class="tline"><span>Nebulisation<small>SAC 999312 · exempt</small></span><span class="num">200.00</span></div>
+          <div class="thin"></div>
+          <div class="big"><span>Paid ₹</span><span class="num">1,150.00</span></div>
+          <div class="fine" style="margin-top:1mm">Rupees One Thousand One Hundred Fifty only</div>
+          <div class="stamp">PAID BY UPI<small>Razorpay · pay_Q8x••81Q · 10:45</small></div>
+          <div class="fine">Health care services by a clinical establishment are exempt from GST. Reprints are marked DUPLICATE.</div>
+        </article>
+        <figcaption>80 mm · payment receipt</figcaption>
+      </figure>
+
+      <figure class="specimen" style="margin:0">
+        <article class="paper slip w58" lang="en" aria-label="Payment receipt, 58 mm">
+          <div class="clinic" style="font-size:10pt;font-weight:800">Iyer Family Clinic</div>
+          <div class="addr" style="font-size:6.5pt">Adyar, Chennai · 044 2441 0000<br>GSTIN 33ABCDE1234F1Z5</div>
+          <div class="rule" style="margin:2.5mm 0"></div>
+          <div class="title2" style="font-size:8.5pt">Payment receipt</div>
+          <dl class="meta2" style="margin-top:1.5mm;font-size:7pt">
+            <dt>Receipt</dt><dd class="mono">RCT/26-27/00318</dd>
+            <dt>Bill</dt><dd class="mono">INV/26-27/00342</dd>
+            <dt>Date</dt><dd>16 Nov 2026 10:46</dd>
+            <dt>MRN</dt><dd>DQ-10-4482</dd>
+          </dl>
+          <div class="thin"></div>
+          <div class="tline" style="font-size:7.5pt"><span>Consultation</span><span class="num">600.00</span></div>
+          <div class="tline" style="font-size:7.5pt"><span>ECG, 12-lead</span><span class="num">350.00</span></div>
+          <div class="tline" style="font-size:7.5pt"><span>Nebulisation</span><span class="num">200.00</span></div>
+          <div class="thin"></div>
+          <div class="big" style="font-size:8.5pt"><span>Paid ₹</span><span class="num" style="font-size:13pt">1,150.00</span></div>
+          <div class="stamp" style="font-size:9pt;padding:1.5mm">PAID BY UPI<small style="font-size:6.5pt">Razorpay · pay_Q8x••81Q</small></div>
+          <div class="fine" style="font-size:6.5pt">Exempt health care. Reprints say DUPLICATE.</div>
+        </article>
+        <figcaption>58 mm · same receipt, short labels</figcaption>
+      </figure>
+
+      <figure class="specimen" style="margin:0">
+        <article class="paper slip" lang="ar" dir="rtl" aria-label="إيصال دفع">
+          <div class="mast"><svg aria-hidden="true"><use href="#logo-mono"/></svg><div><div class="clinic">عيادة النور العائلية</div><div class="addr">مدينة خليفة أ، أبوظبي · <bdi dir="ltr">+971 2 555 0100</bdi><br>الرقم الضريبي <bdi dir="ltr">100234567800003</bdi></div></div></div>
+          <div class="rule"></div>
+          <div class="title2">إيصال دفع <span style="font-family:var(--sans);font-size:7.5pt;letter-spacing:.08em">· PAYMENT RECEIPT</span></div>
+          <dl class="meta2" style="margin-top:2mm">
+            <dt>رقم الإيصال</dt><dd><bdi dir="ltr" class="mono">RC-AD-03381</bdi></dd>
+            <dt>الفاتورة</dt><dd><bdi dir="ltr" class="mono">TI-AD-03381</bdi></dd>
+            <dt>التاريخ</dt><dd>16 نوفمبر 2026 · <bdi dir="ltr">10:46</bdi></dd>
+            <dt>المريضة</dt><dd>فاطمة المنصوري</dd>
+          </dl>
+          <div class="thin"></div>
+          <div class="tline"><span>إجمالي الفاتورة<small>شامل ضريبة القيمة المضافة 5.00</small></span><span class="num"><bdi dir="ltr">555.00</bdi></span></div>
+          <div class="tline"><span>تدفعها شركة التأمين<small>ضمان المميز · مطالبة <bdi dir="ltr">DAMAN-CLM-77120</bdi></small></span><span class="num"><bdi dir="ltr">−400.00</bdi></span></div>
+          <div class="thin"></div>
+          <div class="big"><span>المدفوع (درهم)</span><span class="num"><bdi dir="ltr">155.00</bdi></span></div>
+          <div class="fine" style="margin-top:1mm">مائة وخمسة وخمسون درهمًا فقط</div>
+          <div class="stamp">مدفوع بالبطاقة<small>جهاز الدفع · <bdi dir="ltr">••4421 · 88120••41</bdi></small></div>
+          <div class="fine">تُطبع النسخ المعادة بعلامة «نسخة».</div>
+        </article>
+        <figcaption>80 mm · UAE receipt, Arabic (working translation)</figcaption>
+      </figure>
+
+      <figure class="specimen" style="margin:0">
+        <article class="paper slip" lang="en" aria-label="Day close report, 80 mm">
+          <div class="mast"><svg aria-hidden="true"><use href="#logo-mono"/></svg><div><div class="clinic">Iyer Family Clinic</div><div class="addr">Adyar · counter 1</div></div></div>
+          <div class="rule"></div>
+          <div class="title2">Day close</div>
+          <dl class="meta2" style="margin-top:2mm">
+            <dt>Date</dt><dd>16 Nov 2026 · closed 19:12</dd>
+            <dt>Closed by</dt><dd>A. Joseph</dd>
+            <dt>Checked by</dt><dd>Priya N.</dd>
+          </dl>
+          <div class="thin"></div>
+          <div class="tline"><span>Cash<small>9 receipts</small></span><span class="num">6,450.00</span></div>
+          <div class="tline"><span>UPI · Razorpay<small>14 payments, confirmed</small></span><span class="num">12,300.00</span></div>
+          <div class="tline"><span>Card<small>0 payments</small></span><span class="num">0.00</span></div>
+          <div class="tline"><span>Refunds<small>1 to UPI · CN/26-27/00012</small></span><span class="num">−350.00</span></div>
+          <div class="thin"></div>
+          <div class="tline"><span>Opening float</span><span class="num">2,000.00</span></div>
+          <div class="tline"><span>Cash expected</span><span class="num">8,450.00</span></div>
+          <div class="tline"><span>Cash counted<small>500×12 · 200×8 · 100×5 · 50×2 · 20×2 · 10×1</small></span><span class="num">8,250.00</span></div>
+          <div class="stamp">CASH SHORT ₹200.00<small>Note: change given twice to one patient</small></div>
+          <div class="fine">Closed sessions cannot be edited; a correction is a new, signed adjustment.</div>
+        </article>
+        <figcaption>80 mm · day-close report</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ===================== DOT MATRIX ===================== -->
+  <section class="piece" id="dmx" aria-labelledby="dmx-h">
+    <h2 id="dmx-h">Dot-matrix carbon copy · 80 columns, 2-ply</h2>
+    <p class="lead">For clinics with an impact printer and pin-fed continuous paper. One pass prints the original for the patient and, through carbon, the duplicate the clinic keeps. Text only, in the printer's own font: no logo, no colour, no QR code, so the payment link is printed in full. Every line fits 80 columns at 10 characters per inch.</p>
+    <figure class="specimen" style="margin:0">
+      <div class="dmx-stack"><div class="dmx-wrap">
+        <div class="dmx" aria-label="Original for recipient"><pre>IYER FAMILY CLINIC                                                BILL OF SUPPLY
+12 Kasturba Nagar 1st Street, Adyar, Chennai 600020       ORIGINAL FOR RECIPIENT
+Ph 044 2441 0000   GSTIN 33ABCDE1234F1Z5   CE Reg TN-CE-2021-008812
+================================================================================
+Bill No : INV/26-27/00342                          Date  : 16 Nov 2026 10:46 IST
+Patient : Meera Iyer (F, 54)                        MRN   : DQ-10-4482          
+Doctor  : Dr. Arjun Rao, TNMC 84213                 Visit : ENC-20441           
+Place of supply : Tamil Nadu (33)
+--------------------------------------------------------------------------------
+No  Service                             SAC       Qty        Rate         Amount
+--------------------------------------------------------------------------------
+ 1  Consultation, follow-up             999312      1      600.00         600.00
+ 2  ECG, 12-lead                        999317      1      350.00         350.00
+ 3  Nebulisation                        999312      1      200.00         200.00
+--------------------------------------------------------------------------------
+                                                     Sub-total          1,150.00
+                                                     Round off              0.00
+                                                     TOTAL (INR)        1,150.00
+--------------------------------------------------------------------------------
+Rupees One Thousand One Hundred Fifty only
+Health care services by a clinical establishment: exempt from GST.
+Paid by UPI via Razorpay, ref pay_Q8x****81Q, 16 Nov 2026 10:45 IST
+
+                                                        For IYER FAMILY CLINIC  
+
+
+                                                        Authorised signatory    
+================================================================================</pre></div>
+        <div class="dmx copy" aria-hidden="true"><pre>IYER FAMILY CLINIC                                                BILL OF SUPPLY
+12 Kasturba Nagar 1st Street, Adyar, Chennai 600020       DUPLICATE FOR SUPPLIER
+Ph 044 2441 0000   GSTIN 33ABCDE1234F1Z5   CE Reg TN-CE-2021-008812
+================================================================================
+Bill No : INV/26-27/00342                          Date  : 16 Nov 2026 10:46 IST
+Patient : Meera Iyer (F, 54)                        MRN   : DQ-10-4482          
+Doctor  : Dr. Arjun Rao, TNMC 84213                 Visit : ENC-20441           
+Place of supply : Tamil Nadu (33)
+--------------------------------------------------------------------------------
+No  Service                             SAC       Qty        Rate         Amount
+--------------------------------------------------------------------------------
+ 1  Consultation, follow-up             999312      1      600.00         600.00
+ 2  ECG, 12-lead                        999317      1      350.00         350.00
+ 3  Nebulisation                        999312      1      200.00         200.00
+--------------------------------------------------------------------------------
+                                                     Sub-total          1,150.00
+                                                     Round off              0.00
+                                                     TOTAL (INR)        1,150.00
+--------------------------------------------------------------------------------
+Rupees One Thousand One Hundred Fifty only
+Health care services by a clinical establishment: exempt from GST.
+Paid by UPI via Razorpay, ref pay_Q8x****81Q, 16 Nov 2026 10:45 IST
+
+                                                        For IYER FAMILY CLINIC  
+
+
+                                                        Authorised signatory    
+================================================================================</pre></div>
+      </div></div>
+      <figcaption>Original (white) over the carbon duplicate (yellow) · scrolls sideways on a phone, as the real form is 8 inches wide</figcaption>
+    </figure>
+  </section>
+
+  <!-- ===================== EMAILS ===================== -->
+  <section class="piece" id="email" aria-labelledby="email-h">
+    <h2 id="email-h">Billing emails</h2>
+    <p class="lead">Email is not a channel for health data, so no email lists services, tests or a diagnosis: only the clinic, the document number, the date and the amount. The full bill or receipt opens through the secure link, after a code sent to the patient's phone. One teal button per email.</p>
+    <div class="stage">
+      <figure class="specimen" style="margin:0;flex:1 1 480px;max-width:640px">
+        <div class="client">
+          <div class="bar"><b>Iyer Family Clinic: Your bill INV/26-27/00342</b><span>From Iyer Family Clinic · to the patient</span></div>
+          <div class="body">
+            <article class="mail" lang="en" aria-label="Bill email with payment link">
+              <div class="m-head"><svg aria-hidden="true"><use href="#logo"/></svg><div><b>Iyer Family Clinic</b><span>Adyar, Chennai</span></div></div>
+              <div class="m-body">
+                <span class="chip due"><svg aria-hidden="true"><use href="#clock"/></svg>Payment due</span>
+                <h2>Your bill is ready</h2>
+                <p>Here is your bill from Iyer Family Clinic for your visit on 16 Nov 2026.</p>
+                <div class="facts">
+                  <span class="lbl first">Bill</span><div class="v first"><span class="mono" style="font-size:15px;color:var(--ink-900);font-weight:600">INV/26-27/00342</span></div>
+                  <span class="lbl">Date</span><div class="v">16 November 2026</div>
+                </div>
+                <div class="total"><span>Amount to pay</span><b>₹1,150.00</b></div>
+                <a class="btn" href="#email">Pay ₹1,150.00</a>
+                <p class="secure">You pay on Razorpay's secure page by UPI, card or net banking. The clinic never sees your card number or UPI PIN.</p>
+                <p class="fallback">To see the full bill, open <span class="mono">medvya.example/b/••••••</span>. We will text a code to your phone.</p>
+              </div>
+              <div class="m-foot"><p>Sent by Iyer Family Clinic through Medvya. This email has no medical details.</p><p>Questions about this bill? Call 044 2441 0000.</p></div>
+            </article>
+          </div>
+        </div>
+        <figcaption>Bill with Razorpay payment link</figcaption>
+      </figure>
+
+      <figure class="specimen" style="margin:0;flex:1 1 480px;max-width:640px">
+        <div class="client">
+          <div class="bar"><b>Iyer Family Clinic: Payment received, ₹1,150.00</b><span>From Iyer Family Clinic · after Razorpay confirms</span></div>
+          <div class="body">
+            <article class="mail" lang="en" aria-label="Payment received email">
+              <div class="m-head"><svg aria-hidden="true"><use href="#logo"/></svg><div><b>Iyer Family Clinic</b><span>Adyar, Chennai</span></div></div>
+              <div class="m-body">
+                <span class="chip paid"><svg aria-hidden="true"><use href="#check"/></svg>Paid</span>
+                <h2>Payment received</h2>
+                <p>Thank you. Iyer Family Clinic has received your payment.</p>
+                <div class="facts">
+                  <span class="lbl first">Amount</span><div class="v first">₹1,150.00</div>
+                  <span class="lbl">Paid</span><div class="v">16 Nov 2026, 10:45<span>India Standard Time</span></div>
+                  <span class="lbl">Method</span><div class="v">UPI<span>Razorpay reference pay_Q8x••81Q</span></div>
+                  <span class="lbl">Receipt</span><div class="v"><span class="mono" style="font-size:15px;color:var(--ink-900);font-weight:600">RCT/26-27/00318</span></div>
+                </div>
+                <a class="btn" href="#email">View the receipt</a>
+                <p class="secure">The receipt opens after a code sent to your phone.</p>
+              </div>
+              <div class="m-foot"><p>Sent by Iyer Family Clinic through Medvya. This email has no medical details.</p></div>
+            </article>
+          </div>
+        </div>
+        <figcaption>Payment received</figcaption>
+      </figure>
+
+      <figure class="specimen" style="margin:0;flex:1 1 480px;max-width:640px">
+        <div class="client">
+          <div class="bar"><b>Iyer Family Clinic: Refund of ₹350.00 started</b><span>From Iyer Family Clinic · after the refund is accepted</span></div>
+          <div class="body">
+            <article class="mail" lang="en" aria-label="Refund email">
+              <div class="m-head"><svg aria-hidden="true"><use href="#logo"/></svg><div><b>Iyer Family Clinic</b><span>Adyar, Chennai</span></div></div>
+              <div class="m-body">
+                <span class="chip ref"><svg aria-hidden="true"><use href="#undo"/></svg>Refund</span>
+                <h2>Your refund has started</h2>
+                <p>Iyer Family Clinic is refunding ₹350.00 to the UPI account you paid from.</p>
+                <div class="facts">
+                  <span class="lbl first">Amount</span><div class="v first">₹350.00</div>
+                  <span class="lbl">Credit note</span><div class="v"><span class="mono" style="font-size:15px;color:var(--ink-900);font-weight:600">CN/26-27/00012</span><span>Against bill INV/26-27/00342</span></div>
+                  <span class="lbl">Arrives</span><div class="v">Usually in 5 to 7 working days<span>Your bank decides the exact day.</span></div>
+                </div>
+              </div>
+              <div class="m-foot"><p>Sent by Iyer Family Clinic through Medvya. This email has no medical details.</p><p>Not received after 7 working days? Call 044 2441 0000 with the credit note number.</p></div>
+            </article>
+          </div>
+        </div>
+        <figcaption>Refund and credit note</figcaption>
+      </figure>
+
+      <figure class="specimen" style="margin:0;flex:1 1 480px;max-width:640px">
+        <div class="client">
+          <div class="bar" dir="rtl" lang="ar"><b>عيادة النور العائلية: تم استلام الدفعة</b><span>من عيادة النور العائلية</span></div>
+          <div class="body">
+            <article class="mail" lang="ar" dir="rtl" aria-label="رسالة استلام الدفعة">
+              <div class="m-head"><svg aria-hidden="true"><use href="#logo"/></svg><div><b>عيادة النور العائلية</b><span>مدينة خليفة أ، أبوظبي</span></div></div>
+              <div class="m-body">
+                <span class="chip paid"><svg aria-hidden="true"><use href="#check"/></svg>مدفوع</span>
+                <h2>تم استلام الدفعة</h2>
+                <p>شكرًا لك. استلمت عيادة النور العائلية دفعتك.</p>
+                <div class="facts">
+                  <span class="lbl first">المبلغ</span><div class="v first"><bdi dir="ltr">AED 155.00</bdi></div>
+                  <span class="lbl">التاريخ</span><div class="v">16 نوفمبر 2026، <bdi dir="ltr">10:45</bdi><span>بتوقيت الإمارات</span></div>
+                  <span class="lbl">الطريقة</span><div class="v">بطاقة على جهاز الدفع<span>تنتهي بـ <bdi dir="ltr">4421</bdi></span></div>
+                  <span class="lbl">الإيصال</span><div class="v"><bdi dir="ltr" class="mono" style="font-size:15px;color:var(--ink-900);font-weight:600">RC-AD-03381</bdi></div>
+                </div>
+                <a class="btn" href="#email">عرض الإيصال</a>
+              </div>
+              <div class="m-foot"><p>أرسلتها عيادة النور العائلية عبر Medvya. لا يحتوي هذا البريد على أي تفاصيل طبية.</p></div>
+            </article>
+          </div>
+        </div>
+        <figcaption>Payment received, Arabic (working translation)</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ===================== FLOW ===================== -->
+  <section class="piece" id="flow" aria-labelledby="flow-h">
+    <h2 id="flow-h">How a Razorpay payment flows</h2>
+    <p class="lead">What the patient and the desk see at each step. Razorpay draws its own payment page; the clinic's logo and Medvya teal are set once in Razorpay's checkout branding (square logo, at least 256 px), and Medvya does not copy or restyle that page.</p>
+    <ol class="flow">
+      <li><b>Desk issues the bill</b><span>The legal number is taken. Bill printed or sent.</span><span class="tag">Issued</span></li>
+      <li><b>Patient opens the link or scans the QR</b><span>From the email, the SMS or the paper bill.</span><span class="tag">Issued</span></li>
+      <li><b>Patient pays on Razorpay's page</b><span>UPI, card or net banking. The desk sees the bill waiting.</span><span class="tag">Awaiting provider confirmation</span></li>
+      <li><b>Razorpay confirms</b><span>Medvya checks the webhook signature and handles each event once.</span><span class="tag">Paid</span></li>
+      <li><b>Receipt goes out</b><span>Receipt number taken; email sent; the desk can print the thermal copy.</span><span class="tag">Paid · RCT issued</span></li>
+    </ol>
+    <div class="notes">
+      <div><h3>Testing with Razorpay test mode</h3><ul>
+        <li>UPI ID <span class="mono">success@razorpay</span> passes and <span class="mono">failure@razorpay</span> fails, so both branches can be shown to the pilot clinic.</li>
+        <li>Test-mode QR codes cannot be paid from a real UPI app; use the link to test.</li>
+        <li>Test mode allows 30 payment links per business; Razorpay support can raise it.</li>
+        <li>In test mode a cancelled payment counts as successful, so cancelling can only be tested live.</li>
+      </ul></div>
+      <div><h3>What the screens must say</h3><ul>
+        <li>"Paid" appears only after Razorpay confirms, never when the patient says they paid.</li>
+        <li>A payment that times out shows "Payment failed", with Retry and Record cash instead.</li>
+        <li>No card number, CVV or UPI PIN is stored or logged by Medvya, ever.</li>
+      </ul></div>
+    </div>
+  </section>
+
+  <!-- ===================== GAPS ===================== -->
+  <section class="piece" id="gaps" aria-labelledby="gaps-h">
+    <h2 id="gaps-h">What else is missing</h2>
+    <p class="lead">Things this design brings up that the tickets or the original design do not settle yet.</p>
+    <div class="gaps">
+      <div><h3>Bill of supply, not tax invoice</h3><p>The original design titles an Indian clinic bill "Tax invoice". Exempt health care is billed on a bill of supply (CGST Rule 49); a bill that mixes exempt and taxable items to a patient uses an invoice-cum-bill of supply (Rule 46A). This design follows the rules.</p><span class="who">Needs: chartered accountant (MDV-P4-031)</span></div>
+      <div><h3>Signature on the bill</h3><p>The original design prints "Computer-generated, no signature required". Rule 49 asks for the supplier's signature or digital signature, so this design keeps an authorised-signatory line.</p><span class="who">Needs: chartered accountant</span></div>
+      <div><h3>Original and duplicate marks</h3><p>"Original for recipient" on the first copy, "Duplicate for supplier" on the carbon or second print, "DUPLICATE" on every reprint.</p><span class="who">Built with MDV-P4-005</span></div>
+      <div><h3>SAC codes per service</h3><p>Consultation 999312 and diagnostics 999317 are shown as examples. The clinic's price list must carry the right code for each service.</p><span class="who">Needs: CA check of the price-list template (MDV-P4-003)</span></div>
+      <div><h3>Cancelled bills</h3><p>A cancelled bill keeps its number and prints "CANCELLED" across it; it is never deleted, because the series must have no gaps (UAE in particular).</p><span class="who">Add to MDV-P4-004</span></div>
+      <div><h3>Patient statement and dues reminder</h3><p>An A4 statement of bills, payments and balance, and a reminder email with a payment link, both in this layout.</p><span class="who">MDV-P4-011</span></div>
+      <div><h3>Razorpay go-live</h3><p>Merchant KYC, live keys and the webhook secret in Key Vault. Test mode works without them.</p><span class="who">Needs: the owner (merchant account)</span></div>
+      <div><h3>UAE payment provider</h3><p>Razorpay is India only. The UAE needs Network International or Stripe, or card-on-terminal only for the pilot.</p><span class="who">Decision: MDV-P4-008 ADR</span></div>
+      <div><h3>E-invoicing (IRN)</h3><p>Patient bills are business-to-consumer and fall outside e-invoicing at a clinic's turnover, so no IRN or e-invoice QR is printed.</p><span class="who">Confirm with the CA</span></div>
+    </div>
+  </section>
+</div>
+
+<script>
+// Draw each QR code as one SVG path (the same way PlainPdf draws it), from data-qr. Medium error correction suits thermal and laser paper;
+// the white border is the 4 modules the QR standard asks for, or phones misread codes printed close to text.
+document.querySelectorAll('[data-qr]').forEach(function (el) {
+  if (typeof qrcode !== 'function') { el.textContent = 'QR'; return; }
+  var q = qrcode(0, 'M'); q.addData(el.getAttribute('data-qr')); q.make();
+  var n = q.getModuleCount(), quiet = 4, d = '';
+  for (var r = 0; r < n; r++) for (var c = 0; c < n; c++) if (q.isDark(r, c)) d += 'M' + (c + quiet) + ' ' + (r + quiet) + 'h1v1h-1z';
+  var size = n + quiet * 2;
+  el.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + size + ' ' + size + '" shape-rendering="crispEdges" aria-hidden="true"><rect width="' + size + '" height="' + size + '" fill="#fff"/><path d="' + d + '" fill="#000"/></svg>';
+});
+</script>
+</body>
+</html>
+

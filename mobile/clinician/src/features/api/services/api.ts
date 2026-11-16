@@ -30,12 +30,18 @@ export function onSessionEnded(listener: () => void) {
   return () => { if (ended === listener) ended = () => {}; };
 }
 
+/** Every request names this build, so the API can refuse one too old to be safe (426) and the screen asks for the update. */
+const VERSION = { 'X-Medvya-App-Version': Constants.expoConfig?.version ?? '0.0.0' };
+const UPGRADE_REQUIRED = 426;
+const upgradeRequired = () => new Error('mobile.error.upgradeRequired');
+
 const form = (fields: Record<string, string>) => Object.entries(fields).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
 
 /** POST /native/token. 400 is the OAuth invalid_grant: the code or refresh token is no good, and will not become good. */
 async function postToken(fields: Record<string, string>) {
-  const res = await fetch(`${apiBase()}/native/token`, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: form(fields) });
+  const res = await fetch(`${apiBase()}/native/token`, { method: 'POST', headers: { ...VERSION, 'Content-Type': 'application/x-www-form-urlencoded' }, body: form(fields) });
   if (res.status === 400) throw new SessionEndedError();
+  if (res.status === UPGRADE_REQUIRED) throw upgradeRequired();
   if (!res.ok) throw new Error('mobile.error.generic');
   return (await res.json()) as { access_token: string; refresh_token: string };
 }
@@ -73,13 +79,14 @@ function refresh() {
 }
 
 const call = (path: string, init: RequestInit, token: string) =>
-  fetch(`${apiBase()}${path}`, { ...init, headers: { Accept: 'application/json', ...init.headers, Authorization: `Bearer ${token}` } });
+  fetch(`${apiBase()}${path}`, { ...init, headers: { Accept: 'application/json', ...init.headers, ...VERSION, Authorization: `Bearer ${token}` } });
 
 /** A call as the signed-in user. A refused refresh signs the phone out (ADR-011 §3: "a revoke, the first 401 from a refresh"). */
 export async function send<T>(path: string, init: RequestInit = {}): Promise<T> {
   try {
     let res = await call(path, init, access ?? await refresh());
     if (res.status === 401) res = await call(path, init, await refresh());
+    if (res.status === UPGRADE_REQUIRED) throw upgradeRequired();
     if (!res.ok) throw new Error('mobile.error.generic'); // 403 included: the API, not the app, decides what a role may see
     return (res.status === 204 ? undefined : await res.json()) as T;
   } catch (e) {
@@ -106,7 +113,7 @@ export function forgetTokens() {
  */
 export async function endServerSession(held: { access: string | null; refresh: string | null } = { access, refresh: refreshToken }) {
   if (!apiBase() || !held.refresh) return;
-  const logout = (token: string) => fetch(`${apiBase()}/bff/logout`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+  const logout = (token: string) => fetch(`${apiBase()}/bff/logout`, { method: 'POST', headers: { ...VERSION, Authorization: `Bearer ${token}` } });
   try {
     if (held.access && (await logout(held.access)).status !== 401) return;
     await logout((await postToken({ grant_type: 'refresh_token', refresh_token: held.refresh })).access_token);

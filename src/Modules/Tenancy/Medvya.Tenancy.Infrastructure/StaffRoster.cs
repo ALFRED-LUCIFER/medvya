@@ -15,7 +15,7 @@ namespace Medvya.Tenancy.Infrastructure;
 /// "staff.role") and writes its audit event in one transaction, so an unaudited permission change never commits.
 /// </summary>
 public sealed class StaffRoster(TenancyDbContext db, ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, TimeProvider clock,
-    IEnumerable<IStaffOffboardingParticipant> offboarding, IStaffAccess access, ICurrentFacility facility, StarterPlan plan) : IStaffRoster
+    IEnumerable<IStaffOffboardingParticipant> offboarding, IStaffAccess access, ICurrentFacility facility, StarterPlan plan, IDoctorFees fees) : IStaffRoster
 {
     const string Section = "staff.role";
     static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() } };
@@ -175,13 +175,15 @@ public sealed class StaffRoster(TenancyDbContext db, ICurrentTenant tenant, ICur
         if (add.Count > 0)
         {
             await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
-            foreach (var f in add) await Locations.AddAsync(db, source, f, cancellationToken); // no new seat: the person already holds one
+            var doctors = new List<(Guid From, Guid To)>();
+            foreach (var f in add) await Locations.AddAsync(db, source, f, doctors, cancellationToken); // no new seat: the person already holds one
             db.SettingsChanges.Add(new SettingsChange
             {
                 Id = Guid.CreateVersion7(), TenantId = TenantId, ActorUserId = user.UserId, Section = "staff.locations", ResourceId = membershipId, OccurredAt = now,
                 Before = JsonSerializer.Serialize(new { facilityIds = active.Select(m => m.FacilityId) }, Json), After = JsonSerializer.Serialize(new { facilityIds = want }, Json),
             });
             await db.SaveChangesAsync(cancellationToken);
+            await Locations.CopyFeesAsync(fees, doctors, tx.GetDbTransaction(), cancellationToken);
             await audit.WriteAsync(new AuditEvent
             {
                 Id = Guid.CreateVersion7(), TenantId = TenantId, ActorUserId = user.UserId, Action = "staff.locations.add", ResourceType = "membership", ResourceId = membershipId,

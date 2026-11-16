@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text.Json;
+using Medvya.Billing.Domain;
 using Medvya.BuildingBlocks.Domain;
 using Medvya.Identity.Domain;
 using Medvya.Scheduling.Application;
@@ -123,7 +124,15 @@ public sealed class DoctorTests(PostgresFixture sql) : IClassFixture<PostgresFix
         var change = await db.SettingsChanges.SingleAsync(c => c.Section == "doctor" && c.ResourceId == id);
         Assert.Equal((h.Admin, true, true, true), (change.ActorUserId, change.After!.Contains("84213"), change.After.Contains("2031-12-31"), change.After.Contains("Attested")));
         var profile = await db.DoctorProfiles.SingleAsync(p => p.MembershipId == id);
-        Assert.Equal((50000L, 30000L, null), (profile.NewVisitFeeMinor, profile.FollowUpFeeMinor, profile.SignatureKey));
+        Assert.Null(profile.SignatureKey);
+        // The fees are the doctor's own prices in the Billing catalogue (MDV-P4-002), saved with the membership; Tenancy keeps no copy.
+        Assert.Equal((0L, 0L), (profile.NewVisitFeeMinor, profile.FollowUpFeeMinor));
+        await using (var billing = sql.Billing(h.Tenant))
+        {
+            var prices = await billing.PriceVersions.Where(v => v.DoctorId == id).Join(billing.Services, v => v.ServiceId, s => s.Id, (v, s) => new { s.ConsultationKind, v.AmountMinor, v.Currency }).ToListAsync();
+            Assert.Equal([(ConsultationKind.FollowUp, 30000L, "INR"), (ConsultationKind.New, 50000L, "INR")],
+                prices.Select(p => (p.ConsultationKind!.Value, p.AmountMinor, p.Currency)).OrderBy(p => p.Item1.ToString()));
+        }
         Assert.Single(await db.Invitations.Where(i => i.MembershipId == id).ToListAsync());
         Assert.Contains("/invite/", Assert.Single(mail.Sent, m => m.To == Email).Body);
         await using var audit = sql.Audit(h.Tenant);

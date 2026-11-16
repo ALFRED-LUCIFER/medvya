@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test';
+import { mockBilling } from '../support/billing';
 import { completeWizard, mockOnboarding } from '../support/onboarding';
 import { journey } from './storyboard';
 
@@ -23,6 +24,20 @@ journey('J1', {
     // #912: the doctor lands on My day (MDV-P2-002, named in MDV-P2-051), and My day is in the menu.
     await expect(page).toHaveURL(/\/today$/);
     await expect(page.getByRole('link', { name: 'My day' }).first()).toHaveAttribute('aria-current', 'page');
+  },
+  // F-11 (MDV-P4-002): an INR catalogue; the consultation is GST-exempt and priced, and a new service gets its clinic price as a version.
+  2: async ({ page }) => {
+    const api = await mockBilling(page);
+    await page.goto('/settings?tab=services');
+    await expect(page.getByRole('row', { name: /Consultation \(new visit\)/ })).toContainText('Exempt');
+    await page.getByRole('button', { name: 'Add service' }).click();
+    await page.getByRole('dialog', { name: 'New service' }).getByLabel('Name').fill('Dressing (synthetic)');
+    await page.getByRole('button', { name: 'Save service' }).click();
+    const editor = page.getByRole('dialog', { name: 'Dressing (synthetic)' });
+    await editor.getByLabel('Price (INR)').fill('200');
+    await editor.getByRole('button', { name: 'Save version' }).click();
+    await expect(editor.getByText('Line total ₹200.00')).toBeVisible();
+    expect(api.posts.at(-1)).toMatchObject({ body: { doctorId: null, amountMinor: 20_000 } });
   },
   // P-02: full registration with only the India minimum; ABHA left empty (optional, care never depends on it).
   3: async ({ page }) => {

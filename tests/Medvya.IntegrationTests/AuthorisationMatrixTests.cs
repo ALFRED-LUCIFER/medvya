@@ -333,6 +333,12 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         ["/v1/waitlist/{id:guid}/offer"] = "as above",
         ["/v1/waitlist/{id:guid}/accept"] = "as above",
         ["/v1/waitlist/{id:guid}/decline"] = "as above",
+        // MDV-P4-002: behind billing.invoices, which this matrix's tenants do not have (every call is 404); another tenant's service is invisible to the EF filter
+        // and to row-level security, and cannot be priced (BillingCatalogueTests.AnotherTenantSeesNoneOfTheCatalogueAndCannotWriteIntoIt).
+        ["/v1/settings/services/{id:guid}"] = "billing catalogue: see the comment above",
+        ["/v1/settings/services/{id:guid}/archive"] = "as above",
+        ["/v1/settings/services/{id:guid}/unarchive"] = "as above",
+        ["/v1/settings/services/{id:guid}/prices"] = "as above",
         ["/v1/patients/{patientId:guid}/care-goals/{goalId:guid}"] = "two ids: only a goal of the route's own patient is found, another's is not (ChronicCareTests, with row-level security); the patient's goal route is in the matrix",
     };
 

@@ -1,3 +1,4 @@
+using Medvya.Billing.Infrastructure;
 using Medvya.Audit.Infrastructure;
 using Medvya.Encounters.Infrastructure;
 using Medvya.Prescribing.Infrastructure;
@@ -142,7 +143,8 @@ internal sealed class SchedulingHarness(PostgresFixture sql)
             .AddSingleton<Medvya.Tenancy.Application.ILogoStore>(Logos) // before the module, which only adds a store when none is registered
             .AddSingleton(sql.NationalIds) // the fixture's national-ID setup (this harness has no host configuration)
             .AddSingleton<Medvya.Notifications.Application.ISecureLinkMessages>(new NoSecureLinks())
-            .AddAuditModule(ConnectionString).AddTenancyModule(ConnectionString).AddIdentityModule(ConnectionString)
+            // The harness tenant is one of Medvya's own test organisations, so features at the Internal release stage (billing, MDV-P4-002) reach it.
+            .AddAuditModule(ConnectionString).AddTenancyModule(ConnectionString, internalOrganisations: [Tenant]).AddBillingModule(ConnectionString).AddIdentityModule(ConnectionString)
             .AddPatientsModule(ConnectionString).AddSchedulingModule(ConnectionString).AddEncountersModule(ConnectionString).AddPrescribingModule(ConnectionString);
         if (interceptor is not null) services.ConfigureDbContext<Medvya.Scheduling.Infrastructure.Persistence.SchedulingDbContext>(o => o.AddInterceptors(interceptor));
         services.Configure<SchedulingOptions>(o => (o.SlotHold, o.LockTimeout) = (Options.SlotHold, Options.LockTimeout));

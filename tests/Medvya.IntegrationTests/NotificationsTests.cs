@@ -1,3 +1,4 @@
+using Medvya.Billing.Infrastructure;
 using Medvya.Audit.Infrastructure;
 using Medvya.BuildingBlocks.Domain;
 using Medvya.Identity.Infrastructure;
@@ -106,7 +107,7 @@ public sealed partial class NotificationsTests(PostgresFixture sql) : IClassFixt
             .AddSingleton<IPushSender>(pushes)
             .AddSingleton(h.NationalIds); // the fixture's national-ID setup (this harness has no host configuration)
         if (!denyAll && !realConsent) services.AddSingleton<IReminderConsent>(consent);
-        services.AddAuditModule(h.ConnectionString).AddTenancyModule(h.ConnectionString).AddIdentityModule(h.ConnectionString)
+        services.AddAuditModule(h.ConnectionString).AddTenancyModule(h.ConnectionString).AddBillingModule(h.ConnectionString).AddIdentityModule(h.ConnectionString)
             .AddPatientsModule(h.ConnectionString).AddSchedulingModule(h.ConnectionString).AddNotificationsModule(h.ConnectionString, smsSink: false);
         if (realConsent) services.AddScoped<IReminderConsent, Medvya.Notifications.Api.PatientReminderConsent>(); // as the host registers it
         services.AddSingleton<Medvya.Tenancy.Application.ITermsAcceptance>(terms); // the real one is tested in TermsAcceptanceTests

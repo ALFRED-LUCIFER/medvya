@@ -36,7 +36,15 @@ uv run uvicorn medvya_ai.main:create_app --factory --reload      # API on http:/
 uv run python -m medvya_ai.worker                                # second terminal: job worker
 ```
 
-Blob storage: Azurite from `pnpm services:up` (port 10001), with the development connection string from the [Azurite docs](https://learn.microsoft.com/azure/storage/common/storage-use-azurite). Without Azure keys keep `TRANSCRIPTION_PROVIDER=fake` and `LLM_PROVIDER=fake`. `AUTH_MODE=disabled` acts as the clinic's first doctor (`X-Clinic-Id` picks the clinic): development only, never with patient data. `/healthz` is liveness, `/readyz` checks the database and blob store.
+Blob storage: Azurite from `pnpm services:up` (port 10001), with the development connection string from the [Azurite docs](https://learn.microsoft.com/azure/storage/common/storage-use-azurite). Without Azure keys keep `TRANSCRIPTION_PROVIDER=fake` and `LLM_PROVIDER=fake`. With real providers the worker refuses to start unless each endpoint host is on `PROCESSING_ENDPOINT_HOSTS` (in-country allow-list). `/healthz` is liveness, `/readyz` checks the database and that the blob container exists (it creates nothing). The image has no `HEALTHCHECK` because the worker shares it: probes belong to the API's deployment config.
+
+### Who may call it (`AUTH_MODE`)
+
+- `service` (default, the pilot path, ADR-021 gate 1): Host.Api calls with its managed-identity token. The service checks audience and issuer, the caller's client id (`AUTH_ALLOWED_CLIENT_IDS`) and app role (`AUTH_REQUIRED_ROLE`); only then does it trust `X-Clinic-Id` (tenant, sets row-level security), `X-User-Id` (the Medvya user, audit actor) and `X-User-Role` (`doctor` or `admin`). A missing or malformed header is 400.
+- `entra`: a per-user token whose `oid` matches a provisioned `app_user` (`python -m medvya_ai.seed --provision ...`).
+- `disabled`: no token; `X-Clinic-Id` is required and the request acts as that clinic's first user (`python -m medvya_ai.seed` creates one and prints its id). Refused unless `ENVIRONMENT=development`; never with patient data.
+
+Outside development the OpenAPI document and `/docs` are not served.
 
 ## Tests
 
@@ -55,8 +63,11 @@ Locally the integration tests skip when no database is reachable; in CI (`CI` se
 |---|---|
 | Sessions and consent | `POST /sessions`, `GET /sessions/{id}`, `POST /sessions/{id}/participants`, `GET /consent-notice`, `POST /sessions/{id}/consents` (stop vs withdraw: [decision 0001](docs/decisions/0001-stop-vs-withdraw.md)) |
 | Recording | `POST /sessions/{id}/segments`, `PUT …/segments/{n}/chunks/{seq}` (SHA-256 checked), `POST …/segments/{n}/complete`, `POST /sessions/{id}/finish` |
-| Draft and review | `GET /sessions/{id}/result`, `GET …/facts/{fact}/evidence-audio`, `PATCH /facts/{id}`, `PATCH /sessions/{id}/speakers`, `PATCH …/transcript/turns/{turn}`, `POST …/reprocess`, `POST /sessions/{id}/notes` (manual note), `PATCH /sessions/{id}/note` |
-| Not used by Medvya | approve, export, analytics, privacy requests: Medvya signs, prints and handles data requests itself. The receptionist intake (`/receptionist/conversations`) is the starting point for the conversation turns of the AI communication middleware ([ADR-022](../../docs/adr/ADR-022-ai-communication-middleware.md), MDV-P4-038) |
+| Draft and review | `GET /sessions/{id}/result`, `GET …/facts/{fact}/evidence-audio`, `PATCH /facts/{id}`, `PATCH /sessions/{id}/speakers`, `PATCH …/transcript/turns/{turn}`, `POST …/transcript/apply-suggested-roles`, `POST …/reprocess` (re-reads the clinician's corrections; 409 `FACTS_REVIEWED` once a fact was reviewed), `POST /sessions/{id}/notes` (manual note), `PATCH /sessions/{id}/note`, `GET …/notes/revisions` |
+
+The HealthOps approve, export (PDF), analytics, privacy-request and receptionist endpoints were removed (#1417, ADR-021 §2): Medvya signs, prints and handles data requests itself. The receptionist intake is in git history for the AI communication middleware ([ADR-022](../../docs/adr/ADR-022-ai-communication-middleware.md), MDV-P4-038).
+
+Retention: audio is deleted after `RETENTION_DRAFT_AUDIO_DAYS`; all working data of a session (transcript, facts, draft, participant names) is purged `RETENTION_SESSION_DAYS` (30, proposed) after it finished.
 
 ## Documents
 

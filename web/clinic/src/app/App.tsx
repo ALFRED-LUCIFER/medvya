@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import type { Locale } from '@medvya/i18n';
 import { I18nProvider, useI18n } from '@medvya/i18n';
 import { SystemState } from '@medvya/ui';
-import { Navigate, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router';
+import { Navigate, Outlet, Route, Routes, useLocation, useNavigate, useParams } from 'react-router';
 import OfflineStrip from '../features/connectivity/components/OfflineStrip';
 import { useConnectivityController } from '../features/connectivity/hooks/useConnectivityController';
 import { OfflineNoteContext } from '../features/connectivity/hooks/useOfflineNote';
@@ -265,13 +265,16 @@ export default function App({ locale, onLocaleChange }: Props) {
             <Routes>
               {UiGallery && <Route path="/__ui" element={<UiGallery switcher={switcher} />} />}
               {/* Public and token-based (F-06): the same page whether or not someone is signed in. */}
-              <Route path="/invite/:token" element={<InvitationRoute switcher={switcher} />} />
+              <Route path="/invite" element={<InvitationRoute switcher={switcher} />} />
+              {/* shortcut: links emailed or texted before #1417 carry the token in the path; they move it to the fragment. Remove after 2026-12-01 (invitations last 7 days, shared prescriptions 3). */}
+              <Route path="/invite/:token" element={<TokenToFragment to="/invite" />} />
+              <Route path="/rx/:token" element={<TokenToFragment to="/rx" />} />
               {/* The QR code on a printed prescription (MDV-P2-017): public, validity only. */}
               <Route path="/verify/rx/:token" element={<RxVerifyRoute switcher={switcher} />} />
               {/* The QR code on an investigation slip or referral letter (MDV-P2-018/019): public, what the paper is, never whose. */}
               <Route path="/verify/paper/:token" element={<PaperVerifyRoute switcher={switcher} />} />
               {/* A shared prescription link (MDV-P2-020): public, it opens with the code sent to the patient's mobile. */}
-              <Route path="/rx/:token" element={<SharedRxRoute switcher={switcher} />} />
+              <Route path="/rx" element={<SharedRxRoute switcher={switcher} />} />
               {routes}
             </Routes>
           </Suspense>
@@ -279,4 +282,9 @@ export default function App({ locale, onLocaleChange }: Props) {
       </OfflineNoteContext>
     </I18nProvider>
   );
+}
+
+/** An old link with its token in the path moves it to the fragment (#1417), where the page reads it and no later request carries it. */
+function TokenToFragment({ to }: { to: string }) {
+  return <Navigate to={{ pathname: to, hash: `t=${useParams().token ?? ''}` }} replace />;
 }

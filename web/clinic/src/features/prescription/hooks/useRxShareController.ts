@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
+import { takeLinkToken } from '../../api/services/linkToken';
 import { ApiError } from '../../schedule/services/scheduleApi';
 import {
   codeSchema, dispensedSchema, emptyShare, openProblem, shareProblem, shareSchema, toDispensedBody,
@@ -42,7 +43,9 @@ export function useRxShareController(encounterId: string) {
 }
 
 /** The public link page (MDV-P2-020): ask for the code (sent to the patient's registered mobile), then open the PDF with it. */
-export function useSharedRxController(token: string) {
+/** A shared prescription link, /rx#t=… (MDV-P2-020): the token from the fragment, never in a URL a server logs. */
+export function useSharedRxController() {
+  const [token] = useState(takeLinkToken);
   const form = useForm<CodeForm>({ resolver: zodResolver(codeSchema), defaultValues: { code: '' } });
   const [problem, setProblem] = useState<OpenProblem | null>(null);
   const failed = (e: unknown) => setProblem(openProblem(e instanceof ApiError ? e.status : undefined, e instanceof ApiError ? e.code : undefined));

@@ -278,7 +278,7 @@ public sealed partial class StaffLocationsTests(PostgresFixture sql) : IClassFix
 
         public string Token() => LinkToken().Match(last ?? throw new InvalidOperationException("No email sent.")).Groups[1].Value;
 
-        [GeneratedRegex(@"/invite/(\S+)")]
+        [GeneratedRegex(@"/invite#t=(\S+)")]
         private static partial Regex LinkToken();
     }
 

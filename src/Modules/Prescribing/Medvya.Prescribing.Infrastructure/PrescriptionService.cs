@@ -382,7 +382,7 @@ public sealed class PrescriptionService(
             Recipient = command.Recipient!.Value, Channel = channel, PharmacyName = name, PharmacyEmail = email, LinkHash = hash,
             ExpiresAt = now + RxShareRules.LinkLifetime, SharedBy = Me, SharedAt = now,
         };
-        var url = $"{BaseUrl}/rx/{token}";
+        var url = $"{BaseUrl}/rx#t={token}"; // the token in the fragment: never in a server log (#1417)
 
         await using (var tx = await db.Database.BeginTransactionAsync(cancellationToken))
         {

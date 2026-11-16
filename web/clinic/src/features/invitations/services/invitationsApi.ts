@@ -17,7 +17,14 @@ export async function previewInvitation(token: string): Promise<InvitationPrevie
   return res.json() as Promise<InvitationPreview>;
 }
 
-/** Join: sign in with MFA; the server accepts the invitation during sign-in and returns to the app. */
-export function joinWithInvitation(token: string) {
-  window.location.assign(`/bff/login?returnUrl=${encodeURIComponent(import.meta.env.BASE_URL)}&invitation=${encodeURIComponent(token)}`);
+/**
+ * Join: sign in with MFA; the server accepts the invitation during sign-in and returns to the app. The token goes in the POST body and the
+ * page then follows the provider address itself, so it never sits in a Medvya URL. A refused start shows "sign-in did not complete".
+ */
+export async function joinWithInvitation(token: string) {
+  try {
+    const res = await apiFetch('/bff/login', { method: 'POST', credentials: 'same-origin', headers: json, body: JSON.stringify({ returnUrl: import.meta.env.BASE_URL, invitation: token }) });
+    if (res.ok) { window.location.assign(((await res.json()) as { location: string }).location); return; }
+  } catch { /* offline or timed out: same message as a refusal */ }
+  window.location.assign(`${import.meta.env.BASE_URL}?signin=failed`);
 }

@@ -24,7 +24,7 @@ export function useSessionController() {
     keyProblem: register.isError ? keyProblemOf(register.error instanceof ApiError ? register.error.fields : null) : check.isError ? 'failed' as const : null,
     busy: check.isPending || register.isPending,
     signingOut: leave.isPending,
-    onSignOn: () => startSignOn(link),
+    onSignOn: () => void startSignOn(link),
     onTouchKey: () => check.mutate(),
     onRegisterKey: () => register.mutate(),
     onSignOut: () => leave.mutate(),

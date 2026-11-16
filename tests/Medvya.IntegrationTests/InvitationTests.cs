@@ -117,13 +117,31 @@ public sealed partial class InvitationTests(PostgresFixture sql) : IClassFixture
     {
         var (_, token) = await InviteReceptionist();
         var mail = outbox.Sent[^1];
-        Assert.Contains($"href=\"https://clinic.test/invite/{token}\"", mail.Html, StringComparison.Ordinal);
+        Assert.Contains($"href=\"https://clinic.test/invite#t={token}\"", mail.Html, StringComparison.Ordinal); // the token in the fragment: never in a server log (#1417)
         Assert.Contains("Iyer Family Clinic (synthetic)", mail.Html, StringComparison.Ordinal);
         Assert.Contains("Receptionist", mail.Html, StringComparison.Ordinal);
     }
 
-    [GeneratedRegex(@"https://clinic\.test/invite/([A-Za-z0-9_-]+)")]
+    [GeneratedRegex(@"https://clinic\.test/invite#t=([A-Za-z0-9_-]+)")]
     private static partial Regex LinkToken();
+
+    /// <summary>Starts sign-in with an invitation as the page does: the token in a POST body (#1417), then the provider address the answer names.</summary>
+    internal static async Task<Uri> StartJoin(HttpClient browser, string token)
+    {
+        using var start = new HttpRequestMessage(HttpMethod.Post, new Uri("/bff/login", UriKind.Relative)) { Content = JsonContent.Create(new { returnUrl = "/", invitation = token }) };
+        start.Headers.Add("X-Medvya-Csrf", "1");
+        var started = await browser.SendAsync(start);
+        Assert.Equal(HttpStatusCode.OK, started.StatusCode);
+        return new Uri((await started.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("location").GetString()!);
+    }
+
+    // #1417: URLs are logged (App Service, browser history), so the sign-in start refuses an invitation token in the query string.
+    [Fact]
+    public async Task AnInvitationTokenInTheSignInAddressIsRefused()
+    {
+        using var browser = Browser();
+        Assert.Equal(HttpStatusCode.BadRequest, (await browser.GetAsync(new Uri("/bff/login?returnUrl=%2F&invitation=abc", UriKind.Relative))).StatusCode);
+    }
 
     static Task<HttpResponseMessage> Preview(HttpClient client, string token) =>
         client.PostAsJsonAsync(new Uri("/v1/invitations/preview", UriKind.Relative), new { token });
@@ -131,8 +149,8 @@ public sealed partial class InvitationTests(PostgresFixture sql) : IClassFixture
     /// <summary>Join: login with the invitation → dev provider (which reports <paramref name="email"/> for the account) → callback. Returns the callback response.</summary>
     static async Task<HttpResponseMessage> Join(HttpClient browser, string token, string loginHint = "new", string? email = "joseph@example.test")
     {
-        var challenge = await browser.GetAsync(new Uri($"/bff/login?returnUrl=%2F&invitation={token}", UriKind.Relative));
-        var authorize = await browser.GetAsync(new Uri($"{challenge.Headers.Location}&login_hint={loginHint}{(email is null ? "" : $"&email={Uri.EscapeDataString(email)}")}"));
+        var provider = await StartJoin(browser, token);
+        var authorize = await browser.GetAsync(new Uri($"{provider}&login_hint={loginHint}{(email is null ? "" : $"&email={Uri.EscapeDataString(email)}")}"));
         return await browser.GetAsync(authorize.Headers.Location);
     }
 

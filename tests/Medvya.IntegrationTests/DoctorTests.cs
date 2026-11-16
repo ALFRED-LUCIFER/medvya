@@ -126,7 +126,7 @@ public sealed class DoctorTests(PostgresFixture sql) : IClassFixture<PostgresFix
         var profile = await db.DoctorProfiles.SingleAsync(p => p.MembershipId == id);
         Assert.Equal((50000L, 30000L, null), (profile.NewVisitFeeMinor, profile.FollowUpFeeMinor, profile.SignatureKey));
         Assert.Single(await db.Invitations.Where(i => i.MembershipId == id).ToListAsync());
-        Assert.Contains("/invite/", Assert.Single(mail.Sent, m => m.To == Email).Body);
+        Assert.Contains("/invite#t=", Assert.Single(mail.Sent, m => m.To == Email).Body);
         await using var audit = sql.Audit(h.Tenant);
         Assert.Single(await audit.Events.Where(e => e.Action == "invitation.create").ToListAsync());
     }

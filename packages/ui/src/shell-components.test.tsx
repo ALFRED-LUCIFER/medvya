@@ -14,11 +14,13 @@ describe('AccountMenu', () => {
   const props = { name: 'Meera Iyer', roleLabel: 'Doctor', onLocaleChange: vi.fn(), onMyDevices: vi.fn(), onSignOut: vi.fn() };
   const openMenu = () => fireEvent.keyDown(screen.getByRole('button', { name: 'Signed in as Meera Iyer' }), { key: 'Enter' });
 
-  it('lists language, my devices, change facility and sign out in that order, sign out last after a separator', () => {
+  it('lists the languages, my devices, change facility and sign out in that order, sign out last after a separator', () => {
     render(<AccountMenu {...props} onChangeFacility={vi.fn()} />);
     openMenu();
     const menu = screen.getByRole('menu');
-    expect(screen.getAllByRole('menuitem').map(i => i.textContent)).toEqual(['Language', 'My devices', 'Change facility', 'Sign out']);
+    expect(screen.getByRole('group', { name: 'Language' })).toBeTruthy();
+    expect(screen.getAllByRole('menuitemradio').map(i => i.textContent)).toEqual(['English', 'हिन्दी', 'العربية']);
+    expect(screen.getAllByRole('menuitem').map(i => i.textContent)).toEqual(['My devices', 'Change facility', 'Sign out']);
     const last = menu.lastElementChild!;
     expect(last.textContent).toBe('Sign out');
     expect(last.previousElementSibling!.getAttribute('role')).toBe('separator');
@@ -33,6 +35,14 @@ describe('AccountMenu', () => {
     expect(screen.queryByRole('menuitem', { name: 'Change facility' })).toBeNull();
     fireEvent.click(screen.getByRole('menuitem', { name: 'Sign out' }));
     expect(props.onSignOut).toHaveBeenCalledOnce();
+  });
+
+  // #1414: the languages were in a hover submenu that a quick pointer move closed, so the click chose nothing. One click in the menu chooses.
+  it('chooses a language with one click in the menu itself', () => {
+    render(<AccountMenu {...props} />);
+    openMenu();
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'العربية' }));
+    expect(props.onLocaleChange).toHaveBeenCalledWith('ar');
   });
 });
 

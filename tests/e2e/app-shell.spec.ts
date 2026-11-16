@@ -344,3 +344,18 @@ for (const locale of ['en', 'ar'])
         .map(v => `${v.id} (${v.nodes.length})`));
     expect(violations).toEqual([]);
   });
+
+// #1414: on Azure, Language → العربية (then a hover submenu) closed the menu and left the screen English. Playwright's click jumps straight to the
+// item, as a quick hand or a click-by-position tool does; with the submenu that closed it and nothing was chosen.
+test('account menu → العربية turns the signed-in app Arabic and right-to-left, and it stays so after a reload', async ({ page }) => {
+  await page.route('**/v1/me/context', r => r.fulfill({ json: receptionist })); // no stored locale, as on a first visit
+  await page.route('**/v1/front-desk/board?*', r => r.fulfill({ json: { facilityId: 'f-1', timeZone: 'Asia/Kolkata', date: '2026-10-19', now: '2026-10-19T04:40:00Z', cards: [] } }));
+  await page.goto('/front-desk');
+  await page.getByRole('button', { name: 'Signed in as A. Joseph' }).click();
+  await page.getByRole('menuitemradio', { name: 'العربية' }).click();
+  await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+  await expect(page.getByRole('button', { name: 'تم تسجيل الدخول باسم A. Joseph' })).toBeVisible();
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+  await expect(page.getByRole('button', { name: 'تم تسجيل الدخول باسم A. Joseph' })).toBeVisible();
+});

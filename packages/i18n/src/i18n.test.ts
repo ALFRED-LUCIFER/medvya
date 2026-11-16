@@ -39,6 +39,13 @@ describe('i18n', () => {
   it('words a count by the plural rules of the locale, Arabic dual included (MDV-P1-052)', () => {
     expect([1, 2].map(n => makeI18n('en', 'IN').tCount('board.count', n))).toEqual(['1 visit', '2 visits']);
     expect([1, 2, 3, 11].map(n => makeI18n('ar', 'AE').tCount('board.count', n))).toEqual(['زيارة واحدة', 'زيارتان', '3 زيارات', '11 زيارة']);
+    // #1414: the leave summary said "1 visits".
+    expect([0, 1, 2].map(n => makeI18n('en', 'IN').tCount('adjustment.savedManual', n)))
+      .toEqual(['0 visits are for the desk to reschedule.', '1 visit is for the desk to reschedule.', '2 visits are for the desk to reschedule.']);
+    expect(makeI18n('en', 'IN').tCount('adjustment.savedOffered', 1)).toBe('1 patient will be sent a rebooking message.');
+    expect(makeI18n('hi', 'IN').tCount('adjustment.savedOffered', 2)).toBe('2 मरीज़ों को दोबारा बुकिंग का संदेश भेजा जाएगा।');
+    expect([0, 1, 2].map(n => makeI18n('ar', 'AE').tCount('adjustment.savedManual', n)))
+      .toEqual(['لا زيارات على المكتب إعادة جدولتها.', 'زيارة واحدة على المكتب إعادة جدولتها.', 'زيارتان على المكتب إعادة جدولتهما.']);
   });
 
   it('has no keys in other locales that English lacks', () => {

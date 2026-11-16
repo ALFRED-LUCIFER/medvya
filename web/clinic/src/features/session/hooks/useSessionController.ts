@@ -30,7 +30,12 @@ export function useSessionController() {
   });
   const choose = useMutation({
     mutationFn: chooseFacility,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: sessionQueryKey }),
+    // Reads scoped by the server-side facility (terms, settings) carry no facility in their key: drop them all, or the last practice's answer
+    // stays on screen (#1414, "booking paused" after changing to a practice that had accepted the terms).
+    onSuccess: () => {
+      void queryClient.resetQueries({ predicate: q => q.queryKey[0] !== sessionQueryKey[0] });
+      return queryClient.invalidateQueries({ queryKey: sessionQueryKey });
+    },
     onError: e => { if (e instanceof SessionEndedError) queryClient.setQueryData<SessionStatus>(sessionQueryKey, { kind: 'expired' }); },
   });
   const data = me.data;

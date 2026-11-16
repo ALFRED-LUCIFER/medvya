@@ -18,6 +18,8 @@ type Props = {
   onRetry: () => void;
   onMarkAllRead: () => void;
   onMarkRead: (id: string) => void;
+  /** The facility's IANA zone: times show facility time, not the browser's (AGENTS.md 3.5). */
+  timeZone?: string;
 };
 
 /** The words of one item; a licence says how many days are left, or that it has expired; visits to rebook say how many and from when. */
@@ -67,7 +69,7 @@ export default function NotificationCentre(props: Props) {
                       <span className={n.read ? 'font-semibold' : 'font-extrabold'}>{words(i18n, n)}</span>
                       {/* shortcut: shown in the device's time zone, not the facility's; the facility zone is not in the session yet. */}
                       <span className="text-xs text-muted-foreground">
-                        {formatDate(new Date(n.createdAt))}{' · '}{formatTime(new Date(n.createdAt))}{' · '}{n.read ? t('notifications.read') : t('notifications.unread')}
+                        {formatDate(new Date(n.createdAt), props.timeZone)}{' · '}{formatTime(new Date(n.createdAt), props.timeZone)}{' · '}{n.read ? t('notifications.read') : t('notifications.unread')}
                       </span>
                     </span>
                   </Link>

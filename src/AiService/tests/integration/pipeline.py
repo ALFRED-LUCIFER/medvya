@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 
 from medvya_ai.jobs.context import Deps
@@ -18,8 +19,15 @@ def deps_for(app, llm: FakeLLM | None = None) -> Deps:  # type: ignore[no-untype
 
 async def drain(app, deps: Deps, max_jobs: int = 5) -> int:  # type: ignore[no-untyped-def]
     n = 0
-    while n < max_jobs and await run_once(app.state.sessionmaker, deps, "test-worker"):
-        n += 1
+    retried = False
+    while n < max_jobs:
+        if await run_once(app.state.sessionmaker, deps, "test-worker"):
+            n, retried = n + 1, False
+        elif retried:
+            break
+        else:  # run_after is the enqueuing transaction's now(): under a loaded VM clock a just-
+            await asyncio.sleep(0.2)  # enqueued successor can be a few ms "in the future"
+            retried = True
     return n
 
 

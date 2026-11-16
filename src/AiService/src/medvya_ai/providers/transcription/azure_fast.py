@@ -4,6 +4,7 @@ import asyncio
 import json
 from collections.abc import Awaitable, Callable, Sequence
 from typing import Any
+from urllib.parse import urlsplit
 
 import httpx
 
@@ -55,6 +56,7 @@ class AzureFastTranscriber:
         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
     ) -> None:
         self._url = f"{endpoint.rstrip('/')}/speechtotext/transcriptions:transcribe"
+        self.endpoint_host = urlsplit(endpoint).hostname  # recorded on each job
         self._key, self._version, self._sleep = api_key, api_version, sleep
         self._client = client or httpx.AsyncClient(timeout=httpx.Timeout(TIMEOUT_SECONDS))
 

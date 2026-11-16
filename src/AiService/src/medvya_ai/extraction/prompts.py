@@ -4,7 +4,7 @@ import json
 from collections.abc import Sequence
 
 NORMALISE_SYSTEM = """You prepare clinical consultation transcript phrases for a clinician and for structured extraction.
-Input: JSON {"participants":[{"role":str,"name":str}], "context":[{"idx":int,"speaker":str,"text":str}],
+Input: JSON {"participants":[{"role":str}], "context":[{"idx":int,"speaker":str,"text":str}],
 "segments":[{"idx":int,"speaker":str,"text":str}]}. "speaker" is an anonymous diarization cluster from the speech
 provider ("Speaker 1", "Speaker 2", "unknown"); it often merges two people who sound alike. "context" holds the
 phrases just before this batch, for reference only: do not return them.
@@ -64,12 +64,13 @@ Rules:
 
 def normalise_user(
     items: Sequence[tuple[int, str, str]],
-    participants: Sequence[tuple[str, str]],
+    roles: Sequence[str],
     context: Sequence[tuple[int, str, str]] = (),
 ) -> str:
+    """Participants are sent as roles: their names are not needed to tell speakers apart."""
     return json.dumps(
         {
-            "participants": [{"role": r, "name": n} for r, n in participants],
+            "participants": [{"role": r} for r in roles],
             "context": [{"idx": i, "speaker": s, "text": t} for i, s, t in context],
             "segments": [{"idx": i, "speaker": s, "text": t} for i, s, t in items],
         },

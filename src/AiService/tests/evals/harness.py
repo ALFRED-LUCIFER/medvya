@@ -104,6 +104,7 @@ async def run_case(case: dict[str, Any], llm: LLMClient | None = None) -> dict[s
         "accepted": counts.facts,
         "rejected_by_gate": counts.rejected,
         "negation_flagged": counts.negation_flagged,
+        "grounding_flagged": counts.grounding_flagged,
         **scores.as_dict(),
         **asr,
     }

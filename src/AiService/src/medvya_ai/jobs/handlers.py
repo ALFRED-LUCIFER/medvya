@@ -37,7 +37,7 @@ def _llm_usage(deps: Deps, start: Usage, task: Task) -> dict[str, Any]:
         **deps.llm.usage.since(start),
         "provider": type(deps.llm).__name__,  # the adapter actually used
         "model": deps.llm.model_names.get(task),
-        "endpoint": deps.settings.foundry_endpoint,
+        "endpoint_host": getattr(deps.llm, "endpoint_host", None),  # the host actually called
     }
 
 
@@ -69,7 +69,8 @@ async def transcribe(db: AsyncSession, deps: Deps, job: Job) -> Counters:
         "audio_ms": int(audio_ms or 0),
         "phrases": n,
         "provider": type(deps.transcriber).__name__,
-        "region": deps.settings.speech_region,
+        # the host actually called (processing-region evidence), not the configured region name
+        "endpoint_host": getattr(deps.transcriber, "endpoint_host", None),
     }
 
 

@@ -17,6 +17,7 @@ def build_llm(settings: Settings) -> LLMClient:
             "FOUNDRY_ENDPOINT, FOUNDRY_API_KEY and both FOUNDRY_DEPLOYMENT_* are required "
             "when LLM_PROVIDER=foundry"
         )
+    settings.allowed_host(settings.foundry_endpoint)  # in-country only, checked at startup
     return FoundryLLM(
         endpoint=settings.foundry_endpoint,
         api_key=settings.foundry_api_key.get_secret_value(),

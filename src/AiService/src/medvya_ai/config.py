@@ -4,6 +4,7 @@ import base64
 import binascii
 from functools import lru_cache
 from typing import Literal
+from urllib.parse import urlsplit
 
 from pydantic import SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -30,6 +31,11 @@ class Settings(BaseSettings):
     foundry_api_key: SecretStr | None = None
     foundry_deployment_extract: str | None = None
     foundry_deployment_normalise: str | None = None
+
+    # Country data stays in country (AGENTS.md 1.6): the exact Speech and Foundry hosts this
+    # deployment's country may use, comma separated (India: the Central India resources). The
+    # worker refuses to start when a real provider's endpoint host is not listed.
+    processing_endpoint_hosts: str = ""
 
     # No silent fake default: a deployment that forgets the variable must fail, not emit fake notes.
     transcription_provider: Literal["azure_fast", "fake"] = "azure_fast"
@@ -87,6 +93,19 @@ class Settings(BaseSettings):
         if self.auth_mode == "disabled" and self.environment != "development":
             raise ValueError("AUTH_MODE=disabled is allowed only with ENVIRONMENT=development")
         return self
+
+    @property
+    def speech_endpoint_url(self) -> str:
+        return self.speech_endpoint or f"https://{self.speech_region}.api.cognitive.microsoft.com"
+
+    def allowed_host(self, url: str) -> str:
+        """The URL's host, or RuntimeError when it is not on PROCESSING_ENDPOINT_HOSTS."""
+        host = (urlsplit(url).hostname or "").lower()
+        if host not in {h.lower() for h in self.csv(self.processing_endpoint_hosts)}:
+            raise RuntimeError(
+                f"endpoint host {host or '(none)'} is not in PROCESSING_ENDPOINT_HOSTS"
+            )
+        return host
 
     @staticmethod
     def csv(value: str) -> list[str]:

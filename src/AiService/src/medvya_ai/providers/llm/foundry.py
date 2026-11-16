@@ -4,6 +4,7 @@ import asyncio
 import logging
 from collections.abc import Awaitable, Callable
 from typing import Any
+from urllib.parse import urlsplit
 
 import openai
 from openai import AsyncOpenAI
@@ -47,6 +48,7 @@ class FoundryLLM:
             base_url=base_url(endpoint), api_key=api_key, max_retries=0, timeout=TIMEOUT_SECONDS
         )
         self._deployments, self._sleep = deployments, sleep
+        self.endpoint_host = urlsplit(endpoint).hostname  # recorded on each job
         self.usage = Usage()
         self.model_names = dict(deployments)
 

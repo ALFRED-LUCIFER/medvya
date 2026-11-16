@@ -157,6 +157,54 @@ async def test_persist_grounds_values_and_rejects_unsupported_medication() -> No
     assert len(meds) == 1 and meds[0].dose_text is None
 
 
+async def test_assertion_label_must_be_named_in_the_cited_text() -> None:
+    """ "Any allergies?" is a real quote, yet it does not back "allergy: penicillin"."""
+    # SAFETY: mutation check: removed the ASSERTION_CATEGORIES has_term check in persist.py ->
+    # this test failed
+    seg = SimpleNamespace(
+        idx=0,
+        id=uuid.uuid4(),
+        english_text="Any allergies? Yes, a penicillin allergy. Take crocin twice a day.",
+        original_text="o",
+    )
+    soap = SoapIn(
+        chief_complaint="", hpi="", subjective="", objective="", assessment="", plan="", summary=""
+    )
+    out = ExtractionOut(
+        note=soap,
+        facts=[
+            _fact("penicillin", "Any allergies?", cat="allergy"),
+            _fact("sulfa", "Any allergies?", cat="allergy", polarity="absent"),
+            _fact("penicillin allergy", "a penicillin allergy", cat="allergy"),
+            _fact("diabetes", "Any allergies?", cat="history"),
+            _fact(
+                "crocin",
+                "Take crocin twice a day",
+                cat="medication",
+                medication=_med(name_as_spoken="crocin", generic_name="Paracetamol"),
+            ),
+        ],
+        missing_or_uncertain=[],
+    )
+    db = _FakeDB([seg])
+    counts = await persist_extraction(db, clinic_id=uuid.uuid4(), session_id=uuid.uuid4(), out=out)  # type: ignore[arg-type]
+    pol = {f.label: f.polarity for f in db.added if isinstance(f, ClinicalFact)}
+    assert pol == {
+        "penicillin": "uncertain",
+        "sulfa": "uncertain",
+        "penicillin allergy": "present",
+        "diabetes": "uncertain",
+        "crocin": "present",
+    }
+    assert counts.grounding_flagged == 3
+    (rev,) = [r for r in db.added if type(r).__name__ == "NoteRevision"]
+    assert (
+        "penicillin: not named in the quoted transcript text" in rev.content["missing_or_uncertain"]
+    )
+    (med,) = [m for m in db.added if isinstance(m, Medication)]
+    assert med.generic_name is None  # "paracetamol" was never said: the model's guess is not stored
+
+
 async def test_note_is_flagged_unverified_until_a_clinician_revises_it(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

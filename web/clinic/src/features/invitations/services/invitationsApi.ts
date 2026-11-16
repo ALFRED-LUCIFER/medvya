@@ -7,7 +7,7 @@ export class HttpError extends Error {
   constructor(status: number, what: string) { super(`${what} ${status}`); this.status = status; }
 }
 
-const json = { 'Content-Type': 'application/json', 'X-Medvya-Csrf': '1' };
+const json = { 'Content-Type': 'application/json' };
 
 /** The pending invitation, or null when the link is unknown, expired, revoked or already used. POST keeps the token out of URLs. */
 export async function previewInvitation(token: string): Promise<InvitationPreview | null> {

@@ -5,7 +5,7 @@ import { minutesSince } from '../../front-desk/domain/board';
 import { elsewhereLines, escalatedVisits, MAX_FLAGS, nextPatient, patientIdsOf, todayVisits, type Scope } from '../domain/today';
 import { fetchAllergyFlags, fetchElsewhere, fetchEscalations, fetchPendingNotes } from '../services/todayApi';
 import { fetchPendingPrescriptions } from '../../prescription/services/prescriptionApi';
-import { ApiError } from '../../schedule/services/scheduleApi';
+import { ApiError } from '../../api/services/apiClient';
 
 const noLocations: { id: string; facilityId: string; facilityName: string }[] = [];
 

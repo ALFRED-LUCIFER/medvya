@@ -4,7 +4,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { adjustmentError, adjustmentSchema, allChosen, emptyAdjustment, manageableCalendars, toForm, toRequest, type AdjustmentForm, type RebookAction, type SaveResult, type SavedAdjustment } from '../domain/adjustments';
 import type { Appointment } from '../domain/schedule';
-import { ApiError, fetchAdjustments, deleteAdjustment, fetchScheduleDay, saveAdjustment, updateAdjustment } from '../services/scheduleApi';
+import { ApiError } from '../../api/services/apiClient';
+import { fetchAdjustments, deleteAdjustment, fetchScheduleDay, saveAdjustment, updateAdjustment } from '../services/scheduleApi';
 
 /**
  * Leave and schedule exceptions (MDV-P1-012). The first save of a change that overlaps booked visits is answered with the

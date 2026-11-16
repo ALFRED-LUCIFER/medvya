@@ -3,7 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { fetchDocuments } from '../../documents/services/documentsApi';
-import { ApiError } from '../../schedule/services/scheduleApi';
+import { ApiError } from '../../api/services/apiClient';
 import {
   advanceSchema, emptyReferral, fileInSchema, problemOf, referralSchema,
   type AdvanceForm, type Channel, type FileInForm, type Referral, type ReferralForm, type ReferralProblem,

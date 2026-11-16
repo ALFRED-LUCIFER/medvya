@@ -1,4 +1,4 @@
-import { send } from '../../schedule/services/scheduleApi';
+import { send } from '../../api/services/apiClient';
 import { parseFilters, timelineQuery, type TimelineFilters, type TimelinePage, type TrendsAnswer } from '../domain/timeline';
 
 // Timeline (MDV-P2-005). The patient id is the only identifier in a path; filters and the cursor are codes, never patient data.

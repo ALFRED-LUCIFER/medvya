@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { fetchNote, saveNote } from '../../encounters/services/noteApi';
 import { addOrder } from '../../orders/services/ordersApi';
 import { createReferral } from '../../referrals/services/referralsApi';
-import { ApiError } from '../../schedule/services/scheduleApi';
+import { ApiError } from '../../api/services/apiClient';
 import {
   checkFormSchema, checkKindOf, emptyGoal, gapKey, goalFormSchema, progressFormSchema, targetFormSchema, toGoalBody, toLimit, withPlanLine,
   type CareGap, type CheckForm, type GapOutcome, type GoalForm, type ProgressForm, type TargetCode, type TargetForm,

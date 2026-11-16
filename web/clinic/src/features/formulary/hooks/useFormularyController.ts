@@ -3,7 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { useI18n } from '@medvya/i18n';
-import { ApiError } from '../../schedule/services/scheduleApi';
+import { ApiError } from '../../api/services/apiClient';
 import { useTableController } from '../../table/hooks/useTableController';
 import {
   brandProblems, brandRowsSchema, emptyMedicine, formularySort, medicineSchema, orderSetSchema, orderSetSort, parseBrandRows, splitProblem,

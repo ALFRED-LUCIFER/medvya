@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ApiError } from '../../schedule/services/scheduleApi';
+import { ApiError } from '../../api/services/apiClient';
 import { refusalOf } from '../../clinical-access/domain/clinicalAccess';
 import { fetchPatient360 } from '../../patient360/services/patient360Api';
 import type { ConsultView, EncounterBanner, StudioPanel } from '../domain/encounter';

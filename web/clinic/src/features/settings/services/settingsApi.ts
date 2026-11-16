@@ -1,8 +1,8 @@
-import { ApiError, csrf, post, send } from '../../schedule/services/scheduleApi';
+import { ApiError, post, send } from '../../api/services/apiClient';
 import type { NotificationPrefs, TemplatePreview } from '../domain/notifications';
 import type { AddLocationForm, CalendarTemplate, Closure, ClosureForm, ClosureWithVisits, DayHours, Location, LocationForm, LogoLink, Profile, ProfileForm, QueueRule, TermsStatus } from '../domain/settings';
 
-const json = (method: string, body: unknown) => ({ method, headers: { ...csrf, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+const json = (method: string, body: unknown) => ({ method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 const blank = <T extends Record<string, string | boolean>>(form: T) => Object.fromEntries(Object.entries(form).map(([k, v]) => [k, v === '' ? null : v]));
 
 // Practice settings (F-08, MDV-P1-005). Ids in paths, details in bodies; business details only.
@@ -19,8 +19,8 @@ export async function fetchLogoLink(): Promise<LogoLink | null> {
   }
 }
 /** The body is the image itself; the server checks the file's real type and size. An upload gets a minute, not the shared 15 seconds. */
-export const uploadLogo = (file: File) => send<void>('/v1/settings/logo', { method: 'PUT', headers: { ...csrf, 'Content-Type': file.type }, body: file, timeout: 60_000 } as RequestInit);
-export const removeLogo = () => send<void>('/v1/settings/logo', { method: 'DELETE', headers: csrf });
+export const uploadLogo = (file: File) => send<void>('/v1/settings/logo', { method: 'PUT', headers: { 'Content-Type': file.type }, body: file, timeout: 60_000 } as RequestInit);
+export const removeLogo = () => send<void>('/v1/settings/logo', { method: 'DELETE' });
 
 /** The logo change could not be confirmed either way: its request failed and the profile could not be read again. */
 export class LogoUnconfirmedError extends Error {
@@ -60,7 +60,7 @@ export const saveHours = (locationId: string, hours: DayHours[]) => send<DayHour
 
 export const fetchClosures = (locationId: string) => send<ClosureWithVisits[]>(`/v1/settings/locations/${locationId}/closures`);
 export const addClosure = (locationId: string, form: ClosureForm) => post<Closure>(`/v1/settings/locations/${locationId}/closures`, form);
-export const removeClosure = (id: string) => send<void>(`/v1/settings/closures/${id}`, { method: 'DELETE', headers: csrf });
+export const removeClosure = (id: string) => send<void>(`/v1/settings/closures/${id}`, { method: 'DELETE' });
 
 // Existing scheduling endpoints (MDV-P1-011): the calendars of a location with their weekly templates, and rooms.
 export const fetchTemplates = (facilityId: string) => send<CalendarTemplate[]>(`/v1/schedule/templates?${new URLSearchParams({ facilityId })}`);

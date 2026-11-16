@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router';
 import type { AccessReason } from '../../clinical-access/domain/clinicalAccess';
 import { requestAccess } from '../../clinical-access/services/clinicalAccessApi';
 import { patientDataGcTime } from '../../patients/hooks/usePatientDirectoryController';
-import { ApiError } from '../../schedule/services/scheduleApi';
+import { ApiError } from '../../api/services/apiClient';
 import { isShortcut, moveActive, searchableText, type LookupRow } from '../domain/lookup';
 import { focusInlinePanel, focusInlineSearch } from '../services/inlineSearch';
 import { lookupPatients } from '../services/lookupApi';

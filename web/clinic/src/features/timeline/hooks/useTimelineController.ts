@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { ApiError } from '../../schedule/services/scheduleApi';
+import { ApiError } from '../../api/services/apiClient';
 import { refusalOf } from '../../patient360/domain/chart';
 import { toggleKind, trendSeries, type TimelineFilters, type TimelineKind, type TrendChoice } from '../domain/timeline';
 import { fetchTimeline, fetchTrends, rememberedFilters, rememberFilters } from '../services/timelineApi';

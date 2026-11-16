@@ -1,4 +1,4 @@
-import { ApiError } from '../../schedule/services/scheduleApi';
+import { ApiError } from '../../api/services/apiClient';
 import { reapply, staleVersion, type NoteDraft, type NoteSections, type NoteView, type SavePhase } from '../domain/note';
 
 type Options = {

@@ -1,4 +1,4 @@
-import { post, send } from '../../schedule/services/scheduleApi';
+import { post, send } from '../../api/services/apiClient';
 import type { AllergyState } from '../../patient360/domain/chart';
 import type { Elsewhere, Escalation, PendingNote } from '../domain/today';
 

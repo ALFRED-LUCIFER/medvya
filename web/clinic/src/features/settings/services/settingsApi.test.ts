@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ApiError } from '../../schedule/services/scheduleApi';
+import { ApiError } from '../../api/services/apiClient';
 import { RequestTimeoutError } from '../../api/services/apiClient';
 import { LogoUnconfirmedError, saveProfile, settleLogo } from './settingsApi';
 

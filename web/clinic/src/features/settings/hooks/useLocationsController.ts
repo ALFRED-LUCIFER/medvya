@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import type { MessageKey } from '@medvya/i18n';
 import { addLocationSchema, certificateErrorKey, certificateProblem, locationErrorKeys, emptyAddLocation, locationProblem, resourceSchema, toLocationForm, type AddLocationForm, type ResourceForm } from '../domain/settings';
-import { ApiError } from '../../schedule/services/scheduleApi';
+import { ApiError } from '../../api/services/apiClient';
 import { addLocation, addResource, fetchTemplates, saveLocation } from '../services/settingsApi';
 import { useLocationChoice } from './useLocationChoice';
 

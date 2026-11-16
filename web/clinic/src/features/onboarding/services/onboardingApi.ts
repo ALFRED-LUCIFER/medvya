@@ -3,7 +3,7 @@ import { startSignInWithHint } from '../../session/services/sessionApi';
 import type { Country } from '@medvya/i18n';
 import type { Draft, FinishResult, OnboardingData } from '../domain/onboarding';
 
-const json = { 'Content-Type': 'application/json', 'X-Medvya-Csrf': '1' };
+const json = { 'Content-Type': 'application/json' };
 
 /** The server refused the draft: errors maps a field path (e.g. "licence.number") to stable codes. */
 export class ValidationError extends Error {

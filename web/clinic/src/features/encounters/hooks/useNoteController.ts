@@ -3,7 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm, useWatch } from 'react-hook-form';
 import { useI18n } from '@medvya/i18n';
-import { ApiError } from '../../schedule/services/scheduleApi';
+import { ApiError } from '../../api/services/apiClient';
 import { fetchReconciliation } from '../../reconciliation/services/reconciliationApi';
 import { fetchProblems } from '../../problems/services/problemsApi';
 import { remainingItems, sectionTicks, signChecklist } from '../domain/checklist';

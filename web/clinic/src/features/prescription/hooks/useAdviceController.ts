@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { ApiError } from '../../schedule/services/scheduleApi';
+import { ApiError } from '../../api/services/apiClient';
 import { adviceSchema, type AdviceForm, type RxAdvice } from '../domain/authorisation';
 import { fetchAdvice, saveAdvice } from '../services/prescriptionApi';
 

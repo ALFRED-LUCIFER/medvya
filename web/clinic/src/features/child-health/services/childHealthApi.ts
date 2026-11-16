@@ -1,4 +1,4 @@
-import { post, send } from '../../schedule/services/scheduleApi';
+import { post, send } from '../../api/services/apiClient';
 import type { ChildHealth, MilestoneAnswer, MilestoneAnswerer, MilestoneKey } from '../domain/childHealth';
 import type { Growth, growthBody } from '../domain/growth';
 

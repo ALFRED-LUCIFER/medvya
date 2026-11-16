@@ -27,10 +27,16 @@ export function useSessionController() {
   const logout = useMutation({
     mutationFn: signOut,
     onSuccess: () => { rememberSession(false); queryClient.setQueryData<SessionStatus>(sessionQueryKey, { kind: 'signedOut' }); },
+    // Success or failure (a 401 at /bff/logout does not leave the page): nothing the last user read stays in memory.
+    onSettled: () => { queryClient.removeQueries({ predicate: q => q.queryKey[0] !== sessionQueryKey[0] }); },
   });
   const choose = useMutation({
     mutationFn: chooseFacility,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: sessionQueryKey }),
+    // Many keys carry no clinic (patient search, staff, settings): drop every cached read of the last clinic before the new context loads.
+    onSuccess: () => {
+      queryClient.removeQueries({ predicate: q => q.queryKey[0] !== sessionQueryKey[0] });
+      return queryClient.invalidateQueries({ queryKey: sessionQueryKey });
+    },
     onError: e => { if (e instanceof SessionEndedError) queryClient.setQueryData<SessionStatus>(sessionQueryKey, { kind: 'expired' }); },
   });
   const data = me.data;

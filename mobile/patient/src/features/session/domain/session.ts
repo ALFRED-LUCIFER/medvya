@@ -14,19 +14,18 @@ export const zoneOf = (s: Session) => s.clinic?.timeZone ?? Intl.DateTimeFormat(
 
 export const clinicLine = (s: Session) => (s.clinic ? `${s.clinic.name} · ${s.clinic.branch}` : undefined);
 
+// The server's rule (IndiaRules / UaeRules): separators dropped, then an optional country code or trunk 0 before the national number.
+// packages/i18n/country-samples.json keeps the two in step (#1417).
 const mobile: Record<Country, { prefix: string; pattern: RegExp }> = {
-  IN: { prefix: '+91', pattern: /^[6-9]\d{9}$/ }, // 10 digits, starting 6–9
-  AE: { prefix: '+971', pattern: /^5\d{8}$/ }, // 9 digits after the code, starting 5
+  IN: { prefix: '+91', pattern: /^(?:\+91|0091|91|0)?([6-9]\d{9})$/ }, // 10 digits, starting 6–9
+  AE: { prefix: '+971', pattern: /^(?:\+971|00971|971|0)?(5\d{8})$/ }, // 9 digits after the code, starting 5
 };
 export const dialCode = (c: Country) => mobile[c].prefix;
 
-/** A typed mobile number as E.164, or null. Spaces, dashes, a leading 0 and a repeated country code are forgiven. */
+/** A typed mobile number as E.164, or null. Spaces, dashes, dots, brackets, a leading 0 and the country code are forgiven. */
 export function toE164(country: Country, typed: string): string | null {
-  const prefix = mobile[country].prefix;
-  let digits = typed.replace(/[^\d+]/g, '');
-  if (digits.startsWith(prefix)) digits = digits.slice(prefix.length);
-  digits = digits.replace(/^\+/, '').replace(/^0/, '');
-  return mobile[country].pattern.test(digits) ? `${prefix}${digits}` : null;
+  const m = mobile[country].pattern.exec(typed.replace(/[\s\-().]/g, ''));
+  return m ? `${mobile[country].prefix}${m[1]}` : null;
 }
 
 export const phoneForm = z.object({ country: z.enum(['IN', 'AE']), number: z.string() })

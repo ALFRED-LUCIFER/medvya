@@ -1,3 +1,4 @@
+import samples from '@medvya/i18n/country-samples.json';
 import { maskPhone, phoneForm, shouldLock, LOCK_AFTER_MS, toE164, unlockMethod } from './session';
 
 it('normalises Indian and UAE mobile numbers to E.164', () => {
@@ -9,6 +10,12 @@ it('normalises Indian and UAE mobile numbers to E.164', () => {
   expect(toE164('IN', '9000000')).toBeNull();
   expect(toE164('AE', '9000000101')).toBeNull();
 });
+
+// #1417: the same synthetic samples the server's CountrySamplesTests checks; sign-in accepts a number exactly when the server would.
+it.each((['IN', 'AE'] as const).flatMap(c => [...samples[c].mobile.valid.map(s => [c, s, true] as const), ...samples[c].mobile.invalid.map(s => [c, s, false] as const)]))(
+  'agrees with the server on %s mobile %s (valid: %s)', (country, sample, valid) => {
+    expect(toE164(country, sample) !== null).toBe(valid);
+  });
 
 it('rejects an invalid number with a translatable message', () => {
   const r = phoneForm.safeParse({ country: 'IN', number: '123' });

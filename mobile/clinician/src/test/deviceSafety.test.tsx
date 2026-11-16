@@ -1,7 +1,7 @@
 import { onlineManager } from '@tanstack/react-query';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import * as SecureStore from 'expo-secure-store';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Pressable, Text } from 'react-native';
 import { cast } from '../dev/cast';
 import { readCopy, saveCopy, storeGeneration } from '../features/api/services/store';
@@ -36,7 +36,8 @@ function Launched() {
 }
 function App({ biometric = false }: { biometric?: boolean }) {
   const { ready, session, locked, begin, lock } = useSession();
-  useEffect(() => { if (ready) begin(doctor, biometric); }, [ready]); // once, after the launch check
+  const began = useRef(false);
+  useEffect(() => { if (ready && !began.current) { began.current = true; begin(doctor, biometric); } }, [ready, begin, biometric]); // once, after the launch check
   if (!session) return <Text>signed out</Text>;
   return locked ? <Lock /> : <><Pressable accessibilityRole="button" onPress={lock}><Text>Lock now</Text></Pressable><Today /></>;
 }

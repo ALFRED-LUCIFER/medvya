@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc --noEmit",
     "test": "vitest run",
-    "lint": "oxlint -c ../.oxlintrc.json --react-plugin -D react/jsx-no-literals --ignore-pattern '*.test.tsx' src"
+    "lint": "oxlint --deny-warnings -c ../.oxlintrc.json --react-plugin -D react/jsx-no-literals --ignore-pattern '*.test.tsx' src"
   },
   "peerDependencies": {
     "@medvya/i18n": "workspace:*",

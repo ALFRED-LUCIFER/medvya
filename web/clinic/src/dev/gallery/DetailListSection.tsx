@@ -10,19 +10,19 @@ export default function DetailListSection() {
       <div className="grid gap-4 wide:grid-cols-2">
         <Card title="stacked">
           <DetailList>
-            <Detail label={t('patients.record.dob')}>12 Mar 1972</Detail>
+            <Detail label={t('patients.record.dob')}><bdi dir="ltr">12 Mar 1972</bdi></Detail>
             <Detail label={t('patients.record.mobile')}><bdi dir="ltr">+91 98400 12345</bdi></Detail>
           </DetailList>
         </Card>
         <Card title="inline">
           <DetailList layout="inline">
-            <Detail label={t('appointment.when')}>19 Oct · 10:00</Detail>
+            <Detail label={t('appointment.when')}><bdi dir="ltr">19 Oct · 10:00</bdi></Detail>
             <Detail label={t('appointment.type')}>{t('visitType.FollowUp')}</Detail>
           </DetailList>
         </Card>
       </div>
       <DetailList layout="rows">
-        <Detail label={t('patients.record.dob')} action={<Button type="button" variant="ghost">{t('registration.review.editShort')}</Button>}>12 Mar 1972</Detail>
+        <Detail label={t('patients.record.dob')} action={<Button type="button" variant="ghost">{t('registration.review.editShort')}</Button>}><bdi dir="ltr">12 Mar 1972</bdi></Detail>
         <Detail label={t('settings.data.country')} action={<Button type="button" variant="ghost">{t('registration.review.editShort')}</Button>}>{t('settings.data.country.IN')}</Detail>
       </DetailList>
       <DetailList layout="tiles">

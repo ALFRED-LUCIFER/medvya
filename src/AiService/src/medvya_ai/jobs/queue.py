@@ -6,9 +6,10 @@ each unit of work with set_tenant(job.clinic_id). last_error stores a code, neve
 
 import uuid
 from dataclasses import dataclass
+from datetime import timedelta
 from typing import Any
 
-from sqlalchemy import select, text, update
+from sqlalchemy import func, select, text, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,6 +20,10 @@ STALE_LOCK_SECONDS = 15 * 60  # a worker that died mid-job: the row becomes clai
 HEARTBEAT_SECONDS = 60  # a live worker refreshes locked_at, so a long job is never reclaimed
 # Jobs that process consented audio: gated on consent, and their final failure fails the session.
 SESSION_PIPELINE = frozenset({"transcribe", "normalise", "extract"})
+# Each attempt already retries the provider 3 times; 3 attempts caps one job at 9 paid calls.
+# shortcut: no per-clinic cost cap on model calls (only these attempt limits and the usage
+# counters on each job); add a monthly per-clinic budget check before the pilot scales up.
+MODEL_JOB_MAX_ATTEMPTS = 3
 
 
 class JobCancelled(Exception):
@@ -33,7 +38,8 @@ _CLAIM = text(
     WHERE id = (
         SELECT id FROM processing_job
         WHERE (status = 'queued' AND run_after <= now())
-           OR (status = 'running' AND locked_at < now() - make_interval(secs => :stale))
+           OR (status = 'running' AND locked_at < now() - make_interval(secs => :stale)
+               AND attempts < max_attempts)
         ORDER BY run_after
         FOR UPDATE SKIP LOCKED
         LIMIT 1)
@@ -51,6 +57,7 @@ class Job:
     attempts: int
     max_attempts: int
     consent_epoch: int = 0
+    worker: str = ""  # locked_by at claim: every later write checks the row is still ours
 
 
 def backoff_seconds(attempts: int) -> int:
@@ -75,6 +82,7 @@ async def enqueue(
             session_id=session_id,
             kind=kind,
             consent_epoch=consent_epoch,
+            **({"max_attempts": MODEL_JOB_MAX_ATTEMPTS} if kind in SESSION_PIPELINE else {}),
         )
         .on_conflict_do_nothing()
     )
@@ -115,11 +123,19 @@ async def ensure_processable(db: AsyncSession, job: Job) -> None:
         raise JobCancelled
 
 
-async def ensure_active(db: AsyncSession, job_id: uuid.UUID) -> None:
+def _ours(job: Job) -> Any:
+    """The row is still running under this worker: not cancelled, not reclaimed by another."""
+    return (
+        (ProcessingJob.id == job.id)
+        & (ProcessingJob.status == "running")
+        & (ProcessingJob.locked_by == job.worker)
+    )
+
+
+async def ensure_active(db: AsyncSession, job: Job) -> None:
     """Cancellation token, checked right before every external provider call: a withdrawal
-    committed since the claim has set the row to cancelled."""
-    status = await db.scalar(select(ProcessingJob.status).where(ProcessingJob.id == job_id))
-    if status != "running":
+    committed since the claim has set the row to cancelled, or another worker reclaimed it."""
+    if await db.scalar(select(ProcessingJob.id).where(_ours(job))) is None:
         raise JobCancelled
 
 
@@ -135,15 +151,12 @@ async def claim(db: AsyncSession, worker_id: str) -> Job | None:
         row.attempts,
         row.max_attempts,
         row.consent_epoch,
+        worker_id,
     )
 
 
-async def touch(db: AsyncSession, job_id: uuid.UUID) -> None:
-    await db.execute(
-        update(ProcessingJob)
-        .where(ProcessingJob.id == job_id, ProcessingJob.status == "running")
-        .values(locked_at=text("now()"))
-    )
+async def touch(db: AsyncSession, job: Job) -> None:
+    await db.execute(update(ProcessingJob).where(_ours(job)).values(locked_at=text("now()")))
 
 
 async def complete(db: AsyncSession, job: Job, usage: dict[str, Any] | None = None) -> None:
@@ -153,7 +166,7 @@ async def complete(db: AsyncSession, job: Job, usage: dict[str, Any] | None = No
     done = (
         await db.execute(
             update(ProcessingJob)
-            .where(ProcessingJob.id == job.id, ProcessingJob.status == "running")
+            .where(_ours(job))
             .values(
                 status="done",
                 usage=usage or {},
@@ -172,14 +185,15 @@ async def complete(db: AsyncSession, job: Job, usage: dict[str, Any] | None = No
 async def mark_cancelled(db: AsyncSession, job: Job) -> None:
     await db.execute(
         update(ProcessingJob)
-        .where(ProcessingJob.id == job.id, ProcessingJob.status == "running")
+        .where(_ours(job))
         .values(status="cancelled", locked_at=None, locked_by=None, updated_at=text("now()"))
     )
 
 
 async def fail(db: AsyncSession, job: Job, error: str, *, permanent: bool = False) -> str:
     """Requeue with backoff, or mark failed (and the session failed) when attempts are used up.
-    Returns the new job status."""
+    Only a row still running under this worker changes: a cancelled job is never requeued and a
+    reclaimed one belongs to the other worker. Returns the new job status, or "lost"."""
     final = permanent or job.attempts >= job.max_attempts
     values: dict[str, object] = {
         "last_error": error[:200],
@@ -192,12 +206,49 @@ async def fail(db: AsyncSession, job: Job, error: str, *, permanent: bool = Fals
     else:
         values["status"] = "queued"
         values["run_after"] = text(f"now() + interval '{backoff_seconds(job.attempts)} seconds'")
-    await db.execute(update(ProcessingJob).where(ProcessingJob.id == job.id).values(**values))
-    if final and job.session_id is not None and job.kind in SESSION_PIPELINE:
-        await set_tenant(db, job.clinic_id)
+    changed = (
         await db.execute(
-            update(ConsultationSession)
-            .where(ConsultationSession.id == job.session_id, ConsultationSession.state != "revoked")
-            .values(state="failed")
+            update(ProcessingJob).where(_ours(job)).values(**values).returning(ProcessingJob.id)
         )
+    ).first()
+    if changed is None:
+        return "lost"
+    if final and job.session_id is not None and job.kind in SESSION_PIPELINE:
+        await _fail_session(db, job.clinic_id, job.session_id)
     return "failed" if final else "queued"
+
+
+async def _fail_session(db: AsyncSession, clinic_id: uuid.UUID, session_id: uuid.UUID) -> None:
+    await set_tenant(db, clinic_id)
+    await db.execute(
+        update(ConsultationSession)
+        .where(ConsultationSession.id == session_id, ConsultationSession.state != "revoked")
+        .values(state="failed")
+    )
+
+
+async def fail_exhausted_stale(db: AsyncSession) -> int:
+    """A job whose worker died on its last attempt is never reclaimed (see _CLAIM): mark it
+    failed, and its session failed, instead of leaving it running forever."""
+    rows = (
+        await db.execute(
+            update(ProcessingJob)
+            .where(
+                ProcessingJob.status == "running",
+                ProcessingJob.locked_at < func.now() - timedelta(seconds=STALE_LOCK_SECONDS),
+                ProcessingJob.attempts >= ProcessingJob.max_attempts,
+            )
+            .values(
+                status="failed",
+                last_error="WORKER_LOST",
+                locked_at=None,
+                locked_by=None,
+                updated_at=text("now()"),
+            )
+            .returning(ProcessingJob.clinic_id, ProcessingJob.session_id, ProcessingJob.kind)
+        )
+    ).all()
+    for clinic_id, session_id, kind in rows:
+        if session_id is not None and kind in SESSION_PIPELINE:
+            await _fail_session(db, clinic_id, session_id)
+    return len(rows)

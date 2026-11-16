@@ -93,22 +93,24 @@ async def test_transcribe_sends_multipart_and_maps() -> None:
     assert b"WEBM-BYTES" in body
 
 
-async def test_retries_429_then_succeeds_with_documented_backoff() -> None:
+async def test_retries_429_then_succeeds_honouring_retry_after() -> None:
     calls = {"n": 0}
 
     def handler(_: httpx.Request) -> httpx.Response:
         calls["n"] += 1
-        if calls["n"] < 4:
-            return httpx.Response(429 if calls["n"] % 2 else 503, text="busy PHI-LIKE-TEXT")
+        if calls["n"] == 1:
+            return httpx.Response(429, headers={"Retry-After": "5"}, text="busy PHI-LIKE-TEXT")
+        if calls["n"] == 2:
+            return httpx.Response(503, text="busy")
         return httpx.Response(200, json=SAMPLE)
 
     sleeps: list[float] = []
     t = _transcriber(httpx.MockTransport(handler), sleeps)
     assert await t.transcribe(b"x", mime_type="audio/webm", locales=["en-IN"], max_speakers=2)
-    assert sleeps == [2, 4, 8]
+    assert sleeps == [5, 8]  # Retry-After first, then our backoff
 
 
-async def test_gives_up_after_five_retries_without_leaking_body() -> None:
+async def test_gives_up_after_two_retries_without_leaking_body() -> None:
     def handler(_: httpx.Request) -> httpx.Response:
         return httpx.Response(503, text="secret clinical words")
 
@@ -116,7 +118,7 @@ async def test_gives_up_after_five_retries_without_leaking_body() -> None:
     t = _transcriber(httpx.MockTransport(handler), sleeps)
     with pytest.raises(ProviderError) as exc:
         await t.transcribe(b"x", mime_type="audio/webm", locales=["en-IN"], max_speakers=2)
-    assert sleeps == [2, 4, 8, 16, 32]
+    assert sleeps == [2, 8]
     assert "secret" not in str(exc.value) and exc.value.code == "SPEECH_HTTP_503"
 
 

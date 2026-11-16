@@ -18,8 +18,10 @@ inference runs: Global Standard and Data Zone deployment types route outside the
    output listing `sku.name` and the resource location, saved under `src/AiService/docs/reports/`.
 2. Until such a deployment exists, `LLM_PROVIDER=foundry` is only used with synthetic or
    consented test audio. No "India resident" claim is made for Global Standard or UAE North.
-3. Every provider call records adapter, model/deployment, endpoint and region on the job
-   (`processing_job.usage`), so the processing location of each encounter is auditable.
+3. Every provider call records adapter, model/deployment and the endpoint host actually called on
+   the job (`processing_job.usage`), so the processing location of each encounter is auditable.
+   The worker refuses to start when a real provider's endpoint host is not on
+   `PROCESSING_ENDPOINT_HOSTS`, the per-country allow-list (#1417).
 4. Subprocessor terms to review: retention and abuse monitoring of prompts, no training on
    customer data, deletion on request, breach notification windows (India DPDP Act 2023 and the
    2025 Rules).
@@ -27,4 +29,5 @@ inference runs: Global Standard and Data Zone deployment types route outside the
 ## Consequences
 
 Deployment is blocked on item 1. The code needs no change to switch region: only
-`SPEECH_REGION`, `SPEECH_ENDPOINT`, `FOUNDRY_ENDPOINT` and the deployment names.
+`SPEECH_REGION`, `SPEECH_ENDPOINT`, `FOUNDRY_ENDPOINT`, the deployment names and
+`PROCESSING_ENDPOINT_HOSTS`.

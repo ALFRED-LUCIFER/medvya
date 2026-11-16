@@ -1,8 +1,9 @@
 """Purge of a revoked session (outbox job enqueued by consent.revoke).
 
 Audio is always purged (blob + deleted_at). Derived artifacts (transcript, note, revisions,
-facts, medications, evidence, rejections) are deleted only while the session is `revoked`,
-i.e. never approved; an approved record is kept under record retention (ADR 0001).
+facts, medications, evidence, rejections, corrections) are deleted, and participant names are
+replaced by their role, only while the session is `revoked`, i.e. never approved; an approved
+record is kept under record retention (ADR 0001).
 Consent records and audit events are never touched. Idempotent: reruns find nothing.
 """
 
@@ -10,7 +11,8 @@ import uuid
 from datetime import datetime
 from typing import Any, cast
 
-from sqlalchemy import CursorResult, delete, select
+from sqlalchemy import CursorResult, String, delete, select, update
+from sqlalchemy import cast as sql_cast
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from medvya_ai import audit
@@ -22,6 +24,7 @@ from medvya_ai.models import (
     FactEvidence,
     Medication,
     NoteRevision,
+    Participant,
     TranscriptCorrection,
     TranscriptSegment,
 )
@@ -63,6 +66,15 @@ async def purge_session(
             ),
             ("revisions", delete(NoteRevision).where(NoteRevision.note_id.in_(notes))),
             ("notes", delete(ClinicalNote).where(ClinicalNote.session_id == session_id)),
+            (
+                "participant_names",
+                update(Participant)
+                .where(
+                    Participant.session_id == session_id,
+                    Participant.display_name != sql_cast(Participant.role, String),
+                )
+                .values(display_name=sql_cast(Participant.role, String)),
+            ),
         ):
             counts[name] = cast(CursorResult[Any], await db.execute(stmt)).rowcount
     if any(counts.values()):

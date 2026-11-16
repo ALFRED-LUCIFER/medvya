@@ -63,12 +63,13 @@ async def test_heartbeat_refreshes_lock_and_outlives_stale_window(
         def begin(self) -> "_Tx":
             return self
 
-    async def fake_touch(_: object, job_id: uuid.UUID) -> None:
-        touched.append(job_id)
+    async def fake_touch(_: object, job: queue.Job) -> None:
+        touched.append(job.id)
 
     monkeypatch.setattr(queue, "touch", fake_touch)
     jid = uuid.uuid4()
-    task = asyncio.create_task(worker.heartbeat(lambda: _Tx(), jid, 0.01))  # type: ignore[arg-type]
+    job = queue.Job(jid, uuid.uuid4(), None, "extract", 1, 3, 0, "w1")
+    task = asyncio.create_task(worker.heartbeat(lambda: _Tx(), job, 0.01))  # type: ignore[arg-type]
     await asyncio.sleep(0.08)
     task.cancel()
     assert len(touched) >= 2 and set(touched) == {jid}

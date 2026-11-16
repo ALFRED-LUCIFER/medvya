@@ -6,16 +6,15 @@ from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import select, text
-from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from medvya_ai import crypto
 from medvya_ai.db import uuid7
 from medvya_ai.errors import AppError
+from medvya_ai.jobs.queue import enqueue
 from medvya_ai.models import (
     AudioChunk,
     ConsultationSession,
-    ProcessingJob,
     RecordingSegment,
 )
 from medvya_ai.schemas import SegmentComplete, SegmentIn
@@ -252,14 +251,8 @@ async def finish_session(db: AsyncSession, session_id: uuid.UUID) -> Consultatio
         raise AppError(409, "SEGMENTS_INCOMPLETE", "All segments must be complete", segments=open_)
     s.state, s.finished_at = "processing", datetime.now(UTC)
     # Transactional enqueue: job and state change commit together.
-    await db.execute(
-        pg_insert(ProcessingJob).values(
-            id=uuid7(),
-            clinic_id=s.clinic_id,
-            session_id=s.id,
-            kind="transcribe",
-            consent_epoch=s.consent_epoch,
-        )
+    await enqueue(
+        db, clinic_id=s.clinic_id, session_id=s.id, kind="transcribe", consent_epoch=s.consent_epoch
     )
     await db.flush()
     return s

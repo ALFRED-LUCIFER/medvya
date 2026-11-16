@@ -21,7 +21,7 @@ COPY --from=build --chown=app:app /app /app
 ENV PATH="/app/.venv/bin:$PATH" PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
 USER app
 EXPOSE 8000
-HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
-  CMD python -c "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/healthz', timeout=2)"
-# --proxy-headers so the login rate limiter and audit log see the client IP behind a load balancer.
+# No HEALTHCHECK here: the worker runs this same image without an HTTP port. Probes live in the
+# deployment config: the API container probes GET /healthz (liveness) and /readyz (readiness).
+# --proxy-headers so the audit log sees the caller IP behind a load balancer.
 CMD ["uvicorn", "medvya_ai.main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers"]

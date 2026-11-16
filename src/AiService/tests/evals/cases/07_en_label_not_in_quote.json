@@ -1,0 +1,75 @@
+{
+  "id": "07_en_label_not_in_quote",
+  "slice": "en",
+  "turns": [
+    {
+      "idx": 0,
+      "speaker_role": "doctor",
+      "locale": "en-IN",
+      "original_text": "Any allergies?",
+      "english_text": "Any allergies?"
+    },
+    {
+      "idx": 1,
+      "speaker_role": "patient",
+      "locale": "en-IN",
+      "original_text": "I am not sure, I will check at home. I get breathless climbing stairs.",
+      "english_text": "I am not sure, I will check at home. I get breathless climbing stairs."
+    }
+  ],
+  "model_output": {
+    "note": {
+      "chief_complaint": "",
+      "hpi": "",
+      "subjective": "",
+      "objective": "",
+      "assessment": "",
+      "plan": "",
+      "summary": "synthetic"
+    },
+    "missing_or_uncertain": [],
+    "facts": [
+      {
+        "category": "allergy",
+        "label": "penicillin",
+        "polarity": "present",
+        "body_site": null,
+        "value_numeric": null,
+        "value_unit": null,
+        "detail": null,
+        "confidence": 0.8,
+        "evidence": [{"segment_idx": 0, "quote": "Any allergies?"}],
+        "medication": null
+      },
+      {
+        "category": "diagnosis",
+        "label": "asthma",
+        "polarity": "present",
+        "body_site": null,
+        "value_numeric": null,
+        "value_unit": null,
+        "detail": null,
+        "confidence": 0.7,
+        "evidence": [{"segment_idx": 1, "quote": "I get breathless climbing stairs"}],
+        "medication": null
+      },
+      {
+        "category": "symptom",
+        "label": "breathlessness",
+        "polarity": "present",
+        "body_site": null,
+        "value_numeric": null,
+        "value_unit": null,
+        "detail": "on climbing stairs",
+        "confidence": 0.9,
+        "evidence": [{"segment_idx": 1, "quote": "I get breathless climbing stairs"}],
+        "medication": null
+      }
+    ]
+  },
+  "gold_facts": [
+    {"category": "allergy", "label": "penicillin", "polarity": "uncertain"},
+    {"category": "diagnosis", "label": "asthma", "polarity": "uncertain"},
+    {"category": "symptom", "label": "breathlessness"}
+  ]
+}

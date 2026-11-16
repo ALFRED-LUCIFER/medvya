@@ -1,5 +1,4 @@
 import uuid
-from datetime import UTC, datetime
 
 from fastapi import APIRouter, Response
 
@@ -7,7 +6,6 @@ from medvya_ai.deps import TenantDep
 from medvya_ai.errors import AppError
 from medvya_ai.schemas import (
     ApplyRolesOut,
-    ApproveOut,
     FactOut,
     FactReviewIn,
     ManualNoteIn,
@@ -100,12 +98,3 @@ async def list_revisions(session_id: uuid.UUID, t: TenantDep) -> RevisionsOut:
     out = await note_svc.list_revisions(t.db, session_id)
     await t.audit("revisions_view", "clinical_note", out.note_id, {"n": len(out.revisions)})
     return out
-
-
-@router.post("/sessions/{session_id}/approve", response_model=ApproveOut)
-async def approve(session_id: uuid.UUID, t: TenantDep) -> ApproveOut:
-    if t.role != "doctor":  # clinical sign-off is a clinician act
-        raise AppError(403, "FORBIDDEN", "Only a doctor can approve a note")
-    note, rev_no = await note_svc.approve(t.db, session_id, t.user_id)
-    await t.audit("note_approve", "clinical_note", note.id, {"rev_no": rev_no})
-    return ApproveOut(status="approved", approved_at=note.approved_at or datetime.now(UTC))

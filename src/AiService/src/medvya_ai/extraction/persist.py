@@ -30,6 +30,9 @@ from medvya_ai.models import (
 )
 
 INT4_MAX = 2_147_483_647
+# Clinical assertions: the label itself must be named in an evidence quote. "Any allergies?" is a
+# real quote, but it does not back "allergy: penicillin".
+ASSERTION_CATEGORIES = frozenset({"diagnosis", "allergy", "history"})
 
 
 @dataclass
@@ -39,6 +42,7 @@ class Counts:
     rejected: int = 0
     evidence_dropped: int = 0
     negation_flagged: int = 0
+    grounding_flagged: int = 0
 
 
 def _dec(v: float | None, *, lo: float | None = None, hi: float | None = None) -> Decimal | None:
@@ -99,7 +103,10 @@ def _medication(
         fact_id=fact_id,
         clinic_id=clinic_id,
         name_as_spoken=name if has_term(cited, name) and name else label,
-        generic_name=generic_name(m.generic_name),
+        # shortcut: a generic name the transcript does not contain is the model's guess and there is
+        # no column to mark it as a suggestion, so it is not stored; add generic_name_suggested
+        # (shown as unconfirmed) when the review screen needs brand -> generic help.
+        generic_name=generic_name(m.generic_name) if has_term(cited, m.generic_name) else None,
         strength_value=strength,
         strength_unit=unit_code(m.strength_unit) if strength is not None else None,
         dose_text=_clean(m.dose_text) if has_term(cited, m.dose_text) else None,
@@ -180,6 +187,11 @@ async def persist_extraction(
             continue
         value = fact.value_numeric if has_number(cited, fact.value_numeric) else None
         polarity = fact.polarity
+        quoted = " ".join(q for _, q in verified.accepted)
+        if fact.category in ASSERTION_CATEGORIES and not has_term(quoted, label):
+            polarity = "uncertain"  # a clinician must confirm what the quote does not say
+            flagged.append(f"{label}: not named in the quoted transcript text")
+            counts.grounding_flagged += 1
         if polarity == "present" and negated(
             cited, med.name_as_spoken if med and has_term(cited, med.name_as_spoken) else label
         ):  # the transcript negates what the model asserted: a clinician must decide

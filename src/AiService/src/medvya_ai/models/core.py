@@ -22,8 +22,7 @@ class AppUser(Base):
     __tablename__ = "app_user"
     id: Mapped[uuid.UUID] = pk()
     clinic_id: Mapped[uuid.UUID] = uuid_col()
-    email: Mapped[str]
-    password_hash: Mapped[str]
+    email: Mapped[str | None]  # NULL for users Medvya asserts in AUTH_MODE=service
     role: Mapped[str] = mapped_column(pg_enum("user_role"))
     display_name: Mapped[str]
     external_subject: Mapped[str | None]  # OIDC oid/sub; NULL = cannot log in
@@ -44,7 +43,7 @@ class ConsultationSession(Base):
     id: Mapped[uuid.UUID] = pk()
     clinic_id: Mapped[uuid.UUID] = uuid_col()
     doctor_id: Mapped[uuid.UUID] = uuid_col()
-    patient_ref: Mapped[str]
+    patient_ref: Mapped[uuid.UUID] = uuid_col()  # Medvya encounter id (ADR-021 section 4)
     specialty: Mapped[str | None]
     scheduled_date: Mapped[date]
     state: Mapped[str] = mapped_column(pg_enum("session_state"), server_default="created")
@@ -138,41 +137,6 @@ class AuditEvent(Base):
     )
     ip: Mapped[str | None]
     created_at: Mapped[datetime] = ts_now()
-
-
-class PrivacyRequest(Base):
-    """Patient access / erasure request. decision holds ids and counts only."""
-
-    __tablename__ = "privacy_request"
-    id: Mapped[uuid.UUID] = pk()
-    clinic_id: Mapped[uuid.UUID] = uuid_col()
-    patient_ref: Mapped[str]
-    kind: Mapped[str] = mapped_column(pg_enum("privacy_request_kind"))
-    status: Mapped[str] = mapped_column(
-        pg_enum("privacy_request_status"), server_default="received"
-    )
-    identity_verified_by: Mapped[uuid.UUID] = uuid_col()
-    verification_note: Mapped[str | None]
-    decision: Mapped[dict[str, Any]] = mapped_column(JSONB, server_default=sa.text("'{}'::jsonb"))
-    created_at: Mapped[datetime] = ts_now()
-    resolved_at: Mapped[datetime | None]
-
-
-class ReceptionistConversation(Base):
-    """Intake chat (POC). messages: [{role: patient|receptionist, text}], intake: Intake dump."""
-
-    __tablename__ = "receptionist_conversation"
-    id: Mapped[uuid.UUID] = pk()
-    clinic_id: Mapped[uuid.UUID] = uuid_col()
-    status: Mapped[str] = mapped_column(pg_enum("receptionist_status"), server_default="open")
-    language: Mapped[str | None]
-    intake: Mapped[dict[str, Any]] = mapped_column(JSONB, server_default=sa.text("'{}'::jsonb"))
-    messages: Mapped[list[dict[str, Any]]] = mapped_column(
-        JSONB, server_default=sa.text("'[]'::jsonb")
-    )
-    session_id: Mapped[uuid.UUID | None] = uuid_col(nullable=True)
-    created_at: Mapped[datetime] = ts_now()
-    updated_at: Mapped[datetime] = ts_now()
 
 
 class ProcessingJob(Base):

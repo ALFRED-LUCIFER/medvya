@@ -9,7 +9,7 @@ from medvya_ai.config import Settings
 from medvya_ai.db import set_tenant
 from medvya_ai.jobs.scheduler import enqueue_retention_sweeps
 from medvya_ai.jobs.worker import run_once
-from medvya_ai.services.retention import sweep
+from medvya_ai.services.retention import expire_sessions, sweep
 from tests.integration.helpers import finished_session
 from tests.integration.pipeline import deps_for, drain
 
@@ -136,3 +136,49 @@ async def test_job_last_error_never_carries_message_text(app_ctx, make_clinic) -
         if err:
             break
     assert err == "ValueError"
+
+
+async def test_working_data_is_purged_retention_days_after_the_session_finished(
+    app_ctx, make_clinic, settings, blobs
+) -> None:  # type: ignore[no-untyped-def]
+    """Medvya keeps the signed note; this service's transcript, facts, corrections and participant
+    names go RETENTION_SESSION_DAYS after the session finished. Consent log and audit stay."""
+    app, c = app_ctx
+    cid, _, h = await make_clinic()
+    old = await finished_session(c, h)
+    recent = await finished_session(c, h)
+    assert await drain(app, deps_for(app), max_jobs=10) == 6
+    now = datetime.now(UTC)
+    for sid, days in ((old, 31), (recent, 29)):
+        await _q(
+            app,
+            cid,
+            "UPDATE consultation_session SET finished_at = :t WHERE id = :s",
+            t=now - timedelta(days=days),
+            s=uuid.UUID(sid),
+        )
+    async with app.state.sessionmaker() as db, db.begin():
+        await set_tenant(db, cid)
+        assert await expire_sessions(db, clinic_id=cid, now=now, settings=settings) == 1
+    assert await drain(app, deps_for(app)) == 1  # the purge job
+    per_session = (
+        "SELECT (SELECT count(*) FROM transcript_segment WHERE session_id = :s), "
+        "(SELECT count(*) FROM clinical_fact WHERE session_id = :s), "
+        "(SELECT count(*) FROM clinical_note WHERE session_id = :s), "
+        "(SELECT count(*) FROM participant WHERE session_id = :s AND display_name <> role::text), "
+        "(SELECT count(*) FROM consent_record WHERE session_id = :s)"
+    )
+    (gone,) = await _q(app, cid, per_session, s=uuid.UUID(old))
+    assert tuple(gone) == (0, 0, 0, 0, 2)  # consent log survives
+    (kept,) = await _q(app, cid, per_session, s=uuid.UUID(recent))
+    assert kept[0] > 0 and kept[1] > 0 and kept[3] == 2
+    actions = {
+        a
+        for (a,) in await _q(
+            app, cid, "SELECT action FROM audit_event WHERE entity_id = :s", s=uuid.UUID(old)
+        )
+    }
+    assert {"session_retention_expired", "session_purged"} <= actions
+    async with app.state.sessionmaker() as db, db.begin():  # idempotent
+        await set_tenant(db, cid)
+        assert await expire_sessions(db, clinic_id=cid, now=now, settings=settings) == 0

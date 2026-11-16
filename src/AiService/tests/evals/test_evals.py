@@ -32,7 +32,7 @@ async def _run(live: bool) -> list[dict[str, object]]:
 
 def _gate(rows: list[dict[str, object]]) -> None:
     """Release gate from the blueprint: zero unsupported critical facts, negations preserved."""
-    assert len(rows) >= 6
+    assert len(rows) >= 7
     for r in rows:
         assert r["critical_unsupported"] == [], r
         assert r["negation_fidelity"] == 1.0, r
@@ -45,6 +45,9 @@ async def test_replay_set_passes_release_gate() -> None:
     by_id = {r["id"]: r for r in rows}
     # the gate, not the model, produced these outcomes
     assert by_id["02_hi_negation"]["negation_flagged"] == 2
+    # SAFETY: mutation check: removed the ASSERTION_CATEGORIES has_term check in persist.py ->
+    # this test failed (penicillin and asthma kept as present)
+    assert by_id["07_en_label_not_in_quote"]["grounding_flagged"] == 2
     assert by_id["04_hinglish_switch"]["rejected_by_gate"] == 1  # "dengue" never said
     assert by_id["05_three_speakers_overlap"]["rejected_by_gate"] == 1  # invented aspirin
     assert by_id["06_dose_correction_noisy"]["strength_exact"] == "0/0"  # wrong 50 mg dropped

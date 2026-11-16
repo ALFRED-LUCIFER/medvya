@@ -2,6 +2,7 @@ using Medvya.Scheduling.Application;
 using Medvya.Scheduling.Domain;
 using Medvya.Scheduling.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Medvya.BuildingBlocks.Domain;
 
 namespace Medvya.Scheduling.Infrastructure;
 
@@ -50,7 +51,7 @@ public sealed class PilotMetricsService(SchedulingDbContext db, SchedulingContex
     public async Task<BaselineView> RecordBaselineAsync(RecordBaseline command, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
-        var method = ScheduleService.Clean(command.Method);
+        var method = TextInput.Clean(command.Method);
         var errors = new List<ValidationError>();
         if (command.Metric is not { } metric || !Enum.IsDefined(metric)) errors.Add(new("metric", "required"));
         if (command.Value is not { } value || value < 0) errors.Add(new("value", "required"));

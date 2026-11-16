@@ -23,7 +23,7 @@ public sealed class InvitationOptions
 }
 
 public sealed partial class Invitations(TenancyDbContext db, ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, IEmailSender mail, IOptions<InvitationOptions> options,
-    IStaffAccess access, ILogger<Invitations>? log = null, StarterPlan? plan = null, ILogoStore? logos = null)
+    IStaffAccess access, ILogger<Invitations>? log = null, StarterPlan? plan = null, ILogoStore? logos = null, TimeProvider? clock = null)
     : IInvitations
 {
     public async Task<IReadOnlyList<FacilityOption>> FacilitiesAsync(CancellationToken cancellationToken = default) =>
@@ -107,7 +107,7 @@ public sealed partial class Invitations(TenancyDbContext db, ICurrentTenant tena
         var inviter = user.UserId ?? throw new InvalidOperationException("No signed-in user.");
         var baseUrl = options.Value.LinkBaseUrl ?? throw new InvalidOperationException("Invitations:LinkBaseUrl is not configured.");
         var clinic = await db.Tenants.Select(t => t.Name).SingleAsync(cancellationToken);
-        var now = DateTimeOffset.UtcNow;
+        var now = (clock ?? TimeProvider.System).GetUtcNow();
         if (await db.Invitations.CountAsync(i => i.CreatedAt > now.AddHours(-1), cancellationToken) >= InvitationRules.MaxPerHour)
             throw new InvitationLimitException();
         var (token, hash) = InvitationToken.New(tenantId);
@@ -162,7 +162,7 @@ public sealed partial class Invitations(TenancyDbContext db, ICurrentTenant tena
     public async Task<bool> RevokeAsync(Guid invitationId, CancellationToken cancellationToken = default)
     {
         var tenantId = tenant.TenantId ?? throw new InvalidOperationException("No tenant context.");
-        var now = DateTimeOffset.UtcNow;
+        var now = (clock ?? TimeProvider.System).GetUtcNow();
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
         var facilityId = await db.Invitations.Where(i => i.Id == invitationId).Join(db.Memberships, i => i.MembershipId, m => m.Id, (_, m) => (Guid?)m.FacilityId)
             .SingleOrDefaultAsync(cancellationToken);
@@ -178,7 +178,7 @@ public sealed partial class Invitations(TenancyDbContext db, ICurrentTenant tena
     public async Task<InvitationPreview?> PreviewAsync(string token, CancellationToken cancellationToken = default)
     {
         if (InvitationToken.Read(token) is not { } t || t.TenantId != tenant.TenantId) return null;
-        var now = DateTimeOffset.UtcNow;
+        var now = (clock ?? TimeProvider.System).GetUtcNow();
         var x = await (
             from i in db.Invitations
             where i.TokenHash == t.Hash && i.AcceptedAt == null && i.RevokedAt == null && i.ExpiresAt > now
@@ -192,7 +192,7 @@ public sealed partial class Invitations(TenancyDbContext db, ICurrentTenant tena
     public async Task<bool?> IsAddressedToAsync(string token, IReadOnlyCollection<string> emails, CancellationToken cancellationToken = default)
     {
         if (InvitationToken.Read(token) is not { } t || t.TenantId != tenant.TenantId) return null;
-        var now = DateTimeOffset.UtcNow;
+        var now = (clock ?? TimeProvider.System).GetUtcNow();
         var invitation = await db.Invitations.Where(i => i.TokenHash == t.Hash && i.AcceptedAt == null && i.RevokedAt == null && i.ExpiresAt > now)
             .Select(i => new { i.Id, i.Email }).SingleOrDefaultAsync(cancellationToken);
         if (invitation is null) return null;
@@ -211,7 +211,7 @@ public sealed partial class Invitations(TenancyDbContext db, ICurrentTenant tena
     public async Task<bool> AcceptAsync(string token, Guid userId, CancellationToken cancellationToken = default)
     {
         if (InvitationToken.Read(token) is not { } t || t.TenantId != tenant.TenantId) return false;
-        var now = DateTimeOffset.UtcNow;
+        var now = (clock ?? TimeProvider.System).GetUtcNow();
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
         // The conditional update is the single-use guard: of two concurrent acceptances, only one changes a row.
         var claimed = await db.Invitations.Where(i => i.TokenHash == t.Hash && i.AcceptedAt == null && i.RevokedAt == null && i.ExpiresAt > now)

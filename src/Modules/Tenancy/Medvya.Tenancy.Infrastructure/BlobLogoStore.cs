@@ -62,7 +62,7 @@ public sealed class BlobLogoStore : ILogoStore, IDisposable
     public async Task<Uri> LinkForAsync(string key, TimeSpan lifetime, CancellationToken cancellationToken = default)
     {
         var blob = container.GetBlobClient(key);
-        var now = DateTimeOffset.UtcNow;
+        var now = DateTimeOffset.UtcNow; // wall clock: the storage service checks the link against real time
         var sas = new BlobSasBuilder(BlobSasPermissions.Read, now + lifetime) { BlobContainerName = Container, BlobName = key, Resource = "b", StartsOn = now.AddMinutes(-1) };
         if (!userDelegation) return blob.GenerateSasUri(sas);
         // One delegation key signs every link until it runs out: a round trip to the Blob service an hour, not one per link.

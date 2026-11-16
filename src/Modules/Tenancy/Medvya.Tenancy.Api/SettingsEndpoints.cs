@@ -47,10 +47,10 @@ public static class SettingsEndpoints
             await s.SetHoursAsync(id, body, ct) is { } v ? Results.Ok(v) : Results.NotFound());
 
         // Holidays: each lists the booked visits still on that date, which the desk has to move (new bookings are refused by the booking path).
-        g.MapGet("/locations/{id:guid}/closures", async (Guid id, [FromServices] IPracticeSettings s, [FromServices] IScheduleService schedule, CancellationToken ct) =>
+        g.MapGet("/locations/{id:guid}/closures", async (Guid id, [FromServices] IPracticeSettings s, [FromServices] IScheduleService schedule, [FromServices] TimeProvider clock, CancellationToken ct) =>
         {
             if (await s.ListClosuresAsync(id, ct) is not { } closures) return Results.NotFound();
-            var today = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-1)); // UTC-1 day covers every facility zone; past closures need no list
+            var today = DateOnly.FromDateTime(clock.GetUtcNow().UtcDateTime.AddDays(-1)); // UTC-1 day covers every facility zone; past closures need no list
             var rows = new List<ClosureWithVisits>();
             foreach (var c in closures) rows.Add(new(c, c.Date < today ? [] : await schedule.AppointmentsOnAsync(id, c.Date, ct)));
             return Results.Ok(rows);
@@ -71,7 +71,7 @@ public static class SettingsEndpoints
         });
         g.MapDelete("/logo", async ([FromServices] IPracticeSettings s, CancellationToken ct) => await s.RemoveLogoAsync(ct) ? Results.NoContent() : Results.NotFound());
         g.MapGet("/logo", async ([FromServices] IPracticeSettings s, CancellationToken ct) =>
-            await s.LogoLinkAsync(LogoLinkLifetime, ct) is { } url ? Results.Ok(new LogoLink(url, DateTimeOffset.UtcNow + LogoLinkLifetime)) : Results.NotFound());
+            await s.LogoLinkAsync(LogoLinkLifetime, ct) is { } url ? Results.Ok(new LogoLink(url, DateTimeOffset.UtcNow + LogoLinkLifetime)) : Results.NotFound()); // wall clock: when the storage service stops honouring the link
 
         // Which clinicians treat the facility's patients (MDV-P2-024): every clinician of it (default) or only those assigned.
         g.MapGet("/clinical-access", async ([FromServices] IPracticeSettings s, CancellationToken ct) => Results.Ok(new ClinicalAccessBody(await s.GetClinicalAccessAsync(ct))));

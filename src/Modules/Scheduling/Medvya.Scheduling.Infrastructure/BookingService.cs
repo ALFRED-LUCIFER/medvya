@@ -80,7 +80,7 @@ public sealed class BookingService(
         if (command.PatientId == Guid.Empty) errors.Add(new("patientId", "required"));
         if (!Enum.IsDefined(command.ReasonCategory)) errors.Add(new("reasonCategory", "invalid"));
         if (!Enum.IsDefined(command.Channel)) errors.Add(new("channel", "invalid"));
-        var reason = ScheduleService.Clean(command.ReasonText);
+        var reason = TextInput.Clean(command.ReasonText);
         if (reason?.Length > MaxReason) errors.Add(new("reasonText", "too_long"));
         SchedulingValidationException.ThrowIfAny(errors);
         // Any patient of the organisation (MDV-P1-072); another organisation's is invisible (tenant filter and row-level security).
@@ -362,7 +362,7 @@ public sealed class BookingService(
     static string? CleanCancel(CancelAppointment command)
     {
         ArgumentNullException.ThrowIfNull(command);
-        var note = ScheduleService.Clean(command.Note);
+        var note = TextInput.Clean(command.Note);
         var errors = new List<ValidationError>();
         if (command.Reason is not { } reason || !Enum.IsDefined(reason)) errors.Add(new("reason", "required"));
         else if (reason == CancelReason.Other && note is null) errors.Add(new("note", "required"));
@@ -526,7 +526,7 @@ public sealed class BookingService(
         if (!Enum.IsDefined(command.VisitType)) errors.Add(new("visitType", "invalid"));
         if (!Enum.IsDefined(command.ReasonCategory)) errors.Add(new("reasonCategory", "invalid"));
         if (!Enum.IsDefined(command.Channel)) errors.Add(new("channel", "invalid"));
-        var reason = ScheduleService.Clean(command.ReasonText);
+        var reason = TextInput.Clean(command.ReasonText);
         if (reason?.Length > MaxReason) errors.Add(new("reasonText", "too_long"));
         if (command.Starts.Count is < 1 or > SeriesPattern.MaxCount || command.Starts.Distinct().Count() != command.Starts.Count) errors.Add(new("starts", "out_of_range"));
         SchedulingValidationException.ThrowIfAny(errors);

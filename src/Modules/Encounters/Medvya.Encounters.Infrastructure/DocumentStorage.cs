@@ -53,7 +53,7 @@ public sealed class BlobDocumentStore(BlobServiceClient service, bool userDelega
     public async Task<Uri> ViewLinkAsync(string key, string contentType, Guid viewer, TimeSpan lifetime, CancellationToken cancellationToken = default)
     {
         var blob = live.GetBlobClient(key);
-        var now = DateTimeOffset.UtcNow;
+        var now = DateTimeOffset.UtcNow; // wall clock: the storage service checks the link against real time
         var sas = new BlobSasBuilder(BlobSasPermissions.Read, now + lifetime)
         {
             BlobContainerName = Live, BlobName = key, Resource = "b", StartsOn = now.AddMinutes(-1),

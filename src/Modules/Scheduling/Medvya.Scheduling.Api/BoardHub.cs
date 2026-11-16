@@ -24,7 +24,7 @@ public sealed record BoardChanged(Guid AppointmentId, string State, DateTimeOffs
 /// </summary>
 public sealed class BoardHub(
     IFrontDeskService frontDesk, IAuditLog audit, AuditWindow windows, ICurrentTenant tenant, ICurrentUser user, ICurrentFacility session,
-    [FromKeyedServices(BoardHub.WatchRateLimit)] PartitionedRateLimiter<string> limiter) : Hub
+    [FromKeyedServices(BoardHub.WatchRateLimit)] PartitionedRateLimiter<string> limiter, TimeProvider clock) : Hub
 {
     public const string Path = "/v1/hubs/board";
 
@@ -69,7 +69,7 @@ public sealed class BoardHub(
     Task AuditAsync(AuditOutcome outcome) => audit.WriteAsync(new AuditEvent
     {
         Id = Guid.CreateVersion7(), TenantId = tenant.TenantId!.Value, ActorUserId = user.UserId, Action = WatchAction,
-        ResourceType = SchedulingAudit.AppointmentResource, Purpose = SchedulingAudit.Treatment, Outcome = outcome, OccurredAt = DateTimeOffset.UtcNow,
+        ResourceType = SchedulingAudit.AppointmentResource, Purpose = SchedulingAudit.Treatment, Outcome = outcome, OccurredAt = clock.GetUtcNow(),
     }, Context.ConnectionAborted);
 }
 

@@ -46,7 +46,7 @@ public class FeatureFlagTests(PostgresFixture sql) : IClassFixture<PostgresFixtu
 
     FeatureFlags Flags(Guid? tenant, IAuditLog? audit = null, params Guid[] internalOrganisations) =>
         new(sql.Context(tenant), new PostgresFixture.FixedTenant(tenant), new FixedUser(actor), audit ?? new AuditLog(sql.Audit(tenant)),
-            new FeatureReleaseCache(TimeProvider.System, internalOrganisations.ToHashSet()));
+            new FeatureReleaseCache(TimeProvider.System, internalOrganisations.ToHashSet()), TimeProvider.System);
 
     FeatureReleaseConsole Console() => new(new Dictionary<string, string> { ["IN"] = sql.As("medvya_features"), ["AE"] = sql.As("medvya_features") }, TimeProvider.System);
 

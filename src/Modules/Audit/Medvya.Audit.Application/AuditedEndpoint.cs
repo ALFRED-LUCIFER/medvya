@@ -147,7 +147,7 @@ public static class AuditedEndpoint
         await services.GetRequiredService<IPlatformAuditLog>().WriteAsync(new AuditEvent
         {
             Id = Guid.CreateVersion7(), TenantId = PlatformTenant.Id, ActorUserId = user, Action = action, ResourceType = resourceType, ResourceId = resourceId,
-            Purpose = purpose, Outcome = outcome, OccurredAt = DateTimeOffset.UtcNow,
+            Purpose = purpose, Outcome = outcome, OccurredAt = services.GetRequiredService<TimeProvider>().GetUtcNow(),
             ClientIp = http.Connection.RemoteIpAddress?.ToString(), CorrelationId = http.TraceIdentifier,
         }, http.RequestAborted);
         windows.Record(key, TimeSpan.FromMinutes(1));
@@ -168,7 +168,7 @@ public static class AuditedEndpoint
             PatientId = patientId,
             Purpose = metadata.Purpose,
             Outcome = outcome,
-            OccurredAt = DateTimeOffset.UtcNow,
+            OccurredAt = services.GetRequiredService<TimeProvider>().GetUtcNow(),
             ClientIp = http.Connection.RemoteIpAddress?.ToString(),
             CorrelationId = http.TraceIdentifier,
             Detail = http.Items["audit.detail"] as string,

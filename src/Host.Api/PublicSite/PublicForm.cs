@@ -34,8 +34,11 @@ public sealed class PublicFormGuard : IDisposable
     readonly TimeSpan minimumFillTime;
     readonly PartitionedRateLimiter<string> limiter;
 
-    public PublicFormGuard(IDataProtectionProvider dataProtection, IConfiguration config)
+    readonly TimeProvider clock;
+
+    public PublicFormGuard(IDataProtectionProvider dataProtection, IConfiguration config, TimeProvider clock)
     {
+        this.clock = clock;
         protector = dataProtection.CreateProtector("PublicSite.Form.Started");
         PrivacyContact = config["PublicSite:PrivacyContact"] is { Length: > 0 } contact ? contact : null;
         minimumFillTime = TimeSpan.FromSeconds(config.GetValue("PublicSite:MinimumFillSeconds", 3));
@@ -50,13 +53,16 @@ public sealed class PublicFormGuard : IDisposable
     /// </summary>
     public string? PrivacyContact { get; }
 
-    public string Start() => protector.Protect(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString(CultureInfo.InvariantCulture));
+    /// <summary>The site's clock (DevClock in the browser journeys).</summary>
+    public DateTimeOffset Now => clock.GetUtcNow();
+
+    public string Start() => protector.Protect(Now.ToUnixTimeMilliseconds().ToString(CultureInfo.InvariantCulture));
 
     public bool StartedInTime(string? token)
     {
         try
         {
-            var age = DateTimeOffset.UtcNow - DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(protector.Unprotect(token ?? ""), CultureInfo.InvariantCulture));
+            var age = Now - DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(protector.Unprotect(token ?? ""), CultureInfo.InvariantCulture));
             return age >= minimumFillTime && age <= TimeSpan.FromDays(1);
         }
         catch (Exception ex) when (ex is CryptographicException or FormatException or OverflowException)
@@ -114,7 +120,8 @@ public abstract class PublicFormPage(SiteText text, PublicFormGuard guard) : Pub
     public abstract string NoticePurpose { get; }
     /// <summary>IN or AE: whose data protection authority the notice names.</summary>
     public virtual string NoticeRegion => Region;
-    protected DateTimeOffset? ConsentedAt => Contact.Consent ? DateTimeOffset.UtcNow : null;
+    protected DateTimeOffset Now => guard.Now;
+    protected DateTimeOffset? ConsentedAt => Contact.Consent ? Now : null;
     protected string? NoticeVersion => Contact.Consent ? LeadRules.NoticeVersion : null;
 
     public string? FirstInvalid => Fields.FirstOrDefault(f => Errors.ContainsKey(f.Field)).Id;
@@ -151,6 +158,4 @@ public abstract class PublicFormPage(SiteText text, PublicFormGuard guard) : Pub
         NewForm();
         return Page();
     }
-
-    protected static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

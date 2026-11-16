@@ -10,13 +10,13 @@ namespace Medvya.Identity.Infrastructure;
 /// One primary-key read per request, no cache, so a revocation is seen by the very next request.
 /// shortcut: last-seen is written at most once a minute per session, so idle timeout is accurate to about a minute; add a &lt;= 60 s read cache if the lookup shows in latency.
 /// </summary>
-sealed class StaffSessions(IdentityDbContext db) : IStaffSessions
+sealed class StaffSessions(IdentityDbContext db, TimeProvider clock) : IStaffSessions
 {
     static readonly TimeSpan TouchInterval = TimeSpan.FromMinutes(1);
 
     public async Task<StaffSession> StartAsync(Guid userId, string? userAgent, CancellationToken cancellationToken = default)
     {
-        var now = DateTimeOffset.UtcNow;
+        var now = clock.GetUtcNow();
         var session = new StaffSession { Id = Guid.CreateVersion7(), UserId = userId, Device = StaffSession.DeviceLabel(userAgent), CreatedAt = now, LastSeenAt = now };
         db.Sessions.Add(session);
         await db.SaveChangesAsync(cancellationToken);
@@ -34,7 +34,7 @@ sealed class StaffSessions(IdentityDbContext db) : IStaffSessions
 
     public async Task<StaffSession?> ValidateAsync(Guid sessionId, Guid userId, bool activity, CancellationToken cancellationToken = default)
     {
-        var now = DateTimeOffset.UtcNow;
+        var now = clock.GetUtcNow();
         var session = await db.Sessions.AsNoTracking().SingleOrDefaultAsync(s => s.Id == sessionId && s.UserId == userId, cancellationToken);
         if (session is null || !session.IsActive(now)) return null;
         if (activity && now - session.LastSeenAt >= TouchInterval)
@@ -47,7 +47,7 @@ sealed class StaffSessions(IdentityDbContext db) : IStaffSessions
 
     public Task ScopeAsync(Guid sessionId, Guid tenantId, Guid membershipId, int idleTimeoutMinutes, CancellationToken cancellationToken = default)
     {
-        var now = DateTimeOffset.UtcNow;
+        var now = clock.GetUtcNow();
         return db.Sessions.Where(s => s.Id == sessionId).ExecuteUpdateAsync(u => u
             .SetProperty(s => s.TenantId, tenantId)
             .SetProperty(s => s.MembershipId, membershipId)
@@ -57,7 +57,7 @@ sealed class StaffSessions(IdentityDbContext db) : IStaffSessions
 
     public async Task<IReadOnlyList<StaffSession>> ListAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        var now = DateTimeOffset.UtcNow;
+        var now = clock.GetUtcNow();
         var cutoff = now - StaffSession.NativeMaxLifetime; // the longest lifetime; IsActive below applies each session's own
         var sessions = await db.Sessions.AsNoTracking()
             .Where(s => s.UserId == userId && s.RevokedAt == null && s.CreatedAt > cutoff)
@@ -67,7 +67,7 @@ sealed class StaffSessions(IdentityDbContext db) : IStaffSessions
 
     public async Task<StaffSession?> RevokeAsync(Guid userId, Guid sessionId, CancellationToken cancellationToken = default)
     {
-        var now = DateTimeOffset.UtcNow;
+        var now = clock.GetUtcNow();
         var session = await db.Sessions.SingleOrDefaultAsync(s => s.Id == sessionId && s.UserId == userId, cancellationToken);
         if (session is null) return null;
         session.PushToken = null; // a timed-out session keeps no push token either
@@ -86,7 +86,7 @@ sealed class StaffSessions(IdentityDbContext db) : IStaffSessions
 
     public async Task<IReadOnlyList<string>> PushTokensAsync(Guid tenantId, IReadOnlyCollection<Guid> membershipIds, CancellationToken cancellationToken = default)
     {
-        var now = DateTimeOffset.UtcNow;
+        var now = clock.GetUtcNow();
         var cutoff = now - StaffSession.NativeMaxLifetime; // the longest lifetime; IsActive below applies each session's own
         var sessions = await db.Sessions.AsNoTracking()
             .Where(s => s.TenantId == tenantId && s.MembershipId != null && membershipIds.Contains(s.MembershipId.Value) && s.PushToken != null && s.RefreshTokenHash != null && s.RevokedAt == null && s.CreatedAt > cutoff)
@@ -119,7 +119,7 @@ sealed class StaffSessions(IdentityDbContext db) : IStaffSessions
 
     public async Task<RefreshRotation> RotateRefreshAsync(Guid sessionId, byte[]? current, byte[] replacement, CancellationToken cancellationToken = default)
     {
-        var now = DateTimeOffset.UtcNow;
+        var now = clock.GetUtcNow();
         var session = await db.Sessions.AsNoTracking().SingleOrDefaultAsync(s => s.Id == sessionId, cancellationToken);
         if (session is null || !session.IsActive(now)) return RefreshRotation.Refused;
         // Compared in SQL on the stored value, so two concurrent uses of one token cannot both succeed.
@@ -137,14 +137,14 @@ sealed class StaffSessions(IdentityDbContext db) : IStaffSessions
 
     public Task<int> RevokeForMembershipAsync(Guid userId, Guid tenantId, Guid membershipId, CancellationToken cancellationToken = default)
     {
-        var now = DateTimeOffset.UtcNow;
+        var now = clock.GetUtcNow();
         return db.Sessions.Where(s => s.UserId == userId && s.TenantId == tenantId && (s.MembershipId == membershipId || s.MembershipId == null) && s.RevokedAt == null)
             .ExecuteUpdateAsync(u => u.SetProperty(s => s.RevokedAt, now).SetProperty(s => s.PushToken, (string?)null), cancellationToken);
     }
 
     public Task<int> RevokeInTenantAsync(Guid userId, Guid tenantId, CancellationToken cancellationToken = default)
     {
-        var now = DateTimeOffset.UtcNow;
+        var now = clock.GetUtcNow();
         return db.Sessions.Where(s => s.UserId == userId && s.TenantId == tenantId && s.RevokedAt == null)
             .ExecuteUpdateAsync(u => u.SetProperty(s => s.RevokedAt, now).SetProperty(s => s.PushToken, (string?)null), cancellationToken);
     }

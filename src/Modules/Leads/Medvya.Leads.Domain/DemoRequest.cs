@@ -25,7 +25,7 @@ public sealed class DemoRequest
     [Classification(DataClass.Personal)] public string? Phone { get; init; }
     /// <summary>Free text. Never logged or emailed, because a visitor could ignore the warning and type patient details.</summary>
     [Classification(DataClass.Personal)] public string? Message { get; init; }
-    [Classification(DataClass.Internal)] public DateTimeOffset ReceivedAt { get; init; } = DateTimeOffset.UtcNow;
+    [Classification(DataClass.Internal)] public DateTimeOffset ReceivedAt { get; init; } = DateTimeOffset.UtcNow; // wall clock: a default only; the public site sets it from TimeProvider
     /// <summary>The visitor's preferred demo time, in UTC. A request, not a booking: the team confirms it by email. Null only on rows stored before MDV-P1-057.</summary>
     [Classification(DataClass.Internal)] public DateTimeOffset? PreferredAt { get; init; }
     /// <summary>Proof of consent: when the visitor ticked the box under the privacy notice. Null only on rows stored before the notice existed.</summary>

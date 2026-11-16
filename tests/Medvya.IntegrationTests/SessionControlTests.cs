@@ -493,7 +493,8 @@ public sealed class SessionControlTests(PostgresFixture sql) : IClassFixture<Pos
         var doctor = await Account("Dr. R. Menon");
         var adminMembership = await Member(admin, tenantA, facilityA, Role.PracticeAdmin, owner: true);
         var doctorMembership = await Member(doctor, tenantA, facilityA, Role.HospitalDoctor);
-        var future = await BookedVisitAsync(doctor.Id, facilityA, DateTimeOffset.UtcNow.AddDays(3));
+        var start = DateTimeOffset.UtcNow.AddDays(3);
+        var future = await BookedVisitAsync(doctor.Id, facilityA, start);
         using var adminBrowser = await SignedIn(admin);
         await Choose(adminBrowser, adminMembership);
 
@@ -503,6 +504,11 @@ public sealed class SessionControlTests(PostgresFixture sql) : IClassFixture<Pos
         var released = Assert.Single(await db.Outbox.Where(e => e.Type == "AppointmentNeedsRebooking.v1").ToListAsync());
         Assert.Equal(future, released.AggregateId);
         Assert.Contains("\"quiet\":true", released.Payload, StringComparison.Ordinal);
+        // MDV-P1-034: reception, who will call, gets one notification-centre item in the same transaction: a count, the doctor and the first day.
+        await using var notifications = sql.Notifications(tenantA);
+        var item = Assert.Single(await notifications.StaffNotifications.ToListAsync());
+        var day = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(start, TimeZoneInfo.FindSystemTimeZoneById("Asia/Kolkata")).DateTime);
+        Assert.Equal((Medvya.Notifications.Domain.StaffNotificationKind.VisitsNeedRebooking, facilityA, doctor.Id, 1, day), (item.Kind, item.FacilityId, item.RefId, item.Detail, item.Day));
     }
 
     [Fact]

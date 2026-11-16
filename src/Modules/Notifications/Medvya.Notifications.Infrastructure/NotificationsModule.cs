@@ -36,6 +36,7 @@ public static class NotificationsModule
             .AddScoped<IStaffNotifications, StaffNotifications>()
             .AddScoped<IStaffPush, StaffPush>()
             .AddScoped<Medvya.Tenancy.Application.IAccessRequestParticipant, AccessRequestNotifier>()
+            .AddScoped<IRebookingParticipant, RebookingNotifier>()
             .AddScoped<INotificationPreferences, NotificationPreferences>()
             .AddScoped<IComplianceReminders, ComplianceReminders>();
     }

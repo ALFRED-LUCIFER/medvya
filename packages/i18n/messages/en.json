@@ -3272,6 +3272,7 @@
   "audit.actionName.compliance.registration_expiry.notify": "Registration expiry notice sent",
   "notifications.kind.RegistrationExpiring": "The clinic registration expires in {days} days or less. Renew it, then enter the new date in Settings, Profile.",
   "notifications.kind.RegistrationExpired": "The clinic registration expires today or has expired. Renew it, then enter the new date in Settings, Profile.",
+  "notifications.kind.VisitsNeedRebooking": "Visits to rebook: {count}, from {date}. A doctor is away. Open the schedule to move or cancel them.",
   "settings.profile.registrationExpires": "Registration valid until",
   "settings.profile.registrationExpiresHint": "Owners are reminded 60, 30 and 7 days before, and on the day.",
   "adjustment.viewOnly": "Leave is added by the practice admin or by the doctor for their own calendar. You can see it here and rebook the visits it moves.",

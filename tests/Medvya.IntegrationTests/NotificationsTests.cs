@@ -651,6 +651,32 @@ public sealed partial class NotificationsTests(PostgresFixture sql) : IClassFixt
         Assert.Empty((await As(h.Reception, sp => sp.GetRequiredService<IStaffNotifications>().ListAsync(h.Facility))).Items);
     }
 
+    /// <summary>
+    /// MDV-P1-034: leave that moves booked visits tells the desk once, with a count, the doctor and the first day, never a patient.
+    /// Mutation check: give VisitsNeedRebooking the owners' capability in StaffNotifications.NeededFor and the hospital-IT assertion fails.
+    /// </summary>
+    [Fact]
+    public async Task LeaveThatMovesVisitsTellsTheDeskOnceWithACountAndNoPatient()
+    {
+        var first = await BookTuesdayAsync(10);
+        var second = await BookTuesdayAsync(11);
+        var later = await h.BookAsync(0, start: Tuesday(10).AddDays(1));
+        await As(h.Admin, sp => sp.GetRequiredService<IScheduleExceptionService>().SaveAsync(new SaveAdjustment
+        {
+            FacilityId = h.Facility, CalendarId = h.Doctor, Kind = ExceptionKind.Leave, FromDate = Monday.AddDays(1), ToDate = Monday.AddDays(2), Reason = "Conference",
+            Actions = [new(first.Id, RebookAction.Offer), new(second.Id, RebookAction.Manual), new(later.Id, RebookAction.Manual)],
+        }));
+
+        var desk = await As(h.Reception, sp => sp.GetRequiredService<IStaffNotifications>().ListAsync(h.Facility));
+        var item = Assert.Single(desk.Items);
+        Assert.Equal((StaffNotificationKind.VisitsNeedRebooking, h.Doctor, 3, Monday.AddDays(1), 1), (item.Kind, item.RefId, item.Detail, item.Day, desk.Unread));
+        // Hospital IT administers the practice but does not book: it never sees which doctor's visits need moving.
+        Assert.Empty((await As(h.HospitalIt, sp => sp.GetRequiredService<IStaffNotifications>().ListAsync(h.Facility))).Items);
+        await Assert.ThrowsAsync<NotificationAccessDeniedException>(() => As(h.Elsewhere, sp => sp.GetRequiredService<IStaffNotifications>().ListAsync(h.Facility)));
+        await using var other = sql.Notifications(Guid.NewGuid());
+        Assert.Empty(await other.StaffNotifications.ToListAsync()); // EF filter and row-level security
+    }
+
     // MDV-P1-006: the practice's notification preferences.
 
     Task<NotificationPreferencesView> Prefs() => InScope(sp => sp.GetRequiredService<INotificationPreferences>().GetAsync());

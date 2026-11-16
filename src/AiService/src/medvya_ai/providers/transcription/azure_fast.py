@@ -7,11 +7,10 @@ from typing import Any
 
 import httpx
 
-from medvya_ai.providers.errors import ProviderError
+from medvya_ai.providers.errors import BACKOFF_SECONDS, TIMEOUT_SECONDS, ProviderError, retry_delay
 from medvya_ai.providers.transcription.base import Phrase
 
 RETRY_STATUS = {429, 500, 502, 503, 504}
-BACKOFF_SECONDS = (2, 4, 8, 16, 32)  # Microsoft Learn recommendation: 5 retries
 
 
 def build_definition(locales: Sequence[str], max_speakers: int) -> str:
@@ -57,16 +56,18 @@ class AzureFastTranscriber:
     ) -> None:
         self._url = f"{endpoint.rstrip('/')}/speechtotext/transcriptions:transcribe"
         self._key, self._version, self._sleep = api_key, api_version, sleep
-        self._client = client or httpx.AsyncClient(timeout=httpx.Timeout(300.0))
+        self._client = client or httpx.AsyncClient(timeout=httpx.Timeout(TIMEOUT_SECONDS))
 
     async def transcribe(
         self, audio: bytes, *, mime_type: str, locales: Sequence[str], max_speakers: int
     ) -> list[Phrase]:
         definition = build_definition(locales, max_speakers)
-        last = "SPEECH_NETWORK"
+        last, delay = "SPEECH_NETWORK", 0.0
         for attempt in range(len(BACKOFF_SECONDS) + 1):
             if attempt:
-                await self._sleep(BACKOFF_SECONDS[attempt - 1])
+                await self._sleep(delay)
+            default = BACKOFF_SECONDS[min(attempt, len(BACKOFF_SECONDS) - 1)]
+            delay = default
             try:
                 resp = await self._client.post(
                     self._url,
@@ -86,4 +87,5 @@ class AzureFastTranscriber:
             last = f"SPEECH_HTTP_{resp.status_code}"
             if resp.status_code not in RETRY_STATUS:
                 break
+            delay = retry_delay(resp.headers, default)
         raise ProviderError(last)

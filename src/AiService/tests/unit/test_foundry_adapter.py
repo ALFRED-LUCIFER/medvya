@@ -87,7 +87,21 @@ async def test_retries_429_and_5xx_then_succeeds() -> None:
 
     sleeps: list[float] = []
     out = await _llm(handler, sleeps).parse("extract", system="s", user="u", schema=NormaliseOut)
-    assert out.items and sleeps == [2, 4]
+    assert out.items and sleeps == [2, 8]
+
+
+async def test_honours_retry_after_up_to_a_cap() -> None:
+    waits = iter(["3", "9999", None])
+
+    def handler(_: httpx2.Request) -> httpx2.Response:
+        w = next(waits)
+        if w is None:
+            return httpx2.Response(200, json=_completion())
+        return httpx2.Response(429, headers={"retry-after": w}, json={"error": {}})
+
+    sleeps: list[float] = []
+    await _llm(handler, sleeps).parse("extract", system="s", user="u", schema=NormaliseOut)
+    assert sleeps == [3, 60]
 
 
 async def test_gives_up_with_safe_code() -> None:

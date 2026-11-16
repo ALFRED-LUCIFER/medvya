@@ -8,11 +8,10 @@ from typing import Any
 import openai
 from openai import AsyncOpenAI
 
-from medvya_ai.providers.errors import ProviderError
+from medvya_ai.providers.errors import BACKOFF_SECONDS, TIMEOUT_SECONDS, ProviderError, retry_delay
 from medvya_ai.providers.llm.base import T, Task, Usage
 
 log = logging.getLogger(__name__)
-BACKOFF_SECONDS = (2, 4, 8, 16, 32)
 CONTENT_FILTER = "LLM_CONTENT_FILTER"
 _RETRYABLE = (openai.RateLimitError, openai.InternalServerError, openai.APIConnectionError)
 
@@ -45,7 +44,7 @@ class FoundryLLM:
     ) -> None:
         # SDK retries off: the 429/5xx policy below is ours (testable, shared shape with Speech).
         self._client = client or AsyncOpenAI(
-            base_url=base_url(endpoint), api_key=api_key, max_retries=0, timeout=300.0
+            base_url=base_url(endpoint), api_key=api_key, max_retries=0, timeout=TIMEOUT_SECONDS
         )
         self._deployments, self._sleep = deployments, sleep
         self.usage = Usage()
@@ -53,10 +52,10 @@ class FoundryLLM:
 
     async def parse(self, task: Task, *, system: str, user: str, schema: type[T]) -> T:
         model = self._deployments[task]
-        last = "LLM_ERROR"
+        last, delay = "LLM_ERROR", 0.0
         for attempt in range(len(BACKOFF_SECONDS) + 1):
             if attempt:
-                await self._sleep(BACKOFF_SECONDS[attempt - 1])
+                await self._sleep(delay)
             try:
                 completion: Any = await self._client.chat.completions.parse(
                     model=model,
@@ -70,6 +69,12 @@ class FoundryLLM:
                 )
             except _RETRYABLE as exc:
                 last = f"LLM_{getattr(exc, 'status_code', 'NETWORK')}"
+                response = getattr(exc, "response", None)
+                if attempt < len(BACKOFF_SECONDS):
+                    delay = retry_delay(
+                        response.headers if response is not None else None,
+                        BACKOFF_SECONDS[attempt],
+                    )
                 continue
             except openai.APIStatusError as exc:
                 code = _error_code(exc)

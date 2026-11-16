@@ -50,7 +50,7 @@ async def transcribe(db: AsyncSession, deps: Deps, job: Job) -> Counters:
         wrapper=deps.wrapper,
         transcriber=deps.transcriber,
         settings=deps.settings,
-        before_call=partial(ensure_active, db, job.id),
+        before_call=partial(ensure_active, db, job),
     )
     log.info("transcribe done session=%s phrases=%d", sid, n)
     await enqueue(
@@ -76,7 +76,7 @@ async def transcribe(db: AsyncSession, deps: Deps, job: Job) -> Counters:
 async def normalise(db: AsyncSession, deps: Deps, job: Job) -> Counters:
     sid = _sid(job)
     start = deps.llm.usage.snapshot()
-    n = await run_normalise(db, deps.llm, sid, before_call=partial(ensure_active, db, job.id))
+    n = await run_normalise(db, deps.llm, sid, before_call=partial(ensure_active, db, job))
     log.info("normalise done session=%s translated=%d", sid, n)
     await enqueue(
         db, clinic_id=job.clinic_id, session_id=sid, kind="extract", consent_epoch=job.consent_epoch
@@ -92,7 +92,7 @@ async def extract(db: AsyncSession, deps: Deps, job: Job) -> Counters:
         deps.llm,
         clinic_id=job.clinic_id,
         session_id=sid,
-        before_call=partial(ensure_active, db, job.id),
+        before_call=partial(ensure_active, db, job),
     )
     log.info(
         "extract done session=%s facts=%d medications=%d rejected=%d",

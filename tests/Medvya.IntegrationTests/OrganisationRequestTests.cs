@@ -64,9 +64,11 @@ public sealed class OrganisationRequestTests(PostgresFixture sql) : IClassFixtur
         {
             app.Use((ctx, nxt) =>
             {
+                // Every caller has just done the identity step-up an operations decision asks for, unless the test says otherwise.
                 if (ctx.Request.Headers["X-Test-User"].ToString() is { Length: > 0 } user)
                     ctx.User = new ClaimsPrincipal(new ClaimsIdentity(
-                        [new Claim(ClaimTypes.NameIdentifier, user), new Claim("tenant_id", tenant.ToString()), new Claim("facility_id", facility.ToString())], "synthetic"));
+                        [new Claim(ClaimTypes.NameIdentifier, user), new Claim("tenant_id", tenant.ToString()), new Claim("facility_id", facility.ToString()),
+                         .. ctx.Request.Headers.ContainsKey("X-Test-No-Step-Up") ? Array.Empty<Claim>() : [new Claim("reauth_at", DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture))]], "synthetic"));
                 return nxt(ctx);
             });
             next(app);
@@ -197,6 +199,22 @@ public sealed class OrganisationRequestTests(PostgresFixture sql) : IClassFixtur
         Assert.Equal(HttpStatusCode.OK, (await support.GetAsync("/v1/operations/organisations/")).StatusCode);
         foreach (var action in new[] { "approve", "request-changes", "reject", "suspend", "reinstate" })
             Assert.Equal(HttpStatusCode.Forbidden, (await support.PostAsJsonAsync($"/v1/operations/organisations/{tenant}/{action}", new { reason = "Documents checked" })).StatusCode);
+        Assert.Equal(OrganisationState.Submitted, await StateAsync());
+    }
+
+    // SAFETY: mutation check: removed the step-up check in OrganisationApprovalEndpoints.Apply -> EveryDecisionAsksForAFreshIdentityStepUp failed.
+    [Fact]
+    public async Task EveryDecisionAsksForAFreshIdentityStepUp()
+    {
+        await SetStateAsync(OrganisationState.Submitted);
+        var ops = Client(approver);
+        ops.DefaultRequestHeaders.Add("X-Test-No-Step-Up", "1");
+        foreach (var action in new[] { "approve", "request-changes", "reject", "suspend", "reinstate" })
+        {
+            var refused = await ops.PostAsJsonAsync($"/v1/operations/organisations/{h.Tenant}/{action}", new { reason = "Documents checked" });
+            Assert.Equal(HttpStatusCode.Forbidden, refused.StatusCode);
+            Assert.Equal("reauth_required", (await refused.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString());
+        }
         Assert.Equal(OrganisationState.Submitted, await StateAsync());
     }
 

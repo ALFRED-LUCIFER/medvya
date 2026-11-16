@@ -390,8 +390,7 @@ public sealed class PrescriptionService(
             db.RxShares.Add(share);
             if (pharmacy) db.PharmacyDispatchEvents.Add(new() { Id = Guid.CreateVersion7(), TenantId = TenantId, ShareId = share.Id, State = DispatchState.Sent, ChangedBy = Me, ChangedAt = now });
             await db.SaveChangesAsync(cancellationToken);
-            await audit.WriteAsync(Event(ShareAction, encounter, share.Id, $"recipient:{share.Recipient};channel:{channel};version:{rx.VersionNo}"), tx.GetDbTransaction(), cancellationToken);
-            // Sent inside the transaction: a message that cannot go leaves no share behind.
+            // Sent inside the transaction: a message that cannot go leaves no share behind. Sent before the audit row, whose ledger lock is held to commit.
             try
             {
                 if (pharmacy) await links.SendLinkToPharmacyAsync(email!, encounter.FacilityId, url, share.ExpiresAt, cancellationToken);
@@ -402,6 +401,7 @@ public sealed class PrescriptionService(
             {
                 throw new PrescriptionConflictException(e.Code);
             }
+            await audit.WriteAsync(Event(ShareAction, encounter, share.Id, $"recipient:{share.Recipient};channel:{channel};version:{rx.VersionNo}"), tx.GetDbTransaction(), cancellationToken);
             await tx.CommitAsync(cancellationToken);
         }
         return await ShareViewsAsync(encounterId, cancellationToken);

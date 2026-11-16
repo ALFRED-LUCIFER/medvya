@@ -37,8 +37,8 @@ public sealed class ReferralService(
         if (await encounters.FindAsync(encounterId, cancellationToken) is not { } encounter) return null;
         await clinical.RequireAsync(encounter.PatientId, encounter.FacilityId, Capability.PrescriptionsOrders, Doctors, cancellationToken);
         var errors = new List<(string, string)>();
-        var provider = Text(command.Provider, "provider", MaxProvider, true, errors);
-        var reason = Text(command.Reason, "reason", MaxReason, true, errors);
+        var provider = PrescriptionService.Text(command.Provider, "provider", MaxProvider, true, errors);
+        var reason = PrescriptionService.Text(command.Reason, "reason", MaxReason, true, errors);
         if (command.Urgency is not { } urgency || !Enum.IsDefined(urgency)) errors.Add(("urgency", "required"));
         var sections = (command.Sections ?? []).Distinct().ToList();
         if (sections.Any(s => !Enum.IsDefined(s))) errors.Add(("sections", "invalid"));
@@ -62,8 +62,8 @@ public sealed class ReferralService(
         if ((await patients.SummariesAsync([patientId], cancellationToken)).Count == 0) return null;
         await clinical.RequireAsync(patientId, facilityId, Capability.PrescriptionsOrders, Doctors, cancellationToken);
         var errors = new List<(string, string)>();
-        var provider = Text(command.Provider, "provider", MaxProvider, true, errors);
-        var reason = Text(command.Reason, "reason", MaxReason, false, errors);
+        var provider = PrescriptionService.Text(command.Provider, "provider", MaxProvider, true, errors);
+        var reason = PrescriptionService.Text(command.Reason, "reason", MaxReason, false, errors);
         if (command.DocumentId is not { } documentId) errors.Add(("documentId", "required"));
         else if (!await documents.BelongsToAsync(documentId, patientId, cancellationToken)) errors.Add(("documentId", "unknown"));
         if (errors.Count > 0) throw new ReferralValidationException(errors);
@@ -118,7 +118,7 @@ public sealed class ReferralService(
         if (await FindAsync(referralId, cancellationToken) is not { } referral) return null;
         await clinical.RequireAsync(referral.PatientId, referral.FacilityId, Capability.PrescriptionsOrders, Doctors, cancellationToken);
         var errors = new List<(string, string)>();
-        var note = Text(command.Note, "note", MaxNote, false, errors);
+        var note = PrescriptionService.Text(command.Note, "note", MaxNote, false, errors);
         if (command.State is not { } to || !Enum.IsDefined(to)) errors.Add(("state", "required"));
         if (command.DocumentId is { } documentId && !await documents.BelongsToAsync(documentId, referral.PatientId, cancellationToken)) errors.Add(("documentId", "unknown"));
         if (errors.Count > 0) throw new ReferralValidationException(errors);
@@ -221,14 +221,6 @@ public sealed class ReferralService(
     static ReferralView View(Referral r, IEnumerable<ReferralEvent> history) =>
         new(r.Id, r.PatientId, r.Direction, r.Provider, r.Urgency, r.Reason, Sections(r), r.State, r.Channel, r.SentAt, ReferralRules.IsOpen(r.State), r.LetterDocumentId,
             history.Select(e => new ReferralStep(e.State, e.At, e.DocumentId, e.Note)).ToList());
-
-    static string? Text(string? value, string field, int max, bool required, List<(string, string)> errors)
-    {
-        var v = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-        if (v is null && required) errors.Add((field, "required"));
-        else if (v?.Length > max) errors.Add((field, "too_long"));
-        return v;
-    }
 
     AuditEvent Event(string action, Referral r, string? detail = null) => new()
     {

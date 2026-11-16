@@ -18,7 +18,7 @@ namespace Medvya.Prescribing.Infrastructure.Persistence.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasDefaultSchema("prescribing")
-                .HasAnnotation("ProductVersion", "10.0.14")
+                .HasAnnotation("ProductVersion", "10.0.15")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -482,6 +482,10 @@ namespace Medvya.Prescribing.Infrastructure.Persistence.Migrations
                     b.HasIndex("TenantId", "EncounterId");
 
                     b.HasIndex("TenantId", "PatientId");
+
+                    b.HasIndex("TenantId", "FacilityId", "EncounterId");
+
+                    NpgsqlIndexBuilderExtensions.IncludeProperties(b.HasIndex("TenantId", "FacilityId", "EncounterId"), new[] { "Included", "UpdatedAt" });
 
                     b.ToTable("PrescriptionItems", "prescribing");
                 });

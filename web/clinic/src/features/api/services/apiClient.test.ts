@@ -54,7 +54,7 @@ describe('apiFetch', () => {
     const f = vi.fn().mockResolvedValueOnce(answer(503)).mockResolvedValueOnce(answer(200));
     vi.stubGlobal('fetch', f);
     await run(apiFetch('/v1/appointments', { method: 'POST', headers: { 'Idempotency-Key': 'k1' } }));
-    expect(f.mock.calls.map((c) => (c[1].headers as Record<string, string>)['Idempotency-Key'])).toEqual(['k1', 'k1']);
+    expect(f.mock.calls.map((c) => new Headers(c[1].headers as HeadersInit).get('Idempotency-Key'))).toEqual(['k1', 'k1']);
   });
 
   // #1365: a rate-limited read comes back by itself once the server's Retry-After has passed.
@@ -152,5 +152,16 @@ describe('apiFetch', () => {
     window.dispatchEvent(new Event('pointerdown'));
     await apiFetch('/v1/x');
     expect(sentPassive(2)).toBe(false);
+  });
+
+  // SAFETY: mutation check: made withCsrf return init unchanged -> this test failed.
+  it('adds the CSRF header to every state-changing call and to no read', async () => {
+    const f = vi.fn().mockImplementation(() => Promise.resolve(answer(200)));
+    vi.stubGlobal('fetch', f);
+    const csrfSent = (call: number) => new Headers((f.mock.calls[call]![1] as RequestInit).headers).get('X-Medvya-Csrf');
+    for (const method of ['POST', 'PUT', 'PATCH', 'delete']) await apiFetch('/v1/x', { method, headers: { 'Content-Type': 'application/json' } });
+    await apiFetch('/v1/x');
+    expect([0, 1, 2, 3, 4].map(csrfSent)).toEqual(['1', '1', '1', '1', null]);
+    expect(new Headers((f.mock.calls[0]![1] as RequestInit).headers).get('Content-Type')).toBe('application/json');
   });
 });

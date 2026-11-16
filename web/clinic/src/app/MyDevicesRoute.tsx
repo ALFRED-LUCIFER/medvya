@@ -9,7 +9,7 @@ import { useMySignatureController } from '../features/settings/hooks/useMySignat
  * Composition only: My devices (MDV-P0-012), for every signed-in staff member; times show in the facility's zone. A prescriber also
  * keeps their own signature image here (#1365): it is the one page every account has, and practice settings are closed to an employed doctor.
  */
-export default function MyDevicesRoute({ timeZone, prescriber }: { timeZone?: string; prescriber: boolean }) {
+export default function MyDevicesRoute({ timeZone, prescriber }: { timeZone: string; prescriber: boolean }) {
   const { t } = useI18n();
   const signature = useMySignatureController(prescriber);
   return (

@@ -1,4 +1,4 @@
-import { csrf, post, send } from '../../schedule/services/scheduleApi';
+import { post, send } from '../../api/services/apiClient';
 import { toRequest, type BookedFromWaitlist, type Waitlist, type WaitlistEntry, type WaitlistForm } from '../domain/waitlist';
 
 /** The facility's waiting and offered patients with the free slot each could be offered. Ids only in the URL. */
@@ -14,4 +14,4 @@ export const declineOffer = (id: string) => post<WaitlistEntry>(`/v1/waitlist/${
 /** The patient said yes: books the held slot. */
 export const acceptOffer = (id: string) => post<BookedFromWaitlist>(`/v1/waitlist/${id}/accept`, {});
 
-export const removeFromWaitlist = (id: string) => send<void>(`/v1/waitlist/${id}`, { method: 'DELETE', headers: csrf });
+export const removeFromWaitlist = (id: string) => send<void>(`/v1/waitlist/${id}`, { method: 'DELETE' });

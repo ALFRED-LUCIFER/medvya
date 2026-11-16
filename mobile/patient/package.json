@@ -8,7 +8,7 @@
     "ios": "expo run:ios",
     "android": "expo run:android",
     "build": "tsc --noEmit",
-    "lint": "oxlint -c ../.oxlintrc.json src",
+    "lint": "oxlint --deny-warnings -c ../.oxlintrc.json src",
     "test": "jest --ci"
   },
   "dependencies": {

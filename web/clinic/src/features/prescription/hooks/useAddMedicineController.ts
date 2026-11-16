@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm, useWatch } from 'react-hook-form';
-import { ApiError } from '../../schedule/services/scheduleApi';
+import { ApiError } from '../../api/services/apiClient';
 import { checksFor, closest, draftOf, medicinesOf, quantityOf, sameMedicine, unitOf, type Choice } from '../domain/addMedicine';
 import { lineSafety, overrideSchema } from '../domain/checks';
 import { invalidFields, problemOf, type Medicine, type RxLine, type RxProblem } from '../domain/prescription';

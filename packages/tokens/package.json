@@ -7,7 +7,7 @@
   "scripts": {
     "generate": "node generate.mjs",
     "build": "tsc --noEmit",
-    "lint": "oxlint -c ../.oxlintrc.json src",
+    "lint": "oxlint --deny-warnings -c ../.oxlintrc.json src",
     "test": "vitest run"
   },
   "devDependencies": {

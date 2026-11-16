@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
-import { ApiError } from '../../schedule/services/scheduleApi';
+import { ApiError } from '../../api/services/apiClient';
 import { displaySchema, type DisplayInput } from '../domain/queueTv';
 import { copyText, createDisplay, displayLink, fetchDisplays, revokeDisplay } from '../services/queueTvApi';
 

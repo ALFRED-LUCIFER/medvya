@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
-import { ApiError } from '../../schedule/services/scheduleApi';
+import { ApiError } from '../../api/services/apiClient';
 import { baselineBody, baselineSchema, checkInGap, deliveryPercent, type BaselineInput } from '../domain/pilotMetrics';
 import { fetchDelivery, fetchPilotMetrics, recordBaseline } from '../services/pilotMetricsApi';
 

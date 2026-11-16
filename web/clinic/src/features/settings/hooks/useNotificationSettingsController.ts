@@ -3,7 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { useI18n } from '@medvya/i18n';
-import { ApiError } from '../../schedule/services/scheduleApi';
+import { ApiError } from '../../api/services/apiClient';
 import { notificationPrefsSchema, toPrefsForm, toPrefsPayload, type NotificationPrefsForm } from '../domain/notifications';
 import { fetchNotificationPrefs, fetchTemplatePreviews, saveNotificationPrefs } from '../services/settingsApi';
 

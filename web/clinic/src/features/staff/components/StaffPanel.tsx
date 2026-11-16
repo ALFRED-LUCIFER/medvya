@@ -11,6 +11,8 @@ import { staffActions, staffColumns, type StaffAction, type StaffSortColumn } fr
 import { isOwnerAmong, offboardBlock, roleValue, assignableRoles, canOffboard, locationsOf, isDoctor, permissionRows, statusLabel, type AddStaffForm, type LocationsForm, type OffboardForm, type ReactivateForm, type RoleCatalogue, type RoleChoice, type StaffMember, type Step } from '../domain/staff';
 
 type Props = {
+  /** The facility's IANA zone: instants show facility time, not the browser's (AGENTS.md 3.5). */
+  timeZone: string;
   /** Everyone, for the rules that look across rows (owner, locations); `table.rows` is the sorted page shown. */
   staff: StaffMember[];
   table: TableView<StaffMember, StaffSortColumn>;
@@ -134,7 +136,7 @@ export default function StaffPanel(p: Props) {
                     <TableCell label={t('staff.col.mfa')}>{t(`staff.mfa.${m.mfa}`)}</TableCell>
                     <TableCell label={t('staff.col.status')}>
                       {t(`staff.status.${statusLabel(m)}`)}
-                      {m.invitationState === 'pending' && <span className="block text-muted-foreground">{t(`staff.invitation.${m.invitationState}`, { date: m.invitationExpiresAt ? formatDate(new Date(m.invitationExpiresAt)) : '' })}</span>}
+                      {m.invitationState === 'pending' && <span className="block text-muted-foreground">{t(`staff.invitation.${m.invitationState}`, { date: m.invitationExpiresAt ? formatDate(new Date(m.invitationExpiresAt), p.timeZone) : '' })}</span>}
                     </TableCell>
                     <TableCell>
                       <span className="flex flex-wrap items-center gap-2">

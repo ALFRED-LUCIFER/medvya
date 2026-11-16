@@ -9,6 +9,7 @@ import {
 import ReasonPanel, { ReasonBar } from '../../shell/components/ReasonPanel';
 import type { ReasonForm } from '../../team/domain/team';
 import { featureColumns, hasName, needsSignOff, signOffState, stages, type PendingChange, type Release, type ReleaseForm, type Stage } from '../domain/features';
+import { operatorZone } from '../../session/domain/session';
 
 type Props = {
   vm: {
@@ -124,7 +125,7 @@ export default function FeaturesPage({ vm }: Props) {
                   {signOffText(r)}
                 </TableCell>
                 <TableCell label={t('platform.features.col.changed')}>
-                  {r.changedAt ? `${formatDate(new Date(r.changedAt))} ${formatTime(new Date(r.changedAt))}` : t('platform.features.never')}
+                  {r.changedAt ? `${formatDate(new Date(r.changedAt), operatorZone)} ${formatTime(new Date(r.changedAt), operatorZone)}` : t('platform.features.never')}
                 </TableCell>
                 {vm.canChange && (
                   <TableCell>

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
-import { ApiError } from '../../schedule/services/scheduleApi';
+import { ApiError } from '../../api/services/apiClient';
 import type { HistorySection, Patient360 } from '../domain/chart';
 import { bloodGroupSchema, historySchema, historySections, type BloodGroupForm, type HistoryForm } from '../domain/history';
 import { saveHistory } from '../services/historyApi';

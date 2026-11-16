@@ -2,7 +2,7 @@ import { useI18n, type MessageKey } from '@medvya/i18n';
 import { AppHeader, Button, Card, Chip, Icon, ListRow, Loading, Screen, Section, StateMessage, Text } from '@medvya/ui-native';
 import { theme } from '@medvya/tokens';
 import { StyleSheet, View } from 'react-native';
-import { clinicLine, type Session } from '../../session/domain/session';
+import { clinicLine, zoneOf, type Session } from '../../session/domain/session';
 import type { Visit } from '../domain/visits';
 
 type Props = { session: Session; visits: { upcoming: Visit[]; past: Visit[] } | null; loading: boolean; error: string | null };
@@ -10,7 +10,7 @@ type Props = { session: Session; visits: { upcoming: Visit[]; past: Visit[] } | 
 // Booking, cancelling and rescheduling go through the same booking service as reception (MDV-P5-036); until then the button is disabled.
 export function VisitsScreen(vm: Props) {
   const { t, formatDate, formatTime } = useI18n();
-  const tz = vm.session.clinic?.timeZone;
+  const tz = zoneOf(vm.session);
   const header = <AppHeader title={t('mobile.patient.tab.book')} subtitle={clinicLine(vm.session)} initials={vm.session.person?.initials ?? t('mobile.monogram')} />;
   return (
     <Screen header={header} footer={<Button label={t('mobile.visits.book')} icon="add" disabled hint={t('mobile.common.comingSoon')} />}>

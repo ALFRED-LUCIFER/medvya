@@ -1,4 +1,4 @@
-import { csrf, post, send } from '../../schedule/services/scheduleApi';
+import { post, send } from '../../api/services/apiClient';
 import type { DocumentList, DocumentRow, DocumentSource, DocumentType, ViewLink } from '../domain/documents';
 
 // Documents (MDV-P2-006). Ids only in paths; the file travels as the request body, and the type, date and source in the query are codes and a date.
@@ -12,7 +12,7 @@ export type UploadDetails = { type: DocumentType; date: string; source: Document
 /** The file as the raw body: no multipart, no name sent (a file name is often a patient's name). The server decides the type from the bytes. */
 export function uploadDocument(patientId: string, details: UploadDetails, file: Blob): Promise<DocumentRow> {
   const query = new URLSearchParams({ type: details.type, date: details.date, source: details.source });
-  return send<DocumentRow>(`/v1/patients/${patientId}/documents?${query}`, { method: 'POST', headers: { ...csrf, 'Content-Type': 'application/octet-stream' }, body: file, timeout: uploadTimeoutMs } as RequestInit);
+  return send<DocumentRow>(`/v1/patients/${patientId}/documents?${query}`, { method: 'POST', headers: { 'Content-Type': 'application/octet-stream' }, body: file, timeout: uploadTimeoutMs } as RequestInit);
 }
 
 /** POST, not GET: issuing a link is an audited action. The link expires within five minutes. */
@@ -20,4 +20,4 @@ export const openDocument = (documentId: string) => post<ViewLink>(`/v1/document
 
 /** Changes the type and date only; the file is never touched and the edit is audited. */
 export const updateDocument = (documentId: string, body: { type: DocumentType; documentDate: string }) =>
-  send<DocumentRow>(`/v1/documents/${documentId}`, { method: 'PATCH', headers: { ...csrf, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  send<DocumentRow>(`/v1/documents/${documentId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });

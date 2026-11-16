@@ -8,7 +8,8 @@ import { bookingSchema, emptyBooking, readSlotReturn, slotError, withoutSlotRetu
 import type { ScheduleColumn, VisitType } from '../domain/schedule';
 import { includedStarts, maxRepeat, moveRow, planOf, replanOf, summarise, toggleRow, type PlanRow, type SeriesDone } from '../domain/series';
 import { forgetKey, type HeldKey, keyFor } from '../../api/services/idempotencyKey';
-import { ApiError, bookAppointment, bookSeries, findPatient, holdSlot, previewSeries, releaseHold } from '../services/scheduleApi';
+import { ApiError } from '../../api/services/apiClient';
+import { bookAppointment, bookSeries, findPatient, holdSlot, previewSeries, releaseHold } from '../services/scheduleApi';
 import { usePatientSearch } from '../../patients/hooks/usePatientSearch';
 
 const errorOf = (e: unknown) => slotError(e instanceof ApiError ? e.code : undefined);

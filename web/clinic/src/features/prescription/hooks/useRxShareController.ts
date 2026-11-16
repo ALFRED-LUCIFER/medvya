@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
-import { ApiError } from '../../schedule/services/scheduleApi';
+import { ApiError } from '../../api/services/apiClient';
 import {
   codeSchema, dispensedSchema, emptyShare, openProblem, shareProblem, shareSchema, toDispensedBody,
   type CodeForm, type DispensedForm, type OpenProblem, type RxShare, type ShareForm, type ShareProblem,

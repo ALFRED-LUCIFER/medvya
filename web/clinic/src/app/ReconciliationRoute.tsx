@@ -5,17 +5,17 @@ import { useReconciliationController } from '../features/reconciliation/hooks/us
 import TabletOnly from './TabletOnly';
 
 /** Composition only: one consultation's medication reconciliation (MDV-P2-011, E-07) by its id in the address; the server checks clinical access on every call. */
-export default function ReconciliationRoute({ boardPath, online }: { boardPath: string; online: boolean }) {
+export default function ReconciliationRoute({ boardPath, online, timeZone }: { boardPath: string; online: boolean; timeZone: string }) {
   const { encounterId = '' } = useParams();
-  return <Reconcile key={encounterId} encounterId={encounterId} boardPath={boardPath} online={online} />;
+  return <Reconcile key={encounterId} encounterId={encounterId} boardPath={boardPath} online={online} timeZone={timeZone} />;
 }
 
-function Reconcile({ encounterId, boardPath, online }: { encounterId: string; boardPath: string; online: boolean }) {
+function Reconcile({ encounterId, boardPath, online, timeZone }: { encounterId: string; boardPath: string; online: boolean; timeZone: string }) {
   const rec = useReconciliationController(encounterId);
   const { t } = useI18n();
   return (
     <TabletOnly title={t('reconcile.title')} patientName={rec.banner?.patient.fullName}>
-      <ReconciliationPage {...rec} online={online} consultPath={`/consult/${encounterId}`} boardPath={boardPath} />
+      <ReconciliationPage {...rec} timeZone={timeZone} online={online} consultPath={`/consult/${encounterId}`} boardPath={boardPath} />
     </TabletOnly>
   );
 }

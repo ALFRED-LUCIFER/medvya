@@ -12,7 +12,7 @@ import { ageOn, type ElsewhereLine, type PendingNote, type PendingRx, type Scope
 // A status is always an icon and words, never colour alone; icons come from the shared status map (MDV-P5-057).
 
 type Props = {
-  day: string | null; timeZone: string | null; visits: BoardCard[]; next: BoardCard | null; scope: Scope; onScope: (s: Scope) => void;
+  day: string | null; timeZone: string; visits: BoardCard[]; next: BoardCard | null; scope: Scope; onScope: (s: Scope) => void;
   /** Whole minutes since a visit entered its state, on the server's clock. */
   waitMinutes: (since: string) => number;
   /** Allergy state by patient, only for patients the clinician may treat; no entry shows no flag. */
@@ -126,7 +126,7 @@ function Hero(p: Props & { card: BoardCard }) {
       <h2 id="today-next" className="text-label font-bold text-action-600">{t(c.state === 'InConsult' ? 'today.hero.current' : 'today.hero.next')}</h2>
       <div>
         <p className="text-xl font-extrabold"><Token card={c} /><PatientLink {...p} card={c} stretch /></p>
-        <p className="text-sm text-muted-foreground">{formatTime(new Date(c.start), p.timeZone ?? undefined)}{' · '}{t(`reasonCategory.${c.reasonCategory}`)}</p>
+        <p className="text-sm text-muted-foreground">{formatTime(new Date(c.start), p.timeZone)}{' · '}{t(`reasonCategory.${c.reasonCategory}`)}</p>
       </div>
       <Chips {...p} card={c} />
       {/* Full width and the first thing on a phone, so the thumb reaches it. */}
@@ -158,7 +158,7 @@ function Visit(p: Props & { card: BoardCard }) {
     <Card size="item" className="relative flex-row flex-wrap items-center justify-between gap-3">
       <div className="flex min-w-0 flex-col gap-1.5">
         <h3 className="text-sm font-bold">
-          <span className="font-mono text-xs font-semibold text-muted-foreground">{formatTime(new Date(c.start), p.timeZone ?? undefined)}</span>{' '}
+          <span className="font-mono text-xs font-semibold text-muted-foreground">{formatTime(new Date(c.start), p.timeZone)}</span>{' '}
           <Token card={c} /><PatientLink {...p} card={c} stretch />{age !== null && <span className="font-normal text-muted-foreground">{' · '}{t('today.age', { years: age })}</span>}
         </h3>
         <p className="text-xs text-muted-foreground">{[t(`reasonCategory.${c.reasonCategory}`), p.scope === 'clinic' ? c.calendarName : ''].filter(Boolean).join(' · ')}</p>
@@ -236,7 +236,7 @@ function PendingPrescriptions(p: Props) {
             <span className="flex flex-wrap items-center gap-2 text-sm">
               <Pill aria-hidden className="size-4 shrink-0" />
               <span className="font-bold">{r.patientName || t('board.unknownPatient')}</span>
-              <span className="text-muted-foreground">{formatDate(new Date(r.endedAt), p.timeZone ?? undefined)}{' · '}{tCount('today.rx.lines', r.lines)}</span>
+              <span className="text-muted-foreground">{formatDate(new Date(r.endedAt), p.timeZone)}{' · '}{tCount('today.rx.lines', r.lines)}</span>
             </span>
             <Link to={`${p.consultPath(r.encounterId)}#${authoriseTarget}`} className={buttonVariants({ variant: 'outline' })}
               aria-label={t('today.rx.openFor', { name: r.patientName || t('board.unknownPatient') })}>{t('today.rx.open')}</Link>
@@ -255,7 +255,7 @@ function PendingRow({ note: n, timeZone, consultPath }: Props & { note: PendingN
       <span className="flex flex-wrap items-center gap-2 text-sm">
         {n.openPastDay ? <CircleAlert aria-hidden className="size-4 shrink-0" /> : <FilePen aria-hidden className="size-4 shrink-0" />}
         <span className="font-bold">{n.patientName || t('board.unknownPatient')}</span>
-        <span className="text-muted-foreground">{formatDate(new Date(n.startedAt), timeZone ?? undefined)}{' · '}{t(state)}</span>
+        <span className="text-muted-foreground">{formatDate(new Date(n.startedAt), timeZone)}{' · '}{t(state)}</span>
         {n.openPastDay && <span className="font-bold">{t('today.open.pastDay')}</span>}
       </span>
       <Link to={consultPath(n.encounterId)} className={buttonVariants({ variant: 'outline' })}>{t(n.noteSigned ? 'today.open.action' : 'today.pending.open')}</Link>

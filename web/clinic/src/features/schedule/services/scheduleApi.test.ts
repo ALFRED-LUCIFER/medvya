@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ApiError, fetchScheduleDay } from './scheduleApi';
+import { ApiError } from '../../api/services/apiClient';
+import { fetchScheduleDay } from './scheduleApi';
 
 const day = { facilityId: 'f-1', date: '2026-10-19', columns: [] };
 const answer = (status: number) => new Response(JSON.stringify(day), { status });

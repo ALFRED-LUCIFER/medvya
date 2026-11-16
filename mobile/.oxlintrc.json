@@ -3,6 +3,7 @@
   "plugins": ["react", "typescript", "oxc", "import"],
   "rules": {
     "react/rules-of-hooks": "error",
+    "react/exhaustive-deps": "error",
     "react/jsx-no-literals": "error",
     "no-restricted-imports": [
       "error",
@@ -29,7 +30,8 @@
             ]
           }
         ],
-        "no-restricted-globals": ["error", { "name": "fetch", "message": "I/O lives in services/." }, { "name": "XMLHttpRequest", "message": "I/O lives in services/." }]
+        "no-restricted-globals": ["error", { "name": "fetch", "message": "I/O lives in services/." }, { "name": "XMLHttpRequest", "message": "I/O lives in services/." }, { "name": "localStorage", "message": "I/O lives in services/." }, { "name": "sessionStorage", "message": "I/O lives in services/." }, { "name": "indexedDB", "message": "I/O lives in services/." }, { "name": "caches", "message": "I/O lives in services/." }],
+        "no-restricted-properties": ["error", { "property": "fetch", "message": "I/O lives in services/." }, { "property": "localStorage", "message": "I/O lives in services/." }, { "property": "sessionStorage", "message": "I/O lives in services/." }, { "property": "indexedDB", "message": "I/O lives in services/." }, { "property": "caches", "message": "I/O lives in services/." }, { "property": "XMLHttpRequest", "message": "I/O lives in services/." }]
       }
     },
     {
@@ -39,7 +41,8 @@
           "error",
           { "patterns": [{ "group": ["**/components/*", "react-native", "@medvya/ui", "@medvya/ui-native"], "message": "Controller hooks return data and handlers, never UI." }] }
         ],
-        "no-restricted-globals": ["error", { "name": "fetch", "message": "Call a service from the hook; services own I/O." }]
+        "no-restricted-globals": ["error", { "name": "fetch", "message": "Call a service from the hook; services own I/O." }, { "name": "XMLHttpRequest", "message": "Call a service from the hook; services own I/O." }, { "name": "localStorage", "message": "Call a service from the hook; services own I/O." }, { "name": "sessionStorage", "message": "Call a service from the hook; services own I/O." }, { "name": "indexedDB", "message": "Call a service from the hook; services own I/O." }, { "name": "caches", "message": "Call a service from the hook; services own I/O." }],
+        "no-restricted-properties": ["error", { "property": "fetch", "message": "Call a service from the hook; services own I/O." }, { "property": "localStorage", "message": "Call a service from the hook; services own I/O." }, { "property": "sessionStorage", "message": "Call a service from the hook; services own I/O." }, { "property": "indexedDB", "message": "Call a service from the hook; services own I/O." }, { "property": "caches", "message": "Call a service from the hook; services own I/O." }, { "property": "XMLHttpRequest", "message": "Call a service from the hook; services own I/O." }]
       }
     },
     {
@@ -58,7 +61,7 @@
           "error",
           { "patterns": [{ "group": ["react", "react-native", "expo", "expo-*", "**/hooks/*", "**/components/*", "**/services/*", "@medvya/ui", "@medvya/ui-native"], "message": "Domain is pure: types and rules only." }] }
         ],
-        "no-restricted-globals": ["error", "fetch", "XMLHttpRequest"]
+        "no-restricted-globals": ["error", "fetch", "XMLHttpRequest", "localStorage", "sessionStorage", "indexedDB", "caches", "window", "globalThis", "self"]
       }
     },
     {

@@ -14,6 +14,8 @@ import { referralsHeading } from './ReferralJump';
 import { stateIcons } from './stateIcons';
 
 type Props = {
+  /** The facility's IANA zone: instants show facility time, not the browser's (AGENTS.md 3.5). */
+  timeZone: string;
   encounterId: string;
   ended: boolean;
   referrals: Referral[];
@@ -56,7 +58,7 @@ export default function ReferralsPanel(p: Props) {
                     <TableHead scope="row">{r.provider}<span className="block text-sm font-normal text-muted-foreground">{t(`referrals.direction.${r.direction}`)}</span></TableHead>
                     <TableCell label={t('referrals.col.urgency')}>{t(`referrals.urgency.${r.urgency}`)}</TableCell>
                     <TableCell label={t('referrals.col.state')}><span className="inline-flex items-center gap-1.5 font-bold"><Icon aria-hidden className="size-4 shrink-0" />{t(`referrals.state.${r.state}`)}</span></TableCell>
-                    <TableCell label={r.channel ? t('referrals.col.channel') : undefined}>{r.channel ? `${t(`referrals.channel.${r.channel}`)}${r.sentAt ? `, ${formatDate(new Date(r.sentAt))}` : ''}` : ''}</TableCell>
+                    <TableCell label={r.channel ? t('referrals.col.channel') : undefined}>{r.channel ? `${t(`referrals.channel.${r.channel}`)}${r.sentAt ? `, ${formatDate(new Date(r.sentAt), p.timeZone)}` : ''}` : ''}</TableCell>
                     <TableCell>
                       {r.open && !p.ended && <Button type="button" variant="outline" aria-label={t('referrals.manageNamed', { name: r.provider })} onClick={() => p.onSelect(r.id)}>{t('referrals.manage')}</Button>}
                     </TableCell>
@@ -74,7 +76,7 @@ export default function ReferralsPanel(p: Props) {
           <ol className="flex flex-col gap-1" aria-label={t('referrals.history')}>
             {p.selected.history.map(s => (
               <li key={`${s.state}-${s.at}`}>
-                <span className="font-bold">{t(`referrals.state.${s.state}`)}</span>{` ${formatDate(new Date(s.at))}`}{s.note && ` · ${s.note}`}
+                <span className="font-bold">{t(`referrals.state.${s.state}`)}</span>{` ${formatDate(new Date(s.at), p.timeZone)}`}{s.note && ` · ${s.note}`}
                 {s.documentId && <span className="ms-2 text-sm text-muted-foreground">{t('referrals.evidence')}</span>}
               </li>
             ))}

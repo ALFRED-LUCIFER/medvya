@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { emptyWalkIn, newPatientWalkIn, walkInDoctors, walkInError, type BoardCard, type WalkInChoice, type WalkInVisit } from '../domain/board';
 import { checkIn, heldWalkInStart, holdWalkInStart, monotonicNow, walkIn } from '../services/frontDeskApi';
-import { ApiError, fetchScheduleDay, findPatient } from '../../schedule/services/scheduleApi';
+import { ApiError } from '../../api/services/apiClient';
+import { fetchScheduleDay, findPatient } from '../../schedule/services/scheduleApi';
 import { usePatientSearch } from '../../patients/hooks/usePatientSearch';
 
 /**

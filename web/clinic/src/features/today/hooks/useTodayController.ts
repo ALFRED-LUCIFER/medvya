@@ -5,7 +5,7 @@ import { minutesSince } from '../../front-desk/domain/board';
 import { elsewhereLines, escalatedVisits, MAX_FLAGS, nextPatient, patientIdsOf, todayVisits, type Scope } from '../domain/today';
 import { fetchAllergyFlags, fetchElsewhere, fetchEscalations, fetchPendingNotes } from '../services/todayApi';
 import { fetchPendingPrescriptions } from '../../prescription/services/prescriptionApi';
-import { ApiError } from '../../schedule/services/scheduleApi';
+import { ApiError } from '../../api/services/apiClient';
 
 const noLocations: { id: string; facilityId: string; facilityName: string }[] = [];
 
@@ -13,7 +13,7 @@ const noLocations: { id: string; facilityId: string; facilityName: string }[] = 
  * D-01 Doctor Today (MDV-P2-002): the board's data (same audited endpoint, live updates and server clock), narrowed to the doctor's own
  * visits, or the clinic's when toggled. The server decides who may see the board; nothing here grants anything.
  */
-export function useTodayController(facilityId: string, online: boolean, userId: string, otherLocations: { id: string; facilityId: string; facilityName: string }[] = noLocations) {
+export function useTodayController(facilityId: string, timeZone: string, online: boolean, userId: string, otherLocations: { id: string; facilityId: string; facilityName: string }[] = noLocations) {
   const board = useBoardController(facilityId, online);
   const [scope, setScope] = useState<Scope>('mine');
   const visits = useMemo(() => todayVisits(board.board?.cards ?? [], scope, userId), [board.board, scope, userId]);
@@ -50,7 +50,7 @@ export function useTodayController(facilityId: string, online: boolean, userId: 
     pendingRxFailed: rx.isError && !(rx.error instanceof ApiError && rx.error.status === 403),
     pendingNotes: pending.data?.items ?? [], pendingMore: pending.data?.more ?? false, pendingFailed: pending.isError,
     allergyFlags: flags.data ?? {},
-    day: board.board?.date ?? null, timeZone: board.board?.timeZone ?? null,
+    day: board.board?.date ?? null, timeZone: board.board?.timeZone ?? timeZone,
     // An escalated patient is pinned above the hero (MDV-P1-103), so the hero offers the next one who is not.
     visits, next: nextPatient(visits.filter(v => !escalated.includes(v))), scope, onScope: setScope,
     waitMinutes: (since: string) => minutesSince(since, board.now),

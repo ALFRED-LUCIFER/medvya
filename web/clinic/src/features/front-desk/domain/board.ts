@@ -1,40 +1,17 @@
+import type { Schemas } from '@medvya/api-client';
 import type { I18n } from '@medvya/i18n';
 import type { ReasonCategory } from '../../schedule/domain/booking';
 import type { AppointmentState, ScheduleColumn, VisitType } from '../../schedule/domain/schedule';
-import type { FollowUpDue } from './followUpDue';
 
 // GET /v1/front-desk/board (src/Modules/Scheduling/Medvya.Scheduling.Application/IFrontDeskService.cs). Nonclinical only:
 // the reason is a category, never the patient's words. Instants are UTC; they are shown in the facility's zone.
-export type BoardCard = {
-  id: string; reference: string; patientId: string; patientName: string;
-  /** YYYY-MM-DD, to confirm identity at check-in; null when the patient record was not found. */
-  dateOfBirth: string | null;
-  registrationIncomplete: boolean;
-  calendarId: string; calendarName: string; visitType: VisitType; reasonCategory: ReasonCategory;
-  start: string; end: string; state: AppointmentState;
-  /** When the visit entered its current state. */
-  since: string;
-  /** Where the patient was called in to (set at call-in); null before. */
-  room: string | null;
-  /** The waiting-room token from check-in ("A-07", MDV-P1-031); null before. What the queue TV shows instead of a name. */
-  token: string | null;
-  /** Arrived without an appointment (MDV-P1-025); unscheduled = queued with no free slot (holds no slot). */
-  walkIn?: boolean;
-  unscheduled?: boolean;
+/** The server's BoardCard (generated client). Narrower here: the sex at birth is one of three words, which the contract types as any string. */
+export type BoardCard = Omit<Schemas['BoardCard'], 'sex'> & {
   /** Sex at birth, with the age a desk tells two patients of one name apart by (MDV-AUDIT-1105); absent when the record was not found. */
   sex?: 'Female' | 'Male' | 'Other' | null;
-  /** A consultation is open for the visit (MDV-P1-100): the doctor's End moves it, the desk has no action. */
-  withDoctor?: boolean;
-  /** On a Done card: the doctor's follow-up still to book, date and doctor only (MDV-P1-102). */
-  followUp?: FollowUpDue | null;
-  /**
-   * 1, 2, … in the queue of the visit's doctor while the patient waits (MDV-P1-103, decision 10: each doctor has their own sequence):
-   * escalations first, then the clinic's rule; null otherwise. The place minus one is how many wait ahead.
-   */
-  queuePlace?: number | null;
 };
 /** leftWithoutBeingSeen: today's patients who left before being seen; they are off the board and never in Done. */
-export type Board = { facilityId: string; timeZone: string; date: string; now: string; cards: BoardCard[]; leftWithoutBeingSeen?: number };
+export type Board = Omit<Schemas['FrontDeskBoard'], 'cards'> & { cards: BoardCard[] };
 
 /** Real-time connection to the board hub (MDV-P1-029): live, or paused (offline, dropped, refused) while the board refreshes on a timer. */
 export type LiveStatus = 'connecting' | 'live' | 'paused';

@@ -1,4 +1,4 @@
-import { post, send } from '../../schedule/services/scheduleApi';
+import { post, send } from '../../api/services/apiClient';
 import { FORMULARY_LIMIT, toMedicineBody, toOrderSetBody, type BrandRow, type FormularyItem, type MedicineForm, type OrderSet, type OrderSetForm } from '../domain/formulary';
 
 // Settings, Medicines (F-13, MDV-P2-014). Only medicine names and test names travel, never a patient value.

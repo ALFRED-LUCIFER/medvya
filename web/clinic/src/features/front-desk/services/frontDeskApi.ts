@@ -1,5 +1,5 @@
 import { newIdempotencyKey } from '../../api/services/idempotencyKey';
-import { csrf, post, send } from '../../schedule/services/scheduleApi';
+import { post, send } from '../../api/services/apiClient';
 import type { Board, BoardCard, BoardColumn, TokenSlip, WalkInChoice, WalkInVisit } from '../domain/board';
 import type { ClinicOverview, ReassignReason } from '../domain/overview';
 
@@ -40,7 +40,7 @@ export const markLeft = (appointmentId: string, reason: string, note: string) =>
 
 /** Takes the doctor's follow-up off the desk's list without booking it (MDV-P1-102). The reason is a code, never patient words, so it may be in the query. */
 export const dismissFollowUp = (id: string, reason: string) =>
-  send<void>(`/v1/waitlist/${id}?${new URLSearchParams({ reason })}`, { method: 'DELETE', headers: csrf });
+  send<void>(`/v1/waitlist/${id}?${new URLSearchParams({ reason })}`, { method: 'DELETE' });
 
 /** Milliseconds on a monotonic clock, for timing a check-in. */
 export const monotonicNow = () => performance.now();

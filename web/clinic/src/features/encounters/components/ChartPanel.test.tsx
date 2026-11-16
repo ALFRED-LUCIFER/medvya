@@ -77,9 +77,9 @@ describe('ChartPanel (MDV-P1-094)', () => {
   });
 
   it('says loading and failed', () => {
-    const { rerender } = render(<ChartPanel variant="side" panel="chart" onPanel={() => {}} chart={{ data: null, loading: true, failed: false }} timeZone={undefined} checklist={[]} />);
+    const { rerender } = render(<ChartPanel variant="side" panel="chart" onPanel={() => {}} chart={{ data: null, loading: true, failed: false }} timeZone="Asia/Kolkata" checklist={[]} />);
     expect(screen.getByRole('status').textContent).toBe('Opening the chart…');
-    rerender(<ChartPanel variant="side" panel="chart" onPanel={() => {}} chart={{ data: null, loading: false, failed: true }} timeZone={undefined} checklist={[]} />);
+    rerender(<ChartPanel variant="side" panel="chart" onPanel={() => {}} chart={{ data: null, loading: false, failed: true }} timeZone="Asia/Kolkata" checklist={[]} />);
     expect(screen.getByRole('alert').textContent).toBe('The chart could not be opened.');
   });
 
@@ -88,7 +88,7 @@ describe('ChartPanel (MDV-P1-094)', () => {
       const [open, setOpen] = useState(false);
       return <>
         <ChartDrawerButton open={open} onOpen={() => setOpen(true)} />
-        <ChartPanel variant="drawer" open={open} onOpenChange={setOpen} panel="chart" onPanel={() => {}} chart={{ data: chart, loading: false, failed: false }} timeZone={undefined} checklist={[]} />
+        <ChartPanel variant="drawer" open={open} onOpenChange={setOpen} panel="chart" onPanel={() => {}} chart={{ data: chart, loading: false, failed: false }} timeZone="Asia/Kolkata" checklist={[]} />
       </>;
     }
     render(<Drawer />);

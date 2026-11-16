@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ApiError } from '../../schedule/services/scheduleApi';
+import { ApiError } from '../../api/services/apiClient';
 import { printPage } from '../../encounters/services/noteApi';
 import { pdfProblem, type PaperSize, type SecondLanguage } from '../domain/authorisation';
 import { approveLayout, downloadRxPdf, fetchLayout, fetchRxPrint, verifyPaper, verifyRx } from '../services/prescriptionApi';

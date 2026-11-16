@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
-import { ApiError } from '../../schedule/services/scheduleApi';
+import { ApiError } from '../../api/services/apiClient';
 import { emptyOrder, orderSchema, problemOf, toggleOf, type Order, type OrderForm, type OrderProblem, type TestToggle } from '../domain/orders';
 import { usePaperPdf } from '../../prescription/hooks/useRxPrintController';
 import { addOrder, addOrderSet, downloadSlipPdf, fetchOrders, fetchOrderSets, fetchSlip, includeOrder, placeOrders, printPage } from '../services/ordersApi';

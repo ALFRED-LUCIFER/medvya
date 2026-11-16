@@ -1,5 +1,5 @@
 import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Text } from 'react-native';
 import { exchangeCode, forgetTokens, send } from '../features/api/services/api';
 import { readCopy } from '../features/api/services/store';
@@ -87,7 +87,8 @@ function SignIn() {
 /** The app's routes in small: sign-in, lock or Today. `start` signs the doctor in once the launch check is done. */
 function App({ start }: { start?: Session }) {
   const { ready, session, locked, begin } = useSession();
-  useEffect(() => { if (ready && start) begin(start, false); }, [ready]);
+  const began = useRef(false);
+  useEffect(() => { if (ready && start && !began.current) { began.current = true; begin(start, false); } }, [ready, start, begin]); // once, after the launch check
   if (!ready) return null;
   if (!session) return start ? <Text>signed out</Text> : <SignIn />;
   return locked ? <Lock /> : <Today />;

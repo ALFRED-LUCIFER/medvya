@@ -21,7 +21,9 @@ export type QueueItem = {
 export type HistoryEntry = { at: string; actor: string | null; state: string; reason: string | null };
 export type Detail = {
   name: string; country: string; type: OrgType; state: OrgState; submittedAt: string | null; reason: string | null; address: string | null; contactEmail: string | null;
-  registrationNumber: string | null; taxNumber: string | null; itContactName: string | null; itContactEmail: string | null; documents: DocumentView[]; history: HistoryEntry[];
+  registrationNumber: string | null; taxNumber: string | null;
+  /** The server's verdict on the tax number's format and check character; null when there is none or the country has no rule. */
+  taxNumberValid: boolean | null; itContactName: string | null; itContactEmail: string | null; documents: DocumentView[]; history: HistoryEntry[];
 };
 export type EmailPreview = { subject: string; body: string };
 
@@ -47,18 +49,14 @@ export const documentKinds = ['RegistrationCertificate', 'HospitalRegistration',
 export const isDocumentKind = (k: string): k is (typeof documentKinds)[number] => (documentKinds as readonly string[]).includes(k);
 
 /**
- * The checks that are cheap and certain: the file's type and size (the server read the type from the bytes) and the tax number's format.
+ * The checks that are cheap and certain: the file's type and size (the server read the type from the bytes) and the tax number's format and
+ * check character, which the server judges with the rule set-up applies (this screen keeps no copy of it, #1417).
  * shortcut: "name and address match" the documents needs reading them (OCR), which is not built; the screen says a person reads each document.
  * Add it with the document-AI work when counsel has agreed what Medvya may extract from an applicant's identity documents.
  */
 export type TaxCheck = 'ok' | 'format' | 'missing';
-const gstin = /^(0[1-9]|[1-2]\d|3[0-8])[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
-const trn = /^\d{15}$/;
-export function taxCheck(country: string, taxNumber: string | null): TaxCheck {
-  const value = taxNumber?.replace(/\s/g, '').toUpperCase();
-  if (!value) return 'missing';
-  return (country === 'IN' ? gstin : country === 'AE' ? trn : /.+/).test(value) ? 'ok' : 'format';
-}
+export const taxCheck = (d: Pick<Detail, 'taxNumber' | 'taxNumberValid'>): TaxCheck =>
+  !d.taxNumber?.trim() ? 'missing' : d.taxNumberValid === false ? 'format' : 'ok';
 
 export const sizeLabel = (bytes: number) => (bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / (1024 * 1024)).toFixed(1)} MB`);
 

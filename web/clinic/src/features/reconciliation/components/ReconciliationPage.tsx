@@ -17,6 +17,8 @@ export type DecisionProps = {
 };
 
 type Props = DecisionProps & {
+  /** The active facility's IANA zone, until the banner names the encounter's. */
+  timeZone: string;
   view: Reconciliation | null; banner: EncounterBanner | null; loading: boolean; notFound: boolean; refusal: ClinicalRefusal | null; failed: boolean;
   problem: Problem | null; confirming: boolean; onConfirm: () => void;
   consultPath: string; boardPath: string;
@@ -67,7 +69,7 @@ export default function ReconciliationPage(p: Props) {
       </Card>
       {/* The bottom bar (MDV-P2-064): whether it can be confirmed at the start, the commit actions at the end. */}
       <StickyActionBar status={confirmed
-        ? <p role="status" className="inline-flex items-center gap-1.5 font-bold"><CircleCheck aria-hidden className="size-4" />{t('reconcile.confirmedAt', { time: formatTime(new Date(view.confirmedAt!), p.banner?.timeZone) })}</p>
+        ? <p role="status" className="inline-flex items-center gap-1.5 font-bold"><CircleCheck aria-hidden className="size-4" />{t('reconcile.confirmedAt', { time: formatTime(new Date(view.confirmedAt!), p.banner?.timeZone ?? p.timeZone) })}</p>
         : <p id="reconcile-confirm-note" className="text-sm text-muted-foreground">{t(canConfirm(view) ? 'reconcile.confirmReady' : 'reconcile.confirmBlocked')}</p>}>
         {!confirmed && <Button loading={p.confirming} disabled={!canConfirm(view) || !p.online} aria-describedby="reconcile-confirm-note" onClick={p.onConfirm}>{t('reconcile.confirm')}</Button>}
         <Link to={p.consultPath} className={buttonVariants({ variant: 'outline' })}>{t('reconcile.backToConsult')}</Link>

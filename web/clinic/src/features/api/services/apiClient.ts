@@ -1,4 +1,7 @@
 /** Shared fetch for every feature: a timeout and bounded, jittered retry for requests that are safe to repeat (MDV-P1-048). */
+// shortcut: only the schedule day, the front-desk board and the patient search request are typed from the generated client
+// (`Schemas` in @medvya/api-client); every other service still declares its answer by hand, and /v1/me/context and the search answer have
+// no response schema in the OpenAPI document yet (anonymous or IResult answers). Move each service over when its endpoint declares its type.
 export const timeoutMs = 15_000;
 export const maxRetries = 2;
 const retriableStatus = new Set([429, 502, 503, 504]);
@@ -57,8 +60,18 @@ async function attempt(url: string, { timeout = timeoutMs, ...rest }: RequestIni
   } finally { clearTimeout(id); }
 }
 
+// State-changing calls carry the CSRF header the BFF requires (ADR-004). Exported for the SignalR negotiate, which does not use apiFetch.
+export const csrf = { 'X-Medvya-Csrf': '1' };
+const withCsrf = <T extends RequestInit>(init: T): T => {
+  if (['GET', 'HEAD', undefined].includes(init.method?.toUpperCase())) return init;
+  const headers = new Headers(init.headers);
+  headers.set('X-Medvya-Csrf', '1');
+  return { ...init, headers };
+};
+
 /** `timeout` overrides the shared timeout for one call that is known to be slow (the set-up finish). */
-export async function apiFetch(url: string, init: RequestInit & { timeout?: number } = {}): Promise<Response> {
+export async function apiFetch(url: string, given: RequestInit & { timeout?: number } = {}): Promise<Response> {
+  const init = withCsrf(given);
   const retries = safeToRepeat(init) ? maxRetries : 0;
   let refusedBudget = maxRefusedWaitMs;
   for (let n = 0; ; n++) {
@@ -77,3 +90,35 @@ export async function apiFetch(url: string, init: RequestInit & { timeout?: numb
     await sleep(wait, init.signal);
   }
 }
+
+/** An API answer other than 2xx. `status` tells 403 from other failures; `code` is the 409 reason (e.g. "being_booked"). */
+export class ApiError extends Error {
+  readonly status: number;
+  readonly code: string | undefined;
+  /** The problem-details body, for answers that carry data (e.g. the visits an "actions_required" leave affects). */
+  readonly body: unknown;
+  constructor(status: number, code?: string, body?: unknown) {
+    super(`API ${status}`);
+    this.status = status;
+    this.code = code;
+    this.body = body;
+  }
+}
+
+export async function send<T>(url: string, init: RequestInit = {}): Promise<T> {
+  return answer<T>(await apiFetch(url, { credentials: 'same-origin', ...init }));
+}
+
+export async function answer<T>(res: Response): Promise<T> {
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as { code?: string; errors?: Record<string, string[]> } | null;
+    // A rejected field (400 problem details) is reported as "field:code" so a screen can name what was wrong.
+    const rejected = Object.entries(body?.errors ?? {}).find(([, codes]) => codes.length > 0);
+    throw new ApiError(res.status, body?.code ?? (rejected ? `${rejected[0]}:${rejected[1][0]}` : undefined), body);
+  }
+  return (res.status === 204 ? undefined : await res.json()) as T;
+}
+
+/** With a `key` the call carries an Idempotency-Key, so the shared client may repeat it after a timeout without acting twice. */
+export const post = <T>(url: string, body: unknown, key?: string) =>
+  send<T>(url, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(key ? { 'Idempotency-Key': key } : {}) }, body: JSON.stringify(body) });

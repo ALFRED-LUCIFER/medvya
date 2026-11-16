@@ -1,4 +1,4 @@
-import { csrf, post, send } from '../../schedule/services/scheduleApi';
+import { post, send } from '../../api/services/apiClient';
 import type { AccessQueue, AccessReason, ClinicalPolicy } from '../domain/clinicalAccess';
 
 // Request access, the owner's side of it, and the clinic policy (MDV-P2-024). Ids in paths; the facility is the session's, never sent.
@@ -9,4 +9,4 @@ export const declineAccess = (id: string) => post<unknown>(`/v1/access-requests/
 
 export const fetchClinicalPolicy = () => send<{ policy: ClinicalPolicy }>('/v1/settings/clinical-access');
 export const saveClinicalPolicy = (policy: ClinicalPolicy) =>
-  send<{ policy: ClinicalPolicy }>('/v1/settings/clinical-access', { method: 'PUT', headers: { ...csrf, 'Content-Type': 'application/json' }, body: JSON.stringify({ policy }) });
+  send<{ policy: ClinicalPolicy }>('/v1/settings/clinical-access', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ policy }) });

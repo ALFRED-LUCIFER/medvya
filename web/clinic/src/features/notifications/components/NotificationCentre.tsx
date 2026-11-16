@@ -6,6 +6,8 @@ import { Button } from '@medvya/ui';
 import { badgeText, notificationTarget, type NotificationList, type StaffNotification } from '../domain/notifications';
 
 type Props = {
+  /** The facility's IANA zone: instants show facility time, not the browser's (AGENTS.md 3.5). */
+  timeZone: string;
   open: boolean;
   list: NotificationList | null;
   unread: number;
@@ -67,7 +69,7 @@ export default function NotificationCentre(props: Props) {
                       <span className={n.read ? 'font-semibold' : 'font-extrabold'}>{words(i18n, n)}</span>
                       {/* shortcut: shown in the device's time zone, not the facility's; the facility zone is not in the session yet. */}
                       <span className="text-xs text-muted-foreground">
-                        {formatDate(new Date(n.createdAt))}{' · '}{formatTime(new Date(n.createdAt))}{' · '}{n.read ? t('notifications.read') : t('notifications.unread')}
+                        {formatDate(new Date(n.createdAt), props.timeZone)}{' · '}{formatTime(new Date(n.createdAt), props.timeZone)}{' · '}{n.read ? t('notifications.read') : t('notifications.unread')}
                       </span>
                     </span>
                   </Link>

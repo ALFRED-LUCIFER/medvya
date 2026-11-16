@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
-import { ApiError } from '../../schedule/services/scheduleApi';
+import { ApiError } from '../../api/services/apiClient';
 import { logoFailure, logoProblem, profileSchema, settingsError, toProfileForm, type ProfileForm } from '../domain/settings';
 import { fetchLogoLink, fetchProfile, removeLogo, saveProfile, settleLogo, uploadLogo } from '../services/settingsApi';
 

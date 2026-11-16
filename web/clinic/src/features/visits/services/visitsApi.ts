@@ -1,4 +1,4 @@
-import { send } from '../../schedule/services/scheduleApi';
+import { send } from '../../api/services/apiClient';
 import type { DeskRecordVisits, VisitsAnswer } from '../domain/visits';
 
 // The patient id is the only identifier in a path; the facility id is an opaque id. Opening either list is an audited read.

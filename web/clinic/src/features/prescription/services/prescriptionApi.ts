@@ -1,5 +1,5 @@
 import { apiFetch } from '../../api/services/apiClient';
-import { ApiError, csrf, post, send } from '../../schedule/services/scheduleApi';
+import { ApiError, post, send } from '../../api/services/apiClient';
 import type { PaperVerify, RxAdvice, RxAuthorisationState, RxLayout, RxPrint, RxVerify } from '../domain/authorisation';
 import type { RxChecks } from '../domain/checks';
 import { toShareBody, type RxShare, type ShareForm } from '../domain/share';
@@ -7,7 +7,7 @@ import { toSigBody, type Medicine, type RxLine, type SigDraft } from '../domain/
 
 // The draft prescription (MDV-P2-015). Ids in paths; medicine names and dose fields in bodies. The formulary search carries a medicine name
 // the doctor typed, never a patient value.
-const put = <T>(url: string, body: unknown) => send<T>(url, { method: 'PUT', headers: { ...csrf, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+const put = <T>(url: string, body: unknown) => send<T>(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 export const fetchPrescription = (encounterId: string) => send<RxLine[]>(`/v1/encounters/${encounterId}/prescription`);
 export const addFromFormulary = (encounterId: string, formularyItemId: string) => post<RxLine[]>(`/v1/encounters/${encounterId}/prescription/items`, { formularyItemId });
 export const addFreeText = (encounterId: string, medicine: string) => post<RxLine[]>(`/v1/encounters/${encounterId}/prescription/items`, { medicine: medicine.trim() });
@@ -43,14 +43,14 @@ export const verifyPaper = (token: string) => post<PaperVerify>('/v1/papers/veri
 
 /** A server paper (investigation slip or referral letter): each POST renders, stores and audits a new copy; saved under a name with no patient data. */
 export async function downloadPaperPdf(path: string, name: string): Promise<void> {
-  const res = await apiFetch(path, { method: 'POST', credentials: 'same-origin', headers: csrf });
+  const res = await apiFetch(path, { method: 'POST', credentials: 'same-origin' });
   if (!res.ok) throw new ApiError(res.status);
   await save(res, name);
 }
 
 /** The server renders and keeps the PDF (POST: each copy handed out is stored and audited); saved under a name with no patient data. */
 export async function downloadRxPdf(encounterId: string, paper: 'A4' | 'A5'): Promise<void> {
-  const res = await apiFetch(`/v1/encounters/${encounterId}/prescription/pdf?paper=${paper}`, { method: 'POST', credentials: 'same-origin', headers: csrf });
+  const res = await apiFetch(`/v1/encounters/${encounterId}/prescription/pdf?paper=${paper}`, { method: 'POST', credentials: 'same-origin' });
   if (!res.ok) throw new ApiError(res.status);
   await save(res, `prescription-${paper.toLowerCase()}.pdf`);
 }
@@ -75,7 +75,7 @@ export const sendSharedCode = (token: string) => post<void>('/v1/prescriptions/s
 /** Public: the shared PDF once the code matches, saved under a name with no patient data. */
 export async function openSharedRx(token: string, code: string): Promise<void> {
   const res = await apiFetch('/v1/prescriptions/shared/open', {
-    method: 'POST', credentials: 'same-origin', headers: { ...csrf, 'Content-Type': 'application/json' }, body: JSON.stringify({ token, code }),
+    method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, code }),
   });
   if (!res.ok) throw new ApiError(res.status, ((await res.json().catch(() => null)) as { code?: string } | null)?.code);
   await save(res, 'prescription.pdf');

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import type { AccessReason } from '../../clinical-access/domain/clinicalAccess';
 import { requestAccess } from '../../clinical-access/services/clinicalAccessApi';
-import { ApiError } from '../../schedule/services/scheduleApi';
+import { ApiError } from '../../api/services/apiClient';
 import { startProblem, type StartProblem } from '../domain/encounter';
 import { startEncounter } from '../services/encountersApi';
 

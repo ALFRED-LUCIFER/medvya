@@ -1,11 +1,11 @@
 import { apiFetch } from '../../api/services/apiClient';
-import { ApiError, csrf, post, send } from '../../schedule/services/scheduleApi';
+import { ApiError, post, send } from '../../api/services/apiClient';
 import type { AddendumForm, NoteCatalog, NoteDraft, NoteView, PreviousNote, VerifiedVital } from '../domain/note';
 import type { IntakeComplaint } from '../domain/complaint';
 import { returnPath, type ResumeAction } from '../domain/stepUp';
 
 const put = <T>(url: string, body: unknown, keepalive = false) =>
-  send<T>(url, { method: 'PUT', headers: { 'X-Medvya-Csrf': '1', 'Content-Type': 'application/json' }, body: JSON.stringify(body), keepalive });
+  send<T>(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), keepalive });
 
 // Consult note (MDV-P2-009). The note text travels only in the body; ids only in paths.
 export const fetchNote = (encounterId: string) => send<NoteView>(`/v1/encounters/${encounterId}/note`);
@@ -53,7 +53,7 @@ export const addAddendum = (encounterId: string, addendum: AddendumForm) => post
 
 /** The server renders and keeps the PDF (POST: each copy handed out is stored and audited); the browser saves it under a name with no patient data. */
 export async function downloadNotePdf(encounterId: string): Promise<void> {
-  const res = await apiFetch(`/v1/encounters/${encounterId}/note/pdf`, { method: 'POST', credentials: 'same-origin', headers: csrf });
+  const res = await apiFetch(`/v1/encounters/${encounterId}/note/pdf`, { method: 'POST', credentials: 'same-origin' });
   if (!res.ok) throw new ApiError(res.status);
   const url = URL.createObjectURL(await res.blob());
   const link = document.createElement('a');

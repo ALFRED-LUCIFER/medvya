@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ApiError } from '../../schedule/services/scheduleApi';
+import { ApiError } from '../../api/services/apiClient';
 import { sessionQueryKey } from '../../session/hooks/useSessionController';
 import { fetchNurseIntake, saveNurseIntake } from '../services/settingsApi';
 

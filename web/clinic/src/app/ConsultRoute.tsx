@@ -45,18 +45,20 @@ import OpenOnTablet from '../features/shell/components/OpenOnTablet';
 import { usePhone } from '../features/shell/hooks/usePhone';
 
 /** Composition only: one consultation (MDV-P2-001) by its id in the address, with its note (MDV-P2-009); the server checks clinical access on every call. */
-type Props = { boardPath: string; online: boolean; canOrder: boolean; canReconcile: boolean; canSign: boolean; userId: string };
+type Props = { boardPath: string; online: boolean; canOrder: boolean; canReconcile: boolean; canSign: boolean; userId: string; timeZone: string };
 
 export default function ConsultRoute({ boardPath, ...rest }: Props) {
   const { encounterId = '' } = useParams();
   return <Consult key={encounterId} encounterId={encounterId} boardPath={boardPath} {...rest} />;
 }
 
-function Consult({ encounterId, boardPath, online, canOrder, canReconcile, canSign, userId }: Props & { encounterId: string }) {
+function Consult({ encounterId, boardPath, online, canOrder, canReconcile, canSign, userId, timeZone }: Props & { encounterId: string }) {
   const consultation = useConsultController(encounterId);
+  // The encounter's facility zone once the banner is read; the active facility's before that.
+  const zone = consultation.banner?.timeZone ?? timeZone;
   // Held here, not in the prescription: it must see a click made before the prescription is on the page, and the address's `resume` word, which it reads once.
   const authoriseResume = useStepUpReturn('authorise');
-  const noteController = useNoteController(encounterId, canSign, consultation.banner?.timeZone, consultation.banner);
+  const noteController = useNoteController(encounterId, canSign, zone, consultation.banner);
   // MDV-P1-090: End consultation and Sign note ask first about an unfinished prescription or orders not placed.
   const finish = useFinishController(encounterId, canOrder, { end: consultation.onEnd, sign: noteController.onRequestSign });
   const consult = { ...consultation, onEnd: finish.onRequestEnd };
@@ -65,7 +67,7 @@ function Consult({ encounterId, boardPath, online, canOrder, canReconcile, canSi
   // #1365: a doctor who does not lead this unsigned visit sees why Sign is locked and may take the visit over (the server decides).
   const takeOverController = useTakeOverController(encounterId);
   const lead = consult.banner?.encounter.leadClinicianId;
-  const note = { ...noteController, onRequestSign: finish.onRequestSign, timeZone: consult.banner?.timeZone,
+  const note = { ...noteController, onRequestSign: finish.onRequestSign, timeZone: zone,
     takeOver: noteController.canSign && lead !== undefined && lead !== userId ? takeOverController : undefined,
     patient: consult.banner && { name: consult.banner.patient.fullName, mrn: consult.banner.patient.mrn, dateOfBirth: consult.banner.patient.dateOfBirth, allergies: consult.banner.allergies } };
   const ended = consult.banner?.encounter.status === 'Ended';
@@ -88,14 +90,14 @@ function Consult({ encounterId, boardPath, online, canOrder, canReconcile, canSi
           prescription={!phone && patient && canOrder && <Prescription encounterId={encounterId} ended={ended} patient={patient} resume={authoriseResume} />}
           diagnoses={!phone && canReconcile && <Diagnoses encounterId={encounterId} online={online} />} />
         : <>{entry(true)}<NoteEditor {...note} /></>}
-      <NoteHistory {...useAddendumController(encounterId, canSign)} timeZone={consult.banner?.timeZone} printPath={`/consult/${encounterId}/note/print`} />
+      <NoteHistory {...useAddendumController(encounterId, canSign)} timeZone={zone} printPath={`/consult/${encounterId}/note/print`} />
       <NoteTemplateChoice {...useNoteTemplatesController()} />
       {consult.banner && <UnfinishedDialog {...finish} patientName={consult.banner.patient.fullName} />}
       {phone ? canOrder && !draftOnPhone && phoneGate : <>
         {/* The one page holds the prescription after Assessment (MDV-P1-094); the guided steps keep it under the note. */}
         {patient && canOrder && consult.view !== 'page' && <Prescription encounterId={encounterId} ended={ended} patient={patient} resume={authoriseResume} />}
         {consult.banner && canOrder && <Orders encounterId={encounterId} ended={ended} />}
-        {consult.banner && canOrder && <Referrals patientId={consult.banner.encounter.patientId} encounterId={encounterId} ended={ended} />}
+        {consult.banner && canOrder && <Referrals patientId={consult.banner.encounter.patientId} encounterId={encounterId} ended={ended} timeZone={zone} />}
       </>}
     </ConsultPage>
   );
@@ -162,21 +164,21 @@ function Orders({ encounterId, ended }: { encounterId: string; ended: boolean })
 }
 
 /** Referrals out and in (MDV-P2-019) under the consultation; a clinician the server does not let write sees nothing here. */
-function Referrals({ patientId, encounterId, ended }: { patientId: string; encounterId: string; ended: boolean }) {
+function Referrals({ patientId, encounterId, ended, timeZone }: { patientId: string; encounterId: string; ended: boolean; timeZone: string }) {
   const referrals = useReferralsController(patientId, encounterId);
-  return referrals.hidden ? null : <Disclosure titleKey="referrals.title" filled={referrals.referrals.length > 0}><ReferralsPanel {...referrals} encounterId={encounterId} ended={ended} /></Disclosure>;
+  return referrals.hidden ? null : <Disclosure titleKey="referrals.title" filled={referrals.referrals.length > 0}><ReferralsPanel {...referrals} encounterId={encounterId} ended={ended} timeZone={timeZone} /></Disclosure>;
 }
 
 /** The referral letter (MDV-P2-019), printable. */
-export function LetterRoute() {
+export function LetterRoute({ timeZone }: { timeZone: string }) {
   const { encounterId = '', referralId = '' } = useParams();
-  return <LetterPage {...useLetterController(referralId)} consultPath={`/consult/${encounterId}`} />;
+  return <LetterPage {...useLetterController(referralId)} timeZone={timeZone} consultPath={`/consult/${encounterId}`} />;
 }
 
 /** The investigation slip of one consultation (MDV-P2-018), printable. */
-export function SlipRoute() {
+export function SlipRoute({ timeZone }: { timeZone: string }) {
   const { encounterId = '' } = useParams();
-  return <SlipPage {...useSlipController(encounterId)} consultPath={`/consult/${encounterId}`} />;
+  return <SlipPage {...useSlipController(encounterId)} timeZone={timeZone} consultPath={`/consult/${encounterId}`} />;
 }
 
 /** The signed note's print view and PDF (MDV-P2-013), with the patient's identifiers from the consultation. */

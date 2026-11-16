@@ -6,7 +6,7 @@
   "types": "src/index.ts",
   "scripts": {
     "build": "tsc --noEmit",
-    "lint": "oxlint -c ../.oxlintrc.json src"
+    "lint": "oxlint --deny-warnings -c ../.oxlintrc.json src"
   },
   "peerDependencies": {
     "@expo/vector-icons": "*",

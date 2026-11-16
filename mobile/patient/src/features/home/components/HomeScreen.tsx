@@ -2,7 +2,7 @@ import { useI18n, type MessageKey } from '@medvya/i18n';
 import { AppHeader, Button, Card, Icon, Loading, Screen, Section, StateMessage, Text, type IconName } from '@medvya/ui-native';
 import { theme } from '@medvya/tokens';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { clinicLine, type Session } from '../../session/domain/session';
+import { clinicLine, zoneOf, type Session } from '../../session/domain/session';
 import type { Home, Task } from '../domain/home';
 
 type Props = {
@@ -15,7 +15,7 @@ const taskIcon: Record<Task['kind'], IconName> = { pay: 'payments', video: 'vide
 export function HomeScreen(vm: Props) {
   const { t, formatDate, formatTime, formatMoney } = useI18n();
   const { person, clinic } = vm.session;
-  const tz = clinic?.timeZone;
+  const tz = zoneOf(vm.session);
   const header = <AppHeader title={person ? t('mobile.home.hello', { name: person.name.split(' ')[0] ?? person.name }) : t('mobile.patient.tab.home')}
     subtitle={clinicLine(vm.session)} initials={person?.initials ?? t('mobile.monogram')}
     action={clinic ? { icon: 'call', label: t('mobile.home.callClinic'), onPress: vm.onCallClinic } : undefined} />;

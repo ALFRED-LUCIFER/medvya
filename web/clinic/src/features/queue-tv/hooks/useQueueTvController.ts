@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { LiveStatus } from '../../front-desk/domain/board';
-import { ApiError } from '../../schedule/services/scheduleApi';
+import { ApiError } from '../../api/services/apiClient';
 import { newlyCalled, type QueueTv, type Unpaired } from '../domain/queueTv';
 import { chimePreference, fetchQueueTv, pairDisplay, playChime, takePairingToken, watchQueue } from '../services/queueTvApi';
 

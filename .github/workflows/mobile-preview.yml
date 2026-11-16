@@ -40,7 +40,8 @@ jobs:
       fail-fast: false
       matrix:
         app: [clinician, patient]
-        platform: [android, ios]
+        # iOS takes about 20 min per app on macOS: PRs build Android only; main and a manual run (any branch) build both.
+        platform: ${{ github.event_name == 'pull_request' && fromJSON('["android"]') || fromJSON('["android", "ios"]') }}
     env:
       # The preview signs in against the Azure dev API (docs/releases/r0.md); inlined into the JS bundle at build time.
       EXPO_PUBLIC_MEDVYA_API: https://app-medvya-dev-3afs7i.azurewebsites.net

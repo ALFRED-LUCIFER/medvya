@@ -141,9 +141,8 @@ public sealed partial class FrontDeskService(
         var now = context.Now;
         var date = ScheduleRules.LocalDate(now, zone);
         var (from, to) = (ScheduleRules.Instant(date, TimeOnly.MinValue, zone), ScheduleRules.Instant(date.AddDays(1), TimeOnly.MinValue, zone));
-        var visits = await db.Appointments.AsNoTracking()
-            .Where(a => a.FacilityId == facilityId && a.CalendarKind == CalendarKind.Doctor && a.Start >= from && a.Start < to
-                && a.State != AppointmentState.Cancelled && a.State != AppointmentState.NoShow && a.State != AppointmentState.NeedsRebooking && a.State != AppointmentState.LeftWithoutBeingSeen)
+        var visits = await db.Appointments.AsNoTracking().Where(Appointment.HoldsSlot)
+            .Where(a => a.FacilityId == facilityId && a.CalendarKind == CalendarKind.Doctor && a.Start >= from && a.Start < to)
             .OrderBy(a => a.Start).ThenBy(a => a.Id).ToListAsync(cancellationToken);
         var patients = await context.PatientsAsync(visits.Select(a => a.PatientId), cancellationToken);
         var tokens = await TokensAsync([.. visits.Select(a => a.Id)], cancellationToken);

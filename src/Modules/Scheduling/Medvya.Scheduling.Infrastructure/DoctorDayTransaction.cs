@@ -13,7 +13,7 @@ namespace Medvya.Scheduling.Infrastructure;
 /// <summary>
 /// The only way to change what a calendar holds or has booked (MDV-P1-022, PRD v2 P1-07). Each attempt runs in a READ COMMITTED
 /// transaction (not SERIALIZABLE: its range locks made unrelated doctor-days queue on each other's index ranges, MDV-P1-037) that first takes a transaction advisory lock "doctor:{tenant}:{calendar}:{date}" (facility-local date; the tenant keeps a doctor who works for two practices from making one wait on the other) for every doctor-day it touches,
-/// in a fixed order so two attempts never wait on each other in a circle. Deadlocks, lock timeouts and an ungranted app lock roll
+/// in a fixed order so two attempts never wait on each other in a circle; before those, a shared lock "doctor:{tenant}:{calendar}" per calendar, which offboarding takes exclusive. Deadlocks, lock timeouts and an ungranted app lock roll
 /// back and are retried (nothing was written, so a retry cannot duplicate); after the last attempt the caller gets "busy".
 /// A unique-index violation on SCHEDULE_SLOT means another booking won: "slot_unavailable". The app lock keeps every check-then-write of a
 /// doctor-day exclusive, and the unique index is the last line: it holds even if the lock or the checks are bypassed.
@@ -34,6 +34,10 @@ public sealed class DoctorDayTransaction(SchedulingDbContext db, ICurrentTenant 
             try
             {
                 await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken);
+                // Shared per calendar, before any doctor-day: offboarding takes it exclusive, so no booking of the doctor runs (or commits) during it,
+                // even on a day that held no visit when offboarding read the doctor's days.
+                foreach (var calendarId in locks.Select(l => l.CalendarId).Distinct())
+                    await LockAsync(db, DoctorKey(tenantId, calendarId), options.Value.LockTimeout, cancellationToken, shared: true);
                 foreach (var (calendarId, date) in locks)
                     await LockAsync(db, DoctorDayKey(tenantId, calendarId, date), options.Value.LockTimeout, cancellationToken);
                 var result = await work();
@@ -71,13 +75,20 @@ public sealed class DoctorDayTransaction(SchedulingDbContext db, ICurrentTenant 
     internal static string DoctorDayKey(Guid tenantId, Guid calendarId, DateOnly date) =>
         string.Create(CultureInfo.InvariantCulture, $"doctor:{tenantId}:{calendarId}:{date:yyyy-MM-dd}");
 
-    /// <summary>Exclusive advisory lock owned by the open transaction; released by commit or rollback. Throws when not granted in time.</summary>
-    internal static async Task LockAsync(SchedulingDbContext db, string resource, TimeSpan lockTimeout, CancellationToken cancellationToken)
+    /// <summary>The app-lock name of one calendar as a whole: shared by every doctor-day change, exclusive while the doctor is offboarded.</summary>
+    internal static string DoctorKey(Guid tenantId, Guid calendarId) => string.Create(CultureInfo.InvariantCulture, $"doctor:{tenantId}:{calendarId}");
+
+    /// <summary>Advisory lock (exclusive unless <paramref name="shared"/>) owned by the open transaction; released by commit or rollback. Throws when not granted in time.</summary>
+    internal static async Task LockAsync(SchedulingDbContext db, string resource, TimeSpan lockTimeout, CancellationToken cancellationToken, bool shared = false)
     {
         var timeout = ((int)lockTimeout.TotalMilliseconds).ToString(CultureInfo.InvariantCulture);
         // lock_timeout covers advisory locks; set_config(..., true) is the parameterised SET LOCAL, so it ends with the transaction.
         await db.Database.ExecuteSqlAsync($"SELECT set_config('lock_timeout', {timeout}, true)", cancellationToken);
-        try { await db.Database.ExecuteSqlAsync($"SELECT pg_advisory_xact_lock(hashtextextended({resource}, 0))", cancellationToken); }
+        try
+        {
+            if (shared) await db.Database.ExecuteSqlAsync($"SELECT pg_advisory_xact_lock_shared(hashtextextended({resource}, 0))", cancellationToken);
+            else await db.Database.ExecuteSqlAsync($"SELECT pg_advisory_xact_lock(hashtextextended({resource}, 0))", cancellationToken);
+        }
         catch (Exception e) when (Pg(e) is { SqlState: PostgresErrorCodes.LockNotAvailable }) { throw new LockNotGrantedException(); }
     }
 

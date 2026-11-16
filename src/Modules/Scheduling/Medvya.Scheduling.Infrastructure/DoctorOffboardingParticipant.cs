@@ -17,8 +17,8 @@ namespace Medvya.Scheduling.Infrastructure;
 /// A doctor left a facility of the practice (MDV-P1-009): their future booked visits there (not at the practice's other sites, #877) become "needs rebooking" (slots freed, audited, queued
 /// reminders cancelled; the patient is asked to rebook only if the admin chose to offer new slots),
 /// board told after the commit). It runs inside the offboarding transaction on its connection, so the tenant's row-level security applies and
-/// the move commits or rolls back with the membership change. The caller has already authorised staff administration. Takes the same
-/// per-doctor-day app locks as every booking change, so a booking cannot slip in between.
+/// the move commits or rolls back with the membership change. The caller has already authorised staff administration. Takes the doctor's
+/// calendar lock exclusive (every booking change holds it shared) and then the same per-doctor-day app locks, so a booking cannot slip in between.
 /// </summary>
 public sealed class DoctorOffboardingParticipant(
     ICurrentTenant tenant, ICurrentUser user, IFacilityDirectory facilities, IAuditLog audit, IOptions<SchedulingOptions> options,
@@ -35,6 +35,9 @@ public sealed class DoctorOffboardingParticipant(
         TimeZoneInfo? zone = null; // every visit read is at this one facility
         async Task<TimeZoneInfo> ZoneAsync() => zone ??= TimeZoneInfo.FindSystemTimeZoneById((await facilities.FindAsync(facilityId, cancellationToken)
             ?? throw new InvalidOperationException("A visit's facility is not in this tenant.")).TimeZone);
+        // Exclusive on the whole calendar first: a booking holds it shared from before its checks to its commit, so none is in flight past this
+        // line, and any later one sees the membership already offboarded (it re-checks under the lock).
+        await DoctorDayTransaction.LockAsync(db, DoctorDayTransaction.DoctorKey(tenantId, doctorUserId), options.Value.LockTimeout, cancellationToken);
         var days = new SortedSet<DateOnly>();
         foreach (var a in await FutureAsync()) days.Add(ScheduleRules.LocalDate(a.Start, await ZoneAsync()));
         foreach (var date in days)

@@ -622,6 +622,8 @@ public sealed class SessionControlTests(PostgresFixture sql) : IClassFixture<Pos
         Assert.Equal(Medvya.Scheduling.Domain.AppointmentState.NeedsRebooking, (await scheduling.Appointments.SingleAsync(a => a.Id == adyarVisit)).State);
         Assert.Equal(Medvya.Scheduling.Domain.AppointmentState.Booked, (await scheduling.Appointments.SingleAsync(a => a.Id == velacheryVisit)).State);
         Assert.Equal(HttpStatusCode.OK, await ContextStatus(doctorBrowser)); // still working at Velachery
+        await using var notifications = sql.Notifications(tenantA);
+        Assert.Equal(facilityA, Assert.Single(await notifications.StaffNotifications.ToListAsync()).FacilityId); // only Adyar's desk is told (MDV-P1-034)
     }
 
     [Fact]

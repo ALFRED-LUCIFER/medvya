@@ -17,10 +17,11 @@ public sealed class RebookingNotifier(ICurrentTenant tenant, TimeProvider clock)
     {
         ArgumentNullException.ThrowIfNull(transaction);
         var tenantId = tenant.TenantId ?? throw new InvalidOperationException("No tenant context.");
-        var now = clock.GetUtcNow();
         await using var db = new NotificationsDbContext(new DbContextOptionsBuilder<NotificationsDbContext>().UseNpgsql(transaction.Connection!).Options, tenant);
         await db.Database.UseTransactionAsync(transaction, cancellationToken);
-        StaffNotifications.Raise(db, tenantId, facilityId, StaffNotificationKind.VisitsNeedRebooking, calendarId, count, now, $"rebook:{calendarId:N}:{now.UtcTicks}", firstDay);
+        // Called once per action and facility, and a retried action rolled back its first item: a fresh key never collides (one doctor offboarded
+        // from two locations in the same instant would, with a doctor-and-time key, and roll the whole offboarding back).
+        StaffNotifications.Raise(db, tenantId, facilityId, StaffNotificationKind.VisitsNeedRebooking, calendarId, count, clock.GetUtcNow(), $"rebook:{Guid.CreateVersion7():N}", firstDay);
         await db.SaveChangesAsync(cancellationToken);
     }
 }

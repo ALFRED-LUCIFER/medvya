@@ -310,7 +310,7 @@ resource nationalIdKeyApp 'Microsoft.Authorization/roleAssignments@2022-04-01' =
 // admin connects Razorpay. A vault of its own, because writing needs "Key Vault Secrets Officer" on the vault, and on the main vault that
 // would let the app read and change every platform secret. Nothing else lives here.
 resource paymentsVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
-  name: 'kvp-${name}'
+  name: take('kvp-${name}', 24) // vault names stop at 24 characters; 'staging' would make 25
   location: location
   tags: tags
   properties: {

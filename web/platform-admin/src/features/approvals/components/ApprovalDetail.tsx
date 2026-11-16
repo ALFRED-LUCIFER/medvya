@@ -29,7 +29,7 @@ export default function ApprovalDetail({ vm, operator }: { vm: DetailVm; operato
   if (vm.state !== 'ready' || !vm.detail)
     return <TableState state={vm.state === 'ready' ? 'error' : vm.state} messages={{ loading: t('platform.state.loading'), error: t(vm.notFound ? 'platform.approvals.error.gone' : 'platform.state.error'), empty: '' }}><></></TableState>;
   const d = vm.detail;
-  const tax = taxCheck(d.country, d.taxNumber);
+  const tax = taxCheck(d);
   const profile: [MessageKey, string | null][] = [
     ['platform.approvals.profile.address', d.address], ['platform.approvals.profile.contact', d.contactEmail], ['platform.approvals.profile.registration', d.registrationNumber],
     ['platform.approvals.profile.tax', d.taxNumber], ...(d.type === 'Hospital' ? [['platform.approvals.profile.it', [d.itContactName, d.itContactEmail].filter(Boolean).join(' · ') || null] as [MessageKey, string | null]] : []),

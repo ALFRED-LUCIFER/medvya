@@ -48,13 +48,11 @@ describe('the reviewer’s ticks', () => {
 
 describe('automatic checks', () => {
   it('checks the tax number format per country', () => {
-    expect(taxCheck('IN', '27AAAAA0000A1Z2')).toBe('ok');
-    expect(taxCheck('IN', '27aapfu0939f1zv')).toBe('ok');
-    expect(taxCheck('IN', '99AAAAA0000A1Z2')).toBe('format'); // no such state code
-    expect(taxCheck('IN', '12345')).toBe('format');
-    expect(taxCheck('AE', '100123456700003')).toBe('ok');
-    expect(taxCheck('AE', '10012345')).toBe('format');
-    expect(taxCheck('IN', null)).toBe('missing');
+    // The server's verdict, not a copied rule: a GSTIN with state code 97 and a valid check character is fine (#1417).
+    expect(taxCheck({ taxNumber: '97AAAAA0000A1ZV', taxNumberValid: true })).toBe('ok');
+    expect(taxCheck({ taxNumber: '33AAAAA0000A1Z5', taxNumberValid: false })).toBe('format');
+    expect(taxCheck({ taxNumber: 'X-1', taxNumberValid: null })).toBe('ok'); // no rule for the country: a person reads it
+    expect(taxCheck({ taxNumber: null, taxNumberValid: null })).toBe('missing');
   });
   it('shows sizes and waits in plain units', () => {
     expect(sizeLabel(100)).toBe('1 KB');

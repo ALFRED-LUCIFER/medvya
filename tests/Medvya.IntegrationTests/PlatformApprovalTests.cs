@@ -69,13 +69,13 @@ public sealed class PlatformApprovalTests(PostgresFixture sql) : IClassFixture<P
     }
 
     /// <summary>An organisation under review with every document it needs, a profile email and a request of the given type.</summary>
-    async Task<(Guid Id, Guid Document)> Org(OrganisationType type = OrganisationType.Clinic, OrganisationState state = OrganisationState.Submitted, bool withDpa = true)
+    async Task<(Guid Id, Guid Document)> Org(OrganisationType type = OrganisationType.Clinic, OrganisationState state = OrganisationState.Submitted, bool withDpa = true, string? taxNumber = null)
     {
         var id = Guid.NewGuid();
         Guid doc = default;
         await using var db = sql.Context(id);
         db.Tenants.Add(new Tenant { Id = id, Name = $"Review Clinic {id.ToString("N")[..6]} (synthetic)", CountryCode = "IN", ResidencyRegion = "centralindia", State = state });
-        db.Profiles.Add(new PracticeProfile { Id = Guid.NewGuid(), TenantId = id, Email = "desk@review-clinic.example", ChangedAt = DateTimeOffset.UtcNow });
+        db.Profiles.Add(new PracticeProfile { Id = Guid.NewGuid(), TenantId = id, Email = "desk@review-clinic.example", TaxNumber = taxNumber, ChangedAt = DateTimeOffset.UtcNow });
         db.OrganisationRequests.Add(new OrganisationRequest { TenantId = id, Type = type, SubmittedAt = DateTimeOffset.UtcNow, ItContactName = type == OrganisationType.Hospital ? "IT lead (synthetic)" : null, ItContactEmail = type == OrganisationType.Hospital ? "it@review-clinic.example" : null });
         foreach (var kind in OrganisationDocumentRules.Required(type, ownerIsDoctor: true).Where(k => withDpa || k != OrganisationDocumentRules.Dpa))
         {
@@ -326,6 +326,19 @@ public sealed class PlatformApprovalTests(PostgresFixture sql) : IClassFixture<P
         Assert.Equal("NeedsChanges", entry.GetProperty("state").GetString());
         Assert.StartsWith("Reviewer ", entry.GetProperty("actor").GetString(), StringComparison.Ordinal); // the member's console name
         Assert.Equal(HttpStatusCode.NotFound, (await c.GetAsync(new Uri($"/v1/organisations/{Guid.NewGuid()}", UriKind.Relative))).StatusCode);
+    }
+
+    // #1417: the console copied the GSTIN rule and disagreed with the server (it refused state 97 and skipped the check character). It now shows this verdict.
+    [Theory]
+    [InlineData("97AAAAA0000A1ZV", true)]  // any two-digit state code, valid check character
+    [InlineData("33AAAAA0000A1Z5", false)] // well formed, wrong check character
+    [InlineData(null, null)]
+    public async Task TheDetailCarriesTheServersVerdictOnTheTaxNumber(string? taxNumber, bool? valid)
+    {
+        var (id, _) = await Org(taxNumber: taxNumber);
+        using var c = await Console(PlatformRole.Reviewer);
+        var verdict = (await c.GetFromJsonAsync<JsonElement>(new Uri($"/v1/organisations/{id}", UriKind.Relative))).GetProperty("taxNumberValid");
+        Assert.Equal(valid, verdict.ValueKind == JsonValueKind.Null ? null : verdict.GetBoolean());
     }
 
     [Fact]

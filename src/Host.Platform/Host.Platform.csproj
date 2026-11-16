@@ -17,6 +17,15 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Microsoft.Extensions.ApiDescription.Server" PrivateAssets="all" />
   </ItemGroup>
+
+  <!-- As Host.Api: built with ExportOpenApi=true, the console's document is written to packages/api-client/console-openapi.json (tools/check-contract.sh). -->
+  <PropertyGroup Condition="'$(ExportOpenApi)' == 'true'">
+    <OpenApiGenerateDocuments>true</OpenApiGenerateDocuments>
+    <OpenApiDocumentsDirectory>$(MSBuildThisFileDirectory)..\..\packages\api-client</OpenApiDocumentsDirectory>
+    <OpenApiGenerateDocumentsOptions>--file-name console-openapi</OpenApiGenerateDocumentsOptions>
+  </PropertyGroup>
 
 </Project>

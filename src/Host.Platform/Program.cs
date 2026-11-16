@@ -46,6 +46,7 @@ if (builder.Configuration.GetSection("ConnectionStrings:Features").GetChildren()
 // rows with no tenant in prescribing.FormularyItems, nothing else; row-level security keeps every clinic's own rows out). Without it those endpoints fail closed.
 if (builder.Configuration.GetConnectionString("Formulary") is { } formulary)
     builder.Services.AddSharedFormularyPath(formulary);
+builder.Services.AddOpenApi(); // document only, exported at build time; no endpoint serves it
 builder.Services.AddHsts(o => { o.MaxAge = TimeSpan.FromDays(365); o.IncludeSubDomains = true; });
 builder.Services.AddRateLimiter(o =>
 {

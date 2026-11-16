@@ -1,9 +1,8 @@
 import type { FormEventHandler, ReactNode } from 'react';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 import { ArrowLeftRight, Clock, Stethoscope, Users } from 'lucide-react';
-import { useI18n } from '@medvya/i18n';
+import { useI18n, isDeviceTimeZone } from '@medvya/i18n';
 import { Button, Card, EmptyState, FrontDeskTag, Label, PageMessage, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, PageContainer, PageHeader, cn } from '@medvya/ui';
-import { isDeviceZone } from '../../schedule/domain/changes';
 import type { LiveStatus, MoveError } from '../domain/board';
 import type { QueueRow, QueueTableView } from '../domain/queueTable';
 import QueueTable from './QueueTable';
@@ -38,7 +37,7 @@ type Props = {
 export default function ClinicOverviewPage(props: Props) {
   const { t } = useI18n();
   // As on the board (MDV-P1-095): one header row with the view switch, and the facility's zone only when this device is elsewhere.
-  const zone = props.overview && !isDeviceZone(props.overview.timeZone) ? t('schedule.facilityTime', { zone: props.overview.timeZone }) : null;
+  const zone = props.overview && !isDeviceTimeZone(props.overview.timeZone) ? t('schedule.facilityTime', { zone: props.overview.timeZone }) : null;
   return (
     <PageContainer width="fluid">
       <PageHeader title={t('board.titleOnly')} meta={zone}

@@ -2,7 +2,7 @@ import type { UseFormReturn } from 'react-hook-form';
 import { Link } from 'react-router';
 import { CircleAlert, CircleCheck, X } from 'lucide-react';
 import { useI18n, type MessageKey } from '@medvya/i18n';
-import { Button, buttonVariants, Card, cn, StickyActionBar } from '@medvya/ui';
+import { Button, buttonVariants, Card, cn, StickyActionBar, Detail, DetailList } from '@medvya/ui';
 import { codeKey, needsAttention, type PatientMessage } from '../domain/messages';
 import { actions, localDate, type Action, type CancelForm, type ChangeError, type Rule, type VisitMove } from '../domain/changes';
 import type { Appointment } from '../domain/schedule';
@@ -68,14 +68,11 @@ export default function AppointmentPanel(p: Props) {
         </div>
         <Button variant="outline" size="icon" aria-label={t('appointment.close')} onClick={p.onClose}><X aria-hidden /></Button>
       </div>
-      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
-        <dt className="text-muted-foreground">{t('appointment.when')}</dt>
-        <dd>{t('appointment.whenValue', { day: day(a.start), time: time(a.start), minutes })}</dd>
-        <dt className="text-muted-foreground">{t('appointment.type')}</dt>
-        <dd>{t(`visitType.${a.visitType}`)}</dd>
-        <dt className="text-muted-foreground">{t('appointment.with')}</dt>
-        <dd>{p.done?.calendarName ?? p.opened.calendarName}</dd>
-      </dl>
+      <DetailList layout="inline">
+        <Detail label={t('appointment.when')}>{t('appointment.whenValue', { day: day(a.start), time: time(a.start), minutes })}</Detail>
+        <Detail label={t('appointment.type')}>{t(`visitType.${a.visitType}`)}</Detail>
+        <Detail label={t('appointment.with')}>{p.done?.calendarName ?? p.opened.calendarName}</Detail>
+      </DetailList>
 
       {p.done && (
         <div role="status" className="flex flex-col items-start gap-2">

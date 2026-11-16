@@ -1,8 +1,9 @@
 import type { FormEventHandler } from 'react';
-import { Controller, type UseFormReturn } from 'react-hook-form';
+import { type UseFormReturn } from 'react-hook-form';
 import { ltr, useI18n } from '@medvya/i18n';
-import { Button, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
+import { Button, Field, Input } from '@medvya/ui';
 import { verifications, type AddDraft, type DiagnosisCode } from '../domain/problems';
+import { SelectField } from '../../forms/components/SelectField';
 
 export type ProblemAddFormProps = {
   addForm: UseFormReturn<AddDraft>; search: string; results: DiagnosisCode[]; picked: DiagnosisCode | null; adding: boolean; online: boolean;
@@ -43,14 +44,8 @@ export default function ProblemAddForm(p: ProblemAddFormProps) {
         <Field id="problem-description" label={t('problems.add.description')} hint={t(p.picked ? 'problems.add.descriptionFromCode' : 'problems.add.descriptionHint')} error={errors.description ? t('problems.add.descriptionRequired') : null}>
           <Input autoComplete="off" maxLength={200} placeholder={p.picked?.title} {...p.addForm.register('description')} />
         </Field>
-        <Controller control={p.addForm.control} name="verification" render={({ field }) => (
-          <Select value={field.value} onValueChange={field.onChange}>
-            <Field id="problem-verification" label={t('problems.col.verification')}>
-              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-            </Field>
-            <SelectContent>{verifications.map(v => <SelectItem key={v} value={v}>{t(`problems.verification.${v}`)}</SelectItem>)}</SelectContent>
-          </Select>
-        )} />
+        <SelectField control={p.addForm.control} name="verification" id="problem-verification" label={t('problems.col.verification')}
+          options={verifications} optionLabel={v => t(`problems.verification.${v}`)} />
         <Field id="problem-onset" label={t('problems.col.onset')}>
           <Input type="date" {...p.addForm.register('onsetOn')} />
         </Field>

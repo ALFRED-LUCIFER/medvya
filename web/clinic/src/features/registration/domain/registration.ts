@@ -317,10 +317,6 @@ export function completionSchema(country: Country) {
   });
 }
 
-/** Today in the browser's calendar as yyyy-mm-dd (the desk sits at the facility). */
-export const isoDay = (d: Date) =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-
 /** An Emirates ID past its expiry warns but never blocks registration or care. */
 export const eidExpired = (expiry: string, today: string) => isoDate.test(expiry) && expiry < today;
 

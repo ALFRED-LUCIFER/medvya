@@ -1,6 +1,5 @@
 import { useI18n } from '@medvya/i18n';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@medvya/ui';
-import { Section } from '../../settings/components/Section';
+import { Card, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@medvya/ui';
 import { openReferralColumns, type Referral } from '../domain/referrals';
 import { stateIcons } from './stateIcons';
 
@@ -9,7 +8,7 @@ export default function OpenReferrals({ open }: { open: Referral[] }) {
   const { t } = useI18n();
   if (open.length === 0) return null;
   return (
-    <Section title={t('referrals.open.title')}>
+    <Card title={t('referrals.open.title')}>
       <Table label={t('referrals.open.tableLabel')} stacked className="md:min-w-[480px]">
         <TableHeader><TableRow>{openReferralColumns.map(c => <TableHead key={c} scope="col">{t(`referrals.col.${c}`)}</TableHead>)}</TableRow></TableHeader>
         <TableBody>
@@ -25,6 +24,6 @@ export default function OpenReferrals({ open }: { open: Referral[] }) {
           })}
         </TableBody>
       </Table>
-    </Section>
+    </Card>
   );
 }

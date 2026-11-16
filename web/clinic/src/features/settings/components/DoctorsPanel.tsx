@@ -2,13 +2,12 @@ import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { BadgeCheck, CalendarX, Info } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, Field, Input, Tag } from '@medvya/ui';
+import { Card, Button, Field, Input, Tag } from '@medvya/ui';
 import type { Authority, Doctor, DoctorForm, DoctorStep, FieldProblem, LicenceForm } from '../domain/doctors';
 import type { Location } from '../domain/settings';
 import { licenceFields } from '../domain/doctors';
 import DoctorWizard, { LicenceFields, StepErrorSummary } from './DoctorWizard';
 import { fieldError, fieldGrid } from './fieldStyles';
-import { Section } from './Section';
 import SignatureImage from './SignatureImage';
 
 type Wizard = {
@@ -80,13 +79,13 @@ export default function DoctorsPanel(p: Props) {
       {p.adding
         ? <DoctorWizard {...p} />
         : (
-          <Section title={t('doctors.title')} intro={t('doctors.intro')}>
+          <Card title={t('doctors.title')} intro={t('doctors.intro')}>
             <div><Button type="button" onClick={p.onOpen}>{t('doctors.add')}</Button></div>
             {p.doctors.length === 0 && <p className="text-muted-foreground">{t('doctors.empty')}</p>}
             <ul className="flex flex-col gap-3">
               {p.doctors.map(d => <DoctorRow key={d.id} doctor={d} {...p} />)}
             </ul>
-          </Section>
+          </Card>
         )}
     </div>
   );

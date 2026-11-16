@@ -1,10 +1,11 @@
+import { todayIn } from '@medvya/i18n';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import type { Country } from '@medvya/i18n';
 import {
-  duplicateQuery, emptyForm, formField, isMinor, isoDay, messageFor, quickFields, registrationSchema, resolves, stepFields, stepOf, steps, toRegisterRequest,
+  duplicateQuery, emptyForm, formField, isMinor, messageFor, quickFields, registrationSchema, resolves, stepFields, stepOf, steps, toRegisterRequest,
   type DuplicateDecision, type DuplicateQuery, type DuplicateResolution, type FormField, type RegisterRequest, type RegistrationForm,
   type RegistrationResult, type Step,
 } from '../domain/registration';
@@ -42,10 +43,10 @@ function useDebounced<T>(value: T, ms: number): T {
  * with the duplicate warning while typing and the decision before save (MDV-P1-016). Switching mode keeps what was typed.
  * Save stays blocked until the desk has decided about every possible match; the server enforces the same rule.
  */
-export function useRegistrationController(country: Country, quick: boolean, scope = '') {
-  // The desk's calendar day for the expired-ID warning, the preview age and the under-18 guardian rule; the server decides
-  // with the facility's day.
-  const [today] = useState(() => isoDay(new Date()));
+export function useRegistrationController(country: Country, quick: boolean, scope = '', timeZone?: string) {
+  // The facility's calendar day for the expired-ID warning, the preview age and the under-18 guardian rule; the server decides with the same day.
+  // shortcut: falls back to the device's zone while the facility's zone is unknown; drop the fallback once the route always has it.
+  const [today] = useState(() => todayIn(timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone));
   const schema = useMemo(() => registrationSchema(country, quick, today), [country, quick, today]);
   const [restored] = useState(() => draftFor(scope));
   const form = useForm<RegistrationForm>({

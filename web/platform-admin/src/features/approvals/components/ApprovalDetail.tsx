@@ -2,7 +2,7 @@ import { Ban, Check, Eye, MessageSquareWarning, Play, X } from 'lucide-react';
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { useI18n, type MessageKey } from '@medvya/i18n';
-import { Button, Card, ChoiceRow, EmptyState, StickyActionBar, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState } from '@medvya/ui';
+import { Button, Card, ChoiceRow, EmptyState, StickyActionBar, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState, Detail as DetailItem, DetailList } from '@medvya/ui';
 import ReasonPanel, { ReasonBar } from '../../shell/components/ReasonPanel';
 import type { ReasonForm } from '../../team/domain/team';
 import { documentColumns, historyColumns, isDestructive, isDocumentKind, sizeLabel, taxCheck, type Action, type Detail, type DocumentView, type EmailPreview } from '../domain/approvals';
@@ -47,11 +47,11 @@ export default function ApprovalDetail({ vm, operator }: { vm: DetailVm; operato
       </header>
 
       <Card size="item" title={t('platform.approvals.profile.title')}>
-        <dl className="grid gap-x-6 gap-y-2 md:grid-cols-2">
+        <DetailList>
           {profile.map(([label, value]) => (
-            <div key={label}><dt className="text-sm text-muted-foreground">{t(label)}</dt><dd dir="auto" className="font-semibold break-words">{value ?? t('platform.approvals.notGiven')}</dd></div>
+            <DetailItem key={label} label={t(label)} valueProps={{ dir: 'auto' }} valueClassName="font-semibold">{value ?? t('platform.approvals.notGiven')}</DetailItem>
           ))}
-        </dl>
+        </DetailList>
         <p className="text-sm font-semibold">{t(`platform.approvals.check.tax.${tax}` as MessageKey)}</p>
       </Card>
 

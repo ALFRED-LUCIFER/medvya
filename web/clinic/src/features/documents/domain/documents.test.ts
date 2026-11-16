@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { anyPending, canOpenDocument, fileProblem, maxBytes, todayIn, uploadFailure, type DocumentRow } from './documents';
+import { anyPending, canOpenDocument, fileProblem, maxBytes, uploadFailure, type DocumentRow } from './documents';
 import { buildPdf } from './pdf';
 
 const doc = (scanStatus: DocumentRow['scanStatus']): DocumentRow =>
@@ -41,12 +41,6 @@ describe('opening', () => {
     expect(anyPending([doc('Clean'), doc('Pending')])).toBe(true);
     expect(anyPending([doc('Clean'), doc('Infected')])).toBe(false);
   });
-});
-
-it('todayIn is the date in the facility zone, not the device zone', () => {
-  const instant = new Date('2026-10-19T20:00:00Z'); // already the 20th in India
-  expect(todayIn('Asia/Kolkata', instant)).toBe('2026-10-20');
-  expect(todayIn('America/New_York', instant)).toBe('2026-10-19');
 });
 
 describe('buildPdf', () => {

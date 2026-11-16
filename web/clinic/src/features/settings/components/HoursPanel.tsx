@@ -1,9 +1,8 @@
 import { useI18n } from '@medvya/i18n';
-import { Button, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, StickyActionBar, Switch } from '@medvya/ui';
+import { Card, Button, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, StickyActionBar, Switch } from '@medvya/ui';
 import { slotLengths, weekdays, type CalendarTemplate, type HoursRow, type LocationChoice, type SessionRow, type Weekday } from '../domain/settings';
 import { cardBar, fieldError } from './fieldStyles';
 import { LocationSelect } from './LocationSelect';
-import { Section } from './Section';
 
 type OpeningHours = {
   rows: HoursRow[];
@@ -53,7 +52,7 @@ export default function HoursPanel({ choice, hours, schedules }: Props) {
   return (
     <div className="flex flex-col gap-4">
       <LocationSelect id="hours-location" locations={choice.locations} value={choice.locationId} onChange={choice.onLocation} />
-      <Section title={t('settings.hours.title')} intro={t('settings.hours.intro')}>
+      <Card title={t('settings.hours.title')} intro={t('settings.hours.intro')}>
         {hours.sessionsOutside.length > 0 && (
           <div role="status" className="flex flex-col gap-1 rounded-lg border border-warning-700 p-3">
             <p className="font-bold">{t(hours.closedAllWeek ? 'settings.hours.closedAllWeek' : 'settings.hours.sessionsOutside')}</p>
@@ -90,8 +89,8 @@ export default function HoursPanel({ choice, hours, schedules }: Props) {
         </>}>
           <Button type="button" loading={hours.saving} disabled={!hours.dirty || hours.problems.length > 0} onClick={hours.onSave}>{t('settings.save')}</Button>
         </StickyActionBar>
-      </Section>
-      <Section title={t('settings.schedules.title')} intro={t('settings.schedules.intro')}>
+      </Card>
+      <Card title={t('settings.schedules.title')} intro={t('settings.schedules.intro')}>
         {schedules.loading ? <p role="status">{t('settings.loading')}</p> : schedules.loadFailed ? <p role="alert" className={fieldError}>{t('settings.loadFailed')}</p>
           : schedules.calendars.length === 0 ? <p className="text-muted-foreground">{t('settings.schedules.none')}</p> : (
           <>
@@ -144,7 +143,7 @@ export default function HoursPanel({ choice, hours, schedules }: Props) {
             </StickyActionBar>
           </>
         )}
-      </Section>
+      </Card>
     </div>
   );
 }

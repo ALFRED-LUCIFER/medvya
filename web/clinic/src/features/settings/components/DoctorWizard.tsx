@@ -1,11 +1,12 @@
 import type { FormEventHandler } from 'react';
 import { Controller, type FieldValues, type UseFormReturn } from 'react-hook-form';
 import { useI18n } from '@medvya/i18n';
-import { Button, ChoiceRow, ErrorSummary, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, StickyActionBar } from '@medvya/ui';
+import { Card, Button, ChoiceRow, Field, Input, StickyActionBar } from '@medvya/ui';
 import { doctorSteps, stepFields, type Authority, type FieldProblem, type DoctorForm, type DoctorStep, type LicenceForm } from '../domain/doctors';
 import type { Location } from '../domain/settings';
 import { cardBar, fieldError, fieldGrid } from './fieldStyles';
-import { Section } from './Section';
+import { StepErrorSummary as FormStepErrorSummary } from '../../forms/components/StepErrorSummary';
+import { SelectField } from '../../forms/components/SelectField';
 
 type Errors = Record<string, FieldProblem | undefined>;
 type Labels = Partial<Record<keyof DoctorForm, readonly [id: string, label: string]>>;
@@ -42,14 +43,12 @@ function useFieldError(errors: Errors) {
 export function StepErrorSummary({ errors, fields, prefix, currency, focusKey }: {
   errors: Errors; fields: readonly (keyof DoctorForm)[]; prefix: string; currency?: string; focusKey: number;
 }) {
-  const { t } = useI18n();
   const error = useFieldError(errors);
   const labels = useLabels(prefix, currency);
-  const list = fields.flatMap(name => {
+  return <FormStepErrorSummary fields={fields} focusKey={focusKey} className="col-span-full" entry={name => {
     const message = error(name), at = labels[name];
-    return message && at ? [{ id: at[0], label: at[1], message }] : [];
-  });
-  return <ErrorSummary title={t('field.errorSummary')} focusKey={focusKey} errors={list} className="col-span-full" />;
+    return message && at ? { id: at[0], label: at[1], message } : undefined;
+  }} />;
 }
 
 /** Authority, number, category, expiry, certificate file name and the owner's attestation: the licence step, also used to renew a licence. */
@@ -60,14 +59,8 @@ export function LicenceFields<T extends FieldValues>({ form, errors, authorities
   const f = form as unknown as UseFormReturn<LicenceForm>;
   return (
     <>
-      <Controller control={f.control} name="authority" render={({ field }) => (
-        <Select value={field.value} onValueChange={field.onChange}>
-          <Field id={l.authority![0]} label={l.authority![1]} required error={error('authority')}>
-            <SelectTrigger className="w-full"><SelectValue placeholder={t('doctors.choose')} /></SelectTrigger>
-          </Field>
-          <SelectContent>{authorities.map(a => <SelectItem key={a.code} value={a.code}>{a.name}</SelectItem>)}</SelectContent>
-        </Select>
-      )} />
+      <SelectField control={f.control} name="authority" id={l.authority![0]} label={l.authority![1]} required error={error('authority')} placeholder={t('doctors.choose')}
+        options={authorities.map(a => a.code)} optionLabel={code => authorities.find(a => a.code === code)?.name ?? code} />
       <Field id={l.number![0]} label={l.number![1]} required error={error('number')}>
         <Input dir="ltr" autoComplete="off" {...f.register('number')} />
       </Field>
@@ -122,7 +115,7 @@ export default function DoctorWizard(p: Props) {
   const { register, control, watch } = p.form;
   const title = t(`doctors.step.${p.step}`);
   return (
-    <Section title={t('doctors.add.title')} intro={t('doctors.add.intro')}>
+    <Card title={t('doctors.add.title')} intro={t('doctors.add.intro')}>
       <p aria-live="polite" className="font-bold">{t('doctors.add.progress', { n: p.stepIndex + 1, total: doctorSteps.length, title })}</p>
       <form noValidate onSubmit={p.onSubmit} className="flex flex-col gap-4">
         <div className={fieldGrid}>
@@ -170,14 +163,8 @@ export default function DoctorWizard(p: Props) {
               <Field id="d-role" label={t('doctors.access.role')} hint={t('doctors.access.roleHint')}>
                 <Input readOnly value={t('doctors.access.roleValue')} />
               </Field>
-              <Controller control={control} name="facilityId" render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <Field id={l.facilityId![0]} label={l.facilityId![1]} required hint={t('doctors.access.facilityHint')} error={error('facilityId')}>
-                    <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                  </Field>
-                  <SelectContent>{p.locations.map(loc => <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>)}</SelectContent>
-                </Select>
-              )} />
+              <SelectField control={control} name="facilityId" id={l.facilityId![0]} label={l.facilityId![1]} required hint={t('doctors.access.facilityHint')} error={error('facilityId')}
+                options={p.locations.map(loc => loc.id)} optionLabel={id => p.locations.find(loc => loc.id === id)?.name ?? id} />
               {p.locations.length > 1 && (
                 <Controller control={control} name="alsoFacilityIds" render={({ field }) => (
                   <fieldset className="flex flex-col gap-2 col-span-full">
@@ -208,6 +195,6 @@ export default function DoctorWizard(p: Props) {
             : <Button key="next" type="button" disabled={!p.canContinue} aria-describedby={p.planFull ? 'doctor-plan-full' : undefined} onClick={p.onNext}>{t('doctors.next')}</Button>}
         </StickyActionBar>
       </form>
-    </Section>
+    </Card>
   );
 }

@@ -1,7 +1,7 @@
 import type { UseFormReturn } from 'react-hook-form';
 import { Package, Pill, Plus } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { AllergyBlock, Button, ClinicalAlert, Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger, Field, Input } from '@medvya/ui';
+import { AllergyBlock, Button, ClinicalAlert, Field, Input, Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from '@medvya/ui';
 import { fieldError } from '../../settings/components/fieldStyles';
 import { bannerAllergyState } from '../../patient360/domain/chart';
 import type { AllergyState, Allergy } from '../../patient360/domain/chart';
@@ -33,20 +33,19 @@ export default function AddMedicinePanel(p: Props) {
   const language: PrintLanguage = (printLanguages as readonly string[]).includes(locale) ? (locale as PrintLanguage) : 'en';
   return (
     // The trigger is Radix's, so closing (Escape, the close button, Cancel) hands focus back to it.
-    <Dialog open={p.open} onOpenChange={o => (o ? p.onOpen() : p.onClose())}>
+    <Sheet open={p.open} onOpenChange={o => (o ? p.onOpen() : p.onClose())}>
       <div className="flex flex-col items-start gap-2">
-        <DialogTrigger asChild><Button variant="outline"><Plus aria-hidden className="size-4" />{t('rx.addMed.open')}</Button></DialogTrigger>
+        <SheetTrigger asChild><Button variant="outline"><Plus aria-hidden className="size-4" />{t('rx.addMed.open')}</Button></SheetTrigger>
         {p.added && <p role="status" className="text-sm">{t('rx.addMed.added', { name: p.added })}</p>}
       </div>
-      <DialogContent closeLabel={t('rx.addMed.close')}
-        className="start-auto end-0 top-0 h-dvh max-h-none w-full max-w-lg translate-x-0 content-start rounded-none rtl:translate-x-0 sm:rounded-s-xl">
-        <DialogTitle>{t('rx.addMed.title')}</DialogTitle>
-        <DialogDescription>{t(p.encounterId ? 'rx.addMed.intro' : 'rx.addMed.noConsult')}</DialogDescription>
+      <SheetContent side="end" closeLabel={t('rx.addMed.close')}>
+        <SheetTitle>{t('rx.addMed.title')}</SheetTitle>
+        <SheetDescription>{t(p.encounterId ? 'rx.addMed.intro' : 'rx.addMed.noConsult')}</SheetDescription>
         {p.patient && <Patient patient={p.patient} />}
         {p.encounterId && !p.refused && <Body {...p} language={language} />}
         {p.refused && <p role="alert" className={fieldError}>{t('rx.addMed.refused')}</p>}
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }
 

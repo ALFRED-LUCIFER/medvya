@@ -46,6 +46,3 @@ export const canOpenDocument = (d: DocumentRow, canOpen: boolean) => canOpen && 
 export const anyPending = (docs: DocumentRow[]) => docs.some(d => d.scanStatus === 'Pending');
 
 export const sizeLabel = (bytes: number) => (bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / (1024 * 1024)).toFixed(1)} MB`);
-
-/** Today as a date input's value (YYYY-MM-DD) in a given zone. */
-export const todayIn = (zone: string, now = new Date()) => new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);

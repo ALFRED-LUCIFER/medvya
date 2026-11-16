@@ -79,7 +79,7 @@ export function RegistrationRoute(links: RegistrationLinks) {
   const quick = params.get('mode') === 'quick';
   const slot = pickSlot(params);
   const withMode = (mode: string) => `?${new URLSearchParams([...(slot ?? []), ['mode', mode]])}`;
-  return <Registration {...useRegistrationController(links.country, quick, links.scope)} {...links} recordPath={recordPath} onMode={mode => void navigate(withMode(mode))}
+  return <Registration {...useRegistrationController(links.country, quick, links.scope, links.timeZone)} {...links} recordPath={recordPath} onMode={mode => void navigate(withMode(mode))}
     slot={slot?.toString() ?? null} />;
 }
 

@@ -1,6 +1,6 @@
 import type { Locale } from '@medvya/i18n';
 import { useConnectivityController } from '../features/connectivity/hooks/useConnectivityController';
-import LanguageSwitcher from '../features/locale/components/LanguageSwitcher';
+import { LanguageSwitcher } from '@medvya/ui';
 import QueueTvPage from '../features/queue-tv/components/QueueTvPage';
 import { useQueueTvController } from '../features/queue-tv/hooks/useQueueTvController';
 

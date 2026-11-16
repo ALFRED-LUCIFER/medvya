@@ -3,9 +3,8 @@ import { Link } from 'react-router';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 import { Check, CircleCheck, Minus, Pencil } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Switch, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState } from '@medvya/ui';
+import { Card, Button, buttonVariants, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Switch, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState } from '@medvya/ui';
 import { fieldError } from '../../settings/components/fieldStyles';
-import { Section } from '../../settings/components/Section';
 import { canSwitch, hasDrafts, hasPlaced, isIncluded, orderColumns, orderKinds, type Order, type OrderForm, type OrderProblem, type OrderSetChoice } from '../domain/orders';
 
 type Props = {
@@ -37,7 +36,7 @@ export default function OrdersPanel(p: Props) {
   const nameError = errors.name && t('orders.error.required');
 
   return (
-    <Section title={t('orders.title')} intro={t(p.ended ? 'orders.ended' : 'orders.intro')}>
+    <Card title={t('orders.title')} intro={t(p.ended ? 'orders.ended' : 'orders.intro')}>
       <TableState state={tableState} messages={{ loading: t('orders.loading'), error: t('orders.loadFailed'), empty: t('orders.empty') }}>
         <Table label={t('orders.tableLabel')} stacked className="md:min-w-[640px]">
           <TableHeader>
@@ -107,6 +106,6 @@ export default function OrdersPanel(p: Props) {
       {p.problem && <p role="alert" className={fieldError}>{t(`orders.error.${p.problem}`)}</p>}
       {p.placed && <p role="status" className="flex items-center gap-2 font-bold"><CircleCheck aria-hidden className="size-5" />{t('orders.placed')}</p>}
       {hasPlaced(p.orders) && <Link to={`/consult/${p.encounterId}/slip`} className={buttonVariants({ variant: 'outline', className: 'self-start' })}>{t('orders.slipLink')}</Link>}
-    </Section>
+    </Card>
   );
 }

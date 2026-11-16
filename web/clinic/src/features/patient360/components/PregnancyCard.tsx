@@ -1,5 +1,5 @@
 import { useI18n } from '@medvya/i18n';
-import { Button, Card, cn, ErrorSummary, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, StickyActionBar } from '@medvya/ui';
+import { Button, Card, cn, ErrorSummary, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, StickyActionBar, Detail, DetailList } from '@medvya/ui';
 import { cardBar } from '../../settings/components/fieldStyles';
 import { CalendarClock, CircleAlert, CircleCheck, CircleDashed, HeartPulse, TriangleAlert } from 'lucide-react';
 import type { FormEventHandler, ReactNode } from 'react';
@@ -77,12 +77,12 @@ function Open({ p, open }: { p: Props; open: OpenPregnancy }) {
   const ga = t('pregnancy.ga', { weeks: g.weeks, days: g.days });
   return (
     <>
-      <dl className="grid gap-3 md:grid-cols-3">
+      <DetailList layout="tiles" className="gap-3 md:grid-cols-3">
         <Stat label={t('pregnancy.gestation')} value={ga} note={t(`pregnancy.trimester.${g.trimester}`)} />
         <Stat label={t('pregnancy.dueDate')} value={day(open.dueDate)}
           note={[open.lmp && t('pregnancy.lmp', { date: day(open.lmp) }), open.previousDueDate && t('pregnancy.previousDueDate', { date: day(open.previousDueDate) })].filter(Boolean).join(' · ')} />
         <Stat label={t('pregnancy.obstetric')} value={<span dir="ltr">{gpal(open)}</span>} note={t('pregnancy.gpal')} />
-      </dl>
+      </DetailList>
       <div className="flex flex-col gap-1.5">
         <div aria-hidden className="flex justify-between text-xs font-bold text-muted-foreground"><span>{t('pregnancy.trimester.1')}</span><span>{t('pregnancy.trimester.2')}</span><span>{t('pregnancy.trimester.3')}</span></div>
         <div role="img" aria-label={t('pregnancy.bar', { ga, trimester: t(`pregnancy.trimester.${g.trimester}`) })} className="relative h-3 overflow-hidden rounded-full bg-muted">
@@ -127,13 +127,7 @@ function Open({ p, open }: { p: Props; open: OpenPregnancy }) {
 }
 
 function Stat({ label, value, note }: { label: string; value: ReactNode; note: string }) {
-  return (
-    <div className="flex flex-col rounded-md border p-3">
-      <dt className="text-xs font-bold text-muted-foreground">{label}</dt>
-      <dd className="text-lg font-extrabold">{value}</dd>
-      {note && <dd className="text-sm text-muted-foreground">{note}</dd>}
-    </div>
-  );
+  return <Detail label={label} note={note}>{value}</Detail>;
 }
 
 type FieldName = keyof StartForm | keyof ReadingsForm | keyof CloseForm;

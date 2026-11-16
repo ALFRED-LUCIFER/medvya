@@ -1,7 +1,6 @@
 import { ChevronDown, Download, X } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead, TableHeader, TablePagination, TableRow, TableState } from '@medvya/ui';
-import { Section } from '../../settings/components/Section';
+import { Card, Button, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead, TableHeader, TablePagination, TableRow, TableState } from '@medvya/ui';
 import { fieldError } from '../../settings/components/fieldStyles';
 import { PatientPicker, type PatientSearchView } from '../../schedule/components/BookingPanel';
 import type { TableView } from '../../table/domain/tableSort';
@@ -42,7 +41,7 @@ export default function AuditLogPanel(p: Props) {
   const day = (d: string) => (d ? formatCalendarDate(d) : t('audit.anyDate'));
   const summary = t('audit.showing', { filters: [view, who, t('audit.dateRange', { from: day(f.from), to: day(f.to) })].join(' · ') });
   return (
-    <Section title={t('audit.title')} intro={summary} actions={<>
+    <Card title={t('audit.title')} intro={summary} actions={<>
       <Button type="button" variant="outline" aria-expanded={p.filtersOpen} aria-controls="audit-filters" onClick={p.onToggleFilters}>
         {t('audit.filters')}<ChevronDown aria-hidden className={p.filtersOpen ? 'size-4 rotate-180' : 'size-4'} />
       </Button>
@@ -122,6 +121,6 @@ export default function AuditLogPanel(p: Props) {
       </TableState>
       {p.canLoadMore && <Button type="button" variant="outline" className="self-start" loading={p.loadingMore} onClick={p.onMore}>{t('audit.more')}</Button>}
       <p className="text-sm text-muted-foreground">{t('audit.exportNote')} {t('audit.exportAll')}</p>
-    </Section>
+    </Card>
   );
 }

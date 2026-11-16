@@ -1,8 +1,9 @@
+import { todayIn } from '@medvya/i18n';
 import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError } from '../../schedule/services/scheduleApi';
 import { refusalOf } from '../../patient360/domain/chart';
-import { anyPending, fileProblem, todayIn, uploadFailure, type DocumentSource, type DocumentType, type ScanStatus, type UploadFailure, type ViewLink } from '../domain/documents';
+import { anyPending, fileProblem, uploadFailure, type DocumentSource, type DocumentType, type ScanStatus, type UploadFailure, type ViewLink } from '../domain/documents';
 import { buildPdf, type PageImage } from '../domain/pdf';
 import { fetchDocuments, openDocument, updateDocument, uploadDocument, type UploadDetails } from '../services/documentsApi';
 import { toPageImage } from '../services/imagePages';

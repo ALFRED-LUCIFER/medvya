@@ -1,7 +1,7 @@
 import { useI18n } from '@medvya/i18n';
+import { Card } from '@medvya/ui';
 import MyDevicesPage from '../features/my-devices/components/MyDevicesPage';
 import { useMyDevicesController } from '../features/my-devices/hooks/useMyDevicesController';
-import { Section } from '../features/settings/components/Section';
 import SignatureImage from '../features/settings/components/SignatureImage';
 import { useMySignatureController } from '../features/settings/hooks/useMySignatureController';
 
@@ -15,9 +15,9 @@ export default function MyDevicesRoute({ timeZone, prescriber }: { timeZone?: st
   return (
     <MyDevicesPage {...useMyDevicesController()} timeZone={timeZone}>
       {signature.hasSignature !== null && (
-        <Section title={t('doctors.signature.mine')}>
+        <Card title={t('doctors.signature.mine')}>
           <SignatureImage id="mine" own {...signature} hasSignature={signature.hasSignature} />
-        </Section>
+        </Card>
       )}
     </MyDevicesPage>
   );

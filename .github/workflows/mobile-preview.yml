@@ -3,13 +3,12 @@ name: mobile-preview
 # Installable preview builds of both Expo apps (MDV-P5-032 AC 1, owner decision 15 Nov 2026): an Android APK and an iOS
 # simulator app per app, built on the runners, kept as run artifacts. No Expo or Apple account and no secrets; EAS comes
 # with the store release (MDV-P5-039). Type-check, lint, tests and the JS bundle run on every PR in pr.yml (web-checks).
+# Shared JSON packages (i18n, tokens) are left out: they carry no native code and pr.yml bundles both apps on any change.
 # Not a required check. Download and install: docs/05-delivery/session-handoff.md §8.
 on:
   pull_request:
     paths:
       - 'mobile/**'
-      - 'packages/i18n/**'
-      - 'packages/tokens/**'
       - 'packages/ui-native/**'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
@@ -18,8 +17,6 @@ on:
     branches: [main]
     paths:
       - 'mobile/**'
-      - 'packages/i18n/**'
-      - 'packages/tokens/**'
       - 'packages/ui-native/**'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'

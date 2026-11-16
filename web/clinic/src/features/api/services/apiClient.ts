@@ -1,4 +1,7 @@
 /** Shared fetch for every feature: a timeout and bounded, jittered retry for requests that are safe to repeat (MDV-P1-048). */
+// shortcut: only the schedule day, the front-desk board and the patient search request are typed from the generated client
+// (`Schemas` in @medvya/api-client); every other service still declares its answer by hand, and /v1/me/context and the search answer have
+// no response schema in the OpenAPI document yet (anonymous or IResult answers). Move each service over when its endpoint declares its type.
 export const timeoutMs = 15_000;
 export const maxRetries = 2;
 const retriableStatus = new Set([429, 502, 503, 504]);

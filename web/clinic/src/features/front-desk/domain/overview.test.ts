@@ -7,7 +7,7 @@ const at = (minutes: number) => new Date(nine + minutes * 60_000).toISOString();
 const card = (id: string, calendarId: string, state: BoardCard['state'], start: number, since = start): BoardCard => ({
   id, reference: id, patientId: `p-${id}`, patientName: `Patient ${id} (synthetic)`, dateOfBirth: null, registrationIncomplete: false,
   calendarId, calendarName: calendarId === 'd-1' ? 'Dr. Arjun Rao (synthetic)' : 'Dr. S. Menon (synthetic)', visitType: 'FollowUp',
-  reasonCategory: 'General', start: at(start), end: at(start + 20), state, since: at(since), room: null, token: null,
+  reasonCategory: 'General', start: at(start), end: at(start + 20), state, since: at(since), room: null, token: null, walkIn: false, unscheduled: false, withDoctor: false,
 });
 
 describe('clinic overview', () => {

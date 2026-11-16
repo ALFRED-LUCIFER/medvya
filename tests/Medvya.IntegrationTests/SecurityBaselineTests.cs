@@ -226,4 +226,14 @@ public class SecurityBaselineTests
         // The client sends its own X-Forwarded-For; the front end appends the real address. Only that last entry counts.
         Assert.Equal([HttpStatusCode.OK, HttpStatusCode.TooManyRequests],
             await FromClients(null, appService: true, "198.51.100.9, 203.0.113.1", "198.51.100.10, 203.0.113.1"));
+
+    // #1417: a deployed API keeps its data-protection key ring in Blob, wrapped in Key Vault; without those settings it never starts on local-disk keys.
+    // SAFETY: mutation check: removed the throw in DataProtectionKeys.AddMedvyaDataProtection -> ADeployedHostWithoutItsKeyRingDoesNotStart failed.
+    [Fact]
+    public void ADeployedHostWithoutItsKeyRingDoesNotStart()
+    {
+        using var host = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b.UseEnvironment("Staging").UseSetting("Onboarding:DeploymentCountry", "IN")
+            .UseSetting("ConnectionStrings:Medvya", "Host=localhost;Database=none"));
+        Assert.Contains("DataProtection:KeyVaultKeyId", Assert.Throws<InvalidOperationException>(() => host.CreateClient()).Message, StringComparison.Ordinal);
+    }
 }

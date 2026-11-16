@@ -44,6 +44,7 @@ builder.WebHost.ConfigureKestrel(k =>
     k.Limits.MaxRequestBodySize = 1_048_576;
 });
 
+builder.AddMedvyaDataProtection("medvya-api", deployed: builder.Configuration.GetConnectionString("Medvya") is not null); // staff cookies, app tokens and link tokens: the key ring in Blob, wrapped in Key Vault
 builder.AddStaffAuthentication();
 builder.AddNativeAuthentication(); // the staff app's bearer tokens, on the same server-side sessions (MDV-P5-033)
 // Waiting-room TVs sign in with a display token, never a staff session (MDV-P1-031).
@@ -140,6 +141,7 @@ app.UseForwardedHeaders(); // first, so every later step sees the client's addre
 if (!app.Environment.IsDevelopment()) app.UseHsts();
 // The Blob origin for signed links: set explicitly (local Azurite), else the managed-identity endpoint's own origin (Azure).
 app.UseSecurityHeaders(app.Configuration["Storage:ImageOrigin"] ?? (Uri.TryCreate(app.Configuration["Storage:BlobEndpoint"], UriKind.Absolute, out var blob) ? blob.GetLeftPart(UriPartial.Authority) : null));
+app.UseMobileAppVersion(); // a mobile build below MobileApp:MinimumVersion gets 426; requests without the app's header are untouched
 app.UseWebApp(); // static files only; reads no session cookie. Before the rate limiter: scripts and the shell page are not counted (#1365)
 app.UseRateLimiter();
 app.RunPublicSiteBeforeAuthentication(); // public pages never read the session cookie

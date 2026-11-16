@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\BuildingBlocks\Medvya.BuildingBlocks.Security\Medvya.BuildingBlocks.Security.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Billing\Medvya.Billing.Application\Medvya.Billing.Application.csproj" />
   </ItemGroup>
 
 </Project>

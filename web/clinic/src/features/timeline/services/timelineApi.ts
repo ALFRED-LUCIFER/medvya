@@ -6,20 +6,21 @@ export const fetchTimeline = (patientId: string, filters: TimelineFilters, befor
   send<TimelinePage>(`/v1/patients/${patientId}/timeline${timelineQuery(filters, before)}`);
 export const fetchTrends = (patientId: string) => send<TrendsAnswer>(`/v1/patients/${patientId}/trends`);
 
-const key = 'medvya.timeline.filters';
+// Per user, like the chart section: on a shared computer the next person does not inherit the last one's filters.
+const key = (userId: string) => `medvya.timeline.filters.${userId}`;
 
 /** The doctor's filters stay while they move around in this browser session (a tab); only filter codes are stored, never patient data. */
-export function rememberedFilters(): TimelineFilters {
+export function rememberedFilters(userId: string): TimelineFilters {
   try {
-    return parseFilters(sessionStorage.getItem(key));
+    return parseFilters(sessionStorage.getItem(key(userId)));
   } catch {
     return parseFilters(null); // storage blocked: start unfiltered
   }
 }
 
-export function rememberFilters(filters: TimelineFilters) {
+export function rememberFilters(userId: string, filters: TimelineFilters) {
   try {
-    sessionStorage.setItem(key, JSON.stringify(filters));
+    sessionStorage.setItem(key(userId), JSON.stringify(filters));
   } catch {
     // shortcut: with storage blocked the filters last only until the page is left; nothing is lost but the setting.
   }

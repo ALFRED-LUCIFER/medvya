@@ -9,10 +9,10 @@ import { fetchTimeline, fetchTrends, rememberedFilters, rememberFilters } from '
  * One patient's timeline and trends (MDV-P2-005). Filters combine and are remembered for the browser session; "load earlier" adds older
  * entries below the ones on screen, so the reading position never moves. Every open is audited by the server, so nothing refetches on focus.
  */
-export function useTimelineController(patientId: string) {
-  const [filters, setFilters] = useState<TimelineFilters>(rememberedFilters);
+export function useTimelineController(patientId: string, userId: string) {
+  const [filters, setFilters] = useState<TimelineFilters>(() => rememberedFilters(userId));
   const [choice, setChoice] = useState<TrendChoice>('HbA1c');
-  const change = (next: TimelineFilters) => { rememberFilters(next); setFilters(next); };
+  const change = (next: TimelineFilters) => { rememberFilters(userId, next); setFilters(next); };
 
   const list = useInfiniteQuery({
     queryKey: ['timeline', patientId, filters],

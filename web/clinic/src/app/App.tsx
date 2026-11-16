@@ -230,7 +230,7 @@ export default function App({ locale, onLocaleChange }: Props) {
             {/* Summary and Timeline: Patient 360 (MDV-P2-004, E-01) and the timeline (MDV-P2-005), for the clinical record's roles. */}
             {clinical && <>
               <Route path="/patients/:patientId" element={<Patient360Route backPath={searchPath ?? '/'} canEditHistory={active.capabilities.VitalsAllergiesEntry === 'Full'} canManagePregnancy={active.capabilities.ClinicalNotes === 'Sign'} canOrder={active.capabilities.PrescriptionsOrders === 'Sign'} online={online} userId={shell.session?.user.id ?? ''} />} />
-              <Route path="/patients/:patientId/timeline" element={<TimelineRoute printRx={active.capabilities.PrescriptionsOrders === 'Sign'} />} />
+              <Route path="/patients/:patientId/timeline" element={<TimelineRoute printRx={active.capabilities.PrescriptionsOrders === 'Sign'} userId={shell.session?.user.id ?? ''} />} />
             </>}
             {/* Documents (MDV-P2-006): clinicians, and the front desk (upload and list only; the server refuses it any file). */}
             {record.documents && <Route path="/patients/:patientId/docs" element={<DocumentsRoute />} />}

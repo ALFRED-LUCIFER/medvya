@@ -1,11 +1,12 @@
 import { defineConfig, devices } from '@playwright/test';
 
-// MDV-P0-029: the browser against the real Host.Api and a real SQL Server (no mocked APIs). `pnpm e2e:fullstack` needs Docker and the .NET SDK;
+// MDV-P0-029: the browser against the real Host.Api and real PostgreSQL (no mocked APIs). `pnpm e2e:fullstack` needs Docker and the .NET SDK;
 // stack.mjs starts and removes everything. Not part of `pnpm e2e` (that one is mocked and needs neither).
 // Limit: the browser's clock is fixed 30 minutes after the API's start time, so a stack that idles for more than ~30 minutes before the
 // tests run (or runs them for that long) offers slots the API considers past. A normal run is under 2 minutes. The stack is always fresh.
 const port = process.env.E2E_API_PORT ?? '5391';
 process.env.E2E_API_PORT = port;
+process.env.E2E_MAIL_PORT ??= '5392'; // the mail sink's web API (stack.mjs), where a journey reads the emails it caused
 process.env.E2E_CLOCK_START ??= '2026-11-03T04:00:00Z'; // the API's clock and the browser's start here: Tuesday 09:30 in Kolkata
 
 export default defineConfig({

@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import { Bell, MessageSquareWarning } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
 import { Button } from '@medvya/ui';
-import { badgeText, type NotificationKind, type NotificationList, type StaffNotification } from '../domain/notifications';
+import { badgeText, notificationTarget, type NotificationList, type StaffNotification } from '../domain/notifications';
 
 type Props = {
   open: boolean;
@@ -20,18 +20,16 @@ type Props = {
   onMarkRead: (id: string) => void;
 };
 
-/** Where each kind sends the reader (the board marks the visit whose message failed). */
-const targets: Record<NotificationKind, string> = { MessageFailed: '/front-desk', LicenceExpiring: '/settings?tab=doctors', AccessReviewDue: '/settings?tab=review', AccessRequested: '/settings?tab=requests', RegistrationExpiring: '/settings?tab=profile' };
-
-/** The words of one item; a licence says how many days are left, or that it has expired. */
-const words = (t: ReturnType<typeof useI18n>['t'], n: StaffNotification) =>
-  n.kind === 'LicenceExpiring' ? ((n.detail ?? 0) <= 0 ? t('notifications.kind.LicenceExpired') : t('notifications.kind.LicenceExpiring', { days: n.detail! }))
+/** The words of one item; a licence says how many days are left, or that it has expired; visits to rebook say how many and from when. */
+const words = ({ t, formatCalendarDate }: ReturnType<typeof useI18n>, n: StaffNotification) =>
+  n.kind === 'VisitsNeedRebooking' && n.day ? t('notifications.kind.VisitsNeedRebooking', { count: n.detail ?? 0, date: formatCalendarDate(n.day) })
+    : n.kind === 'LicenceExpiring' ? ((n.detail ?? 0) <= 0 ? t('notifications.kind.LicenceExpired') : t('notifications.kind.LicenceExpiring', { days: n.detail! }))
     : n.kind === 'RegistrationExpiring' ? ((n.detail ?? 0) <= 0 ? t('notifications.kind.RegistrationExpired') : t('notifications.kind.RegistrationExpiring', { days: n.detail! }))
     : t(`notifications.kind.${n.kind}`);
 
 /** D-03: the bell with its unread count and an overlay listing staff notifications, newest first, with "Mark all read". */
 export default function NotificationCentre(props: Props) {
-  const { t, formatTime, formatDate } = useI18n();
+  const i18n = useI18n(), { t, formatTime, formatDate } = i18n;
   const { open, list, unread } = props;
   const bell = useRef<HTMLButtonElement>(null);
   const panel = useRef<HTMLDivElement>(null);
@@ -63,10 +61,10 @@ export default function NotificationCentre(props: Props) {
             <ul className="flex flex-col gap-2">
               {list.items.map(n => (
                 <li key={n.id} className="rounded-lg border">
-                  <Link to={targets[n.kind]} className="flex min-h-control items-start gap-2 p-2.5 text-sm" onClick={() => { if (!n.read) props.onMarkRead(n.id); close(); }}>
+                  <Link to={notificationTarget(n)} className="flex min-h-control items-start gap-2 p-2.5 text-sm" onClick={() => { if (!n.read) props.onMarkRead(n.id); close(); }}>
                     <MessageSquareWarning aria-hidden className="mt-0.5 size-4 shrink-0" />
                     <span className="flex min-w-0 flex-col gap-0.5">
-                      <span className={n.read ? 'font-semibold' : 'font-extrabold'}>{words(t, n)}</span>
+                      <span className={n.read ? 'font-semibold' : 'font-extrabold'}>{words(i18n, n)}</span>
                       {/* shortcut: shown in the device's time zone, not the facility's; the facility zone is not in the session yet. */}
                       <span className="text-xs text-muted-foreground">
                         {formatDate(new Date(n.createdAt))}{' · '}{formatTime(new Date(n.createdAt))}{' · '}{n.read ? t('notifications.read') : t('notifications.unread')}

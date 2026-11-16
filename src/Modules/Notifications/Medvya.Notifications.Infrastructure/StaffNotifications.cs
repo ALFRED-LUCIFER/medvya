@@ -17,7 +17,7 @@ public sealed class StaffNotifications(NotificationsDbContext db, IStaffAccess a
     /// <summary>What a kind needs: message failures are for the desk (view access to registering and booking).</summary>
     internal static Capability NeededFor(StaffNotificationKind kind) => kind switch
     {
-        StaffNotificationKind.MessageFailed => Capability.RegisterBookPatients,
+        StaffNotificationKind.MessageFailed or StaffNotificationKind.VisitsNeedRebooking => Capability.RegisterBookPatients,
         // Practice administration (owner doctor, practice admin, hospital IT): the same people who manage staff and doctors.
         StaffNotificationKind.LicenceExpiring or StaffNotificationKind.RegistrationExpiring or StaffNotificationKind.AccessReviewDue or StaffNotificationKind.AccessRequested => Capability.StaffRolesIntegrations,
         _ => throw new ArgumentOutOfRangeException(nameof(kind)),
@@ -27,12 +27,12 @@ public sealed class StaffNotifications(NotificationsDbContext db, IStaffAccess a
     public static void Raise(NotificationsDbContext db, Notification n, DateTimeOffset now, string dedupeKey) =>
         Raise(db, n.TenantId, n.FacilityId, StaffNotificationKind.MessageFailed, n.AppointmentId, null, now, dedupeKey);
 
-    public static void Raise(NotificationsDbContext db, Guid tenantId, Guid facilityId, StaffNotificationKind kind, Guid? refId, int? detail, DateTimeOffset now, string dedupeKey)
+    public static void Raise(NotificationsDbContext db, Guid tenantId, Guid facilityId, StaffNotificationKind kind, Guid? refId, int? detail, DateTimeOffset now, string dedupeKey, DateOnly? day = null)
     {
         if (db.StaffNotifications.Local.Any(x => x.TenantId == tenantId && x.DedupeKey == dedupeKey)) return;
         db.StaffNotifications.Add(new StaffNotification
         {
-            Id = Guid.CreateVersion7(), TenantId = tenantId, FacilityId = facilityId, Kind = kind, RefId = refId, Detail = detail, DedupeKey = dedupeKey, CreatedAt = now,
+            Id = Guid.CreateVersion7(), TenantId = tenantId, FacilityId = facilityId, Kind = kind, RefId = refId, Detail = detail, Day = day, DedupeKey = dedupeKey, CreatedAt = now,
         });
     }
 
@@ -57,7 +57,7 @@ public sealed class StaffNotifications(NotificationsDbContext db, IStaffAccess a
     {
         var (me, kinds) = await WhoAsync(facilityId, cancellationToken);
         var items = await Visible(facilityId, kinds).AsNoTracking().OrderByDescending(n => n.CreatedAt).Take(50)
-            .Select(n => new StaffNotificationView(n.Id, n.Kind, n.RefId, n.Detail, n.CreatedAt, db.StaffNotificationReads.Any(r => r.NotificationId == n.Id && r.UserId == me))).ToListAsync(cancellationToken);
+            .Select(n => new StaffNotificationView(n.Id, n.Kind, n.RefId, n.Detail, n.Day, n.CreatedAt, db.StaffNotificationReads.Any(r => r.NotificationId == n.Id && r.UserId == me))).ToListAsync(cancellationToken);
         var unread = await Visible(facilityId, kinds).CountAsync(n => !db.StaffNotificationReads.Any(r => r.NotificationId == n.Id && r.UserId == me), cancellationToken);
         return new StaffNotificationList(unread, items);
     }

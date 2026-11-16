@@ -3269,6 +3269,7 @@
   "audit.actionName.compliance.registration_expiry.notify": "إرسال إشعار انتهاء تسجيل العيادة",
   "notifications.kind.RegistrationExpiring": "ينتهي تسجيل العيادة خلال {days} يومًا أو أقل. جدّده، ثم أدخل التاريخ الجديد في الإعدادات، الملف التعريفي.",
   "notifications.kind.RegistrationExpired": "ينتهي تسجيل العيادة اليوم أو انتهى. جدّده، ثم أدخل التاريخ الجديد في الإعدادات، الملف التعريفي.",
+  "notifications.kind.VisitsNeedRebooking": "زيارات تحتاج إلى إعادة حجز: {count}، اعتبارًا من {date}. أحد الأطباء غائب. افتح الجدول لنقلها إلى موعد آخر أو إلغائها.",
   "settings.profile.registrationExpires": "التسجيل صالح حتى",
   "settings.profile.registrationExpiresHint": "يُذكَّر المالكون قبل 60 و30 و7 أيام، وفي يوم الانتهاء.",
   "adjustment.viewOnly": "يضيف مدير العيادة الإجازة، أو يضيفها الطبيب لتقويمه فقط. يمكنك رؤيتها هنا وإعادة حجز الزيارات التي تنقلها.",

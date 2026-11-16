@@ -16,7 +16,8 @@ const card = {
   start: '2026-10-19T04:50:00Z', end: '2026-10-19T05:10:00Z', state: 'Booked', since: '2026-10-19T04:50:00Z', room: null, token: null,
 };
 
-type Item = { id: string; kind: string; refId: string | null; detail?: number; createdAt: string; read: boolean };
+type Item = { id: string; kind: string; refId: string | null; detail?: number; day?: string; createdAt: string; read: boolean };
+const rebook: Item = { id: 'v-1', kind: 'VisitsNeedRebooking', refId: 'd-1', detail: 3, day: '2026-10-21', createdAt: '2026-10-19T04:30:00Z', read: false };
 async function open(page: Page, { locale = 'en', as = reception, path = '/front-desk', extra = [] as Item[] } = {}) {
   const items: Item[] = [...extra,
     { id: 'n-1', kind: 'MessageFailed', refId: 'a-1', createdAt: '2026-10-19T04:00:00Z', read: false },
@@ -84,6 +85,20 @@ for (const [locale, soon, today] of [
     await expect(page).toHaveURL(/\/settings\?tab=profile/);
   });
 
+for (const [locale, words] of [
+  ['en', 'Visits to rebook: 3, from 21 Oct 2026. A doctor is away.'],
+  ['ar', 'زيارات تحتاج إلى إعادة حجز: 3، اعتبارًا من'],
+] as const)
+  test(`visits released by leave or offboarding read as a count and a day, and open the doctor's week (${locale})`, async ({ page }) => {
+    await open(page, { locale, extra: [rebook] });
+    await page.locator('header').getByRole('button', { name: /^(Notifications|الإشعارات)/ }).click();
+    const panel = page.getByRole('dialog');
+    await expect(panel).toContainText(words);
+    expect(await panel.textContent()).not.toMatch(/Farhan|Qureshi|Arjun/); // push-safe: no patient, not even the doctor's name
+    await panel.getByText(words).click();
+    await expect(page).toHaveURL(/\/schedule\?date=2026-10-21&view=week&doctor=d-1$/);
+  });
+
 test('the board marks the visit whose message failed, in words', async ({ page }) => {
   await open(page);
   await expect(page.getByRole('article', { name: 'Farhan Qureshi (synthetic)' })).toContainText('Message not delivered');
@@ -102,7 +117,7 @@ test('a role without the desk gets the inert bell and no notification calls', as
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 for (const locale of ['en', 'ar'])
   test(`axe finds no violations with the overlay open (${locale}); control-size targets`, async ({ page }) => {
-    await open(page, { locale });
+    await open(page, { locale, extra: [rebook] });
     if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
     await page.getByRole('button', { name: /^(Notifications|الإشعارات)، ?|^Notifications, / }).click();
     const panel = page.getByRole('dialog');

@@ -84,7 +84,7 @@ public static class NotificationReference
 }
 
 /// <summary>One item of the notification centre (D-03): a kind and a pointer, worded by the screen.</summary>
-public sealed record StaffNotificationView(Guid Id, StaffNotificationKind Kind, Guid? RefId, int? Detail, DateTimeOffset CreatedAt, bool Read);
+public sealed record StaffNotificationView(Guid Id, StaffNotificationKind Kind, Guid? RefId, int? Detail, DateOnly? Day, DateTimeOffset CreatedAt, bool Read);
 
 public sealed record StaffNotificationList(int Unread, IReadOnlyList<StaffNotificationView> Items);
 

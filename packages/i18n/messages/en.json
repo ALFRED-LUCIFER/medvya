@@ -2466,6 +2466,7 @@
   "mobile.error.generic": "Something went wrong. Try again.",
   "mobile.error.notConnected": "This build is not connected to Medvya yet.",
   "mobile.error.offline": "You are offline and this phone has no copy from the last 24 hours.",
+  "mobile.error.upgradeRequired": "This version of the app is too old. Update it from the app store to keep using Medvya.",
   "mobile.sex.F": "F",
   "mobile.sex.M": "M",
   "mobile.role.doctor": "Doctor",

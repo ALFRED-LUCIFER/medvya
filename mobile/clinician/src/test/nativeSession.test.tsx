@@ -36,12 +36,12 @@ jest.mock('expo-local-authentication', () => ({
 }));
 
 /** A stand-in for Host.Api's native endpoints (NativeAuthentication.cs), as the integration tests drive them. */
-const server = { revoked: false, issued: 0, access: '', calls: [] as { url: string; method: string; auth: string | null; body: string }[], during: undefined as (() => void) | undefined };
+const server = { revoked: false, issued: 0, access: '', calls: [] as { url: string; method: string; auth: string | null; body: string; version?: string }[], during: undefined as (() => void) | undefined };
 const reply = (status: number, body?: unknown) => ({ ok: status < 300, status, json: async () => body });
 function fakeFetch(url: string, init: RequestInit = {}) {
   const headers = (init.headers ?? {}) as Record<string, string>;
   const auth = headers.Authorization ?? null, body = String(init.body ?? ''), method = init.method ?? 'GET';
-  server.calls.push({ url, method, auth, body });
+  server.calls.push({ url, method, auth, body, version: headers['X-Medvya-App-Version'] });
   const path = url.replace(API, '');
   if (path === '/native/token') {
     if (server.revoked) return reply(400, { error: 'invalid_grant' });
@@ -146,8 +146,17 @@ it('sends the bearer token on each call, never in a URL or a log', async () => {
   const board = server.calls.find(c => c.url.includes('/v1/front-desk/board'))!;
   expect(board.auth).toBe('Bearer access-1');
   expect(server.calls.every(c => !/access-|refresh-/.test(c.url))).toBe(true);
+  expect(server.calls.every(c => c.version === '1.2.3')).toBe(true); // every request names the build, so the API can retire an old one (#1417)
   const logged = JSON.stringify(Object.values(log).flatMap(spy => spy.mock.calls));
   expect(logged).not.toMatch(/access-\d|refresh-\d/);
+});
+
+it('asks for the update when the server retires this build (426), keeping the session', async () => {
+  await storedSession();
+  globalThis.fetch = jest.fn(async (url: string, init?: RequestInit) =>
+    url.endsWith('/native/token') ? fakeFetch(url, init) : reply(426, { code: 'app.upgrade_required' })) as unknown as typeof fetch;
+  await expect(send('/v1/me/context')).rejects.toThrow('mobile.error.upgradeRequired');
+  expect(keychain.get('medvya.refresh')).toBe('refresh-1'); // not a session end: the phone is not wiped
 });
 
 it('shows a doctor their own visits from the board, with blanks for what the server does not know', async () => {

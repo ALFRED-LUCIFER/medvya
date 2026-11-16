@@ -1,3 +1,4 @@
+import Constants from 'expo-constants';
 import * as SecureStore from 'expo-secure-store';
 import { apiBase } from './source';
 // shortcut: token handling duplicated from mobile/clinician (api.ts); both move to packages/auth-client when a third app needs it.
@@ -11,6 +12,11 @@ import { apiBase } from './source';
 const REFRESH = 'medvya.refresh';
 export const deviceOnly = { keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY };
 export type TokenPair = { access_token: string; refresh_token: string };
+
+/** Every request names this build, so the API can refuse one too old to be safe (426) and the screen asks for the update. */
+const VERSION = { 'X-Medvya-App-Version': Constants.expoConfig?.version ?? '0.0.0' };
+export const UPGRADE_REQUIRED = 426;
+const upgradeRequired = () => new Error('mobile.error.upgradeRequired');
 
 let access: string | null = null;
 let refreshToken: string | null = null; // the secure-store copy, held so a sign-out can still end the server session after the wipe
@@ -31,7 +37,7 @@ export function onSessionEnded(listener: () => void) {
 
 /** POST JSON without a token (the sign-in endpoints). */
 export const postAnonymous = (path: string, body: unknown) =>
-  fetch(`${apiBase()}${path}`, { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  fetch(`${apiBase()}${path}`, { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', ...VERSION }, body: JSON.stringify(body) });
 
 /**
  * Keeps the pair `request` returns, unless the phone was signed out meanwhile: then the pair is ended on the server and
@@ -63,6 +69,7 @@ export async function loadTokens() {
 async function postRefresh(token: string) {
   const res = await postAnonymous('/v1/patient-sign-in/refresh', { refreshToken: token });
   if (res.status === 400) throw new SessionEndedError();
+  if (res.status === UPGRADE_REQUIRED) throw upgradeRequired();
   if (!res.ok) throw new Error('mobile.error.generic');
   return (await res.json()) as TokenPair;
 }
@@ -76,13 +83,14 @@ function refresh() {
 }
 
 const call = (path: string, init: RequestInit, token: string) =>
-  fetch(`${apiBase()}${path}`, { ...init, headers: { Accept: 'application/json', ...init.headers, Authorization: `Bearer ${token}` } });
+  fetch(`${apiBase()}${path}`, { ...init, headers: { Accept: 'application/json', ...init.headers, ...VERSION, Authorization: `Bearer ${token}` } });
 
 /** A call as the signed-in patient. A refused refresh signs the phone out (ADR-011 §3: "a revoke, the first 401 from a refresh"). */
 export async function send<T>(path: string, init: RequestInit = {}): Promise<T> {
   try {
     let res = await call(path, init, access ?? await refresh());
     if (res.status === 401) res = await call(path, init, await refresh());
+    if (res.status === UPGRADE_REQUIRED) throw upgradeRequired();
     if (!res.ok) throw new Error('mobile.error.generic');
     return (res.status === 204 ? undefined : await res.json()) as T;
   } catch (e) {
@@ -107,7 +115,7 @@ export function forgetTokens() {
  */
 export async function endServerSession(held: { access: string | null; refresh: string | null } = { access, refresh: refreshToken }) {
   if (!apiBase() || !held.refresh) return;
-  const logout = (token: string) => fetch(`${apiBase()}/v1/patient/logout`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+  const logout = (token: string) => fetch(`${apiBase()}/v1/patient/logout`, { method: 'POST', headers: { ...VERSION, Authorization: `Bearer ${token}` } });
   try {
     if (held.access && (await logout(held.access)).status !== 401) return;
     await logout((await postRefresh(held.refresh)).access_token);

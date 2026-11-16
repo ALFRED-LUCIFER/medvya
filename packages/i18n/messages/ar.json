@@ -2465,6 +2465,7 @@
   "mobile.error.generic": "حدث خطأ. حاول مرة أخرى.",
   "mobile.error.notConnected": "هذا الإصدار غير متصل بـ Medvya بعد.",
   "mobile.error.offline": "أنت غير متصل، ولا توجد على هذا الهاتف نسخة من آخر 24 ساعة.",
+  "mobile.error.upgradeRequired": "هذا الإصدار من التطبيق قديم جدًا. حدّثه من متجر التطبيقات لمواصلة استخدام Medvya.",
   "mobile.sex.F": "أنثى",
   "mobile.sex.M": "ذكر",
   "mobile.role.doctor": "طبيب",

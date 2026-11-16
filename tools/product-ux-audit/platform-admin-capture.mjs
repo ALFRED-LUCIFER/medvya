@@ -1,15 +1,15 @@
 // UX audit (Reviewer C): screenshots of the platform console against a MOCKED API (synthetic data), not a deployed environment.
 // Mocks and fixtures are copied from tests/e2e/platform-console.spec.ts and tests/e2e/platform-approvals.spec.ts.
 // Run: pnpm --filter platform-admin exec vite --port 4175 --strictPort   (repo root, background)
-//      node docs/product-ux-audit/tools/platform-admin-capture.mjs
+//      node tools/product-ux-audit/platform-admin-capture.mjs
 import { createRequire } from 'node:module';
 import { mkdirSync } from 'node:fs';
 
-const require = createRequire('/Volumes/Development/medvya/tests/e2e/package.json');
+const require = createRequire(new URL('../../tests/e2e/package.json', import.meta.url));
 const { chromium } = require('@playwright/test');
 const axePath = require.resolve('axe-core/axe.min.js');
 const base = 'http://localhost:4175';
-const out = new URL('../screenshots/platform-admin-mocked/', import.meta.url).pathname;
+const out = new URL('../../docs/product-ux-audit/screenshots/platform-admin-mocked/', import.meta.url).pathname;
 
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==', 'base64');
 const owner = over => ({ displayName: 'Ops Admin (synthetic)', role: 'Owner', keyVerified: true, hasKey: true, canRegister: false, ...over });

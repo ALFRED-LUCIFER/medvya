@@ -22,7 +22,7 @@ pnpm dev:clinician                            # or dev:patient: Metro only; open
 dotnet test Medvya.sln                        # includes tenant-isolation tests on a throwaway PostgreSQL (Testcontainers)
 ```
 
-One command starts the services, creates the database roles (`infra/postgres/roles.sql`, as the container superuser), applies the EF Core migrations as `medvya_migrator` of every module the app runs (Tenancy, Audit, Identity, Leads, Patients, Scheduling) and seeds the synthetic cast (MDV-P0-027): the India tenant "Iyer Family Clinic (synthetic)", facility Adyar, with one membership per role. Add `--uae` for "Al Noor Family Clinic (synthetic)". Re-running is safe (fixed ids, existing rows are kept). The seeder refuses any environment other than Development, Staging or Test.
+One command starts the services, creates the database roles (`infra/postgres/roles.sql`, as the container superuser), applies the EF Core migrations of every module as `medvya_migrator` (`tools/db-migrate`) and seeds the synthetic cast (MDV-P0-027): the India tenant "Iyer Family Clinic (synthetic)", facility Adyar, with one membership per role. Add `--uae` for "Al Noor Family Clinic (synthetic)". Re-running is safe (fixed ids, existing rows are kept). The seeder refuses any environment other than Development, Staging or Test.
 
 ```bash
 pnpm dev:db                                   # or: pnpm dev:db --uae
@@ -53,11 +53,10 @@ medvya/
 ├── docker-compose.yml                     # PostgreSQL, Azurite, email sink (MDV-P0-032)
 ├── src/
 │   ├── Host.Api/            # composition only: Program, auth/BFF, context, middleware, observability, public site
-│   │                        #   today also holds feature endpoints (moved to modules by P0-040)
 │   ├── Host.Platform/       # exists (P5-040): platform console host, composition only; no clinic module (ADR-014)
 │   ├── BuildingBlocks/      # Domain, Application, Infrastructure, Security, Contracts, Country
 │   ├── Modules/             # exist: Identity, Tenancy, Audit, Patients, Scheduling, Encounters, Prescribing, Billing, Notifications, Leads, Platform
-│   │                        # planned: Practice, Prescribing, Documents, Scribe, Care, Portal,
+│   │                        # planned: Practice, Documents, Scribe, Care, Portal,
 │   │                        #   Insurance, Inventory, Laboratory, Migration, Devices, Integrations
 │   ├── AiService/           # exists (ADR-021, MDV-P3-028): Python 3.13 FastAPI AI service + job worker (scribe pipeline);
 │   │                        #   own database medvya_ai, called only by Host.Api; see src/AiService/README.md
@@ -74,13 +73,14 @@ medvya/
 │   ├── ui/ · i18n/ · ui-native/   # exist (ui is web only; ui-native is the shared Expo components)
 │   └── tokens · api-client exist; domain · auth-client · config · test-fixtures   # planned
 ├── tests/
-│   ├── Medvya.ArchitectureTests/ · Medvya.IntegrationTests/ · e2e/     # exist
-│   └── Medvya.SecurityTests · Medvya.ContractTests · mobile-e2e · ai-evals   # planned
+│   ├── Medvya.ArchitectureTests/ · Medvya.IntegrationTests/ · Medvya.SecurityTests/ · e2e/   # exist
+│   └── Medvya.ContractTests · mobile-e2e · ai-evals   # planned
 ├── infra/
-│   ├── bicep/               # exists; PostgreSQL replaces Azure SQL (MDV-P0-038)
+│   ├── bicep/               # exists: dev environment, PostgreSQL Flexible Server (ADR-012)
 │   ├── entra/               # exists; hosted sign-in page branding, run by a tenant admin (MDV-P1-060)
-│   └── postgres · monitoring     # planned (roles and RLS policies, alerts); runbooks stay in docs/runbooks
-├── tools/                   # tickets, prd-extract, erd, synthetic data, db scripts, UI drift count, oxlint plugin, codemods
+│   ├── postgres/            # exists: database roles (roles.sql) and table rights (table-rights.sql)
+│   └── monitoring           # planned (alerts); runbooks stay in docs/runbooks
+├── tools/                   # tickets, prd-extract, erd, synthetic data, db scripts, UI drift count, oxlint plugin, codemods, product UX audit scripts
 ├── docs/                    # 01-prd · 02-design · 03-architecture · 04-security-compliance · 05-delivery · adr · compliance · runbooks
 │   ├── 02-design/source/    #   imported design files
 │   └── 05-delivery/tickets/ #   ticket sources, generated pages, schedule
@@ -90,12 +90,12 @@ medvya/
 | Folder today | Status |
 |---|---|
 | [docs/](docs/README.md) | Matches the target; holds the tickets (`docs/05-delivery/tickets/`) and the design sources (`docs/02-design/source/`) |
-| [src/](src) | Matches; Host.Api feature endpoints move into modules (P0-040 chunk 1) |
+| [src/](src) | Matches |
 | [src/AiService/](src/AiService/README.md) | Python AI service imported from HealthOps (ADR-021); development and synthetic data only until the ADR's pilot conditions are met |
 | [web/](web) · [packages/](packages) | Match; `tokens` and `api-client` added (P0-040 chunk 2) |
-| [tests/](tests) · [infra/](infra) · [tools/](tools) | Match; `infra/postgres` holds the roles script (MDV-P0-034); Azure scripts follow in MDV-P0-038 |
+| [tests/](tests) · [infra/](infra) · [tools/](tools) | Match; `infra/postgres` holds the roles and table-rights scripts |
 
-The run commands above are for PostgreSQL (MDV-P0-032); the Azure deployment still targets Azure SQL until MDV-P0-038.
+Local and Azure both run PostgreSQL 16 (ADR-012). Deploys go through `.github/workflows/release.yml` (dev, test, prod promotion; `docs/runbooks/environments.md`).
 
 Regenerate after editing sources:
 

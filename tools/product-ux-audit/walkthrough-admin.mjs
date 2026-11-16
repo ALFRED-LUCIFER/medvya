@@ -62,7 +62,7 @@ await step('displays-and-tv', async () => {
   if (url) { url = url.replace(/^https?:\/\/[^/]+/, origin); if (url.startsWith('/')) url = origin + url;
     const tv = await browser.newContext({ viewport: { width: 1920, height: 1080 } }); const p = await tv.newPage(); await p.clock.setFixedTime(new Date(Date.parse('2026-11-03T04:40:00Z')));
     await p.goto(url); await p.waitForLoadState('networkidle').catch(() => {}); await p.waitForTimeout(1500);
-    await p.screenshot({ path: new URL('../screenshots/local-stack/walkthroughs/admin/settings/queue-tv-1920.png', import.meta.url).pathname });
+    await p.screenshot({ path: new URL('../../docs/product-ux-audit/screenshots/local-stack/walkthroughs/admin/settings/queue-tv-1920.png', import.meta.url).pathname });
     s.log('  TV url after load: ' + p.url().replace(/[A-Za-z0-9_-]{20,}/g, ':token') + ' TV text: ' + flat(await p.locator('body').innerText()).slice(0, 1200)); await tv.close(); }
 });
 await step('audit-data', async () => {

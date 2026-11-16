@@ -1,14 +1,14 @@
 // Audit evidence capture against the throwaway local full stack (tests/e2e/fullstack/stack.mjs: real Host.Api + PostgreSQL, dev sign-in, synthetic cast).
 // Read-only: signs in as each synthetic role, opens every route at each viewport, saves screenshots and layout/axe metrics.
-// Run: node docs/product-ux-audit/tools/local-capture.mjs [discover|capture] [role,role] [width,width]
+// Run: node tools/product-ux-audit/local-capture.mjs [discover|capture] [role,role] [width,width]
 import { createRequire } from 'node:module';
 import { appendFileSync, mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const root = resolve(here, '..');
-const require = createRequire(resolve(here, '../../../tests/e2e/package.json'));
+const root = resolve(here, '../../docs/product-ux-audit');
+const require = createRequire(resolve(here, '../../tests/e2e/package.json'));
 const { chromium } = require('@playwright/test');
 const axeSource = readFileSync(require.resolve('axe-core/axe.min.js'), 'utf8');
 

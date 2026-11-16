@@ -3,10 +3,10 @@ import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
-const require = createRequire(resolve(here, '../../../tests/e2e/package.json'));
+const require = createRequire(resolve(here, '../../tests/e2e/package.json'));
 const { chromium } = require('@playwright/test');
-const file = 'file://' + resolve(here, '../concepts/medvya-workspace-concept.html');
-const out = resolve(here, '../concepts/screenshots');
+const file = 'file://' + resolve(here, '../../docs/product-ux-audit/concepts/medvya-workspace-concept.html');
+const out = resolve(here, '../../docs/product-ux-audit/concepts/screenshots');
 const browser = await chromium.launch();
 const errors = [];
 for (const [w, h, touch] of [[1440, 900, false], [1024, 768, true], [768, 1024, true], [375, 812, true]]) {

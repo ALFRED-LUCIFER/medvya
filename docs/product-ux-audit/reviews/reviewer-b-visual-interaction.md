@@ -24,9 +24,9 @@ Date: 13 November 2026. Build reviewed: current `main` on the throwaway local st
 | Command | Result |
 |---|---|
 | `impeccable detect --json src ../../packages/ui/src` from `web/clinic` | Exit 2, **2 findings**, both the same rule: `side-tab` (thick one-side border) at `packages/ui/src/components/ui/table.tsx:62` and its test file. In context this is the selected-row marker, added so selection is not shown by background alone. I count it as a false positive |
-| `node docs/product-ux-audit/tools/states-measure.mjs` (written for this review) | 48 page measurements, saved to `docs/product-ux-audit/evidence/reviewer-b-measure.jsonl` |
-| `node docs/product-ux-audit/tools/states-capture.mjs` (written for this review; the first run crashed in its "loading" step on a Playwright route error, I fixed the script and re-ran the remaining sections) | 130 screenshots in `docs/product-ux-audit/screenshots/local-stack/states/`. Notes from the second run are in `evidence/reviewer-b-states-loading-small-locale-zoom-nurse.json`. The first run crashed before it wrote its notes file, so the desktop notes (tab order, hidden-focus counts, validation) exist only in my session log and are quoted in this report |
-| `node docs/product-ux-audit/tools/states-focus.mjs` (written for this review) | Settled focus-ring colours for 24 tab stops, notification panel screenshot |
+| `node tools/product-ux-audit/states-measure.mjs` (written for this review) | 48 page measurements, saved to `docs/product-ux-audit/evidence/reviewer-b-measure.jsonl` |
+| `node tools/product-ux-audit/states-capture.mjs` (written for this review; the first run crashed in its "loading" step on a Playwright route error, I fixed the script and re-ran the remaining sections) | 130 screenshots in `docs/product-ux-audit/screenshots/local-stack/states/`. Notes from the second run are in `evidence/reviewer-b-states-loading-small-locale-zoom-nurse.json`. The first run crashed before it wrote its notes file, so the desktop notes (tab order, hidden-focus counts, validation) exist only in my session log and are quoted in this report |
+| `node tools/product-ux-audit/states-focus.mjs` (written for this review) | Settled focus-ring colours for 24 tab stops, notification panel screenshot |
 | Python over `evidence/local-metrics.jsonl` | All 615 captured pages analysed |
 | `grep` over `web/clinic/src` and `packages/ui/src` for motion code | Inventory in section 5 |
 | One web-fetch agent for the references | Results in section 9 |

@@ -1,11 +1,11 @@
 // Reviewer B: read-only check of the settled focus ring (after the 150 ms colour transition) and the notification panel.
-// Run: node docs/product-ux-audit/tools/states-focus.mjs
+// Run: node tools/product-ux-audit/states-focus.mjs
 import { createRequire } from 'node:module';
 import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-const here = dirname(fileURLToPath(import.meta.url)); const root = resolve(here, '..');
-const require = createRequire(resolve(here, '../../../tests/e2e/package.json'));
+const here = dirname(fileURLToPath(import.meta.url)); const root = resolve(here, '../../docs/product-ux-audit');
+const require = createRequire(resolve(here, '../../tests/e2e/package.json'));
 const { chromium } = require('@playwright/test');
 const origin = 'http://localhost:5391'; const now = new Date(Date.parse('2026-11-03T04:00:00Z') + 30 * 60_000);
 const browser = await chromium.launch();

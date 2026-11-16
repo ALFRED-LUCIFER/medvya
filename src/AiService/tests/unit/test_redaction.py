@@ -91,3 +91,28 @@ def client(settings: Settings) -> httpx.AsyncClient:
 async def test_oversized_json_body_is_413_with_envelope(client: httpx.AsyncClient) -> None:
     r = await client.post("/api/v1/sessions", content=b"x" * (1024 * 1024 + 1))
     assert r.status_code == 413 and r.json()["error"]["code"] == "PAYLOAD_TOO_LARGE"
+
+
+def test_uvicorn_loggers_get_the_filter_too() -> None:
+    """uvicorn's loggers do not propagate to root: their handlers need the filter themselves."""
+    # SAFETY: mutation check: dropped the uvicorn names from FILTERED_LOGGERS ->
+    # this test failed (the traceback text reached the stream)
+    import io
+
+    from medvya_ai.telemetry import install_log_filter
+
+    stream = io.StringIO()
+    logger = logging.getLogger("uvicorn.error")
+    handler = logging.StreamHandler(stream)
+    logger.addHandler(handler)
+    try:
+        install_log_filter()
+        try:
+            raise ValueError("duplicate key value (name)=(Asha Patil)")
+        except ValueError:
+            logger.exception("Exception in ASGI application")
+    finally:
+        logger.removeHandler(handler)
+    out = stream.getvalue()
+    assert "Exception in ASGI application" in out and "ValueError" in out
+    assert "Asha" not in out

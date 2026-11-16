@@ -33,7 +33,10 @@ def create_app(
         yield
         await engine.dispose()
 
-    app = FastAPI(title="Medvya AI API", lifespan=lifespan)
+    dev = settings.environment == "development"  # schema and docs pages are unauthenticated
+    app = FastAPI(
+        title="Medvya AI API", lifespan=lifespan, openapi_url="/openapi.json" if dev else None
+    )
     app.state.settings = settings
     app.state.engine = engine
     app.state.sessionmaker = make_sessionmaker(engine)

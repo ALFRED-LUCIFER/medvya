@@ -1,6 +1,7 @@
 using Medvya.BuildingBlocks.Domain;
+using Microsoft.Extensions.DependencyInjection;
 
-namespace Medvya.Tenancy.Api;
+namespace Medvya.Tenancy.Application;
 
 public static class LinkTenantScope
 {

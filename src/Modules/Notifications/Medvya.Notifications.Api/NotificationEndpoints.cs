@@ -1,8 +1,7 @@
-using Medvya.Tenancy.Api;
+using Medvya.Tenancy.Application;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using Medvya.Audit.Api;
 using Medvya.Audit.Application;
 using Medvya.Notifications.Application;
 using Medvya.Notifications.Domain;
@@ -54,7 +53,7 @@ public static class NotificationEndpoints
             facilityId is not { } f || f == Guid.Empty ? NoFacility : Results.Ok(await q.FailedVisitsAsync(f, ct)));
 
         // Settings -> Notifications (MDV-P1-006): practice configuration only (like the rest of /v1/settings). No patient data; a save is audited inside the service.
-        var settings = app.MapGroup("/v1/settings/notifications").RequireAuthorization(StaffPolicies.ManageStaff).AddEndpointFilter(SettingsEndpoints.MapErrors);
+        var settings = app.MapGroup("/v1/settings/notifications").RequireAuthorization(StaffPolicies.ManageStaff).AddEndpointFilter(SettingsProblems.MapErrors);
         settings.MapGet("", ([FromServices] INotificationPreferences p, CancellationToken ct) => p.GetAsync(ct));
         settings.MapPut("", ([FromBody] NotificationPreferencesView body, [FromServices] INotificationPreferences p, CancellationToken ct) => p.SaveAsync(body, ct));
         settings.MapGet("/templates", (string? language) => MessageCatalog.Previews(language));

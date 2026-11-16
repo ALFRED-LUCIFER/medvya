@@ -1,9 +1,8 @@
-using Medvya.Audit.Api;
+using Medvya.Audit.Application;
 using Medvya.BuildingBlocks.Domain;
 using Medvya.Audit.Domain;
 using Medvya.BuildingBlocks.Infrastructure;
 using Medvya.Prescribing.Application;
-using Medvya.Tenancy.Api;
 using Medvya.Tenancy.Application;
 using Medvya.Tenancy.Domain;
 using Microsoft.AspNetCore.Builder;

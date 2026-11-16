@@ -1,5 +1,5 @@
 using System.Security.Claims;
-using Medvya.Audit.Api;
+using Medvya.Audit.Application;
 using Medvya.Tenancy.Domain;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;

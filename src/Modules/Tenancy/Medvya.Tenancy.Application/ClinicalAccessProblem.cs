@@ -1,6 +1,6 @@
-using Medvya.Tenancy.Application;
+using Microsoft.AspNetCore.Http;
 
-namespace Medvya.Tenancy.Api;
+namespace Medvya.Tenancy.Application;
 
 public static class ClinicalAccessProblem
 {

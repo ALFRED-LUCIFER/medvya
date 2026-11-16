@@ -1,5 +1,5 @@
 using Medvya.Prescribing.Application;
-using Medvya.Tenancy.Api;
+using Medvya.Tenancy.Application;
 using Medvya.Tenancy.Domain;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;

@@ -1,4 +1,3 @@
-using Medvya.Tenancy.Api;
 using System.Security.Claims;
 using Medvya.Identity.Application;
 using Medvya.Tenancy.Application;
@@ -203,15 +202,15 @@ public static class StaffEndpoints
         }
         catch (InvitationEmailException)
         {
-            return SettingsEndpoints.EmailFailed;
+            return SettingsProblems.EmailFailed;
         }
         catch (InvitationLimitException)
         {
-            return SettingsEndpoints.TooManyInvitations;
+            return SettingsProblems.TooManyInvitations;
         }
         catch (PlanLimitException e)
         {
-            return SettingsEndpoints.PlanLimit(e);
+            return SettingsProblems.PlanLimit(e);
         }
     }
 }

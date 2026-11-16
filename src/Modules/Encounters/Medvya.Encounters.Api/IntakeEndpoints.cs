@@ -1,11 +1,10 @@
-using Medvya.Audit.Api;
+using Medvya.Audit.Application;
 using Medvya.Audit.Domain;
 using Medvya.Encounters.Application;
 using Medvya.Encounters.Domain;
 using Medvya.Patients.Application;
 using Medvya.Patients.Domain;
 using Medvya.Scheduling.Application;
-using Medvya.Tenancy.Api;
 using Medvya.Tenancy.Application;
 using Medvya.Tenancy.Domain;
 using Microsoft.AspNetCore.Builder;

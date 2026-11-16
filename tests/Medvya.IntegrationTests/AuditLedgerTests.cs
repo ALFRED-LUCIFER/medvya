@@ -1,5 +1,4 @@
 using System.Net;
-using Medvya.Audit.Api;
 using Medvya.Audit.Application;
 using Medvya.Audit.Domain;
 using Medvya.Audit.Infrastructure;

@@ -15,6 +15,7 @@ using Medvya.Notifications.Application;
 using Medvya.Notifications.Infrastructure;
 using Microsoft.AspNetCore.SignalR;
 using Medvya.Audit.Api;
+using Medvya.Audit.Application;
 using Medvya.Audit.Infrastructure;
 using Medvya.BuildingBlocks.Domain;
 using Medvya.BuildingBlocks.Infrastructure;

@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Medvya.Tenancy.Api;
+namespace Medvya.BuildingBlocks.Security;
 
 /// <summary>
 /// Rate limits per signed-in user, enforced as an endpoint filter. The host's rate-limiting middleware runs before

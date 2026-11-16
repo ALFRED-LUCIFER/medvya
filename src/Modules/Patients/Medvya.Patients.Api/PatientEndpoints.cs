@@ -1,10 +1,10 @@
+using Medvya.BuildingBlocks.Security;
 using System.Text.Json.Serialization;
-using Medvya.Audit.Api;
+using Medvya.Audit.Application;
 using Medvya.Audit.Domain;
 using Medvya.BuildingBlocks.Domain;
 using Medvya.Patients.Application;
 using Medvya.Patients.Domain;
-using Medvya.Tenancy.Api;
 using Medvya.Tenancy.Application;
 using Medvya.Tenancy.Domain;
 using Microsoft.AspNetCore.Builder;

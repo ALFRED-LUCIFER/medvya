@@ -1,4 +1,3 @@
-using Medvya.Tenancy.Api;
 using System.Globalization;
 using System.Security.Claims;
 using System.Text;

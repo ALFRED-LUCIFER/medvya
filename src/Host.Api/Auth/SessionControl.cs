@@ -1,10 +1,8 @@
 using System.Security.Claims;
-using Medvya.Audit.Api;
 using Medvya.Audit.Application;
 using Medvya.Audit.Domain;
 using Medvya.Identity.Application;
 using Medvya.Identity.Domain;
-using Medvya.Tenancy.Api;
 using Medvya.Tenancy.Application;
 using Medvya.Tenancy.Domain;
 using Microsoft.AspNetCore.Authentication;

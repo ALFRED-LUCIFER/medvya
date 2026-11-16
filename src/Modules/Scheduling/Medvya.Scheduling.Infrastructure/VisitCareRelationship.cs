@@ -9,7 +9,7 @@ namespace Medvya.Scheduling.Infrastructure;
 
 /// <summary>
 /// Care relationships from visits (MDV-P2-024): a visit at the facility, one there today (facility-local day), or one in the clinician's
-/// own calendar. A cancelled visit never happened, so it counts for nothing; a no-show was still the clinician's patient.
+/// own calendar. A cancelled visit never happened, so it counts for nothing; a no-show was still the clinician's patient, unless the clinician booked it.
 /// </summary>
 public sealed class VisitCareRelationship(SchedulingDbContext db, IFacilityDirectory facilities, TimeProvider clock) : ICareRelationshipSource
 {
@@ -19,7 +19,10 @@ public sealed class VisitCareRelationship(SchedulingDbContext db, IFacilityDirec
         switch (scope)
         {
             case CareScope.Assigned:
-                visits = visits.Where(a => a.CalendarKind == CalendarKind.Doctor && a.CalendarId == clinicianUserId);
+                // A doctor can book anyone: a visit they booked into their own calendar counts only once the patient has arrived, so a booking
+                // made and cancelled is no way into a chart. SAFETY: mutation-checked in ClinicalAccessTests.
+                visits = visits.Where(a => a.CalendarKind == CalendarKind.Doctor && a.CalendarId == clinicianUserId
+                    && (a.BookedBy != clinicianUserId || (a.State != AppointmentState.Booked && a.State != AppointmentState.NeedsRebooking && a.State != AppointmentState.NoShow)));
                 break;
             case CareScope.FacilityToday:
                 if (await facilities.FindAsync(facilityId, cancellationToken) is not { } facility) return false;

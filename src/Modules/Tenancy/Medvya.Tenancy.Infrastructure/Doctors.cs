@@ -1,4 +1,5 @@
 using System.Net.Mail;
+using System.Text.Json;
 using Medvya.Audit.Application;
 using Medvya.BuildingBlocks.Domain;
 using Medvya.Tenancy.Application;
@@ -12,7 +13,8 @@ namespace Medvya.Tenancy.Infrastructure;
 /// Doctors added in clinic mode (MDV-P1-007). Adding creates the Invited membership, profile, licence (attested by the owner, ADR-016) and invitation in
 /// one transaction through <see cref="IInvitations"/>. The signature image goes to the same private container as logos under its own key.
 /// </summary>
-public sealed class Doctors(TenancyDbContext db, ICurrentTenant tenant, ICurrentUser user, ICurrentFacility facility, IInvitations invitations, IAuditLog audit, ILogoStore store, TimeProvider clock)
+public sealed class Doctors(TenancyDbContext db, ICurrentTenant tenant, ICurrentUser user, ICurrentFacility facility, IInvitations invitations, IAuditLog audit, ILogoStore store, TimeProvider clock,
+    IStaffAccess access)
     : IDoctors
 {
     const long MaxFeeMinor = 100_000_000;
@@ -71,7 +73,7 @@ public sealed class Doctors(TenancyDbContext db, ICurrentTenant tenant, ICurrent
             db.SettingsChanges.Add(new SettingsChange
             {
                 Id = Guid.CreateVersion7(), TenantId = TenantId, ActorUserId = user.UserId, Section = "doctor", ResourceId = m.Id, OccurredAt = now,
-                After = $$"""{"facilityId":"{{command.FacilityId}}","authority":"{{command.Authority}}","number":"{{command.LicenceNumber!.Trim()}}","expiresOn":"{{command.ExpiresOn:yyyy-MM-dd}}","licence":"Attested"}""",
+                After = JsonSerializer.Serialize(new { facilityId = command.FacilityId, authority = command.Authority, number = command.LicenceNumber!.Trim(), expiresOn = command.ExpiresOn, licence = "Attested" }),
             });
         }, command.AlsoFacilityIds, cancellationToken);
         return created is null ? null : (await QueryAsync(id, rules.Currency, cancellationToken))[0];
@@ -81,7 +83,7 @@ public sealed class Doctors(TenancyDbContext db, ICurrentTenant tenant, ICurrent
     {
         ArgumentNullException.ThrowIfNull(command);
         var licence = await db.DoctorLicences.SingleOrDefaultAsync(l => l.MembershipId == doctorId, cancellationToken);
-        if (licence is null) return null;
+        if (licence is null || !await AdministersAsync(doctorId, cancellationToken)) return null;
         var rules = await RulesAsync(cancellationToken);
         var errors = new List<ValidationError>();
         Licence(errors, rules, command.Authority, command.Number, command.Category, command.ExpiresOn, command.CertificateName);
@@ -127,6 +129,9 @@ public sealed class Doctors(TenancyDbContext db, ICurrentTenant tenant, ICurrent
     {
         var profile = await db.DoctorProfiles.SingleOrDefaultAsync(p => p.MembershipId == doctorId, cancellationToken);
         if (profile?.SignatureKey is not { } key) return false;
+        // The doctor removes their own (/v1/me/signature); otherwise only an administrator of the doctor's location.
+        if (!await db.Memberships.AnyAsync(m => m.Id == doctorId && m.UserId != null && m.UserId == user.UserId, cancellationToken) && !await AdministersAsync(doctorId, cancellationToken))
+            return false;
         profile.SignatureKey = null;
         (profile.ChangedBy, profile.ChangedAt) = (user.UserId, clock.GetUtcNow());
         await SettingsAudit.SaveAsync(db, audit, TenantId, user.UserId, profile.ChangedAt, "settings.doctor.signature.delete", "doctor", doctorId,
@@ -144,7 +149,7 @@ public sealed class Doctors(TenancyDbContext db, ICurrentTenant tenant, ICurrent
     public async Task<DoctorView?> SetRoomAsync(Guid doctorId, string? room, CancellationToken cancellationToken = default)
     {
         var profile = await db.DoctorProfiles.SingleOrDefaultAsync(p => p.MembershipId == doctorId, cancellationToken);
-        if (profile is null) return null;
+        if (profile is null || !await AdministersAsync(doctorId, cancellationToken)) return null;
         var errors = new List<ValidationError>();
         Text(errors, "room", room = Clean(room), MaxRoom, false);
         SettingsValidationException.ThrowIfAny(errors);
@@ -154,6 +159,11 @@ public sealed class Doctors(TenancyDbContext db, ICurrentTenant tenant, ICurrent
             new { room = before }, new { room }, cancellationToken);
         return (await QueryAsync(doctorId, (await RulesAsync(cancellationToken)).Currency, cancellationToken))[0];
     }
+
+    /// <summary>Changing a doctor is staff administration at the doctor's own location, as for any member (StaffRoster); elsewhere it does not exist.</summary>
+    async Task<bool> AdministersAsync(Guid doctorId, CancellationToken ct) =>
+        await db.Memberships.Where(m => m.Id == doctorId).Select(m => (Guid?)m.FacilityId).SingleOrDefaultAsync(ct) is { } at
+        && await access.AccessAsync(Capability.StaffRolesIntegrations, at, ct) == Access.Config;
 
     async Task<OnboardingRules> RulesAsync(CancellationToken ct) =>
         OnboardingRules.For(await db.Tenants.Select(t => t.CountryCode).SingleAsync(ct)) ?? throw new InvalidOperationException("Unsupported country.");

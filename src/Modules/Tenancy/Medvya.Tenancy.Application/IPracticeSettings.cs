@@ -139,8 +139,9 @@ public interface IPracticeSettings
     /// <summary>Which clinicians treat the facility's patients (MDV-P2-024).</summary>
     Task<ClinicalAccessPolicy> GetClinicalAccessAsync(CancellationToken cancellationToken = default);
 
+    /// <summary>Owner only (the policy is organisation-wide): null for anyone else.</summary>
     /// <exception cref="SettingsValidationException">Not a known policy.</exception>
-    Task<ClinicalAccessPolicy> SaveClinicalAccessAsync(ClinicalAccessPolicy policy, CancellationToken cancellationToken = default);
+    Task<ClinicalAccessPolicy?> SaveClinicalAccessAsync(ClinicalAccessPolicy policy, CancellationToken cancellationToken = default);
 
     /// <summary>The clinic's queue rule (MDV-P1-103).</summary>
     Task<QueueRule> GetQueueRuleAsync(CancellationToken cancellationToken = default);

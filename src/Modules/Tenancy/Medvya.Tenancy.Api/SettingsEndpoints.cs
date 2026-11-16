@@ -76,7 +76,7 @@ public static class SettingsEndpoints
         // Which clinicians treat the facility's patients (MDV-P2-024): every clinician of it (default) or only those assigned.
         g.MapGet("/clinical-access", async ([FromServices] IPracticeSettings s, CancellationToken ct) => Results.Ok(new ClinicalAccessBody(await s.GetClinicalAccessAsync(ct))));
         g.MapPut("/clinical-access", async ([FromBody] ClinicalAccessBody body, [FromServices] IPracticeSettings s, CancellationToken ct) =>
-            Results.Ok(new ClinicalAccessBody(await s.SaveClinicalAccessAsync(body.Policy, ct))));
+            await s.SaveClinicalAccessAsync(body.Policy, ct) is { } saved ? Results.Ok(new ClinicalAccessBody(saved)) : Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "Only the practice owner can change this"));
 
         // The order arrived patients are seen in (MDV-P1-103): the doctor's day, the board and the queue display all follow it.
         g.MapGet("/queue-rule", ([FromServices] IPracticeSettings s, CancellationToken ct) => s.GetQueueRuleAsync(ct));

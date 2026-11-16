@@ -122,6 +122,7 @@ public sealed class DoctorTests(PostgresFixture sql) : IClassFixture<PostgresFix
         // The audit holds who attested and the values attested (append-only settings change).
         var change = await db.SettingsChanges.SingleAsync(c => c.Section == "doctor" && c.ResourceId == id);
         Assert.Equal((h.Admin, true, true, true), (change.ActorUserId, change.After!.Contains("84213"), change.After.Contains("2031-12-31"), change.After.Contains("Attested")));
+        Assert.Equal("84213", JsonDocument.Parse(change.After).RootElement.GetProperty("number").GetString()); // serialised, never pasted into a JSON string
         var profile = await db.DoctorProfiles.SingleAsync(p => p.MembershipId == id);
         Assert.Equal((50000L, 30000L, null), (profile.NewVisitFeeMinor, profile.FollowUpFeeMinor, profile.SignatureKey));
         Assert.Single(await db.Invitations.Where(i => i.MembershipId == id).ToListAsync());
@@ -231,6 +232,11 @@ public sealed class DoctorTests(PostgresFixture sql) : IClassFixture<PostgresFix
         await using (var db = sql.Context(h.Tenant))
             await db.DoctorLicences.ExecuteUpdateAsync(s => s.SetProperty(l => l.ExpiresOn, today.AddDays(-1)));
         Assert.Equal(Access.Sign, await NotesAsync(h.Doctor, h.OtherFacility));
+        await using (var db = sql.Context(h.Tenant)) // re-attesting is staff administration at the doctor's location
+        {
+            db.Memberships.Add(new Membership { Id = Guid.NewGuid(), TenantId = h.Tenant, UserId = h.Admin, FacilityId = h.OtherFacility, Role = Role.PracticeAdmin, Status = MembershipStatus.Active });
+            await db.SaveChangesAsync();
+        }
 
         using var admin = Client(Role.PracticeAdmin);
         var listed = (await admin.GetFromJsonAsync<JsonElement>("/v1/settings/doctors")).GetProperty("doctors").EnumerateArray().Single();
@@ -242,6 +248,30 @@ public sealed class DoctorTests(PostgresFixture sql) : IClassFixture<PostgresFix
         Assert.False((await renewed.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("expired").GetBoolean());
         await using var check = sql.Context(h.Tenant);
         Assert.Equal(2, await check.SettingsChanges.CountAsync(c => c.Section == "doctor" && c.ResourceId == id)); // add, then re-attest
+    }
+
+    // SAFETY: mutation check: made Doctors.AdministersAsync always true (licence, room, remove signature)
+    // -> AnAdministratorOfAnotherLocationCannotChangeTheDoctor failed.
+    [Fact]
+    public async Task AnAdministratorOfAnotherLocationCannotChangeTheDoctor()
+    {
+        var id = await AddDoctor();
+        var doctor = await Joined(id, Role.HospitalDoctor);
+        using (var own = Client(null, doctor))
+            Assert.Equal(HttpStatusCode.NoContent, (await own.PutAsync("/v1/me/signature", new ByteArrayContent(Png))).StatusCode);
+        await using (var db = sql.Context(h.Tenant)) // the doctor works at Velachery, which h.Admin does not administer
+            await db.Memberships.Where(m => m.Id == id).ExecuteUpdateAsync(s => s.SetProperty(m => m.FacilityId, h.OtherFacility));
+
+        using var admin = Client(Role.PracticeAdmin);
+        var expires = DateOnly.FromDateTime(DateTime.UtcNow).AddYears(5).ToString("O", System.Globalization.CultureInfo.InvariantCulture);
+        Assert.Equal(HttpStatusCode.NotFound, (await admin.PutAsJsonAsync($"/v1/settings/doctors/{id}/licence", new { authority = "TNMC", number = "99999", category = "Permanent", expiresOn = expires, attested = true })).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await admin.PutAsJsonAsync($"/v1/settings/doctors/{id}/room", new { room = "Room 9" })).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await admin.DeleteAsync($"/v1/settings/doctors/{id}/signature")).StatusCode);
+
+        Assert.Single(h.Logos.Stored);
+        await using var check = sql.Context(h.Tenant);
+        Assert.Equal(("84213", null), (await check.DoctorLicences.Where(l => l.MembershipId == id).Select(l => l.Number).SingleAsync(),
+            await check.DoctorProfiles.Where(p => p.MembershipId == id).Select(p => p.Room).SingleAsync()));
     }
 
     // ---- Signature image ----

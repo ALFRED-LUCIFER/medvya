@@ -19,10 +19,10 @@ param country string = 'IN'
 param databaseName string = 'medvya'
 @description('Zone-redundant HA (needs a General Purpose or Memory Optimized SKU). On for production.')
 param postgresHaEnabled bool = env == 'prod'
-@description('Point-in-time restore window in days (7 to 35). Production 14; dev 7.')
+@description('Point-in-time restore window in days (7 to 35). Production 35; dev 7.')
 @minValue(7)
 @maxValue(35)
-param pitrRetentionDays int = env == 'prod' ? 14 : 7
+param pitrRetentionDays int = env == 'prod' ? 35 : 7
 @description('Copy backups to the Azure paired region. Only valid when the pair is in the same country; the module checks.')
 param geoRedundantBackup bool = false
 param postgresSkuName string = env == 'prod' ? 'Standard_D2ds_v5' : 'Standard_B1ms'

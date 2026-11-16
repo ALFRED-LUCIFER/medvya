@@ -7,9 +7,9 @@ Status column: **Done** = implemented and tested; otherwise the ticket that deli
 ## Trust boundaries
 
 ```
-[Browser SPA] ──TLS──▶ [Host.Api BFF] ──private endpoint──▶ [Azure SQL]   [Blob (CMK)]   [Key Vault]
+[Browser SPA] ──TLS──▶ [Host.Api BFF] ──private network──▶ [PostgreSQL Flexible Server]   [Blob (CMK)]   [Key Vault]
      │                    │      └──▶ [Entra External ID]
-     │                    ├──▶ [Hangfire jobs] ──▶ [SendGrid / SMS]          (P1)
+     │                    ├──▶ [Hangfire jobs] ──▶ [Email (ACS) / SMS]          (P1)
      │                    └──▶ [Service Bus] ──▶ [AI worker] ──▶ [Azure OpenAI / Speech, in region]   (P3)
 [Phone/clip] ──TLS + scoped SAS──▶ [Blob]                                       (P3/P6)
 [Queue TV] ──display token──▶ [Host.Api]                                        (P1)
@@ -30,17 +30,20 @@ Status column: **Done** = implemented and tested; otherwise the ticket that deli
 | D | Request floods, huge bodies | General rate limit per signed-in user, per client address without a session (429 with Retry-After; forwarded client address only from listed proxies; the app's static files are not counted); per-user limit on patient search; 1 MiB body limit | **Done** (P0-026, MDV-P1-018) |
 | E | Role escalation via custom roles | Custom roles composed only from existing capabilities; locked role capabilities | MDV-P0-014, MDV-P1-008 |
 
-## B2 · Host.Api → Azure SQL / Blob / Key Vault
+## B2 · Host.Api → PostgreSQL / Blob / Key Vault
+
+PostgreSQL 16 Flexible Server in Central India (ADR-012): private network only, Entra sign-in only (password login off), customer-managed key at rest.
 
 | STRIDE | Threat | Mitigation | Status |
 |---|---|---|---|
-| S | Stolen DB password | Entra-only auth, managed identity, no SQL logins | MDV-P0-008 |
-| T | Tampering with audit, signed notes, consents, invoices | Ledger tables; digests to immutable Blob, verified on schedule | MDV-P0-017, MDV-P2-012 |
-| I | Cross-tenant leakage through a missing filter | EF global filter **and** PostgreSQL FORCE row-level security on `medvya.tenant_id`; CI test proves RLS blocks even with filters off | MDV-P0-010 (P0 exit gate) |
-| I | DBA or Medvya staff reading national IDs | Always Encrypted (CMK usable only by the API identity); DDM for support roles | MDV-P0-009 |
-| I | Public network exposure | Private endpoints, public access disabled, deny-cross-region policy | MDV-P0-006 |
+| S | Stolen DB password | Entra-only auth, managed identity, no password logins | MDV-P0-008 |
+| S, T | Forged cookies or tokens from a copied ASP.NET Data Protection key ring | Key ring persisted to Blob and wrapped by a Key Vault key, shared by every instance; never on the local disk in Azure | #1417 |
+| T | Tampering with audit, signed notes, consents, invoices | Hash-chained audit ledger (each row carries the previous row's hash); a daily HMAC-signed digest of every chain head goes to an immutable Blob container and is verified on schedule; ids and hashes only, no PHI | MDV-P0-017, MDV-P2-012 |
+| I | Cross-tenant leakage through a missing filter | EF global filter **and** PostgreSQL FORCE ROW LEVEL SECURITY on the per-connection tenant setting `medvya.tenant_id` (ADR-012); CI test proves RLS blocks even with filters off | MDV-P0-010 (P0 exit gate) |
+| I | DBA or Medvya staff reading national IDs | Application-level envelope encryption: AES-256-GCM per value with a per-tenant data key, the value bound to its tenant, column and row (associated data); data keys are wrapped by the Key Vault key `medvya-national-id`, usable only by the API identity; exact-match lookup through an HMAC-SHA-256 blind index under a separate per-tenant secret. The database and its backups hold ciphertext only | MDV-P0-009 |
+| I | Public network exposure | Private network only, public access disabled, deny-cross-region policy | MDV-P0-006 |
 | E | Module reading another module's tables | Per-module DB users; architecture tests | MDV-P0-008 |
-| D | Ransomware / accidental deletion | PITR 35 days, LTR in-country, soft delete, monthly restore drill | MDV-P0-019, MDV-P5-021 |
+| D | Ransomware / accidental deletion | PITR 35 days in production (7 in dev), in-country only, soft delete, monthly restore drill | MDV-P0-019, MDV-P5-021 |
 
 ## B3 · Jobs and messaging → SendGrid / SMS / WhatsApp
 
@@ -49,7 +52,7 @@ Status column: **Done** = implemented and tested; otherwise the ticket that deli
 | I | Clinical details in SMS/email/WhatsApp previews | Templates without clinical fields (validation); generic push copy | MDV-P1-006, MDV-P1-032 |
 | S | Forged delivery webhooks | Signature verification; idempotent processing | MDV-P1-033 |
 | R | "We never got a reminder" | NOTIFICATION_ATTEMPT with provider reference and state | MDV-P1-032 |
-| I | Processor data exposure | DPA with SendGrid / SMS provider; minimal data (name + time + clinic) | MDV-P1-044 |
+| I | Processor data exposure | DPA with the email (Azure Communication Services) and SMS providers; minimal data (name + time + clinic) | MDV-P1-044 |
 
 ## B4 · AI worker → Azure OpenAI / Speech (P3)
 

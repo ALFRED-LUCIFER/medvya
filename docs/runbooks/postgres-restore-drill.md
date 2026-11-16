@@ -1,13 +1,13 @@
 # PostgreSQL point-in-time restore drill (MDV-P0-038)
 
 Who: the Entra administrator of the server (a human; just-in-time elevation in production, MDV-P0-025). The app and the deploy identity cannot restore.
-Why: P0 exit gate 2 needs a restore that was run and timed, not a belief that backups work. This replaces the SQL steps in `restore.md` (MDV-P0-019) for the database; the blob steps there still apply.
+Why: P0 exit gate 2 needs a restore that was run and timed, not a belief that backups work. Record each drill in `restore.md` (MDV-P0-019), which also holds the blob steps.
 
 ## What is protected (all in `infra/bicep/postgres.bicep`, none set by hand)
 
 | What | Setting | Dev | Production |
 |---|---|---|---|
-| Point-in-time restore window | `pitrRetentionDays` | 7 days | **14 days** |
+| Point-in-time restore window | `pitrRetentionDays` | 7 days | **35 days** |
 | Zone-redundant HA | `postgresHaEnabled` | off | on |
 | Geo-redundant backup | `geoRedundantBackup` | off | off, unless the Azure paired region is in the same country (India: Central to South; UAE: North to Central). The module fails the deployment otherwise |
 

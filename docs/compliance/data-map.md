@@ -6,20 +6,20 @@ What personal data Medvya holds, why, where it lives and who processes it. Field
 
 | Category | Data subjects | Examples | Purpose | Lawful basis (to confirm with counsel) | Stored in | From phase |
 |---|---|---|---|---|---|---|
-| Staff identity | Clinic staff | Name, email, mobile, role, licence | Account, access control, licence verification | Contract with the clinic | Entra External ID (identity); Azure SQL (profile) | P0 |
-| Waitlist | Doctors and clinics in a country not live yet | Name, country, email or phone. **No patient fields** | Tell them when the country opens | Consent (to confirm) | Azure SQL (`leads` schema) | P1 |
-| Demo requests | Hospital and clinic buyers | Name, organisation, role, country, email or phone, optional message. **No patient fields**; the form warns against typing patient details | Sales follow-up | Legitimate interest / consent (to confirm) | Azure SQL (`leads` schema); founder email without the message | P1 |
-| Audit trail | Staff, patients (opaque refs) | Who did what, when, purpose, IP | Security, accountability, legal obligation | Legal obligation / legitimate use | Azure SQL ledger + Log Analytics | P0 |
-| Patient demographics | Patients | Name, DOB, sex, phone, address, language | Registration, booking, reminders | Consent for treatment / legitimate use for healthcare (DPDP) | Azure SQL (DDM) | P1 |
-| National / insurance IDs | Patients | ABHA, Aadhaar last 4, Emirates ID, passport, member no. | Identification, dedup, claims | Consent / legal requirement (UAE EID) | Azure SQL (Always Encrypted) | P1 |
-| Relationships | Emergency contacts, guardians | Name, phone, relationship | Emergency contact, minors | Legitimate use / consent | Azure SQL | P1 |
-| Consents | Patients | Decisions with policy version | Proof of consent | Legal obligation | Azure SQL ledger | P1 |
-| Scheduling | Patients | Appointments, reason category, free-text reason | Care delivery | Healthcare | Azure SQL | P1 |
-| Clinical record | Patients | Vitals, allergies, problems, notes, Rx, orders, documents | Care delivery | Healthcare / consent | Azure SQL + Blob (CMK) | P2 |
-| Consultation audio and transcripts | Patients, companions, clinicians | Audio, transcript segments, speaker labels | Documentation (AI draft) | **Separate per-encounter recording consent** | Blob (CMK, 30-day default) + Azure SQL | P3 |
-| Billing | Patients, payers | Invoices, payments, provider refs | Billing, tax | Contract / legal obligation (tax) | Azure SQL ledger | P4 |
-| Portal | Patients, caregivers | Portal account, proxy scopes | Patient access | Consent | Entra External ID + Azure SQL | P4 |
-| Native sessions | Staff (patients later) | Session row, device label ("Safari on iOS"), SHA-256 of the refresh token. **No IP, no raw User-Agent** | Sign-in, remote revoke | Contract / legitimate use | Azure SQL (`identity.Sessions`) | P5 |
+| Staff identity | Clinic staff | Name, email, mobile, role, licence | Account, access control, licence verification | Contract with the clinic | Entra External ID (identity); PostgreSQL (profile) | P0 |
+| Waitlist | Doctors and clinics in a country not live yet | Name, country, email or phone. **No patient fields** | Tell them when the country opens | Consent (to confirm) | PostgreSQL (`leads` schema) | P1 |
+| Demo requests | Hospital and clinic buyers | Name, organisation, role, country, email or phone, optional message. **No patient fields**; the form warns against typing patient details | Sales follow-up | Legitimate interest / consent (to confirm) | PostgreSQL (`leads` schema); founder email without the message | P1 |
+| Audit trail | Staff, patients (opaque refs) | Who did what, when, purpose, IP | Security, accountability, legal obligation | Legal obligation / legitimate use | PostgreSQL hash-chained ledger (daily digests in immutable Blob) + Log Analytics | P0 |
+| Patient demographics | Patients | Name, DOB, sex, phone, address, language | Registration, booking, reminders | Consent for treatment / legitimate use for healthcare (DPDP) | PostgreSQL (RLS per tenant) | P1 |
+| National / insurance IDs | Patients | ABHA, Aadhaar last 4, Emirates ID, passport, member no. | Identification, dedup, claims | Consent / legal requirement (UAE EID) | PostgreSQL, encrypted by the application (AES-256-GCM, per-tenant key wrapped in Key Vault; blind index for lookup) | P1 |
+| Relationships | Emergency contacts, guardians | Name, phone, relationship | Emergency contact, minors | Legitimate use / consent | PostgreSQL | P1 |
+| Consents | Patients | Decisions with policy version | Proof of consent | Legal obligation | PostgreSQL hash-chained ledger | P1 |
+| Scheduling | Patients | Appointments, reason category, free-text reason | Care delivery | Healthcare | PostgreSQL | P1 |
+| Clinical record | Patients | Vitals, allergies, problems, notes, Rx, orders, documents | Care delivery | Healthcare / consent | PostgreSQL + Blob (CMK) | P2 |
+| Consultation audio and transcripts | Patients, companions, clinicians | Audio, transcript segments, speaker labels | Documentation (AI draft) | **Separate per-encounter recording consent** | Blob (CMK, 30-day default) + PostgreSQL | P3 |
+| Billing | Patients, payers | Invoices, payments, provider refs | Billing, tax | Contract / legal obligation (tax) | PostgreSQL hash-chained ledger | P4 |
+| Portal | Patients, caregivers | Portal account, proxy scopes | Patient access | Consent | Entra External ID + PostgreSQL | P4 |
+| Native sessions | Staff (patients later) | Session row, device label ("Safari on iOS"), SHA-256 of the refresh token. **No IP, no raw User-Agent** | Sign-in, remote revoke | Contract / legitimate use | PostgreSQL (`identity.Sessions`) | P5 |
 | On-device store, staff app (ADR-011 §3) | Patients, staff | Refresh token, device key (secure-store); today's list, patient summaries opened today, unsent recording chunks (encrypted SQLite). Class: Clinical / Restricted | Offline work, no lost recordings | Healthcare | The staff member's phone only; deleted after 24 h, at sign-out and on revoke | P5 |
 | On-device store, patient app (ADR-011 §3) | Patient, proxied family | Refresh token, device key; own last copy; bookings waiting to sync. Class: Clinical | Offline access to one's own record | Consent | The patient's phone only; deleted at sign-out and on revoke | P5 |
 | Push payloads | Staff, patients | Opaque id + fixed text "You have an update from your clinic". Class: Internal. **No clinical text** | Tell the user to open the app | Legitimate use / consent (opt-in) | Apple APNs / Google FCM via Azure Notification Hubs in country | P5 |
@@ -28,7 +28,7 @@ What personal data Medvya holds, why, where it lives and who processes it. Field
 
 | Processor | Role | Data | Region | Contract |
 |---|---|---|---|---|
-| Microsoft Azure (App Service, SQL, Blob, Key Vault, Monitor, Defender) | Hosting | All | Central India / UAE North (DR in-country) | Microsoft DPA |
+| Microsoft Azure (App Service, PostgreSQL, Blob, Key Vault, Monitor, Defender) | Hosting | All | Central India / UAE North (DR in-country) | Microsoft DPA |
 | Microsoft Entra External ID | Identity | Staff and patient identity | Per Microsoft data residency for the tenant (confirm per country) | Microsoft DPA |
 | SendGrid (Twilio) | Email delivery | Recipient email, name, appointment time, clinic name. **No clinical data** | Confirm processing location | Twilio DPA (to sign before real patient email) |
 | SMS provider (DLT-registered, TBD) | SMS delivery | Mobile, template variables. No clinical data | India / UAE | DPA (MDV-P1-045) |

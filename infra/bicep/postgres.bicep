@@ -25,7 +25,7 @@ param cmkIdentityId string
 param cmkKeyUri string
 @description('Zone-redundant HA. On for production; off for dev (Burstable tiers do not support it).')
 param haEnabled bool = false
-@description('Point-in-time restore window in days (7 to 35). Production 14, dev 7.')
+@description('Point-in-time restore window in days (7 to 35). Production 35, dev 7.')
 @minValue(7)
 @maxValue(35)
 param pitrRetentionDays int = 7

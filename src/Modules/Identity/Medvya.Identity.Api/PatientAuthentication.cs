@@ -131,7 +131,7 @@ public static partial class PatientAuthentication
         http.RequestServices.GetRequiredService<IPlatformAuditLog>().WriteAsync(new AuditEvent
         {
             Id = Guid.CreateVersion7(), TenantId = PlatformTenant.Id, Action = action, ResourceType = "patient_session", ResourceId = sessionId,
-            Purpose = AuditPurpose.Support, Outcome = AuditOutcome.Allowed, OccurredAt = DateTimeOffset.UtcNow,
+            Purpose = AuditPurpose.Support, Outcome = AuditOutcome.Allowed, OccurredAt = http.RequestServices.GetRequiredService<TimeProvider>().GetUtcNow(),
             ClientIp = http.Connection.RemoteIpAddress?.ToString(), CorrelationId = http.TraceIdentifier,
         }, http.RequestAborted);
 

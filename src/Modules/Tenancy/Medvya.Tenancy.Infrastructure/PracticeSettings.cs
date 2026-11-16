@@ -8,6 +8,7 @@ using Medvya.Tenancy.Domain;
 using Medvya.Tenancy.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using static Medvya.BuildingBlocks.Domain.TextInput;
 
 namespace Medvya.Tenancy.Infrastructure;
 
@@ -294,8 +295,6 @@ public sealed class PracticeSettings(
     }
 
     static bool PhoneFormat(string phone) => phone.Length is >= 6 and <= 30 && phone.All(c => char.IsAsciiDigit(c) || c is '+' or ' ' or '-' or '(' or ')');
-
-    static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }
 
 /// <summary>

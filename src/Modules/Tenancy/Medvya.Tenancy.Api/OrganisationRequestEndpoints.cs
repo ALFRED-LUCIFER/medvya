@@ -98,7 +98,7 @@ public static class OrganisationApprovalEndpoints
         {
             await using var scope = http.RequestServices.EnterLinkTenant(tenantId);
             if (await scope.ServiceProvider.GetRequiredService<IOrganisationRequests>().DocumentLinkAsync(documentId, ct) is not { } url) return Results.NotFound();
-            return Results.Ok(new DocumentLink(url, DateTimeOffset.UtcNow.AddMinutes(5)));
+            return Results.Ok(new DocumentLink(url, DateTimeOffset.UtcNow.AddMinutes(5))); // wall clock: when the storage service stops honouring the link
         });
 
         act.MapPost("/{tenantId:guid}/approve", (Guid tenantId, [FromBody] Decision body, HttpContext http, CancellationToken ct) => Apply(http, tenantId, OrganisationState.Approved, body, ct, OrganisationState.Submitted));

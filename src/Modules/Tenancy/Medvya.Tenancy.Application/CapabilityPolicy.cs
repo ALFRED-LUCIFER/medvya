@@ -1,10 +1,9 @@
-using Medvya.Tenancy.Application;
 using Medvya.Tenancy.Domain;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Medvya.Tenancy.Api;
+namespace Medvya.Tenancy.Application;
 
 /// <summary>The signed-in user's active membership must grant <see cref="Capability"/> at one of <see cref="Levels"/>.</summary>
 public sealed record CapabilityRequirement(Capability Capability, IReadOnlyList<Access> Levels) : IAuthorizationRequirement;

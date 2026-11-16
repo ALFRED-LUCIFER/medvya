@@ -15,6 +15,7 @@ using Medvya.Notifications.Application;
 using Medvya.Notifications.Infrastructure;
 using Microsoft.AspNetCore.SignalR;
 using Medvya.Audit.Api;
+using Medvya.Audit.Application;
 using Medvya.Audit.Infrastructure;
 using Medvya.BuildingBlocks.Domain;
 using Medvya.BuildingBlocks.Infrastructure;
@@ -150,6 +151,7 @@ var version = typeof(Program).Assembly.GetCustomAttribute<AssemblyInformationalV
 app.MapGet("/health", () => Results.Ok(new { status = "ok", version }))
     .AllowAnonymous(); // public: deploy smoke tests
 app.MapStaffSession();
+app.MapSessionEndpoints(); // right after the session plumbing: keeps the OpenAPI path order
 app.MapNativeSignIn();
 app.MapSchedulingEndpoints();
 app.MapNotifications();

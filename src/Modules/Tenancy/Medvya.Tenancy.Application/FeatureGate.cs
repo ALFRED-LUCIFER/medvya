@@ -1,10 +1,9 @@
-using Medvya.Tenancy.Application;
 using Medvya.Tenancy.Domain;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Medvya.Tenancy.Api;
+namespace Medvya.Tenancy.Application;
 
 public static class FeatureGate
 {

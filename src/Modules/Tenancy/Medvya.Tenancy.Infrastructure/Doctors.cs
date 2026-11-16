@@ -5,6 +5,7 @@ using Medvya.Tenancy.Application;
 using Medvya.Tenancy.Domain;
 using Medvya.Tenancy.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using static Medvya.BuildingBlocks.Domain.TextInput;
 
 namespace Medvya.Tenancy.Infrastructure;
 
@@ -192,6 +193,4 @@ public sealed class Doctors(TenancyDbContext db, ICurrentTenant tenant, ICurrent
         if (value is null) { if (required) errors.Add(new(field, "required")); }
         else if (value.Length > max) errors.Add(new(field, "too_long"));
     }
-
-    static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

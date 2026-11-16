@@ -1,3 +1,4 @@
+using Medvya.BuildingBlocks.Security;
 using System.Globalization;
 using System.Security.Claims;
 using System.Text.Json;
@@ -54,13 +55,13 @@ public static partial class OnboardingEndpoints
 
         // Autosave. With `validate` the named step is checked first and a failed check saves nothing; without it the typed values
         // are kept as they are (a half-finished step), and the same checks run again at Continue and at finish.
-        group.MapPut("/", async (SaveRequest request, ClaimsPrincipal principal, [FromServices] IOnboardingDrafts drafts, CancellationToken ct) =>
+        group.MapPut("/", async (SaveRequest request, ClaimsPrincipal principal, [FromServices] IOnboardingDrafts drafts, [FromServices] TimeProvider clock, CancellationToken ct) =>
         {
             var userId = UserId(principal);
             if (request.Data is null || !OnboardingRules.Steps.Contains(request.Step)) return Results.ValidationProblem(Errors([new("step", "unknown")]));
             var draft = await drafts.GetAsync(userId, ct);
             if (draft is null) return Results.NotFound();
-            if (request.Validate is { } step && OnboardingRules.For(draft.Country)!.ValidateStep(step, request.Data) is { Count: > 0 } errors)
+            if (request.Validate is { } step && OnboardingRules.For(draft.Country)!.ValidateStep(step, request.Data, DateOnly.FromDateTime(clock.GetUtcNow().UtcDateTime)) is { Count: > 0 } errors)
                 return Results.ValidationProblem(Errors(errors));
             return await drafts.SaveAsync(userId, request.Step, JsonSerializer.Serialize(request.Data, Json), ct) ? Results.NoContent() : Results.NotFound();
         });
@@ -76,7 +77,7 @@ public static partial class OnboardingEndpoints
                 return done is { MembershipId: not null } ? Results.Ok(done with { InvitationsSent = 0, InvitationsFailed = 0 }) : Results.NotFound();
             }
             var data = JsonSerializer.Deserialize<OnboardingData>(draft.Data, Json) ?? new OnboardingData(null, null, null, null, null, null);
-            if (OnboardingRules.For(draft.Country)!.ValidateAll(data) is { Count: > 0 } errors) return Results.ValidationProblem(Errors(errors));
+            if (OnboardingRules.For(draft.Country)!.ValidateAll(data, DateOnly.FromDateTime(http.RequestServices.GetRequiredService<TimeProvider>().GetUtcNow().UtcDateTime)) is { Count: > 0 } errors) return Results.ValidationProblem(Errors(errors));
             // The draft stays, so the owner finishes it once an earlier request is decided. Remove this and OnboardingTests.AnAccountOwnsAtMostTwoOrganisationsAwaitingApproval fails.
             if (await memberships.UnapprovedOwnedAsync(ct) >= MaxUnapprovedOrganisations)
                 return Results.Problem(statusCode: StatusCodes.Status409Conflict, title: "Too many organisations are waiting for approval",

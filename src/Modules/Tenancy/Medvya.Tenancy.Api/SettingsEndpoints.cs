@@ -47,10 +47,10 @@ public static class SettingsEndpoints
             await s.SetHoursAsync(id, body, ct) is { } v ? Results.Ok(v) : Results.NotFound());
 
         // Holidays: each lists the booked visits still on that date, which the desk has to move (new bookings are refused by the booking path).
-        g.MapGet("/locations/{id:guid}/closures", async (Guid id, [FromServices] IPracticeSettings s, [FromServices] IScheduleService schedule, CancellationToken ct) =>
+        g.MapGet("/locations/{id:guid}/closures", async (Guid id, [FromServices] IPracticeSettings s, [FromServices] IScheduleService schedule, [FromServices] TimeProvider clock, CancellationToken ct) =>
         {
             if (await s.ListClosuresAsync(id, ct) is not { } closures) return Results.NotFound();
-            var today = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-1)); // UTC-1 day covers every facility zone; past closures need no list
+            var today = DateOnly.FromDateTime(clock.GetUtcNow().UtcDateTime.AddDays(-1)); // UTC-1 day covers every facility zone; past closures need no list
             var rows = new List<ClosureWithVisits>();
             foreach (var c in closures) rows.Add(new(c, c.Date < today ? [] : await schedule.AppointmentsOnAsync(id, c.Date, ct)));
             return Results.Ok(rows);
@@ -71,7 +71,7 @@ public static class SettingsEndpoints
         });
         g.MapDelete("/logo", async ([FromServices] IPracticeSettings s, CancellationToken ct) => await s.RemoveLogoAsync(ct) ? Results.NoContent() : Results.NotFound());
         g.MapGet("/logo", async ([FromServices] IPracticeSettings s, CancellationToken ct) =>
-            await s.LogoLinkAsync(LogoLinkLifetime, ct) is { } url ? Results.Ok(new LogoLink(url, DateTimeOffset.UtcNow + LogoLinkLifetime)) : Results.NotFound());
+            await s.LogoLinkAsync(LogoLinkLifetime, ct) is { } url ? Results.Ok(new LogoLink(url, DateTimeOffset.UtcNow + LogoLinkLifetime)) : Results.NotFound()); // wall clock: when the storage service stops honouring the link
 
         // Which clinicians treat the facility's patients (MDV-P2-024): every clinician of it (default) or only those assigned.
         g.MapGet("/clinical-access", async ([FromServices] IPracticeSettings s, CancellationToken ct) => Results.Ok(new ClinicalAccessBody(await s.GetClinicalAccessAsync(ct))));
@@ -101,32 +101,19 @@ public static class SettingsEndpoints
         return app;
     }
 
-    /// <summary>Use-case errors as problem details: field/code pairs for 400, a generic 403 that never says why.</summary>
+    /// <summary>
+    /// <see cref="SettingsProblems.MapErrors"/>, plus what only these settings raise: a scheduling refusal (moving visits off a holiday) as
+    /// a generic 403 that never says why, and a concurrent save as 409.
+    /// </summary>
     public static async ValueTask<object?> MapErrors(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
     {
         try
         {
-            return await next(context);
-        }
-        catch (SettingsValidationException e)
-        {
-            return Results.ValidationProblem(e.Errors.GroupBy(x => x.Field).ToDictionary(x => x.Key, x => x.Select(y => y.Code).ToArray()));
+            return await SettingsProblems.MapErrors(context, next);
         }
         catch (SchedulingAccessDeniedException)
         {
             return Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "No access at this facility");
-        }
-        catch (InvitationEmailException)
-        {
-            return EmailFailed;
-        }
-        catch (InvitationLimitException)
-        {
-            return TooManyInvitations;
-        }
-        catch (PlanLimitException e)
-        {
-            return PlanLimit(e);
         }
         catch (DbUpdateConcurrencyException)
         {
@@ -135,14 +122,4 @@ public static class SettingsEndpoints
                 extensions: new Dictionary<string, object?> { ["code"] = "changed" });
         }
     }
-
-    /// <summary>502 with a stable code: the screen says the invitation email could not be sent and nothing was saved, not a generic failure.</summary>
-    /// <summary>429 with a stable code when the practice has sent its hourly allowance of invitations (#886).</summary>
-    public static IResult TooManyInvitations => Results.Problem(statusCode: StatusCodes.Status429TooManyRequests, title: "Too many invitations in the last hour.", extensions: new Dictionary<string, object?> { ["code"] = "invitation_limit" });
-
-    /// <summary>409 with a stable code and the plan's limits when the plan has no free doctor or staff seat (MDV-P1-069).</summary>
-    public static IResult PlanLimit(PlanLimitException e) => Results.Problem(statusCode: StatusCodes.Status409Conflict, title: e.Message,
-        extensions: new Dictionary<string, object?> { ["code"] = "plan_limit", ["doctors"] = e.Doctors, ["staff"] = e.Staff });
-
-    public static IResult EmailFailed => Results.Problem(statusCode: StatusCodes.Status502BadGateway, title: "The invitation email could not be sent.", extensions: new Dictionary<string, object?> { ["code"] = "email_failed" });
 }

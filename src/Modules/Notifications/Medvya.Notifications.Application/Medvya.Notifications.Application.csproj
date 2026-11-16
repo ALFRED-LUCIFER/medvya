@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
     <ProjectReference Include="..\Medvya.Notifications.Domain\Medvya.Notifications.Domain.csproj" />
-    <ProjectReference Include="..\..\Tenancy\Medvya.Tenancy.Domain\Medvya.Tenancy.Domain.csproj" />
+    <ProjectReference Include="..\..\Tenancy\Medvya.Tenancy.Application\Medvya.Tenancy.Application.csproj" />
   </ItemGroup>
 </Project>

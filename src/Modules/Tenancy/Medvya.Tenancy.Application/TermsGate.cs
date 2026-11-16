@@ -1,9 +1,8 @@
-using Medvya.Tenancy.Application;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Medvya.Tenancy.Api;
+namespace Medvya.Tenancy.Application;
 
 public static class TermsGate
 {

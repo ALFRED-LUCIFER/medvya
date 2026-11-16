@@ -7,7 +7,6 @@ using Hangfire.PostgreSql;
 using Microsoft.Extensions.Hosting;
 using Medvya.Notifications.Application;
 using Medvya.Scheduling.Application;
-using Medvya.Tenancy.Api;
 using Medvya.Tenancy.Application;
 using Microsoft.AspNetCore.Authorization;
 

@@ -1,7 +1,7 @@
 using Medvya.Tenancy.Domain;
 using Microsoft.AspNetCore.Authorization;
 
-namespace Medvya.Tenancy.Api;
+namespace Medvya.Tenancy.Application;
 
 /// <summary>
 /// Named capability policies. They go through <see cref="CapabilityHandler"/> (IStaffAccess), so the membership, its role and a

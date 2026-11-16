@@ -1,4 +1,3 @@
-using Medvya.Tenancy.Api;
 using Medvya.Identity.Application;
 using Medvya.Tenancy.Application;
 using Medvya.Tenancy.Domain;
@@ -35,15 +34,15 @@ public static class InvitationEndpoints
             }
             catch (InvitationEmailException)
             {
-                return SettingsEndpoints.EmailFailed; // #893: the same 502 as /v1/staff, not an unhandled 500
+                return SettingsProblems.EmailFailed; // #893: the same 502 as /v1/staff, not an unhandled 500
             }
             catch (InvitationLimitException)
             {
-                return SettingsEndpoints.TooManyInvitations;
+                return SettingsProblems.TooManyInvitations;
             }
             catch (PlanLimitException e)
             {
-                return SettingsEndpoints.PlanLimit(e);
+                return SettingsProblems.PlanLimit(e);
             }
         });
 

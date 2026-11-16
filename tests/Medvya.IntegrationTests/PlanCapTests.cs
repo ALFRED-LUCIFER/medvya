@@ -5,7 +5,6 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using Medvya.BuildingBlocks.Domain;
 using Medvya.Identity.Domain;
-using Medvya.Tenancy.Api;
 using Medvya.Tenancy.Application;
 using Medvya.Tenancy.Domain;
 using Medvya.Tenancy.Infrastructure.Persistence;

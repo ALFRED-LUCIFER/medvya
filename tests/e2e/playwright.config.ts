@@ -4,6 +4,8 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: '.',
   testIgnore: 'fullstack/**', // needs Docker and .NET: `pnpm e2e:fullstack`
+  // Every test mocks its own API and owns its page, so tests of one file run on any worker: shards stay even instead of waiting on the longest file.
+  fullyParallel: true,
   forbidOnly: !!process.env.CI,
   reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : 'list',
   // Reduced motion: styles.css then drops every transition, so axe never samples a button's colour mid-fade (a flaky false contrast failure).

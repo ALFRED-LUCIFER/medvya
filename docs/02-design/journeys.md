@@ -11,11 +11,15 @@ Each step: who acts, on which screen, and what changes. 🔒 = clinician approva
 | 1 | F-04 | Practice admin | Set up practice | Onboarding request (Clinic), clinic profile, owner doctor's own licence attested, hours, invite receptionist; Medvya approves the organisation (ADR-016). |  |
 | 2 | F-11 | Practice admin | Add services & fees | INR catalogue, GST-exempt consults. |  |
 | 3 | P-02 | Reception | Register first patient | Quick or full registration, ABHA optional. |  |
-| 4 | P-04 | Reception | Book & check in | Slot booked, WhatsApp confirmation. |  |
+| 4 | P-04 | Reception | Book & check in | Slot booked, email or SMS confirmation (WhatsApp waits on ADR-022). |  |
 | 5 | A-02 | Doctor | Consent & start recording | Patient agrees in Tamil; phone mic. |  |
 | 6 | E-04 | Doctor | Branch: consent declined | Manual note, same sign flow. | ↪ |
 | 7 | A-05 | Doctor | Review & sign note | Evidence-linked draft; sign. | 🔒 |
 | 8 | P-06 | Reception | Invoice & UPI payment | Paid only on provider confirmation. |  |
+| 9 | F-09 | Practice admin | Add a doctor | Details, licence number, council and expiry attested by the owner (no Medvya check); the doctor list shows who attested and when; the invitation is emailed (MDV-P1-007, MDV-P1-065). |  |
+| 10 | F-06 | Reception | Accept the invitation | Opens the link from the email, signs in and joins: the membership goes from Invited to Active and the front desk opens (MDV-P0-013). |  |
+| 11 | P-04 | System | Confirmation and reminders | The booking confirmation reaches the patient's email within a minute, only for a channel the patient said yes to and with no clinical details; reminders follow 24 h and 2 h before (MDV-P1-032). |  |
+| 12 | F-10 | Practice admin | Offboard a staff member | Reason and the identity step-up; access ends at once and every session of theirs is signed out (MDV-P1-009, MDV-P1-107). |  |
 
 ## J2 · Returning diabetic patient — Meera Iyer · M1–M2
 
@@ -89,13 +93,13 @@ Each step: who acts, on which screen, and what changes. 🔒 = clinician approva
 
 ## Build status (not generated)
 
-Which steps run in the browser against the real stack (`pnpm e2e:fullstack`: real Host.Api, PostgreSQL, sign-in; `tests/e2e/fullstack/j1.spec.ts` to `j6.spec.ts`, `front-desk.spec.ts`), and which ticket builds the rest. A pending step is `fixme` in the full-stack spec, tagged with that ticket (`--grep @MDV-P2-007`). The mocked specs (`tests/e2e/journeys`) cover the same built steps without an API. Updated 12 Nov 2026 (MDV-P2-045).
+Which steps run in the browser against the real stack (`pnpm e2e:fullstack`: real Host.Api, PostgreSQL, sign-in; `tests/e2e/fullstack/j1.spec.ts` to `j6.spec.ts`, `front-desk.spec.ts`), and which ticket builds the rest. A pending step is `fixme` in the full-stack spec, tagged with that ticket (`--grep @MDV-P2-007`). The mocked specs (`tests/e2e/journeys`) cover the same built steps without an API. Updated 16 Nov 2026 (#1417: J1 steps 9 to 12).
 
 | Journey | Green on the real stack | Pending (ticket that builds it) |
 |---|---|---|
-| J1 | 1, 3, 4 (one story test, `fullstack/j1.spec.ts`) | 2 MDV-P4-002 · 5 MDV-P3-003 · 6 MDV-P2-009 · 7 MDV-P3-012 · 8 MDV-P4-004 |
-| J2 | 1, 6 (authorise with the step-up, back on Authorise with focus and a status line and only opaque ids in the round trip (MDV-P2-047), place orders and download the slip's server PDF (MDV-P2-018), print, QR verify, cancel and authorise again), 7 (the pharmacy link; the patient's link needs an SMS provider for the code, MDV-P1-045), 9 to 12 (MDV-P2-045: the nurse records Meera's penicillin allergy at intake, then the one-page chart, Add medicine from the chart with amoxicillin blocked, the one-page consultation with Sign locked until the checklist is complete, and signing; English and Arabic, axe clean) | 2 MDV-P2-004 · 3 MDV-P3-005 · 4 MDV-P3-009 · 5 MDV-P3-012 · 8 MDV-P4-016 |
-| J3 | 1, 2, 3, 4, 6 (doctor sees it on the board, not Today), 7, 10, 11, 12, 13 (real stack only; the queue display's own list is checked in `QueueTvTests` and the mocked `front-desk.spec.ts`), 8, 9 (mocked spec only: a second location exists on the real stack once MDV-P1-070 lands) | 5 MDV-P2-007, MDV-P2-008 (green in the mocked spec `journeys/j3.spec.ts` and on the real stack, `fullstack/j3.spec.ts`, after the owner switches nurse intake on in Settings → Clinical → Nurse intake). Steps 4 and 5 run with nurse intake on; step 6 on the real stack is a clinic without it (Checked in → Ready for doctor) |
+| J1 | 1, 3, 4, 9 to 12 (one story test, `fullstack/j1.spec.ts`: the invitation and the confirmation are read from the stack's mail sink; the 24 h and 2 h reminders are not, since they wait for their time, and `NotificationsTests` (real PostgreSQL) covers them; steps 9 to 12 are not in the mocked spec) | 2 MDV-P4-002 · 5 MDV-P3-003 · 6 MDV-P2-009 · 7 MDV-P3-012 · 8 MDV-P4-004 |
+| J2 | 1, 6 (authorise with the step-up, back on Authorise with focus and a status line and only opaque ids in the round trip (MDV-P2-047), place orders and download the slip's server PDF (MDV-P2-018), print, QR verify, cancel and authorise again), 7 (the pharmacy link; the patient's link needs an SMS provider for the code, MDV-P1-045), 9 to 12 (MDV-P2-045: the nurse records Meera's penicillin allergy at intake, then the one-page chart, Add medicine from the chart with amoxicillin blocked, the one-page consultation with Sign locked until the checklist is complete, and signing; English and Arabic, axe clean) | 2 MDV-P2-004 (green in the mocked spec) · 3 MDV-P3-005 · 4 MDV-P3-009 · 5 MDV-P3-012 · 8 MDV-P4-016 · 13 (built, MDV-P1-090; green in the mocked spec `journeys/j2.spec.ts`; on the real stack step 12 ends the consultation through the same unfinished-prescription dialog, with Discard) |
+| J3 | 1, 2, 3, 4, 5 (after the owner switches nurse intake on in Settings → Clinical → Nurse intake), 6 (doctor sees it on the board, not Today), 7, 10, 11, 12, 13 (real stack only; the queue display's own list is checked in `QueueTvTests` and the mocked `front-desk.spec.ts`), 8, 9 (mocked spec only: a second location exists on the real stack once MDV-P1-070 lands) | none. Steps 4 and 5 run with nurse intake on (MDV-P2-007, MDV-P2-008); step 6 on the real stack is a clinic without it (Checked in → Ready for doctor) |
 | J4 | none | 1 MDV-P6-002 · 2 MDV-P6-003 · 3 MDV-P6-004 · 4 MDV-P3-010 · 5 MDV-P3-009 · 6 MDV-P7-006 |
 | J5 | none | 1 MDV-P2-018 (green in the mocked spec `journeys/j5.spec.ts`; on the real stack once the seeded doctor's licence is attested by the owner (ADR-016; until MDV-P1-065 lands, verified by Medvya operations)) · 2 MDV-P4-014 · 3, 5 MDV-P4-015 · 4 MDV-P4-018 · 6 MDV-P4-019 · 7 MDV-P4-016 |
 | J6 | none | 1 MDV-P7-002 · 2 to 5 MDV-P7-006 · 6 MDV-P7-008 |

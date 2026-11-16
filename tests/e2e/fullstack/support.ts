@@ -1,5 +1,5 @@
 import { createRequire } from 'node:module';
-import { expect, type Browser, type Page } from '@playwright/test';
+import { expect, type APIRequestContext, type Browser, type Page } from '@playwright/test';
 
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 
@@ -147,4 +147,34 @@ export async function expectArabicAxeClean(browser: Browser, user: RegExp, path:
   } finally {
     await page.close();
   }
+}
+
+/**
+ * The text of the newest email the stack's mail sink (smtp4dev, stack.mjs) holds for `to` with a matching subject, waiting up to `timeout`
+ * for it: invitations leave after the response, confirmations with the minutely notification run. Synthetic addresses only.
+ */
+export async function mailTo(request: APIRequestContext, to: string, subject: RegExp, timeout = 120_000) {
+  const api = `http://127.0.0.1:${process.env.E2E_MAIL_PORT}/api/messages`;
+  type Message = { id: string; to: unknown; subject: string; receivedDate: string };
+  let found: Message | undefined;
+  await expect.poll(async () => {
+    const list = await (await request.get(`${api}?pageSize=1000`)).json() as Message[] | { results: Message[] }; // a page of results in smtp4dev 3.x (5 by default)
+    found = (Array.isArray(list) ? list : list.results)
+      .filter(m => JSON.stringify(m.to).toLowerCase().includes(to.toLowerCase()) && subject.test(m.subject))
+      .sort((a, b) => b.receivedDate.localeCompare(a.receivedDate))[0];
+    return found?.id;
+  }, { timeout, intervals: [1_000, 2_000, 5_000] }).toBeTruthy();
+  return { subject: found!.subject, text: await (await request.get(`${api}/${found!.id}/plaintext`)).text() };
+}
+
+/**
+ * The identity step-up through the real BFF (/bff/reauth), for decisions the server takes only from a fresh one (organisation approval,
+ * offboarding). The development provider has no password: picking the same person again is the step-up (Entra's prompt=login is not exercised).
+ */
+export async function stepUp(page: Page, user: RegExp | string, returnUrl = '/app/') {
+  const reauth = await page.request.post('/bff/reauth', { headers: { 'X-Medvya-Csrf': '1' }, data: { returnUrl } });
+  expect(reauth.status(), await reauth.text()).toBe(200);
+  await page.goto((await reauth.json()).location);
+  await page.getByRole('link', { name: user }).click();
+  await page.waitForURL(u => u.pathname.startsWith('/app/'));
 }

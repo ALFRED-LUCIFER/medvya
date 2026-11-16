@@ -1,8 +1,7 @@
-"""Audio retention. Only audio is removed; transcript, note and facts are never touched here.
-
-medvya_ai_app has no DELETE grant, so DB rows are kept and audio_chunk.deleted_at is set.
-Idempotent: a session with no live chunks is never selected, and a blob delete of a missing
-blob is a no-op, so a crash between blob delete and the UPDATE is repaired by the next sweep.
+"""Retention. sweep() deletes due audio (audio_chunk rows keep deleted_at); a blob delete of a
+missing blob is a no-op, so a crash between blob delete and the UPDATE is repaired by the next
+sweep. expire_sessions() hands sessions past RETENTION_SESSION_DAYS to the purge job, which
+deletes the working data: Medvya, not this service, keeps the signed record (ADR-021 s2).
 """
 
 import uuid
@@ -10,12 +9,13 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from medvya_ai import audit
 from medvya_ai.config import Settings
 from medvya_ai.models import AudioChunk, ConsultationSession, RetentionPolicy
+from medvya_ai.services.consent import revoke
 from medvya_ai.storage import BlobStore
 
 
@@ -84,6 +84,39 @@ async def sweep(
         )
         total += n
     return total
+
+
+async def expire_sessions(
+    db: AsyncSession, *, clinic_id: uuid.UUID, now: datetime, settings: Settings
+) -> int:
+    """Sessions finished (or, never recorded, created) RETENTION_SESSION_DAYS ago go through the
+    same revoke -> purge_session path as a withdrawal: jobs cancelled, working data deleted,
+    consent log and audit kept. `db` must already be scoped with set_tenant."""
+    cutoff = now - timedelta(days=settings.retention_session_days)
+    rows = (
+        await db.scalars(
+            select(ConsultationSession)
+            .where(
+                ConsultationSession.revoked_at.is_(None),
+                func.coalesce(ConsultationSession.finished_at, ConsultationSession.created_at)
+                <= cutoff,
+            )
+            .with_for_update(skip_locked=True)
+        )
+    ).all()
+    for s in rows:
+        await revoke(db, s)
+        await audit.record(
+            db,
+            clinic_id=clinic_id,
+            actor_user_id=None,
+            action="session_retention_expired",
+            entity_type="consultation_session",
+            entity_id=s.id,
+            ip=None,
+            metadata={"days": settings.retention_session_days},
+        )
+    return len(rows)
 
 
 async def delete_audio(

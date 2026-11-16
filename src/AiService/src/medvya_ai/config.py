@@ -57,6 +57,10 @@ class Settings(BaseSettings):
 
     retention_audio_after_approval_hours: int = 24
     retention_draft_audio_days: int = 7
+    # Working data (transcript, facts, rejections, corrections, participant names) is purged this
+    # many days after the session finished (or was created, if never recorded). Medvya keeps the
+    # signed note. Proposed in ADR-021; the owner confirms the period.
+    retention_session_days: int = 30
 
     encryption_master_key: SecretStr
 

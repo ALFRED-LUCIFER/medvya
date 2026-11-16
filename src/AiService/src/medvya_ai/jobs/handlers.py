@@ -106,11 +106,17 @@ async def extract(db: AsyncSession, deps: Deps, job: Job) -> Counters:
 
 
 async def retention_sweep(db: AsyncSession, deps: Deps, job: Job) -> Counters:
+    now = datetime.now(UTC)
     n = await retention.sweep(
-        db, deps.blobs, clinic_id=job.clinic_id, now=datetime.now(UTC), settings=deps.settings
+        db, deps.blobs, clinic_id=job.clinic_id, now=now, settings=deps.settings
     )
-    log.info("retention sweep clinic=%s chunks_deleted=%d", job.clinic_id, n)
-    return {"chunks_deleted": n}
+    expired = await retention.expire_sessions(
+        db, clinic_id=job.clinic_id, now=now, settings=deps.settings
+    )
+    log.info(
+        "retention sweep clinic=%s chunks_deleted=%d sessions_expired=%d", job.clinic_id, n, expired
+    )
+    return {"chunks_deleted": n, "sessions_expired": expired}
 
 
 async def purge_session(db: AsyncSession, deps: Deps, job: Job) -> Counters:

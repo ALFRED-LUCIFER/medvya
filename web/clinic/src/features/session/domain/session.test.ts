@@ -74,6 +74,13 @@ describe('lastUsedFirst and toSession (MDV-P1-059)', () => {
     expect(toSession({ ...me, accessEnded: true }).accessEnded).toBe(true);
     expect(toSession(me).accessEnded).toBe(false);
   });
+
+  it('always names a zone for instants: the facility\'s, else the country\'s, never the browser\'s', () => {
+    const active = { membershipId: 'm', tenantId: 't', facilityId: 'f', role: 'Receptionist' as const, capabilities: {}, flags: [] };
+    expect(toSession({ ...me, active: { ...active, timeZone: 'Asia/Kolkata', country: 'AE' } }).active!.timeZone).toBe('Asia/Kolkata');
+    expect(toSession({ ...me, active: { ...active, country: 'AE' } }).active!.timeZone).toBe('Asia/Dubai');
+    expect(toSession({ ...me, active }).active!.timeZone).toBe('Asia/Kolkata');
+  });
 });
 
 describe('signInSchema', () => {

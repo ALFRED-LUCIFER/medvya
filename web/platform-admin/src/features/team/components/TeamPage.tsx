@@ -6,6 +6,7 @@ import type { FormEventHandler } from 'react';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 import ReasonPanel, { ReasonBar } from '../../shell/components/ReasonPanel';
 import { keyState, roles, teamColumns, type InviteForm, type PendingAction, type ReasonForm, type ShownLink, type Team } from '../domain/team';
+import { operatorZone } from '../../session/domain/session';
 
 type Props = {
   vm: {
@@ -23,7 +24,7 @@ export default function TeamPage({ vm }: Props) {
   const { t, formatDate, formatTime, formatCalendarDate } = useI18n();
   const ids = { name: useId(), email: useId(), role: useId(), ends: useId() };
   const errorText = (code?: string) => (code ? t(`platform.error.${code}` as MessageKey) : undefined);
-  const when = (iso: string) => `${formatDate(new Date(iso))} ${formatTime(new Date(iso))}`;
+  const when = (iso: string) => `${formatDate(new Date(iso), operatorZone)} ${formatTime(new Date(iso), operatorZone)}`;
   const e = vm.inviteForm.formState.errors;
   const inviteErrors = ([['displayName', ids.name, 'platform.team.name'], ['email', ids.email, 'platform.team.email'], ['accessEndsOn', ids.ends, 'platform.team.accessEnds'],
     ['reason', `${ids.name}-reason`, 'platform.reason.label']] as const)
@@ -35,8 +36,8 @@ export default function TeamPage({ vm }: Props) {
 
       {vm.team && (
         <p role="status" className={vm.reviewDue ? 'font-semibold text-danger-700' : 'text-sm text-muted-foreground'}>
-          {vm.reviewDue ? t('platform.team.reviewDueNow') : t('platform.team.reviewDue', { date: formatDate(new Date(vm.team.accessReviewDueAt)) })}
-          {vm.team.lastAccessReviewAt && ` · ${t('platform.team.lastReview', { date: formatDate(new Date(vm.team.lastAccessReviewAt)) })}`}
+          {vm.reviewDue ? t('platform.team.reviewDueNow') : t('platform.team.reviewDue', { date: formatDate(new Date(vm.team.accessReviewDueAt), operatorZone) })}
+          {vm.team.lastAccessReviewAt && ` · ${t('platform.team.lastReview', { date: formatDate(new Date(vm.team.lastAccessReviewAt), operatorZone) })}`}
         </p>
       )}
 

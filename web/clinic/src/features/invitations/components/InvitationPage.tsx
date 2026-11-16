@@ -5,10 +5,10 @@ import { Button, PageHeader, PageMessage } from '@medvya/ui';
 import AuthFrame from '../../session/components/AuthFrame';
 import { isAllowed, type InvitationPreview } from '../domain/invitation';
 
-type Props = { languageSwitcher: ReactNode; loading: boolean; failed: boolean; invitation: InvitationPreview | null; onJoin: () => void; onRetry: () => void };
+type Props = { timeZone: string; languageSwitcher: ReactNode; loading: boolean; failed: boolean; invitation: InvitationPreview | null; onJoin: () => void; onRetry: () => void };
 
 /** F-06 Invite acceptance in the sign-in frame (6 Nov design). Allowed and not-allowed capabilities differ by icon and words, never colour alone. */
-export default function InvitationPage({ languageSwitcher, loading, failed, invitation, onJoin, onRetry }: Props) {
+export default function InvitationPage({ timeZone, languageSwitcher, loading, failed, invitation, onJoin, onRetry }: Props) {
   const { t, formatDate } = useI18n();
   let body;
   if (loading) body = <PageMessage kind="busy">{t('invite.loading')}</PageMessage>;
@@ -54,7 +54,7 @@ export default function InvitationPage({ languageSwitcher, loading, failed, invi
         </section>
         {invitation.licenceVerificationRequired && <p className="text-sm">{t('invite.licence')}</p>}
         <Button className="min-h-12" onClick={onJoin}>{t('invite.cta')}</Button>
-        <p className="text-xs text-muted-foreground">{t('invite.expires', { date: formatDate(new Date(invitation.expiresAt)) })}</p>
+        <p className="text-xs text-muted-foreground">{t('invite.expires', { date: formatDate(new Date(invitation.expiresAt), timeZone) })}</p>
       </>
     );
   }

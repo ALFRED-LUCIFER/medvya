@@ -7,6 +7,7 @@ import type { UseFormReturn } from 'react-hook-form';
 import { actionKey, auditColumns, documentKindOf, isKnownAction, type AuditEntry } from '../domain/audit';
 import { isDocumentKind } from '../../approvals/domain/approvals';
 import type { ReasonForm } from '../../team/domain/team';
+import { operatorZone } from '../../session/domain/session';
 
 type Props = {
   vm: {
@@ -39,7 +40,7 @@ export default function AuditPage({ vm }: Props) {
           <TableBody>
             {vm.entries.map(a => (
               <TableRow key={a.id}>
-                <TableHead scope="row"><time dateTime={a.occurredAt}>{formatDate(new Date(a.occurredAt))} {formatTime(new Date(a.occurredAt))}</time></TableHead>
+                <TableHead scope="row"><time dateTime={a.occurredAt}>{formatDate(new Date(a.occurredAt), operatorZone)} {formatTime(new Date(a.occurredAt), operatorZone)}</time></TableHead>
                 <TableCell label={t('platform.audit.what')}>
                   {isKnownAction(a.action) ? t(actionKey(a.action)) : a.action}
                   {/* Which organisation and which document (F-037). */}

@@ -6,6 +6,8 @@ import { Button, Card, Input, Label } from '@medvya/ui';
 import type { Display, DisplayInput } from '../domain/queueTv';
 
 type Props = {
+  /** The facility's IANA zone: instants show facility time, not the browser's (AGENTS.md 3.5). */
+  timeZone: string;
   form: UseFormReturn<DisplayInput>;
   displays: Display[];
   loading: boolean;
@@ -64,7 +66,7 @@ export default function DisplaysPage(p: Props) {
                   <span className="flex flex-col">
                     <span className="font-bold">{d.name}</span>
                     <span className="text-sm text-muted-foreground">
-                      {d.revokedAt ? t('displays.revokedOn', { date: formatDate(new Date(d.revokedAt)) }) : t('displays.addedOn', { date: formatDate(new Date(d.createdAt)) })}
+                      {d.revokedAt ? t('displays.revokedOn', { date: formatDate(new Date(d.revokedAt), p.timeZone) }) : t('displays.addedOn', { date: formatDate(new Date(d.createdAt), p.timeZone) })}
                     </span>
                   </span>
                   {!d.revokedAt && (

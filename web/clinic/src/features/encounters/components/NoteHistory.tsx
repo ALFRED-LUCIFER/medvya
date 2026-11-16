@@ -10,7 +10,7 @@ type Props = {
   canAdd: boolean; composing: boolean; problem: AddendumFailure | null; submitting: boolean; invalid: boolean;
   register: UseFormRegister<AddendumForm>;
   onCompose: () => void; onCancel: () => void; onSubmit: () => void; onConfirmIdentity: () => void;
-  timeZone: string | undefined; printPath: string;
+  timeZone: string; printPath: string;
 };
 
 /** E-06: a signed note's version history, the addendum composer (a new signed version, never an edit) and the way to print. Nothing before signing. */
@@ -66,7 +66,7 @@ export default function NoteHistory(p: Props) {
 }
 
 /** Version 1 and every addendum in order, each with its signer and time; an addendum also shows why it was added and its text. */
-export function Versions({ lastRef, signature, addenda, timeZone }: { lastRef?: Ref<HTMLLIElement>; signature: NoteSignature; addenda: NoteAddendum[]; timeZone: string | undefined }) {
+export function Versions({ lastRef, signature, addenda, timeZone }: { lastRef?: Ref<HTMLLIElement>; signature: NoteSignature; addenda: NoteAddendum[]; timeZone: string }) {
   const { t, formatDate, formatTime } = useI18n();
   const signedLine = (version: number, name: string | null | undefined, at: string) => t(name ? 'noteHistory.signed' : 'noteHistory.signedOther',
     { version: String(version), name: name ?? '', date: formatDate(new Date(at), timeZone), time: formatTime(new Date(at), timeZone) });

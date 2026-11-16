@@ -9,6 +9,9 @@ export type Session = { person: Person | null; phone: string; clinic: Clinic | n
 export type SignInStep = 'welcome' | 'phone' | 'code' | 'who' | 'biometric';
 
 /** The header line under a screen title: the clinic and branch, or nothing when no clinic is linked yet. */
+/** The zone instants show in: the clinic's; with no clinic linked yet, the phone's own zone, said explicitly. */
+export const zoneOf = (s: Session) => s.clinic?.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+
 export const clinicLine = (s: Session) => (s.clinic ? `${s.clinic.name} · ${s.clinic.branch}` : undefined);
 
 const mobile: Record<Country, { prefix: string; pattern: RegExp }> = {

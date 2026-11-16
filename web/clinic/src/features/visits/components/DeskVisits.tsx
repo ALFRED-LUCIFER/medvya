@@ -3,7 +3,7 @@ import { useI18n } from '@medvya/i18n';
 import { Card } from '@medvya/ui';
 import type { DeskVisit } from '../domain/visits';
 
-type Props = { visits: DeskVisit[]; timeZone?: string; loading: boolean; failed: boolean; followUp?: ReactNode };
+type Props = { visits: DeskVisit[]; timeZone: string; loading: boolean; failed: boolean; followUp?: ReactNode };
 
 /** The desk record's visits (MDV-1088): when and what state, never a reason, diagnosis or note; first, the doctor's follow-up still to book (MDV-P1-102). */
 export default function DeskVisits(p: Props) {

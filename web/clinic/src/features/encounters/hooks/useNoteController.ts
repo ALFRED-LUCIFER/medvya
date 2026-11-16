@@ -22,7 +22,7 @@ const leaving = new Map<string, Promise<unknown>>();
  * The consultation note editor (MDV-P2-009): template-driven sections, debounced autosave, template switch with a warning about text that has
  * no place in the new template, and conflict handling that keeps the doctor's text. The text lives in the form (memory) and on the server only.
  */
-export function useNoteController(encounterId: string, canSign: boolean, timeZone: string | undefined, banner: EncounterBanner | null = null) {
+export function useNoteController(encounterId: string, canSign: boolean, timeZone: string, banner: EncounterBanner | null = null) {
   const { t, formatDate, formatTime } = useI18n();
   const queryClient = useQueryClient();
   // MDV-P1-089: each visit to the page reads the note again, after any save that leaving it started.

@@ -5,5 +5,6 @@ import { useInvitationController } from '../features/invitations/hooks/useInvita
 
 export default function InvitationRoute({ switcher }: { switcher: ReactNode }) {
   const vm = useInvitationController(useParams().token ?? '');
-  return <InvitationPage {...vm} onJoin={vm.join} onRetry={vm.retry} languageSwitcher={switcher} />;
+  // The invitee has no facility yet: the expiry shows in their own device's zone, said explicitly.
+  return <InvitationPage {...vm} timeZone={Intl.DateTimeFormat().resolvedOptions().timeZone} onJoin={vm.join} onRetry={vm.retry} languageSwitcher={switcher} />;
 }

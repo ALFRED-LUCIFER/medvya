@@ -48,7 +48,7 @@ type Props = {
   registeredName: string;
   actorName: string;
   /** Facility IANA zone for the confirmation time; undefined falls back to the browser's. */
-  timeZone?: string;
+  timeZone: string;
   /** Address, payer and emergency contact not entered, as sent. */
   missing: Missing[];
   /** A draft from an earlier visit to this screen was put back. */

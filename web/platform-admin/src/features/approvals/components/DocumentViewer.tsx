@@ -1,6 +1,7 @@
 import { useI18n } from '@medvya/i18n';
 import { Button, Card } from '@medvya/ui';
 import type { DocumentView } from '../domain/approvals';
+import { operatorZone } from '../../session/domain/session';
 
 /** The watermark as a tiled picture (not text in the page), so it marks the file without being content a reader or a contrast check has to read. */
 const watermark = (text: string) => {
@@ -15,7 +16,7 @@ const watermark = (text: string) => {
  */
 export default function DocumentViewer({ file, operator, onClose }: { file: { doc: DocumentView; url: string; contentType: string; openedAt: Date }; operator: string; onClose: () => void }) {
   const { t, formatDate, formatTime } = useI18n();
-  const mark = t('platform.approvals.viewer.watermark', { name: operator, when: `${formatDate(file.openedAt)} ${formatTime(file.openedAt)}` });
+  const mark = t('platform.approvals.viewer.watermark', { name: operator, when: `${formatDate(file.openedAt, operatorZone)} ${formatTime(file.openedAt, operatorZone)}` });
   const isPdf = file.contentType === 'application/pdf';
   return (
     <Card size="item" aria-label={t('platform.approvals.viewer.title')} onContextMenu={e => e.preventDefault()}>

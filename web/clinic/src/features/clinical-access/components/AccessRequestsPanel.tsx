@@ -6,6 +6,8 @@ import { Section } from '../../settings/components/Section';
 import type { DecideError, PendingAccessRequest } from '../domain/clinicalAccess';
 
 type Props = {
+  /** The facility's IANA zone: instants show facility time, not the browser's (AGENTS.md 3.5). */
+  timeZone: string;
   requests: PendingAccessRequest[]; grantDays: number[]; loading: boolean; failed: boolean;
   daysFor: (id: string) => number; onDays: (id: string, days: number) => void;
   decidingId: string | null; decideError: DecideError | null;
@@ -30,7 +32,7 @@ export default function AccessRequestsPanel(p: Props) {
                   <span className="flex min-w-0 flex-col">
                     <strong>{t('clinicalAccess.requests.who', { name: who, patient: r.patientName })}</strong>
                     <span className="text-sm text-muted-foreground">
-                      {t('clinicalAccess.requests.mrn', { mrn: r.mrn })}{' · '}{t(`clinicalAccess.reason.${r.reason}`)}{' · '}{formatDate(new Date(r.requestedAt))}
+                      {t('clinicalAccess.requests.mrn', { mrn: r.mrn })}{' · '}{t(`clinicalAccess.reason.${r.reason}`)}{' · '}{formatDate(new Date(r.requestedAt), p.timeZone)}
                     </span>
                   </span>
                   <span className="flex flex-wrap items-center gap-2">

@@ -572,7 +572,7 @@ resource app 'Microsoft.Web/sites@2023-12-01' = {
         { name: 'Plan__Staff', value: string(planStaff) }
         // No password anywhere: the app signs in with an Entra token for its managed identity, a login IN ROLE medvya_app made by the
         // database job (PostgresDataSources). The login name is the app's name. The server certificate is checked.
-        { name: 'ConnectionStrings__Medvya', value: 'Host=${postgres.outputs.fqdn};Database=${postgres.outputs.databaseName};Username=${appName};SslMode=VerifyFull' }
+        { name: 'ConnectionStrings__Medvya', value: 'Host=${postgres.outputs.fqdn};Database=${postgres.outputs.databaseName};Username=${appName};SslMode=VerifyFull;Maximum Pool Size=35' }
         { name: 'NationalIdProtection__KeyVaultKeyId', value: nationalIdKey.properties.keyUri }
         { name: 'Razorpay__KeyVaultUri', value: paymentsVault.properties.vaultUri }
         // Staff sign-in (MDV-P0-011): single-tenant Entra app; the client secret is a Key Vault reference, never a value here.

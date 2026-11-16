@@ -223,4 +223,17 @@ public class ScheduleRulesTests
         Assert.Equal([first, first.AddDays(14), first.AddDays(28)], ScheduleRules.SeriesStarts(first, 2, 3, Kolkata));
         Assert.Equal([first, first.AddDays(7)], ScheduleRules.SeriesStarts(first, 1, 2, Dubai));
     }
+
+    [Fact]
+    public void HoldsSlotIsOccupiesAndOpenIsHoldsSlotLessDone()
+    {
+        var holds = Appointment.HoldsSlot.Compile();
+        var open = Appointment.Open.Compile();
+        foreach (var state in Enum.GetValues<AppointmentState>())
+        {
+            var a = new Appointment { State = state };
+            Assert.Equal(Appointment.Occupies(state), holds(a));
+            Assert.Equal(Appointment.Occupies(state) && state != AppointmentState.Done, open(a));
+        }
+    }
 }

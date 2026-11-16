@@ -153,9 +153,8 @@ public sealed class BookingService(
         if (!command.AllowRepeat)
         {
             var (dayStart, dayEnd) = ScheduleRules.DayBounds(today, zone);
-            if (await db.Appointments.AsNoTracking().AnyAsync(a => a.FacilityId == command.FacilityId && a.PatientId == patient.Id && a.Start >= dayStart && a.Start < dayEnd
-                    && a.State != AppointmentState.Done && a.State != AppointmentState.Cancelled && a.State != AppointmentState.NoShow && a.State != AppointmentState.NeedsRebooking && a.State != AppointmentState.LeftWithoutBeingSeen,
-                    cancellationToken))
+            if (await db.Appointments.AsNoTracking().Where(Appointment.Open)
+                    .AnyAsync(a => a.FacilityId == command.FacilityId && a.PatientId == patient.Id && a.Start >= dayStart && a.Start < dayEnd, cancellationToken))
                 throw new SlotUnavailableException("already_today");
         }
 
@@ -221,9 +220,8 @@ public sealed class BookingService(
             working = [.. doctors.Where(t => !exceptions.Any(x => x.CalendarId == t.CalendarId && x.Kind == ExceptionKind.Leave)).Select(t => t.CalendarId)];
         if (working.Count == 0) return null;
         var (dayStart, dayEnd) = ScheduleRules.DayBounds(today, zone);
-        var open = await db.Appointments.AsNoTracking()
-            .Where(a => a.FacilityId == facilityId && working.Contains(a.CalendarId) && a.Start >= dayStart && a.Start < dayEnd
-                && a.State != AppointmentState.Done && a.State != AppointmentState.Cancelled && a.State != AppointmentState.NoShow && a.State != AppointmentState.NeedsRebooking && a.State != AppointmentState.LeftWithoutBeingSeen)
+        var open = await db.Appointments.AsNoTracking().Where(Appointment.Open)
+            .Where(a => a.FacilityId == facilityId && working.Contains(a.CalendarId) && a.Start >= dayStart && a.Start < dayEnd)
             .GroupBy(a => a.CalendarId).Select(g => new { g.Key, Count = g.Count() }).ToDictionaryAsync(g => g.Key, g => g.Count, cancellationToken);
         return working.OrderBy(id => open.GetValueOrDefault(id)).ThenBy(id => id).First();
     }
@@ -238,9 +236,8 @@ public sealed class BookingService(
         var ids = doctors.Select(d => d.CalendarId).ToList();
         var (from, to) = ScheduleRules.DayBounds(today, zone);
         var exceptions = await context.ExceptionsAsync(facilityId, today, today, null, cancellationToken);
-        var taken = await db.Appointments.AsNoTracking()
-            .Where(a => a.FacilityId == facilityId && ids.Contains(a.CalendarId) && a.Start < to && a.End > from && !a.Unscheduled
-                && a.State != AppointmentState.Cancelled && a.State != AppointmentState.NoShow && a.State != AppointmentState.NeedsRebooking && a.State != AppointmentState.LeftWithoutBeingSeen)
+        var taken = await db.Appointments.AsNoTracking().Where(Appointment.HoldsSlot)
+            .Where(a => a.FacilityId == facilityId && ids.Contains(a.CalendarId) && a.Start < to && a.End > from && !a.Unscheduled)
             .Select(a => new { a.CalendarId, a.Start, a.End }).ToListAsync(cancellationToken);
         var held = await db.SlotHolds.AsNoTracking()
             .Where(h => h.FacilityId == facilityId && ids.Contains(h.CalendarId) && h.ExpiresAt > now && h.HeldBy != me)
@@ -635,8 +632,8 @@ public sealed class BookingService(
             ?? throw new SlotUnavailableException("not_bookable"); // outside hours, in a break or too long for what is left
         var earliest = start.AddMinutes(-ScheduleRules.MaxVisitMinutes); // no visit is longer, so the index seek has a lower bound
         var self = moving?.Id;
-        if (await db.Appointments.AnyAsync(a => a.FacilityId == facilityId && a.CalendarId == calendarId && a.Start < end && start < a.End && a.Start > earliest
-                && a.State != AppointmentState.Cancelled && a.State != AppointmentState.NoShow && a.State != AppointmentState.NeedsRebooking && a.State != AppointmentState.LeftWithoutBeingSeen && a.Id != self && !a.Unscheduled, cancellationToken))
+        if (await db.Appointments.Where(Appointment.HoldsSlot)
+                .AnyAsync(a => a.FacilityId == facilityId && a.CalendarId == calendarId && a.Start < end && start < a.End && a.Start > earliest && a.Id != self && !a.Unscheduled, cancellationToken))
             throw new SlotUnavailableException("slot_unavailable");
         return end;
     }

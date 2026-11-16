@@ -89,6 +89,17 @@ public sealed partial class NotificationsTests
     }
 
     [Fact]
+    public async Task TheReminderCountsDaysOnThePracticesDateNotUtcs()
+    {
+        await ConfirmEveryoneAsync();
+        h.Clock.Advance(TimeSpan.FromHours(16.5)); // Tuesday 00:30 IST, still Monday 19:00 UTC
+        await LicenceExpiringAsync(SchedulingHarness.Monday.AddDays(1));
+        Assert.Equal(1, await RunCompliance());
+        var item = Assert.Single((await As(h.Admin, sp => sp.GetRequiredService<IStaffNotifications>().ListAsync(h.Facility))).Items, i => i.Kind == StaffNotificationKind.LicenceExpiring);
+        Assert.Equal(0, item.Detail); // its last day in the clinic; UTC would still say one day left (the 7-day step)
+    }
+
+    [Fact]
     public async Task AFailedEmailUndoesTheReminderSoTheNextRunTriesAgain()
     {
         await ConfirmEveryoneAsync();

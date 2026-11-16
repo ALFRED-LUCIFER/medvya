@@ -288,6 +288,10 @@ public sealed class PrescriptionService(
     /// Ended consultations here with an included line, not discarded, and no authorisation since the last line change (an open one is still being worked on);
     /// the exact check (<see cref="UnfinishedAsync"/>) follows per row.
     /// shortcut: a draft made only of reconciliation stops (no prescribe line) is not listed; add the stops here if pilot doctors leave such drafts.
+    /// Not bounded by date: an unauthorised prescription stays the doctor's to finish however old the visit. The scan is index-only on
+    /// (TenantId, FacilityId, EncounterId) INCLUDE (Included, UpdatedAt).
+    /// shortcut: each candidate then costs a few queries (the exact content check needs the draft), and a draft changed after its authorisation and
+    /// changed back stays a candidate for good. Store the draft's content hash with the lines, or a per-visit "unfinished" flag, if clinic-today slows down.
     /// </summary>
     async Task<IEnumerable<EncounterView>> EndedUnauthorisedAsync(Guid facilityId, CancellationToken cancellationToken)
     {
@@ -390,8 +394,7 @@ public sealed class PrescriptionService(
             db.RxShares.Add(share);
             if (pharmacy) db.PharmacyDispatchEvents.Add(new() { Id = Guid.CreateVersion7(), TenantId = TenantId, ShareId = share.Id, State = DispatchState.Sent, ChangedBy = Me, ChangedAt = now });
             await db.SaveChangesAsync(cancellationToken);
-            await audit.WriteAsync(Event(ShareAction, encounter, share.Id, $"recipient:{share.Recipient};channel:{channel};version:{rx.VersionNo}"), tx.GetDbTransaction(), cancellationToken);
-            // Sent inside the transaction: a message that cannot go leaves no share behind.
+            // Sent inside the transaction: a message that cannot go leaves no share behind. Sent before the audit row, whose ledger lock is held to commit.
             try
             {
                 if (pharmacy) await links.SendLinkToPharmacyAsync(email!, encounter.FacilityId, url, share.ExpiresAt, cancellationToken);
@@ -402,6 +405,7 @@ public sealed class PrescriptionService(
             {
                 throw new PrescriptionConflictException(e.Code);
             }
+            await audit.WriteAsync(Event(ShareAction, encounter, share.Id, $"recipient:{share.Recipient};channel:{channel};version:{rx.VersionNo}"), tx.GetDbTransaction(), cancellationToken);
             await tx.CommitAsync(cancellationToken);
         }
         return await ShareViewsAsync(encounterId, cancellationToken);
@@ -692,7 +696,8 @@ public sealed class PrescriptionService(
 
     static string? Blank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
-    static string? Text(string? value, string field, int max, bool required, List<(string, string)> errors)
+    /// <summary>Trimmed text or null, with "required" or "too_long" added to the errors; the one free-text check of the Prescribing services.</summary>
+    internal static string? Text(string? value, string field, int max, bool required, List<(string, string)> errors)
     {
         var v = Blank(value);
         if (v is null && required) errors.Add((field, "required"));

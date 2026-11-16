@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 namespace Medvya.Notifications.Infrastructure;
 
 /// <summary>
-/// Compliance reminders for the practice's owners (MDV-P1-010), run by the host's job inside each tenant's scope:
+/// Compliance reminders for the practice's owners (MDV-P1-010), run hourly by the host's job inside each tenant's scope, on the practice's local date:
 /// a doctor's licence or the practice's registration 60 / 30 / 7 days before it expires, on its last valid day (0) and, if the job missed that, once after; and "quarterly access
 /// review due" at the start of each calendar quarter until the review is complete. Each reminder is an in-app notification (and, for a
 /// licence, an email to the practice contact address) written once: the dedupe key makes a second run, or a second instance, add nothing.
@@ -35,6 +35,11 @@ public sealed partial class ComplianceReminders(
         var now = clock.GetUtcNow();
         var today = DateOnly.FromDateTime(now.UtcDateTime);
         var read = await facts.ReadAsync(today, cancellationToken);
+        // The practice's own date, not UTC's: read again in the hours when they differ (00:00-05:30 in India).
+        // shortcut: a tenant is in one country, so its first location's zone is the practice's; per-location dates if a tenant ever spans zones.
+        if (read.FacilityIds.Count > 0 && await facilities.FindAsync(read.FacilityIds[0], cancellationToken) is { } site
+            && DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(now, TimeZoneInfo.FindSystemTimeZoneById(site.TimeZone)).DateTime) is var local && local != today)
+            read = await facts.ReadAsync(today = local, cancellationToken);
         var raised = 0;
         var failed = 0;
         byte[]? logo = null;
@@ -61,7 +66,7 @@ public sealed partial class ComplianceReminders(
         return raised;
     }
 
-    /// <summary>Saves the item and its audit event, and sends the email, in one transaction: a failed email undoes the item, so the next run tries again.</summary>
+    /// <summary>Saves the item, sends the email and writes its audit event, in one transaction: a failed email undoes the item, so the next run tries again.</summary>
     async Task<int> RaiseAsync(Guid tenantId, Guid facilityId, StaffNotificationKind kind, Guid? refId, int? detail, string key, string action, DateTimeOffset now,
         Func<CancellationToken, Task>? send, CancellationToken ct)
     {
@@ -69,12 +74,13 @@ public sealed partial class ComplianceReminders(
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         StaffNotifications.Raise(db, tenantId, facilityId, kind, refId, detail, now, key);
         await db.SaveChangesAsync(ct);
+        // Sent before the audit row: its ledger lock is held to commit, and a slow mail server must not hold every audited request of the clinic.
+        if (send is not null) await BoundedSend.RunAsync(send, ct);
         await audit.WriteAsync(new AuditEvent
         {
             Id = Guid.CreateVersion7(), TenantId = tenantId, ActorUserId = null, Action = action, ResourceType = "compliance", ResourceId = refId ?? facilityId,
             Purpose = "operations", Outcome = AuditOutcome.Allowed, OccurredAt = now,
         }, tx.GetDbTransaction(), ct);
-        if (send is not null) await send(ct);
         await tx.CommitAsync(ct);
         return 1;
     }

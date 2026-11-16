@@ -484,6 +484,45 @@ public sealed class SessionControlTests(PostgresFixture sql) : IClassFixture<Pos
         Assert.Equal(Medvya.Scheduling.Domain.AppointmentState.CheckedIn, (await db.Appointments.SingleAsync(a => a.Id == waiting)).State); // stays for reassignment
     }
 
+    // SAFETY: mutation check: removed the session calendar lock in DoctorOffboardingParticipant.HoldAsync -> this test failed (offboarding finished while the booking was open).
+    [Fact]
+    public async Task OffboardingWaitsForABookingInFlightOnADayWithNoVisitsAndMovesItToo()
+    {
+        await Clinics();
+        var admin = await Account("K. Lakshmi");
+        var doctor = await Account("Dr. R. Menon");
+        var adminMembership = await Member(admin, tenantA, facilityA, Role.PracticeAdmin, owner: true);
+        var doctorMembership = await Member(doctor, tenantA, facilityA, Role.HospitalDoctor);
+        using var adminBrowser = await SignedIn(admin);
+        await Choose(adminBrowser, adminMembership);
+
+        // A booking in flight for a day the doctor had nothing on: it holds the calendar lock shared, as DoctorDayTransaction does, until it commits.
+        await using var booking = sql.Scheduling(tenantA);
+        var tx = await booking.Database.BeginTransactionAsync();
+        var calendarKey = $"doctor:{tenantA}:{doctor.Id}";
+        await booking.Database.ExecuteSqlAsync($"SELECT pg_advisory_xact_lock_shared(hashtextextended({calendarKey}, 0))");
+        var start = DateTimeOffset.UtcNow.AddDays(5);
+        var visit = new Medvya.Scheduling.Domain.Appointment
+        {
+            Id = Guid.NewGuid(), TenantId = tenantA, FacilityId = facilityA, CalendarId = doctor.Id, CalendarKind = Medvya.Scheduling.Domain.CalendarKind.Doctor, PatientId = Guid.NewGuid(),
+            VisitType = Medvya.Scheduling.Domain.VisitType.FollowUp, Start = start, End = start.AddMinutes(15), State = Medvya.Scheduling.Domain.AppointmentState.Booked,
+            ReasonCategory = Medvya.Scheduling.Domain.ReasonCategory.General, Channel = Medvya.Scheduling.Domain.BookingChannel.Phone, BookedAt = DateTimeOffset.UtcNow, ChangedAt = DateTimeOffset.UtcNow,
+        };
+        booking.Appointments.Add(visit);
+        await booking.SaveChangesAsync();
+
+        var offboard = Send(adminBrowser, HttpMethod.Post, $"/v1/staff/{doctorMembership}/offboard", new { reason = "Left the practice", offerRebooking = false });
+        await Task.Delay(TimeSpan.FromSeconds(1));
+        Assert.False(offboard.IsCompleted); // it waits for the booking
+        await tx.CommitAsync();
+        using (var done = await offboard) Assert.Equal(HttpStatusCode.OK, done.StatusCode);
+
+        await using var db = sql.Scheduling(tenantA);
+        Assert.Equal(Medvya.Scheduling.Domain.AppointmentState.NeedsRebooking, (await db.Appointments.SingleAsync(a => a.Id == visit.Id)).State);
+        // The offboarding audit row is still written, after the participants' locks.
+        Assert.Contains("staff.offboard", await AuditActions(tenantA, admin.Id));
+    }
+
     [Fact]
     public async Task ReceptionWillCallMovesTheVisitsQuietly()
     {

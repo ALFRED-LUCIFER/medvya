@@ -122,6 +122,12 @@ public sealed class SchedulingContext(
     }
 
     /// <summary>True while the calendar is an active doctor membership or an existing resource of the facility.</summary>
+    /// <remarks>
+    /// shortcut: the doctor check (and <see cref="ClosuresAsync"/>) reads through Tenancy's own DbContext, so inside DoctorDayTransaction.RunAsync a booking
+    /// holds a second pooled connection while the first holds the transaction and its locks (pool size 35 in Azure); it stays correct because offboarding
+    /// takes the doctor's calendar lock exclusive. Give IFacilityDirectory a read that joins the caller's DbTransaction (as the offboarding participants do)
+    /// when booking load approaches half the pool.
+    /// </remarks>
     public async Task<bool> IsActiveAsync(Guid facilityId, Guid calendarId, CalendarKind kind, CancellationToken cancellationToken) =>
         kind == CalendarKind.Doctor
             ? (await facilities.ActiveDoctorsAsync(facilityId, cancellationToken)).Contains(calendarId)

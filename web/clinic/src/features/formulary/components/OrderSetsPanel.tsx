@@ -2,9 +2,8 @@ import type { FormEventHandler } from 'react';
 import type { FieldError, UseFormReturn } from 'react-hook-form';
 import { CircleCheck } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, Field, Input, Table, TableBody, TableCell, TableHead, TableHeader, TablePagination, TableRow, TableState, StickyActionBar, Textarea } from '@medvya/ui';
+import { Card, Button, Field, Input, Table, TableBody, TableCell, TableHead, TableHeader, TablePagination, TableRow, TableState, StickyActionBar, Textarea } from '@medvya/ui';
 import { cardBar, fieldError } from '../../settings/components/fieldStyles';
-import { Section } from '../../settings/components/Section';
 import type { TableView } from '../../table/domain/tableSort';
 import type { OrderSet, OrderSetForm, ProblemCode } from '../domain/formulary';
 
@@ -29,7 +28,7 @@ export default function OrderSetsPanel(p: Props) {
 
   return (
     <div className="flex flex-col gap-4">
-      <Section title={t('orderSets.title')} intro={t('orderSets.intro')}>
+      <Card title={t('orderSets.title')} intro={t('orderSets.intro')}>
         <TableState state={tableState} messages={{ loading: t('formulary.loading'), error: t('formulary.loadFailed'), empty: t('orderSets.empty') }}>
           {/* Compact: a reference list read with a mouse (DESIGN.md, Density). */}
           <Table label={t('orderSets.tableLabel')} density="compact" stacked status={p.table.status} className="md:min-w-[480px]">
@@ -47,9 +46,9 @@ export default function OrderSetsPanel(p: Props) {
           </Table>
           <TablePagination page={p.table.page} pageCount={p.table.pageCount} onPage={p.table.onPage} />
         </TableState>
-      </Section>
+      </Card>
 
-      <Section title={t('orderSets.add.title')}>
+      <Card title={t('orderSets.add.title')}>
         <form noValidate onSubmit={p.onSubmit} className="flex flex-col gap-4">
           <Field id="set-name" label={t('orderSets.field.name')} error={problem(errors.name)}>
             <Input autoComplete="off" {...p.form.register('name')} />
@@ -64,7 +63,7 @@ export default function OrderSetsPanel(p: Props) {
             <Button type="submit" loading={p.saving}>{t('orderSets.add.submit')}</Button>
           </StickyActionBar>
         </form>
-      </Section>
+      </Card>
     </div>
   );
 }

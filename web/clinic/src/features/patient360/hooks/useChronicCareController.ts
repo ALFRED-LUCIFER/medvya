@@ -1,3 +1,4 @@
+import { todayIn } from '@medvya/i18n';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
@@ -13,7 +14,6 @@ import {
 import { addCareGoal, fetchChronicCare, recordCareCheck, setCareTarget, updateCareGoal } from '../services/chronicCareApi';
 
 const status = (e: unknown) => (e instanceof ApiError ? e.status : null);
-const todayIn = (zone: string) => new Intl.DateTimeFormat('en-CA', { timeZone: zone }).format(new Date());
 
 /**
  * The chart's chronic care cards (MDV-P2-038): targets, care gaps due today and goals. The read is audited, so nothing refetches on focus.

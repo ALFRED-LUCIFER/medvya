@@ -29,6 +29,8 @@ export { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 export { AccountMenu, type AccountMenuProps } from '#components/ui/account-menu';
 export { NavRailItem, type NavRailItemProps } from '#components/ui/nav-rail-item';
 export { Tooltip, type TooltipProps } from '#components/ui/tooltip';
+export { LanguageSwitcher } from '#components/ui/language-switcher';
+export { DetailList, Detail, type DetailListProps, type DetailProps, type DetailLayout } from '#components/ui/detail-list';
 // Radix's focus scope (the one Dialog uses), for a panel that is modal only at some widths (the schedule's tablet drawer).
 import { FocusScope as FocusScopePrimitive } from 'radix-ui/internal';
 export const FocusScope = FocusScopePrimitive.FocusScope;

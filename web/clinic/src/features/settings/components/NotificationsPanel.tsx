@@ -1,10 +1,9 @@
 import type { FormEventHandler } from 'react';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 import { useI18n } from '@medvya/i18n';
-import { Button, ErrorSummary, Field, Input, StickyActionBar, Switch } from '@medvya/ui';
+import { Card, Button, ErrorSummary, Field, Input, StickyActionBar, Switch } from '@medvya/ui';
 import { channelToggles, messageToggles, previewGroups, type NotificationPrefsForm, type TemplatePreview } from '../domain/notifications';
 import { fieldError } from './fieldStyles';
-import { Section } from './Section';
 
 type Props = {
   form: UseFormReturn<NotificationPrefsForm>;
@@ -37,7 +36,7 @@ export default function NotificationsPanel(p: Props) {
         {/* The server's refusal of the sender name moves focus too, once it arrives. */}
         <ErrorSummary title={t('field.errorSummary')} focusKey={`${submitCount}:${p.senderNameError}`}
           errors={fields.flatMap(f => (f.message ? [{ id: f.id, label: f.label, message: f.message }] : []))} />
-        <Section title={t('settings.notifications.messages')} intro={t('settings.notifications.messagesIntro')}>
+        <Card title={t('settings.notifications.messages')} intro={t('settings.notifications.messagesIntro')}>
           <ul className="flex flex-col divide-y rounded-lg border">
             {messageToggles.map(name => (
               <li key={name} className="p-3">
@@ -52,9 +51,9 @@ export default function NotificationsPanel(p: Props) {
             ))}
           </ul>
           <p className="text-sm text-muted-foreground">{t('settings.notifications.turnOffNote')}</p>
-        </Section>
+        </Card>
 
-        <Section title={t('settings.notifications.channels')} intro={t('settings.notifications.channelsIntro')}>
+        <Card title={t('settings.notifications.channels')} intro={t('settings.notifications.channelsIntro')}>
           <ul className="flex flex-col divide-y rounded-lg border">
             {channelToggles.map(name => (
               <li key={name} className="p-3">
@@ -79,9 +78,9 @@ export default function NotificationsPanel(p: Props) {
             <Input maxLength={60} autoComplete="organization" {...p.form.register('senderName')} />
           </Field>
           <p className="text-sm text-muted-foreground">{t('settings.notifications.senderNote')}</p>
-        </Section>
+        </Card>
 
-        <Section title={t('settings.notifications.quiet')} intro={t('settings.notifications.quietIntro')}>
+        <Card title={t('settings.notifications.quiet')} intro={t('settings.notifications.quietIntro')}>
           <div className="flex flex-wrap gap-4">
             <Field id="quiet-start" label={t('settings.notifications.quietStart')} required error={fields[1]!.message}>
               <Input type="time" dir="ltr" className="w-32" {...p.form.register('quietStart')} />
@@ -90,7 +89,7 @@ export default function NotificationsPanel(p: Props) {
               <Input type="time" dir="ltr" className="w-32" {...p.form.register('quietEnd')} />
             </Field>
           </div>
-        </Section>
+        </Card>
 
         {/* The form spans three cards, so its bar pins under them, not in a card; the templates card follows it (md:mb-0). */}
         <StickyActionBar className="rounded-lg md:mb-0" aria-live="polite" status={<>
@@ -101,7 +100,7 @@ export default function NotificationsPanel(p: Props) {
         </StickyActionBar>
       </form>
 
-      <Section title={t('settings.notifications.templates')} intro={t('settings.notifications.templatesIntro')}>
+      <Card title={t('settings.notifications.templates')} intro={t('settings.notifications.templatesIntro')}>
         {p.templates === null ? <p role="status">{t('settings.loading')}</p> : (
           <ul className="flex flex-col gap-3">
             {previewGroups.map(group => p.templates?.find(x => x.group === group)).map(tpl => tpl && (
@@ -113,7 +112,7 @@ export default function NotificationsPanel(p: Props) {
             ))}
           </ul>
         )}
-      </Section>
+      </Card>
     </div>
   );
 }

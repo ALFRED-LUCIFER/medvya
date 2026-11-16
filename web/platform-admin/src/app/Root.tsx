@@ -3,9 +3,8 @@ import '@fontsource/noto-sans-arabic/400.css';
 import '@fontsource/noto-sans-arabic/700.css';
 import '../index.css';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { I18nProvider } from '@medvya/i18n';
+import { I18nProvider, useLocaleController } from '@medvya/i18n';
 import { BrowserRouter } from 'react-router';
-import { useLocaleController } from '../features/locale/hooks/useLocaleController';
 import App from './App';
 
 // Reads are few and every refused one is worth seeing: no focus refetch, no retry.

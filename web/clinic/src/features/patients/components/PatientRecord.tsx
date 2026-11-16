@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { ArrowLeft, ClipboardList, Eye, TriangleAlert } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, Card, cn, PageContainer, PageHeader, PageMessage, PatientBanner, StickyActionBar } from '@medvya/ui';
+import { Button, buttonVariants, Card, cn, Detail, DetailList, PageContainer, PageHeader, PageMessage, PatientBanner, StickyActionBar } from '@medvya/ui';
 import { addressLines, missingParts, type ContactView, type PatientDetails, type RevealedIdentifiers } from '../domain/directory';
 import { consentPolicyVersion, genderIdentities, regionKey } from '../../registration/domain/registration';
 import type { MergeHistoryEntry, Refusal } from '../../merge/domain/merge';
@@ -115,7 +115,7 @@ export default function PatientRecord(props: Props) {
         </Card>
       )}
 
-      <Section title={t('patients.record.identity')}>
+      <Card title={t('patients.record.identity')}><DetailList>
         <Detail label={t('patients.record.dob')}>{dob}</Detail>
         <Detail label={t('patients.record.sex')}>{t(`patients.sex.${p.sexAtBirth}`)}</Detail>
         <Detail label={t('patients.record.gender')}>{gender ? t(`registration.gender.${gender}`) : p.genderIdentity ?? none}</Detail>
@@ -123,9 +123,9 @@ export default function PatientRecord(props: Props) {
         <Detail label={t('patients.record.nationality')}>{p.nationality ? named('region', p.nationality) : none}</Detail>
         {/* A calendar date in the facility's country time zone, from the server; never re-derived from a UTC instant. */}
         <Detail label={t('patients.record.registered')}>{date(p.registeredOn)}</Detail>
-      </Section>
+      </DetailList></Card>
 
-      <Section title={t('patients.record.identifiers')}>
+      <Card title={t('patients.record.identifiers')}><DetailList>
         {p.identifiers.length === 0 ? <Detail label={t('patients.record.identifiers')}>{none}</Detail>
           : p.identifiers.map(i => (
             <Detail key={i.scheme} label={t(`patients.scheme.${i.scheme}`)}>
@@ -133,21 +133,21 @@ export default function PatientRecord(props: Props) {
               {i.expiresOn && <span className="ms-1 text-muted-foreground">{t('patients.record.expires', { date: date(i.expiresOn) })}</span>}
             </Detail>
           ))}
-      </Section>
+      </DetailList></Card>
 
-      <Section title={t('patients.record.contact')}>
+      <Card title={t('patients.record.contact')}><DetailList>
         <Detail label={t('patients.record.mobile')}><Ltr>{p.mobile}</Ltr></Detail>
         <Detail label={t('patients.record.alternate')}>{p.alternatePhone ? <Ltr>{p.alternatePhone}</Ltr> : none}</Detail>
         <Detail label={t('patients.record.email')}>{p.email ? <Ltr>{p.email}</Ltr> : none}</Detail>
         <Detail label={t('patients.record.address')}>{address ? <bdi>{addressLines(address).join(', ')}</bdi> : none}</Detail>
-      </Section>
+      </DetailList></Card>
 
-      <Section title={t('patients.record.contacts')}>
+      <Card title={t('patients.record.contacts')}><DetailList>
         <Detail label={t('patients.record.emergencyContact')}>{p.emergencyContact ? contact(p.emergencyContact) : none}</Detail>
         <Detail label={t('patients.record.guardian')}>{p.guardian ? contact(p.guardian) : none}</Detail>
-      </Section>
+      </DetailList></Card>
 
-      <Section title={t('patients.record.payer')}>
+      <Card title={t('patients.record.payer')}><DetailList>
         {p.payer ? <>
           <Detail label={t('patients.record.payerKind')}>{t(`patients.payer.${p.payer.kind}`)}</Detail>
           {p.payer.payerName && <Detail label={t('patients.record.payerName')}><bdi>{p.payer.payerName}</bdi></Detail>}
@@ -157,7 +157,7 @@ export default function PatientRecord(props: Props) {
           )}
           {p.payer.validTo && <Detail label={t('patients.record.validTo')}>{date(p.payer.validTo)}</Detail>}
         </> : <Detail label={t('patients.record.payerKind')}>{t('patients.record.payerMissing')}</Detail>}
-      </Section>
+      </DetailList></Card>
 
       <Card title={t('patients.consents.title')} intro={<>{t('patients.consents.note')} <bdi dir="ltr">{t('registration.consents.version', { version: consentPolicyVersion })}</bdi></>}>
         {props.consents.failed ? <p role="alert" className="text-sm font-semibold text-danger-700">{t('patients.consents.failed')}</p> : (
@@ -222,18 +222,5 @@ export default function PatientRecord(props: Props) {
         </div>
       )}
     </PageContainer>
-  );
-}
-
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  return <Card title={title}><dl className="grid gap-x-6 gap-y-3 md:grid-cols-2">{children}</dl></Card>;
-}
-
-function Detail({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="flex min-w-0 flex-col">
-      <dt className="text-xs font-bold text-muted-foreground">{label}</dt>
-      <dd className="break-words">{children}</dd>
-    </div>
   );
 }

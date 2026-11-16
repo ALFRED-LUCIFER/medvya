@@ -1,3 +1,4 @@
+import { isDeviceTimeZone } from '@medvya/i18n';
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useSearchParams } from 'react-router';
 import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query';
@@ -6,7 +7,7 @@ import type { DaySheet } from '../domain/daySheet';
 import { foldPast, layoutDay, stepDate } from '../domain/schedule';
 import { agenda, filterColumns, firstFreeSlot, readAddress, weekDays, weekSpan, type ScheduleAddress, type ScheduleView } from '../domain/views';
 import { ApiError, fetchScheduleDay, fetchScheduleWeek, printDaySheet } from '../services/scheduleApi';
-import { isDeviceTimeZone, isPhoneWidth, isTabletWidth, onTabletWidthChange, printPage } from '../services/viewport';
+import { isPhoneWidth, isTabletWidth, onTabletWidthChange, printPage } from '../services/viewport';
 
 /** The current instant, refreshed each minute so slots that start while the screen is open stop being offered without a reload. */
 const useNow = () => {

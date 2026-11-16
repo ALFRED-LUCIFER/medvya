@@ -81,3 +81,5 @@ export function I18nProvider({ locale, country, children }: { locale: Locale; co
 }
 
 export const useI18n = () => useContext(I18nContext);
+export { isLocale, directionOf, readLocale, useLocaleController } from './locale';
+export { dateIn, todayIn, isDeviceTimeZone } from './dates';

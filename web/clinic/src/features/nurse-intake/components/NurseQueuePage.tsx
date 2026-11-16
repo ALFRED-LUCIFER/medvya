@@ -1,6 +1,6 @@
 import { Link } from 'react-router';
 import { useI18n } from '@medvya/i18n';
-import { buttonVariants, PageContainer, PageHeader, PageMessage } from '@medvya/ui';
+import { buttonVariants, PageContainer, PageHeader, PageMessage, Section } from '@medvya/ui';
 import type { Board, LiveStatus, MoveError } from '../../front-desk/domain/board';
 import type { QueueRow, QueueTableView } from '../../front-desk/domain/queueTable';
 import QueueTable from '../../front-desk/components/QueueTable';
@@ -32,7 +32,7 @@ export default function NurseQueuePage(p: Props) {
   else body = (
     <>
       {p.withNurse.rows.length > 0 && (
-        <Section id="nq-with" title={t('intake.queue.withNurse')}>
+        <Section title={t('intake.queue.withNurse')}>
           <QueueTable {...p.withNurse} label={t('intake.queue.withNurse')} timeZone={p.board.timeZone} now={p.now} action={r => (
             <Link to={p.intakePath(r.id)} className={buttonVariants({ className: 'whitespace-normal' })} aria-label={t('intake.queue.openFor', { name: name(r) })}>
               {t('intake.queue.open')}
@@ -41,7 +41,7 @@ export default function NurseQueuePage(p: Props) {
         </Section>
       )}
       {p.checkedIn.rows.length > 0 && (
-        <Section id="nq-in" title={t('intake.queue.checkedIn')}>
+        <Section title={t('intake.queue.checkedIn')}>
           <QueueTable {...p.checkedIn} label={t('intake.queue.checkedIn')} timeZone={p.board.timeZone} now={p.now}
             action={r => (
               <button type="button" disabled={p.pendingId === r.id} onClick={() => p.onTake(r.id)} className={buttonVariants({ variant: 'outline', className: 'whitespace-normal' })}
@@ -60,15 +60,5 @@ export default function NurseQueuePage(p: Props) {
       <PageHeader title={t('nav.nurse')} meta={!p.loading && !p.forbidden && !p.offline && !p.failed && tCount('board.count', total)} />
       {body}
     </PageContainer>
-  );
-}
-
-function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
-  return (
-    // The table below is the named region (same name), so the wrapper is not a second one.
-    <div className="flex flex-col gap-2">
-      <h2 id={id} className="text-lg font-extrabold">{title}</h2>
-      {children}
-    </div>
   );
 }

@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import type { Locale } from '@medvya/i18n';
 import { I18nProvider, useI18n } from '@medvya/i18n';
-import { SystemState } from '@medvya/ui';
+import { LanguageSwitcher, SystemState } from '@medvya/ui';
 import { Navigate, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router';
 import OfflineStrip from '../features/connectivity/components/OfflineStrip';
 import { useConnectivityController } from '../features/connectivity/hooks/useConnectivityController';
@@ -13,7 +13,6 @@ import TermsNotice from '../features/settings/components/TermsNotice';
 import { useTermsNotice } from '../features/settings/hooks/useTermsNotice';
 import OrganisationNotice from '../features/onboarding/components/OrganisationNotice';
 import { organisationPath } from '../features/onboarding/domain/organisationRequest';
-import LanguageSwitcher from '../features/locale/components/LanguageSwitcher';
 import FacilityPicker from '../features/session/components/FacilityPicker';
 import SessionEndingNotice from '../features/session/components/SessionEndingNotice';
 import SessionExpiredPage from '../features/session/components/SessionExpiredPage';

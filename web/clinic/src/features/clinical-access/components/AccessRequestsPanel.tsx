@@ -1,8 +1,7 @@
 import { Inbox } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
+import { Card, Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
 import { fieldError } from '../../settings/components/fieldStyles';
-import { Section } from '../../settings/components/Section';
 import type { DecideError, PendingAccessRequest } from '../domain/clinicalAccess';
 
 type Props = {
@@ -18,7 +17,7 @@ export default function AccessRequestsPanel(p: Props) {
   if (p.loading) return <p role="status">{t('settings.loading')}</p>;
   if (p.failed) return <p role="alert" className={fieldError}>{t('settings.loadFailed')}</p>;
   return (
-    <Section title={t('clinicalAccess.requests.title')} intro={t('clinicalAccess.requests.intro')}>
+    <Card title={t('clinicalAccess.requests.title')} intro={t('clinicalAccess.requests.intro')}>
       {p.requests.length === 0
         ? <p className="flex items-center gap-2 text-muted-foreground"><Inbox aria-hidden className="size-5" />{t('clinicalAccess.requests.empty')}</p>
         : (
@@ -49,6 +48,6 @@ export default function AccessRequestsPanel(p: Props) {
           </ul>
         )}
       {p.decideError && <p role="alert" className={fieldError}>{t(`clinicalAccess.requests.error.${p.decideError}`)}</p>}
-    </Section>
+    </Card>
   );
 }

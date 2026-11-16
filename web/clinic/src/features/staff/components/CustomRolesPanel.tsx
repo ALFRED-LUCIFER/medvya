@@ -1,10 +1,9 @@
 import { Lock } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, StickyActionBar, Switch } from '@medvya/ui';
+import { Card, Button, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, StickyActionBar, Switch } from '@medvya/ui';
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { cardBar, fieldError, fieldGrid } from '../../settings/components/fieldStyles';
-import { Section } from '../../settings/components/Section';
 import type { Capability } from '../../session/domain/session';
 import { addableRows, assignableRoles, type CustomRole, type RoleCatalogue, type RoleForm } from '../domain/staff';
 
@@ -33,7 +32,7 @@ export default function CustomRolesPanel(p: Props) {
   const addable = addableRows(p.catalogue, base);
   const lockedCount = (p.catalogue.builtIn.find(b => b.role === base)?.rows ?? []).filter(r => r.access !== 'None').length;
   return (
-    <Section title={t('staff.roles.title')} intro={t('staff.roles.intro')}>
+    <Card title={t('staff.roles.title')} intro={t('staff.roles.intro')}>
       {p.catalogue.custom.length === 0 && <p className="text-muted-foreground">{t('staff.roles.empty')}</p>}
       <ul className="flex flex-col divide-y rounded-lg border empty:hidden">
         {p.catalogue.custom.map(r => (
@@ -81,6 +80,6 @@ export default function CustomRolesPanel(p: Props) {
           </StickyActionBar>
         </form>
       )}
-    </Section>
+    </Card>
   );
 }

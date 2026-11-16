@@ -1,8 +1,7 @@
 import { CircleCheck, Clock } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button } from '@medvya/ui';
+import { Card, Button } from '@medvya/ui';
 import { fieldError } from '../../settings/components/fieldStyles';
-import { Section } from '../../settings/components/Section';
 import { remaining, type AccessReview } from '../domain/accessReview';
 
 type Props = { review: AccessReview | null; loading: boolean; failed: boolean; confirmingId: string | null; confirmFailed: boolean; onConfirm: (membershipId: string) => void };
@@ -15,7 +14,7 @@ export default function AccessReviewPanel(p: Props) {
   const { review } = p;
   const open = remaining(review);
   return (
-    <Section title={t('accessReview.title', { quarter: review.quarter })} intro={t('accessReview.intro')}>
+    <Card title={t('accessReview.title', { quarter: review.quarter })} intro={t('accessReview.intro')}>
       <p role="status" className="flex items-center gap-2 font-bold">
         {review.completedAt
           ? <><CircleCheck aria-hidden className="size-5" />{t('accessReview.completed', { date: formatDate(new Date(review.completedAt)) })}</>
@@ -40,6 +39,6 @@ export default function AccessReviewPanel(p: Props) {
       </ul>
       <p className="text-sm text-muted-foreground">{t('accessReview.offboardNote')}</p>
       {p.confirmFailed && <p role="alert" className={fieldError}>{t('settings.saveFailed')}</p>}
-    </Section>
+    </Card>
   );
 }

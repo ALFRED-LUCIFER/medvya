@@ -3,10 +3,9 @@ import { Link } from 'react-router';
 import { Controller, type FieldError, type UseFormReturn } from 'react-hook-form';
 import { CircleCheck, Send } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, ChoiceRow, buttonVariants, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState, Textarea } from '@medvya/ui';
+import { Card, Button, ChoiceRow, buttonVariants, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState, Textarea } from '@medvya/ui';
 import type { DocumentRow } from '../../documents/domain/documents';
 import { fieldError } from '../../settings/components/fieldStyles';
-import { Section } from '../../settings/components/Section';
 import {
   canSend, channels, evidenceOf, nextStates, referralColumns, sectionNames, urgencies,
   type AdvanceForm, type Channel, type FileInForm, type Referral, type ReferralForm, type ReferralProblem,
@@ -43,7 +42,7 @@ export default function ReferralsPanel(p: Props) {
 
   return (
     <div className="flex flex-col gap-4">
-      <Section id={referralsHeading} title={t('referrals.title')} intro={t('referrals.intro')}>
+      <Card headingId={referralsHeading} title={t('referrals.title')} intro={t('referrals.intro')}>
         <TableState state={tableState} messages={{ loading: t('referrals.loading'), error: t('referrals.loadFailed'), empty: t('referrals.empty') }}>
           <Table label={t('referrals.tableLabel')} stacked className="md:min-w-[640px]">
             <TableHeader>
@@ -68,10 +67,10 @@ export default function ReferralsPanel(p: Props) {
           </Table>
         </TableState>
         {p.problem && <p role="alert" className={fieldError}>{t(`referrals.error.${p.problem}`)}</p>}
-      </Section>
+      </Card>
 
       {p.selected && !p.ended && (
-        <Section title={t('referrals.manageTitle', { name: p.selected.provider })}>
+        <Card title={t('referrals.manageTitle', { name: p.selected.provider })}>
           <ol className="flex flex-col gap-1" aria-label={t('referrals.history')}>
             {p.selected.history.map(s => (
               <li key={`${s.state}-${s.at}`}>
@@ -119,12 +118,12 @@ export default function ReferralsPanel(p: Props) {
             </form>
           )}
           {evidenceOf(p.selected).length > 0 && <p className="flex items-center gap-2 text-sm"><CircleCheck aria-hidden className="size-4" />{t('referrals.evidenceCount', { count: evidenceOf(p.selected).length })}</p>}
-        </Section>
+        </Card>
       )}
 
       {!p.ended && (
         <>
-          <Section title={t('referrals.add.title')}>
+          <Card title={t('referrals.add.title')}>
             <form noValidate onSubmit={p.onCreate} className="grid gap-4 md:grid-cols-2">
               <Field id="ref-provider" label={t('referrals.field.provider')} error={problem(p.createForm.formState.errors.provider)}>
                 <Input autoComplete="off" {...p.createForm.register('provider')} />
@@ -151,9 +150,9 @@ export default function ReferralsPanel(p: Props) {
               </fieldset>
               <Button type="submit" className="self-start" disabled={p.busy}>{t('referrals.add.submit')}</Button>
             </form>
-          </Section>
+          </Card>
 
-          <Section title={t('referrals.in.title')} intro={t('referrals.in.intro')}>
+          <Card title={t('referrals.in.title')} intro={t('referrals.in.intro')}>
             <form noValidate onSubmit={p.onFileIn} className="grid gap-4 md:grid-cols-2">
               <Field id="refin-provider" label={t('referrals.in.provider')} error={problem(p.fileForm.formState.errors.provider)}>
                 <Input autoComplete="off" {...p.fileForm.register('provider')} />
@@ -171,7 +170,7 @@ export default function ReferralsPanel(p: Props) {
               </Field>
               <Button type="submit" variant="outline" className="self-start" disabled={p.busy}>{t('referrals.in.submit')}</Button>
             </form>
-          </Section>
+          </Card>
         </>
       )}
     </div>

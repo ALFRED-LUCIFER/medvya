@@ -22,6 +22,7 @@ for (const locale of ['en', 'ar'] as const) {
     await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
     await page.goto('/__ui');
     await expect(page.locator('html')).toHaveAttribute('dir', locale === 'ar' ? 'rtl' : 'ltr');
+    await page.evaluate(() => document.fonts.ready); // measured before the Arabic font arrives, a label still sits on its icon (flaky)
 
     // AC3: every rail label is visible text under its icon and not clipped, in the longest names of the language.
     const items = page.getByRole('navigation', { name: 'Rail sample' }).locator('[data-slot=nav-rail-item]');

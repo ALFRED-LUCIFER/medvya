@@ -15,13 +15,13 @@
     <!-- MDV-P2-017: the QR code that verifies a printed prescription. MIT, managed, no dependencies; a hand-written encoder (Reed-Solomon, masks) would need its own decoder to test. -->
     <PackageVersion Include="QRCoder" Version="1.8.1" />
     <!-- Every server PDF (signed note, prescription; ADR-018): shaped Hindi, Tamil and Arabic with embedded Noto fonts, native Skia shipped in the package (linux-x64 App Service). Community licence, see the ADR. -->
-    <PackageVersion Include="QuestPDF" Version="2026.9.1" />
+    <PackageVersion Include="QuestPDF" Version="2026.9.2" />
     <!-- Test only: reads the text and pages back out of the server PDFs. Apache-2.0. -->
     <PackageVersion Include="PdfPig" Version="0.1.16" />
     <!-- Wraps per-tenant data keys with a Key Vault key (MDV-P0-035); already a transitive of the Always Encrypted provider. -->
     <PackageVersion Include="Azure.Security.KeyVault.Keys" Version="4.10.2" />
     <!-- Each clinic's Razorpay keys in the payments vault (MDV-P4-007, ADR-023): same SDK family and Azure.Core as the Keys package above; hand-written Key Vault REST calls would re-do its auth challenge and retries. -->
-    <PackageVersion Include="Azure.Security.KeyVault.Secrets" Version="4.11.2" />
+    <PackageVersion Include="Azure.Security.KeyVault.Secrets" Version="4.12.0" />
     <!-- Email through Azure Communication Services (Email:Provider=Acs), passwordless with the app identity. -->
     <PackageVersion Include="Azure.Communication.Email" Version="1.1.0" />
         <!-- Transitive via Hangfire.Core 1.8; 11.0.1 has GHSA-5crp-9r3c-p9vr. -->
@@ -44,11 +44,11 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.15" />
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.12.0" />
-    <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.20.1" />
-    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.20.1" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.20.1" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.20.1" />
-    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.16.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.21.0" />
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.21.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.21.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.21.0" />
+    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.17.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
   </ItemGroup>

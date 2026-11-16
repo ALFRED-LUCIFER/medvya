@@ -21,7 +21,7 @@
     "environment": [
       "**Repository**: github.com/ALFRED-LUCIFER/medvya, private. The working directory, its worktrees and that remote are the trusted repo.",
       "**Product**: Medvya, a clinic and doctor platform for India and the UAE that handles patient health data. Rules: AGENTS.md and CLAUDE.md.",
-      "**Cloud**: Azure Central India, resource group rg-medvya-dev-in, the dev environment, synthetic data only. Deploys go through GitHub Actions (release.yml, infra-dev), never from a laptop.",
+      "**Cloud**: Azure Central India, resource group rg-medvya-dev-in, the dev environment, synthetic data only. Deploys go through GitHub Actions (release.yml, infra.yml), never from a laptop.",
       "**Owner-only actions**: Key Vault writes, infrastructure applies, Entra tenant settings, merging PRs, and anything whose name carries prod or production as a word or name segment.",
       "**Sensitive data**: PHI never leaves the database and Blob: not in logs, telemetry, URLs, issues, screenshots or external services. All data in the repo and on dev is synthetic; real patient data must never be introduced.",
       "**Secrets**: Key Vault in the cloud, local user secrets on a laptop; .env.example holds names only.",

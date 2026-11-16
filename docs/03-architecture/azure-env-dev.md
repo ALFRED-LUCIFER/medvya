@@ -11,7 +11,7 @@ Synthetic data only. Template: `infra/bicep/main.bicep` (how to deploy: `infra/b
 | Resource group | `rg-medvya-dev-in` |
 | App | `app-medvya-dev-3afs7i` (App Service B1, Linux, .NET 10) |
 | Database | `psql-medvya-dev-3afs7i` (PostgreSQL Flexible, Burstable, private, Entra-only) |
-| Deploys | Tag-triggered `deploy-dev` workflow, GitHub OIDC, DB steps through `job-db-dev-3afs7i` |
+| Deploys | Tag-triggered `release` workflow (`release.yml` → `deploy-env.yml`, docs/runbooks/environments.md), GitHub OIDC, DB steps through `job-db-dev-3afs7i` |
 | Cost guard | Monthly budget 3,500 INR, alerts at 50/80/100 % |
 | AI services | Not deployed. Azure OpenAI (gpt-4.1, gpt-4o) and AI Speech are listed in Central India (checked 12 Nov 2026); quota is requested when P3 starts |
 | Credits | Microsoft for Startups (Founders Hub): not applied for now; revisit before production spend |

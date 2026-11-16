@@ -33,6 +33,6 @@ A clinic in India wants a patient to pay a bill by UPI or card on their phone, a
 
 ## Consequences
 
-- Infrastructure: the payments vault and its role exist only after the owner applies `infra/bicep/main.bicep` (the infra-dev workflow); deploys do not re-apply Bicep.
+- Infrastructure: the payments vault and its role exist only after the owner applies `infra/bicep/main.bicep` (the `infra` workflow, `.github/workflows/infra.yml`); deploys do not re-apply Bicep.
 - Each clinic does its own Razorpay KYC before live payments, and copies its webhook URL and secret into its Razorpay dashboard until partner OAuth (3) creates the webhook by API.
 - MDV-P4-008 (UAE) implements the same `IPaymentLinks` contract.

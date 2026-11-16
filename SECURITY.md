@@ -2,7 +2,7 @@
 
 ## Reporting a vulnerability
 
-Email **alfred.v.paul@gmail.com** with "Medvya security" in the subject. Please include steps to reproduce and the impact you saw. **Do not include real patient data.**
+Report privately to the repository owner (open a private security advisory on this repository, or use the security contact in your agreement with Medvya), with "Medvya security" in the title. Please include steps to reproduce and the impact you saw. **Do not include real patient data.**
 
 You will get an acknowledgement within 3 business days. Please give us 90 days to fix before disclosing publicly. Medvya handles health data, so do not test against production clinics. Use a local or staging environment with synthetic data.
 

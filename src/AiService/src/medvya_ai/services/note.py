@@ -1,8 +1,7 @@
-"""Review, edit, approve and export. Notes are draft until a clinician approves; then immutable."""
+"""Review and edit of the AI draft. Medvya signs the note; this service only keeps the draft."""
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import func, select, update
@@ -12,8 +11,6 @@ from medvya_ai.db import uuid7
 from medvya_ai.errors import AppError
 from medvya_ai.jobs.queue import enqueue
 from medvya_ai.models import (
-    AppUser,
-    Clinic,
     ClinicalFact,
     ClinicalNote,
     ConsultationSession,
@@ -161,23 +158,6 @@ async def edit_note(
     return await note_out(db, note)
 
 
-async def approve(
-    db: AsyncSession, session_id: uuid.UUID, user_id: uuid.UUID
-) -> tuple[ClinicalNote, int]:
-    """Returns the approved note and the new revision number."""
-    s = await get_session(db, session_id, lock=True)
-    ensure_ready(s)
-    note = await get_note(db, session_id, lock=True)
-    ensure_editable(note.status)
-    cur = await _current_revision(db, note)
-    rev = await _append_revision(db, note, cur.content, user_id)
-    now = datetime.now(UTC)
-    note.status, note.approved_by, note.approved_at = "approved", user_id, now
-    s.state, s.approved_at = "approved", now
-    await db.flush()
-    return note, rev.rev_no
-
-
 async def relabel_speaker(db: AsyncSession, session_id: uuid.UUID, body: SpeakerRelabelIn) -> int:
     s = await get_session(db, session_id)
     ensure_ready(s)
@@ -243,7 +223,7 @@ async def _facts(
                 if p.speaker_label
             }
         overrides = (
-            (await _latest_corrections(db, session_id)).speaker if session_id is not None else {}
+            (await latest_corrections(db, session_id)).speaker if session_id is not None else {}
         )
         rows = (
             await db.execute(
@@ -315,6 +295,7 @@ async def review_fact(db: AsyncSession, fact_id: uuid.UUID, review_state: str) -
     if note is None:
         raise AppError(404, "NOT_FOUND", "Note not found")
     ensure_editable(note.status)
+    ensure_ready(await get_session(db, fact.session_id))  # a reprocess in flight replaces AI facts
     fact.review_state = review_state
     await db.flush()
     return (await _facts(db, fact_id=fact_id))[0]
@@ -326,7 +307,7 @@ class Corrections:
     speaker: dict[uuid.UUID, str] = field(default_factory=dict)
 
 
-async def _latest_corrections(db: AsyncSession, session_id: uuid.UUID) -> Corrections:
+async def latest_corrections(db: AsyncSession, session_id: uuid.UUID) -> Corrections:
     rows = (
         await db.scalars(
             select(TranscriptCorrection)
@@ -387,7 +368,7 @@ async def _transcript(db: AsyncSession, session_id: uuid.UUID) -> list[Transcrip
             .order_by(TranscriptSegment.idx)
         )
     ).all()
-    corrected = await _latest_corrections(db, session_id)
+    corrected = await latest_corrections(db, session_id)
     return [_turn(r, corrected) for r in rows]
 
 
@@ -434,7 +415,7 @@ async def correct_turn(
         )
     ).all()
     return TranscriptCorrectionOut(
-        turn=_turn(seg, await _latest_corrections(db, session_id)),
+        turn=_turn(seg, await latest_corrections(db, session_id)),
         affected_fact_ids=list(affected),
     )
 
@@ -451,7 +432,7 @@ async def apply_suggested_roles(
             select(TranscriptSegment).where(TranscriptSegment.session_id == session_id)
         )
     ).all()
-    current = await _latest_corrections(db, session_id)
+    current = await latest_corrections(db, session_id)
     applied = skipped = 0
     for r in rows:
         role = r.suggested_role
@@ -483,13 +464,22 @@ async def apply_suggested_roles(
 
 
 async def reprocess(db: AsyncSession, session_id: uuid.UUID) -> ReprocessOut:
-    """Re-run normalise + extract on the stored transcript (draft only). The note keeps its
-    revision chain and gains a new AI revision; AI facts are replaced."""
+    """Re-run normalise + extract on the stored transcript with the clinician's corrections
+    (draft only). The note keeps its revision chain and gains a new AI revision; AI facts are
+    replaced, so a re-run is refused once any fact was confirmed or rejected."""
     s = await get_session(db, session_id, lock=True)
     ensure_ready(s)
     ensure_editable((await get_note(db, session_id)).status)
     if s.mode == "manual":
         raise AppError(409, "SESSION_STATE", "A manual note has no transcript to reprocess")
+    if await db.scalar(
+        select(ClinicalFact.id)
+        .where(ClinicalFact.session_id == session_id, ClinicalFact.review_state != "ai")
+        .limit(1)
+    ):
+        raise AppError(
+            409, "FACTS_REVIEWED", "Facts were already reviewed; a re-run would discard the review"
+        )
     s.state = "processing"
     await enqueue(
         db, clinic_id=s.clinic_id, session_id=s.id, kind="normalise", consent_epoch=s.consent_epoch
@@ -554,29 +544,3 @@ async def list_revisions(db: AsyncSession, session_id: uuid.UUID) -> RevisionsOu
             for r in rows
         ],
     )
-
-
-async def export_names(db: AsyncSession, s: ConsultationSession) -> tuple[str, str, str]:
-    """(clinic name, approving clinician name, note template) for the PDF header."""
-    note = await get_note(db, s.id)
-    clinic = await db.get(Clinic, s.clinic_id)
-    user = await db.get(AppUser, note.approved_by) if note.approved_by else None
-    return (
-        clinic.name if clinic else "",
-        user.display_name if user else "",
-        note.template,
-    )
-
-
-async def load_export(
-    db: AsyncSession, session_id: uuid.UUID
-) -> tuple[ConsultationSession, ResultOut]:
-    """Approved notes only. Rejected facts are left out; review_state travels with the rest."""
-    s = await get_session(db, session_id)
-    ensure_ready(s)
-    note = await get_note(db, session_id)
-    if note.status != "approved":
-        raise AppError(409, "NOTE_NOT_APPROVED", "Only approved notes can be exported")
-    out = await load_result(db, session_id)
-    out.facts = await _facts(db, session_id=session_id, include_rejected=False)
-    return s, out

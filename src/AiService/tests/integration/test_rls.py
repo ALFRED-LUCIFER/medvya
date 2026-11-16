@@ -6,26 +6,47 @@ from tests.integration.helpers import API, new_session
 
 pytestmark = pytest.mark.integration
 
-TENANT_TABLES = (
-    "app_user",
-    "retention_policy",
-    "consultation_session",
-    "participant",
-    "consent_record",
-    "recording_segment",
-    "audio_chunk",
-    "transcript_segment",
-    "clinical_note",
-    "note_revision",
-    "clinical_fact",
-    "medication",
-    "fact_evidence",
-    "extraction_rejection",
-    "audit_event",
-    "transcript_correction",
-    "privacy_request",
-    "receptionist_conversation",
-)
+# Every table with a clinic_id column, read from the catalog (a hand-kept list misses new tables).
+TENANT_TABLES_SQL = """
+    SELECT c.relname FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace AND n.nspname = 'public'
+    JOIN pg_attribute a ON a.attrelid = c.oid AND a.attname = 'clinic_id' AND NOT a.attisdropped
+    WHERE c.relkind = 'r' ORDER BY c.relname"""
+# The worker claims jobs across tenants; the job row holds ids and codes only (ADR-021 gate 3).
+NO_RLS = {"processing_job"}
+
+
+async def _tenant_tables() -> list[str]:
+    conn = await asyncpg.connect(_dsn(OWNER_URL))
+    try:
+        return [r[0] for r in await conn.fetch(TENANT_TABLES_SQL)]
+    finally:
+        await conn.close()
+
+
+async def test_every_tenant_table_forces_rls_with_a_policy(schema: None) -> None:
+    """Catalog check: a new table with clinic_id but no ENABLE + FORCE + policy fails here.
+    The clinic table has no clinic_id and no RLS on purpose: it holds a uuid and a placeholder
+    name only, and the scheduler lists tenants from it."""
+    # SAFETY: mutation check: ALTER TABLE clinical_fact NO FORCE ROW LEVEL SECURITY ->
+    # test_every_tenant_table_forces_rls_with_a_policy failed
+    conn = await asyncpg.connect(_dsn(OWNER_URL))
+    try:
+        rows = await conn.fetch(
+            f"""SELECT t.relname, t.relrowsecurity, t.relforcerowsecurity,
+                       EXISTS (SELECT 1 FROM pg_policy p WHERE p.polrelid = t.oid) AS has_policy
+                FROM pg_class t WHERE t.relname IN ({TENANT_TABLES_SQL})"""  # noqa: S608
+        )
+    finally:
+        await conn.close()
+    assert len(rows) >= 15  # the query found the schema
+    bad = [
+        r["relname"]
+        for r in rows
+        if r["relname"] not in NO_RLS
+        and not (r["relrowsecurity"] and r["relforcerowsecurity"] and r["has_policy"])
+    ]
+    assert bad == []
 
 
 async def _app_conn(clinic_id: object | None) -> tuple[asyncpg.Connection, object]:
@@ -57,7 +78,7 @@ async def test_raw_sql_sees_only_own_rows(app_ctx, make_clinic) -> None:  # type
     for mine, other in ((a, b), (b, a)):
         conn, tx = await _app_conn(mine)
         try:
-            for t in TENANT_TABLES:
+            for t in set(await _tenant_tables()) - NO_RLS:
                 n = await conn.fetchval(f"SELECT count(*) FROM {t} WHERE clinic_id = $1", other)  # noqa: S608
                 assert n == 0, t
             assert await conn.fetchval("SELECT count(*) FROM consultation_session") == 1
@@ -82,7 +103,7 @@ async def test_unscoped_session_sees_nothing_and_does_not_error(app_ctx, make_cl
     await new_session(c, h)
     conn, tx = await _app_conn(None)
     try:
-        for t in TENANT_TABLES:
+        for t in set(await _tenant_tables()) - NO_RLS:
             assert await conn.fetchval(f"SELECT count(*) FROM {t}") == 0, t  # noqa: S608
     finally:
         await tx.rollback()  # type: ignore[attr-defined]

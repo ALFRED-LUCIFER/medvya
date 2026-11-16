@@ -5,7 +5,7 @@ import binascii
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import SecretStr, field_validator
+from pydantic import SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -30,25 +30,30 @@ class Settings(BaseSettings):
     foundry_api_key: SecretStr | None = None
     foundry_deployment_extract: str | None = None
     foundry_deployment_normalise: str | None = None
-    foundry_deployment_receptionist: str | None = None  # defaults to the extract deployment
 
     # No silent fake default: a deployment that forgets the variable must fail, not emit fake notes.
     transcription_provider: Literal["azure_fast", "fake"] = "azure_fast"
     llm_provider: Literal["foundry", "fake"] = "foundry"
 
-    # entra: every request needs a verified bearer token mapped to app_user.external_subject.
-    # disabled: no login, demo doctor (local development and tests only).
-    auth_mode: Literal["entra", "disabled"] = "entra"
+    # development | test | production ... Only "development" may run AUTH_MODE=disabled.
+    environment: str = "production"
+
+    # service: Medvya's API calls with its managed-identity token (aud, issuer, allow-listed
+    #   client id, app role) and asserts tenant, user and role in headers (ADR-021 pilot gate 1).
+    # entra: a per-user bearer token mapped to app_user.external_subject.
+    # disabled: no token, X-Clinic-Id picks the clinic (ENVIRONMENT=development only).
+    auth_mode: Literal["service", "entra", "disabled"] = "service"
     auth_issuer: str | None = None
     auth_audience: str | None = None
     auth_jwks_url: str | None = None
+    auth_allowed_client_ids: str = ""  # comma separated azp/appid of the callers (service mode)
+    auth_required_role: str | None = None  # app role the caller's token must carry (service mode)
 
     retention_audio_after_approval_hours: int = 24
     retention_draft_audio_days: int = 7
 
     encryption_master_key: SecretStr
 
-    cors_origins: str = "http://localhost:5173"
     max_chunk_bytes: int = 8 * 1024 * 1024
     max_session_chunks: int = 20_000
     max_session_bytes: int = 512 * 1024 * 1024
@@ -77,9 +82,15 @@ class Settings(BaseSettings):
             raise ValueError("ENCRYPTION_MASTER_KEY must decode to exactly 32 bytes")
         return v
 
-    @property
-    def cors_origin_list(self) -> list[str]:
-        return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+    @model_validator(mode="after")
+    def _disabled_only_in_development(self) -> "Settings":
+        if self.auth_mode == "disabled" and self.environment != "development":
+            raise ValueError("AUTH_MODE=disabled is allowed only with ENVIRONMENT=development")
+        return self
+
+    @staticmethod
+    def csv(value: str) -> list[str]:
+        return [v.strip() for v in value.split(",") if v.strip()]
 
     @property
     def master_key_bytes(self) -> bytes:

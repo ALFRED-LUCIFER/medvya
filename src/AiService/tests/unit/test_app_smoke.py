@@ -17,7 +17,7 @@ def client(settings: Settings) -> httpx.AsyncClient:
 async def test_healthz_and_validation_shape(client: httpx.AsyncClient) -> None:
     assert (await client.get("/healthz")).json() == {"status": "ok"}
     r = await client.get("/api/v1/sessions", headers={"X-Clinic-Id": "not-a-uuid"})
-    assert r.status_code == 422 and r.json()["error"]["code"] == "VALIDATION_ERROR"
+    assert r.status_code == 400 and r.json()["error"]["code"] == "TENANT_HEADER_INVALID"
     assert "input" not in str(r.json())
 
 

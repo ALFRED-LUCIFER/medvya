@@ -1,6 +1,9 @@
 """Clinic and user provisioning.
 
-AUTH_MODE=disabled: `python -m medvya_ai.seed` creates the demo clinic + doctor the API acts as.
+AUTH_MODE=service: no seeding; the clinic and a user row per Medvya user are created on first
+use from what Medvya asserts (ensure_service_user).
+AUTH_MODE=disabled: `python -m medvya_ai.seed` creates a demo clinic + doctor and prints the
+clinic id to send as X-Clinic-Id.
 AUTH_MODE=entra: `python -m medvya_ai.seed --provision --email ... --subject <oid> [--clinic-id ...
 --clinic-name ... --role doctor|admin --name ...]` creates (or reuses) a clinic and adds a user
 who can log in with that OIDC subject. Roles are assigned here, never read from tokens."""
@@ -10,6 +13,7 @@ import asyncio
 import uuid
 
 from sqlalchemy import select, text
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from medvya_ai.config import get_settings
@@ -17,7 +21,6 @@ from medvya_ai.db import make_engine, make_sessionmaker, set_tenant, uuid7
 from medvya_ai.models import AppUser, Clinic, RetentionPolicy
 
 DEV_EMAIL = "doctor@example.test"
-NO_PASSWORD = "!"  # noqa: S105 - not a valid hash; there is no login
 
 
 async def create_clinic_with_user(
@@ -33,7 +36,6 @@ async def create_clinic_with_user(
             id=user_id,
             clinic_id=clinic_id,
             email=email.lower(),
-            password_hash=NO_PASSWORD,
             role="doctor",
             display_name=display_name,
         )
@@ -58,7 +60,6 @@ async def provision_user(
             id=user_id,
             clinic_id=clinic_id,
             email=email.lower(),
-            password_hash=NO_PASSWORD,
             role=role,
             display_name=display_name,
             external_subject=subject,
@@ -84,16 +85,32 @@ async def first_doctor(db: AsyncSession) -> uuid.UUID | None:
     )
 
 
-async def ensure_demo_user(db: AsyncSession) -> tuple[uuid.UUID, uuid.UUID]:
-    """Oldest clinic and its first doctor; creates both when the database is empty."""
-    clinic_id = await db.scalar(select(Clinic.id).order_by(Clinic.created_at).limit(1))
-    if clinic_id is None:
-        return await create_clinic_with_user(db, clinic_name="Demo Clinic", email=DEV_EMAIL)
+async def ensure_service_user(
+    db: AsyncSession, *, clinic_id: uuid.UUID, medvya_user_id: uuid.UUID, role: str
+) -> uuid.UUID:
+    """AUTH_MODE=service: the clinic row (no PHI) and one app_user per (clinic, Medvya user) are
+    created on first use, so FKs and the audit actor resolve. Leaves db scoped to the clinic.
+    The Medvya user id lives in external_subject: a user may work in several Medvya tenants."""
+    await db.execute(
+        pg_insert(Clinic).values(id=clinic_id, name="Medvya tenant").on_conflict_do_nothing()
+    )
     await set_tenant(db, clinic_id)
-    user_id = await first_doctor(db)
-    if user_id is None:
-        raise RuntimeError("demo clinic has no active user")
-    return clinic_id, user_id
+    subject = f"medvya:{clinic_id}:{medvya_user_id}"
+    await db.execute(
+        pg_insert(AppUser)
+        .values(
+            id=uuid7(),
+            clinic_id=clinic_id,
+            role=role,
+            display_name="Medvya user",
+            external_subject=subject,
+        )
+        .on_conflict_do_nothing()
+    )
+    user_id = await db.scalar(select(AppUser.id).where(AppUser.external_subject == subject))
+    if user_id is None:  # unreachable unless RLS hid the row: never act as someone else
+        raise RuntimeError("service user not visible after insert")
+    return user_id
 
 
 async def _main() -> None:
@@ -109,8 +126,10 @@ async def _main() -> None:
     engine = make_engine(get_settings().database_url.get_secret_value())
     async with make_sessionmaker(engine)() as db, db.begin():
         if not args.provision:
-            clinic_id, _ = await ensure_demo_user(db)
-            print(f"demo clinic {clinic_id}")
+            clinic_id, _ = await create_clinic_with_user(
+                db, clinic_name="Demo Clinic", email=f"{uuid7().hex[:8]}.{DEV_EMAIL}"
+            )
+            print(f"demo clinic {clinic_id} (send as X-Clinic-Id)")
         else:
             if not (args.email and args.subject):
                 ap.error("--provision needs --email and --subject")

@@ -91,14 +91,3 @@ def client(settings: Settings) -> httpx.AsyncClient:
 async def test_oversized_json_body_is_413_with_envelope(client: httpx.AsyncClient) -> None:
     r = await client.post("/api/v1/sessions", content=b"x" * (1024 * 1024 + 1))
     assert r.status_code == 413 and r.json()["error"]["code"] == "PAYLOAD_TOO_LARGE"
-
-
-async def test_cors_allows_only_configured_origin(client: httpx.AsyncClient) -> None:
-    hdr = {"Access-Control-Request-Method": "POST"}
-    ok = await client.options(
-        "/api/v1/sessions", headers={**hdr, "Origin": "http://localhost:5173"}
-    )
-    bad = await client.options("/api/v1/sessions", headers={**hdr, "Origin": "http://evil.example"})
-    assert ok.headers.get("access-control-allow-origin") == "http://localhost:5173"
-    assert "access-control-allow-origin" not in bad.headers
-    assert "access-control-allow-credentials" not in ok.headers

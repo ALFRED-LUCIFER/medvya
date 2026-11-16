@@ -4,7 +4,7 @@ overrides, resolved in fact provenance; reprocess re-runs the AI steps on a draf
 import pytest
 
 from medvya_ai.providers.transcription.base import Phrase
-from tests.integration.helpers import API, finished_session
+from tests.integration.helpers import API, finished_session, mark_approved
 from tests.integration.pipeline import deps_for, drain
 
 pytestmark = pytest.mark.integration
@@ -57,7 +57,7 @@ async def test_suggested_roles_applied_and_provenance_follows(app_ctx, make_clin
 
 async def test_reprocess_replaces_ai_facts_and_adds_revision(app_ctx, make_clinic) -> None:  # type: ignore[no-untyped-def]
     app, c = app_ctx
-    _, _, h = await make_clinic()
+    cid, _, h = await make_clinic()
     sid = await finished_session(c, h)
     await drain(app, deps_for(app))
     before = (await c.get(f"{API}/sessions/{sid}/result", headers=h)).json()
@@ -71,7 +71,13 @@ async def test_reprocess_replaces_ai_facts_and_adds_revision(app_ctx, make_clini
     assert {f["id"] for f in after["facts"]}.isdisjoint({f["id"] for f in before["facts"]})
     revs = (await c.get(f"{API}/sessions/{sid}/notes/revisions", headers=h)).json()["revisions"]
     assert [x["author_type"] for x in revs] == ["ai", "ai"]
-    await c.post(f"{API}/sessions/{sid}/approve", headers=h)
+    # a reviewed fact would be wiped by a re-run: refused until the review is undone
+    await c.patch(
+        f"{API}/facts/{after['facts'][0]['id']}", headers=h, json={"review_state": "confirmed"}
+    )
+    r = await c.post(f"{API}/sessions/{sid}/reprocess", headers=h)
+    assert r.status_code == 409 and r.json()["error"]["code"] == "FACTS_REVIEWED"
+    await mark_approved(app, cid, sid)
     assert (await c.post(f"{API}/sessions/{sid}/reprocess", headers=h)).status_code == 409
 
 

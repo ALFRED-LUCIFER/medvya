@@ -11,7 +11,14 @@ from sqlalchemy import text
 
 from medvya_ai.providers.transcription.base import Phrase
 from medvya_ai.providers.transcription.fake import DEFAULT_PHRASES
-from tests.integration.helpers import API, consent, finished_session, put_chunk, segment
+from tests.integration.helpers import (
+    API,
+    consent,
+    finished_session,
+    mark_approved,
+    put_chunk,
+    segment,
+)
 from tests.integration.pipeline import deps_for, drain
 
 pytestmark = pytest.mark.integration
@@ -151,7 +158,7 @@ async def test_withdraw_after_approval_keeps_record_but_purges_audio(
     cid, _, h = await make_clinic()
     sid = await finished_session(c, h)
     await drain(app, deps_for(app))
-    assert (await c.post(f"{API}/sessions/{sid}/approve", headers=h)).status_code == 200
+    await mark_approved(app, cid, sid)
     before = await _counts(app, cid, sid)
 
     r = await _withdraw(c, h, sid)
@@ -161,7 +168,6 @@ async def test_withdraw_after_approval_keeps_record_but_purges_audio(
     assert await _counts(app, cid, sid) == before  # the approved record follows its own policy
     s = (await c.get(f"{API}/sessions/{sid}", headers=h)).json()
     assert s["state"] == "approved" and s["revoked_at"]
-    assert (await c.get(f"{API}/sessions/{sid}/export", headers=h)).status_code == 200
 
 
 async def test_stop_is_not_withdraw(app_ctx, make_clinic) -> None:  # type: ignore[no-untyped-def]

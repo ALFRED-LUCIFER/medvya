@@ -57,9 +57,6 @@ ENUMS: dict[str, tuple[str, ...]] = {
     ),
     "job_status": ("queued", "running", "done", "failed", "cancelled"),
     "session_mode": ("recorded", "manual"),
-    "privacy_request_kind": ("access", "erasure"),
-    "privacy_request_status": ("received", "completed", "rejected"),
-    "receptionist_status": ("open", "completed", "escalated"),
 }
 
 

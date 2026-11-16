@@ -1,4 +1,15 @@
+using System.Data.Common;
+
 namespace Medvya.Scheduling.Application;
+
+/// <summary>
+/// Another module's part when one action (leave, or a doctor offboarded) leaves booked visits needing rebooking (MDV-P1-034): called once per
+/// action and facility inside that action's transaction, with the doctor's calendar, the first facility-local day affected and how many visits.
+/// </summary>
+public interface IRebookingParticipant
+{
+    Task NeedsRebookingAsync(Guid facilityId, Guid calendarId, DateOnly firstDay, int count, DbTransaction transaction, CancellationToken cancellationToken);
+}
 
 public enum AppointmentEventKind { Booked, Rescheduled, Cancelled, NoShow, NeedsRebooking, SlotOffered }
 

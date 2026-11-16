@@ -22,7 +22,7 @@ namespace Medvya.Scheduling.Infrastructure;
 /// </summary>
 public sealed class DoctorOffboardingParticipant(
     ICurrentTenant tenant, ICurrentUser user, IFacilityDirectory facilities, IAuditLog audit, IOptions<SchedulingOptions> options,
-    TimeProvider clock, IBoardNotifier notifier, ILogger<DoctorOffboardingParticipant> log) : IStaffOffboardingParticipant
+    TimeProvider clock, IBoardNotifier notifier, ILogger<DoctorOffboardingParticipant> log, IEnumerable<IRebookingParticipant> rebooking) : IStaffOffboardingParticipant
 {
     public async Task<OffboardingShare> OffboardedAsync(Guid doctorUserId, Guid facilityId, bool offerRebooking, DbTransaction transaction, CancellationToken cancellationToken)
     {
@@ -32,16 +32,12 @@ public sealed class DoctorOffboardingParticipant(
         Task<List<Appointment>> FutureAsync() => db.Appointments.AsNoTracking()
             .Where(a => a.CalendarId == doctorUserId && a.FacilityId == facilityId && a.Start >= now && a.State == AppointmentState.Booked && !a.Unscheduled).ToListAsync(cancellationToken);
 
-        var zones = new Dictionary<Guid, TimeZoneInfo>();
-        var days = new SortedSet<(Guid FacilityId, DateOnly Date)>();
-        foreach (var a in await FutureAsync())
-        {
-            if (!zones.TryGetValue(a.FacilityId, out var zone))
-                zones[a.FacilityId] = zone = TimeZoneInfo.FindSystemTimeZoneById((await facilities.FindAsync(a.FacilityId, cancellationToken)
-                    ?? throw new InvalidOperationException("A visit's facility is not in this tenant.")).TimeZone);
-            days.Add((a.FacilityId, ScheduleRules.LocalDate(a.Start, zone)));
-        }
-        foreach (var date in days.Select(d => d.Date).Distinct().Order())
+        TimeZoneInfo? zone = null; // every visit read is at this one facility
+        async Task<TimeZoneInfo> ZoneAsync() => zone ??= TimeZoneInfo.FindSystemTimeZoneById((await facilities.FindAsync(facilityId, cancellationToken)
+            ?? throw new InvalidOperationException("A visit's facility is not in this tenant.")).TimeZone);
+        var days = new SortedSet<DateOnly>();
+        foreach (var a in await FutureAsync()) days.Add(ScheduleRules.LocalDate(a.Start, await ZoneAsync()));
+        foreach (var date in days)
             await DoctorDayTransaction.LockAsync(db, DoctorDayTransaction.DoctorDayKey(tenantId, doctorUserId, date), options.Value.LockTimeout, cancellationToken);
 
         var affected = await FutureAsync(); // read again under the locks
@@ -60,6 +56,11 @@ public sealed class DoctorOffboardingParticipant(
             });
         }
         await db.SaveChangesAsync(cancellationToken);
+        if (affected.Count > 0) // the desk's notification-centre item (MDV-P1-034), committed with the offboarding
+        {
+            var first = ScheduleRules.LocalDate(affected.Min(a => a.Start), await ZoneAsync());
+            foreach (var p in rebooking) await p.NeedsRebookingAsync(facilityId, doctorUserId, first, affected.Count, transaction, cancellationToken);
+        }
         foreach (var a in affected)
             await audit.WriteAsync(new AuditEvent
             {

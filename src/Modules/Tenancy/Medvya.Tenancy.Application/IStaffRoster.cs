@@ -101,6 +101,12 @@ public interface IStaffRoster
 /// </summary>
 public interface IStaffOffboardingParticipant
 {
+    /// <summary>
+    /// Called on the roster's open connection before its (serializable) transaction starts, so before its snapshot: a lock the participant needs
+    /// held while the offboarding runs, so that whatever it waited for is visible to the transaction. Disposing the result releases it, after the commit.
+    /// </summary>
+    Task<IAsyncDisposable> HoldAsync(Guid userId, System.Data.Common.DbConnection connection, CancellationToken cancellationToken);
+
     /// <summary><paramref name="facilityId"/> is the offboarded membership's facility: the person may still work at the practice's other sites (#877).</summary>
     Task<OffboardingShare> OffboardedAsync(Guid doctorUserId, Guid facilityId, bool offerRebooking, System.Data.Common.DbTransaction transaction, CancellationToken cancellationToken);
 }

@@ -85,6 +85,26 @@ public sealed class StaffRoster(TenancyDbContext db, ICurrentTenant tenant, ICur
     async Task<OffboardResult> OffboardCoreAsync(Guid membershipId, string? reason, bool offerRebooking, bool allLocations, CancellationToken cancellationToken)
     {
         reason = ValidReason(reason);
+        // The participants' locks (a doctor's calendar) are taken before the serializable transaction's snapshot: a booking they wait for
+        // commits first and is then seen by the transaction. Inside it, the snapshot would predate the wait and miss it.
+        if (await db.Memberships.Where(m => m.Id == membershipId).Select(m => m.UserId).SingleOrDefaultAsync(cancellationToken) is not { } person)
+            return await OffboardInTransactionAsync(membershipId, reason, offerRebooking, allLocations, cancellationToken);
+        await db.Database.OpenConnectionAsync(cancellationToken);
+        var holds = new List<IAsyncDisposable>();
+        try
+        {
+            foreach (var part in offboarding) holds.Add(await part.HoldAsync(person, db.Database.GetDbConnection(), cancellationToken));
+            return await OffboardInTransactionAsync(membershipId, reason, offerRebooking, allLocations, cancellationToken);
+        }
+        finally
+        {
+            foreach (var hold in holds) await hold.DisposeAsync();
+            await db.Database.CloseConnectionAsync();
+        }
+    }
+
+    async Task<OffboardResult> OffboardInTransactionAsync(Guid membershipId, string reason, bool offerRebooking, bool allLocations, CancellationToken cancellationToken)
+    {
         // Serializable: two administrators offboarding each other at once must not both pass the last-administrator check.
         // shortcut: the one PostgreSQL refuses (40001) gets a 500 and nothing is changed; retry it here once pilot owners report it.
         await using var tx = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, cancellationToken);

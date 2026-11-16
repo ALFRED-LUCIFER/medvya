@@ -484,7 +484,7 @@ public sealed class SessionControlTests(PostgresFixture sql) : IClassFixture<Pos
         Assert.Equal(Medvya.Scheduling.Domain.AppointmentState.CheckedIn, (await db.Appointments.SingleAsync(a => a.Id == waiting)).State); // stays for reassignment
     }
 
-    // SAFETY: mutation check: removed the exclusive calendar lock in DoctorOffboardingParticipant -> this test failed (offboarding finished while the booking was open; its visit stayed Booked).
+    // SAFETY: mutation check: removed the session calendar lock in DoctorOffboardingParticipant.HoldAsync -> this test failed (offboarding finished while the booking was open).
     [Fact]
     public async Task OffboardingWaitsForABookingInFlightOnADayWithNoVisitsAndMovesItToo()
     {

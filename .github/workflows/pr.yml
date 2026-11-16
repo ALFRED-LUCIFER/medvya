@@ -216,7 +216,7 @@ jobs:
           # lint compiles too; it exits 0 on warnings, so any "<file>(line,col) : Warning|Error" line fails the step.
           for f in infra/bicep/*.bicep infra/bicep/*.bicepparam; do
             out=$(az bicep lint -f "$f" 2>&1) || { echo "$out"; exit 1; }
-            echo "$out"; ! echo "$out" | grep -E '\) : (Warning|Error) '
+            echo "$out"; if echo "$out" | grep -qE '\) : (Warning|Error) '; then echo "::error::$f has Bicep warnings"; exit 1; fi
           done
           for f in infra/bicep/*.bicepparam; do az bicep build-params -f "$f" --stdout > /dev/null; done
 

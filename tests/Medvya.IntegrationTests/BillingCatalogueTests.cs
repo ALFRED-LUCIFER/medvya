@@ -185,7 +185,7 @@ public sealed class BillingCatalogueTests(PostgresFixture sql) : IClassFixture<P
     [Fact]
     public async Task BillingSettingsStartFromDefaultsAndAreValidatedByTheCountryRules()
     {
-        var settings = h.Get<IBillingSettings>(h.Admin);
+        var settings = h.Get<IBillingSettings>(h.Admin, s => RazorpayTestKeys.Connect(s, h.Tenant)); // Razorpay links need a connected account
         var defaults = await settings.GetAsync();
         Assert.Equal(("INV", "RCT", "CN", 10, 60), (defaults.InvoicePrefix, defaults.ReceiptPrefix, defaults.CreditNotePrefix, defaults.MaxDiscountPercent, defaults.PaymentLinkExpiryMinutes));
         Assert.Equal([PaymentMethod.Cash, PaymentMethod.Card, PaymentMethod.UpiDirect], defaults.PaymentMethods);

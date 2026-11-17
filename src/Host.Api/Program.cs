@@ -121,6 +121,11 @@ builder.Services.AddRateLimiter(o =>
     o.AddQueueDisplayPairingLimit(builder.Configuration.GetValue("RateLimiting:DisplayPairingPerMinute", 20));
     o.AddPolicy(StaffAuthentication.SignInRateLimit, ctx => RateLimitPartition.GetFixedWindowLimiter(ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = builder.Configuration.GetValue("RateLimiting:SignInPerMinute", 20), Window = TimeSpan.FromMinutes(1) }));
+    // Payment webhooks per address: an unknown webhook key reads the payments Key Vault each time, so a scan of made-up keys is cut off here.
+    // shortcut: Razorpay delivers every clinic's events from a few shared addresses, so this caps all clinics together; raise it (or partition by key once
+    // the key is known) when a busy hour of payments nears it.
+    o.AddPolicy(Medvya.Billing.Api.RazorpayEndpoints.WebhookRateLimit, ctx => RateLimitPartition.GetFixedWindowLimiter(ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = builder.Configuration.GetValue("RateLimiting:PaymentWebhooksPerMinute", 120), Window = TimeSpan.FromMinutes(1) }));
 });
 // Patient search per signed-in user: a desk searches a few times a minute; bulk enumeration is refused. Enforced after sign-in
 // (an endpoint filter), because the middleware above runs before authentication and would key every caller as anonymous.
@@ -188,6 +193,7 @@ app.MapReferralEndpoints();
 app.MapNoteTemplateEndpoints();
 app.MapBillingCatalogue();
 app.MapInvoices();
+app.MapRazorpay();
 if (app.Environment.IsDevelopment() && app.Configuration["Authentication:Oidc:Authority"]?.EndsWith(DevIdentityProvider.Path, StringComparison.Ordinal) == true)
     app.MapDevIdentityProvider(Medvya.Identity.Domain.IdentityProviders.Development, async http =>
         await http.RequestServices.GetRequiredService<Medvya.Identity.Infrastructure.Persistence.IdentityDbContext>().Users.AsNoTracking()

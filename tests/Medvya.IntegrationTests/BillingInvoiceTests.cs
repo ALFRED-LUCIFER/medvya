@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Npgsql;
@@ -25,7 +26,7 @@ namespace Medvya.IntegrationTests;
 /// split payments with the over-collection guard, Razorpay links settled only on the provider's word (a fake provider), tenant isolation in both layers,
 /// and the endpoints' capability, flag and payload rules.
 /// </summary>
-public sealed class BillingInvoiceTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IAsyncLifetime
+public sealed partial class BillingInvoiceTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IAsyncLifetime
 {
     readonly SchedulingHarness h = new(sql);
     readonly FakeLinks links = new();
@@ -65,7 +66,7 @@ public sealed class BillingInvoiceTests(PostgresFixture sql) : IClassFixture<Pos
         return (await Desk().IssueAsync(draft.Id, new InvoiceVersion { Version = draft.Version }))!;
     }
 
-    Task<BillingSettingsView> MethodsAsync(params PaymentMethod[] methods) => h.Get<IBillingSettings>(h.Admin).SaveAsync(new SaveBillingSettings
+    Task<BillingSettingsView> MethodsAsync(params PaymentMethod[] methods) => h.Get<IBillingSettings>(h.Admin, s => RazorpayTestKeys.Connect(s, h.Tenant)).SaveAsync(new SaveBillingSettings
     {
         InvoicePrefix = "INV", ReceiptPrefix = "RCT", CreditNotePrefix = "CN", PaymentMethods = methods, DiscountReasons = ["Senior citizen"], MaxDiscountPercent = 10,
         PaymentLinkExpiryMinutes = 30, Version = 0,
@@ -644,8 +645,19 @@ public sealed class BillingInvoiceTests(PostgresFixture sql) : IClassFixture<Pos
             return new PaymentLink(id, "https://rzp.io/i/synthetic", PaymentLinkStatus.Created);
         }
 
-        public Task<PaymentLinkState> FetchAsync(Guid tenantId, string linkId, CancellationToken ct) =>
-            Task.FromResult(State ?? new PaymentLinkState(linkId, PaymentLinkStatus.Created, Money.Zero(Currency.Inr), []));
+        /// <summary>The tenants each fetch was made for: a webhook only ever prompts a fetch.</summary>
+        public List<Guid> Fetches { get; } = [];
+
+        /// <summary>Runs while the provider is "answering" a fetch: another delivery of the same webhook at that moment.</summary>
+        public Func<Task>? DuringFetch { get; set; }
+
+        public async Task<PaymentLinkState> FetchAsync(Guid tenantId, string linkId, CancellationToken ct)
+        {
+            lock (Fetches) Fetches.Add(tenantId);
+            if (Fail is { } error) throw new PaymentProviderException(error);
+            if (DuringFetch is { } during) await during();
+            return State ?? new PaymentLinkState(linkId, PaymentLinkStatus.Created, Money.Zero(Currency.Inr), []);
+        }
 
         public Task<PaymentLinkStatus> CancelAsync(Guid tenantId, string linkId, CancellationToken ct)
         {
@@ -675,11 +687,12 @@ public sealed class BillingInvoiceTests(PostgresFixture sql) : IClassFixture<Pos
         };
     }
 
-    HttpClient Client(Guid user, Action<IServiceCollection>? replace = null)
+    HttpClient Client(Guid user, Action<IServiceCollection>? replace = null, IDictionary<string, string?>? settings = null)
     {
         var host = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b
             .UseSetting("ConnectionStrings:Medvya", sql.ConnectionString)
             .UseSetting("Features:InternalOrganisations:0", h.Tenant.ToString()) // billing is at the Internal release stage
+            .ConfigureAppConfiguration((_, c) => c.AddInMemoryCollection(RazorpayTestKeys.Settings(h.Tenant, RazorpayTestKeys.OtherTenant)).AddInMemoryCollection(settings ?? new Dictionary<string, string?>()))
             .ConfigureServices(s => s.AddSingleton<IStartupFilter>(new SignedIn(h.Tenant, h.Facility)))
             .ConfigureTestServices(s =>
             {

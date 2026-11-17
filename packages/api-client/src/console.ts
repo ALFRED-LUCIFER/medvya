@@ -47,7 +47,6 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
-                    link?: string;
                     returnUrl?: string;
                 };
                 header?: never;
@@ -66,7 +65,28 @@ export interface paths {
             };
         };
         put?: never;
-        post?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SignOnStart"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -1344,6 +1364,10 @@ export interface components {
         ReleaseStage: "Off" | "Internal" | "Beta" | "Percentage" | "Everyone";
         /** @enum {unknown} */
         ReviewFilter: "Waiting" | "NeedsChanges" | "Decided" | "All" | null;
+        SignOnStart: {
+            link?: null | string;
+            returnUrl?: null | string;
+        };
         TeamMemberView: {
             /** Format: uuid */
             id: string;

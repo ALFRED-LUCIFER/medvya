@@ -367,6 +367,7 @@ public sealed partial class Invoices(
             {
                 Id = Guid.CreateVersion7(), TenantId = invoice.TenantId, InvoiceId = id, Method = command.Method!.Value, AmountMinor = command.AmountMinor!.Value,
                 State = PaymentState.Succeeded, Reference = command.Method == PaymentMethod.Cash ? null : reference, RecordedBy = user.UserId, RecordedAt = now, ConfirmedAt = now,
+                CashSessionId = await OpenCashSessionAsync(invoice.FacilityId, cancellationToken),
             };
             db.Payments.Add(payment);
             Collect(invoice, payment.AmountMinor);
@@ -541,6 +542,7 @@ public sealed partial class Invoices(
         if (to == PaymentState.Succeeded)
         {
             payment.ProviderPaymentId = providerPaymentId;
+            payment.CashSessionId = await OpenCashSessionAsync(invoice.FacilityId, cancellationToken);
             Collect(invoice, payment.AmountMinor);
         }
         invoice.ChangedAt = clock.GetUtcNow();
@@ -566,6 +568,15 @@ public sealed partial class Invoices(
         if (invoice is not null && version is not null && db.Entry(invoice).Property<uint>("xmin").CurrentValue != version) throw new DbUpdateConcurrencyException();
         return invoice;
     }
+
+    /// <summary>
+    /// The location's Open cash session for a payment that succeeds now (MDV-P4-012), share-locked until this transaction commits: a count locks the
+    /// session for update, so it waits for this payment and sees it, or this payment waits for the count and finds no Open session. Null when none is open.
+    /// </summary>
+    // SAFETY: mutation check: dropped FOR SHARE here -> BillingInvoiceTests.APaymentCommittingDuringTheCountLandsInExactlyOneSession failed (the count missed the payment stamped with its session)
+    async Task<Guid?> OpenCashSessionAsync(Guid facilityId, CancellationToken cancellationToken) =>
+        (await db.Database.SqlQuery<Guid>($"""SELECT "Id" AS "Value" FROM billing."CashSessions" WHERE "FacilityId" = {facilityId} AND "State" = 'Open' FOR SHARE""")
+            .ToListAsync(cancellationToken)).Select(id => (Guid?)id).SingleOrDefault();
 
     void Touch(Invoice invoice) => (invoice.ChangedBy, invoice.ChangedAt) = (user.UserId, clock.GetUtcNow());
 

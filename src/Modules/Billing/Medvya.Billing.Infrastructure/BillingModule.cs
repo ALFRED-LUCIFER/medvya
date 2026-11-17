@@ -12,7 +12,7 @@ using Microsoft.Extensions.Hosting;
 
 namespace Medvya.Billing.Infrastructure;
 
-/// <summary>Billing (P4): the services catalogue, doctor fees and billing settings (MDV-P4-002), legal numbering, and bills with their payments (MDV-P4-004).</summary>
+/// <summary>Billing (P4): the services catalogue, doctor fees and billing settings (MDV-P4-002), legal numbering, and bills with their payments (MDV-P4-004), and the day close (MDV-P4-012).</summary>
 public static class BillingModule
 {
     public static IServiceCollection AddBillingModule(this IServiceCollection services, string connectionString)
@@ -27,6 +27,7 @@ public static class BillingModule
             .AddScoped<IBillingSettings, BillingSettingsService>()
             .AddScoped<IInvoices, Invoices>()
             .AddScoped<IBillingDocuments, BillingDocuments>()
+            .AddScoped<ICashSessions, CashSessions>()
             .AddScoped<IRazorpayAccount, RazorpayAccount>()
             // Lazy: the credential store is built on first use (a payment link), never at start-up, so a host without Razorpay:KeyVaultUri still starts.
             .AddRazorpay();

@@ -32,6 +32,7 @@ SOFT_REFS = {
     'PdfId': ('prescribing', 'PrescriptionPdfs'), 'ShareId': ('prescribing', 'RxShares'), 'SharedBy': ('identity', 'Users'),
     'StartedBy': ('identity', 'Users'), 'ClosedBy': ('identity', 'Users'), 'DangerSignsCounselledBy': ('identity', 'Users'),  # PregnancyEpisodes
     'ChangedByMemberId': ('platform', 'Members'), 'SignOffByMemberId': ('platform', 'Members'),  # FeatureReleases: the console member (MDV-P5-041)
+    'OpenedBy': ('identity', 'Users'), 'CountedBy': ('identity', 'Users'), 'ConfirmedBy': ('identity', 'Users'),  # CashSessions (MDV-P4-012)
     'DoctorId': ('identity', 'Users'),  # PrintedPapers: the doctor the slip or letter names (SourceId is the encounter or the referral, by Kind)
 }
 # Per schema, where a column name means something else than in SOFT_REFS. Billing's DoctorId is the doctor's membership (per doctor per location, MDV-P4-002).
@@ -54,6 +55,7 @@ PLANNED_TO_BUILT = {
     'PAYER_COVERAGE': 'patients.PayerCoverages', 'CONSENT_RECEIPT': 'patients.ConsentReceipts', 'SCHEDULE_SLOT': 'scheduling.ScheduleSlots',
     'APPOINTMENT': 'scheduling.Appointments', 'WAITLIST_ENTRY': 'scheduling.Waitlist', 'QUEUE_TOKEN': 'scheduling.QueueTokens', 'DOC_SEQUENCE': 'billing.DocSequences',
     'SERVICE_CATALOGUE': 'billing.Services', 'PRICE_VERSION': 'billing.PriceVersions', 'INVOICE': 'billing.Invoices', 'INVOICE_LINE': 'billing.InvoiceLines', 'PAYMENT': 'billing.Payments',
+    'CASH_SESSION': 'billing.CashSessions',
     'AUDIT_EVENT': 'audit.AuditEvents', 'OUTBOX_EVENT': 'scheduling.OutboxEvents', 'NOTIFICATION': 'notifications.Notifications',
     'NOTIFICATION_ATTEMPT': 'notifications.Attempts', 'ENCOUNTER': 'encounters.Encounters',
     'OBSERVATION': 'encounters.Observations', 'PROBLEM': 'encounters.Problems', 'ALLERGY': 'encounters.Allergies', 'MEDICATION_STATEMENT': 'encounters.MedicationStatements',

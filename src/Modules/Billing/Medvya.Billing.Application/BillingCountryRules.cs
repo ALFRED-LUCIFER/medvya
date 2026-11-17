@@ -37,6 +37,9 @@ public abstract class BillingCountryRules
     /// <summary>The invoice-level round-off added to an exact payable amount (MDV-P4-004); 0 where the country does not round a bill (UAE).</summary>
     public virtual long RoundOff(long exactMinor) => 0;
 
+    /// <summary>The notes and coins a drawer is counted in (P-13 day close, MDV-P4-012), largest first, in minor units.</summary>
+    public abstract IReadOnlyList<long> CashDenominationsMinor { get; }
+
     /// <summary>
     /// Amount in words for printed documents, e.g. "Rupees two thousand only": "and" joins only the paise or fils, "only" ends
     /// the phrase, zero paise are left out. The sign is not spelled (credit notes say "credit").

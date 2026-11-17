@@ -24,13 +24,6 @@
         ],
         "parameters": [
           {
-            "name": "link",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
             "name": "returnUrl",
             "in": "query",
             "schema": {
@@ -38,6 +31,26 @@
             }
           }
         ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Host.Platform"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignOnStart"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "description": "OK"
@@ -1593,6 +1606,23 @@
           "All",
           null
         ]
+      },
+      "SignOnStart": {
+        "type": "object",
+        "properties": {
+          "link": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "returnUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
       },
       "TeamMemberView": {
         "required": [

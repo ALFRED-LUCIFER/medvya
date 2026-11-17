@@ -121,6 +121,8 @@ public sealed class Payment
     [Classification(DataClass.Internal)] public Guid? RecordedBy { get; init; }
     [Classification(DataClass.Internal)] public DateTimeOffset RecordedAt { get; init; }
     [Classification(DataClass.Internal)] public DateTimeOffset? ConfirmedAt { get; set; }
+    /// <summary>The location's open cash session when the payment succeeded (MDV-P4-012); null when none was open.</summary>
+    [Classification(DataClass.Internal)] public Guid? CashSessionId { get; set; }
 }
 
 /// <summary>Every allowed invoice and payment move, in one place; the services ask here and refuse anything else ("state:invalid").</summary>

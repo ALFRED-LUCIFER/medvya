@@ -54,6 +54,7 @@ const RegistrationRoute = lazy(() => import('./PatientRoutes').then(m => ({ defa
 // Walk-in (MDV-P1-025) brings the patient picker and booking lists: loaded when opened, never at first paint.
 const WalkInRoute = lazy(() => import('./WalkInRoute'));
 const BillingListRoute = lazy(() => import('./BillingRoutes').then(m => ({ default: m.BillingListRoute })));
+const DayCloseRoute = lazy(() => import('./BillingRoutes').then(m => ({ default: m.DayCloseRoute })));
 const InvoiceRoute = lazy(() => import('./BillingRoutes').then(m => ({ default: m.InvoiceRoute })));
 const VisitInvoiceRoute = lazy(() => import('./BillingRoutes').then(m => ({ default: m.VisitInvoiceRoute })));
 const TokenSlipRoute = lazy(() => import('./WalkInRoute').then(m => ({ default: m.TokenSlipRoute })));
@@ -182,6 +183,7 @@ export default function App({ locale, onLocaleChange }: Props) {
                 intakePath={nursePath && active.capabilities.VitalsAllergiesEntry === 'Full' ? (id: string) => `${nursePath}/${id}` : null} />
             // Bills and payments (MDV-P4-004): the item exists only with billing on and Invoices and payments; the server checks both again.
             : i.id === 'billing' ? <BillingListRoute path={i.path} timeZone={active.timeZone ?? 'UTC'} />
+            : i.id === 'dayClose' ? <DayCloseRoute timeZone={active.timeZone ?? 'UTC'} />
             : i.id === 'nurse' ? <NurseQueueRoute facilityId={active.facilityId} online={online} nursePath={i.path} />
             : i.id === 'clinicToday' ? <ClinicTodayRoute facilityId={active.facilityId} userId={shell.session?.user.id ?? ''}
                 paths={{ myDay: pathOf('today'), directory: searchPath, waitingRoom: pathOf('frontDesk') && `${pathOf('frontDesk')}/overview` }} />

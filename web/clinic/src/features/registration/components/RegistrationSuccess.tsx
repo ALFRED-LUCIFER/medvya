@@ -11,8 +11,8 @@ type Props = {
   /** Opened from the booking panel: the held slot's address, to go back to it with this patient chosen (MDV-P1-021). */
   slot?: string | null;
   quick: boolean; missing: Missing[];
-  /** The facility's IANA zone (session.active.timeZone); the browser's zone only when the server sent none. */
-  timeZone?: string;
+  /** The facility's IANA zone (session.active.timeZone). */
+  timeZone: string;
 };
 
 /** "{name} is registered" with MRN, time and actor, then the next desk actions (P-02 success). */

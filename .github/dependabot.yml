@@ -1,14 +1,33 @@
 version: 2
+# Weekly on Monday, two weeks after a release (a bad or hijacked version is usually pulled by then), one PR per ecosystem for
+# minor and patch bumps. Majors stay separate PRs: each is upgraded deliberately with a browser check (AGENTS.md 6.2).
 updates:
   - package-ecosystem: nuget
     directory: /
-    schedule: { interval: weekly }
+    schedule: { interval: weekly, day: monday }
+    cooldown: { default-days: 14 }
+    groups:
+      minor-patch: { update-types: [minor, patch] }
+    ignore:
+      # 11.0.0 ships its OpenAPI build tool for net11.0 only (no tools/net10.0/GetDocument.Insider.dll), so the net10.0 build fails (#1395).
+      # Remove when the solution moves to .NET 11.
+      - dependency-name: Microsoft.Extensions.ApiDescription.Server
+        update-types: [version-update:semver-major]
   - package-ecosystem: npm
     directory: /
-    schedule: { interval: weekly }
+    schedule: { interval: weekly, day: monday }
+    cooldown: { default-days: 14 }
+    groups:
+      minor-patch: { update-types: [minor, patch] }
   - package-ecosystem: github-actions
     directory: /
-    schedule: { interval: weekly }
+    schedule: { interval: weekly, day: monday }
+    cooldown: { default-days: 14 }
+    groups:
+      minor-patch: { update-types: [minor, patch] }
   - package-ecosystem: uv # src/AiService (ADR-021)
     directory: /src/AiService
-    schedule: { interval: weekly }
+    schedule: { interval: weekly, day: monday }
+    cooldown: { default-days: 14 }
+    groups:
+      minor-patch: { update-types: [minor, patch] }

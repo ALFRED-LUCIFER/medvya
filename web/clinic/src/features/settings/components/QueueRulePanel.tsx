@@ -1,10 +1,9 @@
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { useI18n } from '@medvya/i18n';
-import { Button, ChoiceRow, StickyActionBar } from '@medvya/ui';
+import { Card, Button, ChoiceRow, StickyActionBar } from '@medvya/ui';
 import { queueOrders, type QueueRule } from '../domain/settings';
 import { cardBar, fieldError } from './fieldStyles';
-import { Section } from './Section';
 
 type Props = {
   form: UseFormReturn<QueueRule>; loading: boolean; forbidden: boolean; loadFailed: boolean;
@@ -17,7 +16,7 @@ export default function QueueRulePanel(p: Props) {
   if (p.loading) return <p role="status">{t('settings.loading')}</p>;
   if (p.loadFailed) return <p role="alert" className={fieldError}>{t(p.forbidden ? 'settings.forbidden' : 'settings.loadFailed')}</p>;
   return (
-    <Section title={t('settings.queue.title')} intro={t('settings.queue.intro')}>
+    <Card title={t('settings.queue.title')} intro={t('settings.queue.intro')}>
       <form noValidate onSubmit={p.onSubmit} className="flex flex-col gap-4">
         <fieldset className="flex flex-col gap-2">
           <legend className="sr-only">{t('settings.queue.title')}</legend>
@@ -41,6 +40,6 @@ export default function QueueRulePanel(p: Props) {
           <Button type="submit" loading={p.saving}>{t('settings.save')}</Button>
         </StickyActionBar>
       </form>
-    </Section>
+    </Card>
   );
 }

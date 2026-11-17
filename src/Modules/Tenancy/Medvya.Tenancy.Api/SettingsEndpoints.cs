@@ -26,6 +26,16 @@ public static class SettingsEndpoints
     /// <summary>The switch and how many patients are with the nurse now, which the owner is told before switching (MDV-P2-055).</summary>
     public sealed record NurseIntakeView(bool Enabled, int WithNurse);
 
+    /// <summary>
+    /// A setting of the whole organisation (legal profile printed on prescriptions, logo, a new location, queue rule, nurse intake) needs an
+    /// owner or an administrator of every location, as the clinical-access policy needs the owner: an administrator of one branch changes only that branch (#1417).
+    /// SAFETY: mutation-checked in PracticeSettingsTests.
+    /// </summary>
+    static async ValueTask<object?> OrganisationWide(EndpointFilterInvocationContext context, EndpointFilterDelegate next) =>
+        await context.HttpContext.RequestServices.GetRequiredService<IPracticeSettings>().AdministersEveryLocationAsync(context.HttpContext.RequestAborted)
+            ? await next(context)
+            : Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "Only an administrator of every location changes this", extensions: new Dictionary<string, object?> { ["code"] = "organisation_admin_required" });
+
     public static WebApplication MapPracticeSettings(this WebApplication app)
     {
         var g = app.MapGroup("/v1/settings").RequireAuthorization(StaffPolicies.ManageStaff).AddEndpointFilter(MapErrors);
@@ -33,11 +43,11 @@ public static class SettingsEndpoints
         g.MapGet("/profile", ([FromServices] IPracticeSettings s, CancellationToken ct) => s.GetProfileAsync(ct));
         // The version is required: a save always says which version it read, so it never overwrites a change it has not seen (#889).
         g.MapPut("/profile", async Task<Results<ValidationProblem, Ok<ProfileView>>> ([FromBody] SaveProfile body, [FromServices] IPracticeSettings s, CancellationToken ct) =>
-            body.Version is null ? TypedResults.ValidationProblem(new Dictionary<string, string[]> { ["version"] = ["required"] }) : TypedResults.Ok(await s.SaveProfileAsync(body, ct)));
+            body.Version is null ? TypedResults.ValidationProblem(new Dictionary<string, string[]> { ["version"] = ["required"] }) : TypedResults.Ok(await s.SaveProfileAsync(body, ct))).AddEndpointFilter(OrganisationWide);
 
         g.MapGet("/locations", ([FromServices] IPracticeSettings s, CancellationToken ct) => s.ListLocationsAsync(ct));
         g.MapPost("/locations", async ([FromBody] AddLocation body, [FromServices] IPracticeSettings s, CancellationToken ct) =>
-            Results.Created("/v1/settings/locations", await s.AddLocationAsync(body, ct)));
+            Results.Created("/v1/settings/locations", await s.AddLocationAsync(body, ct))).AddEndpointFilter(OrganisationWide);
         g.MapPut("/locations/{id:guid}", async (Guid id, [FromBody] SaveLocation body, [FromServices] IPracticeSettings s, CancellationToken ct) =>
             await s.UpdateLocationAsync(id, body, ct) is { } v ? Results.Ok(v) : Results.NotFound());
 
@@ -47,10 +57,10 @@ public static class SettingsEndpoints
             await s.SetHoursAsync(id, body, ct) is { } v ? Results.Ok(v) : Results.NotFound());
 
         // Holidays: each lists the booked visits still on that date, which the desk has to move (new bookings are refused by the booking path).
-        g.MapGet("/locations/{id:guid}/closures", async (Guid id, [FromServices] IPracticeSettings s, [FromServices] IScheduleService schedule, CancellationToken ct) =>
+        g.MapGet("/locations/{id:guid}/closures", async (Guid id, [FromServices] IPracticeSettings s, [FromServices] IScheduleService schedule, [FromServices] TimeProvider clock, CancellationToken ct) =>
         {
             if (await s.ListClosuresAsync(id, ct) is not { } closures) return Results.NotFound();
-            var today = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-1)); // UTC-1 day covers every facility zone; past closures need no list
+            var today = DateOnly.FromDateTime(clock.GetUtcNow().UtcDateTime.AddDays(-1)); // UTC-1 day covers every facility zone; past closures need no list
             var rows = new List<ClosureWithVisits>();
             foreach (var c in closures) rows.Add(new(c, c.Date < today ? [] : await schedule.AppointmentsOnAsync(id, c.Date, ct)));
             return Results.Ok(rows);
@@ -68,19 +78,19 @@ public static class SettingsEndpoints
             await request.Body.CopyToAsync(buffer, ct);
             await s.SetLogoAsync(buffer.ToArray(), ct);
             return Results.NoContent();
-        });
-        g.MapDelete("/logo", async ([FromServices] IPracticeSettings s, CancellationToken ct) => await s.RemoveLogoAsync(ct) ? Results.NoContent() : Results.NotFound());
+        }).AddEndpointFilter(OrganisationWide);
+        g.MapDelete("/logo", async ([FromServices] IPracticeSettings s, CancellationToken ct) => await s.RemoveLogoAsync(ct) ? Results.NoContent() : Results.NotFound()).AddEndpointFilter(OrganisationWide);
         g.MapGet("/logo", async ([FromServices] IPracticeSettings s, CancellationToken ct) =>
-            await s.LogoLinkAsync(LogoLinkLifetime, ct) is { } url ? Results.Ok(new LogoLink(url, DateTimeOffset.UtcNow + LogoLinkLifetime)) : Results.NotFound());
+            await s.LogoLinkAsync(LogoLinkLifetime, ct) is { } url ? Results.Ok(new LogoLink(url, DateTimeOffset.UtcNow + LogoLinkLifetime)) : Results.NotFound()); // wall clock: when the storage service stops honouring the link
 
         // Which clinicians treat the facility's patients (MDV-P2-024): every clinician of it (default) or only those assigned.
         g.MapGet("/clinical-access", async ([FromServices] IPracticeSettings s, CancellationToken ct) => Results.Ok(new ClinicalAccessBody(await s.GetClinicalAccessAsync(ct))));
         g.MapPut("/clinical-access", async ([FromBody] ClinicalAccessBody body, [FromServices] IPracticeSettings s, CancellationToken ct) =>
-            Results.Ok(new ClinicalAccessBody(await s.SaveClinicalAccessAsync(body.Policy, ct))));
+            await s.SaveClinicalAccessAsync(body.Policy, ct) is { } saved ? Results.Ok(new ClinicalAccessBody(saved)) : Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "Only the practice owner can change this"));
 
         // The order arrived patients are seen in (MDV-P1-103): the doctor's day, the board and the queue display all follow it.
         g.MapGet("/queue-rule", ([FromServices] IPracticeSettings s, CancellationToken ct) => s.GetQueueRuleAsync(ct));
-        g.MapPut("/queue-rule", ([FromBody] QueueRule body, [FromServices] IPracticeSettings s, CancellationToken ct) => s.SaveQueueRuleAsync(body, ct));
+        g.MapPut("/queue-rule", ([FromBody] QueueRule body, [FromServices] IPracticeSettings s, CancellationToken ct) => s.SaveQueueRuleAsync(body, ct)).AddEndpointFilter(OrganisationWide);
 
         // Nurse intake before the doctor (MDV-P2-007): a practice-wide switch, off until the owner turns it on. Changes are audited by the flag service.
         // The switch exists only while Medvya's release reaches the practice (MDV-P5-041): otherwise 404, and the screen says it is not available.
@@ -90,7 +100,7 @@ public static class SettingsEndpoints
         {
             await flags.SetAsync(Features.NurseIntake, body.Enabled, "practice", "Nurse intake before the doctor (MDV-P2-007)", ct);
             return Results.Ok(new NurseIntakeView(body.Enabled, await schedule.CountWithNurseAsync(ct)));
-        }).RequireRelease(Features.NurseIntake);
+        }).RequireRelease(Features.NurseIntake).AddEndpointFilter(OrganisationWide);
 
         // Terms of Service and DPA (MDV-P1-019): anyone who administers the practice can see the status; only an owner (practice admin or
         // owner-doctor) can accept, which the service checks. Until accepted, booking and sending are refused (RequireAcceptedTerms).
@@ -101,32 +111,19 @@ public static class SettingsEndpoints
         return app;
     }
 
-    /// <summary>Use-case errors as problem details: field/code pairs for 400, a generic 403 that never says why.</summary>
+    /// <summary>
+    /// <see cref="SettingsProblems.MapErrors"/>, plus what only these settings raise: a scheduling refusal (moving visits off a holiday) as
+    /// a generic 403 that never says why, and a concurrent save as 409.
+    /// </summary>
     public static async ValueTask<object?> MapErrors(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
     {
         try
         {
-            return await next(context);
-        }
-        catch (SettingsValidationException e)
-        {
-            return Results.ValidationProblem(e.Errors.GroupBy(x => x.Field).ToDictionary(x => x.Key, x => x.Select(y => y.Code).ToArray()));
+            return await SettingsProblems.MapErrors(context, next);
         }
         catch (SchedulingAccessDeniedException)
         {
             return Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "No access at this facility");
-        }
-        catch (InvitationEmailException)
-        {
-            return EmailFailed;
-        }
-        catch (InvitationLimitException)
-        {
-            return TooManyInvitations;
-        }
-        catch (PlanLimitException e)
-        {
-            return PlanLimit(e);
         }
         catch (DbUpdateConcurrencyException)
         {
@@ -135,14 +132,4 @@ public static class SettingsEndpoints
                 extensions: new Dictionary<string, object?> { ["code"] = "changed" });
         }
     }
-
-    /// <summary>502 with a stable code: the screen says the invitation email could not be sent and nothing was saved, not a generic failure.</summary>
-    /// <summary>429 with a stable code when the practice has sent its hourly allowance of invitations (#886).</summary>
-    public static IResult TooManyInvitations => Results.Problem(statusCode: StatusCodes.Status429TooManyRequests, title: "Too many invitations in the last hour.", extensions: new Dictionary<string, object?> { ["code"] = "invitation_limit" });
-
-    /// <summary>409 with a stable code and the plan's limits when the plan has no free doctor or staff seat (MDV-P1-069).</summary>
-    public static IResult PlanLimit(PlanLimitException e) => Results.Problem(statusCode: StatusCodes.Status409Conflict, title: e.Message,
-        extensions: new Dictionary<string, object?> { ["code"] = "plan_limit", ["doctors"] = e.Doctors, ["staff"] = e.Staff });
-
-    public static IResult EmailFailed => Results.Problem(statusCode: StatusCodes.Status502BadGateway, title: "The invitation email could not be sent.", extensions: new Dictionary<string, object?> { ["code"] = "email_failed" });
 }

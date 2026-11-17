@@ -2,6 +2,7 @@ using System.Globalization;
 using Medvya.Leads.Application;
 using Medvya.Leads.Domain;
 using Microsoft.AspNetCore.Mvc;
+using static Medvya.BuildingBlocks.Domain.TextInput;
 
 namespace Host.Api.PublicSite;
 
@@ -62,9 +63,9 @@ public sealed class DemoModel(SiteText text, PublicFormGuard guard) : PublicForm
         {
             Name = Clean(Form.Name) ?? "", Organisation = Clean(Form.Organisation) ?? "", Role = Clean(Form.Role) ?? "",
             Country = Clean(Form.Country) ?? "", Email = Clean(Form.Email), Phone = Clean(Form.Phone), Message = Clean(Form.Message),
-            PreferredAt = preferred, ConsentedAt = ConsentedAt, NoticeVersion = NoticeVersion,
+            PreferredAt = preferred, ConsentedAt = ConsentedAt, NoticeVersion = NoticeVersion, ReceivedAt = Now,
         };
-        var errors = new Dictionary<string, string>(DemoRequestRules.Validate(request, DateTimeOffset.UtcNow), StringComparer.Ordinal);
+        var errors = new Dictionary<string, string>(DemoRequestRules.Validate(request, Now), StringComparer.Ordinal);
         if (preferred is null && !string.IsNullOrWhiteSpace(Form.PreferredAt)) errors["PreferredAt"] = "invalid"; // crafted, not missing
         return SubmitAsync(errors, () => requests.SubmitAsync(request, cancellationToken),
             $"{Href(PublicSite.Demo)}?sent=1&at={(preferred is { } at ? Value(at) : "")}");
@@ -73,7 +74,7 @@ public sealed class DemoModel(SiteText text, PublicFormGuard guard) : PublicForm
     /// <summary>The next <see cref="SlotDays"/> weekdays from tomorrow in the region's time, each at <see cref="SlotTimes"/>, as UTC instants.</summary>
     public IEnumerable<(DateOnly Day, DateTimeOffset[] Times)> Slots()
     {
-        var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, Zone).DateTime);
+        var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(Now, Zone).DateTime);
         return Enumerable.Range(1, 7).Select(today.AddDays)
             .Where(d => d.DayOfWeek is not (DayOfWeek.Saturday or DayOfWeek.Sunday))
             .Take(SlotDays)

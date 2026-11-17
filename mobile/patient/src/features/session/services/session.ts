@@ -2,7 +2,7 @@ import type { Country, Locale } from '@medvya/i18n';
 import Constants from 'expo-constants';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { Platform } from 'react-native';
-import { endServerSession, forgetTokens, loadTokens, postAnonymous, send, signIn, type TokenPair } from '../../api/services/api';
+import { endServerSession, forgetTokens, loadTokens, postAnonymous, send, signIn, UPGRADE_REQUIRED, type TokenPair } from '../../api/services/api';
 import { apiBase, fromCast } from '../../api/services/source';
 import { SignInWaitError, unlockMethod, type Clinic, type Person } from '../domain/session';
 
@@ -16,6 +16,7 @@ const refusal = async (res: Response) => (await res.json().catch(() => ({}))) as
 function refused(status: number, { error, retryAfterMinutes }: Refusal): never {
   if (status === 429 && typeof retryAfterMinutes === 'number')
     throw new SignInWaitError(error === 'too_many_codes' ? 'mobile.patientSignIn.tooManyCodes' : 'mobile.patientSignIn.locked', retryAfterMinutes);
+  if (status === UPGRADE_REQUIRED) throw new Error('mobile.error.upgradeRequired');
   if (status === 503) throw new Error('mobile.patientSignIn.sendFailed');
   if (status === 400) throw new Error('mobile.patientSignIn.phoneInvalid');
   throw new Error('mobile.error.generic');

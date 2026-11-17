@@ -10,7 +10,7 @@ Scope: `web/clinic`, `packages/ui`, `packages/tokens`, `packages/i18n`, `package
 
 ### 1.1 Skill files read
 
-Under `/Users/alfredpaul/.claude/plugins/cache/ui-ux-pro-max-skill/ui-ux-pro-max/2.15.0/.claude/skills/`:
+Under `~/.claude/plugins/cache/ui-ux-pro-max-skill/ui-ux-pro-max/2.15.0/.claude/skills/`:
 
 | File | Read |
 |---|---|
@@ -46,7 +46,7 @@ How I used the skill output: I took the density variables (7), the error-summary
 
 - Own analysis scripts (scratchpad, not committed): Tailwind utility counter over `web/clinic/src` (371 non-test files) and `packages/ui/src`; component and raw-element counter over 168 `.tsx` files; metrics summary of `docs/product-ux-audit/evidence/local-metrics.jsonl` (289 rows at the time).
 - Screenshots opened: 14 clinic screenshots (local stack and Azure dev) and 4 platform-console screenshots.
-- Platform console capture: done, see section 2.7. Script at `docs/product-ux-audit/tools/platform-admin-capture.mjs`, 30 PNGs under `docs/product-ux-audit/screenshots/platform-admin-mocked/`. Dev server stopped afterwards.
+- Platform console capture: done, see section 2.7. Script at `tools/product-ux-audit/platform-admin-capture.mjs`, 30 PNGs under `docs/product-ux-audit/screenshots/platform-admin-mocked/`. Dev server stopped afterwards.
 
 ### 1.4 References
 
@@ -232,7 +232,7 @@ Problems:
 
 ### 2.7 Platform console screenshots (mocked API, not a deployed environment)
 
-Captured with `docs/product-ux-audit/tools/platform-admin-capture.mjs` against the Vite dev server on port 4175, with `page.route` mocks and synthetic fixtures copied from `tests/e2e/platform-console.spec.ts` and `tests/e2e/platform-approvals.spec.ts`. No WebAuthn step was needed because `/v1/me` was mocked with `keyVerified: true`; the key-registration screen was captured in its "before" state only.
+Captured with `tools/product-ux-audit/platform-admin-capture.mjs` against the Vite dev server on port 4175, with `page.route` mocks and synthetic fixtures copied from `tests/e2e/platform-console.spec.ts` and `tests/e2e/platform-approvals.spec.ts`. No WebAuthn step was needed because `/v1/me` was mocked with `keyVerified: true`; the key-registration screen was captured in its "before" state only.
 
 Files: `docs/product-ux-audit/screenshots/platform-admin-mocked/<screen>/<width>-<state>.png` for `sign-in`, `key-step`, `overview` (default, reviewer), `approvals`, `approval-detail` (clinic, hospital-no-dpa, approved, viewer-open, approve-reason, arabic), `team` (default, invite-error), `audit` (default, arabic), at 1440×900 and 375×812. 30 files.
 

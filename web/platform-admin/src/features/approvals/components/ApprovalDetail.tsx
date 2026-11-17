@@ -2,11 +2,12 @@ import { Ban, Check, Eye, MessageSquareWarning, Play, X } from 'lucide-react';
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { useI18n, type MessageKey } from '@medvya/i18n';
-import { Button, Card, ChoiceRow, EmptyState, StickyActionBar, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState } from '@medvya/ui';
+import { Button, Card, ChoiceRow, EmptyState, StickyActionBar, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState, Detail as DetailItem, DetailList } from '@medvya/ui';
 import ReasonPanel, { ReasonBar } from '../../shell/components/ReasonPanel';
 import type { ReasonForm } from '../../team/domain/team';
 import { documentColumns, historyColumns, isDestructive, isDocumentKind, sizeLabel, taxCheck, type Action, type Detail, type DocumentView, type EmailPreview } from '../domain/approvals';
 import DocumentViewer from './DocumentViewer';
+import { operatorZone } from '../../session/domain/session';
 
 export type DetailVm = {
   selected: boolean; state: 'loading' | 'error' | 'ready'; notFound: boolean; detail: Detail | null;
@@ -23,12 +24,12 @@ const icons: Record<Action, typeof Check> = { approve: Check, 'request-changes':
 /** One request: profile, documents with their checks and the private viewer, the decision with its reason, and the history. */
 export default function ApprovalDetail({ vm, operator }: { vm: DetailVm; operator: string }) {
   const { t, formatDate, formatTime } = useI18n();
-  const when = (iso: string) => `${formatDate(new Date(iso))} ${formatTime(new Date(iso))}`;
+  const when = (iso: string) => `${formatDate(new Date(iso), operatorZone)} ${formatTime(new Date(iso), operatorZone)}`;
   if (!vm.selected) return <EmptyState id="approvals-detail">{t('platform.approvals.choose')}</EmptyState>;
   if (vm.state !== 'ready' || !vm.detail)
     return <TableState state={vm.state === 'ready' ? 'error' : vm.state} messages={{ loading: t('platform.state.loading'), error: t(vm.notFound ? 'platform.approvals.error.gone' : 'platform.state.error'), empty: '' }}><></></TableState>;
   const d = vm.detail;
-  const tax = taxCheck(d.country, d.taxNumber);
+  const tax = taxCheck(d);
   const profile: [MessageKey, string | null][] = [
     ['platform.approvals.profile.address', d.address], ['platform.approvals.profile.contact', d.contactEmail], ['platform.approvals.profile.registration', d.registrationNumber],
     ['platform.approvals.profile.tax', d.taxNumber], ...(d.type === 'Hospital' ? [['platform.approvals.profile.it', [d.itContactName, d.itContactEmail].filter(Boolean).join(' · ') || null] as [MessageKey, string | null]] : []),
@@ -47,11 +48,11 @@ export default function ApprovalDetail({ vm, operator }: { vm: DetailVm; operato
       </header>
 
       <Card size="item" title={t('platform.approvals.profile.title')}>
-        <dl className="grid gap-x-6 gap-y-2 md:grid-cols-2">
+        <DetailList>
           {profile.map(([label, value]) => (
-            <div key={label}><dt className="text-sm text-muted-foreground">{t(label)}</dt><dd dir="auto" className="font-semibold break-words">{value ?? t('platform.approvals.notGiven')}</dd></div>
+            <DetailItem key={label} label={t(label)} valueProps={{ dir: 'auto' }} valueClassName="font-semibold">{value ?? t('platform.approvals.notGiven')}</DetailItem>
           ))}
-        </dl>
+        </DetailList>
         <p className="text-sm font-semibold">{t(`platform.approvals.check.tax.${tax}` as MessageKey)}</p>
       </Card>
 

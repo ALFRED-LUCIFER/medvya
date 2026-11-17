@@ -1,3 +1,4 @@
+import type { Schemas } from '@medvya/api-client';
 import { initialsOf } from '../../session/domain/session';
 
 export type Sex = 'F' | 'M';
@@ -24,12 +25,9 @@ export type TodayCopy = { today: Today; savedAt: number | null };
 export const orderQueue = (q: QueueEntry[]) =>
   [...q].sort((a, b) => rank[a.status] - rank[b.status] || (a.place ?? Infinity) - (b.place ?? Infinity) || a.at.localeCompare(b.at));
 
-// GET /v1/front-desk/board (the web's board and Today read the same audited endpoint): the fields the phone uses. Instants are UTC.
-export type BoardCard = {
-  patientId: string; patientName: string; dateOfBirth: string | null; sex?: 'Female' | 'Male' | 'Other' | null;
-  calendarId: string; reasonCategory: string; start: string; state: string; room: string | null; token: string | null; queuePlace?: number | null;
-};
-export type Board = { timeZone: string; date: string; cards: BoardCard[] };
+// GET /v1/front-desk/board (the web's board and Today read the same audited endpoint), typed from the generated client. Instants are UTC.
+export type BoardCard = Schemas['BoardCard'];
+export type Board = Schemas['FrontDeskBoard'];
 
 const statusOf: Partial<Record<string, QueueStatus>> = { InConsult: 'withDoctor', ReadyForDoctor: 'next', WithNurse: 'waiting', CheckedIn: 'waiting', Booked: 'booked' };
 const sexOf = (s: BoardCard['sex']): Sex | null => (s === 'Female' ? 'F' : s === 'Male' ? 'M' : null);

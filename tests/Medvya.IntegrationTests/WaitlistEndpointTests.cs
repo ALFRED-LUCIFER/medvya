@@ -92,7 +92,7 @@ public sealed class WaitlistEndpointTests(PostgresFixture sql) : IClassFixture<P
         Assert.Equal(HttpStatusCode.OK, (await Client(h.Reception).GetAsync(url)).StatusCode);
 
         await using var audit = sql.Audit(h.Tenant);
-        var rows = await audit.Events.Where(e => e.ResourceType == "waitlist").OrderBy(e => e.OccurredAt).Select(e => new { e.ActorUserId, e.Outcome }).ToListAsync();
+        var rows = await audit.Events.Where(e => e.ResourceType == "waitlist").OrderBy(e => e.OccurredAt).ThenBy(e => e.Id).Select(e => new { e.ActorUserId, e.Outcome }).ToListAsync();
         Assert.Contains(rows, r => r.ActorUserId == h.Nurse && r.Outcome == AuditOutcome.Denied);
         Assert.Contains(rows, r => r.ActorUserId == h.PortalUser && r.Outcome == AuditOutcome.Denied);
         Assert.Contains(rows, r => r.ActorUserId == h.Reception && r.Outcome == AuditOutcome.Allowed);

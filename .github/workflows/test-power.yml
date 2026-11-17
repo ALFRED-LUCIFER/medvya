@@ -1,0 +1,66 @@
+name: test-power
+
+# The test environment sleeps outside Indian working hours (docs/runbooks/environments.md, cost): PostgreSQL stopped at 20:00 IST and
+# started at 08:00 IST on weekdays, so it is off nights and weekends. A stopped Flexible Server bills storage only; Azure restarts one
+# stopped for 7 days on its own. The web apps stop too, so Hangfire does not retry against a stopped database all night (the B1 plan
+# itself bills either way). Uses the test deploy identity (Contributor on rg-medvya-test-in). Does nothing until test has
+# AZURE_RESOURCE_GROUP. A manual run picks the action.
+on:
+  schedule:
+    - cron: '30 14 * * 1-5' # 20:00 IST
+    - cron: '30 2 * * 1-5' # 08:00 IST
+  workflow_dispatch:
+    inputs:
+      action:
+        type: choice
+        options: [start, stop]
+        required: true
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: test-power
+  cancel-in-progress: false
+
+jobs:
+  power:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: test
+    steps:
+      - name: Test environment configured?
+        if: vars.AZURE_RESOURCE_GROUP == ''
+        run: echo "::notice::the test environment has no AZURE_RESOURCE_GROUP; nothing to start or stop"
+      - uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
+        if: vars.AZURE_RESOURCE_GROUP != ''
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Start or stop PostgreSQL and the web apps
+        if: vars.AZURE_RESOURCE_GROUP != ''
+        env:
+          RG: ${{ vars.AZURE_RESOURCE_GROUP }}
+          ACTION: ${{ inputs.action || (github.event.schedule == '30 2 * * 1-5' && 'start' || 'stop') }}
+        run: |
+          set -euo pipefail
+          servers=$(az postgres flexible-server list -g "$RG" --query '[].name' -o tsv)
+          apps=$(az webapp list -g "$RG" --query '[].name' -o tsv)
+          # Start the database before the apps (they connect at start-up); stop the apps first.
+          if [ "$ACTION" = start ]; then
+            for s in $servers; do
+              state=$(az postgres flexible-server show -g "$RG" -n "$s" --query state -o tsv)
+              [ "$state" = Stopped ] && az postgres flexible-server start -g "$RG" -n "$s" -o none
+              echo "$s: was $state"
+            done
+            for a in $apps; do az webapp start -g "$RG" -n "$a" -o none; echo "$a: started"; done
+          else
+            for a in $apps; do az webapp stop -g "$RG" -n "$a" -o none; echo "$a: stopped"; done
+            for s in $servers; do
+              state=$(az postgres flexible-server show -g "$RG" -n "$s" --query state -o tsv)
+              [ "$state" = Ready ] && az postgres flexible-server stop -g "$RG" -n "$s" -o none
+              echo "$s: was $state"
+            done
+          fi

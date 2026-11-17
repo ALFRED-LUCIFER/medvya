@@ -4,7 +4,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { cancelSchema, changeError, emptyCancel, rulesFor, type CancelForm } from '../domain/changes';
 import type { Appointment } from '../domain/schedule';
-import { ApiError, cancelAppointment, cancelFollowing, fetchHistory, fetchMessages, markNoShow, rescheduleAppointment } from '../services/scheduleApi';
+import { ApiError } from '../../api/services/apiClient';
+import { cancelAppointment, cancelFollowing, fetchHistory, fetchMessages, markNoShow, rescheduleAppointment } from '../services/scheduleApi';
 import { checkIn } from '../../front-desk/services/frontDeskApi';
 
 /** The visit the desk opened, with the calendar it sits in; `openedAt` is "now" for the action rules. */

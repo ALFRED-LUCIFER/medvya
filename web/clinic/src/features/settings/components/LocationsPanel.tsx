@@ -1,12 +1,11 @@
 import { useI18n, type MessageKey } from '@medvya/i18n';
-import { Button, ErrorSummary, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, StickyActionBar, Switch, Textarea } from '@medvya/ui';
+import { Card, Button, ErrorSummary, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, StickyActionBar, Switch, Textarea } from '@medvya/ui';
 import { timeZones } from '../domain/settings';
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import type { AddLocationForm, CalendarTemplate, LocationChoice, ResourceForm } from '../domain/settings';
 import { cardBar, fieldError, fieldGrid } from './fieldStyles';
 import { LocationSelect } from './LocationSelect';
-import { Section } from './Section';
 
 type Props = LocationChoice & {
   form: UseFormReturn<AddLocationForm>;
@@ -51,7 +50,7 @@ export default function LocationsPanel(p: Props) {
   if (p.locationsFailed) return <p role="alert" className={fieldError}>{t('settings.loadFailed')}</p>;
   return (
     <div className="flex flex-col gap-4">
-      <Section title={t('settings.locations.title')} intro={t('settings.locations.intro')}>
+      <Card title={t('settings.locations.title')} intro={t('settings.locations.intro')}>
         <ul className="flex flex-col divide-y rounded-lg border">
           {p.locations.map(l => (
             <li key={l.id} className="flex flex-wrap items-center justify-between gap-3 p-3">
@@ -118,8 +117,8 @@ export default function LocationsPanel(p: Props) {
             <Button type="submit" loading={p.saving}>{editing ? t('settings.save') : t('settings.locations.addButton')}</Button>
           </StickyActionBar>
         </form>
-      </Section>
-      <Section title={t('settings.rooms.title')} intro={t('settings.rooms.intro')}>
+      </Card>
+      <Card title={t('settings.rooms.title')} intro={t('settings.rooms.intro')}>
         <LocationSelect id="rooms-location" locations={p.locations} value={p.locationId} onChange={p.onLocation} />
         {p.resourcesFailed && <p role="alert" className={fieldError}>{t('settings.loadFailed')}</p>}
         {p.resources.length === 0 ? <p className="text-muted-foreground">{t('settings.rooms.empty')}</p> : (
@@ -136,7 +135,7 @@ export default function LocationsPanel(p: Props) {
           <Button type="submit" loading={p.addingResource}>{t('settings.rooms.add')}</Button>
           {p.addResourceFailed && <span role="alert" className={fieldError}>{t('settings.saveFailed')}</span>}
         </form>
-      </Section>
+      </Card>
     </div>
   );
 }

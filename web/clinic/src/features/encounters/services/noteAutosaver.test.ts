@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ApiError } from '../../schedule/services/scheduleApi';
+import { ApiError } from '../../api/services/apiClient';
 import type { NoteDraft, NoteView, SavePhase } from '../domain/note';
 import { createAutosaver } from './noteAutosaver';
 

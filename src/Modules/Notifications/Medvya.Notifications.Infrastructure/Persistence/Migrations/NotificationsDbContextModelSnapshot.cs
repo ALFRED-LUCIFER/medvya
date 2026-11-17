@@ -87,11 +87,11 @@ namespace Medvya.Notifications.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Status", "SendAt");
-
                     b.HasIndex("TenantId", "AppointmentId");
 
                     b.HasIndex("TenantId", "FacilityId", "CreatedAt");
+
+                    b.HasIndex("TenantId", "Status", "SendAt");
 
                     b.HasIndex("TenantId", "SourceEventId", "Kind", "Channel")
                         .IsUnique();

@@ -1,10 +1,10 @@
+using Medvya.BuildingBlocks.Security;
 using System.Text.Json.Serialization;
-using Medvya.Audit.Api;
+using Medvya.Audit.Application;
 using Medvya.Audit.Domain;
 using Medvya.BuildingBlocks.Domain;
 using Medvya.Patients.Application;
 using Medvya.Patients.Domain;
-using Medvya.Tenancy.Api;
 using Medvya.Tenancy.Application;
 using Medvya.Tenancy.Domain;
 using Microsoft.AspNetCore.Builder;
@@ -144,7 +144,7 @@ public static class PatientEndpoints
             .RequireCapability(Capability.RegisterBookPatients, Access.Full)
             .AuditedByUseCase("patient.register", "patient", Purpose);
 
-        // Only the active facility's patients: another facility's is 404 and changes nothing (audited NotFound by the filter).
+        // The record is shared by every location of the organisation (MDV-P1-072): an unknown id, or another organisation's, is 404 and changes nothing (audited NotFound).
         patients.MapPost("/{patientId:guid}/completion", Complete)
             .RequireCapability(Capability.RegisterBookPatients, Access.Full)
             .AuditedByUseCase("patient.update", "patient", Purpose, patientRouteKey: "patientId");
@@ -154,7 +154,7 @@ public static class PatientEndpoints
                 await consents.CurrentAsync(patientId, ct) is { } decisions ? Results.Ok(new { policyVersion = ConsentPolicy.CurrentVersion, decisions }) : Results.NotFound())
             .Audited("patient.consent.read", "patient", Purpose, patientRouteKey: "patientId");
 
-        // A changed decision is a new receipt; the old ones stay. Same facility rule as completion: another facility's patient is 404.
+        // A changed decision is a new receipt; the old ones stay. Same rule as completion: any location of the organisation, otherwise 404.
         patients.MapPost("/{patientId:guid}/consents", ChangeConsents)
             .RequireCapability(Capability.RegisterBookPatients, Access.Full)
             .AuditedByUseCase("patient.consent.record", "patient", Purpose, patientRouteKey: "patientId");

@@ -3,7 +3,6 @@ import type { MeContext } from '../domain/session';
 import type { SignInFailure } from '../domain/signIn';
 
 // The server holds the tokens (BFF, ADR-004); the browser only sends its HTTP-only session cookie.
-const csrf = { 'X-Medvya-Csrf': '1' };
 
 declare global {
   interface Window { medvyaMeContext?: Promise<Response | undefined> }
@@ -32,7 +31,7 @@ export async function fetchMeContext(passive = true): Promise<MeContext | null> 
 /** Scopes the session to one of the user's memberships (facility picker, MDV-P0-012). */
 export async function chooseFacility(membershipId: string) {
   const res = await apiFetch('/v1/me/facility', {
-    method: 'POST', credentials: 'same-origin', headers: { ...csrf, 'Content-Type': 'application/json' }, body: JSON.stringify({ membershipId }),
+    method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ membershipId }),
   });
   if (res.status === 401) throw new SessionEndedError();
   if (!res.ok) throw new Error(`me/facility ${res.status}`);
@@ -54,7 +53,7 @@ export function startSignIn(loginHint?: string) {
  */
 export async function startSignInWithHint(start: { loginHint: string; returnUrl: string; signup?: boolean }) {
   try {
-    const res = await apiFetch('/bff/login', { method: 'POST', headers: { ...csrf, 'Content-Type': 'application/json' }, body: JSON.stringify(start) });
+    const res = await apiFetch('/bff/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(start) });
     if (res.ok) { window.location.assign(((await res.json()) as { location: string }).location); return; }
   } catch { /* offline or timed out: same message as a refusal */ }
   window.location.assign(`${import.meta.env.BASE_URL}?signin=failed`);
@@ -65,7 +64,7 @@ export async function startSignInWithHint(start: { loginHint: string; returnUrl:
  * so on a shared PC the provider cannot sign the last account straight back in. It comes back to the app signed out.
  */
 export async function signOut() {
-  const res = await apiFetch('/bff/logout', { method: 'POST', credentials: 'same-origin', headers: csrf });
+  const res = await apiFetch('/bff/logout', { method: 'POST', credentials: 'same-origin' });
   if (res.status === 200) window.location.assign(((await res.json()) as { location: string }).location);
 }
 

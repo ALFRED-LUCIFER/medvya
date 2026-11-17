@@ -28,15 +28,14 @@ async def test_refused_consent_manual_note_flow(app_ctx, make_clinic) -> None:  
     res = (await c.get(f"{API}/sessions/{sid}/result", headers=h)).json()
     assert res["transcript"] == [] and res["facts"] == []
     assert res["note"]["content"]["subjective"] == "Fever for two days."
-    # a second manual note is refused; the first can be edited and approved
+    # a second manual note is refused; the first can be edited
     assert (await c.post(f"{API}/sessions/{sid}/notes", headers=h, json={})).status_code == 409
     r = await c.patch(
         f"{API}/sessions/{sid}/note", headers=h, json={"content": {"plan": "Rest, fluids"}}
     )
     assert r.status_code == 200 and r.json()["rev_no"] == 2
-    assert (await c.post(f"{API}/sessions/{sid}/approve", headers=h)).status_code == 200
-    r = await c.get(f"{API}/sessions/{sid}/export", headers=h)
-    assert r.status_code == 200 and r.json()["note"]["content"]["plan"] == "Rest, fluids"
+    res = (await c.get(f"{API}/sessions/{sid}/result", headers=h)).json()
+    assert res["note"]["content"]["plan"] == "Rest, fluids"
 
 
 async def test_manual_note_refused_once_audio_exists(app_ctx, make_clinic) -> None:  # type: ignore[no-untyped-def]

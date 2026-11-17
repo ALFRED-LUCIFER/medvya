@@ -4,7 +4,7 @@ import { ageOn, elsewhereLines, escalatedVisits, MAX_FLAGS, nextPatient, patient
 
 const card = (id: string, calendarId: string, state: BoardCard['state'], start: string, since = start): BoardCard => ({
   id, reference: id, patientId: `p-${id}`, patientName: id, dateOfBirth: null, registrationIncomplete: false, calendarId, calendarName: calendarId,
-  visitType: 'FollowUp', reasonCategory: 'General', start, end: start, state, since, room: null, token: null,
+  visitType: 'FollowUp', reasonCategory: 'General', start, end: start, state, since, room: null, token: null, walkIn: false, unscheduled: false, withDoctor: false,
 });
 
 describe('todayVisits', () => {

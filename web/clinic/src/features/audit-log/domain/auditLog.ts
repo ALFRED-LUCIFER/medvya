@@ -1,4 +1,4 @@
-import { catalogs, type MessageKey } from '@medvya/i18n';
+import { catalogs, type MessageKey, dateIn } from '@medvya/i18n';
 import type { Role } from '../../session/domain/session';
 // Mirrors src/Host.Api/AuditLog/AccessLogEndpoints.cs (the server is the authority). Rows hold ids and codes; the patient's name arrives only
 // on the per-patient request, so a list without a chosen patient shows the MRN alone.
@@ -49,8 +49,6 @@ export function actionKey(code: string): MessageKey | null {
 
 const DAY_MS = 86_400_000;
 
-/** The calendar date ('YYYY-MM-DD') of an instant in a time zone. */
-export const dateIn = (at: Date, zone: string) => new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(at);
 
 /** The instant at 00:00 on a 'YYYY-MM-DD' day in a time zone (the zone's own offset on that day, so daylight saving is respected). */
 export function startOfDayIn(day: string, zone: string): Date {

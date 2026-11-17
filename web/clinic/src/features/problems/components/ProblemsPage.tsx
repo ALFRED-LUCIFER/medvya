@@ -1,14 +1,15 @@
 import type { FormEventHandler } from 'react';
-import { Controller, type UseFormReturn } from 'react-hook-form';
+import { type UseFormReturn } from 'react-hook-form';
 import { Link } from 'react-router';
 import { CircleCheck, CircleHelp, MessageCircle, type LucideIcon } from 'lucide-react';
 import { ltr, useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, Card, Field, PageContainer, PageHeader, PageMessage, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead, TableHeader, StickyActionBar, TableRow, TableState, Tag, type Tone } from '@medvya/ui';
+import { Button, buttonVariants, Card, Field, PageContainer, PageHeader, PageMessage, Input, Table, TableBody, TableCell, TableHead, TableHeader, StickyActionBar, TableRow, TableState, Tag, type Tone } from '@medvya/ui';
 import type { ClinicalRefusal } from '../../clinical-access/domain/clinicalAccess';
 import type { EncounterBanner } from '../../encounters/domain/encounter';
 import PatientStrip from '../../encounters/components/PatientStrip';
 import ProblemAddForm, { ProblemAddSubmit } from './ProblemAddForm';
 import { problemColumns, statuses, verificationKey, verifications, type AddDraft, type CodeSet, type DiagnosisCode, type EditDraft, type Problem, type ProblemList, type ProblemRow } from '../domain/problems';
+import { SelectField } from '../../forms/components/SelectField';
 
 type Props = {
   view: ProblemList | null; banner: EncounterBanner | null; codeSet: CodeSet | null; loading: boolean; notFound: boolean; refusal: ClinicalRefusal | null; failed: boolean;
@@ -91,22 +92,10 @@ function EditRow(p: Props & { row: ProblemRow }) {
         <form noValidate onSubmit={p.onSaveEdit} aria-label={t('problems.editFor', { name: row.description })} className="flex flex-col gap-3">
           <p className="font-bold">{row.code ? `${row.code} · ${row.description}` : row.description}</p>
           <div className="grid gap-3 md:grid-cols-3">
-            <Controller control={p.editForm.control} name="verification" render={({ field }) => (
-              <Select value={field.value} onValueChange={field.onChange}>
-                <Field id={`edit-verification-${row.id}`} label={t('problems.col.verification')}>
-                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                </Field>
-                <SelectContent>{verifications.map(v => <SelectItem key={v} value={v}>{t(`problems.verification.${v}`)}</SelectItem>)}</SelectContent>
-              </Select>
-            )} />
-            <Controller control={p.editForm.control} name="status" render={({ field }) => (
-              <Select value={field.value} onValueChange={field.onChange}>
-                <Field id={`edit-status-${row.id}`} label={t('problems.col.status')}>
-                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                </Field>
-                <SelectContent>{statuses.map(s => <SelectItem key={s} value={s}>{t(`problems.status.${s}`)}</SelectItem>)}</SelectContent>
-              </Select>
-            )} />
+            <SelectField control={p.editForm.control} name="verification" id={`edit-verification-${row.id}`} label={t('problems.col.verification')}
+              options={verifications} optionLabel={v => t(`problems.verification.${v}`)} />
+            <SelectField control={p.editForm.control} name="status" id={`edit-status-${row.id}`} label={t('problems.col.status')}
+              options={statuses} optionLabel={s => t(`problems.status.${s}`)} />
             <Field id={`edit-onset-${row.id}`} label={t('problems.col.onset')}>
               <Input type="date" {...p.editForm.register('onsetOn')} />
             </Field>

@@ -7,10 +7,14 @@ export async function fetchMe(): Promise<Me | null> {
   catch (e) { if (e instanceof ApiError && e.status === 401) return null; throw e; }
 }
 
-/** Company sign-on. A key link rides to the server once, in the protected sign-in state; the server then keeps it in the session. */
-export function startSignOn(link: string | null) {
-  const to = link ? `/bff/login?returnUrl=%2F&link=${encodeURIComponent(link)}` : '/bff/login?returnUrl=%2F';
-  window.location.assign(to);
+/**
+ * Company sign-on. A key link rides to the server once, in a POST body and then the protected sign-in state, never in a URL (#1417);
+ * the page follows the returned provider address itself.
+ */
+export async function startSignOn(link: string | null) {
+  if (!link) { window.location.assign('/bff/login?returnUrl=%2F'); return; }
+  const res = await post('/bff/login', { link, returnUrl: '/' });
+  window.location.assign(((await res.json()) as { location: string }).location);
 }
 
 export const currentFragment = () => window.location.hash;

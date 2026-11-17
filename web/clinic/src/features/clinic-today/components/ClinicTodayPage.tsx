@@ -1,6 +1,6 @@
 import { Link } from 'react-router';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, Card, EmptyState, PageContainer, PageHeader, PageMessage, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@medvya/ui';
+import { Button, buttonVariants, Card, EmptyState, PageContainer, PageHeader, PageMessage, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Detail, DetailList } from '@medvya/ui';
 import type { AttentionLine, ClinicToday } from '../domain/clinicToday';
 
 type Props = {
@@ -35,14 +35,14 @@ function Body(p: Props) {
   return (
     <>
       <Card title={t('clinicToday.counts')}>
-        <dl className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <DetailList layout="tiles" className="xl:grid-cols-3">
           <Count label={t('clinicToday.booked')} value={n(d.booked)} detail={t('clinicToday.toArrive', { count: n(d.toArrive) })} />
           <Count label={t('clinicToday.arrived')} value={n(d.arrivedWalkIn + d.arrivedBooked)} detail={t('clinicToday.arrivedSplit', { walkIn: n(d.arrivedWalkIn), booked: n(d.arrivedBooked) })} />
           <Count label={t('clinicToday.waiting')} value={n(d.waiting)}
             detail={d.longestWaitMinutes === null ? t('clinicToday.noData') : t('clinicToday.longest', { minutes: n(d.longestWaitMinutes) })} />
           <Count label={t('clinicToday.incomplete')} value={n(d.incompleteRegistrations)} />
           <Count label={t('clinicToday.revenue')} value={t('clinicToday.notTracked')} />
-        </dl>
+        </DetailList>
       </Card>
       <Card title={t('clinicToday.attention')}>
         {p.lines.length === 0 ? <EmptyState>{t('clinicToday.attentionEmpty')}</EmptyState> : (
@@ -80,13 +80,7 @@ function Body(p: Props) {
 }
 
 function Count({ label, value, detail }: { label: string; value: string; detail?: string }) {
-  return (
-    <div className="flex flex-col gap-1 rounded-lg border p-4">
-      <dt className="font-bold">{label}</dt>
-      <dd className="text-heading">{value}</dd>
-      {detail && <dd className="text-sm text-muted-foreground">{detail}</dd>}
-    </div>
-  );
+  return <Detail label={label} note={detail}>{value}</Detail>;
 }
 
 function Line({ line, paths }: { line: AttentionLine; paths: Props['paths'] }) {

@@ -1,0 +1,171 @@
+name: deploy-env
+
+# Deploys the artifact that release.yml built to one environment (docs/runbooks/environments.md). Called only by release.yml.
+# Every vars.* below is set on the GitHub environment, so it resolves to that environment's resource group, web apps and identity.
+# The OIDC token names the environment (subject repo:<owner>/<repo>:environment:<name>), and each environment's federated credential
+# trusts only its own name, so a test deploy cannot sign in as dev. Nothing is built here: no install script runs next to the token.
+# The database is private (MDV-P0-038): this runner never connects to it. It uploads db-migrate to Blob and starts the Container Apps
+# job from infra/bicep/main.bicep, which applies infra/postgres/roles.sql as its administrator identity, maps the app, console and
+# migrator logins, then migrates as medvya_migrator (MDV-P0-042). The app ships only after the job succeeds. The platform console
+# (Host.Platform with web/platform-admin, ADR-014) ships after the clinic app once AZURE_CONSOLE_WEBAPP_NAME is set
+# (docs/runbooks/platform-console-azure.md).
+on:
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        required: true
+      version:
+        description: The release version (without the v); /health must report it.
+        type: string
+        required: true
+      optional:
+        description: Skip, green, when the environment has no AZURE_WEBAPP_NAME (not provisioned yet). Off for dev, where that is a mistake.
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30 # about 13 to deploy the clinic app and 5 the console
+    environment: ${{ inputs.environment }} # its federated credential trusts this environment only; dev needs a reviewer
+    concurrency:
+      group: deploy-${{ inputs.environment }}
+      cancel-in-progress: false
+    env:
+      VERSION: ${{ inputs.version }}
+    steps:
+      # Every later step runs only when the environment names its web app.
+      - name: Environment configured?
+        env:
+          APP: ${{ vars.AZURE_WEBAPP_NAME }}
+          ENVIRONMENT: ${{ inputs.environment }}
+          OPTIONAL: ${{ inputs.optional }}
+        run: |
+          if [ -n "$APP" ]; then exit 0; fi
+          [ "$OPTIONAL" = true ] || { echo "::error::environment '$ENVIRONMENT' has no AZURE_WEBAPP_NAME variable"; exit 1; }
+          echo "::notice::environment '$ENVIRONMENT' is not provisioned (no AZURE_WEBAPP_NAME); nothing deployed"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: vars.AZURE_WEBAPP_NAME != ''
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            tools/check-legal-marker.sh
+            docs/compliance
+            packages/i18n/messages
+      # dev and test hold synthetic data and internal users only. Any other environment (production) waits for counsel (MDV-P1-044).
+      - name: Draft terms block environments beyond dev and test
+        if: vars.AZURE_WEBAPP_NAME != '' && inputs.environment != 'dev' && inputs.environment != 'test'
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
+        run: bash tools/check-legal-marker.sh "$ENVIRONMENT"
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: vars.AZURE_WEBAPP_NAME != ''
+        with:
+          name: release
+      - if: vars.AZURE_WEBAPP_NAME != ''
+        run: tar -xzf release.tar.gz && rm release.tar.gz
+      - uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
+        if: vars.AZURE_WEBAPP_NAME != ''
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      # The hosts refuse to start without their key ring (#1417), and deploys never apply Bicep: stop here, before migrating, if `infra` has not set it.
+      - name: Infrastructure is current (data-protection key ring)
+        if: vars.AZURE_WEBAPP_NAME != ''
+        env:
+          RG: ${{ vars.AZURE_RESOURCE_GROUP }}
+          APPS: ${{ vars.AZURE_WEBAPP_NAME }} ${{ vars.AZURE_CONSOLE_WEBAPP_NAME }}
+          ENVIRONMENT: ${{ inputs.environment }}
+        run: |
+          for a in $APPS; do
+            n=$(az webapp config appsettings list -g "$RG" -n "$a" --query "length([?name=='DataProtection__KeyVaultKeyId'])" -o tsv)
+            [ "$n" = 1 ] || { echo "::error::$a has no DataProtection__KeyVaultKeyId: run the infra workflow for $ENVIRONMENT first (docs/runbooks/environments.md)"; exit 1; }
+          done
+      # test sleeps at night (test-power.yml): a release then wakes it. A no-op where everything runs.
+      - name: Start PostgreSQL and the web apps if stopped
+        if: vars.AZURE_WEBAPP_NAME != ''
+        env:
+          RG: ${{ vars.AZURE_RESOURCE_GROUP }}
+        run: |
+          for s in $(az postgres flexible-server list -g "$RG" --query "[?state=='Stopped'].name" -o tsv); do
+            echo "Starting $s"; az postgres flexible-server start -g "$RG" -n "$s" -o none
+          done
+          for a in $(az webapp list -g "$RG" --query "[?state=='Stopped'].name" -o tsv); do echo "Starting $a"; az webapp start -g "$RG" -n "$a" -o none; done
+      - name: Migrate database (job inside the VNet)
+        if: vars.AZURE_WEBAPP_NAME != ''
+        env:
+          RG: ${{ vars.AZURE_RESOURCE_GROUP }}
+          STORAGE: ${{ vars.AZURE_STORAGE_ACCOUNT }}
+          JOB: ${{ vars.AZURE_DB_JOB }}
+        run: |
+          az storage blob upload --auth-mode login --account-name "$STORAGE" -c deploy -n db-migrate.tar.gz -f db-migrate.tar.gz --overwrite -o none
+          execution=$(az containerapp job start -g "$RG" -n "$JOB" --query name -o tsv)
+          echo "Started $execution"
+          for _ in $(seq 1 120); do
+            status=$(az containerapp job execution show -g "$RG" -n "$JOB" --job-execution-name "$execution" --query properties.status -o tsv)
+            case "$status" in
+              Succeeded) echo "Database job succeeded"; exit 0 ;;
+              Failed|Stopped|Degraded) echo "::error::Database job $execution ended $status; its log is in Log Analytics (ContainerAppConsoleLogs_CL)"; exit 1 ;;
+            esac
+            sleep 10
+          done
+          echo "::error::Database job $execution did not finish in 20 minutes"; exit 1
+      - uses: azure/webapps-deploy@02a81bead70021f5284939794bcec79c271ab383 # v3.0.8
+        if: vars.AZURE_WEBAPP_NAME != ''
+        with:
+          app-name: ${{ vars.AZURE_WEBAPP_NAME }}
+          package: publish
+      # The app restarts after the deploy; give it up to 5 minutes to answer with the new build before failing.
+      # shortcut: no signed-in check (MFA needs a person); this proves the build, the web app and the identity provider config, not a sign-in.
+      - name: Smoke test
+        if: vars.AZURE_WEBAPP_NAME != ''
+        env:
+          RG: ${{ vars.AZURE_RESOURCE_GROUP }}
+          APP: ${{ vars.AZURE_WEBAPP_NAME }}
+        run: |
+          base="https://$(az webapp show -g "$RG" -n "$APP" --query defaultHostName -o tsv)"
+          expected="$VERSION+$GITHUB_SHA"
+          for _ in $(seq 1 30); do
+            got=$(curl -fsS "$base/health" | jq -r .version) && [ "$got" = "$expected" ] && break
+            sleep 10
+          done
+          [ "$got" = "$expected" ] || { echo "::error::/health reports '$got', expected '$expected'"; exit 1; }
+          curl -fsS -o /dev/null "$base/app/" || { echo "::error::the web app is not served at /app/"; exit 1; }
+          # A challenge redirect proves the OpenID Connect settings load and the provider's metadata is reachable.
+          location=$(curl -sS -o /dev/null -w '%{redirect_url}' "$base/bff/login")
+          case "$location" in *"/oauth2/v2.0/authorize"*) echo "Smoke test passed: $got" ;; *) echo "::error::/bff/login did not redirect to the identity provider (got '$location')"; exit 1 ;; esac
+      - uses: azure/webapps-deploy@02a81bead70021f5284939794bcec79c271ab383 # v3.0.8
+        if: vars.AZURE_WEBAPP_NAME != '' && vars.AZURE_CONSOLE_WEBAPP_NAME != ''
+        with:
+          app-name: ${{ vars.AZURE_CONSOLE_WEBAPP_NAME }}
+          package: publish-platform
+      # The new build answers /health, serves the console shell, refuses an API call without a session (401, not a 500), and sign-on
+      # redirects to Entra with the https callback (forwarded protocol and OIDC settings loaded; the Key Vault secret is read only at the callback).
+      - name: Smoke test the console
+        if: vars.AZURE_WEBAPP_NAME != '' && vars.AZURE_CONSOLE_WEBAPP_NAME != ''
+        env:
+          RG: ${{ vars.AZURE_RESOURCE_GROUP }}
+          APP: ${{ vars.AZURE_CONSOLE_WEBAPP_NAME }}
+        run: |
+          host=$(az webapp show -g "$RG" -n "$APP" --query defaultHostName -o tsv)
+          base="https://$host"
+          expected="$VERSION+$GITHUB_SHA"
+          for _ in $(seq 1 30); do
+            got=$(curl -fsS "$base/health" | jq -r .version) && [ "$got" = "$expected" ] && break
+            sleep 10
+          done
+          [ "$got" = "$expected" ] || { echo "::error::console /health reports '$got', expected '$expected'"; exit 1; }
+          curl -fsS "$base/" | grep -q '<div id="root">' || { echo "::error::the console shell (index.html) is not served at /"; exit 1; }
+          code=$(curl -sS -o /dev/null -w '%{http_code}' "$base/v1/me")
+          [ "$code" = 401 ] || { echo "::error::/v1/me without a session answered $code, expected 401"; exit 1; }
+          location=$(curl -sS -o /dev/null -w '%{redirect_url}' "$base/bff/login")
+          case "$location" in
+            *"/oauth2/v2.0/authorize"*"redirect_uri=https%3A%2F%2F$host%2Fsignin-oidc"*) echo "Console smoke test passed: $got" ;;
+            *) echo "::error::/bff/login did not redirect to Entra with the https callback (got '$location')"; exit 1 ;;
+          esac

@@ -1,10 +1,10 @@
 import type { FormEventHandler, ReactNode } from 'react';
-import { Controller, type UseFormReturn } from 'react-hook-form';
+import { type UseFormReturn } from 'react-hook-form';
 import { useI18n } from '@medvya/i18n';
-import { Button, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, StickyActionBar } from '@medvya/ui';
-import { Section } from '../../settings/components/Section';
+import { Card, Button, Field, Input, StickyActionBar, Detail, DetailList } from '@medvya/ui';
 import { cardBar, fieldError } from '../../settings/components/fieldStyles';
 import { pilotMetricIds, windowDays, type BaselineInput, type PilotMetricId, type PilotMetrics } from '../domain/pilotMetrics';
+import { SelectField } from '../../forms/components/SelectField';
 
 type Props = {
   state: 'loading' | 'ready' | 'forbidden' | 'error';
@@ -23,12 +23,10 @@ type Props = {
 /** One number with what it means and the clinic's value before Medvya. */
 function Tile({ label, value, detail, baseline }: { label: string; value: string; detail: ReactNode; baseline: string }) {
   return (
-    <div className="flex flex-col gap-1 rounded-lg border p-4">
-      <dt className="font-bold">{label}</dt>
-      <dd className="text-3xl font-extrabold">{value}</dd>
-      <dd className="text-sm">{detail}</dd>
-      <dd className="text-sm text-muted-foreground">{baseline}</dd>
-    </div>
+    // The value alone in its dd (a screen reader reads "No data yet", not the explanation run into it); what it means and the baseline follow.
+    <Detail label={label} valueClassName="text-display" note={<><span className="block text-foreground">{detail}</span><span className="block">{baseline}</span></>}>
+      {value}
+    </Detail>
   );
 }
 
@@ -50,8 +48,8 @@ export default function PilotMetricsPanel(p: Props) {
 
   return (
     <div className="flex flex-col gap-6">
-      <Section title={t('pilotMetrics.title')} intro={t('pilotMetrics.intro', { days: formatNumber(windowDays) })}>
-        <dl className="grid gap-4 md:grid-cols-2">
+      <Card title={t('pilotMetrics.title')} intro={t('pilotMetrics.intro', { days: formatNumber(windowDays) })}>
+        <DetailList layout="tiles">
           <Tile label={t('pilotMetrics.checkIn')} value={c.returningMedianSeconds === null ? none : unit('CheckInSeconds', Math.round(c.returningMedianSeconds))}
             detail={<span className="flex flex-col gap-1">
               <span className="font-semibold">{p.gapSeconds === null ? t('pilotMetrics.checkInNoReturning', { target: formatNumber(c.targetSeconds) })
@@ -71,19 +69,13 @@ export default function PilotMetricsPanel(p: Props) {
             detail={p.deliveryFailed ? t(p.deliveryForbidden ? 'pilotMetrics.deliveryForbidden' : 'pilotMetrics.deliveryFailed')
               : t('pilotMetrics.deliveryCounts', { delivered: formatNumber(p.delivery?.delivered ?? 0), settled: formatNumber(p.delivery?.settled ?? 0) })}
             baseline={baseline('ReminderDeliveryPercent')} />
-        </dl>
-      </Section>
+        </DetailList>
+      </Card>
 
-      <Section title={t('pilotMetrics.recordTitle')} intro={t('pilotMetrics.recordIntro')}>
+      <Card title={t('pilotMetrics.recordTitle')} intro={t('pilotMetrics.recordIntro')}>
         <form noValidate onSubmit={p.onSubmit} className="grid gap-4 md:grid-cols-2">
-          <Controller control={p.form.control} name="metric" render={({ field }) => (
-            <Select value={field.value} onValueChange={field.onChange}>
-              <Field id="baseline-metric" label={t('pilotMetrics.metric')}>
-                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-              </Field>
-              <SelectContent>{pilotMetricIds.map(id => <SelectItem key={id} value={id}>{t(`pilotMetrics.metric.${id}`)}</SelectItem>)}</SelectContent>
-            </Select>
-          )} />
+          <SelectField control={p.form.control} name="metric" id="baseline-metric" label={t('pilotMetrics.metric')}
+            options={pilotMetricIds} optionLabel={id => t(`pilotMetrics.metric.${id}`)} />
           <Field id="baseline-value" label={t('pilotMetrics.value')} error={errors.value ? t('pilotMetrics.error.value') : null}>
             <Input inputMode="decimal" autoComplete="off" {...p.form.register('value')} />
           </Field>
@@ -104,7 +96,7 @@ export default function PilotMetricsPanel(p: Props) {
             <Button type="submit" loading={p.saving}>{t('pilotMetrics.record')}</Button>
           </StickyActionBar>
         </form>
-      </Section>
+      </Card>
     </div>
   );
 }

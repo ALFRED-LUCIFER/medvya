@@ -1,3 +1,4 @@
+import type { Schemas } from '@medvya/api-client';
 import { localDate } from './changes';
 
 // GET /v1/schedule (src/Modules/Scheduling/Medvya.Scheduling.Application/IScheduleService.cs). Instants are UTC ISO strings;
@@ -29,7 +30,8 @@ export type ScheduleColumn = {
 };
 
 /** One facility day. `date` is the facility-local date (YYYY-MM-DD); start and end frame the day for every column. */
-export type ScheduleDay = { facilityId: string; timeZone: string; date: string; start: string; end: string; columns: ScheduleColumn[] };
+// The server's ScheduleDay (generated client), with the columns as this screen reads them: the contract leaves a visit length's fields optional.
+export type ScheduleDay = Omit<Schemas['ScheduleDay'], 'columns'> & { columns: ScheduleColumn[] };
 
 /**
  * Where a block sits in its column: offset and height in px from the top of the day frame. `lane` splits the width when a visit

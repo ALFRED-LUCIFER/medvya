@@ -9,6 +9,7 @@ using Medvya.Tenancy.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
+using static Medvya.BuildingBlocks.Domain.TextInput;
 
 namespace Medvya.Tenancy.Infrastructure;
 
@@ -18,17 +19,17 @@ namespace Medvya.Tenancy.Infrastructure;
 /// The scope's context shares the app's EF model: a context built by hand here cost the first finish on each instance seconds (#205).
 /// The fees entered become the clinic default and the owner-doctor's prices in the Billing catalogue (MDV-P4-002), in the same transaction.
 /// </summary>
-public sealed class PracticeProvisioning(IServiceScopeFactory scopes, ICurrentUser user, IAuditLog audit)
+public sealed class PracticeProvisioning(IServiceScopeFactory scopes, ICurrentUser user, IAuditLog audit, TimeProvider clock)
     : IPracticeProvisioning
 {
     public async Task<ProvisionedPractice> CreateAsync(string country, OnboardingData data, CancellationToken cancellationToken = default)
     {
         var rules = OnboardingRules.For(country) ?? throw new ArgumentException("Unsupported country.", nameof(country));
-        if (rules.ValidateAll(data).Count > 0) throw new ArgumentException("The onboarding data is not valid.", nameof(data));
+        if (rules.ValidateAll(data, DateOnly.FromDateTime(clock.GetUtcNow().UtcDateTime)).Count > 0) throw new ArgumentException("The onboarding data is not valid.", nameof(data));
         var owner = user.UserId ?? throw new InvalidOperationException("No signed-in user.");
         var clinic = data.Clinic!;
         var role = data.Profile!.Mode == OnboardingRules.Solo ? Role.SoloDoctor : Role.PracticeAdmin;
-        var now = DateTimeOffset.UtcNow;
+        var now = clock.GetUtcNow();
 
         var tenantId = Guid.CreateVersion7();
         await using var scope = scopes.CreateAsyncScope();
@@ -107,8 +108,6 @@ public sealed class PracticeProvisioning(IServiceScopeFactory scopes, ICurrentUs
 
     // The data plane the tenant is bound to (ADR-003); the region names follow the Azure regions the selector shows.
     static string ResidencyRegion(string country) => country == "IN" ? "centralindia" : "uaenorth";
-
-    static string? Clean(string? v) => string.IsNullOrWhiteSpace(v) ? null : v.Trim();
 
     static string Windows(IReadOnlyList<HoursWindow>? w) => JsonSerializer.Serialize((w ?? []).Select(x => new { start = x.Start, end = x.End }));
 }

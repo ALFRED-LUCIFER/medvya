@@ -97,6 +97,8 @@ public sealed class SettingsValidationException(IReadOnlyList<ValidationError> e
 /// </summary>
 public interface IPracticeSettings
 {
+    /// <summary>The caller is an owner or administers staff at every location: what an organisation-wide setting (profile, logo, a new location, queue rule) needs (#1417).</summary>
+    Task<bool> AdministersEveryLocationAsync(CancellationToken cancellationToken = default);
     Task<ProfileView> GetProfileAsync(CancellationToken cancellationToken = default);
 
     /// <exception cref="SettingsValidationException"/>
@@ -139,8 +141,9 @@ public interface IPracticeSettings
     /// <summary>Which clinicians treat the facility's patients (MDV-P2-024).</summary>
     Task<ClinicalAccessPolicy> GetClinicalAccessAsync(CancellationToken cancellationToken = default);
 
+    /// <summary>Owner only (the policy is organisation-wide): null for anyone else.</summary>
     /// <exception cref="SettingsValidationException">Not a known policy.</exception>
-    Task<ClinicalAccessPolicy> SaveClinicalAccessAsync(ClinicalAccessPolicy policy, CancellationToken cancellationToken = default);
+    Task<ClinicalAccessPolicy?> SaveClinicalAccessAsync(ClinicalAccessPolicy policy, CancellationToken cancellationToken = default);
 
     /// <summary>The clinic's queue rule (MDV-P1-103).</summary>
     Task<QueueRule> GetQueueRuleAsync(CancellationToken cancellationToken = default);

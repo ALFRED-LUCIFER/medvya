@@ -1,6 +1,6 @@
 import type { HubConnection } from '@microsoft/signalr';
-import { csrf } from '../../schedule/services/scheduleApi';
 import { retryDelay, type BoardChange, type LiveStatus } from '../domain/board';
+import { csrf } from '../../api/services/apiClient';
 
 type Handlers = {
   /** Something changed (the board: which visit and its state; the queue TV: nothing at all): the caller refetches. */

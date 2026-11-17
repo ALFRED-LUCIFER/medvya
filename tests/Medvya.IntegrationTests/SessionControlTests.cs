@@ -90,7 +90,7 @@ public sealed class SessionControlTests(PostgresFixture sql) : IClassFixture<Pos
     async Task<List<string>> AuditActions(Guid tenant, Guid actor)
     {
         await using var db = sql.Audit(tenant);
-        return await db.Events.Where(e => e.ActorUserId == actor).OrderBy(e => e.OccurredAt).Select(e => e.Action).ToListAsync();
+        return await db.Events.Where(e => e.ActorUserId == actor).OrderBy(e => e.OccurredAt).ThenBy(e => e.Id).Select(e => e.Action).ToListAsync();
     }
 
     async Task<StaffSession> SessionOf(Guid userId)
@@ -387,6 +387,59 @@ public sealed class SessionControlTests(PostgresFixture sql) : IClassFixture<Pos
         Assert.Equal(HttpStatusCode.OK, await ContextStatus(adminBrowser));
     }
 
+    // SAFETY: mutation check: removed the location check in DELETE /v1/staff/{userId}/sessions -> AnAdminOfOneLocationCannotSignOutStaffOfAnother failed.
+    [Fact]
+    public async Task AnAdminOfOneLocationCannotSignOutStaffOfAnother()
+    {
+        await Clinics();
+        var branch = Guid.NewGuid();
+        await using (var db = sql.Context(tenantA))
+        {
+            db.Facilities.Add(new Facility { Id = branch, TenantId = tenantA, Name = "Velachery (synthetic)", TimeZone = "Asia/Kolkata" });
+            await db.SaveChangesAsync();
+        }
+        var admin = await Account("K. Lakshmi");
+        var staff = await Account("A. Joseph");
+        var adminMembership = await Member(admin, tenantA, facilityA, Role.PracticeAdmin);
+        var staffAtBranch = await Member(staff, tenantA, branch, Role.Receptionist);
+        using var staffBrowser = await SignedIn(staff);
+        await Choose(staffBrowser, staffAtBranch);
+        using var adminBrowser = await SignedIn(admin);
+        await Choose(adminBrowser, adminMembership);
+
+        Assert.Equal(HttpStatusCode.NotFound, (await Send(adminBrowser, HttpMethod.Delete, $"/v1/staff/{staff.Id}/sessions")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, await ContextStatus(staffBrowser)); // the other location's staff stay signed in
+        Assert.DoesNotContain("session.revoke", await AuditActions(tenantA, admin.Id));
+    }
+
+    // SAFETY: mutation check: removed the owner rule in DELETE /v1/staff/{userId}/sessions -> OnlyAnOwnerSignsOutTheOwnerOrADoctor failed.
+    [Fact]
+    public async Task OnlyAnOwnerSignsOutTheOwnerOrADoctor()
+    {
+        await Clinics();
+        var owner = await Account("P. Iyer");
+        var doctor = await Account("S. Menon");
+        var admin = await Account("K. Lakshmi");
+        var ownerMembership = await Member(owner, tenantA, facilityA, Role.PracticeAdmin, owner: true);
+        var doctorMembership = await Member(doctor, tenantA, facilityA, Role.HospitalDoctor);
+        var adminMembership = await Member(admin, tenantA, facilityA, Role.PracticeAdmin);
+        using var ownerBrowser = await SignedIn(owner);
+        await Choose(ownerBrowser, ownerMembership);
+        using var doctorBrowser = await SignedIn(doctor);
+        await Choose(doctorBrowser, doctorMembership);
+        using var adminBrowser = await SignedIn(admin);
+        await Choose(adminBrowser, adminMembership);
+
+        // An administrator of the same location may not sign out the owner or a doctor: only an owner decides that (MDV-P1-107).
+        Assert.Equal(HttpStatusCode.NotFound, (await Send(adminBrowser, HttpMethod.Delete, $"/v1/staff/{owner.Id}/sessions")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await Send(adminBrowser, HttpMethod.Delete, $"/v1/staff/{doctor.Id}/sessions")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, await ContextStatus(ownerBrowser));
+        Assert.Equal(HttpStatusCode.OK, await ContextStatus(doctorBrowser));
+
+        Assert.Equal(HttpStatusCode.NoContent, (await Send(ownerBrowser, HttpMethod.Delete, $"/v1/staff/{doctor.Id}/sessions")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, await ContextStatus(doctorBrowser));
+    }
+
     [Fact]
     public async Task SigningOutBeforeChoosingAFacilityIsAuditedInThePlatformChain()
     {
@@ -485,6 +538,45 @@ public sealed class SessionControlTests(PostgresFixture sql) : IClassFixture<Pos
         Assert.Equal(future, released.AggregateId);
         Assert.Contains("\"quiet\":false", released.Payload, StringComparison.Ordinal); // offered: the patient is asked to rebook
         Assert.Equal(Medvya.Scheduling.Domain.AppointmentState.CheckedIn, (await db.Appointments.SingleAsync(a => a.Id == waiting)).State); // stays for reassignment
+    }
+
+    // SAFETY: mutation check: removed the session calendar lock in DoctorOffboardingParticipant.HoldAsync -> this test failed (offboarding finished while the booking was open).
+    [Fact]
+    public async Task OffboardingWaitsForABookingInFlightOnADayWithNoVisitsAndMovesItToo()
+    {
+        await Clinics();
+        var admin = await Account("K. Lakshmi");
+        var doctor = await Account("Dr. R. Menon");
+        var adminMembership = await Member(admin, tenantA, facilityA, Role.PracticeAdmin, owner: true);
+        var doctorMembership = await Member(doctor, tenantA, facilityA, Role.HospitalDoctor);
+        using var adminBrowser = await SignedIn(admin);
+        await Choose(adminBrowser, adminMembership);
+
+        // A booking in flight for a day the doctor had nothing on: it holds the calendar lock shared, as DoctorDayTransaction does, until it commits.
+        await using var booking = sql.Scheduling(tenantA);
+        var tx = await booking.Database.BeginTransactionAsync();
+        var calendarKey = $"doctor:{tenantA}:{doctor.Id}";
+        await booking.Database.ExecuteSqlAsync($"SELECT pg_advisory_xact_lock_shared(hashtextextended({calendarKey}, 0))");
+        var start = DateTimeOffset.UtcNow.AddDays(5);
+        var visit = new Medvya.Scheduling.Domain.Appointment
+        {
+            Id = Guid.NewGuid(), TenantId = tenantA, FacilityId = facilityA, CalendarId = doctor.Id, CalendarKind = Medvya.Scheduling.Domain.CalendarKind.Doctor, PatientId = Guid.NewGuid(),
+            VisitType = Medvya.Scheduling.Domain.VisitType.FollowUp, Start = start, End = start.AddMinutes(15), State = Medvya.Scheduling.Domain.AppointmentState.Booked,
+            ReasonCategory = Medvya.Scheduling.Domain.ReasonCategory.General, Channel = Medvya.Scheduling.Domain.BookingChannel.Phone, BookedAt = DateTimeOffset.UtcNow, ChangedAt = DateTimeOffset.UtcNow,
+        };
+        booking.Appointments.Add(visit);
+        await booking.SaveChangesAsync();
+
+        var offboard = Send(adminBrowser, HttpMethod.Post, $"/v1/staff/{doctorMembership}/offboard", new { reason = "Left the practice", offerRebooking = false });
+        await Task.Delay(TimeSpan.FromSeconds(1));
+        Assert.False(offboard.IsCompleted); // it waits for the booking
+        await tx.CommitAsync();
+        using (var done = await offboard) Assert.Equal(HttpStatusCode.OK, done.StatusCode);
+
+        await using var db = sql.Scheduling(tenantA);
+        Assert.Equal(Medvya.Scheduling.Domain.AppointmentState.NeedsRebooking, (await db.Appointments.SingleAsync(a => a.Id == visit.Id)).State);
+        // The offboarding audit row is still written, after the participants' locks.
+        Assert.Contains("staff.offboard", await AuditActions(tenantA, admin.Id));
     }
 
     [Fact]

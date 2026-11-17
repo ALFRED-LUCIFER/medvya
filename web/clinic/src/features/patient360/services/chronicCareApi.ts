@@ -1,7 +1,7 @@
-import { csrf, post, send } from '../../schedule/services/scheduleApi';
+import { post, send } from '../../api/services/apiClient';
 import type { CareGoal, CareTarget, ChronicCare, TargetCode } from '../domain/chronicCare';
 
-const put = <T>(url: string, body: unknown) => send<T>(url, { method: 'PUT', headers: { ...csrf, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+const put = <T>(url: string, body: unknown) => send<T>(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 
 // Chronic care (MDV-P2-038). The patient and goal ids are the only things in the path; the measure, values and text travel in the body.
 export const fetchChronicCare = (patientId: string) => send<ChronicCare>(`/v1/patients/${patientId}/chronic-care`);

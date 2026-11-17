@@ -1,4 +1,4 @@
-using Medvya.Tenancy.Api;
+using Medvya.Tenancy.Application;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using System.Threading.RateLimiting;

@@ -1,4 +1,4 @@
-import { csrf, post, send } from '../../schedule/services/scheduleApi';
+import { post, send } from '../../api/services/apiClient';
 import type { Encounter, EncounterBanner } from '../domain/encounter';
 import type { FollowUp, FollowUpPeriod } from '../domain/followUp';
 
@@ -13,4 +13,4 @@ export const takeOverVisit = (id: string, reason: string) => post<void>(`/v1/enc
 // The plan's follow-up (MDV-P2-043): a period code in the body.
 export const fetchFollowUp = (id: string) => send<FollowUp>(`/v1/encounters/${id}/follow-up`);
 export const saveFollowUp = (id: string, period: FollowUpPeriod | null) =>
-  send<FollowUp>(`/v1/encounters/${id}/follow-up`, { method: 'PUT', headers: { ...csrf, 'Content-Type': 'application/json' }, body: JSON.stringify({ period }) });
+  send<FollowUp>(`/v1/encounters/${id}/follow-up`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ period }) });

@@ -46,8 +46,9 @@ public sealed class BlobDigestStore(BlobContainerClient client, bool createConta
 /// (table, tenant, last sequence, last hash) and hmac is HMAC-SHA256 of the payload text with the digest key (Key Vault in the cloud, a local key
 /// in Development). Hashes are integrity evidence, not a legally qualified signature. Ids and hashes only, no PHI.
 /// Row-level security is never bypassed: the tenants come from the ids-only ledger."Chains" list, and each tenant's chains are read with
-/// medvya.tenant_id set to that tenant. shortcut: heads are a group-by per table and a round trip per tenant; keep a head row per chain
-/// when tables or tenant counts are large.
+/// medvya.tenant_id set to that tenant. The daily check re-hashes only rows written since the last digest; once a week (and on demand, full: true)
+/// it re-hashes every chain, which is what finds a row altered in place before that digest with its stored hashes left as they were.
+/// shortcut: one round trip per tenant for heads and per chain for the check; batch them when tenant counts are large.
 /// </summary>
 public sealed partial class LedgerDigests(string connectionString, byte[] key, IDigestStore store, TimeProvider clock, ILogger<LedgerDigests> log)
 {
@@ -66,15 +67,20 @@ public sealed partial class LedgerDigests(string connectionString, byte[] key, I
         await cmd.ExecuteNonQueryAsync(ct);
     }
 
+    /// <summary>Every chain, from the ids-only list (no row-level security, nothing read from the chains themselves).</summary>
+    static async Task<List<(string Table, Guid Tenant)>> ChainsAsync(NpgsqlConnection conn, CancellationToken ct)
+    {
+        var chains = new List<(string, Guid)>();
+        await using var list = new NpgsqlCommand("""SELECT "Table", "TenantId" FROM ledger."Chains" ORDER BY 2, 1""", conn);
+        await using var r = await list.ExecuteReaderAsync(ct);
+        while (await r.ReadAsync(ct)) chains.Add((r.GetString(0), r.GetGuid(1)));
+        return chains;
+    }
+
     static async Task<List<Head>> HeadsAsync(NpgsqlConnection conn, CancellationToken ct)
     {
-        var tenants = new List<Guid>();
-        await using (var list = new NpgsqlCommand("""SELECT DISTINCT "TenantId" FROM ledger."Chains" ORDER BY 1""", conn))
-        await using (var r = await list.ExecuteReaderAsync(ct))
-            while (await r.ReadAsync(ct)) tenants.Add(r.GetGuid(0));
-
         var heads = new List<Head>();
-        foreach (var tenant in tenants)
+        foreach (var tenant in (await ChainsAsync(conn, ct)).Select(c => c.Tenant).Distinct())
         {
             await InTenantAsync(conn, tenant, ct);
             await using var cmd = new NpgsqlCommand("SELECT tbl, tenant, seq, hash FROM ledger.heads() ORDER BY 1, 2", conn);
@@ -100,15 +106,17 @@ public sealed partial class LedgerDigests(string connectionString, byte[] key, I
     }
 
     /// <summary>
-    /// Re-reads every chain and compares with the latest digest. Returns the number of problems found; each one is logged at Critical
+    /// Compares every chain with the latest digest and re-hashes the rows written since it (or the whole chain when <paramref name="full"/>, when a
+    /// chain has no trusted digest head, or without a valid digest). Returns the number of problems found; each one is logged at Critical
     /// (the alert) with table and tenant ids only. A digest that is unreadable or altered is a problem, and so is a missing one once the
     /// database records that a digest was published (ledger."Digests"); no digest ever is only a warning (a new environment).
     /// </summary>
-    public async Task<int> VerifyAsync(CancellationToken ct = default)
+    public async Task<int> VerifyAsync(bool full = false, CancellationToken ct = default)
     {
         var problems = 0;
         await using var conn = await OpenAsync(ct);
-        var chains = (await HeadsAsync(conn, ct)).Select(h => (h.Table, h.Tenant)).ToHashSet();
+        var chains = (await ChainsAsync(conn, ct)).ToHashSet();
+        var trusted = new Dictionary<(string, Guid), Head>(); // digest heads whose stored hash still matches: the forward check starts there
 
         DateTimeOffset? published;
         await using (var last = new NpgsqlCommand("""SELECT max("At") FROM ledger."Digests" """, conn))
@@ -156,6 +164,7 @@ public sealed partial class LedgerDigests(string connectionString, byte[] key, I
                         problems++;
                         HeadChanged(log, h.Table, h.Tenant, h.Seq);
                     }
+                    else trusted[(h.Table, h.Tenant)] = h;
                 }
             }
         }
@@ -163,9 +172,15 @@ public sealed partial class LedgerDigests(string connectionString, byte[] key, I
         foreach (var (table, tenant) in chains)
         {
             await InTenantAsync(conn, tenant, ct);
-            await using var cmd = new NpgsqlCommand("SELECT ledger.verify_chain(@t, @tenant)", conn);
+            var from = full ? null : trusted.GetValueOrDefault((table, tenant));
+            await using var cmd = new NpgsqlCommand(from is null ? "SELECT ledger.verify_chain(@t, @tenant)" : "SELECT ledger.verify_chain_from(@t, @tenant, @seq, @hash)", conn);
             cmd.Parameters.AddWithValue("t", table);
             cmd.Parameters.AddWithValue("tenant", tenant);
+            if (from is not null)
+            {
+                cmd.Parameters.AddWithValue("seq", from.Seq);
+                cmd.Parameters.AddWithValue("hash", Convert.FromHexString(from.Hash));
+            }
             if (await cmd.ExecuteScalarAsync(ct) is Guid broken)
             {
                 problems++;
@@ -192,7 +207,7 @@ public sealed partial class LedgerDigests(string connectionString, byte[] key, I
 }
 
 /// <summary>The two recurring jobs (registered in Program.cs next to the notification job). A failed verification fails the job so Hangfire and its alerts show it.</summary>
-public sealed class LedgerJobs(LedgerDigests digests)
+public sealed class LedgerJobs(LedgerDigests digests, TimeProvider clock)
 {
     public const string PublishJobId = "ledger-digest";
     public const string VerifyJobId = "ledger-verify";
@@ -201,6 +216,7 @@ public sealed class LedgerJobs(LedgerDigests digests)
 
     public async Task VerifyAsync(CancellationToken ct)
     {
-        if (await digests.VerifyAsync(ct) is var problems and > 0) throw new InvalidOperationException($"Ledger verification found {problems} problem(s).");
+        // The whole chains on Sundays; the other days only what was written since the last digest.
+        if (await digests.VerifyAsync(full: clock.GetUtcNow().DayOfWeek == DayOfWeek.Sunday, ct) is var problems and > 0) throw new InvalidOperationException($"Ledger verification found {problems} problem(s).");
     }
 }

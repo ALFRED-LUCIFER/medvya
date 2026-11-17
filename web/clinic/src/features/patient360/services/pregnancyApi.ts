@@ -1,10 +1,10 @@
-import { csrf, send } from '../../schedule/services/scheduleApi';
+import { send } from '../../api/services/apiClient';
 import type { PregnancyOutcome, PregnancyStatus } from '../domain/chart';
 
 // The pregnancy record (MDV-P2-034). Only the patient id is in the path; dates, counts and readings are in the body.
 const post = (patientId: string, tail: string, body?: unknown) =>
   send<PregnancyStatus>(`/v1/patients/${patientId}/pregnancy${tail}`, {
-    method: 'POST', headers: { ...csrf, 'Content-Type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body),
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body),
   });
 
 export const startPregnancy = (patientId: string, body: object) => post(patientId, '', body);

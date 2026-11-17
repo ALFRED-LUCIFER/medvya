@@ -71,7 +71,7 @@ test('J2.5 (coding half, MDV-P2-010) E-07 · Doctor: the diagnosis is coded with
 });
 
 journey('J2', {
-  5: 'MDV-P2-012',
+  5: 'MDV-P3-012', // A-05 note review, conflicts and sign (signing itself is MDV-P2-012, green in steps 11-12)
   // E-01 (MDV-P2-033): the chart on one page, the allergy in the banner, the section buttons, and the open consultation one click away.
   9: async ({ page }) => {
     await mockChart(page);

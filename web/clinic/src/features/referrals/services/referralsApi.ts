@@ -1,4 +1,4 @@
-import { post, send } from '../../schedule/services/scheduleApi';
+import { post, send } from '../../api/services/apiClient';
 import { downloadPaperPdf } from '../../prescription/services/prescriptionApi';
 import { toAdvanceBody, toFileInBody, type AdvanceForm, type Channel, type FileInForm, type Letter, type Referral, type ReferralForm } from '../domain/referrals';
 

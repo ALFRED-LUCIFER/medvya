@@ -25,7 +25,7 @@ param cmkIdentityId string
 param cmkKeyUri string
 @description('Zone-redundant HA. On for production; off for dev (Burstable tiers do not support it).')
 param haEnabled bool = false
-@description('Point-in-time restore window in days (7 to 35). Production 14, dev 7.')
+@description('Point-in-time restore window in days (7 to 35). Production 35, dev 7.')
 @minValue(7)
 @maxValue(35)
 param pitrRetentionDays int = 7
@@ -60,6 +60,8 @@ var serverSettings = [
   { name: 'ssl_min_protocol_version', value: 'TLSv1.2' }
   { name: 'log_connections', value: 'on' }
   { name: 'log_disconnections', value: 'on' }
+  // No DETAIL lines: a constraint error's DETAIL quotes the row's values (a name, a phone), which would land in Log Analytics.
+  { name: 'log_error_verbosity', value: 'terse' }
 ]
 
 resource server 'Microsoft.DBforPostgreSQL/flexibleServers@2024-08-01' = {
@@ -75,6 +77,8 @@ resource server 'Microsoft.DBforPostgreSQL/flexibleServers@2024-08-01' = {
     network: { delegatedSubnetResourceId: delegatedSubnetId, privateDnsZoneArmResourceId: privateDnsZoneId, publicNetworkAccess: 'Disabled' }
     dataEncryption: { type: 'AzureKeyVault', primaryKeyURI: cmkKeyUri, primaryUserAssignedIdentityId: cmkIdentityId }
     storage: { storageSizeGB: storageSizeGB, autoGrow: 'Enabled' }
+    // shortcut: with a customer-managed key, geo backup also needs a key and an identity in the paired region (dataEncryption.geoBackupKeyURI,
+    // geoBackupUserAssignedIdentityId); not passed yet, so geoRedundantBackup=true fails. Add them with the first production server (MDV-P1-039).
     backup: { backupRetentionDays: pitrRetentionDays, geoRedundantBackup: geoRedundantBackup ? 'Enabled' : 'Disabled' }
     highAvailability: { mode: haEnabled ? 'ZoneRedundant' : 'Disabled' }
   }

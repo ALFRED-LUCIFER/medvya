@@ -3,7 +3,7 @@ import { admin, at, axe, board, persona, signIn } from './support/desk';
 
 // MDV-P1-078 (AC4, AC6): on Today, settings and registration at 375, 768 and 1024 touch, no control's target is under 24 px either way,
 // and every radio, checkbox and patient row is at least 44 px tall as a target (the ChoiceRow label; the stretched name link's row).
-// The measuring follows docs/product-ux-audit/tools/states-measure.mjs. Mocked API, as in the other specs (CI has none).
+// The measuring follows tools/product-ux-audit/states-measure.mjs. Mocked API, as in the other specs (CI has none).
 const doctor = { ...persona('SoloDoctor', { RegisterBookPatients: 'Full', CheckInQueue: 'Full', Patient360Chart: 'Full', ClinicalNotes: 'Full' }),
   user: { id: 'd-1', displayName: 'Dr. Arjun Rao (synthetic)' } };
 

@@ -1,9 +1,8 @@
 import type { FormEventHandler } from 'react';
 import type { FieldError, UseFormReturn } from 'react-hook-form';
 import { useI18n, type MessageKey } from '@medvya/i18n';
-import { Button, Dialog, DialogContent, DialogDescription, DialogTitle, Field, Input } from '@medvya/ui';
+import { Button, Card, Dialog, DialogContent, DialogDescription, DialogTitle, Field, Input } from '@medvya/ui';
 import { fieldError } from '../../settings/components/fieldStyles';
-import { Section } from '../../settings/components/Section';
 import { razorpayEvents, type RazorpayForm, type RazorpayStatus } from '../domain/razorpay';
 
 type Props = {
@@ -24,7 +23,7 @@ export default function RazorpayPanel(p: Props) {
   // A server refusal names its code; a refusal in the browser gets the field's own message.
   const problem = (e: FieldError | undefined, own: MessageKey) => (e ? t(e.type === 'server' ? (`billing.error.${e.message}` as MessageKey) : own) : null);
   return (
-    <Section title={t('billing.razorpay.title')} intro={t('billing.razorpay.intro')}
+    <Card title={t('billing.razorpay.title')} intro={t('billing.razorpay.intro')}
       actions={<Button variant="outline" onClick={p.onOpen}>{t(s.connected ? 'billing.razorpay.replace' : 'billing.razorpay.connect')}</Button>}>
       {s.connected ? (
         <div className="flex flex-col gap-3">
@@ -67,6 +66,6 @@ export default function RazorpayPanel(p: Props) {
           </form>
         </DialogContent>
       </Dialog>
-    </Section>
+    </Card>
   );
 }

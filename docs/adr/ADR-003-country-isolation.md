@@ -8,6 +8,6 @@ India and UAE run as **separate deployments**: separate subscription or resource
 
 ## Consequences
 
-- Azure Policy denies resource creation outside the allowed regions (`infra/bicep/policies/deny-cross-region.json`).
+- Azure Policy denies resource creation outside the allowed regions (the built-in "Allowed locations" policy, assigned as `allowed-locations-in` in `infra/bicep/main.bicep`).
 - The global control plane (P5 platform console) holds **no PHI**: only tenant catalogue, plan and routing.
 - Telemetry and support tooling must be per-country or PHI-free.

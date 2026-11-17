@@ -3,7 +3,8 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, render, screen } from '@testing-library/react';
-import { Skeleton, SkeletonGroup, skeletonDelayMs } from './index';
+import { Skeleton, SkeletonGroup } from './index';
+import { skeletonDelayMs } from './components/ui/skeleton';
 
 afterEach(() => { cleanup(); vi.useRealTimers(); });
 

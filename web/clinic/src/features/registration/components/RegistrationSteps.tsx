@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { BadgeInfo, Info, TriangleAlert } from 'lucide-react';
 import { useI18n, type Country } from '@medvya/i18n';
-import { Button } from '@medvya/ui';
+import { Button, Detail, DetailList } from '@medvya/ui';
 import type { IdentifierScheme, PayerKind } from '../../patients/domain/directory';
 import {
   eidExpired, emirates, genderIdentities, hieFor, indiaStates, languages, nationalities, otherIdChoices, payerFields, payerKinds, payerLabel,
@@ -245,17 +245,14 @@ export function ReviewStep({ country, values, ageInstead, onEdit }: { country: C
         : [t('patients.record.payerMissing')] },
   ];
   return (
-    <dl className="flex flex-col divide-y rounded-lg border">
+    <DetailList layout="rows">
       {rows.map(r => (
-        <div key={r.label} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-3 py-2">
-          <dt className="w-36 shrink-0 text-sm font-bold text-muted-foreground">{r.label}</dt>
-          <dd className="min-w-0 flex-1 break-words">
-            {r.parts.filter(Boolean).length === 0 ? missing
-              : r.parts.filter(Boolean).map((part, i) => <span key={i}>{i > 0 && t('registration.review.separator')}{part}</span>)}
-          </dd>
-          <dd><Button type="button" variant="ghost" onClick={() => onEdit(r.step)} aria-label={t('registration.review.edit', { part: r.label })}>{t('registration.review.editShort')}</Button></dd>
-        </div>
+        <Detail key={r.label} label={r.label}
+          action={<Button type="button" variant="ghost" onClick={() => onEdit(r.step)} aria-label={t('registration.review.edit', { part: r.label })}>{t('registration.review.editShort')}</Button>}>
+          {r.parts.filter(Boolean).length === 0 ? missing
+            : r.parts.filter(Boolean).map((part, i) => <span key={i}>{i > 0 && t('registration.review.separator')}{part}</span>)}
+        </Detail>
       ))}
-    </dl>
+    </DetailList>
   );
 }

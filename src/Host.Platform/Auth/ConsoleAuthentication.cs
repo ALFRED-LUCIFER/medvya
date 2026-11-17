@@ -140,12 +140,23 @@ public static partial class ConsoleAuthentication
 
     public static WebApplication MapConsoleSession(this WebApplication app)
     {
-        // A key link (invitation or recovery) rides in the protected OIDC state, then in the session row; the browser drops it here.
-        app.MapGet("/bff/login", (string? link, string? returnUrl) =>
+        // Plain sign-on. A key link never rides in a URL (App Service logs, browser history; #1417): in the query string it is refused, not read.
+        app.MapGet("/bff/login", (string? returnUrl, HttpRequest request) => request.Query.ContainsKey("link")
+                ? Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: "Send the key link in the request body")
+                : Results.Challenge(SignOnProperties(null, returnUrl), [OpenIdConnectDefaults.AuthenticationScheme]))
+            .AllowAnonymous()
+            .RequireRateLimiting(SignInRateLimit);
+
+        // Sign-on with a key link (invitation or recovery): it comes in the body, rides in the protected OIDC state, then in the session row.
+        // The page navigates to the returned provider address itself, as the clinic's POST /bff/login does.
+        app.MapPost("/bff/login", async (SignOnStart start, HttpContext ctx) =>
             {
-                var properties = new AuthenticationProperties { RedirectUri = returnUrl is not null && IsLocal(returnUrl) ? returnUrl : "/" };
-                if (link is { Length: > 0 and <= 128 }) properties.Items[LinkItem] = link;
-                return Results.Challenge(properties, [OpenIdConnectDefaults.AuthenticationScheme]);
+                // The house anti-forgery header: a cross-site page cannot add it without a CORS preflight, which this host never grants.
+                if (!ctx.Request.Headers.ContainsKey(CsrfHeader)) return Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: "Missing anti-forgery header");
+                await ctx.ChallengeAsync(OpenIdConnectDefaults.AuthenticationScheme, SignOnProperties(start.Link, start.ReturnUrl));
+                var location = ctx.Response.Headers.Location.ToString();
+                ctx.Response.Headers.Remove(Microsoft.Net.Http.Headers.HeaderNames.Location);
+                return Results.Ok(new { location });
             })
             .AllowAnonymous()
             .RequireRateLimiting(SignInRateLimit);
@@ -183,6 +194,15 @@ public static partial class ConsoleAuthentication
             return Results.NoContent();
         }).RequireAuthorization(PlatformPolicies.SignedOn);
         return app;
+    }
+
+    public sealed record SignOnStart(string? Link = null, string? ReturnUrl = null);
+
+    static AuthenticationProperties SignOnProperties(string? link, string? returnUrl)
+    {
+        var properties = new AuthenticationProperties { RedirectUri = returnUrl is not null && IsLocal(returnUrl) ? returnUrl : "/" };
+        if (link is { Length: > 0 and <= 128 }) properties.Items[LinkItem] = link;
+        return properties;
     }
 
     static Guid Session(ClaimsPrincipal principal) => Read(principal, SessionIdClaim)!.Value;

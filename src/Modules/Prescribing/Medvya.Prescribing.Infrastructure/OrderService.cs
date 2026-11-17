@@ -43,8 +43,8 @@ public sealed class OrderService(
         if (await RequireAsync(encounterId, cancellationToken) is not { } encounter) return null;
         Open(encounter);
         var errors = new List<(string, string)>();
-        var name = Text(command.Name, "name", MaxName, true, errors);
-        var note = Text(command.Note, "note", MaxNote, false, errors);
+        var name = PrescriptionService.Text(command.Name, "name", MaxName, true, errors);
+        var note = PrescriptionService.Text(command.Note, "note", MaxNote, false, errors);
         if (command.Kind is not { } kind || !Enum.IsDefined(kind)) errors.Add(("kind", "required"));
         if (errors.Count > 0) throw new OrdersValidationException(errors);
 
@@ -103,7 +103,7 @@ public sealed class OrderService(
         if (await RequireAsync(encounterId, cancellationToken) is not { } encounter) return null;
         Open(encounter);
         var errors = new List<(string, string)>();
-        var destination = Text(command.Destination, "destination", MaxDestination, false, errors);
+        var destination = PrescriptionService.Text(command.Destination, "destination", MaxDestination, false, errors);
         if (errors.Count > 0) throw new OrdersValidationException(errors);
 
         var (now, me) = (clock.GetUtcNow(), user.UserId ?? throw new InvalidOperationException("No user."));
@@ -184,14 +184,6 @@ public sealed class OrderService(
         (await db.Orders.AsNoTracking().Where(o => o.EncounterId == encounterId).OrderBy(o => o.CreatedAt).ThenBy(o => o.Id).ToListAsync(cancellationToken)).Select(View).ToList();
 
     static OrderView View(ClinicalOrder o) => new(o.Id, o.Kind, o.Name, o.Note, o.State, o.Destination, o.OrderedAt);
-
-    static string? Text(string? value, string field, int max, bool required, List<(string, string)> errors)
-    {
-        var v = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-        if (v is null && required) errors.Add((field, "required"));
-        else if (v?.Length > max) errors.Add((field, "too_long"));
-        return v;
-    }
 
     AuditEvent Event(string action, EncounterView encounter, Guid resourceId, string? detail = null) => new()
     {

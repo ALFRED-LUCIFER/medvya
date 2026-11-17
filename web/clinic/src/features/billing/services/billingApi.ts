@@ -1,10 +1,10 @@
-import { csrf, post, send } from '../../schedule/services/scheduleApi';
+import { post, send } from '../../api/services/apiClient';
 import type { BillingSettings } from '../domain/billingSettings';
 import type { PriceVersion, Service } from '../domain/catalogue';
 import type { RazorpayStatus } from '../domain/razorpay';
 
 // Settings, Services and Settings, Billing (MDV-P4-002). Ids in paths, details in bodies; no patient data travels.
-const put = <T>(url: string, body: unknown) => send<T>(url, { method: 'PUT', headers: { ...csrf, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+const put = <T>(url: string, body: unknown) => send<T>(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 
 export const fetchServices = (archived: boolean) => send<Service[]>(`/v1/settings/services?${new URLSearchParams({ archived: String(archived) })}`);
 export const createService = (body: unknown) => post<Service>('/v1/settings/services', body);

@@ -25,11 +25,9 @@
 
 ## Definition of Done (every ticket)
 
-Functional:
-- [ ] All acceptance criteria pass, demonstrated on staging with synthetic data
-- [ ] Linked requirement ID(s) referenced in the PR title and the release notes
+The Definition of Done is [AGENTS.md §5](../../AGENTS.md#5--definition-of-done-every-pr); it is the only one. On top of it, a ticket's acceptance criteria are demonstrated on the Azure dev environment with synthetic data (staging from MDV-P1-039), and its requirement IDs are referenced in the PR title and the release notes.
 
-Cross-cutting X1–X8 (PRD v2 §05). A ticket that misses one is **not shippable**:
+Cross-cutting X1–X8 (PRD v2 §05), which AGENTS.md §5 asks every PR to consider. A ticket that misses one is **not shippable**:
 - [ ] **X1 Security:** server-side authorisation on every new endpoint (tenant, facility, role, relationship, purpose). Input validated. No secrets. Rate limit where public
 - [ ] **X2 Privacy:** no PHI in logs, analytics or errors. Audit event written for patient-data reads and writes. Consent respected
 - [ ] **X3 Clinical safety:** patient identity on screen. Allergy never colour-only. Uncertain match = hard stop. Unknowns left blank
@@ -37,7 +35,7 @@ Cross-cutting X1–X8 (PRD v2 §05). A ticket that misses one is **not shippable
 - [ ] **X5 A11y & language:** WCAG 2.2 AA (axe clean), keyboard path, screen-reader labels, 200% zoom, strings in i18n (en/hi/ar) with RTL verified, touch targets ≥ 44px (portal 48px)
 - [ ] **X6 Performance:** reads p95 < 300 ms, writes < 600 ms, page interactive < 2.5 s p75
 - [ ] **X7 Reliability:** migration reviewed and forward-only. Idempotent retries
-- [ ] **X8 Quality:** unit + integration tests (Testcontainers SQL Server), Vitest for UI, Playwright where a journey is touched. OpenTelemetry spans with PHI scrubbing. Behind a tenant feature flag with an owner
+- [ ] **X8 Quality:** unit + integration tests (Testcontainers PostgreSQL), Vitest for UI, Playwright where a journey is touched; safety tests mutation-checked. OpenTelemetry spans with PHI scrubbing
 
 ## Ticket conventions
 

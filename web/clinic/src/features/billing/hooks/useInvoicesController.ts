@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useI18n } from '@medvya/i18n';
 import { usePatientSearch } from '../../patients/hooks/usePatientSearch';
-import { ApiError } from '../../schedule/services/scheduleApi';
+import { ApiError } from '../../api/services/apiClient';
 import { useTableController } from '../../table/hooks/useTableController';
 import { invoiceProblem, invoiceSort, type InvoiceState } from '../domain/invoice';
 import { createInvoice, searchInvoices } from '../services/invoicesApi';

@@ -1,9 +1,8 @@
 import type { FormEventHandler } from 'react';
 import type { FieldError, UseFormReturn } from 'react-hook-form';
 import { useI18n, type MessageKey } from '@medvya/i18n';
-import { Button, ChoiceRow, Field, Input, StickyActionBar, Textarea } from '@medvya/ui';
+import { Button, Card, ChoiceRow, Field, Input, StickyActionBar, Textarea } from '@medvya/ui';
 import { cardBar, fieldError, fieldGrid } from '../../settings/components/fieldStyles';
-import { Section } from '../../settings/components/Section';
 import { paymentMethods, type BillingSettingsForm } from '../domain/billingSettings';
 
 type Props = {
@@ -19,7 +18,7 @@ export default function BillingSettingsPanel(p: Props) {
   const { errors } = p.form.formState;
   const problem = (e: FieldError | undefined) => (e ? t(`billing.error.${e.type === 'server' ? e.message : 'invalid'}` as MessageKey) : null);
   return (
-    <Section title={t('billing.settings.title')} intro={t('billing.settings.intro')}>
+    <Card title={t('billing.settings.title')} intro={t('billing.settings.intro')}>
       <form noValidate onSubmit={p.onSubmit} className="flex flex-col gap-4">
         <div className={fieldGrid}>
           <Field id="billing-invoice-prefix" label={t('billing.settings.invoicePrefix')} hint={t('billing.settings.prefix.hint')} error={problem(errors.invoicePrefix)}>
@@ -60,6 +59,6 @@ export default function BillingSettingsPanel(p: Props) {
           <Button type="submit" loading={p.saving}>{t('settings.save')}</Button>
         </StickyActionBar>
       </form>
-    </Section>
+    </Card>
   );
 }

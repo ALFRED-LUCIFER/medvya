@@ -1,7 +1,7 @@
 import { Link } from 'react-router';
 import { Printer, Wifi } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, PageContainer, PageHeader } from '@medvya/ui';
+import { Button, buttonVariants, PageContainer, PageHeader, Detail, DetailList } from '@medvya/ui';
 import { qrCells } from '../../prescription/domain/authorisation';
 import { slipAheadWords, type TokenSlip } from '../domain/board';
 
@@ -20,7 +20,7 @@ type Props = { slip: TokenSlip | null; loading: boolean; problem: 'void' | 'forb
 const receiptPage = (height: number) =>
   `@page { size: 80mm ${height}mm; margin: 0; } @media print { html, body, main { background: white !important; padding: 0 !important; } }`;
 
-const label = 'text-[6.5pt] font-bold uppercase leading-tight tracking-[0.08em] rtl:text-[7.5pt] rtl:normal-case rtl:tracking-normal';
+const label = 'text-[6.5pt] font-bold uppercase leading-tight tracking-[0.08em] rtl:text-[7.5pt] rtl:normal-case rtl:tracking-normal text-inherit';
 
 export default function TokenSlipPrintPage(p: Props) {
   const i18n = useI18n(), { t, formatDate, formatTime } = i18n;
@@ -59,18 +59,19 @@ export default function TokenSlipPrintPage(p: Props) {
           </div>
         </div>
         <div className="mb-[3.5mm] mt-[3mm] border-t-[1.4pt] border-black" />
-        <dl className="grid grid-cols-[15mm_1fr] items-baseline gap-x-[3mm] gap-y-[2mm]">
-          <dt className={label}>{t('tokenSlip.token')}</dt>
-          <dd id="token-slip-token" className="text-[46pt] font-extrabold leading-[0.95] tracking-[-0.02em]">
+        {/* Print sizes are the receipt's own (mm/pt); text-inherit keeps the labels black like the rest of the slip. */}
+        <DetailList layout="inline" className="grid-cols-[15mm_1fr] items-baseline gap-x-[3mm] gap-y-[2mm]">
+          <Detail label={t('tokenSlip.token')} labelClassName={label} valueProps={{ id: 'token-slip-token' }} valueClassName="text-[46pt] font-extrabold leading-[0.95] tracking-[-0.02em]">
             <bdi dir="ltr">{slip.token}</bdi>
-          </dd>
-          <dt className={label}>{t('tokenSlip.doctor')}</dt><dd className="text-[9.5pt] font-semibold leading-[1.3]">{slip.doctorName}</dd>
-          {slip.room && <><dt className={label}>{t('tokenSlip.room')}</dt><dd className="text-[12pt] font-extrabold">{slip.room}</dd></>}
-          {slip.vitalsRoom && <><dt className={label}>{t('tokenSlip.vitals')}</dt><dd className="text-[12pt] font-extrabold">{slip.vitalsRoom}</dd></>}
-          {slip.ahead !== null && <><dt className={label}>{t('tokenSlip.queue')}</dt><dd className="text-[12pt] font-extrabold">{slipAheadWords(i18n, slip.ahead)}</dd></>}
-          <dt className={label}>{t('tokenSlip.issued')}</dt>
-          <dd className="text-[9.5pt] font-semibold leading-[1.3]">{formatDate(issued, slip.timeZone)}{' · '}<bdi dir="ltr">{formatTime(issued, slip.timeZone)}</bdi></dd>
-        </dl>
+          </Detail>
+          <Detail label={t('tokenSlip.doctor')} labelClassName={label} valueClassName="text-[9.5pt] font-semibold leading-[1.3]">{slip.doctorName}</Detail>
+          {slip.room && <Detail label={t('tokenSlip.room')} labelClassName={label} valueClassName="text-[12pt] font-extrabold">{slip.room}</Detail>}
+          {slip.vitalsRoom && <Detail label={t('tokenSlip.vitals')} labelClassName={label} valueClassName="text-[12pt] font-extrabold">{slip.vitalsRoom}</Detail>}
+          {slip.ahead !== null && <Detail label={t('tokenSlip.queue')} labelClassName={label} valueClassName="text-[12pt] font-extrabold">{slipAheadWords(i18n, slip.ahead)}</Detail>}
+          <Detail label={t('tokenSlip.issued')} labelClassName={label} valueClassName="text-[9.5pt] font-semibold leading-[1.3]">
+            {formatDate(issued, slip.timeZone)}{' · '}<bdi dir="ltr">{formatTime(issued, slip.timeZone)}</bdi>
+          </Detail>
+        </DetailList>
         <p className="mt-[3.5mm] text-[8.5pt] font-semibold leading-[1.35]">{t('tokenSlip.notice')}</p>
         {slip.wifi && <WifiStub wifi={slip.wifi} />}
       </article>
@@ -96,10 +97,10 @@ function WifiStub({ wifi }: { wifi: NonNullable<TokenSlip['wifi']> }) {
         </svg>
         <div>
           <p className="mb-[1.5mm] flex items-center gap-[1.5mm] text-[9.5pt] font-extrabold"><Wifi aria-hidden className="size-[4mm]" strokeWidth={2.4} />{t('tokenSlip.wifi.scan')}</p>
-          <dl className="grid gap-[1.2mm]">
-            <div><dt className={label}>{t('tokenSlip.wifi.network')}</dt><dd dir="ltr" className="break-all text-[10pt] font-extrabold rtl:text-end">{wifi.network}</dd></div>
-            {wifi.password && <div><dt className={label}>{t('tokenSlip.wifi.password')}</dt><dd dir="ltr" className="break-all font-mono text-[10pt] font-extrabold rtl:text-end">{wifi.password}</dd></div>}
-          </dl>
+          <DetailList className="gap-[1.2mm] md:grid-cols-1">
+            <Detail label={t('tokenSlip.wifi.network')} labelClassName={label} valueProps={{ dir: 'ltr' }} valueClassName="break-all text-[10pt] font-extrabold rtl:text-end">{wifi.network}</Detail>
+            {wifi.password && <Detail label={t('tokenSlip.wifi.password')} labelClassName={label} valueProps={{ dir: 'ltr' }} valueClassName="break-all font-mono text-[10pt] font-extrabold rtl:text-end">{wifi.password}</Detail>}
+          </DetailList>
           {wifi.daily && <p className="mt-[1.5mm] text-[7pt] font-semibold">{t('tokenSlip.wifi.today')}</p>}
         </div>
       </div>

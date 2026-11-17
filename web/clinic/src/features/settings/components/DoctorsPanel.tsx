@@ -2,13 +2,12 @@ import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { BadgeCheck, CalendarX, Info } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, Field, Input, Tag } from '@medvya/ui';
+import { Card, Button, Field, Input, Tag } from '@medvya/ui';
 import type { Authority, Doctor, DoctorForm, DoctorStep, FieldProblem, LicenceForm } from '../domain/doctors';
 import type { Location } from '../domain/settings';
 import { licenceFields } from '../domain/doctors';
 import DoctorWizard, { LicenceFields, StepErrorSummary } from './DoctorWizard';
 import { fieldError, fieldGrid } from './fieldStyles';
-import { Section } from './Section';
 import SignatureImage from './SignatureImage';
 
 type Wizard = {
@@ -18,6 +17,8 @@ type Wizard = {
 };
 
 type Props = Wizard & {
+  /** The facility's IANA zone: instants show facility time, not the browser's (AGENTS.md 3.5). */
+  timeZone: string;
   loading: boolean;
   forbidden: boolean;
   loadFailed: boolean;
@@ -47,10 +48,10 @@ type Props = Wizard & {
 };
 
 /** Who attested the licence and when, or that it has expired: words and an icon, never colour alone. Medvya does not check licences (ADR-016). */
-function LicenceBadge({ doctor: d }: { doctor: Doctor }) {
+function LicenceBadge({ doctor: d, timeZone }: { doctor: Doctor; timeZone: string }) {
   const { t, formatDate } = useI18n();
   const Icon = d.expired ? CalendarX : BadgeCheck;
-  const date = formatDate(new Date(d.attestedAt));
+  const date = formatDate(new Date(d.attestedAt), timeZone);
   const label = d.expired ? t('doctors.licence.expired') : d.attestedByName ? t('doctors.licence.attestedBy', { name: d.attestedByName, date }) : t('doctors.licence.attestedByOwner', { date });
   // Neutral, not success: an owner's attestation, not a check by Medvya (MDV-P2-060).
   return <Tag tone={d.expired ? 'danger' : 'neutral'} icon={Icon} label={label} />;
@@ -80,13 +81,13 @@ export default function DoctorsPanel(p: Props) {
       {p.adding
         ? <DoctorWizard {...p} />
         : (
-          <Section title={t('doctors.title')} intro={t('doctors.intro')}>
+          <Card title={t('doctors.title')} intro={t('doctors.intro')}>
             <div><Button type="button" onClick={p.onOpen}>{t('doctors.add')}</Button></div>
             {p.doctors.length === 0 && <p className="text-muted-foreground">{t('doctors.empty')}</p>}
             <ul className="flex flex-col gap-3">
               {p.doctors.map(d => <DoctorRow key={d.id} doctor={d} {...p} />)}
             </ul>
-          </Section>
+          </Card>
         )}
     </div>
   );
@@ -101,7 +102,7 @@ function DoctorRow({ doctor: d, ...p }: Props & { doctor: Doctor }) {
     <li className="flex flex-col gap-3 rounded-lg border p-4">
       <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
         <h3 className="text-base font-extrabold">{d.fullName}</h3>
-        <LicenceBadge doctor={d} />
+        <LicenceBadge doctor={d} timeZone={p.timeZone} />
         <span className="text-muted-foreground">{t(`doctors.status.${d.status}`)}</span>
       </div>
       <p className="text-sm text-muted-foreground">{[d.specialty, d.facilityName].filter(Boolean).join(' · ')}</p>

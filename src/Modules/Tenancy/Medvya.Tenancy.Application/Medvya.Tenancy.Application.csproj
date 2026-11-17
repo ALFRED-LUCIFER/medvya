@@ -1,4 +1,9 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <!-- Endpoint conventions other modules' Api projects apply (RequireCapability, RequireFeature, RequireAcceptedTerms, EnterLinkTenant): the module's published web contract, so no module references another's Api. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Medvya.Tenancy.Domain\Medvya.Tenancy.Domain.csproj" />

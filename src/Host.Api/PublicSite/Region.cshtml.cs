@@ -2,6 +2,7 @@ using Medvya.Leads.Application;
 using Medvya.Leads.Domain;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using static Medvya.BuildingBlocks.Domain.TextInput;
 
 namespace Host.Api.PublicSite;
 
@@ -56,7 +57,7 @@ public sealed class RegionModel(SiteText text, IOptionsSnapshot<DeploymentOption
         if (Form.Country is not { } country || !PublicSite.Regions.Contains(country)) return Task.FromResult<IActionResult>(BadRequest());
         WaitlistCountry = country;
         var entry = new WaitlistEntry { Name = Clean(Form.Name) ?? "", Country = country, Email = Clean(Form.Email), Phone = Clean(Form.Phone),
-            ConsentedAt = ConsentedAt, NoticeVersion = NoticeVersion,
+            ConsentedAt = ConsentedAt, NoticeVersion = NoticeVersion, ReceivedAt = Now,
         };
         return SubmitAsync(WaitlistRules.Validate(entry), () => waitlist.JoinAsync(entry, cancellationToken),
             $"{Href(PublicSite.DoctorStart)}?go={country}&sent=1#waitlist");

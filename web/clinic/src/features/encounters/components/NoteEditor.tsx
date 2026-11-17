@@ -29,7 +29,7 @@ export type NoteEditorProps = StructuredProps & {
   /** Back from the step-up (MDV-P2-047). */
   signResume: StepUpReturn;
   takeOver?: TakeOverProps;
-  signAsName: string | null; timeZone: string | undefined; patient: SignPatient | null;
+  signAsName: string | null; timeZone: string; patient: SignPatient | null;
   consent: RecordingConsent | null; onConsent: (value: RecordingConsent) => void;
   /** Empty without Sign or once signed. */
   checklist: ChecklistItem[]; remaining: number;

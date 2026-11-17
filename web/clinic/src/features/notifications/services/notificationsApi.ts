@@ -1,4 +1,4 @@
-import { post, send } from '../../schedule/services/scheduleApi';
+import { post, send } from '../../api/services/apiClient';
 import type { NotificationList } from '../domain/notifications';
 
 // Notification centre (D-03, MDV-P1-034). Ids only, in the URL or the body; the server decides what this role may see.

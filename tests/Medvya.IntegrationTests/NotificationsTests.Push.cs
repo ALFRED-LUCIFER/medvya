@@ -34,7 +34,7 @@ public sealed partial class NotificationsTests
         Guid membership;
         await using (var tenancy = sql.Context(h.Tenant))
             membership = await tenancy.Memberships.Where(m => m.UserId == userId && m.FacilityId == h.Facility).Select(m => m.Id).SingleAsync();
-        var now = DateTimeOffset.UtcNow; // sessions run on the real clock
+        var now = h.Clock.GetUtcNow(); // sessions read the injected clock (TimeProvider)
         var session = new StaffSession
         {
             Id = Guid.CreateVersion7(), UserId = userId, Device = "iPhone app", CreatedAt = now, LastSeenAt = now, TenantId = h.Tenant, MembershipId = membership,
@@ -116,8 +116,8 @@ public sealed partial class NotificationsTests
         Assert.NotNull(await InScope(sp => sp.GetRequiredService<IStaffSessions>().RevokeAsync(h.Admin, revoked))); // My devices, offboarding, sign-out
         // The query refuses these too, even if a token was left behind.
         // SAFETY: mutation check: removing the IsActive filter or the native check (RefreshTokenHash) from StaffSessions.PushTokensAsync makes this fail.
-        await PhoneAsync(h.Admin, Token("revoked"), s => s.RevokedAt = DateTimeOffset.UtcNow);
-        await PhoneAsync(h.Admin, Token("idle"), s => s.LastSeenAt = DateTimeOffset.UtcNow - StaffSession.NativeIdleTimeout - TimeSpan.FromMinutes(1));
+        await PhoneAsync(h.Admin, Token("revoked"), s => s.RevokedAt = h.Clock.GetUtcNow());
+        await PhoneAsync(h.Admin, Token("idle"), s => s.LastSeenAt = h.Clock.GetUtcNow() - StaffSession.NativeIdleTimeout - TimeSpan.FromMinutes(1));
         await PhoneAsync(h.Admin, Token("browser"), s => s.RefreshTokenHash = null); // a browser session is never pushed to
         await RaiseAccessRequestAsync();
 

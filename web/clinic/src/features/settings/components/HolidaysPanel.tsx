@@ -1,11 +1,10 @@
 import { useI18n } from '@medvya/i18n';
-import { Button, ErrorSummary, Field, Input } from '@medvya/ui';
+import { Card, Button, ErrorSummary, Field, Input } from '@medvya/ui';
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import type { ClosureForm, ClosureWithVisits, LocationChoice } from '../domain/settings';
 import { fieldError } from './fieldStyles';
 import { LocationSelect } from './LocationSelect';
-import { Section } from './Section';
 
 type Holidays = {
   form: UseFormReturn<ClosureForm>;
@@ -37,7 +36,7 @@ export default function HolidaysPanel({ choice, holidays: h, zoneOf }: Props) {
   return (
     <div className="flex flex-col gap-4">
       <LocationSelect id="holidays-location" locations={choice.locations} value={choice.locationId} onChange={choice.onLocation} />
-      <Section title={t('settings.holidays.title')} intro={t('settings.holidays.intro')}>
+      <Card title={t('settings.holidays.title')} intro={t('settings.holidays.intro')}>
         <form noValidate onSubmit={h.onSubmit} className="flex flex-wrap items-start gap-3">
           <ErrorSummary title={t('field.errorSummary')} focusKey={submitCount} className="basis-full"
             errors={fields.flatMap(f => (f.message ? [{ id: f.id, label: f.label, message: f.message }] : []))} />
@@ -81,7 +80,7 @@ export default function HolidaysPanel({ choice, holidays: h, zoneOf }: Props) {
             ))}
           </ul>
         )}
-      </Section>
+      </Card>
     </div>
   );
 }

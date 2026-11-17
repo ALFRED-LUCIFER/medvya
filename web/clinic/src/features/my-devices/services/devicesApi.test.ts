@@ -11,7 +11,7 @@ it('ends a session with DELETE, the CSRF header and only the id in the URL', asy
   const [url, init] = f.mock.calls[0] as [string, RequestInit];
   expect(url).toContain('/v1/me/sessions/s-1');
   expect(init.method).toBe('DELETE');
-  expect(init.headers).toMatchObject({ 'X-Medvya-Csrf': '1' });
+  expect(new Headers(init.headers).get('X-Medvya-Csrf')).toBe('1');
 });
 
 it('reads the list', async () => {

@@ -43,7 +43,7 @@ public sealed class VisitUndoTests(PostgresFixture sql) : IClassFixture<Postgres
     async Task<List<(AppointmentState? From, AppointmentState To)>> Events(Guid visit)
     {
         await using var db = sql.Scheduling(h.Tenant);
-        return [.. (await db.StatusEvents.Where(e => e.AppointmentId == visit).OrderBy(e => e.OccurredAt).ToListAsync()).Select(e => (e.FromState, e.State))];
+        return [.. (await db.StatusEvents.Where(e => e.AppointmentId == visit).OrderBy(e => e.OccurredAt).ThenBy(e => e.Id).ToListAsync()).Select(e => (e.FromState, e.State))];
     }
 
     async Task<(Guid? Actor, DateTimeOffset At, string? Detail)> Audited(string action, Guid visit)

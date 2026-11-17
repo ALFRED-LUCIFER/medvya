@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
-import { ApiError } from '../../schedule/services/scheduleApi';
+import { ApiError } from '../../api/services/apiClient';
 import {
   allergySchema, correctionSchema, emptyAllergy, emptyCorrection, emptyMedicine, escalateSchema, formOf, intakeFormSchema, intakeProblem, invalidKind, medicineSchema, toRecord,
   type AllergyForm, type AllergyStatus, type CorrectionForm, type IntakeForm, type IntakeProblem, type IntakeScreen, type IntakeView, type MedicineForm, type VitalKind,

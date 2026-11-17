@@ -3,12 +3,11 @@ import type { UseFormReturn } from 'react-hook-form';
 import { Link } from 'react-router';
 import { CircleAlert, CircleSlash, TrendingDown, CircleX, FilePen, History, Plus, Printer, ShieldCheck, Trash2, UserRound } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, ClinicalAlert, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tag } from '@medvya/ui';
+import { Card, Button, buttonVariants, ClinicalAlert, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tag } from '@medvya/ui';
 import { authoriseTarget, isCurrent, type AuthoriseProblem, type RxAuthorisationState } from '../domain/authorisation';
 import StepUpConfirmed from '../../encounters/components/StepUpConfirmed';
 import type { StepUpReturn } from '../../encounters/domain/stepUp';
 import { describedBy, fieldError } from '../../settings/components/fieldStyles';
-import { Section } from '../../settings/components/Section';
 import { lineSafety } from '../domain/checks';
 import SafetyChecks, { SafetyChip, type SafetyProps } from './SafetyChecks';
 import {
@@ -85,7 +84,7 @@ export default function PrescriptionPanel(p: Props) {
   const status = p.loading ? t('rx.loading') : p.failed ? t('rx.loadFailed') : prescribed.length === 0 && stopped.length === 0 ? t('rx.empty') : null;
 
   return (
-    <Section title={t('rx.title')} intro={t(finishing ? 'rx.endedFinish' : p.ended ? 'rx.ended' : 'rx.intro')}>
+    <Card title={t('rx.title')} intro={t(finishing ? 'rx.endedFinish' : p.ended ? 'rx.ended' : 'rx.intro')}>
       <div className="flex flex-wrap items-end gap-3">
         <Select value={p.language} onValueChange={v => p.onLanguage(v as PrintLanguage)}>
           <Field id="rx-language" label={t('rx.language')} className="min-w-56">
@@ -161,7 +160,7 @@ export default function PrescriptionPanel(p: Props) {
       )}
 
       {p.problem && <p role="alert" className={fieldError}>{t(`rx.error.${p.problem}`)}</p>}
-    </Section>
+    </Card>
   );
 }
 

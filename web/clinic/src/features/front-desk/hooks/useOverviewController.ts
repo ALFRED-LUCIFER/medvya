@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { moveError, type LiveStatus, type MoveError } from '../domain/board';
 import { reassignSchema, type ReassignInput } from '../domain/overview';
-import { ApiError } from '../../schedule/services/scheduleApi';
+import { ApiError } from '../../api/services/apiClient';
 import { watchBoard } from '../services/boardLive';
 import { fetchOverview, reassignVisit } from '../services/frontDeskApi';
 

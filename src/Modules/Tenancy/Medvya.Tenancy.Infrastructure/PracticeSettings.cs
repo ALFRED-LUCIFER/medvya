@@ -8,6 +8,7 @@ using Medvya.Tenancy.Domain;
 using Medvya.Tenancy.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using static Medvya.BuildingBlocks.Domain.TextInput;
 
 namespace Medvya.Tenancy.Infrastructure;
 
@@ -19,7 +20,7 @@ namespace Medvya.Tenancy.Infrastructure;
 /// </summary>
 public sealed class PracticeSettings(
     TenancyDbContext db, ICurrentTenant tenant, ICurrentUser user, ICurrentFacility currentFacility, IFacilityDirectory facilities,
-    IAuditLog audit, ILogoStore logos, TimeProvider clock) : IPracticeSettings
+    IAuditLog audit, ILogoStore logos, TimeProvider clock, IStaffAccess access) : IPracticeSettings
 {
 
     Guid TenantId => tenant.TenantId ?? throw new InvalidOperationException("No tenant context.");
@@ -117,7 +118,7 @@ public sealed class PracticeSettings(
     {
         ArgumentNullException.ThrowIfNull(command);
         var site = await db.Facilities.SingleOrDefaultAsync(f => f.Id == facilityId, cancellationToken);
-        if (site is null) return null;
+        if (site is null || !await AdministersAsync(facilityId, cancellationToken)) return null;
         var (name, address, zone) = ValidLocation(command, requireZone: false);
         var (room, network, password) = (Clean(command.NurseRoom), Clean(command.WifiNetwork), Clean(command.WifiPassword));
         var errors = new List<ValidationError>();
@@ -141,7 +142,7 @@ public sealed class PracticeSettings(
     public async Task<IReadOnlyList<DayHours>?> SetHoursAsync(Guid facilityId, IReadOnlyList<DayHours> hours, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(hours);
-        if (!await db.Facilities.AnyAsync(f => f.Id == facilityId, cancellationToken)) return null;
+        if (!await db.Facilities.AnyAsync(f => f.Id == facilityId, cancellationToken) || !await AdministersAsync(facilityId, cancellationToken)) return null;
         var errors = new List<ValidationError>();
         for (var i = 0; i < hours.Count; i++)
         {
@@ -171,7 +172,7 @@ public sealed class PracticeSettings(
     public async Task<ClosureView?> AddClosureAsync(AddClosure command, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
-        if (!await db.Facilities.AnyAsync(f => f.Id == command.FacilityId, cancellationToken)) return null;
+        if (!await db.Facilities.AnyAsync(f => f.Id == command.FacilityId, cancellationToken) || !await AdministersAsync(command.FacilityId, cancellationToken)) return null;
         var name = Clean(command.Name);
         var errors = new List<ValidationError>();
         if (name is null) errors.Add(new("name", "required"));
@@ -190,7 +191,7 @@ public sealed class PracticeSettings(
     public async Task<bool> RemoveClosureAsync(Guid closureId, CancellationToken cancellationToken = default)
     {
         var closure = await db.Closures.SingleOrDefaultAsync(c => c.Id == closureId, cancellationToken);
-        if (closure is null) return false;
+        if (closure is null || !await AdministersAsync(closure.FacilityId, cancellationToken)) return false;
         db.Closures.Remove(closure);
         await SaveAuditedAsync("settings.closure.delete", "closure", closure.Id, new ClosureView(closure.Id, closure.FacilityId, closure.Date, closure.Name), null, cancellationToken);
         return true;
@@ -235,9 +236,11 @@ public sealed class PracticeSettings(
     public Task<ClinicalAccessPolicy> GetClinicalAccessAsync(CancellationToken cancellationToken = default) =>
         db.Tenants.AsNoTracking().Select(t => t.ClinicalAccess).SingleAsync(cancellationToken);
 
-    public async Task<ClinicalAccessPolicy> SaveClinicalAccessAsync(ClinicalAccessPolicy policy, CancellationToken cancellationToken = default)
+    public async Task<ClinicalAccessPolicy?> SaveClinicalAccessAsync(ClinicalAccessPolicy policy, CancellationToken cancellationToken = default)
     {
         if (!Enum.IsDefined(policy)) throw new SettingsValidationException([new("policy", "invalid")]);
+        // The policy holds for every location of the organisation, so only an owner sets it, not the administrator of one location.
+        if (user.UserId is not { } me || !await db.Memberships.AnyAsync(m => m.UserId == me && m.IsOwner && m.Status == MembershipStatus.Active, cancellationToken)) return null;
         var clinic = await db.Tenants.SingleAsync(cancellationToken);
         var before = clinic.ClinicalAccess;
         clinic.ClinicalAccess = policy;
@@ -260,6 +263,19 @@ public sealed class PracticeSettings(
         await SaveAuditedAsync("settings.queue_rule.update", "queue_rule", TenantId, before, new { order = rule.Order.ToString(), bookedFirst = rule.BookedFirst }, cancellationToken);
         return rule;
     }
+
+    public async Task<bool> AdministersEveryLocationAsync(CancellationToken cancellationToken = default)
+    {
+        // An owner speaks for the whole organisation; anyone else administers staff at every location.
+        if (user.UserId is { } me && await db.Memberships.AnyAsync(m => m.UserId == me && m.IsOwner && m.Status == MembershipStatus.Active, cancellationToken)) return true;
+        foreach (var facility in await db.Facilities.AsNoTracking().Select(f => f.Id).ToListAsync(cancellationToken))
+            if (!await AdministersAsync(facility, cancellationToken)) return false;
+        return true;
+    }
+
+    /// <summary>A location's settings are staff administration at that location (as StaffRoster): an administrator of another location gets not found.</summary>
+    async Task<bool> AdministersAsync(Guid facilityId, CancellationToken cancellationToken) =>
+        await access.AccessAsync(Capability.StaffRolesIntegrations, facilityId, cancellationToken) == Access.Config;
 
     async Task<List<DayHours>> HoursAsync(Guid facilityId, CancellationToken cancellationToken) =>
         await db.OperatingHours.AsNoTracking().Where(h => h.FacilityId == facilityId).OrderBy(h => h.Weekday)
@@ -294,8 +310,6 @@ public sealed class PracticeSettings(
     }
 
     static bool PhoneFormat(string phone) => phone.Length is >= 6 and <= 30 && phone.All(c => char.IsAsciiDigit(c) || c is '+' or ' ' or '-' or '(' or ')');
-
-    static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }
 
 /// <summary>

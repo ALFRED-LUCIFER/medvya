@@ -3,25 +3,27 @@
 Run from src/AiService after `alembic upgrade head` and the seed:
     uv run python scripts/e2e_smoke.py
 Exits 0 with a SKIP line when PostgreSQL or the required settings are unavailable.
-Flow: session -> consent -> record 2 chunks -> finish -> worker -> result -> approve ->
-export -> analytics -> retention sweep. Prints counts and ids only, never clinical text.
+Flow: session -> consent -> record 2 chunks -> finish -> worker -> result -> retention sweep.
+Prints counts and ids only, never clinical text.
 """
 
 import asyncio
 import hashlib
 import sys
+import uuid
 from datetime import UTC, datetime, timedelta
 
 import asyncpg
 import httpx
 
 from medvya_ai.config import Settings, get_settings
+from medvya_ai.db import set_tenant
 from medvya_ai.jobs.context import Deps
 from medvya_ai.jobs.worker import run_once
 from medvya_ai.main import create_app
 from medvya_ai.providers.llm import build_llm
 from medvya_ai.providers.transcription import build_transcriber
-from medvya_ai.seed import ensure_demo_user
+from medvya_ai.seed import create_clinic_with_user
 from medvya_ai.services.retention import sweep
 from medvya_ai.storage import MemoryBlobStore
 
@@ -39,6 +41,7 @@ async def main() -> int:
                 "transcription_provider": "fake",
                 "llm_provider": "fake",
                 "auth_mode": "disabled",
+                "environment": "development",
             }
         )
         dsn = settings.database_url.get_secret_value().replace("+asyncpg", "", 1)
@@ -55,17 +58,21 @@ async def run(settings: Settings) -> int:
     deps = Deps(
         settings, blobs, app.state.key_wrapper, build_transcriber(settings), build_llm(settings)
     )
+    async with app.state.sessionmaker() as db, db.begin():
+        clinic_id, _ = await create_clinic_with_user(
+            db, clinic_name="Smoke Clinic", email=f"smoke-{uuid.uuid4().hex[:8]}@example.test"
+        )
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://smoke"
     ) as c:
-        h: dict[str, str] = {}  # auth disabled above: the API acts as the demo doctor
+        h = {"X-Clinic-Id": str(clinic_id)}  # auth disabled above: acts as the clinic's doctor
 
         s = (
             await c.post(
                 f"{API}/sessions",
                 headers=h,
                 json={
-                    "patient_ref": "SMOKE-1",
+                    "patient_ref": str(uuid.uuid4()),
                     "scheduled_date": datetime.now(UTC).date().isoformat(),
                     "participants": [
                         {"role": "doctor", "display_name": "Dr"},
@@ -131,19 +138,11 @@ async def run(settings: Settings) -> int:
             f"result: state={body['state']} facts={len(body['facts'])} "
             f"transcript={len(body['transcript'])}"
         )
-        ap = await c.post(f"{API}/sessions/{sid}/approve", headers=h)
-        ex = await c.get(f"{API}/sessions/{sid}/export", headers=h)
-        ov = await c.get(f"{API}/analytics/overview", headers=h)
-        codes = (ap.status_code, ex.status_code, ov.status_code)
-        if codes != (200, 200, 200):
-            print(f"FAIL approve/export/analytics -> {codes}")
-            return 1
-        step(f"approved, exported, overview={ov.json()['approved']} approved sessions")
 
     async with app.state.sessionmaker() as db, db.begin():
-        clinic_id, _ = await ensure_demo_user(db)
+        await set_tenant(db, clinic_id)
         n = await sweep(
-            db, blobs, clinic_id=clinic_id, now=datetime.now(UTC) + timedelta(hours=25),
+            db, blobs, clinic_id=clinic_id, now=datetime.now(UTC) + timedelta(days=8),
             settings=settings,
         )  # fmt: skip
     step(f"retention sweep deleted {n} chunks; blobs left={len(blobs.blobs)}")

@@ -81,11 +81,25 @@ public sealed class PlatformConsoleTests(PostgresFixture sql) : IClassFixture<Po
     /// <summary>Company sign-on through the dev provider; returns the callback response.</summary>
     internal static async Task<HttpResponseMessage> SignOn(HttpClient browser, string subject, string? link = null, string? email = null)
     {
-        var challenge = await browser.GetAsync(new Uri(link is null ? "/bff/login" : $"/bff/login?link={link}", UriKind.Relative));
-        Assert.Equal(HttpStatusCode.Redirect, challenge.StatusCode);
-        Assert.Contains("scope=openid%20profile%20email", challenge.Headers.Location!.Query, StringComparison.Ordinal); // Entra sends the email claim an invitation matches
+        Uri provider;
+        if (link is null)
+        {
+            var challenge = await browser.GetAsync(new Uri("/bff/login", UriKind.Relative));
+            Assert.Equal(HttpStatusCode.Redirect, challenge.StatusCode);
+            provider = challenge.Headers.Location!;
+        }
+        else
+        {
+            // #1417: a key link goes in the body, never the URL; the page follows the provider address the answer names.
+            using var start = new HttpRequestMessage(HttpMethod.Post, new Uri("/bff/login", UriKind.Relative)) { Content = JsonContent.Create(new { link }) };
+            start.Headers.Add("X-Medvya-Csrf", "1");
+            var started = await browser.SendAsync(start);
+            Assert.Equal(HttpStatusCode.OK, started.StatusCode);
+            provider = new Uri((await started.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("location").GetString()!);
+        }
+        Assert.Contains("scope=openid%20profile%20email", provider.Query, StringComparison.Ordinal); // Entra sends the email claim an invitation matches
         // email: the address the company directory reports for the account.
-        var authorize = await browser.GetAsync(new Uri($"{challenge.Headers.Location}&login_hint={Uri.EscapeDataString(subject)}{(email is null ? "" : $"&email={Uri.EscapeDataString(email)}")}"));
+        var authorize = await browser.GetAsync(new Uri($"{provider}&login_hint={Uri.EscapeDataString(subject)}{(email is null ? "" : $"&email={Uri.EscapeDataString(email)}")}"));
         Assert.Equal(HttpStatusCode.Redirect, authorize.StatusCode);
         return await browser.GetAsync(authorize.Headers.Location);
     }

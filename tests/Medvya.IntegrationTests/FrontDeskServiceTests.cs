@@ -27,7 +27,7 @@ public sealed class FrontDeskServiceTests(PostgresFixture sql) : IClassFixture<P
     {
         await using var db = sql.Scheduling(h.Tenant);
         // Tests move the clock between steps, so the time orders the history.
-        return await db.StatusEvents.Where(e => e.AppointmentId == appointmentId).OrderBy(e => e.OccurredAt).Select(e => e.State).ToListAsync();
+        return await db.StatusEvents.Where(e => e.AppointmentId == appointmentId).OrderBy(e => e.OccurredAt).ThenBy(e => e.Id).Select(e => e.State).ToListAsync();
     }
 
     static async Task<string> Code(Task task) => (await Assert.ThrowsAsync<VisitTransitionException>(() => task)).Code;

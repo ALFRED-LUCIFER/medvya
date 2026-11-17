@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { useI18n, type Country } from '@medvya/i18n';
-import { Button, ChoiceRow, ErrorSummary, Field, FieldMarks, Input, PageHeader } from '@medvya/ui';
+import { Button, ChoiceRow, ErrorSummary, FieldMarks, PageHeader } from '@medvya/ui';
 import AuthFrame from '../../session/components/AuthFrame';
 import type { SignUpForm } from '../domain/signUp';
 import Frame from './OnboardingFrame';
+import { TextField as FormTextField } from '../../forms/components/TextField';
 
 const countries: Country[] = ['IN', 'AE'];
 
@@ -33,12 +34,8 @@ type Name = 'practiceName' | 'city' | 'fullName' | 'email';
 function TextField({ form, name, label, ltr, autoFocus }: { form: UseFormReturn<SignUpForm>; name: Name; label: string; ltr?: boolean; autoFocus?: boolean }) {
   const { t } = useI18n();
   const error = form.formState.errors[name] && t(name === 'email' ? 'signin.email.invalid' : 'signin.create.required');
-  return (
-    <Field id={`signup-${name}`} label={label} required error={error}>
-      <Input type={name === 'email' ? 'email' : 'text'} dir={ltr ? 'ltr' : undefined} spellCheck={false} autoFocus={autoFocus}
-        autoComplete={name === 'email' ? 'email' : name === 'fullName' ? 'name' : 'off'} {...form.register(name)} />
-    </Field>
-  );
+  return <FormTextField register={form.register} name={name} id={`signup-${name}`} label={label} required error={error} ltr={ltr} autoFocus={autoFocus}
+    type={name === 'email' ? 'email' : 'text'} autoComplete={name === 'email' ? 'email' : name === 'fullName' ? 'name' : 'off'} />;
 }
 
 type SignUpProps = {

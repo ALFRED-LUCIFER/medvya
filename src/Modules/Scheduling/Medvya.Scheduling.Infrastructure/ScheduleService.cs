@@ -4,6 +4,7 @@ using Medvya.Scheduling.Domain;
 using Medvya.Scheduling.Infrastructure.Persistence;
 using Medvya.Tenancy.Application;
 using Microsoft.EntityFrameworkCore;
+using static Medvya.BuildingBlocks.Domain.TextInput;
 
 namespace Medvya.Scheduling.Infrastructure;
 
@@ -200,6 +201,4 @@ public sealed class ScheduleService(SchedulingDbContext db, SchedulingContext co
 
     static TemplateView View(Calendar c, ScheduleTemplate? t, IReadOnlyList<AppointmentChip> outside) =>
         new(c.Id, c.Kind, c.Name, t?.SlotMinutes, t?.Hours ?? [], t?.Breaks ?? [], t?.VisitLengths ?? [], t?.ChangedAt, outside);
-
-    internal static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

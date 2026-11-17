@@ -161,7 +161,7 @@ public sealed class BoardHubTests(PostgresFixture sql) : IClassFixture<PostgresF
     {
         await using var db = sql.Audit(tenant);
         return (await db.Events.Where(e => e.Action.StartsWith("front_desk.board.") && e.Action != "front_desk.board.read")
-            .OrderBy(e => e.OccurredAt).Select(e => new { e.Action, e.Outcome, e.ActorUserId }).ToListAsync())
+            .OrderBy(e => e.OccurredAt).ThenBy(e => e.Id).Select(e => new { e.Action, e.Outcome, e.ActorUserId }).ToListAsync())
             .Select(e => (e.Action, e.Outcome, e.ActorUserId)).ToList();
     }
 

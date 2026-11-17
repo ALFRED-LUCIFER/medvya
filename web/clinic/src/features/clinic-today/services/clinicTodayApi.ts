@@ -1,4 +1,4 @@
-import { send } from '../../schedule/services/scheduleApi';
+import { send } from '../../api/services/apiClient';
 import type { ClinicToday } from '../domain/clinicToday';
 
 /** The owner's Clinic today of the facility (MDV-P2-053). Ids only in the URL; the server checks practice configuration. */

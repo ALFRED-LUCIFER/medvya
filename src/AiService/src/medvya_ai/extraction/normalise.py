@@ -15,6 +15,7 @@ from medvya_ai.extraction.schemas import NormaliseOut, NormItem
 from medvya_ai.models import Participant, TranscriptSegment
 from medvya_ai.providers.errors import PipelineError, ProviderError
 from medvya_ai.providers.llm.base import LLMClient
+from medvya_ai.services.note import latest_corrections
 
 _FREQ: tuple[tuple[str, str], ...] = (
     (r"\bstat\b|\bimmediately\b", "STAT"),
@@ -127,7 +128,7 @@ async def _noop() -> None:
 async def _normalise_batch(
     llm: LLMClient,
     batch: list[Item],
-    roster: list[tuple[str, str]],
+    roster: list[str],
     previous: list[Item],
 ) -> dict[int, NormItem | None]:
     """One model call; when the provider's content filter refuses the batch, split it so a single
@@ -165,7 +166,9 @@ async def run_normalise(
     before_call: Callable[[], Awaitable[None]] = _noop,
 ) -> int:
     """Every phrase goes through the model: English text (ASR term repair allowed only when
-    unambiguous) and a suggested speaker role with confidence. Returns the number of phrases."""
+    unambiguous) and a suggested speaker role with confidence. The clinician's latest text and
+    speaker corrections replace what the provider heard. Participants go to the model as roles
+    only, never names. Returns the number of phrases."""
     rows = (
         await db.scalars(
             select(TranscriptSegment)
@@ -175,17 +178,21 @@ async def run_normalise(
     ).all()
     if not rows:
         raise PipelineError("NO_TRANSCRIPT")
-    roster = [
-        (p.role, p.display_name)
-        for p in (
+    roster = list(
+        (
             await db.scalars(
-                select(Participant)
+                select(Participant.role)
                 .where(Participant.session_id == session_id)
                 .order_by(Participant.id)
             )
         ).all()
+    )
+    fix = await latest_corrections(db, session_id)
+    items: list[Item] = [
+        (r.idx, fix.speaker.get(r.id, r.speaker_label), fix.text.get(r.id, r.original_text))
+        for r in rows
     ]
-    items: list[Item] = [(r.idx, r.speaker_label, r.original_text) for r in rows]
+    text_by_idx = {i: t for i, _, t in items}
     by_idx = {r.idx: r for r in rows}
     filtered = 0
     previous: list[Item] = []
@@ -195,7 +202,7 @@ async def run_normalise(
             row = by_idx[idx]
             if item is None:  # content filter refused this single phrase: keep it as heard
                 row.english_text, row.suggested_role, row.role_confidence = (
-                    row.original_text,
+                    text_by_idx[idx],
                     "unknown",
                     Decimal(0),
                 )

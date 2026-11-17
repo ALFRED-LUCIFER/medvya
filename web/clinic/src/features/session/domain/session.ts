@@ -62,7 +62,8 @@ export type Session = {
   memberships: Membership[];
   lastMembershipId: string | null;
   accessEnded: boolean;
-  active: (ActiveMembership & { facilityName: string }) | null;
+  /** `timeZone` is always set: instants are never shown in the browser's zone (AGENTS.md 3.5). */
+  active: (ActiveMembership & { facilityName: string; timeZone: string }) | null;
 };
 
 /** The picker lists the last used facility first (F-03); the rest keep the server's order. */
@@ -80,6 +81,8 @@ export function toSession(me: MeContext): Session {
     user: me.user, memberships, lastMembershipId, accessEnded,
     active: {
       ...a, capabilities: a.capabilities ?? {}, flags: a.flags ?? [],
+      // The server always sends the facility's zone; an older or partial answer falls back to the country's, never the browser's.
+      timeZone: a.timeZone ?? (a.country === 'AE' ? 'Asia/Dubai' : 'Asia/Kolkata'),
       facilityName: memberships.find(m => m.id === a.membershipId)?.facilityName ?? '',
     },
   };

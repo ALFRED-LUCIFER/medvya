@@ -7,9 +7,10 @@ from tests.integration.helpers import API, consent, grant_all, new_session, put_
 pytestmark = pytest.mark.integration
 
 
-async def test_no_login_uses_demo_clinic_and_unknown_clinic_is_404(app_ctx) -> None:  # type: ignore[no-untyped-def]
+async def test_no_login_needs_clinic_header_and_unknown_clinic_is_404(app_ctx) -> None:  # type: ignore[no-untyped-def]
     _, c = app_ctx
-    assert (await c.get(f"{API}/sessions")).status_code == 200
+    r = await c.get(f"{API}/sessions")  # no demo-clinic fallback: the oldest clinic is real data
+    assert r.status_code == 400 and r.json()["error"]["code"] == "TENANT_HEADER_REQUIRED"
     r = await c.get(
         f"{API}/sessions", headers={"X-Clinic-Id": "00000000-0000-0000-0000-000000000000"}
     )

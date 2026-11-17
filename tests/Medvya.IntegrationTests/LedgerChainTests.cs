@@ -279,6 +279,32 @@ public class LedgerTamperTests(PostgresFixture sql) : IClassFixture<PostgresFixt
     }
 
     [Fact]
+    public async Task TheDailyCheckRehashesFromTheLastDigestAndTheWeeklyOneTheWholeChain()
+    {
+        var tenant = Guid.NewGuid();
+        var before = await LedgerChainTests.WriteEvent(sql, tenant);
+        await LedgerChainTests.WriteEvent(sql, tenant);
+        var (store, log) = (new MemoryDigestStore(), new CapturingLogger<LedgerDigests>());
+        var digests = new LedgerDigests(sql.ConnectionString, LedgerChainTests.Key, store, TimeProvider.System, log);
+        await digests.PublishAsync();
+        var after = await LedgerChainTests.WriteEvent(sql, tenant);
+        await LedgerChainTests.WriteEvent(sql, tenant);
+
+        // Altered in place after the digest, stored hashes left as they were: the daily forward check finds it.
+        await LedgerChainTests.AsSuperuserWithoutTrigger(sql, "audit.\"AuditEvents\"", "TR_AuditEvents_AppendOnly", $"""UPDATE audit."AuditEvents" SET "Outcome" = 'Denied' WHERE "Id" = '{after}'""");
+        Assert.True(await digests.VerifyAsync() > 0);
+        Assert.Contains(log.Entries, e => e.Level == LogLevel.Critical && e.Message.Contains(after.ToString()) && e.Message.Contains("broken hash chain"));
+
+        // Altered before the digest the same way: the head still matches, so only the weekly whole-chain check re-hashes that row.
+        log.Entries.Clear();
+        await LedgerChainTests.AsSuperuserWithoutTrigger(sql, "audit.\"AuditEvents\"", "TR_AuditEvents_AppendOnly", $"""UPDATE audit."AuditEvents" SET "Outcome" = 'Denied' WHERE "Id" = '{before}'""");
+        await digests.VerifyAsync();
+        Assert.DoesNotContain(log.Entries, e => e.Message.Contains(before.ToString()));
+        Assert.True(await digests.VerifyAsync(full: true) > 0);
+        Assert.Contains(log.Entries, e => e.Level == LogLevel.Critical && e.Message.Contains(before.ToString()) && e.Message.Contains("broken hash chain"));
+    }
+
+    [Fact]
     public async Task AnAlteredRowRaisesTheAlertWithoutAnyPatientData()
     {
         var tenant = Guid.NewGuid();

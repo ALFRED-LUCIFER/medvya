@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { fetchTokenSlip } from '../services/frontDeskApi';
-import { ApiError } from '../../schedule/services/scheduleApi';
+import { ApiError } from '../../api/services/apiClient';
 import { printPage } from '../../orders/services/ordersApi';
 
 /** The token slip of one visit (MDV-P2-046): print or reprint the same token; a void token (409) says so instead. */

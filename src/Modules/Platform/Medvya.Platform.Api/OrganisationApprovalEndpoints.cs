@@ -32,6 +32,8 @@ public static class OrganisationApprovalEndpoints
             return Results.Ok(new
             {
                 d.Name, d.Country, d.Type, d.State, d.SubmittedAt, d.Reason, d.Address, d.ContactEmail, d.RegistrationNumber, d.TaxNumber, d.ItContactName, d.ItContactEmail, d.Documents,
+                // The server's own verdict on the tax number (format and check character, the rule set-up applies): the console shows it, it keeps no copy of the rule.
+                TaxNumberValid = d.TaxNumber is { } tax ? OnboardingRules.For(d.Country)?.IsTaxId(tax) : null,
                 History = d.History.Select(h => new { h.At, Actor = h.ActorUserId is { } id && names.TryGetValue(id, out var n) ? n : null, h.State, h.Reason }),
             });
         });

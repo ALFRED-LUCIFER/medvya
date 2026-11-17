@@ -1,4 +1,5 @@
 import hashlib
+import uuid
 from typing import Any
 
 import httpx
@@ -12,7 +13,7 @@ async def new_session(c: httpx.AsyncClient, h: dict[str, str], n: int = 2) -> di
         f"{API}/sessions",
         headers=h,
         json={
-            "patient_ref": "P-1",
+            "patient_ref": str(uuid.uuid4()),
             "scheduled_date": "2026-11-08",
             "participants": [{"role": x, "display_name": f"{x} {i}"} for i, x in enumerate(roles)],
         },
@@ -86,3 +87,20 @@ async def finished_session(c: httpx.AsyncClient, h: dict[str, str], chunks: int 
     r = await c.post(f"{API}/sessions/{s['id']}/finish", headers=h)
     assert r.status_code == 202, r.text
     return str(s["id"])
+
+
+async def mark_approved(app: Any, clinic_id: Any, sid: str) -> None:
+    """Medvya signs notes itself and never calls an approve endpoint (ADR-021 section 2); tests of
+    the approved-record rules (immutability, retention, withdrawal) set the state directly."""
+    from sqlalchemy import text
+
+    from medvya_ai.db import set_tenant
+
+    async with app.state.sessionmaker() as db, db.begin():
+        await set_tenant(db, clinic_id)
+        for sql in (
+            "UPDATE clinical_note SET status = 'approved', approved_at = now() "
+            "WHERE session_id = :s",
+            "UPDATE consultation_session SET state = 'approved', approved_at = now() WHERE id = :s",
+        ):
+            await db.execute(text(sql), {"s": sid})

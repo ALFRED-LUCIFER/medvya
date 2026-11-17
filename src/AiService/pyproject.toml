@@ -10,7 +10,6 @@ dependencies = [
     "azure-storage-blob>=12.31.1",
     "cryptography>=50.0.2",
     "fastapi>=0.162.5",
-    "fpdf2>=2.9.0",
     "httpx>=0.28.1",
     "openai>=3.50.0",
     "opentelemetry-sdk>=1.45.2",
@@ -18,7 +17,6 @@ dependencies = [
     "pydantic-settings>=2.16.2",
     "pyjwt>=2.15.1",
     "sqlalchemy[asyncio]>=2.1.8",
-    "uharfbuzz>=0.57.0",
     "uvicorn[standard]>=0.54.0",
 ]
 
@@ -60,7 +58,6 @@ select = ["E", "F", "I", "B", "UP", "S", "ASYNC", "SIM", "RUF"]
 "tests/**" = ["S101", "S105", "S106"]
 "migrations/**" = ["S608", "E501"]
 "src/medvya_ai/extraction/prompts.py" = ["E501"]
-"src/medvya_ai/services/receptionist.py" = ["E501"]  # system prompt text
 
 [tool.mypy]
 python_version = "3.13"

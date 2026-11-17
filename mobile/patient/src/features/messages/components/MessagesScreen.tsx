@@ -2,7 +2,7 @@ import { useI18n, type MessageKey } from '@medvya/i18n';
 import { AppHeader, Banner, IconButton, Loading, Screen, StateMessage, Text, TextField } from '@medvya/ui-native';
 import { theme } from '@medvya/tokens';
 import { StyleSheet, View } from 'react-native';
-import type { Session } from '../../session/domain/session';
+import { zoneOf, type Session } from '../../session/domain/session';
 import type { Message } from '../domain/messages';
 
 type Props = { session: Session; messages: Message[] | null; loading: boolean; error: string | null };
@@ -28,7 +28,7 @@ export function MessagesScreen(vm: Props) {
           <View key={m.id} style={[styles.bubble, m.from === 'me' ? styles.mine : styles.theirs]}>
             <Text tone={m.from === 'me' ? theme.color.card : theme.color.ink900}>{m.text}</Text>
             <Text variant="caption" tone={m.from === 'me' ? theme.color.patient50 : theme.color.ink600}>
-              {t('mobile.messages.meta', { who: m.from === 'me' ? t('mobile.messages.you') : m.author, time: formatTime(new Date(m.at), vm.session.clinic?.timeZone) })}
+              {t('mobile.messages.meta', { who: m.from === 'me' ? t('mobile.messages.you') : m.author, time: formatTime(new Date(m.at), zoneOf(vm.session)) })}
             </Text>
           </View>
         ))}

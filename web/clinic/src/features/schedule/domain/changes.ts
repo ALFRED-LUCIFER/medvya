@@ -1,3 +1,4 @@
+import { dateIn } from '@medvya/i18n';
 import { z } from 'zod';
 import type { Appointment } from './schedule';
 
@@ -21,12 +22,7 @@ export type Why = 'noAccess' | 'noCheckIn' | 'onlyBooked' | 'notToday' | 'notSta
 export type Rule = { allowed: true } | { allowed: false; why: Why };
 
 /** The facility-local calendar date (YYYY-MM-DD) of an instant. */
-export const localDate = (iso: string, timeZone: string) =>
-  new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(iso));
-
-/** This device is in the facility's zone (aliases such as Asia/Calcutta and Asia/Kolkata are one zone): the zone then goes unsaid. */
-export const isDeviceZone = (timeZone: string) =>
-  new Intl.DateTimeFormat('en', { timeZone }).resolvedOptions().timeZone === Intl.DateTimeFormat().resolvedOptions().timeZone;
+export const localDate = (iso: string, timeZone: string) => dateIn(new Date(iso), timeZone);
 
 const ended = (a: Appointment): Why | null =>
   a.state === 'Done' ? 'completed' : a.state === 'Cancelled' ? 'cancelled' : a.state === 'NoShow' ? 'noShow' : a.state === 'LeftWithoutBeingSeen' ? 'left' : null;

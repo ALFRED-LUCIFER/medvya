@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
-import { ApiError } from '../../schedule/services/scheduleApi';
+import { ApiError } from '../../api/services/apiClient';
 import { addendumFailure, addendumSchema, pdfFailure, type AddendumFailure, type AddendumForm } from '../domain/note';
 import { addAddendum, downloadNotePdf, fetchNote, fetchNoteCatalog, printPage, startReauth } from '../services/noteApi';
 

@@ -1,10 +1,9 @@
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, ErrorSummary, Field, Input, Label, StickyActionBar, Switch, Textarea } from '@medvya/ui';
+import { Card, Button, buttonVariants, ErrorSummary, Field, Input, Label, StickyActionBar, Switch, Textarea } from '@medvya/ui';
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import type { ProfileForm } from '../domain/settings';
 import { cardBar, fieldError, fieldGrid } from './fieldStyles';
-import { Section } from './Section';
 
 type Props = {
   form: UseFormReturn<ProfileForm>;
@@ -50,7 +49,7 @@ export default function ProfilePanel(p: Props) {
   if (p.loadFailed) return <p role="alert" className={fieldError}>{t(p.forbidden ? 'settings.forbidden' : 'settings.loadFailed')}</p>;
   return (
     <div className="flex flex-col gap-4">
-      <Section title={t('settings.profile.title')} intro={t('settings.profile.intro')}>
+      <Card title={t('settings.profile.title')} intro={t('settings.profile.intro')}>
         <form noValidate onSubmit={p.onSubmit} className={fieldGrid}>
           {/* The server's refusal of a web address in the name moves focus too, once it arrives. */}
           <ErrorSummary title={t('field.errorSummary')} focusKey={`${submitCount}:${p.nameHasLink}`} className="col-span-full"
@@ -97,8 +96,8 @@ export default function ProfilePanel(p: Props) {
             <Button type="submit" loading={p.saving}>{t('settings.save')}</Button>
           </StickyActionBar>
         </form>
-      </Section>
-      <Section title={t('settings.logo.title')} intro={t('settings.logo.intro')}>
+      </Card>
+      <Card title={t('settings.logo.title')} intro={t('settings.logo.intro')}>
         <div className="flex flex-wrap items-center gap-4">
           {p.logoUrl
             ? <img src={p.logoUrl} alt={t('settings.logo.alt', { name: p.clinicName })} className="max-h-24 max-w-48 rounded-md border bg-white object-contain p-2" />
@@ -126,7 +125,7 @@ export default function ProfilePanel(p: Props) {
           {p.hasLogo && <Button type="button" variant="outline" loading={p.removing} onClick={p.onRemoveLogo}>{t('settings.logo.remove')}</Button>}
         </div>
         {p.uploading && <p role="status">{t('settings.logo.uploading')}</p>}
-      </Section>
+      </Card>
     </div>
   );
 }

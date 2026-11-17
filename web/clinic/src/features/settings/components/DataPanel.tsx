@@ -1,7 +1,6 @@
 import { Link } from 'react-router';
 import { useI18n } from '@medvya/i18n';
-import { buttonVariants } from '@medvya/ui';
-import { Section } from './Section';
+import { Card, Detail, DetailList, buttonVariants } from '@medvya/ui';
 
 type Props = {
   /** The practice's country, from the server (null before sign-in finishes). */
@@ -15,26 +14,24 @@ export default function DataPanel({ country, accessLogPath }: Props) {
   const { t } = useI18n();
   return (
     <div className="flex flex-col gap-4">
-      <Section title={t('settings.data.residency')} intro={t('site.trust.residency.body')}>
+      <Card title={t('settings.data.residency')} intro={t('site.trust.residency.body')}>
         {country && (
-          <dl className="grid gap-2 md:grid-cols-[max-content_1fr] md:gap-x-6">
-            <dt className="font-bold">{t('settings.data.country')}</dt>
-            <dd>{t(`settings.data.country.${country}`)}</dd>
-            <dt className="font-bold">{t('settings.data.region')}</dt>
-            <dd>{t(`site.residency.${country}`)}</dd>
-          </dl>
+          <DetailList layout="inline" className="md:gap-x-6">
+            <Detail label={t('settings.data.country')}>{t(`settings.data.country.${country}`)}</Detail>
+            <Detail label={t('settings.data.region')}>{t(`site.residency.${country}`)}</Detail>
+          </DetailList>
         )}
         <p className="text-sm text-muted-foreground">{t('settings.data.fixed')}</p>
-      </Section>
-      <Section title={t('settings.data.retention')} intro={t('settings.data.retentionIntro')}>
+      </Card>
+      <Card title={t('settings.data.retention')} intro={t('settings.data.retentionIntro')}>
         <p>{t('site.trust.retention.body')}</p>
-      </Section>
-      <Section title={t('settings.data.export')} intro={t('settings.data.exportLater')}>
+      </Card>
+      <Card title={t('settings.data.export')} intro={t('settings.data.exportLater')}>
         <p className="text-sm text-muted-foreground">{t('settings.data.exportNote')}</p>
-      </Section>
-      <Section title={t('settings.data.access')} intro={t('site.trust.audit.body')}>
+      </Card>
+      <Card title={t('settings.data.access')} intro={t('site.trust.audit.body')}>
         <Link to={accessLogPath} className={buttonVariants({ variant: 'outline', className: 'self-start' })}>{t('settings.data.openAccessLog')}</Link>
-      </Section>
+      </Card>
     </div>
   );
 }

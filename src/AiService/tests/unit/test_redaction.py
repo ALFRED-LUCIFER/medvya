@@ -93,12 +93,26 @@ async def test_oversized_json_body_is_413_with_envelope(client: httpx.AsyncClien
     assert r.status_code == 413 and r.json()["error"]["code"] == "PAYLOAD_TOO_LARGE"
 
 
-async def test_cors_allows_only_configured_origin(client: httpx.AsyncClient) -> None:
-    hdr = {"Access-Control-Request-Method": "POST"}
-    ok = await client.options(
-        "/api/v1/sessions", headers={**hdr, "Origin": "http://localhost:5173"}
-    )
-    bad = await client.options("/api/v1/sessions", headers={**hdr, "Origin": "http://evil.example"})
-    assert ok.headers.get("access-control-allow-origin") == "http://localhost:5173"
-    assert "access-control-allow-origin" not in bad.headers
-    assert "access-control-allow-credentials" not in ok.headers
+def test_uvicorn_loggers_get_the_filter_too() -> None:
+    """uvicorn's loggers do not propagate to root: their handlers need the filter themselves."""
+    # SAFETY: mutation check: dropped the uvicorn names from FILTERED_LOGGERS ->
+    # this test failed (the traceback text reached the stream)
+    import io
+
+    from medvya_ai.telemetry import install_log_filter
+
+    stream = io.StringIO()
+    logger = logging.getLogger("uvicorn.error")
+    handler = logging.StreamHandler(stream)
+    logger.addHandler(handler)
+    try:
+        install_log_filter()
+        try:
+            raise ValueError("duplicate key value (name)=(Asha Patil)")
+        except ValueError:
+            logger.exception("Exception in ASGI application")
+    finally:
+        logger.removeHandler(handler)
+    out = stream.getvalue()
+    assert "Exception in ASGI application" in out and "ValueError" in out
+    assert "Asha" not in out

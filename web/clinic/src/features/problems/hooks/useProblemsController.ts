@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { refusalOf } from '../../clinical-access/domain/clinicalAccess';
 import { fetchEncounter } from '../../encounters/services/encountersApi';
-import { ApiError } from '../../schedule/services/scheduleApi';
+import { ApiError } from '../../api/services/apiClient';
 import { addSchema, editSchema, emptyAdd, problemOf, searchCodes, type AddDraft, type DiagnosisCode, type EditDraft, type Problem, type ProblemList, type ProblemRow } from '../domain/problems';
 import { addProblem, fetchCodeSet, fetchProblems, updateProblem } from '../services/problemsApi';
 

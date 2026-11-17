@@ -109,13 +109,16 @@ export function regionKey(country: Country, region: string): MessageKey | null {
   return (emirates as readonly string[]).includes(region) ? `registration.emirate.${region as (typeof emirates)[number]}` : null;
 }
 
-const abha = /^\d{2}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}$/; // 14 digits, shown XX-XXXX-XXXX-XXXX
+// The server's rules (IndiaRules / UaeRules); packages/i18n/country-samples.json keeps both sides in step (#1417).
+// India's identifiers are checked without spaces and dashes, as the server stores them.
+const compact = (value: string) => value.replace(/[\s-]/g, '');
+const abha = /^\d{14}$/; // 14 digits, shown XX-XXXX-XXXX-XXXX
 const abhaAddress = /^[a-z0-9][a-z0-9._]{2,49}@(abdm|sbx)$/i;
-const emiratesId = /^784-?\d{4}-?\d{7}-?\d$/;               // 784-YYYY-NNNNNNN-N
+const emiratesId = /^784(?:\d{12}|-\d{4}-\d{7}-\d)$/;      // 784-YYYY-NNNNNNN-N, or the 15 digits alone
 const passport = /^[A-Z0-9]{6,20}$/i;
 const visa = /^[A-Z0-9/-]{5,30}$/i;
 const lastFour = /^\d{4}$/;
-const fullAadhaar = /^\d{4}[\s-]?\d{4}[\s-]?\d{4}$/;
+const fullAadhaar = /^\d{12}$/;
 const pin = /^\d{6}$/;
 const makani = /^\d{10}$/;
 const poBox = /^\d{1,10}$/;
@@ -239,7 +242,7 @@ export function registrationSchema(country: Country, quick: boolean, today: stri
     if (filled(v.mobile) && !isMobile(v.mobile, country)) issue('mobile', 'format.phone');
 
     if (country === 'IN') {
-      if (filled(v.abha) && !abha.test(v.abha.trim())) issue('abha', 'format.Abha');
+      if (filled(v.abha) && !abha.test(compact(v.abha))) issue('abha', 'format.Abha');
     } else {
       const eid = v.emiratesId.trim();
       if (eid !== '' && !emiratesId.test(eid)) issue('emiratesId', 'format.EmiratesId');
@@ -253,8 +256,8 @@ export function registrationSchema(country: Country, quick: boolean, today: stri
     checkContact(v, country, 'ec', 'required', issue);
 
     if (country === 'IN') {
-      if (filled(v.abhaAddress) && !abhaAddress.test(v.abhaAddress.trim())) issue('abhaAddress', 'format.AbhaAddress');
-      const other = v.otherIdValue.trim();
+      if (filled(v.abhaAddress) && !abhaAddress.test(compact(v.abhaAddress))) issue('abhaAddress', 'format.AbhaAddress');
+      const other = compact(v.otherIdValue);
       if ((otherIdTypes as readonly string[]).includes(v.otherIdType) && other === '') issue('otherIdValue', 'required');
       else if (v.otherIdType === 'AadhaarLast4' && fullAadhaar.test(other)) issue('otherIdValue', 'aadhaar_full_number_not_allowed');
       else if (v.otherIdType === 'AadhaarLast4' && !lastFour.test(other)) issue('otherIdValue', 'format.AadhaarLast4');
@@ -317,10 +320,6 @@ export function completionSchema(country: Country) {
   });
 }
 
-/** Today in the browser's calendar as yyyy-mm-dd (the desk sits at the facility). */
-export const isoDay = (d: Date) =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-
 /** An Emirates ID past its expiry warns but never blocks registration or care. */
 export const eidExpired = (expiry: string, today: string) => isoDate.test(expiry) && expiry < today;
 
@@ -378,7 +377,7 @@ export function duplicateQuery(v: RegistrationForm, country: Country, quick: boo
   const fullName = v.fullName.trim();
   const dateOfBirth = !(country === 'IN' && v.ageInstead) && isoDate.test(v.dateOfBirth) ? v.dateOfBirth : null;
   const identifiers = identifierInputs(v, country, quick)
-    .filter(i => lookup[i.scheme]?.test(i.value))
+    .filter(i => lookup[i.scheme]?.test(country === 'IN' ? compact(i.value) : i.value))
     .map(({ scheme, value }) => ({ scheme, value }));
   const letters = [...fullName].filter(c => /\p{L}/u.test(c)).length;
   if (identifiers.length === 0 && (letters < 2 || !dateOfBirth)) return null;

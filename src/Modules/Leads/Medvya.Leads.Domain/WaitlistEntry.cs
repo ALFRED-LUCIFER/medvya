@@ -17,7 +17,7 @@ public sealed class WaitlistEntry
     [Classification(DataClass.Internal)] public required string Country { get; init; }
     [Classification(DataClass.Personal)] public string? Email { get; init; }
     [Classification(DataClass.Personal)] public string? Phone { get; init; }
-    [Classification(DataClass.Internal)] public DateTimeOffset ReceivedAt { get; init; } = DateTimeOffset.UtcNow;
+    [Classification(DataClass.Internal)] public DateTimeOffset ReceivedAt { get; init; } = DateTimeOffset.UtcNow; // wall clock: a default only; the public site sets it from TimeProvider
     /// <summary>Proof of consent: when the visitor ticked the box under the privacy notice. Null only on rows stored before the notice existed.</summary>
     [Classification(DataClass.Internal)] public DateTimeOffset? ConsentedAt { get; init; }
     /// <summary>The <see cref="LeadRules.NoticeVersion"/> the visitor agreed to.</summary>

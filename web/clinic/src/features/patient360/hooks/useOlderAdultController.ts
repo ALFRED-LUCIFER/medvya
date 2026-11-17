@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { ApiError } from '../../schedule/services/scheduleApi';
+import { ApiError } from '../../api/services/apiClient';
 import { emptyGeriatricForm, geriatricFormSchema, toRecord, type GeriatricForm } from '../domain/olderAdult';
 import { fetchGeriatric, fetchMedicineReview, recordGeriatric } from '../services/olderAdultApi';
 

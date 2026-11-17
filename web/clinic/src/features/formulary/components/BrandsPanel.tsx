@@ -2,9 +2,8 @@ import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { CircleCheck } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, Field, StickyActionBar, Textarea } from '@medvya/ui';
+import { Card, Button, Field, StickyActionBar, Textarea } from '@medvya/ui';
 import { cardBar, fieldError } from '../../settings/components/fieldStyles';
-import { Section } from '../../settings/components/Section';
 import { allergyClasses, type BrandProblem, type BrandRowsForm } from '../domain/formulary';
 
 type Props = {
@@ -20,7 +19,7 @@ export default function BrandsPanel(p: Props) {
   const { t } = useI18n();
   const refused = p.problems.length > 0;
   return (
-    <Section title={t('formulary.brands.title')} intro={t('formulary.brands.intro')}>
+    <Card title={t('formulary.brands.title')} intro={t('formulary.brands.intro')}>
       <form noValidate onSubmit={p.onSubmit} className="flex flex-col gap-4">
         <Field id="brand-rows" label={t('formulary.brands.rows')} hint={t('formulary.brands.rows.hint', { classes: allergyClasses.join(', ') })}>
           {/* The refusal lists rows, so it sits below the field instead of in Field's one-line error; the control still points at it. */}
@@ -39,6 +38,6 @@ export default function BrandsPanel(p: Props) {
           <Button type="submit" loading={p.saving}>{t('formulary.brands.submit')}</Button>
         </StickyActionBar>
       </form>
-    </Section>
+    </Card>
   );
 }

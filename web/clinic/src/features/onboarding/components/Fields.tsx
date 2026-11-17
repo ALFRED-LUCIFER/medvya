@@ -1,9 +1,11 @@
 import type { ReactNode } from 'react';
-import { Controller, type UseFormReturn } from 'react-hook-form';
+import type { UseFormReturn } from 'react-hook-form';
 import { CircleAlert } from 'lucide-react';
 import { useI18n, type Country } from '@medvya/i18n';
-import { ErrorSummary, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
 import { errorCode, stepFields, type FormField, type WizardForm } from '../domain/onboarding';
+import { TextField as FormTextField } from '../../forms/components/TextField';
+import { SelectField as FormSelectField } from '../../forms/components/SelectField';
+import { StepErrorSummary as FormStepErrorSummary } from '../../forms/components/StepErrorSummary';
 
 export type FormProps = { form: UseFormReturn<WizardForm> };
 
@@ -28,28 +30,15 @@ export function TextField({ form, name, label, required, hint, ltr, wide, type =
   name: FormField; label: string; required?: boolean; hint?: ReactNode; ltr?: boolean; wide?: boolean;
   type?: 'text' | 'email' | 'time' | 'date'; inputMode?: 'numeric' | 'email';
 }) {
-  return (
-    <Field id={name} label={label} required={required} error={useError(form, name)} hint={hint} className={wide ? 'md:col-span-2' : undefined}>
-      <Input {...form.register(name)} type={type} inputMode={inputMode} dir={ltr ? 'ltr' : undefined} autoComplete="off" spellCheck={false} />
-    </Field>
-  );
+  return <FormTextField register={form.register} name={name} label={label} required={required} error={useError(form, name)} hint={hint} wide={wide} ltr={ltr} type={type} inputMode={inputMode} />;
 }
 
 /** A choice from a fixed list (shadcn Select). Value "" = nothing chosen. */
 export function SelectField({ form, name, label, required, hint, options, optionLabel, placeholder }: FormProps & {
   name: FormField; label: string; required?: boolean; hint?: ReactNode; options: readonly string[]; optionLabel: (value: string) => string; placeholder: string;
 }) {
-  const error = useError(form, name);
-  return (
-    <Controller control={form.control} name={name} render={({ field }) => (
-      <Select value={field.value as string} onValueChange={field.onChange}>
-        <Field id={name} label={label} required={required} error={error} hint={hint}>
-          <SelectTrigger className="w-full" onBlur={field.onBlur}><SelectValue placeholder={placeholder} /></SelectTrigger>
-        </Field>
-        <SelectContent>{options.map(o => <SelectItem key={o} value={o}>{optionLabel(o)}</SelectItem>)}</SelectContent>
-      </Select>
-    )} />
-  );
+  return <FormSelectField control={form.control} name={name} label={label} required={required} error={useError(form, name)} hint={hint}
+    options={options} optionLabel={optionLabel} placeholder={placeholder} />;
 }
 
 /**
@@ -68,9 +57,8 @@ export function StepErrorSummary({ form, step, country, currency, focusKey }: Fo
     slotMinutes: t('onboarding.field.slot'), newVisitFee: t('onboarding.field.newFee', { currency }), followUpFee: t('onboarding.field.followUpFee', { currency }),
     inviteEmail: t('onboarding.field.inviteEmail'), patients: t('onboarding.patients.legend'),
   };
-  const errors = (stepFields[step] ?? []).flatMap(name => {
+  return <FormStepErrorSummary fields={stepFields[step] ?? []} focusKey={focusKey} entry={name => {
     const code = form.formState.errors[name]?.message, label = labels[name];
-    return code && label ? [{ id: name, label, message: t(`onboarding.error.${errorCode(code)}`) }] : [];
-  });
-  return <ErrorSummary title={t('field.errorSummary')} focusKey={focusKey} errors={errors} />;
+    return code && label ? { id: name, label, message: t(`onboarding.error.${errorCode(code)}`) } : undefined;
+  }} />;
 }

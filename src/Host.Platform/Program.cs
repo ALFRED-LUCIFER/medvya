@@ -16,9 +16,12 @@ using Microsoft.EntityFrameworkCore;
 
 // The platform console host (MDV-P5-040, ADR-014): a separate app for the Medvya team. It reads only the control plane and signs in to the
 // database as medvya_platform, which has no right on any clinic schema.
-// shortcut: no telemetry exporter (the allowlist scrubber lives in Host.Api) and no data-protection key store beyond App Service's own
-// %HOME% folder (one instance); move the scrubber to a building block and add both before the console scales out or leaves dev.
+// shortcut: no telemetry exporter (the allowlist scrubber lives in Host.Api), so outside Development it writes no logs at all; move the scrubber to
+// a building block and add an exporter before the console leaves dev.
 var builder = WebApplication.CreateBuilder(args);
+// The default console and debug providers have no scrubber: a log line could carry an organisation's or a person's details.
+if (!builder.Environment.IsDevelopment()) builder.Logging.ClearProviders();
+builder.AddMedvyaDataProtection("medvya-platform", deployed: builder.Configuration.GetConnectionString("Platform") is not null); // console cookies: the key ring in Blob, wrapped in Key Vault
 builder.WebHost.ConfigureKestrel(k => { k.AddServerHeader = false; k.Limits.MaxRequestBodySize = 65_536; });
 builder.Services.AddClientAddress(builder.Configuration); // App Service ends TLS in front: sign-in must send Entra the https redirect address
 
@@ -46,6 +49,7 @@ if (builder.Configuration.GetSection("ConnectionStrings:Features").GetChildren()
 // rows with no tenant in prescribing.FormularyItems, nothing else; row-level security keeps every clinic's own rows out). Without it those endpoints fail closed.
 if (builder.Configuration.GetConnectionString("Formulary") is { } formulary)
     builder.Services.AddSharedFormularyPath(formulary);
+builder.Services.AddOpenApi(); // document only, exported at build time; no endpoint serves it
 builder.Services.AddHsts(o => { o.MaxAge = TimeSpan.FromDays(365); o.IncludeSubDomains = true; });
 builder.Services.AddRateLimiter(o =>
 {

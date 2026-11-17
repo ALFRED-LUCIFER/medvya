@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using System.Text.Json.Serialization;
 using Medvya.BuildingBlocks.Domain;
 
@@ -76,6 +77,14 @@ public sealed class Appointment
     /// <summary>States that occupy their slots; a cancelled, no-show, needs-rebooking or left-without-being-seen visit frees them.</summary>
     public static bool Occupies(AppointmentState state) =>
         state is not (AppointmentState.Cancelled or AppointmentState.NoShow or AppointmentState.NeedsRebooking or AppointmentState.LeftWithoutBeingSeen);
+
+    /// <summary><see cref="Occupies"/> as a query: the visit's time is taken. A Done visit still holds the time it was seen in.</summary>
+    public static readonly Expression<Func<Appointment, bool>> HoldsSlot = a =>
+        a.State != AppointmentState.Cancelled && a.State != AppointmentState.NoShow && a.State != AppointmentState.NeedsRebooking && a.State != AppointmentState.LeftWithoutBeingSeen;
+
+    /// <summary>A visit the patient has not finished: it holds its slot and is not Done (a second walk-in the same day, a doctor's open load).</summary>
+    public static readonly Expression<Func<Appointment, bool>> Open = a => a.State != AppointmentState.Done
+        && a.State != AppointmentState.Cancelled && a.State != AppointmentState.NoShow && a.State != AppointmentState.NeedsRebooking && a.State != AppointmentState.LeftWithoutBeingSeen;
 }
 
 /// <summary>

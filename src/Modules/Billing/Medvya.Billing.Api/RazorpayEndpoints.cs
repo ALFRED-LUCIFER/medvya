@@ -1,14 +1,15 @@
-using Medvya.Audit.Api;
+using Medvya.Audit.Application;
 using Medvya.Audit.Domain;
 using Medvya.Billing.Application;
 using Medvya.Billing.Domain;
-using Medvya.Tenancy.Api;
+using Medvya.Tenancy.Application;
 using Medvya.Tenancy.Domain;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Medvya.Billing.Api;
 
@@ -16,7 +17,7 @@ namespace Medvya.Billing.Api;
 /// The clinic's own Razorpay account (MDV-P4-007 part 2, ADR-023): Settings, Billing, Razorpay for the practice-configuration capability while billing is
 /// on, and the clinic's public webhook. Secrets go in, never out.
 /// </summary>
-public static class RazorpayEndpoints
+public static partial class RazorpayEndpoints
 {
     public const string WebhookRateLimit = "payment-webhooks", SignatureHeader = "X-Razorpay-Signature", EventIdHeader = "X-Razorpay-Event-Id";
     const string Resource = "payment_provider";
@@ -61,12 +62,21 @@ public static class RazorpayEndpoints
         {
             await account.HandleWebhookAsync(webhookEvent, ct);
         }
-        catch (PaymentProviderException)
+        catch (PaymentProviderException e) when (e.Error == PaymentProviderError.Unavailable)
         {
             return Results.StatusCode(StatusCodes.Status503ServiceUnavailable); // not recorded as handled: Razorpay's retry tries again
         }
+        catch (PaymentProviderException e)
+        {
+            // Wrong or missing keys: a retry cannot help, and 24 hours of failures would make Razorpay disable the clinic's webhook. Answered, not recorded:
+            // the payment stays pending for "Check status", and the warning makes the clinic's misconfiguration visible.
+            ProviderRefused(http.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(RazorpayEndpoints)), e.Error);
+        }
         return Results.Ok();
     }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Razorpay webhook could not confirm its payment link: {Error}")]
+    static partial void ProviderRefused(ILogger logger, PaymentProviderError error);
 
     /// <summary>The raw body bytes, or null when it is larger than <see cref="MaxBody"/> (a chunked request has no length to check first).</summary>
     static async Task<byte[]?> ReadAsync(Stream body, CancellationToken ct)

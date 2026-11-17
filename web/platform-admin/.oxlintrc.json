@@ -13,6 +13,7 @@
     "medvya-ui/no-height-patch": "error",
     "medvya-ui/compact-table": "error",
     "react/rules-of-hooks": "error",
+    "react/exhaustive-deps": "error",
     "react/only-export-components": [
       "warn",
       {
@@ -39,7 +40,7 @@
               { "element": "table", "message": "Use Table from @medvya/ui (MDV-P0-030; docs/03-architecture/frontend-architecture.md, Tables)." },
               { "element": "thead", "message": "Use TableHeader from @medvya/ui." },
               { "element": "tbody", "message": "Use TableBody from @medvya/ui." },
-              { "element": "tfoot", "message": "Use TableFooter from @medvya/ui." },
+              { "element": "tfoot", "message": "Table from @medvya/ui has no footer row: show totals below the table." },
               { "element": "tr", "message": "Use TableRow from @medvya/ui." },
               { "element": "th", "message": "Use TableHead from @medvya/ui." },
               { "element": "td", "message": "Use TableCell from @medvya/ui." },
@@ -98,7 +99,18 @@
           {
             "name": "XMLHttpRequest",
             "message": "I/O lives in services/."
-          }
+          },
+          { "name": "indexedDB", "message": "I/O lives in services/." },
+          { "name": "caches", "message": "I/O lives in services/." }
+        ],
+        "no-restricted-properties": [
+          "error",
+          { "property": "fetch", "message": "I/O lives in services/ (window.fetch, globalThis.fetch too)." },
+          { "property": "localStorage", "message": "I/O lives in services/." },
+          { "property": "sessionStorage", "message": "I/O lives in services/." },
+          { "property": "indexedDB", "message": "I/O lives in services/." },
+          { "property": "caches", "message": "I/O lives in services/." },
+          { "property": "XMLHttpRequest", "message": "I/O lives in services/." }
         ]
       }
     },
@@ -131,7 +143,20 @@
           {
             "name": "localStorage",
             "message": "Call a service from the hook; services own I/O."
-          }
+          },
+          { "name": "sessionStorage", "message": "Call a service from the hook; services own I/O." },
+          { "name": "indexedDB", "message": "Call a service from the hook; services own I/O." },
+          { "name": "caches", "message": "Call a service from the hook; services own I/O." },
+          { "name": "XMLHttpRequest", "message": "Call a service from the hook; services own I/O." }
+        ],
+        "no-restricted-properties": [
+          "error",
+          { "property": "fetch", "message": "Call a service from the hook; services own I/O." },
+          { "property": "localStorage", "message": "Call a service from the hook; services own I/O." },
+          { "property": "sessionStorage", "message": "Call a service from the hook; services own I/O." },
+          { "property": "indexedDB", "message": "Call a service from the hook; services own I/O." },
+          { "property": "caches", "message": "Call a service from the hook; services own I/O." },
+          { "property": "XMLHttpRequest", "message": "Call a service from the hook; services own I/O." }
         ]
       }
     },
@@ -189,8 +214,13 @@
           "fetch",
           "localStorage",
           "sessionStorage",
+          "indexedDB",
+          "caches",
+          "XMLHttpRequest",
           "window",
-          "document"
+          "document",
+          "globalThis",
+          "self"
         ]
       }
     },

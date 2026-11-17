@@ -7,24 +7,23 @@ using Hangfire.PostgreSql;
 using Microsoft.Extensions.Hosting;
 using Medvya.Notifications.Application;
 using Medvya.Scheduling.Application;
-using Medvya.Tenancy.Api;
 using Medvya.Tenancy.Application;
 using Microsoft.AspNetCore.Authorization;
 
 namespace Medvya.Notifications.Api;
 
 /// <summary>
-/// Hangfire on PostgreSQL (ADR-001, MDV-P1-032): one recurring job publishes each tenant's outbox and then sends what is due, so a
-/// confirmation leaves within about a minute of booking and reminders at their time. No Redis, no Service Bus.
+/// Hangfire on PostgreSQL (ADR-001, MDV-P1-032): a minutely job publishes each tenant's outbox and then sends what is due, so a
+/// confirmation leaves within about a minute of booking and reminders at their time; an hourly job raises the compliance reminders. No Redis, no Service Bus.
 /// shortcut: the server runs inside Host.Api; move it to the Worker.Jobs host (docs/03-architecture/repository-structure.md) when load or deploys need it.
 /// </summary>
 public sealed partial class NotificationJobs(IServiceProvider services, ILogger<NotificationJobs> log)
 {
-    public const string JobId = "notifications-run";
+    public const string JobId = "notifications-run", ComplianceJobId = "compliance-reminders";
     public const string DashboardPolicy = "jobs-operations";
     const int Batch = 100;
 
-    /// <summary>One run over every tenant that has written an outbox event. A tenant that fails does not stop the others; the run then fails so Hangfire shows it.</summary>
+    /// <summary>One run over every tenant: publishes its outbox and sends what is due, then pushes the notification centre.</summary>
     [DisableConcurrentExecution(300), AutomaticRetry(Attempts = 0)]
     public async Task RunAsync(CancellationToken cancellationToken)
     {
@@ -34,24 +33,46 @@ public sealed partial class NotificationJobs(IServiceProvider services, ILogger<
             withEvents = await scope.ServiceProvider.GetRequiredService<IOutboxDispatcher>().TenantsAsync(cancellationToken);
             indexed = await scope.ServiceProvider.GetRequiredService<IComplianceFacts>().TenantsAsync(cancellationToken);
         }
+        await EachTenantAsync(withEvents.Union(indexed), async scope =>
+        {
+            if (withEvents.Contains(scope.Tenant))
+            {
+                var dispatcher = scope.Services.GetRequiredService<IOutboxDispatcher>();
+                while (await dispatcher.DispatchAsync(Batch, cancellationToken) == Batch) { }
+                // The sender holds back all but cancellations until the owner accepts the terms (MDV-P1-019).
+                await scope.Services.GetRequiredService<INotificationSender>().SendDueAsync(Batch, cancellationToken);
+            }
+            // Push what is new in the notification centre (MDV-P5-038). A compliance reminder raised by the hourly job is pushed on the next run.
+            await scope.Services.GetRequiredService<IStaffPush>().SendDueAsync(Batch, cancellationToken);
+        });
+    }
+
+    /// <summary>
+    /// Licence expiry and access review reminders for the owners (MDV-P1-010), hourly: they work at day granularity and are idempotent, so they
+    /// stay out of the minutely run, where an email outage would delay every tenant's reminders.
+    /// </summary>
+    [DisableConcurrentExecution(300), AutomaticRetry(Attempts = 0)]
+    public async Task RunComplianceAsync(CancellationToken cancellationToken)
+    {
+        IReadOnlyList<Guid> tenants;
+        await using (var scope = services.CreateAsyncScope())
+            tenants = await scope.ServiceProvider.GetRequiredService<IComplianceFacts>().TenantsAsync(cancellationToken);
+        await EachTenantAsync(tenants, scope => scope.Services.GetRequiredService<IComplianceReminders>().RunAsync(cancellationToken));
+    }
+
+    /// <summary>
+    /// Runs the work in each tenant's scope in turn. A tenant that fails does not stop the others; the run then fails so Hangfire shows it.
+    /// shortcut: tenants run one after another in one job; enqueue one job per tenant when tenants exceed about 100.
+    /// </summary>
+    async Task EachTenantAsync(IEnumerable<Guid> tenants, Func<(Guid Tenant, IServiceProvider Services), Task> work)
+    {
         var failed = 0;
-        foreach (var tenant in withEvents.Union(indexed))
+        foreach (var tenant in tenants)
         {
             try
             {
                 await using var scope = services.EnterLinkTenant(tenant);
-                if (withEvents.Contains(tenant))
-                {
-                    var dispatcher = scope.ServiceProvider.GetRequiredService<IOutboxDispatcher>();
-                    while (await dispatcher.DispatchAsync(Batch, cancellationToken) == Batch) { }
-                    // The sender holds back all but cancellations until the owner accepts the terms (MDV-P1-019).
-                    await scope.ServiceProvider.GetRequiredService<INotificationSender>().SendDueAsync(Batch, cancellationToken);
-                }
-                // Push what is new in the notification centre (MDV-P5-038) before the reminders below, which throw when an email fails:
-                // an email outage must not hold pushes back. A reminder raised below is pushed on the next run, a minute later.
-                await scope.ServiceProvider.GetRequiredService<IStaffPush>().SendDueAsync(Batch, cancellationToken);
-                // Licence expiry and access review reminders for the owners (MDV-P1-010); idempotent, so every minute is fine.
-                await scope.ServiceProvider.GetRequiredService<IComplianceReminders>().RunAsync(cancellationToken);
+                await work((tenant, scope.ServiceProvider));
             }
             catch (Exception e) when (e is not OperationCanceledException)
             {
@@ -95,6 +116,7 @@ public static class JobsSetup
         app.MapHangfireDashboard("/admin/jobs", new DashboardOptions { Authorization = [], IsReadOnlyFunc = _ => true, DashboardTitle = "Medvya jobs" })
             .RequireAuthorization(NotificationJobs.DashboardPolicy);
         jobs.Add(NotificationJobs.JobId, m => m.AddOrUpdate<NotificationJobs>(NotificationJobs.JobId, j => j.RunAsync(CancellationToken.None), Cron.Minutely()));
+        jobs.Add(NotificationJobs.ComplianceJobId, m => m.AddOrUpdate<NotificationJobs>(NotificationJobs.ComplianceJobId, j => j.RunComplianceAsync(CancellationToken.None), Cron.Hourly()));
         return app;
     }
 }

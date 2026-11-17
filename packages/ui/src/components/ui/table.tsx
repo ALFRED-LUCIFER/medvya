@@ -88,16 +88,6 @@ function TableBody({ className, ...props }: React.ComponentProps<"tbody">) {
   )
 }
 
-function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
-  return (
-    <tfoot
-      data-slot="table-footer"
-      className={cn("border-t bg-muted/50 font-medium [&>tr]:last:border-b-0", className)}
-      {...props}
-    />
-  )
-}
-
 // Selected is also shown by a thick start-edge bar, never by the background alone.
 function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
   const { stacked } = React.useContext(TableLayout)
@@ -207,7 +197,6 @@ export {
   TablePagination,
   TableHeader,
   TableBody,
-  TableFooter,
   TableHead,
   TableRow,
   TableCell,

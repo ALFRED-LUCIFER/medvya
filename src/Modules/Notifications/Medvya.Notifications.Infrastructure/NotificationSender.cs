@@ -80,11 +80,14 @@ public sealed partial class NotificationSender(
                 var sender = prefs.SenderFor(facility.Name); // the practice's name opens the subject on every provider (#213)
                 var logo = await facilities.LogoAsync(ct);
                 var html = EmailHtml.Render(MessageCatalog.Email(n.Kind, contact.PreferredLanguage, message, sender, facility.Name, localStart, facility.TimeZone, facility.Address, facility.Phone), logo is not null);
-                await email.SendAsync(new EmailMessage(address, $"{sender}: {message.Subject}", message.Body,
-                    new Dictionary<string, string> { ["X-SMTPAPI"] = $$$"""{"unique_args":{"ref":"{{{reference}}}"}}""" }, sender, html, logo), ct);
+                await BoundedSend.RunAsync(t => email.SendAsync(new EmailMessage(address, $"{sender}: {message.Subject}", message.Body,
+                    new Dictionary<string, string> { ["X-SMTPAPI"] = $$$"""{"unique_args":{"ref":"{{{reference}}}"}}""" }, sender, html, logo), t), ct);
             }
             else
-                await sms.SendAsync(SmsFor(n, contact.CountryCode, address, message, reference, o.Sms), ct);
+            {
+                var text = SmsFor(n, contact.CountryCode, address, message, reference, o.Sms);
+                await BoundedSend.RunAsync(t => sms.SendAsync(text, t), ct);
+            }
 
             n.ProviderRef = reference;
             await EndAsync(n, now, NotificationStatus.Sent, null, ct);
@@ -135,4 +138,21 @@ public sealed partial class NotificationSender(
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Notification {NotificationId} is now {Status} ({Code}).")]
     static partial void Ended(ILogger logger, Guid notificationId, NotificationStatus status, string? code);
+}
+
+/// <summary>
+/// One provider call from a job, bounded in time: SmtpClient ignores its Timeout on async sends, and a stuck provider must not hold the run
+/// (or an open transaction) past the claim window. A time-out is a TimeoutException, so callers retry it like any provider failure.
+/// </summary>
+static class BoundedSend
+{
+    public static readonly TimeSpan Limit = TimeSpan.FromSeconds(30);
+
+    public static async Task RunAsync(Func<CancellationToken, Task> send, CancellationToken cancellationToken)
+    {
+        using var bounded = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        bounded.CancelAfter(Limit);
+        try { await send(bounded.Token); }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) { throw new TimeoutException("The provider did not answer in time."); }
+    }
 }

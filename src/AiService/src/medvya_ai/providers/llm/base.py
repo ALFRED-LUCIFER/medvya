@@ -6,7 +6,7 @@ from typing import Literal, Protocol, TypeVar
 from pydantic import BaseModel
 
 T = TypeVar("T", bound=BaseModel)
-Task = Literal["normalise", "extract", "receptionist"]  # selects the deployment
+Task = Literal["normalise", "extract"]  # selects the deployment
 
 
 @dataclass

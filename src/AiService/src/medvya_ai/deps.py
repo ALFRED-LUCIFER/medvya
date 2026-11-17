@@ -5,17 +5,16 @@ from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import Annotated, Any
 
-from fastapi import Depends, Header, Request
+from fastapi import Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from medvya_ai import audit
-from medvya_ai.auth import TokenVerifier, bearer_token
+from medvya_ai.auth import TokenVerifier, authorise_service, bearer_token
 from medvya_ai.config import Settings
 from medvya_ai.crypto import KeyWrapper
 from medvya_ai.db import set_tenant
 from medvya_ai.errors import AppError
-from medvya_ai.providers.llm.base import LLMClient
-from medvya_ai.seed import ensure_demo_user, first_doctor, user_by_subject
+from medvya_ai.seed import ensure_service_user, first_doctor, user_by_subject
 from medvya_ai.storage import BlobStore
 
 
@@ -27,11 +26,6 @@ def get_settings(request: Request) -> Settings:
 def get_blobs(request: Request) -> BlobStore:
     blobs: BlobStore = request.app.state.blobs
     return blobs
-
-
-def get_llm(request: Request) -> LLMClient:
-    llm: LLMClient = request.app.state.llm
-    return llm
 
 
 def get_key_wrapper(request: Request) -> KeyWrapper:
@@ -66,31 +60,57 @@ class Tenant:
         )
 
 
-async def get_tenant(
-    request: Request,
-    x_clinic_id: Annotated[uuid.UUID | None, Header()] = None,
-) -> AsyncIterator[Tenant]:
+SERVICE_ROLES = frozenset({"doctor", "admin"})  # user_role enum; anything else is refused
+
+
+def _header_uuid(request: Request, name: str) -> uuid.UUID:
+    raw = request.headers.get(name)
+    if raw is None:
+        raise AppError(400, "TENANT_HEADER_REQUIRED", f"{name} header is required")
+    try:
+        return uuid.UUID(raw)
+    except ValueError:
+        raise AppError(400, "TENANT_HEADER_INVALID", f"{name} must be a UUID") from None
+
+
+async def get_tenant(request: Request) -> AsyncIterator[Tenant]:
     """One transaction per request, scoped with set_config(..., is_local=true); commits on
     success, rolls back on error.
 
-    AUTH_MODE=entra: the bearer token is verified, its subject selects the app_user, and clinic
-    and role come from that row. X-Clinic-Id is ignored: a client can never choose its tenant.
-    AUTH_MODE=disabled (local/test build): every request acts as the clinic's first doctor; the
-    clinic is X-Clinic-Id when sent, else the demo clinic (created on first use)."""
+    AUTH_MODE=service: the token must be Medvya's API (authorise_service); only then are
+    X-Clinic-Id, X-User-Id and X-User-Role trusted. They set the RLS tenant and the audit actor.
+    AUTH_MODE=entra: the token's subject selects the app_user; clinic and role come from that row
+    and tenant headers are ignored.
+    AUTH_MODE=disabled (ENVIRONMENT=development only): X-Clinic-Id is required; the request acts
+    as that clinic's first user."""
+    settings: Settings = request.app.state.settings
     verifier: TokenVerifier | None = request.app.state.verifier
     claims = await verifier.verify(bearer_token(request)) if verifier is not None else None
+    mode = settings.auth_mode
+    if mode == "service":
+        if claims is None:  # build_verifier never returns None outside disabled mode
+            raise AppError(401, "UNAUTHENTICATED", "Bearer token required")
+        authorise_service(claims, settings)
+        medvya_user = _header_uuid(request, "X-User-Id")
+        role = request.headers.get("X-User-Role", "")
+        if role not in SERVICE_ROLES:
+            raise AppError(400, "TENANT_HEADER_INVALID", "X-User-Role is missing or not allowed")
+    if mode != "entra":
+        header_clinic = _header_uuid(request, "X-Clinic-Id")
     async with request.app.state.sessionmaker() as session, session.begin():
-        role = "doctor"
-        if claims is not None:
+        if mode == "service":
+            clinic_id = header_clinic
+            user_id = await ensure_service_user(
+                session, clinic_id=clinic_id, medvya_user_id=medvya_user, role=role
+            )
+        elif claims is not None:
             user = await user_by_subject(session, claims.subject)
             if user is None:
                 raise AppError(403, "TENANT_ACCESS_DENIED", "User is not provisioned")
             clinic_id, user_id, role = user.clinic_id, user.id, user.role
             await set_tenant(session, clinic_id)
-        elif x_clinic_id is None:
-            clinic_id, user_id = await ensure_demo_user(session)
         else:
-            clinic_id = x_clinic_id
+            clinic_id, role = header_clinic, "doctor"
             await set_tenant(session, clinic_id)
             found = await first_doctor(session)
             if found is None:
@@ -106,4 +126,3 @@ TenantDep = Annotated[Tenant, Depends(get_tenant, scope="function")]
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 BlobsDep = Annotated[BlobStore, Depends(get_blobs)]
 WrapperDep = Annotated[KeyWrapper, Depends(get_key_wrapper)]
-LLMDep = Annotated[LLMClient, Depends(get_llm)]

@@ -13,6 +13,7 @@ const literal = /"([a-z0-9_-]+(?:\.[a-z0-9_-]+)+)"/g;
 export const builtAtRunTime = [
   'onboarding.complete.IN', 'onboarding.complete.AE',
   ...['Draft', 'Submitted', 'NeedsChanges', 'Approved', 'Rejected', 'Suspended'].map(s => `organisation.state.${s}`),
+  ...['succeeded', 'failed', 'expired'].map(s => `billing.payment.${s}`), // Invoices.SettleAsync: billing.payment.{final payment state}
 ];
 
 /** Dotted literals on audit lines that are not action codes: HttpContext item keys, a SettingsChange section, feature keys (Features.cs, MDV-P5-041). */

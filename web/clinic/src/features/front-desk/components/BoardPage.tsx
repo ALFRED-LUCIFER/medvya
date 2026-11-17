@@ -72,7 +72,8 @@ type Props = {
   views?: ReactNode;
   workload: ReturnType<typeof workload>;
   /** Payment for Billing cards: present when billing is on (flag billing.invoices, P4); until then a disabled placeholder. */
-  paymentAction?: ReactNode;
+  /** The Billing card's way to the visit's bill; absent without billing or the Invoices and payments capability. */
+  paymentAction?: (card: BoardCard) => ReactNode;
   /** "Start consultation" for a card (MDV-P2-001), for doctors; null for a card it does not apply to. `primary` on the one next patient. */
   consultAction?: (card: BoardCard, primary: boolean) => ReactNode;
   /** With the nurse-intake step on (MDV-P2-007) a With nurse card leaves the nurse by the nurse's handoff, not by this board's move: shown instead of "Intake done". */
@@ -381,13 +382,8 @@ function VisitCard(props: Props & { card: BoardCard; board: Board; primary: stri
       {card.room && (state === 'InConsult' || state === 'WithNurse') && <FrontDeskTag kind="room" text={t('board.room', { room: card.room })} />}
 
       {canMove && confirming ? <ConfirmCheckIn {...props} card={card} /> : <NextAction {...props} card={card} className="mt-1 w-full" />}
-      {/* shortcut: with billing.invoices off (all of P1) payment is a disabled placeholder; P4 builds payments behind that flag. */}
-      {canMove && state === 'Billing' && (paymentAction ?? (
-        <>
-          <Button variant="outline" className="whitespace-normal" disabled aria-describedby={`${nameId}-pay`}>{t('board.action.paymentReceived')}</Button>
-          <p id={`${nameId}-pay`} className="text-xs text-muted-foreground">{t('board.paymentLater')}</p>
-        </>
-      ))}
+      {/* The visit's bill (MDV-P4-004): for whoever takes payments; the server checks Invoices and payments again. */}
+      {state === 'Billing' && paymentAction?.(card)}
       {consultAction?.(card, card.id === primary)}
       {state === 'Done' && card.followUp && followUp?.(card)}
       {/* MDV-P2-046: the same token again, for a lost slip; a void token is off the board and the server refuses it anyway. */}

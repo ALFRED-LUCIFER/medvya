@@ -54,6 +54,9 @@ const MergeReviewRoute = lazy(() => import('./PatientRoutes').then(m => ({ defau
 const RegistrationRoute = lazy(() => import('./PatientRoutes').then(m => ({ default: m.RegistrationRoute })));
 // Walk-in (MDV-P1-025) brings the patient picker and booking lists: loaded when opened, never at first paint.
 const WalkInRoute = lazy(() => import('./WalkInRoute'));
+const BillingListRoute = lazy(() => import('./BillingRoutes').then(m => ({ default: m.BillingListRoute })));
+const InvoiceRoute = lazy(() => import('./BillingRoutes').then(m => ({ default: m.InvoiceRoute })));
+const VisitInvoiceRoute = lazy(() => import('./BillingRoutes').then(m => ({ default: m.VisitInvoiceRoute })));
 const TokenSlipRoute = lazy(() => import('./WalkInRoute').then(m => ({ default: m.TokenSlipRoute })));
 const WaitlistRoute = lazy(() => import('./WaitlistRoute'));
 const TodayRoute = lazy(() => import('./TodayRoute'));
@@ -178,6 +181,8 @@ export default function App({ locale, onLocaleChange }: Props) {
                 registerPath={registerPath} walkInPath={walkInPath} waitlistPath={waitlistPath} bookPath={active.capabilities.RegisterBookPatients === 'Full' ? pathOf('schedule') : null} billingPath={shell.items.find(b => b.id === 'billing')?.path ?? null}
                 canConsult={active.capabilities.Patient360Chart === 'Full'} steps={{ nurse: active.flags.includes('clinical.nurse-intake'), billing: active.flags.includes('billing.invoices') }}
                 intakePath={nursePath && active.capabilities.VitalsAllergiesEntry === 'Full' ? (id: string) => `${nursePath}/${id}` : null} />
+            // Bills and payments (MDV-P4-004): the item exists only with billing on and Invoices and payments; the server checks both again.
+            : i.id === 'billing' ? <BillingListRoute path={i.path} timeZone={active.timeZone ?? 'UTC'} />
             : i.id === 'nurse' ? <NurseQueueRoute facilityId={active.facilityId} online={online} nursePath={i.path} />
             : i.id === 'clinicToday' ? <ClinicTodayRoute facilityId={active.facilityId} userId={shell.session?.user.id ?? ''}
                 paths={{ myDay: pathOf('today'), directory: searchPath, waitingRoom: pathOf('frontDesk') && `${pathOf('frontDesk')}/overview` }} />
@@ -195,6 +200,10 @@ export default function App({ locale, onLocaleChange }: Props) {
           {/* The token slip (MDV-P2-046): whoever runs the queue; the server refuses a void token. */}
           {pathOf('frontDesk') && active.capabilities.CheckInQueue === 'Full' &&
             <Route path="/front-desk/token/:appointmentId" element={<TokenSlipRoute boardPath={pathOf('frontDesk')!} />} />}
+          {pathOf('billing') && <>
+            <Route path={`${pathOf('billing')}/visit/:appointmentId`} element={<VisitInvoiceRoute path={pathOf('billing')!} />} />
+            <Route path={`${pathOf('billing')}/:invoiceId`} element={<InvoiceRoute path={pathOf('billing')!} timeZone={active.timeZone ?? 'UTC'} />} />
+          </>}
           {waitlistPath && <Route path={waitlistPath} element={<WaitlistRoute facilityId={active.facilityId} boardPath={pathOf('frontDesk')!} />} />}
           {/* shortcut: reachable by URL only; the Staff screen and its navigation entry come with F-10 (MDV-P1-008). */}
           {/* The owner's onboarding request (ADR-016, MDV-P1-062): status, documents and Submit; the shell notice links here until approval. */}

@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 
 namespace Medvya.Billing.Api;
@@ -56,10 +57,10 @@ public static class CatalogueEndpoints
 
     static async Task<IResult> List(bool? archived, [FromServices] ICatalogue c, CancellationToken ct) => Results.Ok(await c.ListAsync(archived ?? false, ct));
 
-    static IResult Required() => Results.ValidationProblem(new Dictionary<string, string[]> { ["body"] = ["required"] });
+    internal static IResult Required() => Results.ValidationProblem(new Dictionary<string, string[]> { ["body"] = ["required"] });
 
     // Inside the audit filter (added after it), so the row records the answer the caller gets.
-    static async ValueTask<object?> MapErrors(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
+    internal static async ValueTask<object?> MapErrors(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
     {
         try
         {
@@ -68,6 +69,17 @@ public static class CatalogueEndpoints
         catch (BillingValidationException e)
         {
             return Results.ValidationProblem(e.Errors.GroupBy(x => x.Field).ToDictionary(g => g.Key, g => g.Select(x => x.Code).ToArray()));
+        }
+        catch (DocumentNumberingException e)
+        {
+            return Results.ValidationProblem(new Dictionary<string, string[]> { ["number"] = [e.Code] }); // e.g. series_exhausted: nothing was issued
+        }
+        catch (PaymentProviderException e)
+        {
+            // The kind of failure only, never the provider's text: "provider_not_connected" tells the desk to ask the admin to connect Razorpay.
+            var code = "provider_" + JsonNamingPolicy.SnakeCaseLower.ConvertName(e.Error.ToString());
+            return Results.Problem(statusCode: e.Error == PaymentProviderError.Unavailable ? StatusCodes.Status503ServiceUnavailable : StatusCodes.Status409Conflict,
+                title: "The payment provider did not accept the request.", extensions: new Dictionary<string, object?> { ["code"] = code });
         }
         catch (DbUpdateConcurrencyException)
         {

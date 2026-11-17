@@ -5791,6 +5791,7 @@
   "billing.print.gst": "GST {rate}% · {amount}",
   "billing.print.billTotal": "बिल का कुल",
   "billing.print.balance": "बकाया राशि",
+  "billing.print.receivedBefore": "पहले प्राप्त",
   "billing.print.paid": "भुगतान ({currency})",
   "billing.print.discount": "छूट",
   "billing.print.tax": "GST",

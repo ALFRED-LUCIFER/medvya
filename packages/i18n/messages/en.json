@@ -5843,6 +5843,7 @@
   "billing.print.gst": "GST {rate}% · {amount}",
   "billing.print.billTotal": "Bill total",
   "billing.print.balance": "Balance due",
+  "billing.print.receivedBefore": "Received earlier",
   "billing.print.paid": "Paid ({currency})",
   "billing.print.discount": "Discount",
   "billing.print.tax": "GST",

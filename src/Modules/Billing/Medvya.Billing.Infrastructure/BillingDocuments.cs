@@ -24,6 +24,7 @@ public sealed class BillingDocuments(
     IBillingSettings settings, IDocumentNumbering numbering, IPatientDirectory patients, IDocumentStore files, IAuditLog audit, TimeProvider clock) : IBillingDocuments
 {
     public const string Action = "billing.document.print";
+    static readonly TimeSpan UploadTimeout = TimeSpan.FromSeconds(10);
 
     Guid TenantId => tenant.TenantId ?? throw new InvalidOperationException("No tenant context.");
     Guid FacilityId => facility.FacilityId ?? throw new InvalidOperationException("No facility context.");
@@ -60,18 +61,38 @@ public sealed class BillingDocuments(
                 return await ReprintAsync(invoice, meanwhile, cancellationToken);
             }
             var lines = await db.InvoiceLines.AsNoTracking().Where(l => l.InvoiceId == invoiceId).OrderBy(l => l.CreatedAt).ToListAsync(cancellationToken);
-            var payments = await db.Payments.AsNoTracking().Where(p => p.InvoiceId == invoiceId && p.State == PaymentState.Succeeded).OrderBy(p => p.RecordedAt).ToListAsync(cancellationToken);
+            // In the order they succeeded, which is the order the paid total grew in (each success locks the bill).
+            var payments = await db.Payments.AsNoTracking().Where(p => p.InvoiceId == invoiceId && p.State == PaymentState.Succeeded)
+                .OrderBy(p => p.ConfirmedAt ?? p.RecordedAt).ThenBy(p => p.RecordedAt).ToListAsync(cancellationToken);
             var paid = PaidFor(invoice, kind);
             var now = clock.GetUtcNow();
+            // A receipt is for the money received since the bill's last receipt, never again for money already receipted.
+            var before = kind == BillingDocumentKind.Receipt
+                ? await db.BillingDocuments.Where(d => d.InvoiceId == invoiceId && d.Kind == BillingDocumentKind.Receipt && d.PaidMinor < paid).MaxAsync(d => (long?)d.PaidMinor, cancellationToken) ?? 0
+                : 0;
+            // The receipt's other layout, if printed already, has its number and date; else the next of the receipt series (gap-free: in this transaction),
+            // dated now, so the number's financial year and the printed date are the same instant.
+            var sibling = kind == BillingDocumentKind.Receipt
+                ? await db.BillingDocuments.Where(d => d.InvoiceId == invoiceId && d.Kind == BillingDocumentKind.Receipt && d.PaidMinor == paid)
+                    .Select(d => new { d.Number, d.IssuedAt }).FirstOrDefaultAsync(cancellationToken)
+                : null;
             var number = kind == BillingDocumentKind.Bill ? invoice.Number!
-                // The receipt's other layout, if printed already, has its number; else the next of the receipt series (gap-free: in this transaction).
-                : await db.BillingDocuments.Where(d => d.InvoiceId == invoiceId && d.Kind == BillingDocumentKind.Receipt && d.PaidMinor == paid).Select(d => d.Number).FirstOrDefaultAsync(cancellationToken)
-                  ?? (await numbering.IssueAsync(rules.CountryCode, DocumentType.Receipt, prefix, now, cancellationToken)).Value;
-            pdf = BillPdf.Render(Paper(kind, rules, place, logo, person, doctor, invoice, number, lines, payments), layout);
+                : sibling?.Number ?? (await numbering.IssueAsync(rules.CountryCode, DocumentType.Receipt, prefix, now, cancellationToken)).Value;
+            var covered = new List<Payment>();
+            long running = 0;
+            foreach (var p in payments) { running += p.AmountMinor; if (running > before) covered.Add(p); }
+            pdf = BillPdf.Render(Paper(kind, rules, place, logo, person, doctor, invoice, number, lines, covered, before, sibling?.IssuedAt ?? now), layout);
             var id = Guid.CreateVersion7();
             var key = $"{TenantId}/billing/{id}"; // ids only, no names in blob paths
             // Written before the row, as the prescription's PDF: a failed commit leaves only an unreachable blob, never a row without its copy.
-            await using (var stream = new MemoryStream(pdf, writable: false)) await files.PutAsync(key, stream, "application/pdf", cancellationToken);
+            // shortcut: the upload runs while the bill (and, for a receipt, the clinic's receipt series) is locked, so a slow Blob holds payments and the
+            // Razorpay webhook for up to this timeout; move the upload out of the transaction (reserve, commit, upload) before more than a few desks share a clinic (#1432).
+            using (var upload = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken))
+            {
+                upload.CancelAfter(UploadTimeout);
+                await using var stream = new MemoryStream(pdf, writable: false);
+                await files.PutAsync(key, stream, "application/pdf", upload.Token);
+            }
             row = new BillingDocument
             {
                 Id = id, TenantId = invoice.TenantId, FacilityId = invoice.FacilityId, InvoiceId = invoiceId, Kind = kind, Layout = layout, Number = number, PaidMinor = paid,
@@ -119,7 +140,7 @@ public sealed class BillingDocuments(
 
     /// <summary>The paper's words and numbers. A bill: its lines and totals, words of the total. A receipt: the same lines, the paid total in words and each payment.</summary>
     static BillPaper Paper(BillingDocumentKind kind, BillingCountryRules rules, FacilityInfo place, byte[]? logo, PatientSummary? person, PrescriberInfo? doctor,
-        Invoice invoice, string number, List<InvoiceLine> lines, List<Payment> payments)
+        Invoice invoice, string number, List<InvoiceLine> lines, List<Payment> payments, long receivedBefore, DateTimeOffset issuedAt)
     {
         var zone = TimeZoneInfo.FindSystemTimeZoneById(place.TimeZone);
         string When(DateTimeOffset at) => T("billing.print.when", ("when", TimeZoneInfo.ConvertTime(at, zone).ToString("dd MMM yyyy, HH:mm", CultureInfo.InvariantCulture)), ("zone", place.TimeZone));
@@ -150,10 +171,12 @@ public sealed class BillingDocuments(
         string grandLabel, grand, words;
         if (receipt)
         {
+            var received = invoice.PaidMinor - receivedBefore;
             totals = [(T("billing.print.billTotal"), amount(invoice.TotalMinor))];
+            if (receivedBefore > 0) totals.Add((T("billing.print.receivedBefore"), amount(receivedBefore)));
             if (invoice.TotalMinor > invoice.PaidMinor) totals.Add((T("billing.print.balance"), amount(invoice.TotalMinor - invoice.PaidMinor)));
-            (grandLabel, grand) = (T("billing.print.paid", ("currency", invoice.Currency)), amount(invoice.PaidMinor));
-            words = rules.AmountInWords(new Money(invoice.PaidMinor, Currency.From(invoice.Currency)));
+            (grandLabel, grand) = (T("billing.print.paid", ("currency", invoice.Currency)), amount(received));
+            words = rules.AmountInWords(new Money(received, Currency.From(invoice.Currency)));
         }
         else
         {
@@ -169,8 +192,8 @@ public sealed class BillingDocuments(
             ("method", T($"billing.method.{p.Method}")), ("reference", p.ProviderPaymentId ?? p.Reference ?? ""), ("amount", amount(p.AmountMinor)),
             ("when", When(p.ConfirmedAt ?? p.RecordedAt)))).ToList() : [];
         var treatments = lines.Select(l => l.TaxTreatment).ToList();
-        // A receipt is dated by the payment it closes, so its A5 and thermal copies agree; a bill by its issue.
-        var at = receipt ? payments.Max(p => p.ConfirmedAt ?? p.RecordedAt) : invoice.IssuedAt!.Value;
+        // A receipt is dated by its own issue (its A5 and thermal copies share it), the instant its number's financial year comes from; a bill by its issue.
+        var at = receipt ? issuedAt : invoice.IssuedAt!.Value;
         // The business that supplies the care (the practice's name), as GST asks; the location's own address under it.
         return new BillPaper(place.TenantName, place.Address, place.Phone, taxLine.Length == 0 ? null : taxLine, logo,
             T(receipt ? "billing.print.receipt" : rules.BillTitle(treatments)), number, When(at), facts, person?.FullName ?? "", person?.Mrn ?? "", printed, totals,

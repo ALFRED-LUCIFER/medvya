@@ -5840,6 +5840,7 @@
   "billing.print.gst": "ضريبة GST {rate}% · {amount}",
   "billing.print.billTotal": "إجمالي الفاتورة",
   "billing.print.balance": "المبلغ المتبقي",
+  "billing.print.receivedBefore": "المستلم سابقًا",
   "billing.print.paid": "المدفوع ({currency})",
   "billing.print.discount": "الخصم",
   "billing.print.tax": "ضريبة GST",

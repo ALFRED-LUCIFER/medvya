@@ -156,6 +156,9 @@ public sealed class BillingDocumentTests(PostgresFixture sql, AzuriteFixture blo
 
         await Desk().RecordPaymentAsync(bill.Id, new RecordPayment { Method = PaymentMethod.Cash, AmountMinor = 30_000 });
         await Desk().RecordPaymentAsync(bill.Id, new RecordPayment { Method = PaymentMethod.Card, AmountMinor = 20_000, Reference = "TID 4471 RRN 8812" });
+        // Paid on 31 March, printed today: the receipt is dated by its issue, the same instant its number's financial year comes from.
+        await using (var db = sql.Billing(h.Tenant))
+            await db.Database.ExecuteSqlAsync($"""UPDATE billing."Payments" SET "RecordedAt" = '2026-03-31T18:00:00Z', "ConfirmedAt" = '2026-03-31T18:00:00Z' WHERE "InvoiceId" = {bill.Id}""");
         var first = (await Printer().PdfAsync(bill.Id, BillingDocumentKind.Receipt, DocumentLayout.A5))!;
         var text = Text(first.Content, Medvya.BuildingBlocks.Infrastructure.PlainPdf.A5.Margin);
         foreach (var expected in new[]
@@ -166,11 +169,17 @@ public sealed class BillingDocumentTests(PostgresFixture sql, AzuriteFixture blo
             Assert.Contains(expected, text, StringComparison.Ordinal);
         var roll = Text((await Printer().PdfAsync(bill.Id, BillingDocumentKind.Receipt, DocumentLayout.Thermal))!.Content, 4 * 2.8346);
         Assert.Contains("RCT/26-27/00001", roll, StringComparison.Ordinal); // the same receipt on the other paper
+        // SAFETY: mutation check: dated the receipt by its last payment again -> this test failed (the receipt said 31 Mar 2026 under a 26-27 number)
+        Assert.DoesNotContain("Date 31 Mar 2026", roll, StringComparison.Ordinal);
 
         await Desk().RecordPaymentAsync(bill.Id, new RecordPayment { Method = PaymentMethod.Cash, AmountMinor = 50_000 });
         var second = Text((await Printer().PdfAsync(bill.Id, BillingDocumentKind.Receipt, DocumentLayout.A5))!.Content, Medvya.BuildingBlocks.Infrastructure.PlainPdf.A5.Margin);
         Assert.Contains("RCT/26-27/00002", second, StringComparison.Ordinal);
-        Assert.Contains("Rupees one thousand only", second, StringComparison.Ordinal);
+        // The second receipt is for the ₹500 received since the first, never the ₹500 already receipted again.
+        // SAFETY: mutation check: set receivedBefore to 0 -> this test failed (the second receipt said Paid (INR) 1,000.00 and listed the card again)
+        foreach (var expected in new[] { "Received earlier 500.00", "Paid (INR) 500.00", "Rupees five hundred only", "Cash · 500.00" })
+            Assert.Contains(expected, second, StringComparison.Ordinal);
+        Assert.DoesNotContain("TID 4471", second, StringComparison.Ordinal);
         Assert.DoesNotContain("Balance due", second, StringComparison.Ordinal);
         Assert.Equal(["RCT/26-27/00001", "RCT/26-27/00001", "RCT/26-27/00002"], (await RowsAsync()).Select(r => r.Number));
     }

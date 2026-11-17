@@ -108,7 +108,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20 # 2-vCPU runners since the repo went private
     strategy:
       fail-fast: false
       matrix:
@@ -254,7 +254,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.e2e == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25 # 2-vCPU runners since the repo went private
     strategy:
       fail-fast: false
       matrix:

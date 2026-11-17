@@ -8,6 +8,12 @@ allowBuilds:
   esbuild: true
 # Security floors for test-only tooling (jest 30, test-exclude, @expo/fingerprint): Dependabot alerts on glob (AbortSignal bypass,
 # GHSA fixed in 14.0.2) and minimatch (globparts DoS, fixed in 11.0.1). Remove when jest and expo ship these versions themselves.
+# Time-boxed audit exception (AGENTS.md 6.3): picomatch ReDoS, every version <= 4.0.7 and no patched release yet (micromatch/picomatch#194).
+# Only build tooling uses it (Vite, Expo CLI, tinyglobby) on our own config's patterns; no shipped bundle contains it (checked 17 Nov 2026).
+# Owner-approved 17 Nov 2026, expires 31 Dec 2026: remove when picomatch 4.0.8 ships (#1433).
+auditConfig:
+  ignoreGhsas:
+    - GHSA-fc5q-39xc-vjpf
 overrides:
   'glob@>=9.0.0 <14.0.2': ^14.0.2
   'minimatch@>=7.0.0 <11.0.1': ^11.0.1

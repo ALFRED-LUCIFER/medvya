@@ -98,7 +98,7 @@ The only Definition of Done: the PR template and `docs/05-delivery/README.md` li
 
 1. Prefer what is already installed. A new dependency needs a reason in the PR (what it replaces, why not the standard library).
 2. Pin through the lockfile / `Directory.Packages.props`. Keep majors current: Dependabot PRs are reviewed weekly. Major upgrades are done deliberately on one branch with a browser check.
-3. `pnpm audit` (high/critical), the NuGet vulnerability check and `pip-audit` must stay clean. Fix by upgrading or pinning the patched version, never by ignoring.
+3. `pnpm audit` (high/critical), the NuGet vulnerability check and `pip-audit` must stay clean. Fix by upgrading or pinning the patched version, never by ignoring. One exception: when **no patched version exists**, the owner may approve ignoring that one advisory id, with the reason, proof it is not in a shipped bundle or reachable from user input, an expiry date, and a removal ticket, all next to the entry (first: picomatch, #1433).
 4. pnpm build scripts are allow-listed (`pnpm-workspace.yaml` `allowBuilds`); approve only what needs it.
 
 ## 7 · Git and PRs

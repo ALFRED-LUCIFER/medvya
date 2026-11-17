@@ -1,5 +1,5 @@
 import {
-  Calendar, CalendarDays, ClipboardCheck, Forward, Headset, Inbox, MessageSquare, Mic, ReceiptText,
+  Banknote, Calendar, CalendarDays, ClipboardCheck, Forward, Headset, Inbox, MessageSquare, Mic, ReceiptText,
   SlidersHorizontal, Syringe, Gauge, Users, Video, type LucideIcon,
 } from 'lucide-react';
 import type { NavGroup, NavId } from '../domain/navigation';
@@ -8,7 +8,7 @@ import type { NavGroup, NavId } from '../domain/navigation';
 export const navIcons: Record<NavId, LucideIcon> = {
   today: CalendarDays, patients: Users, messages: MessageSquare, video: Video, referrals: Forward, inbox: Inbox,
   carePlans: ClipboardCheck, frontDesk: Headset, schedule: Calendar, nurse: Syringe,
-  billing: ReceiptText, devices: Mic, clinicToday: Gauge, settings: SlidersHorizontal,
+  billing: ReceiptText, dayClose: Banknote, devices: Mic, clinicToday: Gauge, settings: SlidersHorizontal,
 };
 
 /** Module rail colour beside the current item (tokens in packages/ui/src/styles.css). */

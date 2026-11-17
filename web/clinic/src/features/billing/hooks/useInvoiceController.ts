@@ -6,11 +6,11 @@ import { ApiError } from '../../api/services/apiClient';
 import { toMinor } from '../domain/catalogue';
 import {
   actionsFor, coverage, discountSchema, invoiceProblem, paymentSchema, providerPayment, toMajor, toPaymentBody,
-  type DiscountForm, type Invoice, type InvoiceProblem, type PaymentForm,
+  type DiscountForm, type Invoice, type InvoiceProblem, type PaymentForm, type PrintPaper,
 } from '../domain/invoice';
 import {
-  addLine, cancelInvoice, cancelPaymentLink, checkPayment, createPaymentLink, fetchBillableServices, fetchInvoice, issueInvoice, recordPayment, removeLine,
-  setDiscount, updateLine,
+  addLine, cancelInvoice, cancelPaymentLink, checkPayment, createPaymentLink, downloadBillingPdf, fetchBillableServices, fetchInvoice, issueInvoice, recordPayment,
+  removeLine, setDiscount, updateLine,
 } from '../services/invoicesApi';
 
 const problemOf = (e: unknown) => invoiceProblem(e instanceof ApiError ? e.code : undefined);
@@ -56,6 +56,12 @@ export function useInvoiceController(id: string) {
     onSuccess: r => { done(r.invoice); setLinkUrl(r.shortUrl); },
     onError: failed,
   });
+  const [paper, setPaper] = useState<PrintPaper>('a5');
+  const print = useMutation({
+    mutationFn: (kind: 'bill' | 'receipt') => downloadBillingPdf(id, kind, paper),
+    onSuccess: () => setProblem(null),
+    onError: () => setProblem('print_failed'),
+  });
 
   const discountForm = useForm<DiscountForm>({ resolver: zodResolver(discountSchema), values: { amount: toMajor(invoice?.discountMinor ?? 0), reason: invoice?.discountReason ?? '' } });
   const paymentForm = useForm<PaymentForm>({ resolver: zodResolver(paymentSchema), defaultValues: { method: 'Cash', amount: '', reference: '' } });
@@ -93,5 +99,6 @@ export function useInvoiceController(id: string) {
     linkUrl: linkUrl ?? (invoice ? providerPayment(invoice.payments)?.linkUrl ?? null : null), linking: link.isPending, onCreateLink: () => link.mutate(),
     checking: check.isPending, onCheck: (paymentId: string) => check.mutate(paymentId),
     onCancelLink: (paymentId: string) => closeLink.mutate(paymentId),
+    paper, onPaper: setPaper, printing: print.isPending ? print.variables : null, onPrint: (kind: 'bill' | 'receipt') => print.mutate(kind),
   };
 }

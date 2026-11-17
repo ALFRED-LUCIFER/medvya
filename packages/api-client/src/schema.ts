@@ -10434,6 +10434,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/billing/invoices/{id}/documents/{kind}/{layout}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    kind: string;
+                    layout: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/settings/billing/razorpay": {
         parameters: {
             query?: never;
@@ -10488,6 +10525,212 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/billing/cash-sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["OpenCashSession"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/billing/cash-sessions/{id}/count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["CountCashSession"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/billing/cash-sessions/{id}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["ConfirmCashSession"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/billing/cash-sessions/{id}/adjustments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["AddCashAdjustment"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/billing/cash-sessions/{id}/report/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -10510,6 +10753,11 @@ export interface components {
             target: null | string;
             /** Format: int32 */
             progressPercent: null | number | string;
+        };
+        AddCashAdjustment: {
+            /** Format: int64 */
+            amountMinor?: null | number | string;
+            reason?: null | string;
         };
         AddDoctor: {
             fullName?: null | string;
@@ -10830,6 +11078,12 @@ export interface components {
         Capability: "RegisterBookPatients" | "CheckInQueue" | "InvoicesPayments" | "Patient360Chart" | "VitalsAllergiesEntry" | "ClinicalNotes" | "PrescriptionsOrders" | "RecordingConsentCapture" | "AiDraftsEvidence" | "ResultReviewAcknowledge" | "CareTasksPatientContact" | "ReleaseRecordsToPortal" | "DevicePairingFleet" | "StaffRolesIntegrations" | "AuditLog";
         /** @enum {unknown} */
         CareCheckKind: "DiabeticEyeExam" | "DiabeticFootExam" | null;
+        CashCount: {
+            /** Format: int64 */
+            valueMinor?: number | string;
+            /** Format: int32 */
+            count?: number | string;
+        };
         ChangeRole: {
             role: null | components["schemas"]["Role"];
             /** Format: uuid */
@@ -10922,6 +11176,10 @@ export interface components {
             version?: null | number | string;
             contact?: null | components["schemas"]["ContactChange"];
         };
+        ConfirmCashSession: {
+            /** Format: uint32 */
+            version?: null | number | string;
+        };
         ConnectRazorpay: {
             keyId?: null | string;
             keySecret?: null | string;
@@ -10956,6 +11214,12 @@ export interface components {
             /** Format: double */
             value: null | number | string;
             reason: null | string;
+        };
+        CountCashSession: {
+            counts?: null | components["schemas"]["CashCount"][];
+            note?: null | string;
+            /** Format: uint32 */
+            version?: null | number | string;
         };
         CreatedDisplay: {
             display: components["schemas"]["DisplayView"];
@@ -11416,6 +11680,10 @@ export interface components {
         OnboardingTeamMember: {
             email: null | string;
             role: null | components["schemas"]["Role"];
+        };
+        OpenCashSession: {
+            /** Format: int64 */
+            openingFloatMinor?: null | number | string;
         };
         /** @enum {unknown} */
         OrderKind: "Lab" | "Imaging" | null;

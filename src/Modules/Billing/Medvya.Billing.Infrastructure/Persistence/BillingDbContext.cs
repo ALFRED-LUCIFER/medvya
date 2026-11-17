@@ -15,6 +15,9 @@ public sealed class BillingDbContext(DbContextOptions<BillingDbContext> options,
     public DbSet<InvoiceLine> InvoiceLines => Set<InvoiceLine>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<ProviderEvent> ProviderEvents => Set<ProviderEvent>();
+    public DbSet<BillingDocument> BillingDocuments => Set<BillingDocument>();
+    public DbSet<CashSession> CashSessions => Set<CashSession>();
+    public DbSet<CashAdjustment> CashAdjustments => Set<CashAdjustment>();
 
     Guid? CurrentTenantId => tenant.TenantId;
 
@@ -122,6 +125,7 @@ public sealed class BillingDbContext(DbContextOptions<BillingDbContext> options,
             e.HasIndex(x => new { x.TenantId, x.ProviderLinkId }).IsUnique().HasFilter("\"ProviderLinkId\" IS NOT NULL");
             // At most one payment the patient may still pay per bill (a Razorpay link for the balance).
             e.HasIndex(x => x.InvoiceId).IsUnique().HasFilter("\"State\" = 'Pending'");
+            e.HasOne<CashSession>().WithMany().HasForeignKey(x => x.CashSessionId).OnDelete(DeleteBehavior.Restrict);
             e.ToTable(t => t.HasCheckConstraint("CK_Payments_Amount", "\"AmountMinor\" > 0"));
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
@@ -132,6 +136,53 @@ public sealed class BillingDbContext(DbContextOptions<BillingDbContext> options,
             e.Property(x => x.Provider).HasMaxLength(16);
             e.Property(x => x.EventId).HasMaxLength(ProviderEvent.MaxEventId);
             e.Property(x => x.Type).HasMaxLength(ProviderEvent.MaxType);
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<BillingDocument>(e =>
+        {
+            e.Property(x => x.Kind).HasConversion<string>().HasMaxLength(10);
+            e.Property(x => x.Layout).HasConversion<string>().HasMaxLength(10);
+            e.Property(x => x.Number).HasMaxLength(32);
+            e.Property(x => x.Sha256).HasMaxLength(64).IsFixedLength();
+            e.Property(x => x.BlobKey).HasMaxLength(100);
+            e.HasOne<Invoice>().WithMany().HasForeignKey(x => x.InvoiceId).OnDelete(DeleteBehavior.Restrict);
+            // One paper per bill, kind, layout and paid total: two first prints at once cannot both store one.
+            e.HasIndex(x => new { x.TenantId, x.InvoiceId, x.Kind, x.Layout, x.PaidMinor }).IsUnique();
+            e.ToTable(t => t.HasCheckConstraint("CK_BillingDocuments_Paid", "\"PaidMinor\" >= 0"));
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<CashSession>(e =>
+        {
+            e.Property(x => x.State).HasConversion<string>().HasMaxLength(24);
+            e.Property(x => x.Currency).HasMaxLength(3).IsFixedLength();
+            e.Property(x => x.Note).HasMaxLength(CashSession.MaxNote);
+            e.OwnsMany(x => x.Counts, o => o.ToJson());
+            e.OwnsMany(x => x.Totals, o =>
+            {
+                o.ToJson();
+                o.Property(x => x.Method).HasConversion<string>();
+            });
+            e.Property<uint>("xmin").IsRowVersion(); // the confirmer confirms the count they saw: a recount meanwhile is refused (409)
+            // One Open session per location: two desks opening at once get one (MDV-P4-012). A counted one awaiting confirmation does not block the next.
+            e.HasIndex(x => new { x.TenantId, x.FacilityId }).IsUnique().HasFilter("\"State\" = 'Open'");
+            e.HasIndex(x => new { x.FacilityId, x.ClosedAt });
+            e.ToTable(t =>
+            {
+                t.HasCheckConstraint("CK_CashSessions_Float", $"\"OpeningFloatMinor\" BETWEEN 0 AND {CashSession.MaxFloatMinor}");
+                // A closed session is never changed or deleted (TR_CashSessions_ClosedImmutable); corrections are CashAdjustments.
+                t.HasTrigger("TR_CashSessions_ClosedImmutable");
+            });
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<CashAdjustment>(e =>
+        {
+            e.Property(x => x.Reason).HasMaxLength(CashAdjustment.MaxReason);
+            e.HasOne<CashSession>().WithMany().HasForeignKey(x => x.SessionId).OnDelete(DeleteBehavior.Restrict);
+            e.ToTable(t =>
+            {
+                t.HasCheckConstraint("CK_CashAdjustments_Amount", "\"AmountMinor\" <> 0");
+                t.HasTrigger("TR_CashAdjustments_AppendOnly");
+            });
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
     }

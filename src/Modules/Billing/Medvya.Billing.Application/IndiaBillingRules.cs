@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
+using Medvya.Billing.Domain;
 using Medvya.BuildingBlocks.Domain;
 
 namespace Medvya.Billing.Application;
@@ -19,6 +20,9 @@ sealed partial class IndiaBillingRules : BillingCountryRules
 
     public override string CountryCode => "IN";
     public override Currency Currency => Currency.Inr;
+
+    /// <summary>₹500, 200, 100, 50, 20 and 10 (notes, and the ₹20 and ₹10 coins counted with them), then the ₹5, 2 and 1 coins.</summary>
+    public override IReadOnlyList<long> CashDenominationsMinor { get; } = [50_000, 20_000, 10_000, 5_000, 2_000, 1_000, 500, 200, 100];
 
     public override string FinancialYear(DateTimeOffset issuedAt)
     {
@@ -68,6 +72,32 @@ sealed partial class IndiaBillingRules : BillingCountryRules
         var words = "Rupees " + Spell(rupees, Groups);
         return (paise == 0 ? words : words + " and " + Spell(paise, Groups) + (paise == 1 ? " paisa" : " paise")) + " only";
     }
+
+    /// <summary>
+    /// GST: exempt care only is a bill of supply, taxed services only a tax invoice, both together an invoice-cum-bill of supply (CGST Rules 46 and 49).
+    /// Clinic care is exempt by default, so most bills are bills of supply.
+    /// </summary>
+    public override string BillTitle(IReadOnlyCollection<TaxTreatment> lines) =>
+        !lines.Contains(TaxTreatment.Taxable) ? "billing.print.billOfSupply"
+        : lines.Contains(TaxTreatment.Exempt) ? "billing.print.invoiceCumBillOfSupply" : "billing.print.taxInvoice";
+
+    /// <summary>
+    /// The state of the clinic's GSTIN (its first two digits), e.g. "Tamil Nadu (33)": care is supplied at the clinic.
+    /// shortcut: always the clinic's state; whether a teleconsult takes the patient's state is the CA review's call (MDV-P4-031).
+    /// </summary>
+    public override string? PlaceOfSupply(string? taxNumber) =>
+        taxNumber is { Length: >= 2 } && States.TryGetValue(taxNumber[..2], out var state) ? $"{state} ({taxNumber[..2]})" : null;
+
+    /// <summary>GST state codes, the first two digits of a GSTIN.</summary>
+    static readonly Dictionary<string, string> States = new()
+    {
+        ["01"] = "Jammu and Kashmir", ["02"] = "Himachal Pradesh", ["03"] = "Punjab", ["04"] = "Chandigarh", ["05"] = "Uttarakhand", ["06"] = "Haryana",
+        ["07"] = "Delhi", ["08"] = "Rajasthan", ["09"] = "Uttar Pradesh", ["10"] = "Bihar", ["11"] = "Sikkim", ["12"] = "Arunachal Pradesh", ["13"] = "Nagaland",
+        ["14"] = "Manipur", ["15"] = "Mizoram", ["16"] = "Tripura", ["17"] = "Meghalaya", ["18"] = "Assam", ["19"] = "West Bengal", ["20"] = "Jharkhand",
+        ["21"] = "Odisha", ["22"] = "Chhattisgarh", ["23"] = "Madhya Pradesh", ["24"] = "Gujarat", ["26"] = "Dadra and Nagar Haveli and Daman and Diu",
+        ["27"] = "Maharashtra", ["29"] = "Karnataka", ["30"] = "Goa", ["31"] = "Lakshadweep", ["32"] = "Kerala", ["33"] = "Tamil Nadu", ["34"] = "Puducherry",
+        ["35"] = "Andaman and Nicobar Islands", ["36"] = "Telangana", ["37"] = "Andhra Pradesh", ["38"] = "Ladakh",
+    };
 
     [GeneratedRegex("^[A-Z0-9]{1,3}$")] private static partial Regex Prefix();
     [GeneratedRegex("^[A-Za-z0-9/-]+$")] private static partial Regex Allowed();

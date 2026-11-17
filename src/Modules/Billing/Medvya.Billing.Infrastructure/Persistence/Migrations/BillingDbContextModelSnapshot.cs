@@ -23,6 +23,69 @@ namespace Medvya.Billing.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Medvya.Billing.Domain.BillingDocument", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("BlobKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("FacilityId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("InvoiceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("IssuedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("IssuedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("Layout")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("Number")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<long>("PaidMinor")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Sha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .IsFixedLength();
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InvoiceId");
+
+                    b.HasIndex("TenantId", "InvoiceId", "Kind", "Layout", "PaidMinor")
+                        .IsUnique();
+
+                    b.ToTable("BillingDocuments", "billing", t =>
+                        {
+                            t.HasCheckConstraint("CK_BillingDocuments_Paid", "\"PaidMinor\" >= 0");
+                        });
+                });
+
             modelBuilder.Entity("Medvya.Billing.Domain.BillingSettings", b =>
                 {
                     b.Property<Guid>("TenantId")
@@ -73,6 +136,123 @@ namespace Medvya.Billing.Infrastructure.Persistence.Migrations
                     b.HasKey("TenantId");
 
                     b.ToTable("Settings", "billing");
+                });
+
+            modelBuilder.Entity("Medvya.Billing.Domain.CashAdjustment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("AmountMinor")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SessionId");
+
+                    b.ToTable("CashAdjustments", "billing", t =>
+                        {
+                            t.HasTrigger("TR_CashAdjustments_AppendOnly");
+
+                            t.HasCheckConstraint("CK_CashAdjustments_Amount", "\"AmountMinor\" <> 0");
+                        });
+                });
+
+            modelBuilder.Entity("Medvya.Billing.Domain.CashSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("ClosedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ConfirmedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("CountedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CountedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<long?>("CountedMinor")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character(3)")
+                        .IsFixedLength();
+
+                    b.Property<long?>("ExpectedMinor")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("FacilityId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset>("OpenedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("OpenedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("OpeningFloatMinor")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long?>("VarianceMinor")
+                        .HasColumnType("bigint");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FacilityId", "ClosedAt");
+
+                    b.HasIndex("TenantId", "FacilityId")
+                        .IsUnique()
+                        .HasFilter("\"State\" = 'Open'");
+
+                    b.ToTable("CashSessions", "billing", t =>
+                        {
+                            t.HasTrigger("TR_CashSessions_ClosedImmutable");
+
+                            t.HasCheckConstraint("CK_CashSessions_Float", "\"OpeningFloatMinor\" BETWEEN 0 AND 100000000");
+                        });
                 });
 
             modelBuilder.Entity("Medvya.Billing.Domain.DocSequence", b =>
@@ -308,6 +488,9 @@ namespace Medvya.Billing.Infrastructure.Persistence.Migrations
                     b.Property<long>("AmountMinor")
                         .HasColumnType("bigint");
 
+                    b.Property<Guid?>("CashSessionId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTimeOffset?>("ConfirmedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -350,6 +533,8 @@ namespace Medvya.Billing.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CashSessionId");
 
                     b.HasIndex("InvoiceId")
                         .IsUnique()
@@ -512,6 +697,80 @@ namespace Medvya.Billing.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Medvya.Billing.Domain.BillingDocument", b =>
+                {
+                    b.HasOne("Medvya.Billing.Domain.Invoice", null)
+                        .WithMany()
+                        .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Medvya.Billing.Domain.CashAdjustment", b =>
+                {
+                    b.HasOne("Medvya.Billing.Domain.CashSession", null)
+                        .WithMany()
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Medvya.Billing.Domain.CashSession", b =>
+                {
+                    b.OwnsMany("Medvya.Billing.Domain.CashCount", "Counts", b1 =>
+                        {
+                            b1.Property<Guid>("CashSessionId");
+
+                            b1.Property<int>("__synthesizedOrdinal")
+                                .ValueGeneratedOnAdd();
+
+                            b1.Property<int>("Count");
+
+                            b1.Property<long>("ValueMinor");
+
+                            b1.HasKey("CashSessionId", "__synthesizedOrdinal");
+
+                            b1.ToTable("CashSessions", "billing");
+
+                            b1
+                                .ToJson("Counts")
+                                .HasColumnType("jsonb");
+
+                            b1.WithOwner()
+                                .HasForeignKey("CashSessionId");
+                        });
+
+                    b.OwnsMany("Medvya.Billing.Domain.MethodTotal", "Totals", b1 =>
+                        {
+                            b1.Property<Guid>("CashSessionId");
+
+                            b1.Property<int>("__synthesizedOrdinal")
+                                .ValueGeneratedOnAdd();
+
+                            b1.Property<long>("AmountMinor");
+
+                            b1.Property<string>("Method")
+                                .IsRequired();
+
+                            b1.Property<int>("Payments");
+
+                            b1.HasKey("CashSessionId", "__synthesizedOrdinal");
+
+                            b1.ToTable("CashSessions", "billing");
+
+                            b1
+                                .ToJson("Totals")
+                                .HasColumnType("jsonb");
+
+                            b1.WithOwner()
+                                .HasForeignKey("CashSessionId");
+                        });
+
+                    b.Navigation("Counts");
+
+                    b.Navigation("Totals");
+                });
+
             modelBuilder.Entity("Medvya.Billing.Domain.InvoiceLine", b =>
                 {
                     b.HasOne("Medvya.Billing.Domain.Invoice", null)
@@ -535,6 +794,11 @@ namespace Medvya.Billing.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Medvya.Billing.Domain.Payment", b =>
                 {
+                    b.HasOne("Medvya.Billing.Domain.CashSession", null)
+                        .WithMany()
+                        .HasForeignKey("CashSessionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Medvya.Billing.Domain.Invoice", null)
                         .WithMany()
                         .HasForeignKey("InvoiceId")

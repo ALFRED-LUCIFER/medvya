@@ -1,3 +1,4 @@
+using Medvya.Billing.Domain;
 using Medvya.BuildingBlocks.Domain;
 
 namespace Medvya.Billing.Application;
@@ -36,11 +37,20 @@ public abstract class BillingCountryRules
     /// <summary>The invoice-level round-off added to an exact payable amount (MDV-P4-004); 0 where the country does not round a bill (UAE).</summary>
     public virtual long RoundOff(long exactMinor) => 0;
 
+    /// <summary>The notes and coins a drawer is counted in (P-13 day close, MDV-P4-012), largest first, in minor units.</summary>
+    public abstract IReadOnlyList<long> CashDenominationsMinor { get; }
+
     /// <summary>
     /// Amount in words for printed documents, e.g. "Rupees two thousand only": "and" joins only the paise or fils, "only" ends
     /// the phrase, zero paise are left out. The sign is not spelled (credit notes say "credit").
     /// </summary>
     public abstract string AmountInWords(Money amount);
+
+    /// <summary>The printed bill's title, as a message key, from its lines' tax treatments. Default: a tax invoice (UAE VAT).</summary>
+    public virtual string BillTitle(IReadOnlyCollection<TaxTreatment> lines) => "billing.print.taxInvoice";
+
+    /// <summary>The place of supply printed on a bill, from the clinic's tax number; null where the country prints none or the number is not known.</summary>
+    public virtual string? PlaceOfSupply(string? taxNumber) => null;
 
     protected (long Major, long Minor) Split(Money amount)
     {

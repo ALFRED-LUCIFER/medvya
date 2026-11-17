@@ -10,17 +10,26 @@ const pay = (state: Payment['state'], id: string = state): Payment =>
 
 describe('invoice actions per state (screen-specs "Billing (P4)")', () => {
   it('edits and issues a draft only once every suggested line is confirmed', () => {
-    expect(actionsFor({ state: 'Draft', paidMinor: 0, payments: [], lines: [line(true)] })).toEqual({ edit: true, issue: false, pay: false, cancel: true });
+    expect(actionsFor({ state: 'Draft', paidMinor: 0, payments: [], lines: [line(true)] }))
+      .toEqual({ edit: true, issue: false, pay: false, cancel: true, printBill: false, printReceipt: false });
     expect(actionsFor({ state: 'Draft', paidMinor: 0, payments: [], lines: [] }).issue).toBe(false);
     expect(actionsFor({ state: 'Draft', paidMinor: 0, payments: [], lines: [line()] }).issue).toBe(true);
   });
 
   it('takes payments on an issued or partly paid bill, but not while a link is pending, and cancels only an unpaid one', () => {
-    expect(actionsFor({ state: 'Issued', paidMinor: 0, payments: [], lines: [line()] })).toEqual({ edit: false, issue: false, pay: true, cancel: true });
-    expect(actionsFor({ state: 'PartlyPaid', paidMinor: 100, payments: [], lines: [line()] })).toEqual({ edit: false, issue: false, pay: true, cancel: false });
+    expect(actionsFor({ state: 'Issued', paidMinor: 0, payments: [], lines: [line()] }))
+      .toEqual({ edit: false, issue: false, pay: true, cancel: true, printBill: true, printReceipt: false });
+    expect(actionsFor({ state: 'PartlyPaid', paidMinor: 100, payments: [], lines: [line()] }))
+      .toEqual({ edit: false, issue: false, pay: true, cancel: false, printBill: true, printReceipt: true });
     expect(actionsFor({ state: 'Issued', paidMinor: 0, payments: [pay('Pending')], lines: [line()] })).toMatchObject({ pay: false, cancel: false });
-    expect(actionsFor({ state: 'Paid', paidMinor: 100, payments: [], lines: [line()] })).toEqual({ edit: false, issue: false, pay: false, cancel: false });
+    expect(actionsFor({ state: 'Paid', paidMinor: 100, payments: [], lines: [line()] }))
+      .toEqual({ edit: false, issue: false, pay: false, cancel: false, printBill: true, printReceipt: true });
     expect(actionsFor({ state: 'Paid', paidMinor: 0, payments: [], lines: [line()] }).cancel).toBe(true); // a fully discounted bill
+  });
+
+  it('prints the bill once issued and its receipt once something is paid; a cancelled bill prints nothing (MDV-P4-005)', () => {
+    expect(actionsFor({ state: 'Paid', paidMinor: 0, payments: [], lines: [line()] })).toMatchObject({ printBill: true, printReceipt: false }); // a ₹0 bill
+    expect(actionsFor({ state: 'Cancelled', paidMinor: 0, payments: [], lines: [line()] })).toMatchObject({ printBill: false, printReceipt: false });
   });
 });
 

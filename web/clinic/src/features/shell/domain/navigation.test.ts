@@ -44,7 +44,7 @@ describe('role-based navigation', () => {
   });
 
   it('never shows a receptionist a clinical screen: Patients is the directory, not the chart', () => {
-    expect(ids('Receptionist', allFlags)).toEqual(['frontDesk', 'schedule', 'patients', 'billing']);
+    expect(ids('Receptionist', allFlags)).toEqual(['frontDesk', 'schedule', 'patients', 'billing', 'dayClose']);
     expect(allows({ role: 'Receptionist', capabilities: capabilities('Receptionist'), flags: [] }, clinicalRecord)).toBe(false);
   });
 

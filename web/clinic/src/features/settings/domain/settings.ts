@@ -214,8 +214,12 @@ export const settingsGroups = {
 } as const satisfies Record<string, readonly SettingsTab[]>;
 export type SettingsGroup = keyof typeof settingsGroups;
 export const settingsGroupIds = Object.keys(settingsGroups) as SettingsGroup[];
-/** The groups shown: Billing only while the billing.invoices flag is on (MDV-P4-002); its API answers 404 otherwise. */
-export const visibleGroups = (billing: boolean): SettingsGroup[] => settingsGroupIds.filter(g => billing || g !== 'billing');
+/**
+ * The tabs shown, by group. While the billing.invoices flag is off the Billing group holds only its Billing tab, where the owner switches billing on
+ * (#1430); Services needs it on (MDV-P4-002), as its API answers 404 otherwise.
+ */
+export const visibleTabs = (billing: boolean): Record<SettingsGroup, readonly SettingsTab[]> =>
+  ({ ...settingsGroups, billing: billing ? settingsGroups.billing : ['billing'] });
 export const groupOf = (tab: SettingsTab): SettingsGroup =>
   settingsGroupIds.find(g => (settingsGroups[g] as readonly SettingsTab[]).includes(tab))!;
 

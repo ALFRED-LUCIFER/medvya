@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { toSettingsBody, toSettingsForm, billingSettingsSchema } from './billingSettings';
 import { catalogueProblem, linePreview, priceFor, serviceSchema, todayIn, toPriceBody, toServiceBody, upcomingFor, type PriceVersion, type Service } from './catalogue';
-import { visibleGroups } from '../../settings/domain/settings';
+import { visibleTabs } from '../../settings/domain/settings';
 
 const v = (id: string, doctorId: string | null, amountMinor: number, effectiveFrom: string, createdAt = effectiveFrom): PriceVersion =>
   ({ id, doctorId, amountMinor, currency: 'INR', effectiveFrom, createdAt });
@@ -76,8 +76,9 @@ describe('billing settings', () => {
     expect(billingSettingsSchema.safeParse({ ...form, paymentMethods: [] }).success).toBe(false);
   });
 
-  it('shows the Billing settings group only while billing is on', () => {
-    expect(visibleGroups(false)).not.toContain('billing');
-    expect(visibleGroups(true)).toContain('billing');
+  it('shows Services only while billing is on, and the Billing tab (its switch, #1430) always', () => {
+    expect(visibleTabs(false).billing).toEqual(['billing']);
+    expect(visibleTabs(true).billing).toEqual(['services', 'billing']);
+    expect(visibleTabs(false).clinical).toEqual(['nurse', 'queue', 'medicines']);
   });
 });

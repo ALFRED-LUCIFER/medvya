@@ -2,21 +2,20 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError } from '../../api/services/apiClient';
 import { sessionQueryKey } from '../../session/hooks/useSessionController';
-import { fetchNurseIntake, saveNurseIntake } from '../services/settingsApi';
-
-const key = ['settings', 'nurse-intake'];
+import { fetchFeatureSwitch, saveFeatureSwitch, type FeatureSwitchName } from '../services/settingsApi';
 
 /**
- * The nurse-intake switch (MDV-P2-007). It changes every board of the practice at once, so a flip first asks to confirm, with how many patients
- * are with the nurse now (read again as the dialog opens); only the confirm saves (MDV-P2-055). The session is then refetched so the Nurse menu
- * and the board's nurse step follow at once.
+ * A practice-wide switch: nurse intake (MDV-P2-007) or billing (MDV-P4-002, #1430). It changes every board of the practice at once, so a flip
+ * first asks to confirm, with how many patients are with the nurse now for nurse intake (read again as the dialog opens); only the confirm saves
+ * (MDV-P2-055). The session is then refetched so the menu (Nurse, Billing) and the board follow at once.
  */
-export function useNurseIntakeController() {
+export function useFeatureSwitchController(name: FeatureSwitchName) {
+  const key = ['settings', name];
   const queryClient = useQueryClient();
-  const query = useQuery({ queryKey: key, queryFn: fetchNurseIntake });
+  const query = useQuery({ queryKey: key, queryFn: () => fetchFeatureSwitch(name) });
   const [confirming, setConfirming] = useState<boolean | null>(null);
   const save = useMutation({
-    mutationFn: saveNurseIntake,
+    mutationFn: (enabled: boolean) => saveFeatureSwitch(name, enabled),
     onSuccess: data => {
       setConfirming(null);
       queryClient.setQueryData(key, data);
@@ -27,7 +26,7 @@ export function useNurseIntakeController() {
     enabled: query.data?.enabled ?? false,
     loading: query.isPending,
     forbidden: query.error instanceof ApiError && query.error.status === 403,
-    /** Medvya has not released nurse intake to this practice (MDV-P5-041): the server has no switch for it, so none is shown. */
+    /** Medvya has not released the feature to this practice (MDV-P5-041): the server has no switch for it, so none is shown. */
     unavailable: query.error instanceof ApiError && query.error.status === 404,
     loadFailed: query.isError,
     saving: save.isPending,

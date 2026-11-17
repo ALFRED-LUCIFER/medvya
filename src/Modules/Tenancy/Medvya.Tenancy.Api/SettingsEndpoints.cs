@@ -25,9 +25,10 @@ public static class SettingsEndpoints
     public sealed record NurseIntakeBody(bool Enabled);
     /// <summary>The switch and how many patients are with the nurse now, which the owner is told before switching (MDV-P2-055).</summary>
     public sealed record NurseIntakeView(bool Enabled, int WithNurse);
+    public sealed record BillingSwitch(bool Enabled);
 
     /// <summary>
-    /// A setting of the whole organisation (legal profile printed on prescriptions, logo, a new location, queue rule, nurse intake) needs an
+    /// A setting of the whole organisation (legal profile printed on prescriptions, logo, a new location, queue rule, nurse intake, billing) needs an
     /// owner or an administrator of every location, as the clinical-access policy needs the owner: an administrator of one branch changes only that branch (#1417).
     /// SAFETY: mutation-checked in PracticeSettingsTests.
     /// </summary>
@@ -101,6 +102,15 @@ public static class SettingsEndpoints
             await flags.SetAsync(Features.NurseIntake, body.Enabled, "practice", "Nurse intake before the doctor (MDV-P2-007)", ct);
             return Results.Ok(new NurseIntakeView(body.Enabled, await schedule.CountWithNurseAsync(ct)));
         }).RequireRelease(Features.NurseIntake).AddEndpointFilter(OrganisationWide);
+
+        // Billing (MDV-P4-002, #1430): the same practice-wide switch, off until the owner turns it on, and only while Medvya's release reaches the practice.
+        g.MapGet("/billing-switch", async ([FromServices] IFeatureFlags flags, CancellationToken ct) =>
+            Results.Ok(new BillingSwitch(await flags.IsEnabledAsync(Features.Billing, ct)))).RequireRelease(Features.Billing);
+        g.MapPut("/billing-switch", async ([FromBody] BillingSwitch body, [FromServices] IFeatureFlags flags, CancellationToken ct) =>
+        {
+            await flags.SetAsync(Features.Billing, body.Enabled, "practice", "Billing (MDV-P4-002)", ct);
+            return Results.Ok(body);
+        }).RequireRelease(Features.Billing).AddEndpointFilter(OrganisationWide);
 
         // Terms of Service and DPA (MDV-P1-019): anyone who administers the practice can see the status; only an owner (practice admin or
         // owner-doctor) can accept, which the service checks. Until accepted, booking and sending are refused (RequireAcceptedTerms).

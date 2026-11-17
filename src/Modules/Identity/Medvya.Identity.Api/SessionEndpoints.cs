@@ -63,10 +63,15 @@ public static class SessionEndpoints
         // Like every staff change (StaffRoster): only an administrator of staff at a location where the person works; anyone else gets 404.
         app.MapDelete("/v1/staff/{userId:guid}/sessions", async (Guid userId, HttpContext http, [FromServices] IStaffSessions sessions, [FromServices] IStaffRoster roster, [FromServices] IStaffAccess access) =>
         {
+            var rows = await roster.ListAsync(http.RequestAborted);
+            var target = rows.Where(r => r.UserId == userId).ToList();
             var administers = false;
-            foreach (var facility in (await roster.ListAsync(http.RequestAborted)).Where(r => r.UserId == userId).Select(r => r.FacilityId).Distinct())
+            foreach (var facility in target.Select(r => r.FacilityId).Distinct())
                 administers = administers || await access.AccessAsync(Capability.StaffRolesIntegrations, facility, http.RequestAborted) == Access.Config;
-            if (!administers) return Results.NotFound();
+            // As offboarding (MDV-P1-107): an owner or a doctor is signed out only by an owner. SAFETY: mutation-checked in SessionControlTests.
+            var me = Read(http.User, ClaimTypes.NameIdentifier);
+            var protectedPerson = target.Any(r => r.IsOwner || r.Role is Role.SoloDoctor or Role.HospitalDoctor);
+            if (!administers || (protectedPerson && !rows.Any(r => r.UserId == me && r.IsOwner && r.Status == MembershipStatus.Active))) return Results.NotFound();
             await WriteAuditAsync(http, "session.revoke", "staff_user", userId);
             await sessions.RevokeInTenantAsync(userId, Read(http.User, StaffPolicies.TenantClaim)!.Value, http.RequestAborted);
             return Results.NoContent();

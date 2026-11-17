@@ -97,6 +97,8 @@ public sealed class SettingsValidationException(IReadOnlyList<ValidationError> e
 /// </summary>
 public interface IPracticeSettings
 {
+    /// <summary>The caller is an owner or administers staff at every location: what an organisation-wide setting (profile, logo, a new location, queue rule) needs (#1417).</summary>
+    Task<bool> AdministersEveryLocationAsync(CancellationToken cancellationToken = default);
     Task<ProfileView> GetProfileAsync(CancellationToken cancellationToken = default);
 
     /// <exception cref="SettingsValidationException"/>

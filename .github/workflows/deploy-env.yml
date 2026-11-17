@@ -75,6 +75,18 @@ jobs:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      # The hosts refuse to start without their key ring (#1417), and deploys never apply Bicep: stop here, before migrating, if `infra` has not set it.
+      - name: Infrastructure is current (data-protection key ring)
+        if: vars.AZURE_WEBAPP_NAME != ''
+        env:
+          RG: ${{ vars.AZURE_RESOURCE_GROUP }}
+          APPS: ${{ vars.AZURE_WEBAPP_NAME }} ${{ vars.AZURE_CONSOLE_WEBAPP_NAME }}
+          ENVIRONMENT: ${{ inputs.environment }}
+        run: |
+          for a in $APPS; do
+            n=$(az webapp config appsettings list -g "$RG" -n "$a" --query "length([?name=='DataProtection__KeyVaultKeyId'])" -o tsv)
+            [ "$n" = 1 ] || { echo "::error::$a has no DataProtection__KeyVaultKeyId: run the infra workflow for $ENVIRONMENT first (docs/runbooks/environments.md)"; exit 1; }
+          done
       # test sleeps at night (test-power.yml): a release then wakes it. A no-op where everything runs.
       - name: Start PostgreSQL and the web apps if stopped
         if: vars.AZURE_WEBAPP_NAME != ''

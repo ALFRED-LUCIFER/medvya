@@ -409,6 +409,34 @@ public sealed class SessionControlTests(PostgresFixture sql) : IClassFixture<Pos
         Assert.DoesNotContain("session.revoke", await AuditActions(tenantA, admin.Id));
     }
 
+    // SAFETY: mutation check: removed the owner rule in DELETE /v1/staff/{userId}/sessions -> OnlyAnOwnerSignsOutTheOwnerOrADoctor failed.
+    [Fact]
+    public async Task OnlyAnOwnerSignsOutTheOwnerOrADoctor()
+    {
+        await Clinics();
+        var owner = await Account("P. Iyer");
+        var doctor = await Account("S. Menon");
+        var admin = await Account("K. Lakshmi");
+        var ownerMembership = await Member(owner, tenantA, facilityA, Role.PracticeAdmin, owner: true);
+        var doctorMembership = await Member(doctor, tenantA, facilityA, Role.HospitalDoctor);
+        var adminMembership = await Member(admin, tenantA, facilityA, Role.PracticeAdmin);
+        using var ownerBrowser = await SignedIn(owner);
+        await Choose(ownerBrowser, ownerMembership);
+        using var doctorBrowser = await SignedIn(doctor);
+        await Choose(doctorBrowser, doctorMembership);
+        using var adminBrowser = await SignedIn(admin);
+        await Choose(adminBrowser, adminMembership);
+
+        // An administrator of the same location may not sign out the owner or a doctor: only an owner decides that (MDV-P1-107).
+        Assert.Equal(HttpStatusCode.NotFound, (await Send(adminBrowser, HttpMethod.Delete, $"/v1/staff/{owner.Id}/sessions")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await Send(adminBrowser, HttpMethod.Delete, $"/v1/staff/{doctor.Id}/sessions")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, await ContextStatus(ownerBrowser));
+        Assert.Equal(HttpStatusCode.OK, await ContextStatus(doctorBrowser));
+
+        Assert.Equal(HttpStatusCode.NoContent, (await Send(ownerBrowser, HttpMethod.Delete, $"/v1/staff/{doctor.Id}/sessions")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, await ContextStatus(doctorBrowser));
+    }
+
     [Fact]
     public async Task SigningOutBeforeChoosingAFacilityIsAuditedInThePlatformChain()
     {

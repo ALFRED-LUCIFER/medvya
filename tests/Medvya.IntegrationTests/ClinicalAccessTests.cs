@@ -131,6 +131,26 @@ public sealed class ClinicalAccessTests(PostgresFixture sql) : IClassFixture<Pos
         Assert.Equal(Access.Full, await CheckAsync(h.Doctor, h.SecondPatient));
     }
 
+    // SAFETY: mutation check: removed the Reschedules condition in VisitCareRelationship (Assigned) -> AVisitTheDoctorMovedIntoTheirOwnCalendarCountsOnlyOnceThePatientArrives failed.
+    [Fact]
+    public async Task AVisitTheDoctorMovedIntoTheirOwnCalendarCountsOnlyOnceThePatientArrives()
+    {
+        await AssignedOnlyAsync();
+        await h.Schedule(h.Admin).SaveTemplateAsync(h.DoctorTemplate() with { CalendarId = h.SecondDoctor });
+        var desk = h.Booking(h.Reception);
+        var hold = await desk.HoldAsync(new HoldSlot { FacilityId = h.Facility, CalendarId = h.SecondDoctor, Start = SchedulingHarness.At(10), VisitType = Scheduling.Domain.VisitType.FollowUp });
+        var visit = await desk.BookAsync(new BookAppointment
+        {
+            HoldId = hold.Id, PatientId = h.SecondPatient, ReasonCategory = Scheduling.Domain.ReasonCategory.ChronicReview, Channel = Scheduling.Domain.BookingChannel.Phone,
+        });
+        // Reception booked it for a colleague; the doctor moves it into their own calendar: booked by someone else, but no way into the chart yet.
+        await h.Booking(h.Doctor).RescheduleAsync(visit.Id, new RescheduleAppointment { CalendarId = h.Doctor, Start = SchedulingHarness.At(11) });
+        Assert.True((await RefusedAsync(h.Doctor, h.SecondPatient)).CanRequest);
+
+        await h.FrontDesk(h.Reception).CheckInAsync(visit.Id, new CheckIn()); // the patient came: now the doctor's patient
+        Assert.Equal(Access.Full, await CheckAsync(h.Doctor, h.SecondPatient));
+    }
+
     [Fact]
     public async Task ARequestIsStoredOnceAuditedAndNotifiesTheOwners()
     {

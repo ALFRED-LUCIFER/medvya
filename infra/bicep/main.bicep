@@ -357,47 +357,38 @@ resource nationalIdKeyApp 'Microsoft.Authorization/roleAssignments@2022-04-01' =
   properties: { roleDefinitionId: cryptoUser, principalId: app.identity.principalId, principalType: 'ServicePrincipal' }
 }
 
-// The ASP.NET Core data-protection key ring (#1417): it signs staff and console cookies, app tokens and link tokens. The ring sits in the
-// data-protection container (one blob per host) and this key wraps it, so neither the blob nor the App Service files alone forge a cookie.
-resource dataProtectionKey 'Microsoft.KeyVault/vaults/keys@2023-07-01' = {
+// The ASP.NET Core data-protection key rings (#1417): they sign staff and console cookies, app tokens and link tokens. Each host has its own
+// key and its own container, and its identity can reach only those: the internet-facing API cannot write (or forge) the console's ring.
+// Neither the blob nor the App Service files alone forge a cookie.
+var dataProtectionHosts = ['api', 'platform'] // index 0 the app, 1 the console
+
+resource dataProtectionKey 'Microsoft.KeyVault/vaults/keys@2023-07-01' = [for h in dataProtectionHosts: {
   parent: vault
-  name: 'dataprotection'
+  name: 'dataprotection-${h}'
   properties: {
     kty: 'RSA'
     keySize: 3072
     keyOps: ['wrapKey', 'unwrapKey']
   }
-}
+}]
 
-resource dataProtectionKeys 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
+resource dataProtectionKeys 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = [for h in dataProtectionHosts: {
   parent: blobProtection
-  name: 'data-protection'
+  name: 'data-protection-medvya-${h}'
   properties: { publicAccess: 'None' }
-}
+}]
 
-resource dataProtectionKeyApp 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: dataProtectionKey
-  name: guid(dataProtectionKey.id, app.id, cryptoUser)
-  properties: { roleDefinitionId: cryptoUser, principalId: app.identity.principalId, principalType: 'ServicePrincipal' }
-}
+resource dataProtectionKeyRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = [for (h, i) in dataProtectionHosts: {
+  scope: dataProtectionKey[i]
+  name: guid(dataProtectionKey[i].id, h, cryptoUser)
+  properties: { roleDefinitionId: cryptoUser, principalId: i == 0 ? app.identity.principalId : console.identity.principalId, principalType: 'ServicePrincipal' }
+}]
 
-resource dataProtectionKeyConsole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: dataProtectionKey
-  name: guid(dataProtectionKey.id, console.id, cryptoUser)
-  properties: { roleDefinitionId: cryptoUser, principalId: console.identity.principalId, principalType: 'ServicePrincipal' }
-}
-
-resource dataProtectionKeysApp 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: dataProtectionKeys
-  name: guid(dataProtectionKeys.id, app.id, blobContributor)
-  properties: { roleDefinitionId: blobContributor, principalId: app.identity.principalId, principalType: 'ServicePrincipal' }
-}
-
-resource dataProtectionKeysConsole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: dataProtectionKeys
-  name: guid(dataProtectionKeys.id, console.id, blobContributor)
-  properties: { roleDefinitionId: blobContributor, principalId: console.identity.principalId, principalType: 'ServicePrincipal' }
-}
+resource dataProtectionKeysRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = [for (h, i) in dataProtectionHosts: {
+  scope: dataProtectionKeys[i]
+  name: guid(dataProtectionKeys[i].id, h, blobContributor)
+  properties: { roleDefinitionId: blobContributor, principalId: i == 0 ? app.identity.principalId : console.identity.principalId, principalType: 'ServicePrincipal' }
+}]
 
 // Clinic payment keys (MDV-P4-007, ADR-023): each clinic's Razorpay key secret and webhook secret, written by the API when the clinic
 // admin connects Razorpay. A vault of its own, because writing needs "Key Vault Secrets Officer" on the vault, and on the main vault that
@@ -616,7 +607,7 @@ resource app 'Microsoft.Web/sites@2023-12-01' = {
         // database job (PostgresDataSources). The login name is the app's name. The server certificate is checked.
         { name: 'ConnectionStrings__Medvya', value: 'Host=${postgres.outputs.fqdn};Database=${postgres.outputs.databaseName};Username=${appName};SslMode=VerifyFull;Maximum Pool Size=35' }
         { name: 'NationalIdProtection__KeyVaultKeyId', value: nationalIdKey.properties.keyUri }
-        { name: 'DataProtection__KeyVaultKeyId', value: dataProtectionKey.properties.keyUri }
+        { name: 'DataProtection__KeyVaultKeyId', value: dataProtectionKey[0].properties.keyUri }
         { name: 'Razorpay__KeyVaultUri', value: paymentsVault.properties.vaultUri }
         // Staff sign-in (MDV-P0-011): single-tenant Entra app; the client secret is a Key Vault reference, never a value here.
         { name: 'Authentication__Oidc__Authority', value: '${environment().authentication.loginEndpoint}${tenant().tenantId}/v2.0' }
@@ -696,7 +687,7 @@ resource console 'Microsoft.Web/sites@2023-12-01' = {
         { name: 'ConnectionStrings__Formulary', value: '${consoleDb};Username=${consoleFormularyDb.name};Entra Client Id=${consoleFormularyDb.properties.clientId}' }
         // Organisation documents (practice-assets, read only) through a user-delegation link signed with the system identity.
         { name: 'Storage__BlobEndpoint', value: storage.properties.primaryEndpoints.blob }
-        { name: 'DataProtection__KeyVaultKeyId', value: dataProtectionKey.properties.keyUri }
+        { name: 'DataProtection__KeyVaultKeyId', value: dataProtectionKey[1].properties.keyUri }
       ])
     }
   }

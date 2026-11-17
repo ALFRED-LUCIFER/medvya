@@ -26,6 +26,16 @@ public static class SettingsEndpoints
     /// <summary>The switch and how many patients are with the nurse now, which the owner is told before switching (MDV-P2-055).</summary>
     public sealed record NurseIntakeView(bool Enabled, int WithNurse);
 
+    /// <summary>
+    /// A setting of the whole organisation (legal profile printed on prescriptions, logo, a new location, queue rule, nurse intake) needs an
+    /// owner or an administrator of every location, as the clinical-access policy needs the owner: an administrator of one branch changes only that branch (#1417).
+    /// SAFETY: mutation-checked in PracticeSettingsTests.
+    /// </summary>
+    static async ValueTask<object?> OrganisationWide(EndpointFilterInvocationContext context, EndpointFilterDelegate next) =>
+        await context.HttpContext.RequestServices.GetRequiredService<IPracticeSettings>().AdministersEveryLocationAsync(context.HttpContext.RequestAborted)
+            ? await next(context)
+            : Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "Only an administrator of every location changes this", extensions: new Dictionary<string, object?> { ["code"] = "organisation_admin_required" });
+
     public static WebApplication MapPracticeSettings(this WebApplication app)
     {
         var g = app.MapGroup("/v1/settings").RequireAuthorization(StaffPolicies.ManageStaff).AddEndpointFilter(MapErrors);
@@ -33,11 +43,11 @@ public static class SettingsEndpoints
         g.MapGet("/profile", ([FromServices] IPracticeSettings s, CancellationToken ct) => s.GetProfileAsync(ct));
         // The version is required: a save always says which version it read, so it never overwrites a change it has not seen (#889).
         g.MapPut("/profile", async Task<Results<ValidationProblem, Ok<ProfileView>>> ([FromBody] SaveProfile body, [FromServices] IPracticeSettings s, CancellationToken ct) =>
-            body.Version is null ? TypedResults.ValidationProblem(new Dictionary<string, string[]> { ["version"] = ["required"] }) : TypedResults.Ok(await s.SaveProfileAsync(body, ct)));
+            body.Version is null ? TypedResults.ValidationProblem(new Dictionary<string, string[]> { ["version"] = ["required"] }) : TypedResults.Ok(await s.SaveProfileAsync(body, ct))).AddEndpointFilter(OrganisationWide);
 
         g.MapGet("/locations", ([FromServices] IPracticeSettings s, CancellationToken ct) => s.ListLocationsAsync(ct));
         g.MapPost("/locations", async ([FromBody] AddLocation body, [FromServices] IPracticeSettings s, CancellationToken ct) =>
-            Results.Created("/v1/settings/locations", await s.AddLocationAsync(body, ct)));
+            Results.Created("/v1/settings/locations", await s.AddLocationAsync(body, ct))).AddEndpointFilter(OrganisationWide);
         g.MapPut("/locations/{id:guid}", async (Guid id, [FromBody] SaveLocation body, [FromServices] IPracticeSettings s, CancellationToken ct) =>
             await s.UpdateLocationAsync(id, body, ct) is { } v ? Results.Ok(v) : Results.NotFound());
 
@@ -68,8 +78,8 @@ public static class SettingsEndpoints
             await request.Body.CopyToAsync(buffer, ct);
             await s.SetLogoAsync(buffer.ToArray(), ct);
             return Results.NoContent();
-        });
-        g.MapDelete("/logo", async ([FromServices] IPracticeSettings s, CancellationToken ct) => await s.RemoveLogoAsync(ct) ? Results.NoContent() : Results.NotFound());
+        }).AddEndpointFilter(OrganisationWide);
+        g.MapDelete("/logo", async ([FromServices] IPracticeSettings s, CancellationToken ct) => await s.RemoveLogoAsync(ct) ? Results.NoContent() : Results.NotFound()).AddEndpointFilter(OrganisationWide);
         g.MapGet("/logo", async ([FromServices] IPracticeSettings s, CancellationToken ct) =>
             await s.LogoLinkAsync(LogoLinkLifetime, ct) is { } url ? Results.Ok(new LogoLink(url, DateTimeOffset.UtcNow + LogoLinkLifetime)) : Results.NotFound()); // wall clock: when the storage service stops honouring the link
 
@@ -80,7 +90,7 @@ public static class SettingsEndpoints
 
         // The order arrived patients are seen in (MDV-P1-103): the doctor's day, the board and the queue display all follow it.
         g.MapGet("/queue-rule", ([FromServices] IPracticeSettings s, CancellationToken ct) => s.GetQueueRuleAsync(ct));
-        g.MapPut("/queue-rule", ([FromBody] QueueRule body, [FromServices] IPracticeSettings s, CancellationToken ct) => s.SaveQueueRuleAsync(body, ct));
+        g.MapPut("/queue-rule", ([FromBody] QueueRule body, [FromServices] IPracticeSettings s, CancellationToken ct) => s.SaveQueueRuleAsync(body, ct)).AddEndpointFilter(OrganisationWide);
 
         // Nurse intake before the doctor (MDV-P2-007): a practice-wide switch, off until the owner turns it on. Changes are audited by the flag service.
         // The switch exists only while Medvya's release reaches the practice (MDV-P5-041): otherwise 404, and the screen says it is not available.
@@ -90,7 +100,7 @@ public static class SettingsEndpoints
         {
             await flags.SetAsync(Features.NurseIntake, body.Enabled, "practice", "Nurse intake before the doctor (MDV-P2-007)", ct);
             return Results.Ok(new NurseIntakeView(body.Enabled, await schedule.CountWithNurseAsync(ct)));
-        }).RequireRelease(Features.NurseIntake);
+        }).RequireRelease(Features.NurseIntake).AddEndpointFilter(OrganisationWide);
 
         // Terms of Service and DPA (MDV-P1-019): anyone who administers the practice can see the status; only an owner (practice admin or
         // owner-doctor) can accept, which the service checks. Until accepted, booking and sending are refused (RequireAcceptedTerms).

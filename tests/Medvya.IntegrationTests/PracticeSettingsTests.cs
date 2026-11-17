@@ -406,5 +406,36 @@ public sealed class PracticeSettingsTests(PostgresFixture sql) : IClassFixture<P
         Assert.NotNull(await h.Settings(h.Elsewhere).UpdateLocationAsync(h.OtherFacility, new SaveLocation { Name = "Velachery North (synthetic)" })); // its own administrator can
     }
 
+    // SAFETY: mutation check: made SettingsEndpoints.OrganisationWide always call next -> ABranchAdministratorCannotChangeOrganisationWideSettings failed.
+    [Fact]
+    public async Task ABranchAdministratorCannotChangeOrganisationWideSettings()
+    {
+        var branchAdmin = Guid.NewGuid(); // administers Adyar, not Velachery, and is no owner
+        await using (var db = sql.Context(h.Tenant))
+        {
+            db.Memberships.Add(new Membership { Id = Guid.NewGuid(), TenantId = h.Tenant, UserId = branchAdmin, FacilityId = h.Facility, Role = Role.PracticeAdmin, Status = MembershipStatus.Active });
+            await db.SaveChangesAsync();
+        }
+        using var branch = Client(Role.PracticeAdmin, branchAdmin);
+        HttpRequestMessage[] organisationWide =
+        [
+            new(HttpMethod.Put, "/v1/settings/profile") { Content = JsonContent.Create(new { name = "Taken over (synthetic)" }) },
+            new(HttpMethod.Post, "/v1/settings/locations") { Content = JsonContent.Create(new { name = "New site (synthetic)", timeZone = "Asia/Kolkata", countryCode = "IN", taxNumber = Gstin, certificateName = "reg.png", certificate = Png }) },
+            new(HttpMethod.Delete, "/v1/settings/logo"),
+            new(HttpMethod.Put, "/v1/settings/queue-rule") { Content = JsonContent.Create(new { order = "Arrival", bookedFirst = false }) },
+        ];
+        foreach (var request in organisationWide)
+        {
+            using var refused = await branch.SendAsync(request);
+            Assert.Equal((request.RequestUri, HttpStatusCode.Forbidden), (request.RequestUri, refused.StatusCode));
+        }
+        // Its own location stays its to run.
+        using (var own = await branch.PutAsJsonAsync($"/v1/settings/locations/{h.Facility}", new { name = "Adyar (synthetic)" })) Assert.Equal(HttpStatusCode.OK, own.StatusCode);
+        // The owner speaks for the whole organisation.
+        using var owner = Client(Role.PracticeAdmin);
+        var loaded = await owner.GetFromJsonAsync<JsonElement>("/v1/settings/profile");
+        using (var ok = await owner.PutAsJsonAsync("/v1/settings/profile", new { name = "Iyer Family Clinic (synthetic)", version = loaded.GetProperty("version").GetUInt32() })) Assert.Equal(HttpStatusCode.OK, ok.StatusCode);
+    }
+
     HoldSlot Hold(DateTimeOffset start) => new() { FacilityId = h.Facility, CalendarId = h.Doctor, Start = start, VisitType = Scheduling.Domain.VisitType.FollowUp };
 }

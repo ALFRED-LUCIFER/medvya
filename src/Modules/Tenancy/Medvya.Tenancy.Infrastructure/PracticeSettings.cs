@@ -264,6 +264,15 @@ public sealed class PracticeSettings(
         return rule;
     }
 
+    public async Task<bool> AdministersEveryLocationAsync(CancellationToken cancellationToken = default)
+    {
+        // An owner speaks for the whole organisation; anyone else administers staff at every location.
+        if (user.UserId is { } me && await db.Memberships.AnyAsync(m => m.UserId == me && m.IsOwner && m.Status == MembershipStatus.Active, cancellationToken)) return true;
+        foreach (var facility in await db.Facilities.AsNoTracking().Select(f => f.Id).ToListAsync(cancellationToken))
+            if (!await AdministersAsync(facility, cancellationToken)) return false;
+        return true;
+    }
+
     /// <summary>A location's settings are staff administration at that location (as StaffRoster): an administrator of another location gets not found.</summary>
     async Task<bool> AdministersAsync(Guid facilityId, CancellationToken cancellationToken) =>
         await access.AccessAsync(Capability.StaffRolesIntegrations, facilityId, cancellationToken) == Access.Config;

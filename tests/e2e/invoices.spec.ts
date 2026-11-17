@@ -49,14 +49,40 @@ test('a bill is paid in parts by cash and card; a card number and an over-collec
   ]);
 });
 
+test('an issued bill prints as a PDF on A5 or the 80 mm roll, and its receipt once something is paid (MDV-P4-005)', async ({ page }) => {
+  const api = await mockInvoices(page);
+  await page.goto('/billing/inv-1');
+  await expect(page.getByRole('button', { name: 'Bill PDF' })).toHaveCount(0); // a draft prints nothing
+  await issued(page);
+  await expect(page.getByRole('button', { name: 'Receipt PDF' })).toHaveCount(0); // nothing paid yet
+  const a5 = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Bill PDF' }).click();
+  expect((await a5).suggestedFilename()).toBe('bill-a5.pdf'); // no patient detail in the file name
+
+  await page.getByLabel('Amount (INR)').fill('300');
+  await page.getByRole('button', { name: 'Record payment' }).click();
+  await expect(page.getByText('Paid', { exact: true }).first()).toBeVisible();
+  await page.getByRole('group', { name: 'Paper' }).getByRole('button', { name: '80 mm roll' }).click();
+  await expect(page.getByRole('button', { name: '80 mm roll' })).toHaveAttribute('aria-pressed', 'true');
+  const roll = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Receipt PDF' }).click();
+  expect((await roll).suggestedFilename()).toBe('receipt-thermal.pdf');
+  expect(api.posts.filter(p => p.body === null && p.path.includes('/')).map(p => p.path)).toEqual(['bill/a5', 'receipt/thermal']); // ids and the paper only in the URL
+});
+
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 for (const locale of ['en', 'ar'])
-  for (const view of ['list', 'draft', 'pending'] as const)
+  for (const view of ['list', 'draft', 'pending', 'print'] as const)
     test(`axe finds no violations on billing, ${view} (${locale})`, async ({ page }) => {
       await mockInvoices(page, { locale });
       if (view === 'list') await page.goto('/billing');
       else if (view === 'draft') await page.goto('/billing/inv-1');
-      else {
+      else if (view === 'print') {
+        await page.goto('/billing/inv-1');
+        await page.getByRole('row').nth(1).getByRole('button').first().click(); // Confirm
+        await page.locator('footer').getByRole('button').last().click(); // Issue bill
+        await expect(page.locator('footer [data-slot="segmented-control"]')).toBeVisible(); // A5 / 80 mm and the print actions
+      } else {
         await page.goto('/billing/inv-1');
         await page.getByRole('row').nth(1).getByRole('button').first().click(); // Confirm
         await page.locator('footer').getByRole('button').last().click(); // Issue bill

@@ -48,7 +48,6 @@ export interface paths {
             parameters: {
                 query?: {
                     returnUrl?: string;
-                    invitation?: string;
                     signup?: boolean;
                 };
                 header?: never;
@@ -10361,6 +10360,43 @@ export interface paths {
                 path: {
                     id: string;
                     paymentId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/billing/invoices/{id}/documents/{kind}/{layout}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    kind: string;
+                    layout: string;
                 };
                 cookie?: never;
             };

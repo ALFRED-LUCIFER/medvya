@@ -81,6 +81,16 @@ public static class CatalogueEndpoints
             return Results.Problem(statusCode: e.Error == PaymentProviderError.Unavailable ? StatusCodes.Status503ServiceUnavailable : StatusCodes.Status409Conflict,
                 title: "The payment provider did not accept the request.", extensions: new Dictionary<string, object?> { ["code"] = code });
         }
+        catch (Medvya.BuildingBlocks.Infrastructure.PdfUnsupportedTextException)
+        {
+            return Results.Problem(statusCode: StatusCodes.Status422UnprocessableEntity, title: "The bill has text the PDF cannot show.",
+                extensions: new Dictionary<string, object?> { ["code"] = "pdf_unsupported_text" });
+        }
+        catch (Medvya.Encounters.Application.DocumentStorageUnavailableException)
+        {
+            return Results.Problem(statusCode: StatusCodes.Status503ServiceUnavailable, title: "Document storage is not available",
+                extensions: new Dictionary<string, object?> { ["code"] = "storage_unavailable" });
+        }
         catch (DbUpdateConcurrencyException)
         {
             return Results.Problem(statusCode: StatusCodes.Status409Conflict, title: "This was changed by someone else. Reload and try again.",

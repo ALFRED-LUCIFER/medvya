@@ -15,6 +15,7 @@ public sealed class BillingDbContext(DbContextOptions<BillingDbContext> options,
     public DbSet<InvoiceLine> InvoiceLines => Set<InvoiceLine>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<ProviderEvent> ProviderEvents => Set<ProviderEvent>();
+    public DbSet<BillingDocument> BillingDocuments => Set<BillingDocument>();
 
     Guid? CurrentTenantId => tenant.TenantId;
 
@@ -132,6 +133,19 @@ public sealed class BillingDbContext(DbContextOptions<BillingDbContext> options,
             e.Property(x => x.Provider).HasMaxLength(16);
             e.Property(x => x.EventId).HasMaxLength(ProviderEvent.MaxEventId);
             e.Property(x => x.Type).HasMaxLength(ProviderEvent.MaxType);
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<BillingDocument>(e =>
+        {
+            e.Property(x => x.Kind).HasConversion<string>().HasMaxLength(10);
+            e.Property(x => x.Layout).HasConversion<string>().HasMaxLength(10);
+            e.Property(x => x.Number).HasMaxLength(32);
+            e.Property(x => x.Sha256).HasMaxLength(64).IsFixedLength();
+            e.Property(x => x.BlobKey).HasMaxLength(100);
+            e.HasOne<Invoice>().WithMany().HasForeignKey(x => x.InvoiceId).OnDelete(DeleteBehavior.Restrict);
+            // One paper per bill, kind, layout and paid total: two first prints at once cannot both store one.
+            e.HasIndex(x => new { x.TenantId, x.InvoiceId, x.Kind, x.Layout, x.PaidMinor }).IsUnique();
+            e.ToTable(t => t.HasCheckConstraint("CK_BillingDocuments_Paid", "\"PaidMinor\" >= 0"));
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
     }

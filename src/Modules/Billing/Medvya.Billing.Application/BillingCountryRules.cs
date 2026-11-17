@@ -1,3 +1,4 @@
+using Medvya.Billing.Domain;
 using Medvya.BuildingBlocks.Domain;
 
 namespace Medvya.Billing.Application;
@@ -41,6 +42,12 @@ public abstract class BillingCountryRules
     /// the phrase, zero paise are left out. The sign is not spelled (credit notes say "credit").
     /// </summary>
     public abstract string AmountInWords(Money amount);
+
+    /// <summary>The printed bill's title, as a message key, from its lines' tax treatments. Default: a tax invoice (UAE VAT).</summary>
+    public virtual string BillTitle(IReadOnlyCollection<TaxTreatment> lines) => "billing.print.taxInvoice";
+
+    /// <summary>The place of supply printed on a bill, from the clinic's tax number; null where the country prints none or the number is not known.</summary>
+    public virtual string? PlaceOfSupply(string? taxNumber) => null;
 
     protected (long Major, long Minor) Split(Money amount)
     {

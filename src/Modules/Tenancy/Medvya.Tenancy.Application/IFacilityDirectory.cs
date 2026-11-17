@@ -10,8 +10,9 @@ namespace Medvya.Tenancy.Application;
 /// <param name="NurseRoom">Where patients go for vitals and nurse intake at this location, e.g. "Room 1"; null when not set.</param>
 /// <param name="Wifi">The guest Wi-Fi printed on the token slip's tear-off stub; null when not set.</param>
 /// <param name="SignatureLine">The practice setting: prescriptions leave space for a handwritten signature (default), else say they need none (#1365).</param>
+/// <param name="TaxNumber">The location's GSTIN (India) or TRN (UAE), else the practice's: printed on bills and receipts (MDV-P4-005).</param>
 public sealed record FacilityInfo(Guid Id, string Name, string TimeZone, string TenantName, QueueRule Queue, string? Address = null, string? Phone = null,
-    string? NurseRoom = null, GuestWifi? Wifi = null, string? Registration = null, bool SignatureLine = true);
+    string? NurseRoom = null, GuestWifi? Wifi = null, string? Registration = null, bool SignatureLine = true, string? TaxNumber = null);
 
 /// <summary>A location's guest Wi-Fi for patients (MDV-P1-111). Daily: the desk changes the password every day, so the slip says "today only".</summary>
 public sealed record GuestWifi(string Network, string? Password, bool Daily);
@@ -47,6 +48,9 @@ public interface IFacilityDirectory
 
     /// <summary>The id of the user's doctor membership at this facility (whose own prices a bill takes, MDV-P4-004); null when the user is not a doctor here.</summary>
     Task<Guid?> DoctorMembershipAsync(Guid userId, Guid facilityId, CancellationToken cancellationToken = default);
+
+    /// <summary>The doctor's profile and licence for a doctor membership id (a bill's doctor, MDV-P4-005); null when it has none.</summary>
+    Task<PrescriberInfo?> MembershipPrescriberAsync(Guid membershipId, CancellationToken cancellationToken = default);
 
     /// <summary>The doctor's room at this facility (MDV-P1-111); null when none is set or the id is not a doctor's (a resource).</summary>
     Task<string?> DoctorRoomAsync(Guid userId, Guid facilityId, CancellationToken cancellationToken = default);

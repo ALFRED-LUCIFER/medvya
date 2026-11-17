@@ -354,6 +354,7 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         ["/v1/billing/invoices/{id:guid}/payment-link"] = "as above",
         ["/v1/billing/invoices/{id:guid}/payments/{paymentId:guid}/check"] = "as above",
         ["/v1/billing/invoices/{id:guid}/payments/{paymentId:guid}/cancel"] = "as above",
+        ["/v1/billing/invoices/{id:guid}/documents/{kind}/{layout}"] = "as above: MDV-P4-005, another tenant cannot print the bill (BillingDocumentTests.AnotherTenantSeesNoneOfThePapersAndCannotPrintTheBill)",
         ["/v1/patients/{patientId:guid}/care-goals/{goalId:guid}"] = "two ids: only a goal of the route's own patient is found, another's is not (ChronicCareTests, with row-level security); the patient's goal route is in the matrix",
     };
 

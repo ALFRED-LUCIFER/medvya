@@ -147,6 +147,11 @@ export async function mockInvoices(page: Page, { locale = 'en', methods = ['Cash
     bill.version++;
     return r.fulfill({ json: { invoice: bill, paymentId: id, shortUrl: 'https://rzp.io/i/synthetic' } });
   });
+  // MDV-P4-005: the printed bill or receipt; the server issues, stores and re-prints it. A tiny stand-in PDF.
+  await page.route('**/v1/billing/invoices/inv-1/documents/*/*', r => {
+    posts.push({ path: new URL(r.request().url()).pathname.split('/documents/')[1]!, body: null });
+    return r.fulfill({ status: 200, contentType: 'application/pdf', headers: { 'X-Content-SHA256': '0'.repeat(64) }, body: '%PDF-1.7\n%%EOF\n' });
+  });
   await page.route('**/v1/billing/invoices/inv-1/payments/*/check', r => {
     posts.push({ path: 'check', body: null });
     const pending = bill.payments.find(p => p.state === 'Pending');

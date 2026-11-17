@@ -39,7 +39,7 @@ flowchart LR
   api --> Notifications["Notifications<br/>schema notifications<br/>5 tables"]
   api --> Audit["Audit<br/>schema audit<br/>1 table"]
   api --> Leads["Leads<br/>schema leads<br/>2 tables"]
-  api --> Billing["Billing<br/>schema billing<br/>8 tables"]
+  api --> Billing["Billing<br/>schema billing<br/>9 tables"]
   Platform["Platform<br/>schema platform<br/>7 tables (not wired into the host)"]
   jobs --> Notifications
   bff -->|"sign-in"| entra["Microsoft Entra"]
@@ -59,6 +59,7 @@ flowchart LR
   Audit -->|"Application"| Patients
   Audit -->|"Application"| Tenancy
   Billing -->|"Application"| Audit
+  Billing -->|"Application"| Encounters
   Billing -->|"Application"| Patients
   Billing -->|"Application"| Scheduling
   Billing -->|"Application"| Tenancy
@@ -109,7 +110,7 @@ flowchart LR
   audit -.->|"ActorUserId"| identity
   audit -.->|"PatientId"| patients
   audit -.->|"FacilityId"| tenancy
-  billing -.->|"ChangedBy, CreatedBy, RecordedBy"| identity
+  billing -.->|"ChangedBy, CreatedBy, IssuedBy, ..."| identity
   billing -.->|"PatientId"| patients
   billing -.->|"AppointmentId"| scheduling
   billing -.->|"DoctorId, FacilityId"| tenancy
@@ -2898,10 +2899,16 @@ erDiagram
 
 </details>
 
-### Billing (schema `billing`, 8 tables)
+### Billing (schema `billing`, 9 tables)
 
 ```mermaid
 erDiagram
+  BillingDocuments {
+    guid Id PK
+    guid FacilityId "id of tenancy.Facilities"
+    guid InvoiceId FK "FK to Invoices"
+    guid IssuedBy "id of identity.Users"
+  }
   Settings {
     guid TenantId PK "id of tenancy.Tenants"
     guid ChangedBy "id of identity.Users"
@@ -2960,6 +2967,9 @@ erDiagram
   tenancy_Memberships {
     guid Id PK "other module"
   }
+  Invoices ||--o{ BillingDocuments : "InvoiceId"
+  tenancy_Facilities ||..o{ BillingDocuments : "FacilityId"
+  identity_Users ||..o{ BillingDocuments : "IssuedBy"
   identity_Users |o..o{ Settings : "ChangedBy"
   scheduling_Appointments |o..o{ Invoices : "AppointmentId"
   identity_Users |o..o{ Invoices : "ChangedBy"
@@ -2981,6 +2991,7 @@ erDiagram
 
 | Table | Columns | Primary key | Notes |
 |---|---|---|---|
+| `BillingDocuments` | 12 | Id | tenant-scoped |
 | `Settings` | 11 | TenantId | tenant-scoped |
 | `DocSequences` | 7 | Id | tenant-scoped |
 | `Invoices` | 24 | Id | tenant-scoped |
@@ -2989,6 +3000,25 @@ erDiagram
 | `PriceVersions` | 9 | Id | tenant-scoped |
 | `ProviderEvents` | 5 | TenantId, Provider, EventId | tenant-scoped |
 | `Services` | 16 | Id | tenant-scoped |
+
+<details><summary><code>billing.BillingDocuments</code> columns</summary>
+
+| Column | Type | Null | Links to |
+|---|---|---|---|
+| `Id` | guid |  |  |
+| `BlobKey` | character varying(100) |  |  |
+| `FacilityId` | guid |  | id of `tenancy.Facilities` |
+| `InvoiceId` | guid |  | FK to `Invoice` |
+| `IssuedAt` | timestamptz |  |  |
+| `IssuedBy` | guid |  | id of `identity.Users` |
+| `Kind` | character varying(10) |  |  |
+| `Layout` | character varying(10) |  |  |
+| `Number` | character varying(32) |  |  |
+| `PaidMinor` | bigint |  |  |
+| `Sha256` | character(64) |  |  |
+| `TenantId` | guid |  | `tenancy.Tenants` |
+
+</details>
 
 <details><summary><code>billing.Settings</code> columns</summary>
 
@@ -3406,13 +3436,13 @@ From `docs/03-architecture/data-model.md` (areas A to D). "Built" means a table 
 | D · Care, portal, integration, audit | `AUDIT_EVENT` | built | `audit.AuditEvents` |
 | D · Care, portal, integration, audit | `OUTBOX_EVENT` | built | `scheduling.OutboxEvents` |
 
-Tables that exist but were added while building (not named in the plan): `billing.ProviderEvents`, `billing.Settings`, `encounters.CareChecks`, `encounters.CareGoals`, `encounters.CareTargets`, `encounters.ConsultNotes`, `encounters.DoctorNoteTemplates`, `encounters.EncounterHandovers`, `encounters.GeriatricAssessments`, `encounters.HistoryEntries`, `encounters.Immunisations`, `encounters.IntakeEscalations`, `encounters.Intakes`, `encounters.MedicationDecisions`, `encounters.MedicationReconciliations`, `encounters.MilestoneResponses`, `encounters.OutboxEvents`, `encounters.PregnancyEpisodes`, `encounters.PregnancyRuledOuts`, `encounters.SignedNotePdfs`, `encounters.SignedNoteVersions`, `identity.OnboardingDrafts`, `identity.PatientSessions`, `identity.Sessions`, `identity.SmsSignIns`, `leads.DemoRequests`, `leads.Waitlist`, `notifications.Preferences`, `notifications.StaffNotificationReads`, `notifications.StaffNotifications`, `patients.DataKeys`, `patients.MergeRequests`, `platform.AuditEntries`, `platform.KeyLinks`, `platform.Members`, `platform.PlanPrices`, `platform.PlanVersions`, `platform.SecurityKeys`, `platform.Sessions`, `prescribing.FormularyBrands`, `prescribing.PrescriptionCancellations`, `prescribing.PrescriptionDiscards`, `prescribing.PrescriptionPdfs`, `prescribing.PrintedPapers`, `prescribing.ReferralEvents`, `prescribing.RxAdvice`, `prescribing.RxAlertOverrides`, `prescribing.RxLayoutApprovals`, `prescribing.RxShareCodes`, `prescribing.RxShares`, `scheduling.AppointmentReschedules`, `scheduling.BookingConflicts`, `scheduling.MetricBaselines`, `scheduling.OutboxTenants`, `scheduling.QueueDisplays`, `scheduling.Resources`, `scheduling.SlotHolds`, `scheduling.VisitStatusEvents`, `tenancy.AccessRequests`, `tenancy.AccessReviewDecisions`, `tenancy.AccessReviews`, `tenancy.FeatureFlags`, `tenancy.FeatureReleases`, `tenancy.Invitations`, `tenancy.OperatingHours`, `tenancy.OrganisationDocuments`, `tenancy.OrganisationRequests`, `tenancy.PracticeDefaults`, `tenancy.Profiles`, `tenancy.SettingsChanges`, `tenancy.TenantIndex`, `tenancy.TermsAcceptances`.
+Tables that exist but were added while building (not named in the plan): `billing.BillingDocuments`, `billing.ProviderEvents`, `billing.Settings`, `encounters.CareChecks`, `encounters.CareGoals`, `encounters.CareTargets`, `encounters.ConsultNotes`, `encounters.DoctorNoteTemplates`, `encounters.EncounterHandovers`, `encounters.GeriatricAssessments`, `encounters.HistoryEntries`, `encounters.Immunisations`, `encounters.IntakeEscalations`, `encounters.Intakes`, `encounters.MedicationDecisions`, `encounters.MedicationReconciliations`, `encounters.MilestoneResponses`, `encounters.OutboxEvents`, `encounters.PregnancyEpisodes`, `encounters.PregnancyRuledOuts`, `encounters.SignedNotePdfs`, `encounters.SignedNoteVersions`, `identity.OnboardingDrafts`, `identity.PatientSessions`, `identity.Sessions`, `identity.SmsSignIns`, `leads.DemoRequests`, `leads.Waitlist`, `notifications.Preferences`, `notifications.StaffNotificationReads`, `notifications.StaffNotifications`, `patients.DataKeys`, `patients.MergeRequests`, `platform.AuditEntries`, `platform.KeyLinks`, `platform.Members`, `platform.PlanPrices`, `platform.PlanVersions`, `platform.SecurityKeys`, `platform.Sessions`, `prescribing.FormularyBrands`, `prescribing.PrescriptionCancellations`, `prescribing.PrescriptionDiscards`, `prescribing.PrescriptionPdfs`, `prescribing.PrintedPapers`, `prescribing.ReferralEvents`, `prescribing.RxAdvice`, `prescribing.RxAlertOverrides`, `prescribing.RxLayoutApprovals`, `prescribing.RxShareCodes`, `prescribing.RxShares`, `scheduling.AppointmentReschedules`, `scheduling.BookingConflicts`, `scheduling.MetricBaselines`, `scheduling.OutboxTenants`, `scheduling.QueueDisplays`, `scheduling.Resources`, `scheduling.SlotHolds`, `scheduling.VisitStatusEvents`, `tenancy.AccessRequests`, `tenancy.AccessReviewDecisions`, `tenancy.AccessReviews`, `tenancy.FeatureFlags`, `tenancy.FeatureReleases`, `tenancy.Invitations`, `tenancy.OperatingHours`, `tenancy.OrganisationDocuments`, `tenancy.OrganisationRequests`, `tenancy.PracticeDefaults`, `tenancy.Profiles`, `tenancy.SettingsChanges`, `tenancy.TenantIndex`, `tenancy.TermsAcceptances`.
 
-**Counts:** 114 tables across 11 schemas; 42 of 90 planned entities are built; 72 tables were added during the build.
+**Counts:** 115 tables across 11 schemas; 42 of 90 planned entities are built; 73 tables were added during the build.
 
 ## 6. Rules the model follows
 
-- **Tenant isolation:** 99 of 114 tables carry `TenantId` (EF query filter plus PostgreSQL forced row-level security on `medvya.tenant_id`). Without `TenantId`: `identity.OnboardingDrafts`, `identity.PatientSessions`, `identity.SmsSignIns`, `identity.Users`, `leads.DemoRequests`, `leads.Waitlist`, `platform.AuditEntries`, `platform.KeyLinks`, `platform.Members`, `platform.PlanPrices`, `platform.PlanVersions`, `platform.SecurityKeys`, `platform.Sessions`, `tenancy.FeatureReleases`, `tenancy.Tenants`. (`TenantId` present is not proof the row-level-security policy covers the table; see `docs/03-architecture/database-security.md`.)
+- **Tenant isolation:** 100 of 115 tables carry `TenantId` (EF query filter plus PostgreSQL forced row-level security on `medvya.tenant_id`). Without `TenantId`: `identity.OnboardingDrafts`, `identity.PatientSessions`, `identity.SmsSignIns`, `identity.Users`, `leads.DemoRequests`, `leads.Waitlist`, `platform.AuditEntries`, `platform.KeyLinks`, `platform.Members`, `platform.PlanPrices`, `platform.PlanVersions`, `platform.SecurityKeys`, `platform.Sessions`, `tenancy.FeatureReleases`, `tenancy.Tenants`. (`TenantId` present is not proof the row-level-security policy covers the table; see `docs/03-architecture/database-security.md`.)
 - **Append-only ledgers:** `audit.AuditEvents`, `encounters.SignedNotePdfs`, `encounters.SignedNoteVersions`, `patients.ConsentReceipts`, `prescribing.AuthorisedPrescriptions`, `prescribing.PharmacyDispatchEvents`, `prescribing.PrescriptionPdfs`, `prescribing.PrintedPapers`, `prescribing.RxLayoutApprovals`, `prescribing.RxShares`, `tenancy.TermsAcceptances` (hash-chained, MDV-P0-036; each also has ChainSeq, PrevHash and RowHash added by `LedgerSql`, outside the EF model).
 - **No cross-module foreign keys:** modules link by id and through application services (AGENTS.md 3.1).
 - **Country data plane:** one deployment and one database per country (ADR-003); this diagram is the same in each.

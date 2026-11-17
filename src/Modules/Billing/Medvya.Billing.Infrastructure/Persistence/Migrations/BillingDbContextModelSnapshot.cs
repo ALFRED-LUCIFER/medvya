@@ -23,6 +23,69 @@ namespace Medvya.Billing.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Medvya.Billing.Domain.BillingDocument", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("BlobKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("FacilityId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("InvoiceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("IssuedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("IssuedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("Layout")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("Number")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<long>("PaidMinor")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Sha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .IsFixedLength();
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InvoiceId");
+
+                    b.HasIndex("TenantId", "InvoiceId", "Kind", "Layout", "PaidMinor")
+                        .IsUnique();
+
+                    b.ToTable("BillingDocuments", "billing", t =>
+                        {
+                            t.HasCheckConstraint("CK_BillingDocuments_Paid", "\"PaidMinor\" >= 0");
+                        });
+                });
+
             modelBuilder.Entity("Medvya.Billing.Domain.BillingSettings", b =>
                 {
                     b.Property<Guid>("TenantId")
@@ -510,6 +573,15 @@ namespace Medvya.Billing.Infrastructure.Persistence.Migrations
 
                             t.HasCheckConstraint("CK_Services_Sac", "\"Sac\" IS NULL OR \"Sac\" ~ '^[0-9]{6}$'");
                         });
+                });
+
+            modelBuilder.Entity("Medvya.Billing.Domain.BillingDocument", b =>
+                {
+                    b.HasOne("Medvya.Billing.Domain.Invoice", null)
+                        .WithMany()
+                        .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Medvya.Billing.Domain.InvoiceLine", b =>

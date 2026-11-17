@@ -116,6 +116,17 @@ public static class PlainPdf
             });
             page.Footer().PaddingTop(paper.FootGap).Dynamic(new Foot(paper, footer));
         }));
+        return Generate(document);
+    }
+
+    /// <summary>The embedded font families, in fallback order, for a paper laid out outside <see cref="Write"/> (the 80 mm thermal receipt).</summary>
+    public static IReadOnlyList<string> FontFamilies => Fonts;
+
+    /// <summary>Renders any QuestPDF document with the embedded fonts only.</summary>
+    /// <exception cref="PdfUnsupportedTextException"/>
+    public static byte[] Generate(IDocument document)
+    {
+        ArgumentNullException.ThrowIfNull(document);
         try
         {
             return document.GeneratePdf();

@@ -15,9 +15,10 @@ public sealed class FacilityDirectory(TenancyDbContext db, ILogoStore store) : I
         if (f is null) return null;
         // The tenant filter and row-level security leave exactly this tenant's row.
         var tenant = await db.Tenants.AsNoTracking().Select(t => new { t.Name, t.QueueOrder, t.BookedFirst }).SingleAsync(cancellationToken);
-        var profile = await db.Profiles.AsNoTracking().Select(p => new { p.Address, p.Phone, p.RegistrationNumber, p.SignatureLine }).SingleOrDefaultAsync(cancellationToken);
+        var profile = await db.Profiles.AsNoTracking().Select(p => new { p.Address, p.Phone, p.RegistrationNumber, p.SignatureLine, p.TaxNumber }).SingleOrDefaultAsync(cancellationToken);
         return new FacilityInfo(f.Id, f.Name, f.TimeZone, tenant.Name, new(tenant.QueueOrder, tenant.BookedFirst), f.Address ?? profile?.Address, profile?.Phone, f.NurseRoom,
-            f.WifiNetwork is { } network ? new GuestWifi(network, f.WifiPassword, f.WifiDaily) : null, profile?.RegistrationNumber, profile?.SignatureLine ?? true);
+            f.WifiNetwork is { } network ? new GuestWifi(network, f.WifiPassword, f.WifiDaily) : null, profile?.RegistrationNumber, profile?.SignatureLine ?? true,
+            f.TaxNumber ?? profile?.TaxNumber);
     }
 
     public Task<Role?> ActiveRoleAsync(Guid userId, Guid facilityId, CancellationToken cancellationToken = default) =>
@@ -36,6 +37,10 @@ public sealed class FacilityDirectory(TenancyDbContext db, ILogoStore store) : I
     public Task<Guid?> DoctorMembershipAsync(Guid userId, Guid facilityId, CancellationToken cancellationToken = default) =>
         db.Memberships.AsNoTracking().Where(m => m.UserId == userId && m.FacilityId == facilityId && Doctors.Contains(m.Role))
             .Select(m => (Guid?)m.Id).FirstOrDefaultAsync(cancellationToken);
+
+    public async Task<PrescriberInfo?> MembershipPrescriberAsync(Guid membershipId, CancellationToken cancellationToken = default) =>
+        await db.Memberships.AsNoTracking().Where(m => m.Id == membershipId && m.UserId != null).Select(m => new { UserId = m.UserId!.Value, m.FacilityId })
+            .SingleOrDefaultAsync(cancellationToken) is { } m ? await PrescriberAsync(m.UserId, m.FacilityId, cancellationToken) : null;
 
     public Task<string?> DoctorRoomAsync(Guid userId, Guid facilityId, CancellationToken cancellationToken = default) =>
         (from m in db.Memberships.AsNoTracking()

@@ -245,6 +245,45 @@ public sealed class QueueTvTests(PostgresFixture sql) : IClassFixture<PostgresFi
         Assert.Equal(expected.Order(StringComparer.Ordinal), rows.Order(StringComparer.Ordinal));
     }
 
+    [Fact]
+    public async Task ANewLinkReplacesTheOldLinkAndTheOldScreenAndOnlyTheFacilitysAdminsMayAskForIt()
+    {
+        // #1413: a lost link is replaced, never shown again; the old link and the screen paired with it stop working at once.
+        var (id, oldLink) = await NewDisplay(h.Admin, h.Facility);
+        var (oldTv, _) = await Paired(oldLink);
+        var unused = await NewDisplay(h.Admin, h.Facility, "Lobby TV (synthetic)");
+
+        foreach (var (user, status) in new[] { (h.Reception, HttpStatusCode.Forbidden), (h.Elsewhere, HttpStatusCode.Forbidden), (other.Admin, HttpStatusCode.NotFound) })
+            using (var refused = await Staff(user).PostAsync($"/v1/queue/displays/{id}/link", null))
+                Assert.Equal(status, refused.StatusCode); // reception, another facility's admin, another clinic's admin (the id is unknown there)
+        Assert.Equal(HttpStatusCode.OK, (await oldTv.GetAsync("/v1/queue/tv")).StatusCode); // a refused request changed nothing
+
+        using var replaced = await Staff(h.Admin).PostAsync($"/v1/queue/displays/{id}/link", null);
+        var json = JsonDocument.Parse(await replaced.EnsureSuccessStatusCode().Content.ReadAsStringAsync()).RootElement;
+        Assert.Equal(id, json.GetProperty("display").GetProperty("id").GetGuid());
+        var newLink = json.GetProperty("token").GetString()!;
+        Assert.NotEqual(oldLink, newLink);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, (await oldTv.GetAsync("/v1/queue/tv")).StatusCode); // the old screen
+        using (var old = await Tv().PostAsJsonAsync("/v1/queue/tv/session", new { token = oldLink }))
+            Assert.Equal(HttpStatusCode.Unauthorized, old.StatusCode); // the old link
+        var (newTv, _) = await Paired(newLink);
+        Assert.Equal(HttpStatusCode.OK, (await newTv.GetAsync("/v1/queue/tv")).StatusCode);
+
+        // A link not yet opened is replaced the same way; a revoked display gets no new link.
+        Assert.Equal(HttpStatusCode.OK, (await Staff(h.Admin).PostAsync($"/v1/queue/displays/{unused.Id}/link", null)).StatusCode);
+        using (var stale = await Tv().PostAsJsonAsync("/v1/queue/tv/session", new { token = unused.Token }))
+            Assert.Equal(HttpStatusCode.Unauthorized, stale.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await Staff(h.Admin).DeleteAsync($"/v1/queue/displays/{id}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await Staff(h.Admin).PostAsync($"/v1/queue/displays/{id}/link", null)).StatusCode);
+
+        await using var audit = sql.Audit(h.Tenant);
+        var rows = (await audit.Events.Where(e => e.Action == SchedulingAudit.DisplayNewLink)
+            .Select(e => new { e.Outcome, e.ActorUserId }).ToListAsync()).Select(r => $"{r.Outcome} {r.ActorUserId}");
+        string[] expected = [$"Denied {h.Reception}", $"Denied {h.Elsewhere}", $"Allowed {h.Admin}", $"Allowed {h.Admin}", $"NotFound {h.Admin}"];
+        Assert.Equal(expected.Order(StringComparer.Ordinal), rows.Order(StringComparer.Ordinal));
+    }
+
     /// <summary>A TV's live connection with its display cookie; the push arrives with no arguments or it is not delivered at all.</summary>
     async Task<(HubConnection Connection, Channel<int> Pushes)> Live(string? cookie, HttpTransportType transport = HttpTransportType.LongPolling, Guid? staff = null)
     {

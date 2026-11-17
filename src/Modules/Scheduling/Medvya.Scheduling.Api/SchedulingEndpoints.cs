@@ -220,7 +220,7 @@ public static class SchedulingEndpoints
         queue.MapGet("/tv", ([FromServices] IQueueService service, CancellationToken ct) => service.TvAsync(ct))
             .RequireAuthorization(QueueDisplayAuth.Policy);
         app.MapHub<QueueHub>(QueueHub.Path).RequireAuthorization(QueueDisplayAuth.Policy);
-        // Staff who configure the facility add and revoke its displays.
+        // Staff who configure the facility add and revoke its displays, and replace a display's link (#1413).
         var displays = app.MapGroup("/v1/queue/displays").RequireAuthorization();
         displays.MapGet("/", (Guid? facilityId, [FromServices] IQueueService service, CancellationToken ct) => service.ListDisplaysAsync(facilityId ?? Guid.Empty, ct))
             .AuditedWithErrors("queue_display.read", SchedulingAudit.DisplayResource, SchedulingAudit.Operations);
@@ -232,6 +232,8 @@ public static class SchedulingEndpoints
                 return Results.NoContent();
             })
             .AuditedWriteWithErrors(SchedulingAudit.DisplayRevoke, SchedulingAudit.DisplayResource, SchedulingAudit.Operations);
+        displays.MapPost("/{displayId:guid}/link", (Guid displayId, [FromServices] IQueueService service, CancellationToken ct) => service.NewDisplayLinkAsync(displayId, ct))
+            .AuditedWriteWithErrors(SchedulingAudit.DisplayNewLink, SchedulingAudit.DisplayResource, SchedulingAudit.Operations);
 
         return app;
     }

@@ -1,0 +1,473 @@
+# P9 · Practice operations and engagement · Week 65 onward · R9 Ongoing
+# Source: comparison with DentalERP (github.com/abinauv/dental-erp, MIT), 17 Nov 2026. Only gaps with no ticket elsewhere are here; see the phase "Not in this phase" line.
+# DentalERP is Next.js + Prisma: its files are a reference for schema and flow. Backend is rewritten in C#; UI is rebuilt on @medvya/ui (AGENTS.md: no second component library). Copied code keeps the MIT notice.
+# exit: 1 per feature: adoption target agreed before build
+# exit: 2 each epic demonstrated on the real stack in English and Arabic, axe clean
+# nfr:  1 P8-001 intake per feature
+# nfr:  2 no patient health detail in messages, calendar entries, exports or AI prompts beyond need
+# pkg:  1 minor-version release notes per feature
+# dep:  1 DentalERP reference only; copied code keeps its licence notice
+# dep:  2 DLT templates and marketing opt-in before campaigns
+
+@epic MDV-P9-E01 | Stock and suppliers | P9-01 | The clinic knows what it has, what expires and what to reorder, without a spreadsheet.
+@epic MDV-P9-E02 | External lab send-outs | P9-02 | A test sent to an outside lab is tracked until its report is in the results inbox.
+@epic MDV-P9-E03 | Payment plans | P9-03 | A patient can pay a large balance in agreed instalments, and the desk sees what is due.
+@epic MDV-P9-E04 | Staff time and calendars | P9-04, P9-06 | Rota, attendance and leave in one place; doctors see their clinic day in their own calendar.
+@epic MDV-P9-E05 | Patient engagement | P9-05 | The clinic can reach consenting patients, hear their feedback and reward loyalty, within the messaging rules.
+@epic MDV-P9-E06 | Operational AI | P9-07 | Owners and the desk get forecasts and answers as drafts they can check, never automatic actions.
+
+=== MDV-P9-001
+title: P9 intake: adoption target, evidence and rules check for each P9 feature
+type: Chore
+epic: MDV-P9-E01
+prd: P9-01, P9-02, P9-03, P9-04, P9-05, P9-06, P9-07
+covers: exit:1, nfr:1, nfr:2, pkg:1, dep:1, dep:2
+priority: MUST
+roles: Founder
+labels: governance
+estimate: 0.5
+weeks: 65
+depends: MDV-P8-001
+confidence: 85 | Same process as P8-001.
+sources: DentalERP comparison (17 Nov 2026); PRD P9
+desc:
+Run the P8-001 intake for every P9 feature: who asked for it, the adoption target, and the rules that apply (DLT and opt-in for campaigns; NMC and DHA rules on patient inducements for loyalty points; regulatory class for any AI forecast). Record the DentalERP licence terms once for the whole phase.
+ac:
+- Each P9 ticket links an approved intake record before work starts.
+- The DentalERP MIT notice is recorded in docs/compliance with the files it applies to, if any code is copied.
+- Release notes per feature use the P8 minor-version template.
+
+=== MDV-P9-002
+title: Stock items: categories, units, reorder level and locations (Inventory module)
+type: Story
+epic: MDV-P9-E01
+prd: P9-01
+priority: SHOULD
+roles: Owner, Practice admin
+labels: inventory, stock
+estimate: 3
+weeks: 65
+depends: MDV-P9-001
+confidence: 65 | New module; DentalERP schema shows the shape.
+sources: DentalERP prisma/schema.prisma (InventoryCategory, InventoryItem); app/api/inventory; app/(dashboard)/inventory; components/inventory/item-form.tsx
+desc:
+Creates the planned Inventory module (README): stock items with category, unit, pack size, reorder level and the location that holds them. Settings → Stock lists, adds and edits items.
+ac:
+- An admin can add, edit and retire an item; a retired item keeps its history.
+- Each new property carries a data classification; tenant isolation tests cover the new tables.
+- Quantities are decimals with a unit; prices are integer minor units with currency (AGENTS.md 3.4).
+- Checked in English and Arabic, axe clean.
+notes:
+- Pick up from DentalERP: field list of `InventoryItem` and `InventoryCategory` in prisma/schema.prisma; screen flow of app/(dashboard)/inventory. Data to take: none (its categories are dental only).
+
+=== MDV-P9-003
+title: Batches and expiry: receive with batch and expiry, use first-expiring first, block expired
+type: Story
+epic: MDV-P9-E01
+prd: P9-01
+priority: SHOULD
+roles: Practice admin, Nurse
+labels: inventory, stock, safety
+estimate: 2
+weeks: 66
+depends: MDV-P9-002
+confidence: 70 | Simple rules; DentalERP has the same model.
+sources: DentalERP prisma/schema.prisma (InventoryBatch)
+desc:
+Each receipt records batch number, expiry and quantity. Using stock takes the first-expiring batch unless the user picks one. An expired batch cannot be used.
+ac:
+- Using stock defaults to the batch that expires first.
+- An expired batch is shown as "Expired" in words and cannot be logged as used.
+- Batch and expiry show on every movement.
+notes:
+- Pick up from DentalERP: `InventoryBatch` fields.
+
+=== MDV-P9-004
+title: Stock movements: receive, use, adjust and transfer, with reasons and audit
+type: Story
+epic: MDV-P9-E01
+prd: P9-01
+priority: SHOULD
+roles: Practice admin, Nurse
+labels: inventory, stock, audit
+estimate: 2
+weeks: 66
+depends: MDV-P9-003
+confidence: 70 | Ledger pattern exists in billing (P4-012).
+sources: DentalERP prisma/schema.prisma (StockTransaction); app/api/inventory
+desc:
+Every change in quantity is a movement (receive, use, adjust, transfer between locations) with a reason, a person and a time. The on-hand quantity is the sum of movements, never edited directly.
+ac:
+- On-hand equals the sum of movements, tested under concurrent use.
+- An adjustment needs a reason; adjustments are on the audit log.
+- A transfer moves the same batch between two locations in one step.
+notes:
+- Pick up from DentalERP: `StockTransaction` types. Do not copy its direct quantity update; Medvya uses an append-only ledger.
+
+=== MDV-P9-005
+title: Suppliers and purchase orders: draft, send, receive in part or in full
+type: Story
+epic: MDV-P9-E01
+prd: P9-01
+priority: SHOULD
+roles: Owner, Practice admin
+labels: inventory, purchasing
+estimate: 3
+weeks: 67
+depends: MDV-P9-004
+confidence: 65 | Standard flow; printing uses the QuestPDF family (ADR-018).
+sources: DentalERP prisma/schema.prisma (Supplier, SupplierItem, PurchaseOrder, PurchaseOrderItem)
+desc:
+A supplier list with the items each supplies and their price. A purchase order moves Draft → Sent → Part received → Received or Cancelled. Receiving creates batches (P9-003) and receive movements (P9-004).
+ac:
+- Receiving part of an order leaves the rest open; receiving all closes it.
+- A sent order prints or exports as PDF with clinic, supplier, items and quantities.
+- Supplier GSTIN (India) or TRN (UAE) is validated by format.
+notes:
+- Pick up from DentalERP: the four models above and the status list.
+
+=== MDV-P9-006
+title: Low-stock and expiry alerts in the notification centre
+type: Story
+epic: MDV-P9-E01
+prd: P9-01
+covers: exit:2
+priority: SHOULD
+roles: Practice admin, Owner
+labels: inventory, notifications
+estimate: 1
+weeks: 67
+depends: MDV-P9-004, MDV-P9-003
+confidence: 75 | Reuses the job runner and notification centre.
+sources: DentalERP app/api/cron/inventory/route.ts; prisma/schema.prisma (StockAlert)
+desc:
+A daily job raises one alert per item below its reorder level and per batch expiring within 30 days (configurable), shown in the notification centre for admins.
+ac:
+- An alert is raised once and cleared when the stock is back above the level or the batch is used up.
+- The expiry window is a clinic setting.
+notes:
+- Pick up from DentalERP: the rules in app/api/cron/inventory/route.ts.
+
+=== MDV-P9-007
+title: External lab list and send-out orders from investigation orders
+type: Story
+epic: MDV-P9-E02
+prd: P9-02
+priority: SHOULD
+roles: Doctor, Nurse, Receptionist
+labels: lab, orders
+estimate: 2
+weeks: 68
+depends: MDV-P9-001, MDV-P2-018
+confidence: 65 | Manual tracking only; HL7 feeds stay in P7-007.
+sources: DentalERP prisma/schema.prisma (LabVendor, LabOrder, LabOrderHistory); app/api/lab-orders; app/api/lab-vendors; components/lab/lab-order-editor.tsx
+desc:
+A clinic list of outside labs. An ordered investigation (P2-018) can be sent out to a lab: sample, sent date, expected date. Status Sent → Received by lab → Reported, with history. The same lab list serves dental lab work (P8-018).
+ac:
+- A send-out shows only the data the lab needs on its print or export.
+- Each status change is recorded with who and when.
+- Overdue send-outs (past expected date) are listed for the desk.
+notes:
+- Pick up from DentalERP: `LabVendor` fields, `LabOrderHistory` pattern, status list of `LabOrderStatus`. Its work types are dental; pathology tests come from P2-018 instead.
+
+=== MDV-P9-008
+title: Returned lab report goes into results intake
+type: Story
+epic: MDV-P9-E02
+prd: P9-02
+covers: exit:2
+priority: SHOULD
+roles: Nurse, Doctor
+labels: lab, results
+estimate: 1.5
+weeks: 68
+depends: MDV-P9-007, MDV-P4-014
+confidence: 70 | Builds on the P4-014 identity match.
+sources: DentalERP prisma/schema.prisma (LabOrderDocument)
+desc:
+Uploading the returned report on a send-out passes it through results intake (P4-014) with the send-out already matched, and marks the send-out Reported.
+ac:
+- The report reaches the doctor's results inbox linked to the order.
+- A report uploaded to the wrong send-out can be moved, with the move audited.
+
+=== MDV-P9-009
+title: Payment plan on an invoice balance: instalments, due dates and a printed schedule
+type: Story
+epic: MDV-P9-E03
+prd: P9-03
+priority: SHOULD
+roles: Receptionist, Owner, Patient
+labels: billing, payment-plan
+estimate: 3
+weeks: 69
+depends: MDV-P9-001, MDV-P4-004, MDV-P4-009, MDV-P4-011
+confidence: 60 | Interacts with dues and receipts; needs an accountant's view on India/UAE wording.
+sources: DentalERP prisma/schema.prisma (PaymentPlan, PaymentPlanSchedule); app/api/payment-plans
+desc:
+The desk turns an invoice balance into a plan: number of instalments, first due date and frequency, or custom amounts. The schedule prints for the patient to sign. No interest or fees in v1.
+ac:
+- Instalments sum exactly to the balance in minor units (the last one takes the remainder).
+- The plan and the patient's acceptance are recorded with who and when.
+- A plan is not a loan: the printed wording is approved by the P4-031 accountant.
+notes:
+- Pick up from DentalERP: the two models and the split logic in app/api/payment-plans. Check its rounding; Medvya uses integer minor units.
+
+=== MDV-P9-010
+title: Instalment payments, overdue reminders and plan close
+type: Story
+epic: MDV-P9-E03
+prd: P9-03
+covers: exit:2
+priority: SHOULD
+roles: Receptionist
+labels: billing, payment-plan, reminders
+estimate: 2
+weeks: 69
+depends: MDV-P9-009, MDV-P1-032
+confidence: 70 | Reuses payments and the reminder pipeline.
+sources: DentalERP app/api/payment-plans/[id]
+desc:
+A payment against the invoice settles the oldest open instalment first. Overdue instalments show on the dues list and send a balance reminder with no clinical detail. The plan closes when paid or is cancelled with a reason.
+ac:
+- Reminders respect the patient's consent and carry no clinical detail.
+- Cancelling a plan returns the remaining balance to ordinary dues.
+
+=== MDV-P9-011
+title: Staff shifts and rota per location
+type: Story
+epic: MDV-P9-E04
+prd: P9-04
+priority: COULD
+roles: Practice admin
+labels: staff, rota
+estimate: 2
+weeks: 70
+depends: MDV-P9-001, MDV-P1-011
+confidence: 65 | Doctor schedules exist (P1-011); this adds non-doctor staff.
+sources: DentalERP prisma/schema.prisma (StaffShift); app/api/staff; app/(dashboard)/staff
+desc:
+A weekly rota for each location: who works which shift. Doctors keep their schedule templates (P1-011); the rota shows them read-only beside other staff.
+ac:
+- A shift cannot overlap another shift of the same person.
+- The rota prints for the staff room without phone numbers.
+
+=== MDV-P9-012
+title: Attendance: clock in and out, corrections approved by an admin
+type: Story
+epic: MDV-P9-E04
+prd: P9-04
+priority: COULD
+roles: Practice admin, Nurse, Receptionist
+labels: staff, attendance
+estimate: 2
+weeks: 70
+depends: MDV-P9-011
+confidence: 60 | Labour-law record keeping varies; intake decides scope.
+sources: DentalERP prisma/schema.prisma (Attendance); app/api/staff/attendance
+desc:
+Staff clock in and out on the clinic app. A missed or wrong entry is corrected by request and approved by an admin. A monthly attendance sheet exports as CSV.
+ac:
+- A correction keeps the original entry and records who approved it.
+- No location tracking; clock-in is from a signed-in clinic session only.
+
+=== MDV-P9-013
+title: Staff leave requests and approval; approved doctor leave feeds the schedule
+type: Story
+epic: MDV-P9-E04
+prd: P9-04
+priority: COULD
+roles: Practice admin, Doctor, Nurse, Receptionist
+labels: staff, leave
+estimate: 2
+weeks: 70-71
+depends: MDV-P9-011, MDV-P1-012
+confidence: 65 | P1-012 already handles leave as a schedule exception.
+sources: DentalERP prisma/schema.prisma (Leave); app/api/staff/leaves
+desc:
+Staff request leave; an admin approves or declines. Approved doctor leave becomes a P1-012 schedule exception, which re-offers affected appointments.
+ac:
+- Approved doctor leave creates the schedule exception once (idempotent).
+- Declining needs a reason.
+
+=== MDV-P9-014
+title: Calendar sync: a doctor's appointments as busy blocks in Google or Outlook
+type: Story
+epic: MDV-P9-E04
+prd: P9-06
+covers: exit:2
+priority: COULD
+roles: Doctor
+labels: calendar, integrations, privacy
+estimate: 3
+weeks: 71
+depends: MDV-P9-001
+confidence: 55 | OAuth app reviews by Google and Microsoft take time.
+sources: DentalERP lib/services/google-calendar.ts; lib/services/outlook-calendar.ts; app/api/integrations; prisma/schema.prisma (CalendarIntegration)
+desc:
+One-way publish: each appointment of the doctor appears as "Busy · Medvya" with time only. No patient name, reason or location detail leaves Medvya. The doctor connects and disconnects from their account page.
+ac:
+- A published event contains no patient data (tested).
+- Disconnecting deletes the published events and the stored tokens.
+- Tokens are stored encrypted with Key Vault keys.
+notes:
+- Pick up from DentalERP: the OAuth and event calls in the two service files. Remove anything that writes patient names into events.
+
+=== MDV-P9-015
+title: Patient segments: saved filters for campaigns and reports
+type: Story
+epic: MDV-P9-E05
+prd: P9-05
+priority: COULD
+roles: Owner, Practice admin
+labels: crm, segments
+estimate: 2
+weeks: 72
+depends: MDV-P9-001, MDV-P4-029
+confidence: 60 | Must read from the PHI-safe reporting store.
+sources: DentalERP app/api/crm/segments; app/(dashboard)/crm; lib/ai/skills/patient-segmentation.ts
+desc:
+A segment is a saved filter: last visit, age band, location, service used, outstanding balance, marketing consent. It shows a count and, to admins, the list.
+ac:
+- Diagnoses and clinical notes are not offered as filters.
+- Counts under 5 are shown as "fewer than 5" outside the patient list.
+
+=== MDV-P9-016
+title: Campaign messages to a segment with consent, quiet hours, DLT template and opt-out
+type: Story
+epic: MDV-P9-E05
+prd: P9-05
+priority: COULD
+roles: Owner, Practice admin
+labels: crm, messaging, compliance
+estimate: 3
+weeks: 72
+depends: MDV-P9-015, MDV-P1-045
+confidence: 50 | Blocked on DLT (P1-045) in India; UAE advertising rules need a check.
+sources: DentalERP app/api/communications/sms/bulk; app/api/communications/templates; app/api/communications/automations; lib/services/template.service.ts
+desc:
+Send a templated message to a segment, now or scheduled. Only patients with marketing consent receive it. India promotional messages go out only 9 AM to 9 PM and use an approved DLT template; every message has an opt-out.
+ac:
+- A patient without marketing consent is never sent a campaign (tested).
+- A scheduled send outside 9 AM to 9 PM (India) waits until 9 AM.
+- Opt-out takes effect before the next send and is recorded.
+notes:
+- Pick up from DentalERP: the 9 AM to 9 PM rule and template placeholders. Medvya reminder consent and marketing consent stay separate.
+
+=== MDV-P9-017
+title: Patient feedback after a visit: short survey and results per doctor
+type: Story
+epic: MDV-P9-E05
+prd: P9-05
+priority: COULD
+roles: Patient, Owner
+labels: feedback, survey
+estimate: 2
+weeks: 73
+depends: MDV-P9-001, MDV-P1-032
+confidence: 65 | Small; reuses messaging.
+sources: DentalERP prisma/schema.prisma (Survey, SurveyResponse); app/api/communications/surveys; app/api/communications/feedback/analytics
+desc:
+After a completed visit, a consenting patient gets a link to a two-question survey (rating and comment). The owner sees results per doctor and per month.
+ac:
+- The link carries no patient data and expires after 14 days.
+- Results with fewer than 5 responses are not shown per doctor.
+
+=== MDV-P9-018
+title: Loyalty points for visits and referrals
+type: Story
+epic: MDV-P9-E05
+prd: P9-05
+covers: exit:2
+priority: COULD
+roles: Owner, Receptionist
+labels: crm, loyalty
+estimate: 2
+weeks: 73
+depends: MDV-P9-001, MDV-P4-009
+confidence: 40 | Intake must confirm patient inducements are allowed (NMC ethics, DHA advertising rules).
+sources: DentalERP prisma/schema.prisma (LoyaltyTransaction, Referral); app/api/loyalty; app/api/referrals
+desc:
+Points earned per paid visit or referred patient, redeemed as a discount on a later invoice. Points have an expiry.
+ac:
+- Built only if the P9-001 intake approves it for the country.
+- Points are a ledger; redeeming shows as a discount line on the invoice.
+
+=== MDV-P9-019
+title: No-show risk on tomorrow's list, as an explained draft
+type: Story
+epic: MDV-P9-E06
+prd: P9-07
+priority: COULD
+roles: Receptionist
+labels: ai, scheduling
+estimate: 3
+weeks: 73-74
+depends: MDV-P9-001, MDV-P4-030
+confidence: 50 | Needs enough history per clinic; may start rule-based.
+sources: DentalERP lib/ai/skills/no-show-predictor.ts; app/api/ai/no-show-risk
+desc:
+Tomorrow's appointments show a risk label (Low, Medium, High) with the reasons in words (past no-shows, booking lead time, unconfirmed). The desk decides whether to call; nothing is sent automatically.
+ac:
+- The label is shown as an AI draft (DESIGN.md principle 8) with its reasons.
+- With fewer than 3 months of clinic history the label is not shown.
+notes:
+- Pick up from DentalERP: the input factors in no-show-predictor.ts; start with those rules before any model.
+
+=== MDV-P9-020
+title: Stock forecast: days until reorder per item
+type: Story
+epic: MDV-P9-E06
+prd: P9-07
+priority: COULD
+roles: Practice admin
+labels: ai, inventory
+estimate: 2
+weeks: 74
+depends: MDV-P9-004
+confidence: 60 | Simple average use per day is enough for v1.
+sources: DentalERP lib/ai/skills/inventory-forecaster.ts; app/api/ai/inventory-forecast
+desc:
+From the last 90 days of use movements, each item shows the expected days until it reaches its reorder level.
+ac:
+- Items with under 30 days of history show "Not enough history".
+- The forecast states its method in words.
+
+=== MDV-P9-021
+title: Cash-flow forecast for owners from invoices, plans and dues
+type: Story
+epic: MDV-P9-E06
+prd: P9-07
+priority: COULD
+roles: Owner
+labels: ai, billing, reports
+estimate: 2
+weeks: 74
+depends: MDV-P9-010, MDV-P4-011
+confidence: 55 | Deterministic sums first; AI only for the summary sentence.
+sources: DentalERP lib/ai/skills/cashflow-forecaster.ts; app/api/ai/cashflow-forecast
+desc:
+Expected money in for the next 30, 60 and 90 days from due instalments, open dues and booked visits at their fee, shown beside the last 90 days actual.
+ac:
+- Figures are computed, not generated; any AI summary is labelled as a draft.
+- Amounts are integer minor units per currency.
+
+=== MDV-P9-022
+title: Ask a question about clinic reports in plain English
+type: Story
+epic: MDV-P9-E06
+prd: P9-07
+covers: exit:2
+priority: COULD
+roles: Owner
+labels: ai, reports
+estimate: 3
+weeks: 74
+depends: MDV-P4-029, MDV-P4-030
+confidence: 45 | Safe only on the PHI-free reporting store.
+sources: DentalERP app/api/ai/query; lib/ai/skills/clinic-analyst.ts
+desc:
+The owner types a question ("revenue by doctor last month"). The AI service turns it into a read-only query on the reporting store (P4-029), runs it and shows the answer with the query used.
+ac:
+- Queries run only against the reporting store, read-only, with a row and time limit.
+- The answer shows the query, and is labelled as an AI draft.
+- No patient-identifying column is reachable.

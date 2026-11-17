@@ -85,6 +85,13 @@ Every requirement, screen, exit criterion, NFR, delivery-package item and depend
 | P8-04 | P8 | SHOULD | MDV-P8-001, MDV-P8-005 |
 | P8-05 | P8 | COULD | MDV-P8-001, MDV-P8-006 |
 | P8-06 | P8 | COULD | MDV-P5-031, MDV-P5-032, MDV-P5-033, MDV-P5-034, MDV-P5-035, MDV-P5-036, MDV-P5-037, MDV-P5-038, MDV-P5-039, MDV-P8-001, MDV-P8-007, MDV-P8-008, MDV-P8-009, MDV-P8-010, MDV-P8-011, MDV-P8-012, MDV-P8-013, MDV-P8-014, MDV-P8-015, MDV-P8-016, MDV-P8-017, MDV-P8-018, MDV-P8-019, MDV-P8-020, MDV-P8-021, MDV-P8-022 |
+| P9-01 | P9 | SHOULD | MDV-P9-001, MDV-P9-002, MDV-P9-003, MDV-P9-004, MDV-P9-005, MDV-P9-006 |
+| P9-02 | P9 | SHOULD | MDV-P9-001, MDV-P9-007, MDV-P9-008 |
+| P9-03 | P9 | SHOULD | MDV-P9-001, MDV-P9-009, MDV-P9-010 |
+| P9-04 | P9 | COULD | MDV-P9-001, MDV-P9-011, MDV-P9-012, MDV-P9-013 |
+| P9-05 | P9 | COULD | MDV-P9-001, MDV-P9-015, MDV-P9-016, MDV-P9-017, MDV-P9-018 |
+| P9-06 | P9 | COULD | MDV-P9-001, MDV-P9-014 |
+| P9-07 | P9 | COULD | MDV-P9-001, MDV-P9-019, MDV-P9-020, MDV-P9-021, MDV-P9-022 |
 
 ## Screens (PRD v2 traceability matrix)
 
@@ -223,6 +230,8 @@ Every requirement, screen, exit criterion, NFR, delivery-package item and depend
 | P7 | 2 | Write-back success ≥ 99% with every conflict visible | MDV-P7-006, MDV-P7-013 |
 | P7 | 3 | Hospital clinical sign-off | MDV-P7-013 |
 | P8 | 1 | Per feature: adoption target agreed before build | MDV-P8-001 |
+| P9 | 1 | Per feature: adoption target agreed before build | MDV-P9-001 |
+| P9 | 2 | Each epic demonstrated on the real stack in English and Arabic, axe clean | MDV-P9-006, MDV-P9-008, MDV-P9-010, MDV-P9-014, MDV-P9-018, MDV-P9-022 |
 
 ## Platform & NFR
 
@@ -251,6 +260,8 @@ Every requirement, screen, exit criterion, NFR, delivery-package item and depend
 | P7 | 1 | SIEM export, privileged access review | MDV-P7-012 |
 | P7 | 2 | Move from App Service to AKS when stamp count or isolation requires it | MDV-P7-011 |
 | P8 | 1 | Each feature gated by its own evidence review | MDV-P8-001 |
+| P9 | 1 | Each feature passes the P8-001 intake (adoption target, evidence review) before build | MDV-P9-001 |
+| P9 | 2 | No patient health detail in any message, calendar entry, export or AI prompt beyond what the feature needs | MDV-P9-001 |
 
 ## Delivery package
 
@@ -281,6 +292,7 @@ Every requirement, screen, exit criterion, NFR, delivery-package item and depend
 | P7 | 1 | Integration specification and runbook | MDV-P7-001, MDV-P7-013 |
 | P7 | 2 | Security evidence pack | MDV-P7-012, MDV-P7-013 |
 | P8 | 1 | Minor-version release notes | MDV-P8-001 |
+| P9 | 1 | Minor-version release notes per feature | MDV-P9-001 |
 
 ## Dependencies & risks
 
@@ -303,6 +315,8 @@ Every requirement, screen, exit criterion, NFR, delivery-package item and depend
 | P6 | 2 | Language model quality per language | MDV-P6-007 |
 | P7 | 1 | Hospital procurement and HIS vendor cooperation | MDV-P7-001 |
 | P8 | 1 | Regulatory classification review for any decision-support feature | MDV-P8-001 |
+| P9 | 1 | DentalERP (MIT) is a reference for schema and flows only; any copied code keeps its licence notice | MDV-P9-001 |
+| P9 | 2 | Campaign messages need approved DLT templates (India, P1-045) and marketing opt-in records | MDV-P9-001 |
 
 **Result:** ✅ complete, nothing missing
 

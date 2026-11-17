@@ -5,7 +5,7 @@
 
 Jira-style tickets for every PRD v2 phase (P0–P8). The source of truth is `docs/05-delivery/tickets/_source/*.tickets`. Run `python3 -I tools/tickets/build.py` to regenerate the ticket files, [schedule.md](schedule.md), [jira-import.csv](jira-import.csv) and [coverage-report.md](coverage-report.md).
 
-**403 tickets** in 55 epics · **981.25 dev-days** estimated · confidence: High 103 · Medium 229 · Low 71 · coverage: ✅ every requirement, screen, exit criterion, NFR, package item and dependency is ticketed
+**425 tickets** in 61 epics · **1029.25 dev-days** estimated · confidence: High 104 · Medium 240 · Low 81 · coverage: ✅ every requirement, screen, exit criterion, NFR, package item and dependency is ticketed
 
 Conventions, Definition of Ready/Done and the confidence scale: [docs/05-delivery](../README.md).
 
@@ -20,6 +20,7 @@ Conventions, Definition of Ready/Done and the confidence scale: [docs/05-deliver
 | P6 Wearable capture and advanced AI | [P6-clip-advanced-ai](P6-clip-advanced-ai/README.md) | 07 Jun 2027 → 13 Aug 2027 | 10 | 0 | 0 | 32 | 50 | 59% |
 | P7 Hospital enterprise and integrations | [P7-hospital-enterprise](P7-hospital-enterprise/README.md) | 28 Jun 2027 → 17 Dec 2027 | 13 | 0 | 0 | 48 | 125 | 66% |
 | P8 Scale and specialty features | [P8-scale-specialty](P8-scale-specialty/README.md) | 18 Oct 2027 → 14 Jan 2028 | 22 | 0 | 0 | 81 | 65 | 60% |
+| P9 Practice operations and engagement | [P9-practice-operations](P9-practice-operations/README.md) | 17 Jan 2028 → 24 Mar 2028 | 22 | 0 | 0 | 48 | 50 | 62% |
 
 ## Capacity check (read this before committing to dates)
 
@@ -33,6 +34,7 @@ PRD v2 plans **v1.0 GA in week 32** for one full-time developer with AI help, ab
 | [MDV-P5-012](P5-commercial-launch/MDV-P5-012.md) | Health-exchange pull and push for the launch emirate (Malaffi / NABIDH / Riayati) (N-07) | 40% | Regulator onboarding and conformance testing control the dates; one integration module, three configurations. |
 | [MDV-P5-066](P5-commercial-launch/MDV-P5-066.md) | Import Common Drug Codes for India by release into the Medvya-wide medicine list | 40% | The NRCeS flat-file package (31 Aug 2026 release) is not readable yet and its licence is not recorded; the column layout is unknown. |
 | [MDV-P7-001](P7-hospital-enterprise/MDV-P7-001.md) | Hospital procurement, HIS vendor engagement and integration contract | 40% | Entirely dependent on a hospital customer and its HIS vendor. |
+| [MDV-P9-018](P9-practice-operations/MDV-P9-018.md) | Loyalty points for visits and referrals | 40% | Intake must confirm patient inducements are allowed (NMC ethics, DHA advertising rules). |
 | [MDV-P5-010](P5-commercial-launch/MDV-P5-010.md) | UAE claims via eClaimLink (Dubai) / Shafafiya (Abu Dhabi) for the launch emirate (P-14) | 45% | Requires regulator onboarding and conformance testing outside our control (PRD risk HIGH). |
 | [MDV-P6-001](P6-clip-advanced-ai/MDV-P6-001.md) | Hardware partner, device certification and regulated-device classification advice | 45% | Hardware partner not chosen (decision default: defer until phone metrics are met); CDSCO/UAE classification advice pending. |
 | [MDV-P8-004](P8-scale-specialty/MDV-P8-004.md) | India ABDM: ABHA consent requests and linked records from other facilities | 45% | Requires ABDM sandbox certification and current implementation-guide conformance. |
@@ -40,6 +42,7 @@ PRD v2 plans **v1.0 GA in week 32** for one full-time developer with AI help, ab
 | [MDV-P8-006](P8-scale-specialty/MDV-P8-006.md) | Front-desk extras: kiosk/QR self check-in, clinic letter inbox, offline read and draft (N-16) | 45% | DESIGN NEEDED; offline mode has significant security implications. |
 | [MDV-P8-007](P8-scale-specialty/MDV-P8-007.md) | Platform: public FHIR APIs, saved migration templates per vendor, specialty templates | 45% | Broad bucket; each item needs its own intake. |
 | [MDV-P8-021](P8-scale-specialty/MDV-P8-021.md) | Materials stock and sterilisation log | 45% | Inventory is new to Medvya; scope needs an intake record. |
+| [MDV-P9-022](P9-practice-operations/MDV-P9-022.md) | Ask a question about clinic reports in plain English | 45% | Safe only on the PHI-free reporting store. |
 | [MDV-P5-013](P5-commercial-launch/MDV-P5-013.md) | Regulator e-prescription and e-sick leave; letters and certificates from templates (N-09) | 50% | Regulator formats/APIs per emirate unknown until onboarding; letters/certificates are straightforward. |
 | [MDV-P5-015](P5-commercial-launch/MDV-P5-015.md) | Voice appointment assistant v1 (inbound): book/move/cancel from the live calendar, identity check, no medical advice, staff handover (N-10) | 50% | New capability with telephony (ACS + SIP trunk), multilingual speech and strict safety rules; design needed. |
 | [MDV-P5-035](P5-commercial-launch/MDV-P5-035.md) | Staff app: consent script, background recording with offline queue, AI note review and sign | 50% | Design exists (6 Nov 2026); build estimate not yet calibrated. |
@@ -47,6 +50,4 @@ PRD v2 plans **v1.0 GA in week 32** for one full-time developer with AI help, ab
 | [MDV-P7-013](P7-hospital-enterprise/MDV-P7-013.md) | R7 hospital pilot, clinical sign-off and release | 50% | Hospital-driven timeline. |
 | [MDV-P8-016](P8-scale-specialty/MDV-P8-016.md) | Dental imaging: X-rays and photos on the tooth, with a viewer | 50% | Upload and viewer build on documents; CBCT (DICOM) needs a spike. |
 | [MDV-P8-022](P8-scale-specialty/MDV-P8-022.md) | Dental pilot gate: a dentist walks a dental journey and signs off | 50% | Needs a pilot dentist. |
-| [MDV-P1-046](P1-front-desk/MDV-P1-046.md) | Start UAE regulator onboarding applications early (risk mitigation) | 55% | Requirements and timelines are controlled by regulators; mitigation step named in PRD v2 risk register. |
-| [MDV-P1-051](P1-front-desk/MDV-P1-051.md) | Encrypted read-only schedule cache for outages (needs an ADR first) | 55% | Storing any patient data in the browser needs a recorded decision; build only if pilot clinics report outages long enough that a paper sheet is not enough. |
-| [MDV-P1-072](P1-front-desk/MDV-P1-072.md) | Shared patient record across an organisation's locations: one MRN and one chart, search across locations, location in the access log | 55% | Decided 10 Nov 2026; touches registration, duplicates, search, merge and access rules, so the estimate is the least certain. |
+| [MDV-P9-016](P9-practice-operations/MDV-P9-016.md) | Campaign messages to a segment with consent, quiet hours, DLT template and opt-out | 50% | Blocked on DLT (P1-045) in India; UAE advertising rules need a check. |

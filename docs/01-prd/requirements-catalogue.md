@@ -404,3 +404,42 @@ Requirement IDs are stable and must be used in tickets, tests and release notes 
 
 **Not in this phase:** See postponed scope below.
 
+
+## P9 · Practice operations and engagement
+
+- **Weeks:** Week 65 onward · **Release:** R9 · Ongoing
+- **Delivered to:** All customers, by demand
+- **Day one:** Features released individually as minor versions.
+- **Goal:** Close the clinic operations gaps found against an open-source dental ERP: stock, external labs, payment plans, staff time, patient engagement and operational AI.
+
+| ID | Requirement | Priority | Screens | Flags |
+|---|---|---|---|---|
+| **P9-01** | **Stock and suppliers.** Stock items, batches and expiry, movements, suppliers, purchase orders and low-stock alerts. | SHOULD | — | ADDED v2 DESIGN NEEDED |
+| **P9-02** | **External lab send-outs.** Send-out orders to external labs with status, and the returned report into results intake. | SHOULD | — | ADDED v2 DESIGN NEEDED |
+| **P9-03** | **Payment plans.** Instalment plans on an invoice balance with schedule, payments and overdue reminders. | SHOULD | — | ADDED v2 DESIGN NEEDED |
+| **P9-04** | **Staff time.** Shifts, attendance and staff leave, with approved doctor leave feeding the schedule. | COULD | — | ADDED v2 DESIGN NEEDED |
+| **P9-05** | **Patient engagement.** Patient segments, consented campaign messages, feedback after a visit and loyalty points. | COULD | — | ADDED v2 DESIGN NEEDED |
+| **P9-06** | **Calendar sync.** A doctor's appointments published as busy blocks to Google or Outlook, with no patient data. | COULD | — | ADDED v2 DESIGN NEEDED |
+| **P9-07** | **Operational AI.** No-show risk, stock and cash-flow forecasts, and plain-English questions on clinic reports. | COULD | — | ADDED v2 DESIGN NEEDED |
+
+**Platform & non-functional**
+
+- Each feature passes the P8-001 intake (adoption target, evidence review) before build
+- No patient health detail in any message, calendar entry, export or AI prompt beyond what the feature needs
+
+**Exit criteria (release gate)**
+
+- [ ] Per feature: adoption target agreed before build
+- [ ] Each epic demonstrated on the real stack in English and Arabic, axe clean
+
+**Delivery package**
+
+- Minor-version release notes per feature
+
+**Dependencies & risks**
+
+- DentalERP (MIT) is a reference for schema and flows only; any copied code keeps its licence notice
+- Campaign messages need approved DLT templates (India, P1-045) and marketing opt-in records
+
+**Not in this phase:** Already ticketed elsewhere: refunds P4-006, Razorpay P4-007, packages P4-010, dues P4-011, reports P4-030, portal P4-020 to P4-026, public booking P4-027, insurance P5-008 to P5-010, migration P5-002 to P5-004, data export P5-019, video P8-002, recalls P8-003, sterilisation P8-021. Medical equipment readings.
+

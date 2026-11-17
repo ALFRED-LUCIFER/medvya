@@ -2016,6 +2016,116 @@
    "c": "#829AB1",
    "col": "53 / 66",
    "expand": true
+  },
+  {
+   "code": "P9",
+   "short": "Practice operations",
+   "name": "Practice operations and engagement",
+   "weeks": "Week 65 onward",
+   "s": 65,
+   "e": 74,
+   "rel": "R9 · Ongoing",
+   "to": "All customers, by demand",
+   "dayOne": "Features released individually as minor versions.",
+   "goal": "Close the clinic operations gaps found against an open-source dental ERP: stock, external labs, payment plans, staff time, patient engagement and operational AI.",
+   "feats": [
+    {
+     "id": "P9-01",
+     "t": "Stock and suppliers",
+     "d": "Stock items, batches and expiry, movements, suppliers, purchase orders and low-stock alerts.",
+     "scr": [],
+     "pr": "SHOULD",
+     "prc": "#B26A00",
+     "need": true,
+     "added": true,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P9-02",
+     "t": "External lab send-outs",
+     "d": "Send-out orders to external labs with status, and the returned report into results intake.",
+     "scr": [],
+     "pr": "SHOULD",
+     "prc": "#B26A00",
+     "need": true,
+     "added": true,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P9-03",
+     "t": "Payment plans",
+     "d": "Instalment plans on an invoice balance with schedule, payments and overdue reminders.",
+     "scr": [],
+     "pr": "SHOULD",
+     "prc": "#B26A00",
+     "need": true,
+     "added": true,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P9-04",
+     "t": "Staff time",
+     "d": "Shifts, attendance and staff leave, with approved doctor leave feeding the schedule.",
+     "scr": [],
+     "pr": "COULD",
+     "prc": "#829AB1",
+     "need": true,
+     "added": true,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P9-05",
+     "t": "Patient engagement",
+     "d": "Patient segments, consented campaign messages, feedback after a visit and loyalty points.",
+     "scr": [],
+     "pr": "COULD",
+     "prc": "#829AB1",
+     "need": true,
+     "added": true,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P9-06",
+     "t": "Calendar sync",
+     "d": "A doctor's appointments published as busy blocks to Google or Outlook, with no patient data.",
+     "scr": [],
+     "pr": "COULD",
+     "prc": "#829AB1",
+     "need": true,
+     "added": true,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P9-07",
+     "t": "Operational AI",
+     "d": "No-show risk, stock and cash-flow forecasts, and plain-English questions on clinic reports.",
+     "scr": [],
+     "pr": "COULD",
+     "prc": "#829AB1",
+     "need": true,
+     "added": true,
+     "bg": "#F7FAFC"
+    }
+   ],
+   "nfr": [
+    "Each feature passes the P8-001 intake (adoption target, evidence review) before build",
+    "No patient health detail in any message, calendar entry, export or AI prompt beyond what the feature needs"
+   ],
+   "exit": [
+    "Per feature: adoption target agreed before build",
+    "Each epic demonstrated on the real stack in English and Arabic, axe clean"
+   ],
+   "pkg": [
+    "Minor-version release notes per feature"
+   ],
+   "deps": [
+    "DentalERP (MIT) is a reference for schema and flows only; any copied code keeps its licence notice",
+    "Campaign messages need approved DLT templates (India, P1-045) and marketing opt-in records"
+   ],
+   "notIn": "Already ticketed elsewhere: refunds P4-006, Razorpay P4-007, packages P4-010, dues P4-011, reports P4-030, portal P4-020 to P4-026, public booking P4-027, insurance P5-008 to P5-010, migration P5-002 to P5-004, data export P5-019, video P8-002, recalls P8-003, sterilisation P8-021. Medical equipment readings.",
+   "c": "#829AB1",
+   "col": "67 / 76",
+   "expand": true
   }
  ],
  "weekTicks": [

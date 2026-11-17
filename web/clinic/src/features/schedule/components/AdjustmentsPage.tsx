@@ -41,7 +41,7 @@ const hhmm = (time: string | null) => time?.slice(0, 5) ?? '';
 
 /** P-04 "Leave and exceptions" (MDV-P1-012): leave, an extra session or a shortened day; affected visits need an action each before it saves. */
 export default function AdjustmentsPage(p: Props) {
-  const { t, formatDay } = useI18n();
+  const { t, tCount, formatDay } = useI18n();
   const { register, watch, setValue, formState: { errors } } = p.form;
   const kind = watch('kind');
   const calendarId = watch('calendarId');
@@ -58,7 +58,7 @@ export default function AdjustmentsPage(p: Props) {
       {p.result && (
         <Card role="status" className="items-start gap-2">
           <p className="flex items-center gap-2 font-bold"><CircleCheck className="size-5 text-success-700" aria-hidden />{t('adjustment.saved')}</p>
-          {p.result.offered + p.result.manual > 0 && <p>{t('adjustment.savedCounts', { offered: p.result.offered, manual: p.result.manual })}</p>}
+          {p.result.offered + p.result.manual > 0 && <p>{tCount('adjustment.savedOffered', p.result.offered)} {tCount('adjustment.savedManual', p.result.manual)}</p>}
           {p.boardPath && p.result.offered + p.result.manual > 0 && <Link to={p.boardPath} className={buttonVariants({ variant: 'link' })}>{t('adjustment.toBoard')}</Link>}
         </Card>
       )}

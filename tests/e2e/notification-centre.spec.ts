@@ -114,6 +114,19 @@ test('a role without the desk gets the inert bell and no notification calls', as
   expect(asked).toBe(false);
 });
 
+// #1414: a browser in Dubai (UTC+4) showed a Kolkata clinic's notification at 08:00, its own time; the facility's time is 09:30.
+test.describe('in a browser in another time zone', () => {
+  test.use({ timezoneId: 'Asia/Dubai' });
+  for (const locale of ['en', 'ar'])
+    test(`a notification shows facility time, not the browser's (${locale})`, async ({ page }) => {
+      await open(page, { locale, as: { ...reception, active: { ...reception.active, timeZone: 'Asia/Kolkata' } } as typeof reception });
+      await page.getByRole('button', { name: /^(Notifications|الإشعارات)، ?|^Notifications, / }).click();
+      const item = page.getByRole('dialog').getByRole('listitem').first(); // created 04:00 UTC
+      await expect(item).toContainText('09:30');
+      await expect(item).not.toContainText('08:00');
+    });
+});
+
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 for (const locale of ['en', 'ar'])
   test(`axe finds no violations with the overlay open (${locale}); control-size targets`, async ({ page }) => {

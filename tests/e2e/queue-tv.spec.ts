@@ -162,3 +162,36 @@ test('a practice admin adds a display, gets its link once and revokes it', async
       .map(v => `${v.id} (${v.nodes.length})`));
   expect(violations).toEqual([]);
 });
+
+// #1413: a lost link is replaced, never shown again. The server ends the old link and the screen paired with it (QueueTvTests).
+for (const [locale, s] of [
+  ['en', { tab: 'Queue displays', newLink: 'New link for Old lobby TV', replaced: 'New link for Old lobby TV.', link: 'Open this link once on the screen', once: 'use New link if you lose it' }],
+  ['ar', { tab: 'شاشات قائمة الانتظار', newLink: 'رابط جديد لـ Old lobby TV', replaced: 'رابط جديد لـ Old lobby TV.', link: 'افتح هذا الرابط مرة واحدة على الشاشة', once: 'استخدم «رابط جديد» إذا فقدته' }],
+] as const)
+  test(`a practice admin gets a new link for a display whose link was lost (${locale}), axe clean`, async ({ page }) => {
+    const displays = [{ id: 'd-1', facilityId: 'f-1', name: 'Old lobby TV', createdAt: '2026-10-01T04:00:00Z', revokedAt: null }];
+    const calls: { method: string; path: string; csrf?: string }[] = [];
+    await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
+    await page.route('**/v1/me/context', r => r.fulfill({ json: admin }));
+    await page.route('**/v1/queue/displays?*', r => r.fulfill({ json: displays }));
+    await page.route('**/v1/queue/displays/*/link', r => {
+      calls.push({ method: r.request().method(), path: new URL(r.request().url()).pathname, csrf: r.request().headers()['x-medvya-csrf'] });
+      return r.fulfill({ json: { display: displays[0], token } });
+    });
+    await page.goto('/settings?tab=displays');
+    if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+    await expect(page.getByRole('heading', { level: 2, name: s.tab })).toBeVisible();
+
+    await page.getByRole('button', { name: s.newLink }).click();
+    await expect(page.getByText(s.replaced)).toBeVisible();
+    await expect(page.getByLabel(s.link)).toHaveValue(`http://localhost:${new URL(page.url()).port}/queue/tv#${token}`);
+    await expect(page.getByText(s.once)).toBeVisible();
+    expect(calls).toEqual([{ method: 'POST', path: '/v1/queue/displays/d-1/link', csrf: '1' }]);
+
+    for (const b of await page.getByRole('button').all()) if (await b.isVisible()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(await targetPx(page));
+    await page.addScriptTag({ path: axePath });
+    const violations = await page.evaluate(async () =>
+      (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations
+        .map(v => `${v.id} (${v.nodes.length})`));
+    expect(violations).toEqual([]);
+  });

@@ -5,6 +5,8 @@ export default defineConfig({
   testDir: '.',
   testIgnore: 'fullstack/**', // needs Docker and .NET: `pnpm e2e:fullstack`
   forbidOnly: !!process.env.CI,
+  // A private repo's runner has 2 vCPUs, where Playwright's default (half the cores) gives 1 worker; the specs mostly wait on the page, so 2 fit.
+  workers: process.env.CI ? 2 : undefined,
   reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : 'list',
   // Reduced motion: styles.css then drops every transition, so axe never samples a button's colour mid-fade (a flaky false contrast failure).
   use: { baseURL: 'http://localhost:4173', trace: 'retain-on-failure', reducedMotion: 'reduce' },

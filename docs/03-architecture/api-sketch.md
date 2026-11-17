@@ -54,7 +54,7 @@ HUB    /v1/hubs/board  Watch(facilityId) → BoardChanged{appointmentId,state,ch
 POST   /v1/queue/tv/session  {token}               # P1-031: pairs a TV (token from the link's #fragment) → HttpOnly display cookie
 GET    /v1/queue/tv                                # display cookie only: {now:[{token,room,doctor}], next:[{token,waitMinutes}]}
 HUB    /v1/queue/hub  Watch() → QueueChanged()     # display only; the push has no arguments, the TV refetches
-GET|POST /v1/queue/displays · DELETE /v1/queue/displays/{id}   # staff with practice configuration: add (token shown once), list, revoke
+GET|POST /v1/queue/displays · DELETE /v1/queue/displays/{id} · POST /v1/queue/displays/{id}/link   # staff with practice configuration: add (token shown once), list, revoke, new link (replaces the old link and its screen, #1413)
 GET    /v1/notifications
 POST   /v1/encounters                              # P2
 GET    /v1/patients/{id}/timeline

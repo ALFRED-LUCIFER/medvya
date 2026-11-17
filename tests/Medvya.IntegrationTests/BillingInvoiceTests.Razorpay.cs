@@ -23,8 +23,10 @@ namespace Medvya.IntegrationTests;
 static class RazorpayTestKeys
 {
     public static readonly Guid OtherTenant = Guid.NewGuid();
-    public const string KeyId = "rzp_test_Synth0001", KeySecret = "synthetic-key-secret-0001", WebhookSecret = "synthetic-webhook-secret-0001";
-    public const string OtherWebhookSecret = "synthetic-webhook-secret-0002";
+    public const string KeyId = "rzp_test_Synth0001";
+    // Made per run, so no secret-shaped literal sits in the source (AGENTS.md 1.7; gitleaks generic-api-key).
+    public static readonly string KeySecret = Random(), WebhookSecret = Random(), OtherKeySecret = Random(), OtherWebhookSecret = Random();
+    static string Random() => Convert.ToHexStringLower(System.Security.Cryptography.RandomNumberGenerator.GetBytes(16));
     public static readonly string WebhookKey = new('a', 64), OtherWebhookKey = new('c', 64);
 
     public static Dictionary<string, string?> Settings(Guid tenant, Guid? other = null)
@@ -36,7 +38,7 @@ static class RazorpayTestKeys
         };
         if (other is { } o)
             (s[$"Razorpay:Tenants:{o}:KeyId"], s[$"Razorpay:Tenants:{o}:KeySecret"], s[$"Razorpay:Tenants:{o}:WebhookSecret"], s[$"Razorpay:Tenants:{o}:WebhookKey"]) =
-                ("rzp_test_Synth0002", "synthetic-key-secret-0002", OtherWebhookSecret, OtherWebhookKey);
+                ("rzp_test_Synth0002", OtherKeySecret, OtherWebhookSecret, OtherWebhookKey);
         return s;
     }
 

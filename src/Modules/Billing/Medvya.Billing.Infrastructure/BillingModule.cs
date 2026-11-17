@@ -26,6 +26,7 @@ public static class BillingModule
             .AddScoped<IDoctorFees, DoctorFees>()
             .AddScoped<IBillingSettings, BillingSettingsService>()
             .AddScoped<IInvoices, Invoices>()
+            .AddScoped<IRazorpayAccount, RazorpayAccount>()
             // Lazy: the credential store is built on first use (a payment link), never at start-up, so a host without Razorpay:KeyVaultUri still starts.
             .AddRazorpay();
     }

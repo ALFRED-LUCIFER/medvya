@@ -21,6 +21,8 @@ export async function mockBilling(page: Page, { country = 'IN', flags, locale = 
     'svc-new': [{ id: 'pv-1', doctorId: null, amountMinor: 50_000, currency, effectiveFrom: '2026-09-01T00:00:00Z', createdAt: '2026-09-01T00:00:00Z' }],
   };
   const posts: { path: string; body: unknown }[] = [];
+  // MDV-P4-007: the clinic's Razorpay connection; secrets go in, only the status comes back.
+  let razorpay: Record<string, unknown> = { connected: false, mode: null, keyIdEnding: null, webhookPath: null };
   let settings = { invoicePrefix: 'INV', receiptPrefix: 'RCT', creditNotePrefix: 'CN', paymentMethods: ['Cash', 'Card', 'UpiDirect'], discountReasons: [] as string[], maxDiscountPercent: 10, paymentLinkExpiryMinutes: 60, version: 0 };
 
   await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
@@ -58,10 +60,19 @@ export async function mockBilling(page: Page, { country = 'IN', flags, locale = 
       const body = r.request().postDataJSON() as typeof settings;
       posts.push({ path: 'billing', body });
       if (body.invoicePrefix.length > 3) return r.fulfill({ status: 400, json: { errors: { invoicePrefix: ['format'] } } });
+      if (body.paymentMethods.includes('RazorpayLink') && !razorpay.connected) return r.fulfill({ status: 400, json: { errors: { paymentMethods: ['razorpay_not_connected'] } } });
       if (body.version !== settings.version) return r.fulfill({ status: 409, json: { code: 'changed' } });
       settings = { ...body, version: settings.version + 1 };
     }
     return r.fulfill({ json: settings });
+  });
+  await page.route('**/v1/settings/billing/razorpay', r => {
+    if (r.request().method() === 'PUT') {
+      const body = r.request().postDataJSON() as { keyId: string; keySecret: string; webhookSecret: string };
+      posts.push({ path: 'razorpay', body });
+      razorpay = { connected: true, mode: body.keyId.startsWith('rzp_live_') ? 'Live' : 'Test', keyIdEnding: body.keyId.slice(-4), webhookPath: `/v1/webhooks/razorpay/${'a'.repeat(64)}` };
+    }
+    return r.fulfill({ json: razorpay });
   });
   return { services, posts };
 }

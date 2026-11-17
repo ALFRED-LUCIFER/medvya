@@ -1633,6 +1633,28 @@
         }
       }
     },
+    "/v1/webhooks/razorpay/{webhookKey}": {
+      "post": {
+        "tags": [
+          "RazorpayEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "webhookKey",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/v1/schedule": {
       "get": {
         "tags": [
@@ -8371,6 +8393,44 @@
           }
         }
       }
+    },
+    "/v1/settings/billing/razorpay": {
+      "get": {
+        "tags": [
+          "Host.Api"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Host.Api"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ConnectRazorpay"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -10211,6 +10271,29 @@
               {
                 "$ref": "#/components/schemas/ContactChange"
               }
+            ]
+          }
+        }
+      },
+      "ConnectRazorpay": {
+        "type": "object",
+        "properties": {
+          "keyId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "keySecret": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "webhookSecret": {
+            "type": [
+              "null",
+              "string"
             ]
           }
         }
@@ -15851,6 +15934,9 @@
     },
     {
       "name": "NoteEndpoints"
+    },
+    {
+      "name": "RazorpayEndpoints"
     },
     {
       "name": "AccessLogEndpoints"

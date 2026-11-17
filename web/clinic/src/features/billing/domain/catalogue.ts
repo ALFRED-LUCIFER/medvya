@@ -84,8 +84,8 @@ export function linePreview(s: Pick<Service, 'name' | 'sac' | 'taxTreatment' | '
 }
 
 /** A server refusal ("sac:format", "consultationKind:taken", 409 "changed") as the field it belongs to and a message key suffix. */
-export type CatalogueProblem = 'required' | 'too_long' | 'format' | 'range' | 'taken' | 'fixed' | 'past' | 'changed' | 'failed';
-const codes: readonly string[] = ['required', 'too_long', 'format', 'range', 'taken', 'fixed', 'past'];
+export type CatalogueProblem = 'required' | 'too_long' | 'format' | 'range' | 'taken' | 'fixed' | 'past' | 'razorpay_not_connected' | 'changed' | 'failed';
+const codes: readonly string[] = ['required', 'too_long', 'format', 'range', 'taken', 'fixed', 'past', 'razorpay_not_connected'];
 export function catalogueProblem(code: string | undefined): { field: string | null; code: CatalogueProblem } {
   if (code === 'changed') return { field: null, code: 'changed' };
   const [field, reason] = code?.split(':') ?? [];

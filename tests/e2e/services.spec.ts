@@ -1,5 +1,5 @@
 import { createRequire } from 'node:module';
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { mockBilling } from './support/billing';
 
 // MDV-P4-002 (F-11): Settings, Services and Settings, Billing. CI has no API, so the endpoints are mocked (support/billing.ts).
@@ -54,6 +54,10 @@ test('billing settings are saved, and a prefix the country refuses is shown unde
   await page.getByRole('checkbox', { name: 'Razorpay payment link' }).check();
   await page.getByLabel('Discount reasons').fill('Staff family\nSenior citizen');
   await page.getByRole('button', { name: 'Save' }).click();
+  // Razorpay links need the clinic's own account first (MDV-P4-007).
+  await expect(page.getByText('Connect Razorpay below before offering Razorpay payment links.')).toBeVisible();
+  await connectRazorpay(page, 'en');
+  await page.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByRole('status').filter({ hasText: 'Saved' })).toBeVisible();
   expect(api.posts.at(-1)?.body).toMatchObject({ invoicePrefix: 'INB', paymentMethods: ['Cash', 'Card', 'UpiDirect', 'RazorpayLink'], discountReasons: ['Staff family', 'Senior citizen'] });
 });
@@ -75,3 +79,44 @@ for (const locale of ['en', 'ar'])
         (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations.map(v => `${v.id} (${v.nodes.length})`));
       expect(violations).toEqual([]);
     });
+
+// MDV-P4-007: Settings, Billing, Razorpay. Synthetic test keys only; the mocked API answers in RazorpayStatus's shape.
+const razorpayWords = {
+  en: { connect: 'Connect Razorpay', keyId: 'Key id', keySecret: 'Key secret', webhookSecret: 'Webhook secret', save: 'Connect', connected: 'Connected · Test · key …0001', format: 'A key id starts with rzp_test_ or rzp_live_, then letters and digits.' },
+  ar: { connect: 'ربط Razorpay', keyId: 'معرّف المفتاح', keySecret: 'سر المفتاح', webhookSecret: 'سر Webhook', save: 'ربط', connected: 'مرتبط · اختبار · المفتاح …0001', format: 'يبدأ معرّف المفتاح بـ rzp_test_ أو rzp_live_ ثم أحرف وأرقام.' },
+};
+
+async function axeViolations(page: Page) {
+  await page.addScriptTag({ path: axePath });
+  return page.evaluate(async () =>
+    (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations.map(v => `${v.id} (${v.nodes.length})`));
+}
+
+async function connectRazorpay(page: Page, locale: 'en' | 'ar', checkAxe = false) {
+  const w = razorpayWords[locale];
+  await page.getByRole('button', { name: w.connect }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel(w.keyId, { exact: true }).fill('key_0001');
+  await dialog.getByRole('button', { name: w.save, exact: true }).click();
+  await expect(dialog.getByText(w.format)).toBeVisible();
+  if (checkAxe) expect(await axeViolations(page)).toEqual([]);
+  await dialog.getByLabel(w.keyId, { exact: true }).fill('rzp_test_Synth0001');
+  await dialog.getByLabel(w.keySecret, { exact: true }).fill('synthetic-key-secret');
+  await dialog.getByLabel(w.webhookSecret, { exact: true }).fill('synthetic-webhook-secret');
+  await dialog.getByRole('button', { name: w.save, exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByText(w.connected)).toBeVisible();
+}
+
+for (const locale of ['en', 'ar'] as const)
+  test(`the admin connects Razorpay and gets the webhook URL to paste, never a secret back (${locale})`, async ({ page }) => {
+    const api = await mockBilling(page, { locale, country: 'IN' });
+    await page.goto('/settings?tab=billing');
+    if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+    await connectRazorpay(page, locale, true);
+    expect(api.posts.at(-1)).toEqual({ path: 'razorpay', body: { keyId: 'rzp_test_Synth0001', keySecret: 'synthetic-key-secret', webhookSecret: 'synthetic-webhook-secret' } });
+    await expect(page.getByText(`/v1/webhooks/razorpay/${'a'.repeat(64)}`)).toBeVisible();
+    await expect(page.getByText('payment_link.paid', { exact: true })).toBeVisible();
+    expect(await page.content()).not.toContain('synthetic-key-secret');
+    expect(await axeViolations(page)).toEqual([]);
+  });

@@ -14,6 +14,7 @@ public sealed class BillingDbContext(DbContextOptions<BillingDbContext> options,
     public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<InvoiceLine> InvoiceLines => Set<InvoiceLine>();
     public DbSet<Payment> Payments => Set<Payment>();
+    public DbSet<ProviderEvent> ProviderEvents => Set<ProviderEvent>();
 
     Guid? CurrentTenantId => tenant.TenantId;
 
@@ -122,6 +123,15 @@ public sealed class BillingDbContext(DbContextOptions<BillingDbContext> options,
             // At most one payment the patient may still pay per bill (a Razorpay link for the balance).
             e.HasIndex(x => x.InvoiceId).IsUnique().HasFilter("\"State\" = 'Pending'");
             e.ToTable(t => t.HasCheckConstraint("CK_Payments_Amount", "\"AmountMinor\" > 0"));
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<ProviderEvent>(e =>
+        {
+            // Per tenant: another clinic signing an event with the same id (with its own secret) can never mark this clinic's event as handled.
+            e.HasKey(x => new { x.TenantId, x.Provider, x.EventId });
+            e.Property(x => x.Provider).HasMaxLength(16);
+            e.Property(x => x.EventId).HasMaxLength(ProviderEvent.MaxEventId);
+            e.Property(x => x.Type).HasMaxLength(ProviderEvent.MaxType);
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
     }

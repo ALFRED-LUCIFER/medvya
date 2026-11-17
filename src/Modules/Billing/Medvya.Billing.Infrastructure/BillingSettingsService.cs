@@ -7,12 +7,13 @@ using Medvya.BuildingBlocks.Domain;
 using Medvya.Tenancy.Application;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Medvya.Billing.Infrastructure;
 
 /// <summary>Billing settings (MDV-P4-002): the defaults until the first save, then the tenant's one row. Prefixes follow the country's numbering rules.</summary>
-public sealed class BillingSettingsService(BillingDbContext db, ICurrentTenant tenant, ICurrentUser user, ICurrentFacility facility, IStaffAccess staff, IAuditLog audit, TimeProvider clock)
-    : IBillingSettings
+public sealed class BillingSettingsService(BillingDbContext db, ICurrentTenant tenant, ICurrentUser user, ICurrentFacility facility, IStaffAccess staff, IAuditLog audit, TimeProvider clock,
+    IServiceProvider services) : IBillingSettings
 {
     public async Task<BillingSettingsView> GetAsync(CancellationToken cancellationToken = default) =>
         await db.Settings.AsNoTracking().Select(s => new { s, Version = EF.Property<uint>(s, "xmin") }).SingleOrDefaultAsync(cancellationToken) is { } row
@@ -39,9 +40,13 @@ public sealed class BillingSettingsService(BillingDbContext db, ICurrentTenant t
         else if (reasons.Any(r => r.Length > BillingSettings.MaxReason)) errors.Add(("discountReasons", "too_long"));
         if (command.MaxDiscountPercent is not (>= 0 and <= 100)) errors.Add(("maxDiscountPercent", "range"));
         if (command.PaymentLinkExpiryMinutes is not (>= BillingSettings.MinLinkExpiry and <= BillingSettings.MaxLinkExpiry)) errors.Add(("paymentLinkExpiryMinutes", "range"));
+        var tenantId = tenant.TenantId ?? throw new InvalidOperationException("No tenant context.");
+        // Resolved only here: the secret store needs the payments vault (or Development), which the other settings never do.
+        // SAFETY: mutation check: removed this check -> BillingInvoiceTests.RazorpayLinksNeedAConnectedAccount failed (saved without an account)
+        if (methods.Contains(PaymentMethod.RazorpayLink) && await services.GetRequiredService<IRazorpayCredentialStore>().GetAsync(tenantId, cancellationToken) is null)
+            errors.Add(("paymentMethods", "razorpay_not_connected"));
         BillingValidationException.ThrowIfAny(errors);
 
-        var tenantId = tenant.TenantId ?? throw new InvalidOperationException("No tenant context.");
         var settings = await db.Settings.SingleOrDefaultAsync(cancellationToken);
         if (settings is null)
         {

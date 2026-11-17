@@ -162,7 +162,7 @@ export default function App({ locale, onLocaleChange }: Props) {
             role={active.role} facilityName={active.facilityName} items={shell.items} tabs={shell.tabs} searchPath={searchPath}
             globalSearch={searchPath && clinical
               ? <GlobalSearchRoute startVisitPath={walkInPath} bookPath={pathOf('schedule')} registerPath={registerPath} /> : undefined}
-            notifications={allows(active, patientDirectory) || allows(active, { capability: 'StaffRolesIntegrations', access: ['Config'] } as const) ? <NotificationsRoute facilityId={active.facilityId} online={online} /> : undefined}>
+            notifications={allows(active, patientDirectory) || allows(active, { capability: 'StaffRolesIntegrations', access: ['Config'] } as const) ? <NotificationsRoute facilityId={active.facilityId} timeZone={active.timeZone} online={online} /> : undefined}>
             <OrganisationNotice state={active.organisationState} requestPath={active.capabilities.StaffRolesIntegrations === 'Config' ? organisationPath : undefined} />
             {termsPending && <TermsNotice />}
             <Suspense fallback={<ShellMessage busy title={t('shell.loading')} />}><Outlet /></Suspense>

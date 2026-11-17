@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { QueryClientProvider } from '@tanstack/react-query';
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useNotificationsController } from '../features/notifications/hooks/useNotificationsController';
@@ -44,5 +44,26 @@ describe('what the shell reads', () => {
 
   it('reads the terms notice once', async () => {
     expect(await requestsOfTwoMounts(() => useTermsNotice(true), pending => pending)).toEqual(['/v1/settings/terms']);
+  });
+});
+
+// #1414: the terms were read for one practice; after changing to another practice whose owner had accepted them, the shell still said
+// "Booking and messages are paused" until a Settings tab read them again. What was read for one facility must not outlive the change.
+describe('changing facility', () => {
+  it('reads the terms again for the new facility instead of keeping the last one\'s answer', async () => {
+    let accepted = false;
+    vi.stubGlobal('fetch', vi.fn((url: string) => Promise.resolve(url === '/v1/me/facility' ? new Response(null, { status: 204 })
+      : new Response(JSON.stringify(url === '/v1/settings/terms' ? { required: true, accepted } : answers[url]), { status: 200 }))));
+    const client = createQueryClient();
+    const wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+    const { result, unmount } = renderHook(() => ({ shell: useSessionController(), termsPending: useTermsNotice(true) }), { wrapper });
+    await waitFor(() => expect(result.current.termsPending).toBe(true));
+    accepted = true; // the other practice's owner has accepted them
+    const done = vi.fn();
+    act(() => result.current.shell.chooseFacility('m-2', done));
+    await waitFor(() => expect(done).toHaveBeenCalled());
+    await waitFor(() => expect(result.current.termsPending).toBe(false));
+    unmount();
+    client.clear();
   });
 });

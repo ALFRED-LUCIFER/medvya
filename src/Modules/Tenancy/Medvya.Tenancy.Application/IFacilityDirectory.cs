@@ -45,6 +45,9 @@ public interface IFacilityDirectory
     /// <summary>The images a printed prescription (and a signed note's PDF) carries: the practice logo and this doctor's signature at this facility.</summary>
     Task<PrintImages> PrintImagesAsync(Guid userId, Guid facilityId, CancellationToken cancellationToken = default);
 
+    /// <summary>The id of the user's doctor membership at this facility (whose own prices a bill takes, MDV-P4-004); null when the user is not a doctor here.</summary>
+    Task<Guid?> DoctorMembershipAsync(Guid userId, Guid facilityId, CancellationToken cancellationToken = default);
+
     /// <summary>The doctor's room at this facility (MDV-P1-111); null when none is set or the id is not a doctor's (a resource).</summary>
     Task<string?> DoctorRoomAsync(Guid userId, Guid facilityId, CancellationToken cancellationToken = default);
 

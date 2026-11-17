@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test';
-import { mockBilling } from '../support/billing';
+import { mockBilling, mockInvoices } from '../support/billing';
 import { completeWizard, mockOnboarding } from '../support/onboarding';
 import { journey } from './storyboard';
 
@@ -63,5 +63,31 @@ journey('J1', {
     await page.getByRole('button', { name: 'Continue' }).click(); // consents: treatment only is required, ticked by the desk (#1365 F-040)
     await page.getByRole('button', { name: 'Register patient' }).click();
     await expect(page.getByRole('heading', { name: 'Meera Iyer is registered' })).toBeVisible();
+  },
+  // P-06 (MDV-P4-004): the board's Billing card opens the visit's bill (front-desk.spec checks the card's link) with the consultation suggested; the desk
+  // confirms it, issues the bill and sends a Razorpay link; it is Paid only once the provider confirms. Mocked: the whole API, and Razorpay as the
+  // "Check status" answer (support/billing.ts mockInvoices).
+  8: async ({ page }) => {
+    const api = await mockInvoices(page);
+    await page.goto('/billing/visit/a5');
+    await expect(page).toHaveURL(/\/billing\/inv-1$/);
+    const line = page.getByRole('row', { name: /Consultation \(follow-up\)/ });
+    await expect(line).toContainText('Suggested from the visit');
+    await expect(page.getByRole('button', { name: 'Issue bill' })).toBeDisabled();
+    await line.getByRole('button', { name: 'Confirm' }).click();
+    await page.getByRole('button', { name: 'Issue bill' }).click();
+    await expect(page.getByRole('heading', { name: 'Bill INV/26-27/00001' })).toBeVisible();
+    await expect(page.getByText('Round off')).toBeVisible(); // always shown, even ₹0.00
+
+    await page.getByRole('button', { name: 'Razorpay link for the balance' }).click();
+    const pending = page.getByRole('status').filter({ hasText: 'Awaiting provider confirmation' });
+    await expect(pending).toContainText('https://rzp.io/i/synthetic');
+    await pending.getByRole('button', { name: 'Check status' }).click();
+    await expect(page.getByText('Issued · awaiting payment')).toBeVisible(); // the provider has not confirmed: not paid
+    api.provider.paid = true;
+    await pending.getByRole('button', { name: 'Check status' }).click();
+    await expect(page.getByText('Paid', { exact: true }).first()).toBeVisible();
+    await expect(page.getByText('Awaiting provider confirmation')).toHaveCount(0);
+    expect(api.posts.map(p => p.path)).toEqual(['line', 'issue', 'payment-link', 'check', 'check']);
   },
 });

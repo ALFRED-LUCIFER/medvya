@@ -100,6 +100,11 @@ Out: `DRAFT → SENT → APPOINTMENT_BOOKED → REPORT_RECEIVED → CLOSED` (a s
 
 `DRAFT → ISSUED → PENDING (provider) → PAID`. `ISSUED/PENDING → FAILED → (retry) PENDING`. `PAID → REFUNDED` (credit note). `ISSUED → PARTIAL` (balance → DUE). `INSURER` (claim pending, co-pay collected).
 
+As built (MDV-P4-004, with the split-payment core of MDV-P4-009; all moves in `InvoiceFlow`, src/Modules/Billing/Medvya.Billing.Domain/Invoice.cs):
+
+- **Invoice:** `DRAFT → ISSUED → PARTLY_PAID → PAID`, and `ISSUED → PAID` when one payment covers it (a ₹0 bill is Paid when issued). `DRAFT → CANCELLED` and `ISSUED → CANCELLED` while nothing is paid and no link is pending, with a required reason; a cancelled bill keeps its row and, once issued, its number (never deleted, no DELETE right). Only a draft changes (lines, quantity, discount); issuing needs at least one line, every suggested line confirmed, and takes the legal number (DOC_SEQUENCE, the settings' invoice prefix) in the same transaction. Issued bills are immutable; corrections are credit notes (MDV-P4-006). PAID → REFUNDED and INSURER are not built yet (MDV-P4-006, P5).
+- **Payment** (one bill, many payments): Cash, Card (terminal reference, never a card number) and UPI direct (UTR) are recorded `SUCCEEDED`. A Razorpay link is `PENDING → SUCCEEDED` only when the provider, fetched by "Check status" or (MDV-P4-007) after a webhook, shows the link paid with exactly the payment's amount; `PENDING → EXPIRED` when the link expired or was cancelled; `PENDING → FAILED` when the link could not be created. The bill's paid amount is the sum of succeeded payments; a payment beyond the balance less any pending link is refused ("Over-collected"); one pending link per bill. "Pending" on the screen reads "Awaiting provider confirmation".
+
 ## Integration delivery (P7)
 
 `QUEUED → SENT → DELIVERED (receipt)`. `SENT → FAILED → RETRYING → (paused after N) → manual retry`. `SENT → CONFLICT → SENT_TO_CLINICIAN → RESOLVED (keep HIS + addendum | resend)`.

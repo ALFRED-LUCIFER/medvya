@@ -118,7 +118,7 @@ test('shows today\'s visits by status with nonclinical tags, in facility time', 
   await expect(cardOf(page, 'Vikram Desai (synthetic)').getByRole('button')).toHaveText('Consult done');
   const billing = cardOf(page, 'Rahul Menon (synthetic)');
   await expect(billing.getByRole('button', { name: 'Close visit' })).toBeEnabled();
-  await expect(billing.getByRole('button', { name: 'Payment received' })).toBeDisabled(); // placeholder until P4
+  await expect(billing.getByRole('link', { name: /Take payment/ })).toHaveCount(0); // without billing and Invoices and payments there is no payment action (MDV-P4-004)
 });
 
 test('with the nurse and billing steps off the board fits a 1280 px laptop without sideways scrolling', async ({ page }) => {
@@ -250,12 +250,11 @@ test('a card with an open consultation reads With the doctor and has no desk act
   await expect(cardOf(page, 'Vikram Desai (synthetic)').getByRole('button', { name: 'Consult done' })).toBeEnabled(); // no consultation screen in use: the desk still closes it
 });
 
-test('with billing switched on (flag billing.invoices), Billing cards lead to payment instead of the placeholder', async ({ page }) => {
+test('with billing switched on (flag billing.invoices), a Billing card opens its visit\'s bill', async ({ page }) => {
   const billingOn = { ...reception, active: { ...reception.active, flags: ['billing.invoices'], capabilities: { ...reception.active.capabilities, InvoicesPayments: 'Full' } } };
   await open(page, { as: billingOn });
   const billing = cardOf(page, 'Rahul Menon (synthetic)');
-  await expect(billing.getByRole('link', { name: 'Take payment' })).toHaveAttribute('href', '/billing');
-  await expect(billing.getByRole('button', { name: 'Payment received' })).toHaveCount(0);
+  await expect(billing.getByRole('link', { name: 'Take payment for Rahul Menon (synthetic)' })).toHaveAttribute('href', '/billing/visit/a5');
   await expect(billing.getByRole('button', { name: 'Close visit' })).toBeEnabled();
 });
 

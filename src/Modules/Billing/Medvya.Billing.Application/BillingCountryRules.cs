@@ -33,6 +33,9 @@ public abstract class BillingCountryRules
     /// <summary>The highest number the series can print; issuing past it is refused ("series_exhausted"). Default: no format limit, only the bigint column.</summary>
     public virtual long MaxNumber(string prefix, string financialYear) => long.MaxValue - 1;
 
+    /// <summary>The invoice-level round-off added to an exact payable amount (MDV-P4-004); 0 where the country does not round a bill (UAE).</summary>
+    public virtual long RoundOff(long exactMinor) => 0;
+
     /// <summary>
     /// Amount in words for printed documents, e.g. "Rupees two thousand only": "and" joins only the paise or fils, "only" ends
     /// the phrase, zero paise are left out. The sign is not spelled (credit notes say "credit").

@@ -53,7 +53,7 @@ PLANNED_TO_BUILT = {
     'PATIENT': 'patients.Patients', 'PATIENT_IDENTIFIER': 'patients.Identifiers', 'PATIENT_RELATIONSHIP': 'patients.Relationships',
     'PAYER_COVERAGE': 'patients.PayerCoverages', 'CONSENT_RECEIPT': 'patients.ConsentReceipts', 'SCHEDULE_SLOT': 'scheduling.ScheduleSlots',
     'APPOINTMENT': 'scheduling.Appointments', 'WAITLIST_ENTRY': 'scheduling.Waitlist', 'QUEUE_TOKEN': 'scheduling.QueueTokens', 'DOC_SEQUENCE': 'billing.DocSequences',
-    'SERVICE_CATALOGUE': 'billing.Services', 'PRICE_VERSION': 'billing.PriceVersions',
+    'SERVICE_CATALOGUE': 'billing.Services', 'PRICE_VERSION': 'billing.PriceVersions', 'INVOICE': 'billing.Invoices', 'INVOICE_LINE': 'billing.InvoiceLines', 'PAYMENT': 'billing.Payments',
     'AUDIT_EVENT': 'audit.AuditEvents', 'OUTBOX_EVENT': 'scheduling.OutboxEvents', 'NOTIFICATION': 'notifications.Notifications',
     'NOTIFICATION_ATTEMPT': 'notifications.Attempts', 'ENCOUNTER': 'encounters.Encounters',
     'OBSERVATION': 'encounters.Observations', 'PROBLEM': 'encounters.Problems', 'ALLERGY': 'encounters.Allergies', 'MEDICATION_STATEMENT': 'encounters.MedicationStatements',

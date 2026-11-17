@@ -3,8 +3,11 @@ using Medvya.Scheduling.Domain;
 
 namespace Medvya.Scheduling.Application;
 
-/// <summary>What the Encounters module needs of a visit: who, where, its state and room (ids and codes only).</summary>
-public sealed record ConsultVisit(Guid Id, Guid FacilityId, Guid PatientId, AppointmentState State, string? Room, DateTimeOffset Start);
+/// <summary>
+/// What other modules need of a visit: who, where, its state and room, and whose calendar and which visit type (Billing's suggested consultation line,
+/// MDV-P4-004). Ids and codes only.
+/// </summary>
+public sealed record ConsultVisit(Guid Id, Guid FacilityId, Guid PatientId, AppointmentState State, string? Room, DateTimeOffset Start, Guid CalendarId, CalendarKind CalendarKind, VisitType VisitType);
 
 /// <summary>
 /// The visit side of a consultation (MDV-P2-001). The Encounters module never reads scheduling tables; it asks here. Start and finish run

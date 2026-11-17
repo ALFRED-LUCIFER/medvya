@@ -15,7 +15,7 @@ public sealed class RazorpayCredentials(string keyId, string keySecret, string w
     public string KeyId { get; } = keyId;
     public string KeySecret { get; } = keySecret;
     public string WebhookSecret { get; } = webhookSecret;
-    /// <summary>Opaque random value in the clinic's webhook URL (/api/webhooks/razorpay/{key}); picks the tenant, proves nothing.</summary>
+    /// <summary>Opaque random value in the clinic's webhook URL (/v1/webhooks/razorpay/{key}); picks the tenant, proves nothing.</summary>
     public string WebhookKey { get; } = webhookKey;
     /// <summary>Razorpay key ids say their mode (rzp_test_…, rzp_live_…), so the mode is read from the key, never stored apart from it.</summary>
     public RazorpayMode Mode => KeyId.StartsWith("rzp_live_", StringComparison.Ordinal) ? RazorpayMode.Live : RazorpayMode.Test;
@@ -38,12 +38,45 @@ public interface IRazorpayCredentialStore
     Task<RazorpayCredentials> SaveAsync(Guid tenantId, string keyId, string keySecret, string webhookSecret, CancellationToken ct);
 }
 
+/// <summary>What Settings, Billing shows of the clinic's Razorpay account: never a secret. WebhookPath is the clinic's own webhook path on this host.</summary>
+public sealed record RazorpayStatus(bool Connected, RazorpayMode? Mode, string? KeyIdEnding, string? WebhookPath);
+
+/// <summary>The keys the clinic admin pastes. A class, not a record, so no generated ToString ever prints a secret.</summary>
+public sealed class ConnectRazorpay
+{
+    public string? KeyId { get; init; }
+    public string? KeySecret { get; init; }
+    public string? WebhookSecret { get; init; }
+    public override string ToString() => nameof(ConnectRazorpay);
+}
+
+/// <summary>
+/// The current clinic's Razorpay account (MDV-P4-007 part 2): connecting it (Settings, Billing) and acting on its verified webhooks. Runs in the
+/// current tenant; the webhook endpoint enters the tenant its webhook key names before calling here.
+/// </summary>
+public interface IRazorpayAccount
+{
+    Task<RazorpayStatus> GetAsync(CancellationToken cancellationToken = default);
+    /// <summary>Validates and saves the keys (key id rzp_test_… or rzp_live_…, non-empty secrets), audited without their values.</summary>
+    Task<RazorpayStatus> ConnectAsync(ConnectRazorpay command, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Acts on a webhook whose signature was verified: a replayed event id does nothing; a payment link event re-fetches the link and settles it
+    /// (<see cref="IInvoices.ConfirmPaymentLinkAsync"/>). The event is recorded as handled only after that succeeded. False for a replay.
+    /// </summary>
+    Task<bool> HandleWebhookAsync(RazorpayWebhookEvent webhookEvent, CancellationToken cancellationToken = default);
+    /// <summary>Audits a webhook for this clinic's URL whose signature did not match (nothing of the request is kept).</summary>
+    Task RecordForgedWebhookAsync(CancellationToken cancellationToken = default);
+}
+
 /// <summary>A verified Razorpay webhook: the event id (header x-razorpay-event-id) for de-duplication and the link to fetch again.</summary>
 public sealed record RazorpayWebhookEvent(string EventId, string Type, string? PaymentLinkId);
 
 /// <summary>Razorpay webhook checks (ADR-023). Verify the signature over the raw bytes first; parse only a verified body.</summary>
 public static class RazorpayWebhook
 {
+    /// <summary>The clinic's webhook URL path on this host (ADR-023 §6); the clinic pastes origin + this into its Razorpay dashboard.</summary>
+    public static string PathFor(string webhookKey) => "/v1/webhooks/razorpay/" + webhookKey;
+
     /// <summary>X-Razorpay-Signature is the hex HMAC-SHA256 of the raw body under the webhook secret. Constant-time compare.</summary>
     public static bool IsSignatureValid(ReadOnlySpan<byte> rawBody, string? signatureHeader, string webhookSecret)
     {

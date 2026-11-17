@@ -36,7 +36,9 @@ export default function BillingSettingsPanel(p: Props) {
           {paymentMethods.map(m => (
             <ChoiceRow key={m} type="checkbox" value={m} {...p.form.register('paymentMethods')}>{t(`billing.method.${m}`)}</ChoiceRow>
           ))}
-          {errors.paymentMethods && <p id="billing-methods-error" className={fieldError}>{t('billing.settings.methods.required')}</p>}
+          {errors.paymentMethods && <p id="billing-methods-error" className={fieldError}>
+            {t(errors.paymentMethods.message === 'razorpay_not_connected' ? 'billing.error.razorpay_not_connected' : 'billing.settings.methods.required')}
+          </p>}
         </fieldset>
         <Field id="billing-reasons" label={t('billing.settings.reasons')} hint={t('billing.settings.reasons.hint')} error={problem(errors.discountReasons)}>
           <Textarea rows={4} {...p.form.register('discountReasons')} />

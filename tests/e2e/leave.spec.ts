@@ -66,7 +66,7 @@ test('leave over booked visits lists them and saves only after each has an actio
   await save.click();
 
   await expect(page.getByRole('status')).toContainText('Saved.');
-  await expect(page.getByRole('status')).toContainText('1 patients will be sent a rebooking message');
+  await expect(page.getByRole('status')).toContainText('1 patient will be sent a rebooking message. 1 visit is for the desk to reschedule.'); // #1414: not "1 visits"
   await expect(page.getByText('Conference').last()).toBeVisible();
   expect(bodies[0]!.actions).toEqual([{ appointmentId: 'a1', action: 'Offer' }, { appointmentId: 'a2', action: 'Manual' }]);
 });

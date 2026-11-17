@@ -104,6 +104,21 @@ public sealed class QueueService(SchedulingDbContext db, SchedulingContext conte
         await tx.CommitAsync(cancellationToken);
     }
 
+    public async Task<CreatedDisplay> NewDisplayLinkAsync(Guid displayId, CancellationToken cancellationToken = default)
+    {
+        var display = await db.QueueDisplays.AsNoTracking().SingleOrDefaultAsync(d => d.Id == displayId && d.RevokedAt == null, cancellationToken)
+            ?? throw new DisplayNotFoundException();
+        await context.RequireAsync(display.FacilityId, SchedulingAccess.CanConfigure, cancellationToken);
+        var (token, hash) = InvitationToken.New(context.TenantId);
+        await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
+        // One hash per display (the link's, or the paired screen's after #884): replacing it ends both the old link and the old screen.
+        if (await db.QueueDisplays.Where(d => d.Id == displayId && d.RevokedAt == null)
+                .ExecuteUpdateAsync(u => u.SetProperty(d => d.TokenHash, hash), cancellationToken) != 1) throw new DisplayNotFoundException();
+        await context.AuditAsync(SchedulingAudit.DisplayNewLink, SchedulingAudit.DisplayResource, SchedulingAudit.Operations, displayId, null, cancellationToken);
+        await tx.CommitAsync(cancellationToken);
+        return new(new(display.Id, display.FacilityId, display.Name, display.CreatedAt, null), token);
+    }
+
     public Task<DisplaySession?> FindDisplayAsync(byte[] tokenHash, CancellationToken cancellationToken = default) =>
         db.QueueDisplays.AsNoTracking().Where(d => d.TokenHash == tokenHash && d.RevokedAt == null)
             .Select(d => new DisplaySession(d.Id, d.FacilityId)).SingleOrDefaultAsync(cancellationToken);

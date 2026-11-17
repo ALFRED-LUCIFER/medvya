@@ -12,7 +12,7 @@ async function axe(page: Page, scope = 'html') {
 }
 
 const names = {
-  en: { account: 'Signed in as Meera Iyer', items: ['Language', 'My devices', 'Change facility', 'Sign out'] },
+  en: { account: 'Signed in as Meera Iyer', items: ['English', 'हिन्दी', 'العربية', 'My devices', 'Change facility', 'Sign out'] },
   ar: { account: /Meera Iyer/, items: null },
 };
 
@@ -60,24 +60,24 @@ for (const locale of ['en', 'ar'] as const) {
     expect(await bell.getAttribute('aria-label')).toBeTruthy();
     await bell.blur();
 
-    // AC1, AC2: Enter opens the menu; arrows move through language, my devices, change facility, sign out; Escape returns focus.
+    // AC1, AC2: Enter opens the menu; arrows move through the languages (in the menu itself, #1414), my devices, change facility, sign out; Escape returns focus.
     const avatar = page.getByRole('button', { name: names[locale].account });
     await avatar.focus();
     await page.keyboard.press('Enter');
     const menu = page.getByRole('menu');
     await expect(menu).toBeVisible();
-    const menuItems = menu.getByRole('menuitem');
-    await expect(menuItems).toHaveCount(4);
+    const menuItems = menu.locator('[role=menuitem], [role=menuitemradio]');
+    await expect(menuItems).toHaveCount(6);
     if (names[locale].items) await expect(menuItems).toHaveText(names[locale].items!);
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 6; i++) {
       if (i > 0) await page.keyboard.press('ArrowDown');
       else await expect(menuItems.nth(0)).toBeFocused();
       await expect(menuItems.nth(i)).toBeFocused();
       expect((await menuItems.nth(i).boundingBox())!.height).toBeGreaterThanOrEqual((await targetPx(page)) - 0.5);
     }
-    const signOut = (await menuItems.nth(3).boundingBox())!, separator = (await menu.getByRole('separator').last().boundingBox())!;
+    const signOut = (await menuItems.nth(5).boundingBox())!, separator = (await menu.getByRole('separator').last().boundingBox())!;
     expect(separator.y).toBeLessThan(signOut.y);
-    expect(separator.y).toBeGreaterThan((await menuItems.nth(2).boundingBox())!.y);
+    expect(separator.y).toBeGreaterThan((await menuItems.nth(4).boundingBox())!.y);
     expect(await axe(page, '[role=menu]')).toEqual([]);
     await page.keyboard.press('Escape');
     await expect(menu).toBeHidden();

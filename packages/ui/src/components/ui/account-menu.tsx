@@ -1,8 +1,8 @@
-import { Building2, Languages, LogOut, MonitorSmartphone } from "lucide-react"
+import { Building2, LogOut, MonitorSmartphone } from "lucide-react"
 import { locales, useI18n, type Locale } from "@medvya/i18n"
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem,
-  DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger,
+  DropdownMenuSeparator, DropdownMenuTrigger,
 } from "#components/ui/dropdown-menu"
 
 type AccountMenuProps = {
@@ -37,14 +37,13 @@ function AccountMenu({ name, roleLabel, onLocaleChange, onMyDevices, onChangeFac
           <span className="text-caption text-muted-foreground">{roleLabel}</span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuSub>
-          <DropdownMenuSubTrigger><Languages aria-hidden />{t("app.language")}</DropdownMenuSubTrigger>
-          <DropdownMenuSubContent>
-            <DropdownMenuRadioGroup value={locale} onValueChange={v => onLocaleChange(v as Locale)}>
-              {locales.map(l => <DropdownMenuRadioItem key={l.code} value={l.code} lang={l.code}>{l.label}</DropdownMenuRadioItem>)}
-            </DropdownMenuRadioGroup>
-          </DropdownMenuSubContent>
-        </DropdownMenuSub>
+        {/* The languages sit in the menu itself, not a hover submenu: a quick pointer move towards the submenu closed it, and the click then
+            dismissed the whole menu with nothing chosen (#1414). */}
+        <DropdownMenuLabel className="text-caption text-muted-foreground">{t("app.language")}</DropdownMenuLabel>
+        <DropdownMenuRadioGroup aria-label={t("app.language")} value={locale} onValueChange={v => onLocaleChange(v as Locale)}>
+          {locales.map(l => <DropdownMenuRadioItem key={l.code} value={l.code} lang={l.code}>{l.label}</DropdownMenuRadioItem>)}
+        </DropdownMenuRadioGroup>
+        <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={onMyDevices}><MonitorSmartphone aria-hidden />{t("myDevices.link")}</DropdownMenuItem>
         {onChangeFacility && <DropdownMenuItem onSelect={onChangeFacility}><Building2 aria-hidden />{t("session.switchFacility")}</DropdownMenuItem>}
         <DropdownMenuSeparator />

@@ -69,6 +69,8 @@ export function playChime() {
 export const fetchDisplays = (facilityId: string) => send<Display[]>(`/v1/queue/displays?${new URLSearchParams({ facilityId })}`);
 export const createDisplay = (facilityId: string, name: string) => post<CreatedDisplay>('/v1/queue/displays', { facilityId, name });
 export const revokeDisplay = (id: string) => send<void>(`/v1/queue/displays/${id}`, { method: 'DELETE' });
+/** Replaces the display's link (#1413): the old link and the screen paired with it stop working; the new one comes back once. */
+export const newDisplayLink = (id: string) => post<CreatedDisplay>(`/v1/queue/displays/${id}/link`, {});
 
 /** The link to open once on the TV; the token rides in the fragment. */
 export const displayLink = (token: string) => `${window.location.origin}${import.meta.env.BASE_URL}queue/tv#${token}`;

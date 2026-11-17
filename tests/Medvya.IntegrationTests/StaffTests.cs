@@ -200,7 +200,7 @@ public sealed class StaffTests(PostgresFixture sql) : IClassFixture<PostgresFixt
         Assert.Contains("AuditLog", changes[1].After);
         Assert.All(changes, c => Assert.Equal((h.Admin, "staff.role"), (c.ActorUserId, c.Section)));
         await using var audit = sql.Audit(h.Tenant);
-        Assert.Equal(["staff.role.create", "staff.role.update"], (await audit.Events.OrderBy(e => e.OccurredAt).ToListAsync()).Select(e => e.Action));
+        Assert.Equal(["staff.role.create", "staff.role.update"], (await audit.Events.OrderBy(e => e.OccurredAt).ThenBy(e => e.Id).ToListAsync()).Select(e => e.Action));
         Assert.Equal(["InvoicesPayments,AuditLog"], (await db.CustomRoles.ToListAsync()).Select(r => r.Capabilities));
     }
 

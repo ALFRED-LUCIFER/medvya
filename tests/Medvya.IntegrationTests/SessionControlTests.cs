@@ -87,7 +87,7 @@ public sealed class SessionControlTests(PostgresFixture sql) : IClassFixture<Pos
     async Task<List<string>> AuditActions(Guid tenant, Guid actor)
     {
         await using var db = sql.Audit(tenant);
-        return await db.Events.Where(e => e.ActorUserId == actor).OrderBy(e => e.OccurredAt).Select(e => e.Action).ToListAsync();
+        return await db.Events.Where(e => e.ActorUserId == actor).OrderBy(e => e.OccurredAt).ThenBy(e => e.Id).Select(e => e.Action).ToListAsync();
     }
 
     async Task<StaffSession> SessionOf(Guid userId)

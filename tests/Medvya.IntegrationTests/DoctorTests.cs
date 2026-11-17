@@ -309,7 +309,7 @@ public sealed class DoctorTests(PostgresFixture sql) : IClassFixture<PostgresFix
         Assert.Empty(h.Logos.Stored);
         await using var audit = sql.Audit(h.Tenant);
         Assert.Equal([("settings.doctor.signature.update", (Guid?)doctor), ("settings.doctor.signature.delete", h.ByRole[Role.PracticeAdmin])],
-            (await audit.Events.Where(e => e.Action.StartsWith("settings.doctor.signature")).OrderBy(e => e.OccurredAt).ToListAsync()).Select(e => (e.Action, e.ActorUserId)));
+            (await audit.Events.Where(e => e.Action.StartsWith("settings.doctor.signature")).OrderBy(e => e.OccurredAt).ThenBy(e => e.Id).ToListAsync()).Select(e => (e.Action, e.ActorUserId)));
     }
 
     [Fact]
@@ -363,7 +363,7 @@ public sealed class DoctorTests(PostgresFixture sql) : IClassFixture<PostgresFix
         Assert.Empty(h.Logos.Stored);
         await using var audit = sql.Audit(h.Tenant);
         Assert.Equal([("settings.doctor.signature.update", (Guid?)doctor), ("settings.doctor.signature.delete", doctor)],
-            (await audit.Events.Where(e => e.Action.StartsWith("settings.doctor.signature")).OrderBy(e => e.OccurredAt).ToListAsync()).Select(e => (e.Action, e.ActorUserId)));
+            (await audit.Events.Where(e => e.Action.StartsWith("settings.doctor.signature")).OrderBy(e => e.OccurredAt).ThenBy(e => e.Id).ToListAsync()).Select(e => (e.Action, e.ActorUserId)));
     }
 
     // ---- Schedule ----

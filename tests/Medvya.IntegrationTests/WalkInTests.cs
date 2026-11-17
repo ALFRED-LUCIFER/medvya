@@ -30,7 +30,7 @@ public sealed class WalkInTests(PostgresFixture sql) : IClassFixture<PostgresFix
     async Task<List<string>> Audit(Guid appointmentId)
     {
         await using var db = sql.Audit(h.Tenant);
-        return await db.Events.Where(e => e.ResourceId == appointmentId).OrderBy(e => e.OccurredAt).Select(e => e.Action + ":" + e.Outcome).ToListAsync();
+        return await db.Events.Where(e => e.ResourceId == appointmentId).OrderBy(e => e.OccurredAt).ThenBy(e => e.Id).Select(e => e.Action + ":" + e.Outcome).ToListAsync();
     }
 
     [Fact]

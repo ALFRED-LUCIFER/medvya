@@ -200,7 +200,7 @@ public sealed partial class InvitationTests(PostgresFixture sql) : IClassFixture
         }
         await using (var audit = sql.Audit(tenantA))
         {
-            var events = await audit.Events.Where(e => e.ResourceId == id).OrderBy(e => e.OccurredAt).Select(e => new { e.Action, e.ActorUserId }).ToListAsync();
+            var events = await audit.Events.Where(e => e.ResourceId == id).OrderBy(e => e.OccurredAt).ThenBy(e => e.Id).Select(e => new { e.Action, e.ActorUserId }).ToListAsync();
             Assert.Equal([("invitation.create", (Guid?)admin), ("invitation.accept", userId)], events.Select(e => (e.Action, e.ActorUserId)));
         }
 

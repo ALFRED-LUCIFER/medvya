@@ -93,7 +93,7 @@ public class FeatureFlagTests(PostgresFixture sql) : IClassFixture<PostgresFixtu
         Assert.Equal(("clinical-team", actor, actor), (flag.Owner, flag.CreatedBy, flag.ChangedBy));
 
         await using var audit = sql.Audit(tenantA);
-        var events = await audit.Events.Where(e => e.ResourceId == flag.Id).OrderBy(e => e.OccurredAt).Select(e => new { e.Action, e.ActorUserId }).ToListAsync();
+        var events = await audit.Events.Where(e => e.ResourceId == flag.Id).OrderBy(e => e.OccurredAt).ThenBy(e => e.Id).Select(e => new { e.Action, e.ActorUserId }).ToListAsync();
         Assert.Equal(["flag.enable", "flag.disable"], events.Select(e => e.Action));
         Assert.All(events, e => Assert.Equal(actor, e.ActorUserId));
     }

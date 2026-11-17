@@ -62,7 +62,7 @@ public class PatientRegistryTests(PostgresFixture sql) : IClassFixture<PostgresF
         Assert.Equal(["2222", Abha], record.Identifiers.Select(i => i.LookupValue ?? i.DisplayValue).Order());
 
         await using var audit = sql.Audit(tenantA);
-        var actions = await audit.Events.Where(e => e.PatientId == first.PatientId).OrderBy(e => e.OccurredAt).Select(e => e.Action).ToListAsync();
+        var actions = await audit.Events.Where(e => e.PatientId == first.PatientId).OrderBy(e => e.OccurredAt).ThenBy(e => e.Id).Select(e => e.Action).ToListAsync();
         Assert.Equal(["patient.register"], actions); // the read is audited once, by its endpoint
     }
 

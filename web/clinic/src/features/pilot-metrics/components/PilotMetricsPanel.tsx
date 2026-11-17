@@ -23,9 +23,9 @@ type Props = {
 /** One number with what it means and the clinic's value before Medvya. */
 function Tile({ label, value, detail, baseline }: { label: string; value: string; detail: ReactNode; baseline: string }) {
   return (
-    <Detail label={label} valueClassName="text-display" note={baseline}>
+    // The value alone in its dd (a screen reader reads "No data yet", not the explanation run into it); what it means and the baseline follow.
+    <Detail label={label} valueClassName="text-display" note={<><span className="block text-foreground">{detail}</span><span className="block">{baseline}</span></>}>
       {value}
-      <span className="block text-body font-normal">{detail}</span>
     </Detail>
   );
 }

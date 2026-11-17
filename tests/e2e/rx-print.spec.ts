@@ -180,6 +180,9 @@ for (const locale of ['en', 'ar'])
     await authorise.click();
     await rx.getByRole('button', { name: locale === 'ar' ? 'تأكيد الهوية' : 'Confirm identity' }).click();
 
+    // The return is a full page load of the dev server: on a 2-vCPU CI runner it can take longer than the default 5 s to render again.
+    await page.waitForURL(/\/consult\/e-1/);
+    await expect(authorise).toBeVisible({ timeout: 20_000 });
     await expect(authorise).toBeFocused();
     await expect(authorise).toBeInViewport();
     const said = locale === 'ar' ? 'تم تأكيد الهوية. اضغط «اعتماد الوصفة».' : 'Identity confirmed. Press Authorise prescription.';

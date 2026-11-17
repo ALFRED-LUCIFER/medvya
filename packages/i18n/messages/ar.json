@@ -5819,5 +5819,8 @@
   "audit.actionName.billing.payment.check": "التحقق من حالة الدفع",
   "audit.actionName.billing.payment.succeeded": "تأكيد المزوّد لدفعة الرابط",
   "audit.actionName.billing.payment.expired": "انتهاء رابط الدفع أو إلغاؤه",
-  "audit.actionName.billing.payment.failed": "فشل رابط الدفع"
+  "audit.actionName.billing.payment.failed": "فشل رابط الدفع",
+  "billing.error.taxable_lines": "لا يمكن خصم فاتورة فيها خدمة خاضعة للضريبة بعد (تحدّد المراجعة الضريبية الطريقة). أزل الخصم أو البند الخاضع للضريبة.",
+  "billing.error.creating": "ما زال رابط الدفع قيد الإنشاء. انتظر قليلًا ثم تحقّق من حالته.",
+  "billing.error.series_exhausted": "نفدت أرقام فواتير هذا العام لهذه البادئة. اطلب من مسؤول العيادة تعيين بادئة جديدة."
 }

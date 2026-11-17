@@ -70,6 +70,10 @@ public static class CatalogueEndpoints
         {
             return Results.ValidationProblem(e.Errors.GroupBy(x => x.Field).ToDictionary(g => g.Key, g => g.Select(x => x.Code).ToArray()));
         }
+        catch (DocumentNumberingException e)
+        {
+            return Results.ValidationProblem(new Dictionary<string, string[]> { ["number"] = [e.Code] }); // e.g. series_exhausted: nothing was issued
+        }
         catch (PaymentProviderException e)
         {
             // The kind of failure only, never the provider's text: "provider_not_connected" tells the desk to ask the admin to connect Razorpay.

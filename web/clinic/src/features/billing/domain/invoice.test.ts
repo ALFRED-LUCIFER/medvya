@@ -20,6 +20,7 @@ describe('invoice actions per state (screen-specs "Billing (P4)")', () => {
     expect(actionsFor({ state: 'PartlyPaid', paidMinor: 100, payments: [], lines: [line()] })).toEqual({ edit: false, issue: false, pay: true, cancel: false });
     expect(actionsFor({ state: 'Issued', paidMinor: 0, payments: [pay('Pending')], lines: [line()] })).toMatchObject({ pay: false, cancel: false });
     expect(actionsFor({ state: 'Paid', paidMinor: 100, payments: [], lines: [line()] })).toEqual({ edit: false, issue: false, pay: false, cancel: false });
+    expect(actionsFor({ state: 'Paid', paidMinor: 0, payments: [], lines: [line()] }).cancel).toBe(true); // a fully discounted bill
   });
 });
 
@@ -70,6 +71,8 @@ describe('server refusals', () => {
   it('map to message keys, never the raw code', () => {
     expect(invoiceProblem('amountMinor:over_collected')).toBe('over_collected');
     expect(invoiceProblem('state:invalid')).toBe('state');
+    expect(invoiceProblem('discountMinor:taxable_lines')).toBe('taxable_lines');
+    expect(invoiceProblem('number:series_exhausted')).toBe('series_exhausted');
     expect(invoiceProblem('changed')).toBe('stale');
     expect(invoiceProblem('provider_not_connected')).toBe('provider_not_connected');
     expect(invoiceProblem('provider_something_new')).toBe('failed');

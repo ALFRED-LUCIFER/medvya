@@ -29,6 +29,8 @@ public sealed partial class Invoices(
     public const string Resource = "invoice";
     /// <summary>Razorpay wants a link to expire at least 15 minutes after it receives it; this covers the time the request takes.</summary>
     static readonly TimeSpan LinkExpiryMargin = TimeSpan.FromMinutes(2);
+    /// <summary>How long a pending payment may wait for its link (the provider call takes at most 10 s) before "Check status" may fail it.</summary>
+    static readonly TimeSpan LinkCreationGrace = TimeSpan.FromMinutes(2);
     /// <summary>Razorpay's smallest link amount is 100 paise.</summary>
     const long MinLinkMinor = 100;
     static readonly AppointmentState[] Attended =
@@ -219,7 +221,7 @@ public sealed partial class Invoices(
     public Task<InvoiceView?> SetDiscountAsync(Guid id, SetDiscount command, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
-        return EditDraftAsync(id, command.Version, "billing.invoice.discount", async (invoice, lines) =>
+        return EditDraftAsync(id, command.Version, "billing.invoice.discount", (invoice, lines) =>
         {
             var amount = command.AmountMinor ?? -1;
             var reason = string.IsNullOrWhiteSpace(command.Reason) ? null : command.Reason.Trim();
@@ -229,12 +231,27 @@ public sealed partial class Invoices(
             if (amount > 0 && reason is null) errors.Add(("reason", "required")); // a reason is always required, not a setting
             else if (reason?.Length > Invoice.MaxReason) errors.Add(("reason", "too_long"));
             BillingValidationException.ThrowIfAny(errors);
-            // Above the settings' cap only someone with practice configuration may give it.
-            var max = (await settings.GetAsync(cancellationToken)).MaxDiscountPercent;
-            if (amount * 100 > subtotal * max && await staff.AccessAsync(Capability.StaffRolesIntegrations, cancellationToken) != Access.Config)
-                throw new BillingValidationException([("discountMinor", "over_limit")]);
             (invoice.DiscountMinor, invoice.DiscountReason) = (amount, amount == 0 ? null : reason);
+            return Task.CompletedTask; // the cap and the taxable-line rule are checked after every draft edit (EditDraftAsync)
         }, cancellationToken);
+    }
+
+    /// <summary>
+    /// The discount rule: none on a bill with a taxable line, never more than the subtotal, and (when <paramref name="capped"/>) at most the settings'
+    /// percentage unless the user has practice configuration.
+    /// </summary>
+    async Task CheckDiscountAsync(long discountMinor, List<InvoiceLine> lines, bool capped, CancellationToken cancellationToken)
+    {
+        if (discountMinor == 0) return;
+        // shortcut: a discount is refused while any line is taxable, because the bill-level discount would not lower that line's GST value; the CA review
+        // (MDV-P4-031) decides how a discount spreads over taxable lines, then this refusal goes.
+        // SAFETY: mutation check: removed the taxable-line refusal -> BillingInvoiceTests.ADiscountIsRefusedWhileAnyLineIsTaxable failed (₹180 GST kept on a ₹100-off bill)
+        if (lines.Any(l => l.TaxTreatment == TaxTreatment.Taxable)) throw new BillingValidationException([("discountMinor", "taxable_lines")]);
+        var subtotal = lines.Sum(l => l.AmountMinor);
+        if (discountMinor > subtotal) throw new BillingValidationException([("discountMinor", "range")]);
+        var max = (await settings.GetAsync(cancellationToken)).MaxDiscountPercent;
+        if (capped && discountMinor * 100 > subtotal * max && await staff.AccessAsync(Capability.StaffRolesIntegrations, cancellationToken) != Access.Config)
+            throw new BillingValidationException([("discountMinor", "over_limit")]);
     }
 
     /// <summary>A draft edit: the bill locked, its version checked, the change applied and the totals recalculated, then audited and committed.</summary>
@@ -248,6 +265,9 @@ public sealed partial class Invoices(
             if (!InvoiceFlow.CanEdit(invoice.State)) throw new BillingValidationException([("state", "invalid")]);
             var lines = await db.InvoiceLines.Where(l => l.InvoiceId == id).ToListAsync(cancellationToken);
             await change(invoice, lines);
+            // Any edit (a discount, or removing a line under one) leaves the discount within what this user may give.
+            // SAFETY: mutation check: removed this check after draft edits -> BillingInvoiceTests.RemovingLinesCannotPushADiscountPastTheCap failed (the line went, leaving 100 % off)
+            await CheckDiscountAsync(invoice.DiscountMinor, lines, capped: true, cancellationToken);
             invoice.Recalculate(lines, rules.RoundOff);
             Touch(invoice);
             await db.SaveChangesAsync(cancellationToken);
@@ -273,8 +293,10 @@ public sealed partial class Invoices(
             var errors = new List<(string, string)>();
             if (lines.Count == 0) errors.Add(("lines", "required"));
             if (lines.Any(l => l.Suggested)) errors.Add(("lines", "unconfirmed")); // the desk confirms what the visit suggested
-            if (invoice.DiscountMinor > lines.Sum(l => l.AmountMinor)) errors.Add(("discountMinor", "range")); // lines removed after the discount
             BillingValidationException.ThrowIfAny(errors);
+            // Again at issue: a taxable line may have been added after the discount. The cap was enforced on the edit that set it (an
+            // administrator's larger discount stays issuable by the desk).
+            await CheckDiscountAsync(invoice.DiscountMinor, lines, capped: false, cancellationToken);
             invoice.Recalculate(lines, rules.RoundOff);
             var now = clock.GetUtcNow();
             // The legal number in this transaction: a rollback gives it back, so issued numbers have no gaps (MDV-P4-001).
@@ -410,14 +432,30 @@ public sealed partial class Invoices(
             throw;
         }
 
-        // 3. The link on the payment. If this never runs, "Check status" finds a pending payment with no link and fails it.
-        await using (var tx = await db.Database.BeginTransactionAsync(cancellationToken))
+        // 3. The link on the payment, under the bill's lock (as SettleAsync), and not cancelled midway: the link exists now. If another desk failed the
+        // payment meanwhile ("Check status" after the grace period), the link is closed and never shown, so no money can arrive for a failed payment.
+        // If this step never runs, "Check status" fails the pending payment once the grace period is over.
+        var attached = false;
+        await using (var tx = await db.Database.BeginTransactionAsync(CancellationToken.None))
         {
-            var tracked = await db.Payments.SingleAsync(p => p.Id == payment.Id, cancellationToken);
-            (tracked.ProviderLinkId, tracked.LinkUrl) = (link.Id, link.ShortUrl);
-            await db.SaveChangesAsync(cancellationToken);
-            await AuditAsync(tx, "billing.payment.link_ready", invoice, cancellationToken);
-            await tx.CommitAsync(cancellationToken);
+            db.ChangeTracker.Clear();
+            await db.Database.ExecuteSqlAsync($"""SELECT 1 FROM billing."Invoices" WHERE "Id" = {id} FOR UPDATE""", CancellationToken.None);
+            var tracked = await db.Payments.SingleAsync(p => p.Id == payment.Id, CancellationToken.None);
+            // SAFETY: mutation check: removed this state check -> BillingInvoiceTests.ALinkIsNeverAttachedToAPaymentFailedMeanwhile failed (the URL went to a failed payment)
+            if (tracked.State == PaymentState.Pending)
+            {
+                (tracked.ProviderLinkId, tracked.LinkUrl) = (link.Id, link.ShortUrl);
+                await db.SaveChangesAsync(CancellationToken.None);
+                await AuditAsync(tx, "billing.payment.link_ready", invoice, CancellationToken.None);
+                await tx.CommitAsync(CancellationToken.None);
+                attached = true;
+            }
+        }
+        if (!attached)
+        {
+            try { await links.CancelAsync(TenantId, link.Id, CancellationToken.None); }
+            catch (PaymentProviderException) { } // best effort: unattached, the link reaches nobody (its URL is never shown)
+            throw new BillingValidationException([("payment", "failed")]);
         }
         return new PaymentLinkView((await GetAsync(id, cancellationToken))!, payment.Id, link.ShortUrl);
     }
@@ -426,7 +464,7 @@ public sealed partial class Invoices(
     {
         if (await PendingLinkAsync(id, paymentId, cancellationToken) is not { } found) return null;
         var after = found.LinkId is { } linkId ? await ConfirmPaymentLinkAsync(TenantId, linkId, cancellationToken)
-            : found.State == PaymentState.Pending ? await SettleAsync(paymentId, PaymentState.Failed, null, null, cancellationToken) // the link was never made
+            : found.State == PaymentState.Pending && !StillCreating(found) ? await SettleAsync(paymentId, PaymentState.Failed, null, null, cancellationToken) // the link was never made
             : found.State;
         var view = await GetAsync(id, cancellationToken);
         // A check that changed nothing is still a look at the bill: one audit row of its own (a change wrote its own).
@@ -443,6 +481,7 @@ public sealed partial class Invoices(
     {
         if (await PendingLinkAsync(id, paymentId, cancellationToken) is not { } found) return null;
         if (found.State != PaymentState.Pending) throw new BillingValidationException([("state", "invalid")]);
+        if (found.LinkId is null && StillCreating(found)) throw new BillingValidationException([("payment", "creating")]);
         if (found.LinkId is { } linkId)
         {
             await links.CancelAsync(TenantId, linkId, cancellationToken);
@@ -452,13 +491,17 @@ public sealed partial class Invoices(
         return await GetAsync(id, cancellationToken);
     }
 
-    async Task<(PaymentState State, string? LinkId)?> PendingLinkAsync(Guid id, Guid paymentId, CancellationToken cancellationToken)
+    /// <summary>A pending payment with no link yet, younger than the grace period: its link is probably being made right now (CreatePaymentLinkAsync step 2).</summary>
+    bool StillCreating((PaymentState State, string? LinkId, DateTimeOffset RecordedAt) found) =>
+        found.State == PaymentState.Pending && found.LinkId is null && found.RecordedAt > clock.GetUtcNow() - LinkCreationGrace;
+
+    async Task<(PaymentState State, string? LinkId, DateTimeOffset RecordedAt)?> PendingLinkAsync(Guid id, Guid paymentId, CancellationToken cancellationToken)
     {
         var facilityId = FacilityId;
         var row = await db.Payments.AsNoTracking()
             .Where(p => p.Id == paymentId && p.InvoiceId == id && p.Method == PaymentMethod.RazorpayLink && db.Invoices.Any(i => i.Id == id && i.FacilityId == facilityId))
-            .Select(p => new { p.State, p.ProviderLinkId }).SingleOrDefaultAsync(cancellationToken);
-        return row is null ? null : (row.State, row.ProviderLinkId);
+            .Select(p => new { p.State, p.ProviderLinkId, p.RecordedAt }).SingleOrDefaultAsync(cancellationToken);
+        return row is null ? null : (row.State, row.ProviderLinkId, row.RecordedAt);
     }
 
     public async Task<PaymentState?> ConfirmPaymentLinkAsync(Guid tenantId, string linkId, CancellationToken cancellationToken = default)
@@ -517,6 +560,7 @@ public sealed partial class Invoices(
     {
         var facilityId = FacilityId;
         db.ChangeTracker.Clear(); // what an earlier transaction of this request loaded may be stale now; read it again under the lock
+        // SAFETY: mutation check: dropped the FacilityId condition here and in the query below -> BillingInvoiceTests.AnotherLocationOfTheSameClinicCannotReachTheBill failed (the other location reached the bill)
         await db.Database.ExecuteSqlAsync($"""SELECT 1 FROM billing."Invoices" WHERE "Id" = {id} AND "FacilityId" = {facilityId} FOR UPDATE""", cancellationToken);
         var invoice = await db.Invoices.SingleOrDefaultAsync(i => i.Id == id && i.FacilityId == facilityId, cancellationToken);
         if (invoice is not null && version is not null && db.Entry(invoice).Property<uint>("xmin").CurrentValue != version) throw new DbUpdateConcurrencyException();

@@ -50,7 +50,7 @@ public sealed class Invoice
     [Classification(DataClass.Internal)] public DateTimeOffset ChangedAt { get; set; }
 
     /// <summary>Totals from the lines and the discount. <paramref name="roundOff"/> is the country's rule for the exact payable amount.</summary>
-    // shortcut: the discount is taken off the bill, not spread over the lines, so it does not lower a taxable line's GST value; the CA review (MDV-P4-031) decides.
+    // The discount is taken off the bill; a bill with a taxable line takes no discount (Invoices.CheckDiscountAsync, until the CA review MDV-P4-031).
     public void Recalculate(IReadOnlyCollection<InvoiceLine> lines, Func<long, long> roundOff)
     {
         ArgumentNullException.ThrowIfNull(lines);
@@ -134,8 +134,8 @@ public static class InvoiceFlow
     /// <summary>Payments are taken on an issued bill until it is paid.</summary>
     public static bool CanPay(InvoiceState state) => state is InvoiceState.Issued or InvoiceState.PartlyPaid;
 
-    /// <summary>A draft, or an issued bill nobody has paid anything towards; it keeps its number.</summary>
-    public static bool CanCancel(InvoiceState state, long paidMinor) => state == InvoiceState.Draft || state == InvoiceState.Issued && paidMinor == 0;
+    /// <summary>A draft, or an issued bill nobody has paid anything towards (a ₹0 bill is Paid when issued, with nothing paid); it keeps its number.</summary>
+    public static bool CanCancel(InvoiceState state, long paidMinor) => state == InvoiceState.Draft || state is InvoiceState.Issued or InvoiceState.Paid && paidMinor == 0;
 
     /// <summary>The state an issued bill is in once <paramref name="paidMinor"/> of <paramref name="totalMinor"/> is paid.</summary>
     public static InvoiceState AfterPayment(long totalMinor, long paidMinor) =>

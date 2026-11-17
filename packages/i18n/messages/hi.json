@@ -5770,5 +5770,8 @@
   "audit.actionName.billing.payment.check": "भुगतान स्थिति जाँची",
   "audit.actionName.billing.payment.succeeded": "प्रदाता ने लिंक भुगतान की पुष्टि की",
   "audit.actionName.billing.payment.expired": "भुगतान लिंक समाप्त या रद्द",
-  "audit.actionName.billing.payment.failed": "भुगतान लिंक विफल"
+  "audit.actionName.billing.payment.failed": "भुगतान लिंक विफल",
+  "billing.error.taxable_lines": "कर वाली सेवा वाले बिल पर अभी छूट नहीं दी जा सकती (कर समीक्षा तय करेगी कैसे)। छूट या कर वाली पंक्ति हटाएँ।",
+  "billing.error.creating": "भुगतान लिंक अभी बन रहा है। थोड़ा रुकें, फिर स्थिति जाँचें।",
+  "billing.error.series_exhausted": "इस प्रीफ़िक्स के इस वर्ष के बिल नंबर खत्म हो गए हैं। प्रैक्टिस एडमिन से नया इनवॉइस प्रीफ़िक्स सेट करने को कहें।"
 }

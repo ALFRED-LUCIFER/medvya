@@ -63,7 +63,8 @@ export function actionsFor(i: Pick<Invoice, 'state' | 'paidMinor' | 'payments' |
     edit: i.state === 'Draft',
     issue: i.state === 'Draft' && i.lines.length > 0 && !i.lines.some(l => l.suggested),
     pay: (i.state === 'Issued' || i.state === 'PartlyPaid') && !pending,
-    cancel: (i.state === 'Draft' || (i.state === 'Issued' && i.paidMinor === 0)) && !pending,
+    // A ₹0 bill is Paid when issued with nothing paid: it can still be cancelled.
+    cancel: (i.state === 'Draft' || ((i.state === 'Issued' || i.state === 'Paid') && i.paidMinor === 0)) && !pending,
   };
 }
 
@@ -107,8 +108,10 @@ export const toMajor = (minor: number) => (minor / 100).toFixed(2);
 /** A server refusal ("amountMinor:over_collected", "state:invalid", 409 "changed" → stale, "provider_not_connected") as a message key suffix. */
 export type InvoiceProblem =
   | 'over_collected' | 'card_number' | 'disabled' | 'unconfirmed' | 'over_limit' | 'no_price' | 'pending' | 'invalid' | 'required' | 'too_small' | 'not_attended'
+  | 'taxable_lines' | 'creating' | 'series_exhausted'
   | 'state' | 'stale' | 'provider_not_connected' | 'provider_unauthorized' | 'provider_rejected' | 'provider_unavailable' | 'failed';
-const known: readonly string[] = ['over_collected', 'card_number', 'disabled', 'unconfirmed', 'over_limit', 'no_price', 'pending', 'invalid', 'required', 'too_small', 'not_attended'];
+const known: readonly string[] = ['over_collected', 'card_number', 'disabled', 'unconfirmed', 'over_limit', 'no_price', 'pending', 'invalid', 'required', 'too_small', 'not_attended',
+  'taxable_lines', 'creating', 'series_exhausted'];
 export function invoiceProblem(code: string | undefined): InvoiceProblem {
   if (code === 'changed') return 'stale';
   if (code === 'state:invalid') return 'state';

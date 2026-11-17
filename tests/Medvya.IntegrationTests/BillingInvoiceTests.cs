@@ -330,6 +330,9 @@ public sealed class BillingInvoiceTests(PostgresFixture sql) : IClassFixture<Pos
         links.State = new PaymentLinkState("plink_synthetic", PaymentLinkStatus.Paid, new Money(100, Currency.Inr), ["pay_synthetic"]);
         Assert.Equal(PaymentState.Pending, await Desk().ConfirmPaymentLinkAsync(h.Tenant, "plink_synthetic"));
 
+        links.State = new PaymentLinkState("plink_synthetic", PaymentLinkStatus.Paid, new Money(40_000, Currency.Aed), ["pay_synthetic"]); // the right number in another currency
+        Assert.Equal(PaymentState.Pending, await Desk().ConfirmPaymentLinkAsync(h.Tenant, "plink_synthetic"));
+
         links.State = new PaymentLinkState("plink_synthetic", PaymentLinkStatus.Paid, new Money(40_000, Currency.Inr), ["pay_synthetic"]);
         var paid = (await Desk().CheckPaymentAsync(bill.Id, pending.Id))!;
         Assert.Equal((InvoiceState.Paid, 50_000L), (paid.State, paid.PaidMinor));
@@ -406,6 +409,147 @@ public sealed class BillingInvoiceTests(PostgresFixture sql) : IClassFixture<Pos
         Assert.Equal(5_000, (await Desk().GetAsync(bill.Id))!.PaidMinor);
     }
 
+    // ---- Review fixes (PR #1421) ----
+
+    /// <summary>
+    /// A bill-level discount would leave a taxable line's GST unchanged (₹1,000 at 18 % with ₹100 off still charges ₹180), so until the CA review
+    /// (MDV-P4-031) a bill with a taxable line takes no discount: refused when set, after a line is added, and again at issue.
+    /// </summary>
+    // SAFETY: mutation check: removed the taxable-line refusal in Invoices.CheckDiscountAsync -> this test failed (the discount was saved with ₹180 GST)
+    [Fact]
+    public async Task ADiscountIsRefusedWhileAnyLineIsTaxable()
+    {
+        var peel = await PricedAsync("Cosmetic peel (synthetic)", 100_000, TaxTreatment.Taxable, 1800);
+        var taxed = (await Desk().CreateAsync(new NewInvoice { PatientId = h.Patient }))!;
+        taxed = (await Desk().AddLineAsync(taxed.Id, new AddLine { ServiceId = peel.Id, Quantity = 1, Version = taxed.Version }))!;
+        Assert.Equal("discountMinor:taxable_lines", await Refused(Desk().SetDiscountAsync(taxed.Id, new SetDiscount { AmountMinor = 10_000, Reason = "Senior citizen", Version = taxed.Version })));
+
+        var discounted = await DraftAsync(100_000);
+        discounted = (await Desk().SetDiscountAsync(discounted.Id, new SetDiscount { AmountMinor = 5_000, Reason = "Senior citizen", Version = discounted.Version }))!;
+        Assert.Equal("discountMinor:taxable_lines", await Refused(Desk().AddLineAsync(discounted.Id, new AddLine { ServiceId = peel.Id, Quantity = 1, Version = discounted.Version })));
+
+        // Issue checks again: a taxable line that reached the draft another way (written here directly) still blocks it.
+        await using (var db = sql.Billing(h.Tenant))
+        {
+            var version = await db.PriceVersions.Where(v => v.ServiceId == peel.Id).Select(v => v.Id).FirstAsync();
+            var line = new InvoiceLine
+            {
+                Id = Guid.NewGuid(), TenantId = h.Tenant, InvoiceId = discounted.Id, ServiceId = peel.Id, PriceVersionId = version, Description = "Cosmetic peel (synthetic)",
+                UnitMinor = 100_000, TaxTreatment = TaxTreatment.Taxable, GstRateBasisPoints = 1800, CreatedAt = DateTimeOffset.UtcNow,
+            };
+            line.SetQuantity(1);
+            db.InvoiceLines.Add(line);
+            await db.SaveChangesAsync();
+        }
+        var current = (await Desk().GetAsync(discounted.Id))!;
+        Assert.Equal("discountMinor:taxable_lines", await Refused(Desk().IssueAsync(discounted.Id, new InvoiceVersion { Version = current.Version })));
+    }
+
+    /// <summary>Removing lines under a discount raises its share of the bill: the edit that pushes it past the cap is refused (9,000 + 1,000, 10 % off, then 100 %).</summary>
+    // SAFETY: mutation check: removed the discount check after draft edits (EditDraftAsync) -> this test failed (the line was removed, leaving the discount at 100 %)
+    [Fact]
+    public async Task RemovingLinesCannotPushADiscountPastTheCap()
+    {
+        var small = await PricedAsync("Dressing small (synthetic)", 1_000);
+        var draft = await DraftAsync(9_000);
+        draft = (await Desk().AddLineAsync(draft.Id, new AddLine { ServiceId = small.Id, Quantity = 1, Version = draft.Version }))!;
+        draft = (await Desk().SetDiscountAsync(draft.Id, new SetDiscount { AmountMinor = 1_000, Reason = "Senior citizen", Version = draft.Version }))!; // exactly 10 %
+        var big = draft.Lines.Single(l => l.UnitMinor == 9_000);
+        Assert.Equal("discountMinor:over_limit", await Refused(Desk().RemoveLineAsync(draft.Id, big.Id, new InvoiceVersion { Version = draft.Version })));
+        var issued = (await Desk().IssueAsync(draft.Id, new InvoiceVersion { Version = draft.Version }))!;
+        Assert.Equal((9_000L, 2), (issued.TotalMinor, issued.Lines.Count));
+    }
+
+    /// <summary>
+    /// Desk A asks for a link; while the provider makes it, desk B's "Check status" (after the grace period) fails the payment. The link must then never be
+    /// attached or shown, and is cancelled at the provider, so no money can arrive for a failed payment. Within the grace period B's check leaves it alone.
+    /// </summary>
+    // SAFETY: mutation check: removed the Pending check in CreatePaymentLinkAsync step 3 -> this test failed (the link and URL went to the failed payment)
+    [Fact]
+    public async Task ALinkIsNeverAttachedToAPaymentFailedMeanwhile()
+    {
+        await MethodsAsync(PaymentMethod.Cash, PaymentMethod.RazorpayLink);
+        var bill = await IssuedAsync(20_000);
+        async Task<Guid> PendingId()
+        {
+            await using var db = sql.Billing(h.Tenant);
+            return await db.Payments.Where(p => p.InvoiceId == bill.Id && p.State == PaymentState.Pending).Select(p => p.Id).SingleAsync();
+        }
+
+        // Within the grace period: another desk's check and cancel leave the link being made alone.
+        links.DuringCreate = async () =>
+        {
+            var id = await PendingId();
+            Assert.Equal(PaymentState.Pending, (await Desk().CheckPaymentAsync(bill.Id, id))!.Payments.Single(p => p.Id == id).State);
+            Assert.Equal("payment:creating", await Refused(Desk().CancelPaymentLinkAsync(bill.Id, id)));
+        };
+        var first = (await Desk().CreatePaymentLinkAsync(bill.Id))!;
+        Assert.Equal("https://rzp.io/i/synthetic", first.ShortUrl);
+        await Desk().CancelPaymentLinkAsync(bill.Id, first.PaymentId);
+
+        // Past it: the other desk fails the payment while the link is made; the link is closed, not attached.
+        links.State = null;
+        links.DuringCreate = async () =>
+        {
+            h.Clock.Advance(TimeSpan.FromMinutes(3));
+            var id = await PendingId();
+            Assert.Equal(PaymentState.Failed, (await Desk().CheckPaymentAsync(bill.Id, id))!.Payments.Single(p => p.Id == id).State);
+        };
+        var cancelledBefore = links.Cancelled;
+        Assert.Equal("payment:failed", await Refused(Desk().CreatePaymentLinkAsync(bill.Id)));
+        Assert.Equal(cancelledBefore + 1, links.Cancelled);
+        await using var billing = sql.Billing(h.Tenant);
+        var failed = await billing.Payments.Where(p => p.InvoiceId == bill.Id).OrderBy(p => p.RecordedAt).ThenBy(p => p.Id).LastAsync();
+        Assert.Equal((PaymentState.Failed, (string?)null, (string?)null), (failed.State, failed.ProviderLinkId, failed.LinkUrl));
+    }
+
+    /// <summary>Another location of the same clinic (tenant) cannot read, pay, cancel or check this location's bill, nor list it.</summary>
+    // SAFETY: mutation check: dropped the FacilityId condition in Invoices.LockAsync -> this test failed (the other location reached the bill: its payment call got past the lock)
+    [Fact]
+    public async Task AnotherLocationOfTheSameClinicCannotReachTheBill()
+    {
+        await MethodsAsync(PaymentMethod.Cash, PaymentMethod.RazorpayLink);
+        var bill = await IssuedAsync(20_000);
+        var link = (await Desk().CreatePaymentLinkAsync(bill.Id))!;
+        var elsewhere = h.Get<IInvoices>(h.Elsewhere, s =>
+        {
+            s.Replace(ServiceDescriptor.Singleton<ICurrentFacility>(new PatientRegistryTests.FixedFacility(h.OtherFacility)));
+            s.Replace(ServiceDescriptor.Singleton<IPaymentLinks>(links));
+        });
+        Assert.Null(await elsewhere.GetAsync(bill.Id));
+        Assert.Null(await elsewhere.RecordPaymentAsync(bill.Id, new RecordPayment { Method = PaymentMethod.Cash, AmountMinor = 1 }));
+        Assert.Null(await elsewhere.CancelAsync(bill.Id, new CancelInvoice { Reason = "Synthetic", Version = bill.Version }));
+        Assert.Null(await elsewhere.CheckPaymentAsync(bill.Id, link.PaymentId));
+        Assert.Empty(await elsewhere.SearchAsync(new InvoiceSearch()));
+        Assert.Equal((0L, InvoiceState.Issued), ((await Desk().GetAsync(bill.Id))!.PaidMinor, (await Desk().GetAsync(bill.Id))!.State));
+    }
+
+    /// <summary>A fully discounted bill is Paid when issued with nothing paid; it can still be cancelled.</summary>
+    [Fact]
+    public async Task AFullyDiscountedBillIsPaidOnIssueAndCanStillBeCancelled()
+    {
+        var draft = await DraftAsync(10_000);
+        draft = (await Desk(h.Admin).SetDiscountAsync(draft.Id, new SetDiscount { AmountMinor = 10_000, Reason = "Staff (owner approved)", Version = draft.Version }))!;
+        var issued = (await Desk().IssueAsync(draft.Id, new InvoiceVersion { Version = draft.Version }))!;
+        Assert.Equal((InvoiceState.Paid, 0L, 0L), (issued.State, issued.TotalMinor, issued.PaidMinor));
+        var cancelled = (await Desk().CancelAsync(issued.Id, new CancelInvoice { Reason = "Issued by mistake", Version = issued.Version }))!;
+        Assert.Equal((InvoiceState.Cancelled, issued.Number), (cancelled.State, cancelled.Number));
+    }
+
+    /// <summary>A full number series is a refusal the desk can read ("number: series_exhausted"), not a server error; nothing is issued.</summary>
+    [Fact]
+    public async Task AFullNumberSeriesIsARefusalNotAServerError()
+    {
+        await h.StepsAsync(nurse: false, billing: true);
+        var draft = await DraftAsync(10_000);
+        // A full series needs 999,999 numbers taken one at a time (the series only moves forward by one), so the numbering answers as a full one would.
+        using var desk = Client(h.Reception, s => s.Replace(ServiceDescriptor.Scoped<IDocumentNumbering, FullSeries>()));
+        var issued = await desk.PostAsJsonAsync($"/v1/billing/invoices/{draft.Id}/issue", new { version = draft.Version });
+        Assert.Equal(HttpStatusCode.BadRequest, issued.StatusCode);
+        Assert.Equal("series_exhausted", (await issued.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("errors").GetProperty("number")[0].GetString());
+        Assert.Equal(InvoiceState.Draft, (await Desk().GetAsync(draft.Id))!.State);
+    }
+
     // ---- Endpoints ----
 
     /// <summary>The receptionist bills; a nurse and a doctor without "Invoices and payments" are refused; the payloads carry no clinical text.</summary>
@@ -474,20 +618,30 @@ public sealed class BillingInvoiceTests(PostgresFixture sql) : IClassFixture<Pos
         Assert.Equal(HttpStatusCode.NotFound, (await desk.PostAsJsonAsync($"/v1/billing/invoices/{bill.Id}/payments", new { method = "Cash", amountMinor = 1 })).StatusCode);
     }
 
+    sealed class FullSeries : IDocumentNumbering
+    {
+        public Task<DocumentNumber> IssueAsync(string countryCode, DocumentType type, string prefix, DateTimeOffset issuedAt, CancellationToken cancellationToken = default) =>
+            throw new DocumentNumberingException("series_exhausted");
+    }
+
     /// <summary>A provider double: what was asked for, and the link state it reports.</summary>
     sealed class FakeLinks : IPaymentLinks
     {
         public PaymentLinkRequest? Created { get; private set; }
         public PaymentLinkState? State { get; set; }
         public PaymentProviderError? Fail { get; set; }
+        /// <summary>Runs while the provider is "making" the link: another desk acting at that moment.</summary>
+        public Func<Task>? DuringCreate { get; set; }
+        public int Cancelled { get; private set; }
         int made;
 
-        public Task<PaymentLink> CreateAsync(Guid tenantId, PaymentLinkRequest request, CancellationToken ct)
+        public async Task<PaymentLink> CreateAsync(Guid tenantId, PaymentLinkRequest request, CancellationToken ct)
         {
             if (Fail is { } error) throw new PaymentProviderException(error);
+            if (DuringCreate is { } during) await during();
             Created = request;
             var id = made++ == 0 ? "plink_synthetic" : $"plink_synthetic{made}"; // a new link per attempt
-            return Task.FromResult(new PaymentLink(id, "https://rzp.io/i/synthetic", PaymentLinkStatus.Created));
+            return new PaymentLink(id, "https://rzp.io/i/synthetic", PaymentLinkStatus.Created);
         }
 
         public Task<PaymentLinkState> FetchAsync(Guid tenantId, string linkId, CancellationToken ct) =>
@@ -496,6 +650,7 @@ public sealed class BillingInvoiceTests(PostgresFixture sql) : IClassFixture<Pos
         public Task<PaymentLinkStatus> CancelAsync(Guid tenantId, string linkId, CancellationToken ct)
         {
             State = new PaymentLinkState(linkId, PaymentLinkStatus.Cancelled, Money.Zero(Currency.Inr), []);
+            Cancelled++;
             return Task.FromResult(PaymentLinkStatus.Cancelled);
         }
     }
@@ -520,7 +675,7 @@ public sealed class BillingInvoiceTests(PostgresFixture sql) : IClassFixture<Pos
         };
     }
 
-    HttpClient Client(Guid user)
+    HttpClient Client(Guid user, Action<IServiceCollection>? replace = null)
     {
         var host = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b
             .UseSetting("ConnectionStrings:Medvya", sql.ConnectionString)
@@ -530,6 +685,7 @@ public sealed class BillingInvoiceTests(PostgresFixture sql) : IClassFixture<Pos
             {
                 s.Replace(ServiceDescriptor.Singleton<IEmailSender>(new NoMail()));
                 s.Replace(ServiceDescriptor.Singleton<IPaymentLinks>(links));
+                replace?.Invoke(s);
             }));
         hosts.Add(host);
         var client = host.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost") });

@@ -5822,5 +5822,8 @@
   "audit.actionName.billing.payment.check": "Payment status checked",
   "audit.actionName.billing.payment.succeeded": "Link payment confirmed by the provider",
   "audit.actionName.billing.payment.expired": "Payment link expired or cancelled",
-  "audit.actionName.billing.payment.failed": "Payment link failed"
+  "audit.actionName.billing.payment.failed": "Payment link failed",
+  "billing.error.taxable_lines": "A bill with a taxed service cannot take a discount yet (the tax review decides how). Remove the discount or the taxed line.",
+  "billing.error.creating": "The payment link is still being made. Wait a moment, then check its status.",
+  "billing.error.series_exhausted": "This year's bill numbers are used up for this prefix. Ask the practice admin to set a new invoice prefix."
 }

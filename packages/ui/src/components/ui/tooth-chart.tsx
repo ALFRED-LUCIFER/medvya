@@ -135,7 +135,8 @@ function ToothChart({ dentition, marks, notRecorded, selected, onSelect, classNa
           </div>
         </React.Fragment>
       ))}
-      <p className="text-caption text-muted-foreground">{t("toothChart.facing")} {t("toothChart.keys")}</p>
+      {/* Only the teeth stay left to right; the words follow their own language (Arabic reads right to left inside the chart box). */}
+      <p dir="auto" className="text-caption text-muted-foreground">{t("toothChart.facing")} {t("toothChart.keys")}</p>
     </div>
   )
 }

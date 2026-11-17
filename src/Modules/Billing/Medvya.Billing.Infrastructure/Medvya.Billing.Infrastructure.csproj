@@ -10,10 +10,11 @@
     <ProjectReference Include="..\..\Scheduling\Medvya.Scheduling.Application\Medvya.Scheduling.Application.csproj" />
     <!-- The document store (Blob) the printed bills and receipts are kept in, as the prescription's PDFs are (MDV-P4-005). -->
     <ProjectReference Include="..\..\Encounters\Medvya.Encounters.Application\Medvya.Encounters.Application.csproj" />
+    <ProjectReference Include="..\..\Identity\Medvya.Identity.Application\Medvya.Identity.Application.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <!-- The printed bill's and receipt's English copy (MDV-P4-005), from the shared catalogue. -->
+    <!-- The printed bill's and receipt's (MDV-P4-005) and the shift report's (MDV-P4-012) English copy, from the shared catalogue. -->
     <EmbeddedResource Include="..\..\..\..\packages\i18n\messages\en.json" LogicalName="Medvya.Billing.messages.en.json" />
   </ItemGroup>
 

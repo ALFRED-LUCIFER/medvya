@@ -355,6 +355,12 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         ["/v1/billing/invoices/{id:guid}/payments/{paymentId:guid}/check"] = "as above",
         ["/v1/billing/invoices/{id:guid}/payments/{paymentId:guid}/cancel"] = "as above",
         ["/v1/billing/invoices/{id:guid}/documents/{kind}/{layout}"] = "as above: MDV-P4-005, another tenant cannot print the bill (BillingDocumentTests.AnotherTenantSeesNoneOfThePapersAndCannotPrintTheBill)",
+        // MDV-P4-012: also behind billing.invoices; another tenant's or another location's cash session is not found (EF filter, row-level security and the
+        // facility check), proved by BillingInvoiceTests.AnotherTenantSeesNoSessionsAndCannotWriteIntoThem and OneLocationHasOneOpenSessionEvenWhenTwoDesksOpenAtOnce.
+        ["/v1/billing/cash-sessions/{id:guid}/count"] = "cash sessions: see the comment above",
+        ["/v1/billing/cash-sessions/{id:guid}/confirm"] = "as above",
+        ["/v1/billing/cash-sessions/{id:guid}/adjustments"] = "as above",
+        ["/v1/billing/cash-sessions/{id:guid}/report/pdf"] = "as above",
         ["/v1/patients/{patientId:guid}/care-goals/{goalId:guid}"] = "two ids: only a goal of the route's own patient is found, another's is not (ChronicCareTests, with row-level security); the patient's goal route is in the matrix",
     };
 

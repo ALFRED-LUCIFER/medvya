@@ -21,6 +21,9 @@ sealed partial class IndiaBillingRules : BillingCountryRules
     public override string CountryCode => "IN";
     public override Currency Currency => Currency.Inr;
 
+    /// <summary>₹500, 200, 100, 50, 20 and 10 (notes, and the ₹20 and ₹10 coins counted with them), then the ₹5, 2 and 1 coins.</summary>
+    public override IReadOnlyList<long> CashDenominationsMinor { get; } = [50_000, 20_000, 10_000, 5_000, 2_000, 1_000, 500, 200, 100];
+
     public override string FinancialYear(DateTimeOffset issuedAt)
     {
         var local = TimeZoneInfo.ConvertTime(issuedAt, IndiaTime);

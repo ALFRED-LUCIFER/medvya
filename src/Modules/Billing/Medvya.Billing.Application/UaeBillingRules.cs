@@ -18,6 +18,10 @@ sealed partial class UaeBillingRules : BillingCountryRules
     public override string CountryCode => "AE";
     public override Currency Currency => Currency.Aed;
 
+    /// <summary>The design's AED notes and the dirham coin.</summary>
+    // shortcut: no fils coins and no 25-fils cash rounding lines in the day close; add both with the UAE launch.
+    public override IReadOnlyList<long> CashDenominationsMinor { get; } = [50_000, 20_000, 10_000, 5_000, 2_000, 1_000, 500, 100];
+
     public override string FinancialYear(DateTimeOffset issuedAt) => "";
 
     public override string Format(string prefix, string financialYear, long number) =>

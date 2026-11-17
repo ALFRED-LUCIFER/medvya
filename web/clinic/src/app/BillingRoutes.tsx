@@ -1,8 +1,10 @@
 import { Navigate, useNavigate, useParams } from 'react-router';
 import { useI18n } from '@medvya/i18n';
 import { PageContainer, PageHeader, PageMessage } from '@medvya/ui';
+import DayClosePage from '../features/billing/components/DayClosePage';
 import InvoiceListPage from '../features/billing/components/InvoiceListPage';
 import InvoicePage from '../features/billing/components/InvoicePage';
+import { useDayCloseController } from '../features/billing/hooks/useDayCloseController';
 import { useInvoiceController } from '../features/billing/hooks/useInvoiceController';
 import { useInvoicesController } from '../features/billing/hooks/useInvoicesController';
 import { useVisitInvoiceController } from '../features/billing/hooks/useVisitInvoiceController';
@@ -31,4 +33,9 @@ export function VisitInvoiceRoute({ path }: { path: string }) {
         : <PageMessage kind="busy">{t('billing.invoice.opening')}</PageMessage>}
     </PageContainer>
   );
+}
+
+/** Day close (MDV-P4-012): the drawer count and the shift reports. */
+export function DayCloseRoute({ timeZone }: { timeZone: string }) {
+  return <DayClosePage {...useDayCloseController()} timeZone={timeZone} />;
 }

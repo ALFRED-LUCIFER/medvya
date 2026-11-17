@@ -1,6 +1,7 @@
 import { post, send } from '../../api/services/apiClient';
 import type { Service } from '../domain/catalogue';
-import type { Invoice, InvoiceRow, InvoiceState, PaymentLinkResult } from '../domain/invoice';
+import type { Invoice, InvoiceRow, InvoiceState, PaymentLinkResult, PrintPaper } from '../domain/invoice';
+import { downloadPaperPdf } from '../../prescription/services/prescriptionApi';
 
 // Bills and payments (MDV-P4-004). Ids in paths; filters, amounts and reasons in bodies, so no patient detail reaches a URL.
 const put = <T>(url: string, body: unknown) => send<T>(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -21,5 +22,8 @@ export const recordPayment = (id: string, body: { method: string; amountMinor: n
 export const createPaymentLink = (id: string) => post<PaymentLinkResult>(`${bill(id)}/payment-link`, {});
 export const checkPayment = (id: string, paymentId: string) => post<Invoice>(`${bill(id)}/payments/${paymentId}/check`, {});
 export const cancelPaymentLink = (id: string, paymentId: string) => post<Invoice>(`${bill(id)}/payments/${paymentId}/cancel`, {});
+/** The bill or its receipt as a PDF (MDV-P4-005): the first print issues and stores it, later ones return the same paper. Saved under a name with no patient data. */
+export const downloadBillingPdf = (id: string, kind: 'bill' | 'receipt', paper: PrintPaper) =>
+  downloadPaperPdf(`${bill(id)}/documents/${kind}/${paper}`, `${kind}-${paper}.pdf`);
 /** The active catalogue with clinic prices, for the desk's "Add line" (Invoices and payments at Full). */
 export const fetchBillableServices = () => send<Service[]>('/v1/billing/services');

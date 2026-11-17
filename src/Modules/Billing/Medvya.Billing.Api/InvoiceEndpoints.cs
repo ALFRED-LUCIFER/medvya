@@ -1,6 +1,7 @@
 using Medvya.Audit.Application;
 using Medvya.Audit.Domain;
 using Medvya.Billing.Application;
+using Medvya.Billing.Domain;
 using Medvya.Tenancy.Application;
 using Medvya.Tenancy.Domain;
 using Microsoft.AspNetCore.Builder;
@@ -16,7 +17,7 @@ namespace Medvya.Billing.Api;
 /// </summary>
 public static class InvoiceEndpoints
 {
-    const string Purpose = AuditPurpose.Billing, Resource = "invoice";
+    const string Purpose = AuditPurpose.Billing, Resource = "invoice", BillingDocumentsAction = "billing.document.print";
 
     public static IEndpointRouteBuilder MapInvoices(this IEndpointRouteBuilder app)
     {
@@ -66,6 +67,17 @@ public static class InvoiceEndpoints
         g.MapPost("/invoices/{id:guid}/payments/{paymentId:guid}/cancel", async (Guid id, Guid paymentId, [FromServices] IInvoices s, CancellationToken ct) =>
                 Found(await s.CancelPaymentLinkAsync(id, paymentId, ct)))
             .AuditedByUseCase("billing.payment.link_cancel", Resource, Purpose).AddEndpointFilter(CatalogueEndpoints.MapErrors);
+        // MDV-P4-005: the bill or its receipt as a PDF, A5 or 80 mm thermal. POST: the first print issues and stores the paper; later ones re-print it.
+        g.MapPost("/invoices/{id:guid}/documents/{kind}/{layout}", async (Guid id, string kind, string layout, HttpContext http, [FromServices] IBillingDocuments s, CancellationToken ct) =>
+            {
+                if (!Enum.TryParse<BillingDocumentKind>(kind, ignoreCase: true, out var k) || !Enum.IsDefined(k) || !Enum.TryParse<DocumentLayout>(layout, ignoreCase: true, out var l) || !Enum.IsDefined(l))
+                    return Results.NotFound();
+                if (await s.PdfAsync(id, k, l, ct) is not { } pdf) return Results.NotFound();
+                http.Response.Headers["X-Content-SHA256"] = pdf.Sha256;
+                http.Response.Headers.CacheControl = "no-store";
+                return Results.File(pdf.Content, "application/pdf");
+            })
+            .AuditedByUseCase(BillingDocumentsAction, Resource, Purpose).AddEndpointFilter(CatalogueEndpoints.MapErrors);
         return app;
     }
 

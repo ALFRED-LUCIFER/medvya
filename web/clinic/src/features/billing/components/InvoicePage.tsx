@@ -1,16 +1,17 @@
 import type { FormEventHandler } from 'react';
 import { Link } from 'react-router';
 import { Controller, type FieldError, type UseFormReturn } from 'react-hook-form';
-import { ArrowLeft, CircleAlert, Hourglass, Link2, Sparkles } from 'lucide-react';
+import { ArrowLeft, CircleAlert, Hourglass, Link2, Printer, Sparkles } from 'lucide-react';
 import { useI18n, type MessageKey } from '@medvya/i18n';
 import {
   Banner, Button, buttonVariants, Card, cn, Dialog, DialogContent, DialogDescription, DialogTitle, Field, Input, PageContainer, PageHeader, PageMessage,
-  PatientBanner, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, StickyActionBar, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tag,
+  PatientBanner, SegmentedControl, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, StickyActionBar, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tag,
 } from '@medvya/ui';
 import { ageOn } from '../../registration/domain/registration';
 import { todayIn, type Service } from '../domain/catalogue';
 import {
-  deskMethods, maxDiscountMinor, type actionsFor, type coverage, type DiscountForm, type Invoice, type InvoiceProblem, type Payment, type PaymentForm,
+  deskMethods, maxDiscountMinor, printPapers, type actionsFor, type coverage, type DiscountForm, type Invoice, type InvoiceProblem, type Payment, type PaymentForm,
+  type PrintPaper,
 } from '../domain/invoice';
 import InvoiceStateChip from './InvoiceStateChip';
 
@@ -26,6 +27,7 @@ type Props = {
   cancelling: boolean; cancelReason: string; onCancelReason: (v: string) => void; onStartCancel: () => void; onStopCancel: () => void; cancelPending: boolean; onCancel: () => void;
   paymentForm: UseFormReturn<PaymentForm>; method: PaymentForm['method']; paying: boolean; onPay: FormEventHandler<HTMLFormElement>; onFillBalance: () => void; onRecordCash: () => void;
   linkUrl: string | null; linking: boolean; onCreateLink: () => void; checking: boolean; onCheck: (paymentId: string) => void; onCancelLink: (paymentId: string) => void;
+  paper: PrintPaper; onPaper: (paper: PrintPaper) => void; printing: 'bill' | 'receipt' | null; onPrint: (kind: 'bill' | 'receipt') => void;
 };
 
 /** One bill (P-06, MDV-P4-004): who it is for (identity only), its lines, discount and totals with the round-off line, and its payments. */
@@ -228,8 +230,21 @@ export default function InvoicePage(p: Props) {
         </Card>
       )}
 
-      {(a.issue || a.edit || a.cancel || (a.pay && canLink)) && (
-        <StickyActionBar>
+      {(a.issue || a.edit || a.cancel || (a.pay && canLink) || a.printBill) && (
+        <StickyActionBar status={a.printBill && (
+          <SegmentedControl label={t('billing.print.paper')} value={p.paper} onValueChange={p.onPaper}
+            options={printPapers.map(v => ({ value: v, label: t(`billing.print.paper.${v}`) }))} />
+        )}>
+          {a.printBill && (
+            <Button variant="outline" loading={p.printing === 'bill'} disabled={p.printing !== null && p.printing !== 'bill'} onClick={() => p.onPrint('bill')}>
+              <Printer aria-hidden />{t('billing.print.billPdf')}
+            </Button>
+          )}
+          {a.printReceipt && (
+            <Button variant="outline" loading={p.printing === 'receipt'} disabled={p.printing !== null && p.printing !== 'receipt'} onClick={() => p.onPrint('receipt')}>
+              <Printer aria-hidden />{t('billing.print.receiptPdf')}
+            </Button>
+          )}
           {a.cancel && <Button variant="ghost" disabled={p.busy} onClick={p.onStartCancel}>{t('billing.invoice.cancel')}</Button>}
           {a.pay && canLink && <Button variant="outline" loading={p.linking} disabled={p.busy && !p.linking} onClick={p.onCreateLink}>{t('billing.payment.sendLink')}</Button>}
           {a.edit && <Button loading={p.issuing} disabled={!a.issue || (p.busy && !p.issuing)} onClick={p.onIssue}>{t('billing.invoice.issue')}</Button>}

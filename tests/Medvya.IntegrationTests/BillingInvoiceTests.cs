@@ -626,7 +626,7 @@ public sealed partial class BillingInvoiceTests(PostgresFixture sql) : IClassFix
     }
 
     /// <summary>A provider double: what was asked for, and the link state it reports.</summary>
-    sealed class FakeLinks : IPaymentLinks
+    internal sealed class FakeLinks : IPaymentLinks
     {
         public PaymentLinkRequest? Created { get; private set; }
         public PaymentLinkState? State { get; set; }

@@ -65,8 +65,15 @@ export function actionsFor(i: Pick<Invoice, 'state' | 'paidMinor' | 'payments' |
     pay: (i.state === 'Issued' || i.state === 'PartlyPaid') && !pending,
     // A ₹0 bill is Paid when issued with nothing paid: it can still be cancelled.
     cancel: (i.state === 'Draft' || ((i.state === 'Issued' || i.state === 'Paid') && i.paidMinor === 0)) && !pending,
+    // MDV-P4-005: an issued bill prints; its receipt once something is paid. A draft or cancelled bill prints nothing.
+    printBill: i.state !== 'Draft' && i.state !== 'Cancelled',
+    printReceipt: i.state !== 'Draft' && i.state !== 'Cancelled' && i.paidMinor > 0,
   };
 }
+
+/** The paper a bill or receipt prints on (MDV-P4-005): A5 for a standard printer, or the 80 mm thermal roll. */
+export const printPapers = ['a5', 'thermal'] as const;
+export type PrintPaper = (typeof printPapers)[number];
 
 /** The payment the desk must chase: a pending link ("Awaiting provider confirmation") or, else, the latest failed one ("Payment failed"). */
 export function providerPayment(payments: Payment[]): Payment | null {
@@ -109,7 +116,7 @@ export const toMajor = (minor: number) => (minor / 100).toFixed(2);
 export type InvoiceProblem =
   | 'over_collected' | 'card_number' | 'disabled' | 'unconfirmed' | 'over_limit' | 'no_price' | 'pending' | 'invalid' | 'required' | 'too_small' | 'not_attended'
   | 'taxable_lines' | 'creating' | 'series_exhausted'
-  | 'state' | 'stale' | 'provider_not_connected' | 'provider_unauthorized' | 'provider_rejected' | 'provider_unavailable' | 'failed';
+  | 'state' | 'stale' | 'provider_not_connected' | 'provider_unauthorized' | 'provider_rejected' | 'provider_unavailable' | 'failed' | 'print_failed';
 const known: readonly string[] = ['over_collected', 'card_number', 'disabled', 'unconfirmed', 'over_limit', 'no_price', 'pending', 'invalid', 'required', 'too_small', 'not_attended',
   'taxable_lines', 'creating', 'series_exhausted'];
 export function invoiceProblem(code: string | undefined): InvoiceProblem {

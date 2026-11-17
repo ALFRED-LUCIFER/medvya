@@ -1,4 +1,5 @@
 using Medvya.Billing.Application;
+using Medvya.Billing.Domain;
 using Medvya.BuildingBlocks.Domain;
 
 namespace Medvya.IntegrationTests;
@@ -82,11 +83,34 @@ public class BillingRulesTests
     [InlineData("IN", 100_001, "Rupees one thousand and one paisa only")]
     [InlineData("IN", 100_500, "Rupees one thousand five only")]
     [InlineData("AE", 1, "UAE dirhams zero and one fils only")]
+    // The printed receipt's edges (MDV-P4-005): one rupee, one lakh, one crore, ten crore, and paise on a lakh.
+    [InlineData("IN", 100, "Rupees one only")]
+    [InlineData("IN", 10_000_000, "Rupees one lakh only")]
+    [InlineData("IN", 1_000_000_000, "Rupees one crore only")]
+    [InlineData("IN", 10_000_000_000, "Rupees ten crore only")]
+    [InlineData("IN", 10_000_050, "Rupees one lakh and fifty paise only")]
     public void AmountInWords(string country, long minor, string expected)
     {
         var rules = BillingCountryRules.For(country);
         Assert.Equal(expected, rules.AmountInWords(new Money(minor, rules.Currency)));
     }
+
+    /// <summary>GST: exempt care only is a bill of supply, taxed only a tax invoice, both an invoice-cum-bill of supply; the UAE bill is always a tax invoice.</summary>
+    [Theory]
+    [InlineData("IN", new[] { TaxTreatment.Exempt, TaxTreatment.Exempt }, "billing.print.billOfSupply")]
+    [InlineData("IN", new[] { TaxTreatment.Taxable }, "billing.print.taxInvoice")]
+    [InlineData("IN", new[] { TaxTreatment.Exempt, TaxTreatment.Taxable }, "billing.print.invoiceCumBillOfSupply")]
+    [InlineData("AE", new[] { TaxTreatment.Exempt }, "billing.print.taxInvoice")]
+    public void TheBillsTitleFollowsItsLinesTax(string country, TaxTreatment[] lines, string expected) =>
+        Assert.Equal(expected, BillingCountryRules.For(country).BillTitle(lines));
+
+    [Theory]
+    [InlineData("33AAAAA0000A1Z0", "Tamil Nadu (33)")]
+    [InlineData("29AAAAA0000A1Z0", "Karnataka (29)")]
+    [InlineData("99AAAAA0000A1Z0", null)] // not a state code
+    [InlineData(null, null)]
+    public void ThePlaceOfSupplyIsTheClinicsGstinState(string? gstin, string? expected) =>
+        Assert.Equal(expected, BillingCountryRules.India.PlaceOfSupply(gstin));
 
     [Fact]
     public void AmountInWordsRefusesTheOtherCountrysCurrency()

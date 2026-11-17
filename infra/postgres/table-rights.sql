@@ -32,6 +32,10 @@ BEGIN
     IF to_regclass('billing."PriceVersions"') IS NOT NULL THEN
         REVOKE UPDATE, DELETE, TRUNCATE ON billing."PriceVersions" FROM medvya_billing;
     END IF;
+    -- A printed bill or receipt is stored once with its hash (MDV-P4-005): a re-print hands out the same paper, so its row never changes.
+    IF to_regclass('billing."BillingDocuments"') IS NOT NULL THEN
+        REVOKE UPDATE, DELETE, TRUNCATE ON billing."BillingDocuments" FROM medvya_billing;
+    END IF;
 
     -- A draft bill's line can be removed (MDV-P4-004); bills and payments themselves are never deleted (billing has no DELETE right), and an issued
     -- bill's lines are left alone by the application (InvoiceFlow.CanEdit).

@@ -35,7 +35,7 @@ SOFT_REFS = {
     'DoctorId': ('identity', 'Users'),  # PrintedPapers: the doctor the slip or letter names (SourceId is the encounter or the referral, by Kind)
 }
 # Per schema, where a column name means something else than in SOFT_REFS. Billing's DoctorId is the doctor's membership (per doctor per location, MDV-P4-002).
-SCHEMA_SOFT_REFS = {'billing': {'DoctorId': ('tenancy', 'Memberships')}}
+SCHEMA_SOFT_REFS = {'billing': {'DoctorId': ('tenancy', 'Memberships'), 'IssuedBy': ('identity', 'Users')}}
 
 
 def refs_for(schema: str) -> dict:

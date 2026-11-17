@@ -66,5 +66,8 @@ class AzureBlobStore:
     async def delete(self, path: str) -> None:
         await asyncio.to_thread(self._delete, path)
 
+    def _ping(self) -> None:
+        self._container.get_container_properties()  # read-only: readiness never creates anything
+
     async def ping(self) -> None:
-        await asyncio.to_thread(self._ensure)
+        await asyncio.to_thread(self._ping)

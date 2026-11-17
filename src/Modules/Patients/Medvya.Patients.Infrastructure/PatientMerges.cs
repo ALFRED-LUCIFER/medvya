@@ -140,7 +140,6 @@ public sealed class PatientMerges(PatientsDbContext db, ICurrentTenant tenant, I
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
         if (request.FirstApprovedBy is null) request.FirstApprovedBy = me; else request.SecondApprovedBy = me;
         await db.SaveChangesAsync(cancellationToken);
-        await AuditAsync(tx, "patient.merge.approve", survivor.Id, request.Id, now, cancellationToken);
 
         // The merge itself runs only here, and only with every required approval in place.
         if ((request.FirstApprovedBy is null ? 0 : 1) + (request.SecondApprovedBy is null ? 0 : 1) >= required)
@@ -154,8 +153,10 @@ public sealed class PatientMerges(PatientsDbContext db, ICurrentTenant tenant, I
             request.Status = MergeRequestStatus.Merged;
             request.MergedAt = now;
             await db.SaveChangesAsync(cancellationToken);
-            await AuditAsync(tx, "patient.merge", survivor.Id, request.Id, now, cancellationToken);
         }
+        // Audit rows last (AGENTS.md 3.1): the tenant's audit lock is held only from here to commit, never across the merge's row moves.
+        await AuditAsync(tx, "patient.merge.approve", survivor.Id, request.Id, now, cancellationToken);
+        if (request.Status == MergeRequestStatus.Merged) await AuditAsync(tx, "patient.merge", survivor.Id, request.Id, now, cancellationToken);
         await tx.CommitAsync(cancellationToken);
         return request.Status;
     }

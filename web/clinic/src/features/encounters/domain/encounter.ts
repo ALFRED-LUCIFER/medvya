@@ -1,7 +1,7 @@
+import { dateIn } from '@medvya/i18n';
 import { refusalOf, type ClinicalRefusal } from '../../clinical-access/domain/clinicalAccess';
 import type { SexAtBirth } from '../../patients/domain/directory';
 import type { Allergy, AllergyState } from '../../patient360/domain/chart';
-import { dateIn } from '../../audit-log/domain/auditLog';
 
 // Encounters (MDV-P2-001): what the server answers. The server decides every access; nothing here grants anything.
 export type EncounterStatus = 'Active' | 'Ended';

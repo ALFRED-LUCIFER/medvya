@@ -2,6 +2,6 @@ import NotificationCentre from '../features/notifications/components/Notificatio
 import { useNotificationsController } from '../features/notifications/hooks/useNotificationsController';
 
 /** Composition only: the notification centre controller for the active facility, fed to the bell. */
-export default function NotificationsRoute({ facilityId, timeZone, online }: { facilityId: string; timeZone?: string; online: boolean }) {
+export default function NotificationsRoute({ facilityId, timeZone, online }: { facilityId: string; timeZone: string; online: boolean }) {
   return <NotificationCentre {...useNotificationsController(facilityId, online)} timeZone={timeZone} />;
 }

@@ -75,8 +75,9 @@ export function useSession() {
  */
 export function useSignedIn() {
   const s = useSession();
-  const last = useRef(s.session);
-  if (s.session) last.current = s.session;
-  if (!last.current) throw new Error('useSignedIn outside the signed-in screens');
-  return { ...s, session: last.current };
+  const [last, setLast] = useState(s.session);
+  if (s.session && s.session !== last) setLast(s.session); // derived state, set during render (React docs) instead of a ref read in render
+  const session = s.session ?? last;
+  if (!session) throw new Error('useSignedIn outside the signed-in screens');
+  return { ...s, session };
 }

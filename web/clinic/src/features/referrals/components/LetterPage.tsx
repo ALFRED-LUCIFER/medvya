@@ -5,7 +5,7 @@ import { Button, buttonVariants, PageHeader, PageMessage } from '@medvya/ui';
 import type { Letter, LetterLine } from '../domain/referrals';
 import PaperPrintPage, { Allergy, Ident, Masthead, Meta, PaperFooter, Row, Rows, Signature } from '../../prescription/components/PaperPrintPage';
 
-type Props = { letter: Letter | null; loading: boolean; notFound: boolean; failed: boolean; onPrint: () => void; consultPath: string;
+type Props = { timeZone: string; letter: Letter | null; loading: boolean; notFound: boolean; failed: boolean; onPrint: () => void; consultPath: string;
   downloading: boolean; pdfProblem: 'unsupported' | 'failed' | null; onPdf: () => void };
 
 /**
@@ -24,7 +24,7 @@ export default function LetterPage(p: Props) {
       </div>
     );
   const { letter } = p;
-  const date = formatDate(new Date(letter.at));
+  const date = formatDate(new Date(letter.at), p.timeZone);
   const toolbar = <>
     <div className="flex flex-wrap gap-3">
       <Button onClick={p.onPrint}><Printer aria-hidden className="size-4" />{t('referrals.letter.print')}</Button>

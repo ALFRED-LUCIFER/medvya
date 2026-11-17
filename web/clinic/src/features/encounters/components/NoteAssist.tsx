@@ -25,7 +25,7 @@ export function VitalList({ vitals, row = false }: { vitals: Assist['vitals']; r
 }
 
 /** `showVitals` false: the one page shows the verified readings in its own Vitals section (MDV-P2-041). */
-type Props = { assist: Assist; template: NoteTemplate; timeZone: string | undefined; showVitals?: boolean };
+type Props = { assist: Assist; template: NoteTemplate; timeZone: string; showVitals?: boolean };
 
 /** E-04: what the doctor may add to the note. Nothing goes in by itself: each button adds text the doctor then reads and edits. */
 export default function NoteAssist({ assist: a, template, timeZone, showVitals = true }: Props) {

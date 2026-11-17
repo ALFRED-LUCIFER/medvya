@@ -44,7 +44,7 @@ public sealed class FeatureReleaseCache(TimeProvider clock, IReadOnlySet<Guid> i
 /// A feature is on when Medvya's release reaches the organisation (cached, at most 60 s old) and, where it has one, the practice's own switch is on. The
 /// practice's switch is read from the database on every check, so the owner turning it off takes effect on the next request.
 /// </summary>
-public sealed class FeatureFlags(TenancyDbContext db, ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, FeatureReleaseCache releases) : IFeatureFlags
+public sealed class FeatureFlags(TenancyDbContext db, ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, FeatureReleaseCache releases, TimeProvider clock) : IFeatureFlags
 {
     public async Task<bool> IsEnabledAsync(Feature feature, CancellationToken cancellationToken = default) =>
         await IsReleasedAsync(feature, cancellationToken)
@@ -72,7 +72,7 @@ public sealed class FeatureFlags(TenancyDbContext db, ICurrentTenant tenant, ICu
         if (string.IsNullOrWhiteSpace(description) || description.Length > 500) throw new ArgumentException("Every flag needs a description (max 500).", nameof(description));
         var tenantId = tenant.TenantId ?? throw new InvalidOperationException("No tenant context.");
 
-        var now = DateTimeOffset.UtcNow;
+        var now = clock.GetUtcNow();
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
         var flag = await db.FeatureFlags.SingleOrDefaultAsync(f => f.Key == feature.Key, cancellationToken);
         if (flag is null)

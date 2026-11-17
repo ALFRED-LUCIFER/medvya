@@ -5,6 +5,7 @@ using Medvya.Scheduling.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
+using Medvya.BuildingBlocks.Domain;
 
 namespace Medvya.Scheduling.Infrastructure;
 
@@ -49,7 +50,7 @@ public sealed class ScheduleExceptionService(
         var exception = new ScheduleAdjustment
         {
             Id = old?.Id ?? Guid.CreateVersion7(), TenantId = context.TenantId, FacilityId = command.FacilityId, CalendarId = calendar.Id, Kind = command.Kind,
-            FromDate = command.FromDate, ToDate = command.ToDate, Start = command.Start, End = command.End, Reason = ScheduleService.Clean(command.Reason), CreatedBy = old?.CreatedBy ?? me, CreatedAt = old?.CreatedAt ?? now,
+            FromDate = command.FromDate, ToDate = command.ToDate, Start = command.Start, End = command.End, Reason = TextInput.Clean(command.Reason), CreatedBy = old?.CreatedBy ?? me, CreatedAt = old?.CreatedAt ?? now,
         };
         ScheduleRules.Validate(exception, template);
         var errors = new List<ValidationError>();

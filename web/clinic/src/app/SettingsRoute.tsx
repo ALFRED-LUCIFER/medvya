@@ -58,8 +58,8 @@ function Holidays({ facilityId }: { facilityId: string }) {
   const zones = new Map(choice.locations.map(l => [l.id, l.timeZone]));
   return <HolidaysPanel choice={choice} holidays={useHolidaysController(choice.locationId)} zoneOf={id => zones.get(id) ?? 'UTC'} />;
 }
-function Doctors({ facilityId }: { facilityId: string }) {
-  return <DoctorsPanel {...useDoctorsController(facilityId)} locations={useLocationChoice(facilityId).locations} />;
+function Doctors({ facilityId, timeZone }: { facilityId: string; timeZone: string }) {
+  return <DoctorsPanel {...useDoctorsController(facilityId)} locations={useLocationChoice(facilityId).locations} timeZone={timeZone} />;
 }
 
 function Medicines({ country }: { country: 'IN' | 'AE' | null }) {
@@ -72,41 +72,38 @@ function Medicines({ country }: { country: 'IN' | 'AE' | null }) {
   );
 }
 
-const Terms = () => <TermsPanel {...useTermsController()} />;
+const Terms = ({ timeZone }: { timeZone: string }) => <TermsPanel {...useTermsController()} timeZone={timeZone} />;
 const Notifications = () => <NotificationsPanel {...useNotificationSettingsController()} />;
 const Audit = () => <AuditLogPanel {...useAuditLogController()} />;
-const Displays = ({ facilityId }: { facilityId: string }) => <DisplaysPage {...useDisplaysController(facilityId)} />;
+const Displays = ({ facilityId, timeZone }: { facilityId: string; timeZone: string }) => <DisplaysPage {...useDisplaysController(facilityId)} timeZone={timeZone} />;
 const Metrics = ({ facilityId }: { facilityId: string }) => <PilotMetricsPanel {...usePilotMetricsController(facilityId)} />;
 
-const Review = () => <AccessReviewPanel {...useAccessReviewController()} />;
-const AccessRequests = () => <AccessRequestsPanel {...useAccessRequestsController()} />;
+const Review = ({ timeZone }: { timeZone: string }) => <AccessReviewPanel {...useAccessReviewController()} timeZone={timeZone} />;
+const AccessRequests = ({ timeZone }: { timeZone: string }) => <AccessRequestsPanel {...useAccessRequestsController()} timeZone={timeZone} />;
 const ClinicalPolicy = () => <ClinicalPolicyPanel {...useClinicalPolicyController()} />;
 const NurseIntake = () => <NurseIntakePanel {...useNurseIntakeController()} />;
 const Queue = () => <QueueRulePanel {...useQueueRuleController()} />;
 const BillingSettings = () => <BillingSettingsPanel {...useBillingSettingsController()} />;
-function Services({ facilityId }: { facilityId: string }) {
-  const zone = useLocationChoice(facilityId).locations.find(l => l.id === facilityId)?.timeZone ?? 'UTC';
-  return <ServicesPanel {...useServicesController(zone)} />;
-}
+const Services = ({ timeZone }: { timeZone: string }) => <ServicesPanel {...useServicesController(timeZone)} timeZone={timeZone} />;
 
-function Staff({ facilityId, userId }: { facilityId: string; userId: string }) {
+function Staff({ facilityId, userId, timeZone }: { facilityId: string; userId: string; timeZone: string }) {
   const staff = useStaffController(facilityId);
   const roles = useCustomRolesController();
   return (
     <>
-      <StaffPanel {...staff} currentUserId={userId} />
+      <StaffPanel {...staff} currentUserId={userId} timeZone={timeZone} />
       {!staff.loading && !staff.failed && <CustomRolesPanel catalogue={staff.catalogue} {...roles} />}
     </>
   );
 }
 
 /** Composition only: Settings (F-08) with its tab in the address (?tab=hours), so a tab can be linked and survives a reload. */
-export default function SettingsRoute({ facilityId, country, userId, billing }: { facilityId: string; country: 'IN' | 'AE' | null; userId: string; billing: boolean }) {
+export default function SettingsRoute({ facilityId, country, userId, timeZone, billing }: { facilityId: string; country: 'IN' | 'AE' | null; userId: string; timeZone: string; billing: boolean }) {
   const [params, setParams] = useSearchParams();
   const asked = params.get('tab');
   const groups = visibleGroups(billing);
   const tabs: readonly string[] = groups.flatMap(g => settingsGroups[g]);
   const tab: SettingsTab = tabs.includes(asked ?? '') ? (asked as SettingsTab) : 'profile';
-  const panels = { profile: <Profile />, locations: <Locations facilityId={facilityId} country={country} />, hours: <Hours facilityId={facilityId} />, holidays: <Holidays facilityId={facilityId} />, staff: <Staff facilityId={facilityId} userId={userId} />, nurse: <NurseIntake />, queue: <Queue />, requests: <AccessRequests />, policy: <ClinicalPolicy />, review: <Review />, doctors: <Doctors facilityId={facilityId} />, medicines: <Medicines country={country} />, displays: <Displays facilityId={facilityId} />, audit: <Audit />, metrics: <Metrics facilityId={facilityId} />, terms: <Terms />, notifications: <Notifications />, data: <DataPanel country={country} accessLogPath="/settings?tab=audit" />, services: <Services facilityId={facilityId} />, billing: <BillingSettings /> };
+  const panels = { profile: <Profile />, locations: <Locations facilityId={facilityId} country={country} />, hours: <Hours facilityId={facilityId} />, holidays: <Holidays facilityId={facilityId} />, staff: <Staff facilityId={facilityId} userId={userId} timeZone={timeZone} />, nurse: <NurseIntake />, queue: <Queue />, requests: <AccessRequests timeZone={timeZone} />, policy: <ClinicalPolicy />, review: <Review timeZone={timeZone} />, doctors: <Doctors facilityId={facilityId} timeZone={timeZone} />, medicines: <Medicines country={country} />, displays: <Displays facilityId={facilityId} timeZone={timeZone} />, audit: <Audit />, metrics: <Metrics facilityId={facilityId} />, terms: <Terms timeZone={timeZone} />, notifications: <Notifications />, data: <DataPanel country={country} accessLogPath="/settings?tab=audit" />, services: <Services timeZone={timeZone} />, billing: <BillingSettings /> };
   return <SettingsPage tab={tab} onTab={next => setParams({ tab: next }, { replace: true })} panels={panels} groups={groups} />;
 }

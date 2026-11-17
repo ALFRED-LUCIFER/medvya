@@ -1,11 +1,12 @@
 import { CircleCheck, TriangleAlert } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, Dialog, DialogContent, DialogDescription, DialogTitle, StickyActionBar } from '@medvya/ui';
+import { Card, Button, Dialog, DialogContent, DialogDescription, DialogTitle, StickyActionBar } from '@medvya/ui';
 import type { TermsStatus } from '../domain/settings';
 import { cardBar, fieldError } from './fieldStyles';
-import { Section } from './Section';
 
 type Props = {
+  /** The facility's IANA zone: instants show facility time, not the browser's (AGENTS.md 3.5). */
+  timeZone: string;
   terms: TermsStatus | null; loading: boolean; loadFailed: boolean; accepting: boolean; notOwner: boolean; acceptFailed: boolean;
   /** The confirmation is open (#1365 F-038): the button asks, Confirm in the dialog accepts. */
   confirming: boolean; onAsk: () => void; onCancel: () => void; onAccept: () => void;
@@ -18,7 +19,7 @@ export default function TermsPanel(p: Props) {
   if (p.loadFailed || !p.terms) return <p role="alert" className={fieldError}>{t('settings.loadFailed')}</p>;
   const { terms } = p;
   return (
-    <Section title={t('settings.terms.title')} intro={t('settings.terms.intro')}>
+    <Card title={t('settings.terms.title')} intro={t('settings.terms.intro')}>
       <p className="rounded-md border border-warning-700 px-3 py-2 text-sm font-semibold">
         {t('settings.terms.draft')} <bdi dir="ltr">{t('settings.terms.version', { version: terms.version })}</bdi>
       </p>
@@ -30,7 +31,7 @@ export default function TermsPanel(p: Props) {
           there is nothing to link to; the page says so instead of implying it was read. Link the published documents here once they exist. */}
       <p className="text-sm text-muted-foreground">{t('settings.terms.noText')}</p>
       {terms.accepted && terms.acceptedAt ? (
-        <p role="status" className="flex items-center gap-2 font-bold"><CircleCheck aria-hidden className="size-5" />{t('settings.terms.accepted', { date: formatDate(new Date(terms.acceptedAt)) })}</p>
+        <p role="status" className="flex items-center gap-2 font-bold"><CircleCheck aria-hidden className="size-5" />{t('settings.terms.accepted', { date: formatDate(new Date(terms.acceptedAt), p.timeZone) })}</p>
       ) : (
         <>
           {/* The server's own answer: the gate refuses booking only while acceptance is required (TermsAcceptances.Required). */}
@@ -55,6 +56,6 @@ export default function TermsPanel(p: Props) {
           </Dialog>
         </>
       )}
-    </Section>
+    </Card>
   );
 }

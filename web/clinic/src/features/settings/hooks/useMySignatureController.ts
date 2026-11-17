@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ApiError } from '../../schedule/services/scheduleApi';
+import { ApiError } from '../../api/services/apiClient';
 import { doctorProblem, signatureProblem } from '../domain/doctors';
 import { fetchMySignature, removeMySignature, uploadMySignature } from '../services/doctorsApi';
 

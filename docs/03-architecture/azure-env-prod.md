@@ -12,7 +12,7 @@
 
 ## Same as dev, but stronger (already in the templates)
 
-Zone-redundant General Purpose PostgreSQL, 14-day point-in-time restore, ledger digests kept 3,650 days and the immutability policy locked, App Service plan with a staging slot, Defender for Cloud, budget alerts.
+Zone-redundant General Purpose PostgreSQL, 35-day point-in-time restore, ledger digests kept 3,650 days and the immutability policy locked, App Service plan with a staging slot, Defender for Cloud, budget alerts.
 
 ## Edge: Azure Front Door Premium + WAF (to build)
 

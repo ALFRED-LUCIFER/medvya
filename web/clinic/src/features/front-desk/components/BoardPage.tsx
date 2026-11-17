@@ -2,9 +2,9 @@ import { useRef, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import type { UseFormReturn } from 'react-hook-form';
 import { CalendarClock, Ellipsis, EyeOff, Printer, Undo2 } from 'lucide-react';
-import { useI18n, type MessageKey } from '@medvya/i18n';
+import { useI18n, type MessageKey, isDeviceTimeZone } from '@medvya/i18n';
 import { Button, buttonVariants, cn, Card, Dialog, DialogContent, DialogDescription, DialogTitle, EmptyState, FilterChip, FrontDeskTag, PageContainer, PageHeader, PageMessage, SegmentedControl, Skeleton, SkeletonGroup, statusIcons } from '@medvya/ui';
-import { isDeviceZone, type CancelForm } from '../../schedule/domain/changes';
+import type { CancelForm } from '../../schedule/domain/changes';
 import CancelReasonFields from '../../schedule/components/CancelReasonFields';
 import QueueTable from './QueueTable';
 import type { workload } from '../domain/overview';
@@ -97,7 +97,7 @@ export default function BoardPage(props: Props) {
   const { t, formatShortDay } = useI18n();
   const { board } = props;
   // The facility's zone is said only when this device is elsewhere; times are always the facility's.
-  const zone = board && !isDeviceZone(board.timeZone) ? t('schedule.facilityTime', { zone: board.timeZone }) : null;
+  const zone = board && !isDeviceTimeZone(board.timeZone) ? t('schedule.facilityTime', { zone: board.timeZone }) : null;
   return (
     // A minmax(0, 1fr) track keeps the board's width out of the page's minimum width, so only the board scrolls sideways.
     <PageContainer width="fluid" className="gap-2">

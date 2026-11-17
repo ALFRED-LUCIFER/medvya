@@ -55,14 +55,14 @@ public abstract partial class OnboardingRules
     public static readonly IReadOnlyList<int> Steps = [1, 2, 3, 4, 5];
 
     /// <summary>Every step; used before the practice is created.</summary>
-    public List<OnboardingError> ValidateAll(OnboardingData data)
+    public List<OnboardingError> ValidateAll(OnboardingData data, DateOnly today)
     {
         var errors = new List<OnboardingError>();
-        foreach (var step in Steps) errors.AddRange(ValidateStep(step, data));
+        foreach (var step in Steps) errors.AddRange(ValidateStep(step, data, today));
         return errors;
     }
 
-    public List<OnboardingError> ValidateStep(int step, OnboardingData d)
+    public List<OnboardingError> ValidateStep(int step, OnboardingData d, DateOnly today)
     {
         var e = new List<OnboardingError>();
         switch (step)
@@ -72,7 +72,7 @@ public abstract partial class OnboardingRules
                 // Only a doctor gives a licence: an owner who is not a doctor has none. The owner-doctor attests it (ADR-016).
                 if (d.Profile?.Mode != Clinic)
                 {
-                    Licence(d.Licence, e, DateOnly.FromDateTime(DateTime.UtcNow));
+                    Licence(d.Licence, e, today);
                     if (d.Licence?.Attested != true) e.Add(new("licence.attested", "required"));
                 }
                 ClinicStep(d.Clinic, e);

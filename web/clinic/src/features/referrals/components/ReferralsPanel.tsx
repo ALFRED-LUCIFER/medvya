@@ -3,10 +3,9 @@ import { Link } from 'react-router';
 import { Controller, type FieldError, type UseFormReturn } from 'react-hook-form';
 import { CircleCheck, Send } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, ChoiceRow, buttonVariants, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState, Textarea } from '@medvya/ui';
+import { Card, Button, ChoiceRow, buttonVariants, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState, Textarea } from '@medvya/ui';
 import type { DocumentRow } from '../../documents/domain/documents';
 import { fieldError } from '../../settings/components/fieldStyles';
-import { Section } from '../../settings/components/Section';
 import {
   canSend, channels, evidenceOf, nextStates, referralColumns, sectionNames, urgencies,
   type AdvanceForm, type Channel, type FileInForm, type Referral, type ReferralForm, type ReferralProblem,
@@ -15,6 +14,8 @@ import { referralsHeading } from './ReferralJump';
 import { stateIcons } from './stateIcons';
 
 type Props = {
+  /** The facility's IANA zone: instants show facility time, not the browser's (AGENTS.md 3.5). */
+  timeZone: string;
   encounterId: string;
   ended: boolean;
   referrals: Referral[];
@@ -43,7 +44,7 @@ export default function ReferralsPanel(p: Props) {
 
   return (
     <div className="flex flex-col gap-4">
-      <Section id={referralsHeading} title={t('referrals.title')} intro={t('referrals.intro')}>
+      <Card headingId={referralsHeading} title={t('referrals.title')} intro={t('referrals.intro')}>
         <TableState state={tableState} messages={{ loading: t('referrals.loading'), error: t('referrals.loadFailed'), empty: t('referrals.empty') }}>
           <Table label={t('referrals.tableLabel')} stacked className="md:min-w-[640px]">
             <TableHeader>
@@ -57,7 +58,7 @@ export default function ReferralsPanel(p: Props) {
                     <TableHead scope="row">{r.provider}<span className="block text-sm font-normal text-muted-foreground">{t(`referrals.direction.${r.direction}`)}</span></TableHead>
                     <TableCell label={t('referrals.col.urgency')}>{t(`referrals.urgency.${r.urgency}`)}</TableCell>
                     <TableCell label={t('referrals.col.state')}><span className="inline-flex items-center gap-1.5 font-bold"><Icon aria-hidden className="size-4 shrink-0" />{t(`referrals.state.${r.state}`)}</span></TableCell>
-                    <TableCell label={r.channel ? t('referrals.col.channel') : undefined}>{r.channel ? `${t(`referrals.channel.${r.channel}`)}${r.sentAt ? `, ${formatDate(new Date(r.sentAt))}` : ''}` : ''}</TableCell>
+                    <TableCell label={r.channel ? t('referrals.col.channel') : undefined}>{r.channel ? `${t(`referrals.channel.${r.channel}`)}${r.sentAt ? `, ${formatDate(new Date(r.sentAt), p.timeZone)}` : ''}` : ''}</TableCell>
                     <TableCell>
                       {r.open && !p.ended && <Button type="button" variant="outline" aria-label={t('referrals.manageNamed', { name: r.provider })} onClick={() => p.onSelect(r.id)}>{t('referrals.manage')}</Button>}
                     </TableCell>
@@ -68,14 +69,14 @@ export default function ReferralsPanel(p: Props) {
           </Table>
         </TableState>
         {p.problem && <p role="alert" className={fieldError}>{t(`referrals.error.${p.problem}`)}</p>}
-      </Section>
+      </Card>
 
       {p.selected && !p.ended && (
-        <Section title={t('referrals.manageTitle', { name: p.selected.provider })}>
+        <Card title={t('referrals.manageTitle', { name: p.selected.provider })}>
           <ol className="flex flex-col gap-1" aria-label={t('referrals.history')}>
             {p.selected.history.map(s => (
               <li key={`${s.state}-${s.at}`}>
-                <span className="font-bold">{t(`referrals.state.${s.state}`)}</span>{` ${formatDate(new Date(s.at))}`}{s.note && ` · ${s.note}`}
+                <span className="font-bold">{t(`referrals.state.${s.state}`)}</span>{` ${formatDate(new Date(s.at), p.timeZone)}`}{s.note && ` · ${s.note}`}
                 {s.documentId && <span className="ms-2 text-sm text-muted-foreground">{t('referrals.evidence')}</span>}
               </li>
             ))}
@@ -119,12 +120,12 @@ export default function ReferralsPanel(p: Props) {
             </form>
           )}
           {evidenceOf(p.selected).length > 0 && <p className="flex items-center gap-2 text-sm"><CircleCheck aria-hidden className="size-4" />{t('referrals.evidenceCount', { count: evidenceOf(p.selected).length })}</p>}
-        </Section>
+        </Card>
       )}
 
       {!p.ended && (
         <>
-          <Section title={t('referrals.add.title')}>
+          <Card title={t('referrals.add.title')}>
             <form noValidate onSubmit={p.onCreate} className="grid gap-4 md:grid-cols-2">
               <Field id="ref-provider" label={t('referrals.field.provider')} error={problem(p.createForm.formState.errors.provider)}>
                 <Input autoComplete="off" {...p.createForm.register('provider')} />
@@ -151,9 +152,9 @@ export default function ReferralsPanel(p: Props) {
               </fieldset>
               <Button type="submit" className="self-start" disabled={p.busy}>{t('referrals.add.submit')}</Button>
             </form>
-          </Section>
+          </Card>
 
-          <Section title={t('referrals.in.title')} intro={t('referrals.in.intro')}>
+          <Card title={t('referrals.in.title')} intro={t('referrals.in.intro')}>
             <form noValidate onSubmit={p.onFileIn} className="grid gap-4 md:grid-cols-2">
               <Field id="refin-provider" label={t('referrals.in.provider')} error={problem(p.fileForm.formState.errors.provider)}>
                 <Input autoComplete="off" {...p.fileForm.register('provider')} />
@@ -171,7 +172,7 @@ export default function ReferralsPanel(p: Props) {
               </Field>
               <Button type="submit" variant="outline" className="self-start" disabled={p.busy}>{t('referrals.in.submit')}</Button>
             </form>
-          </Section>
+          </Card>
         </>
       )}
     </div>

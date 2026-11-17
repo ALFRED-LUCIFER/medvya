@@ -2,7 +2,7 @@
 
 import uuid
 from datetime import date, datetime
-from typing import Annotated, Any, Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
@@ -24,7 +24,7 @@ class ParticipantOut(BaseModel):
 
 
 class SessionCreate(BaseModel):
-    patient_ref: str = Field(min_length=1, max_length=120)
+    patient_ref: uuid.UUID  # the Medvya encounter id (ADR-021 section 4), never a name
     specialty: str | None = Field(default=None, max_length=120)
     scheduled_date: date
     participants: list[ParticipantIn] = Field(min_length=1, max_length=3)
@@ -53,7 +53,7 @@ class SessionOut(BaseModel):
     recording_allowed: bool
     consent_epoch: int
     revoked_at: datetime | None
-    patient_ref: str
+    patient_ref: uuid.UUID
     participants: list[ParticipantOut]
     consent: list[ConsentState]
     segments: list[SegmentState]
@@ -141,7 +141,7 @@ class FinishOut(BaseModel):
     state: str
 
 
-# ---- review / result / export (B6) ----------------------------------------------------------
+# ---- review / result (B6) ----------------------------------------------------------
 
 
 class NoteContent(BaseModel):
@@ -190,11 +190,6 @@ class RevisionsOut(BaseModel):
     status: str
     template: str
     revisions: list[RevisionOut]  # oldest first; append-only in the database
-
-
-class ApproveOut(BaseModel):
-    status: str
-    approved_at: datetime
 
 
 class EvidenceOut(BaseModel):
@@ -320,99 +315,3 @@ class SpeakerRelabelIn(BaseModel):
 
 class FactReviewIn(BaseModel):
     review_state: Literal["confirmed", "rejected"]
-
-
-class ExportSession(BaseModel):
-    id: uuid.UUID
-    patient_ref: str
-    specialty: str | None
-    scheduled_date: date
-    approved_at: datetime | None
-
-
-class ExportOut(BaseModel):
-    schema_version: Literal["1"] = "1"
-    session: ExportSession
-    note: NoteOut
-    facts: list[FactOut]
-    transcript: list[TranscriptOut]
-    participants: list[ParticipantOut]
-
-
-class PrivacyRequestIn(BaseModel):
-    """Patient access or erasure request, recorded by staff after verifying the requester."""
-
-    patient_ref: str = Field(min_length=1, max_length=120)
-    kind: Literal["access", "erasure"]
-    verification_note: str = Field(min_length=5, max_length=500)  # how identity was verified
-
-
-class PrivacyRequestOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    id: uuid.UUID
-    patient_ref: str
-    kind: str
-    status: str
-    decision: dict[str, Any]  # session ids and counts only
-    created_at: datetime
-    resolved_at: datetime | None
-
-
-class ReceptionistMessageIn(BaseModel):
-    text: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=2000)]
-
-
-class ConversationOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    id: uuid.UUID
-    status: str
-    language: str | None
-    intake: dict[str, Any]
-    messages: list[dict[str, Any]]
-    session_id: uuid.UUID | None
-    created_at: datetime
-
-
-class MedicationUsageItem(BaseModel):
-    period: date
-    generic_name: str
-    prescriptions: int
-    sessions: int
-
-
-class MedicationUsageOut(BaseModel):
-    items: list[MedicationUsageItem]
-
-
-class FactCountItem(BaseModel):
-    category: str
-    label: str
-    n: int
-
-
-class FactCountsOut(BaseModel):
-    items: list[FactCountItem]
-
-
-class CategoryCount(BaseModel):
-    category: str
-    n: int
-
-
-class UsageItem(BaseModel):
-    month: date
-    kind: str
-    jobs: int
-    audio_ms: int
-    prompt_tokens: int
-    completion_tokens: int
-
-
-class UsageOut(BaseModel):
-    items: list[UsageItem]
-
-
-class OverviewOut(BaseModel):
-    sessions: int
-    approved: int
-    by_category: list[CategoryCount]

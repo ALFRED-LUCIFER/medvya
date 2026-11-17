@@ -4,6 +4,8 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: '.',
   testIgnore: 'fullstack/**', // needs Docker and .NET: `pnpm e2e:fullstack`
+  // Every test mocks its own API and owns its page, so tests of one file run on any worker: shards stay even instead of waiting on the longest file.
+  fullyParallel: true,
   forbidOnly: !!process.env.CI,
   // A private repo's runner has 2 vCPUs, where Playwright's default (half the cores) gives 1 worker; the specs mostly wait on the page, so 2 fit.
   workers: process.env.CI ? 2 : undefined,

@@ -10,9 +10,12 @@ docker run --env-file .env -p 8000:8000 medvya-ai-service                 # API
 docker run --env-file .env medvya-ai-service python -m medvya_ai.worker   # worker (scale horizontally)
 ```
 
-Required for production: `AUTH_MODE=entra` with `AUTH_ISSUER`/`AUTH_AUDIENCE`, real providers,
-`ENCRYPTION_MASTER_KEY` injected from Key Vault, `APPLICATIONINSIGHTS_CONNECTION_STRING`.
-Provision users: `python -m medvya_ai.seed --provision --email ... --subject <oid> --clinic-id ...`.
+Required for production: `ENVIRONMENT=production`, `AUTH_MODE=service` with `AUTH_ISSUER`,
+`AUTH_AUDIENCE`, `AUTH_ALLOWED_CLIENT_IDS` (Host.Api's managed identity) and `AUTH_REQUIRED_ROLE`,
+real providers with `PROCESSING_ENDPOINT_HOSTS`, `ENCRYPTION_MASTER_KEY` injected from Key Vault,
+`APPLICATIONINSIGHTS_CONNECTION_STRING`. No user provisioning in service mode: the clinic row and
+one user row per Medvya user are created on first use. The API container probes `/healthz` and
+`/readyz` (the image has no HEALTHCHECK: the worker shares it).
 
 ## Rollback
 
@@ -34,7 +37,9 @@ SELECT id, clinic_id, session_id, kind, attempts, last_error, updated_at
 FROM processing_job WHERE status = 'failed' ORDER BY updated_at DESC;
 -- re-enqueue one after fixing the cause (purge jobs are idempotent)
 UPDATE processing_job SET status = 'queued', attempts = 0, run_after = now() WHERE id = '<id>';
--- stuck running jobs are reclaimed automatically after 15 minutes without heartbeat
+-- stuck running jobs are reclaimed after 15 minutes without heartbeat while attempts remain;
+-- on the last attempt the worker marks them failed with last_error = 'WORKER_LOST'
+-- model jobs (transcribe, normalise, extract) have max_attempts 3; provider calls 3 tries each
 ```
 
 A failed `purge_session` must be re-enqueued the same day: until it runs, audio of a revoked
@@ -43,14 +48,15 @@ session still exists (encrypted) in Blob.
 ## Consent withdrawal and erasure
 
 Withdrawal is done by the clinician through Medvya, which calls `POST /sessions/{id}/consents` with
-`status=withdrawn`. Erasure requests: `POST /privacy-requests` with the verification note;
-the decision lists purged and retained (approved) sessions. Approved records follow the clinic's
-record retention; audio is purged in both cases.
+`status=withdrawn`; the purge job deletes the session's audio and working data. Medvya handles
+patient data requests itself; this service's working data also expires `RETENTION_SESSION_DAYS`
+after the session finished (hourly retention sweep, audit action `session_retention_expired`).
 
 ## Cost and usage
 
-`GET /analytics/usage` (per month and job kind: audio ms, tokens). Cross-check with Azure cost
-management for the Speech and Foundry resources.
+`processing_job.usage` holds counters per job (audio ms, tokens, model, endpoint host). Cross-check
+with Azure cost management for the Speech and Foundry resources. There is no per-clinic cost cap
+yet (shortcut in `jobs/queue.py`).
 
 ## Tests
 

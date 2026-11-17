@@ -1,4 +1,3 @@
-using Medvya.Tenancy.Api;
 using Medvya.Identity.Application;
 using Medvya.Identity.Domain;
 using Medvya.Tenancy.Application;

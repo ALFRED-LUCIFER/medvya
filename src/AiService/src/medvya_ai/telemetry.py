@@ -78,10 +78,15 @@ class RedactingLogFilter(logging.Filter):
         return True
 
 
+# uvicorn's loggers have their own handlers and do not propagate: an unhandled exception's
+# traceback (with SQL text) would reach stdout unscrubbed without the filter on them too.
+FILTERED_LOGGERS = ("", "medvya_ai", "uvicorn", "uvicorn.error", "uvicorn.access")
+
+
 def install_log_filter() -> None:
-    """Attach the filter to every root handler and to the 'medvya_ai' logger's handlers."""
+    """Attach the filter to the handlers of the root, 'medvya_ai' and uvicorn loggers."""
     f = RedactingLogFilter()
-    for logger in (logging.getLogger(), logging.getLogger("medvya_ai")):
+    for logger in map(logging.getLogger, FILTERED_LOGGERS):
         for h in logger.handlers:
             if not any(isinstance(x, RedactingLogFilter) for x in h.filters):
                 h.addFilter(f)

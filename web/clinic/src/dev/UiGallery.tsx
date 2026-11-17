@@ -12,6 +12,7 @@ import StickyActionBarSection from './gallery/StickyActionBarSection';
 import ChipTagBannerSection from './gallery/ChipTagBannerSection';
 import PatientBannerSection from './gallery/PatientBannerSection';
 import PopoverSection from './gallery/PopoverSection';
+import DetailListSection from './gallery/DetailListSection';
 import ShellComponentsGallery from './ShellComponentsGallery';
 
 const keys = <T extends object>(o: T) => Object.keys(o) as (keyof T)[];
@@ -185,6 +186,7 @@ export default function UiGallery({ switcher }: { switcher: ReactNode }) {
         <Measured name="duration-fast ease-out" className="transition-colors duration-fast ease-out" read={s => `${s.transitionDuration} ${s.transitionTimingFunction}`}>Motion</Measured>
       </section>
       <PageComponentsGallery />
+      <DetailListSection />
       <FieldGallery />
       <StickyActionBarSection />
       <ChipTagBannerSection />

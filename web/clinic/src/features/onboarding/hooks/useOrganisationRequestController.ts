@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
-import { ApiError } from '../../schedule/services/scheduleApi';
+import { ApiError } from '../../api/services/apiClient';
 import { sessionQueryKey } from '../../session/hooks/useSessionController';
 import {
   canSubmit, fileProblem, isEditable, itContactSchema, missingKinds, requestError, type DocumentKind, type FileProblem, type ItContactForm, type RequestError,

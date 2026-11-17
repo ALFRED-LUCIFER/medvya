@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
-import { ApiError } from '../../schedule/services/scheduleApi';
+import { ApiError } from '../../api/services/apiClient';
 import { emptyGrowth, growthBody, growthProblemOf, growthSchema, type Growth, type GrowthDraft, type GrowthIndicator, type GrowthProblem } from '../domain/growth';
 import { fetchGrowth, recordGrowth } from '../services/childHealthApi';
 

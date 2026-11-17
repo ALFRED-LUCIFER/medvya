@@ -1,6 +1,6 @@
 import { CalendarPlus, CircleCheck, FileUp, FolderInput, Plug, Store, Users, type LucideIcon } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, PageHeader } from '@medvya/ui';
+import { Button, PageHeader, Detail, DetailList } from '@medvya/ui';
 import { specialtyIdOf, type FinishResult, type WizardForm } from '../domain/onboarding';
 
 type Props = { form: WizardForm; done: FinishResult; onBook: () => void; onHome: () => void };
@@ -29,15 +29,12 @@ export default function ReadyScreen({ form, done, onBook, onHome }: Props) {
         <PageHeader className="[&_h1]:whitespace-normal" title={t('onboarding.ready.title', { name: form.clinicName.trim() })} description={t('onboarding.ready.body')} />
         {done.invitationsFailed > 0 && <p className="font-semibold text-warning-700">{t('onboarding.done.invitesFailed', { n: done.invitationsFailed })}</p>}
       </div>
-      <dl className="flex flex-col divide-y rounded-xl border">
+      <DetailList layout="rows">
         {rows.map(({ icon: Icon, label, value }) => (
-          <div key={label} className="flex min-h-12 items-center gap-3 px-4 py-2 text-sm">
-            <Icon className="size-5 shrink-0 text-brand-700" aria-hidden />
-            <dt className="flex-1 font-semibold">{label}</dt>
-            <dd className="text-muted-foreground">{value}</dd>
-          </div>
+          <Detail key={label} label={label} icon={<Icon className="size-5 shrink-0 text-brand-700" aria-hidden />}
+            className="flex-nowrap gap-3" labelClassName="w-auto flex-1" valueClassName="flex-none text-muted-foreground">{value}</Detail>
         ))}
-      </dl>
+      </DetailList>
       <div className="flex flex-wrap gap-3">
         <Button onClick={onBook}><FileUp className="size-4" aria-hidden />{t('onboarding.ready.book')}</Button>
         <Button variant="outline" onClick={onHome}>{t('onboarding.finish.app')}</Button>

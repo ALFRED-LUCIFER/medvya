@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ApiError } from '../../schedule/services/scheduleApi';
+import { ApiError } from '../../api/services/apiClient';
 import { acceptTerms, fetchTerms } from '../services/settingsApi';
 
 /** Terms tab: the accepted-terms status and the owner's accept action. The server decides who may accept; this follows its answer. */

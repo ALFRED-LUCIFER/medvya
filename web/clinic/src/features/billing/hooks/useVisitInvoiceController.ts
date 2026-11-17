@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { ApiError } from '../../schedule/services/scheduleApi';
+import { ApiError } from '../../api/services/apiClient';
 import { invoiceProblem } from '../domain/invoice';
 import { openVisitInvoice } from '../services/invoicesApi';
 

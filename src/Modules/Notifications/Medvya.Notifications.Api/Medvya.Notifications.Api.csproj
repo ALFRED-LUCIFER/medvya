@@ -19,11 +19,10 @@
     <ProjectReference Include="..\Medvya.Notifications.Application\Medvya.Notifications.Application.csproj" />
     <ProjectReference Include="..\Medvya.Notifications.Domain\Medvya.Notifications.Domain.csproj" />
     <ProjectReference Include="..\Medvya.Notifications.Infrastructure\Medvya.Notifications.Infrastructure.csproj" />
-    <ProjectReference Include="..\..\Audit\Medvya.Audit.Api\Medvya.Audit.Api.csproj" />
-    <ProjectReference Include="..\..\Tenancy\Medvya.Tenancy.Api\Medvya.Tenancy.Api.csproj" />
+    <ProjectReference Include="..\..\Audit\Medvya.Audit.Application\Medvya.Audit.Application.csproj" />
+    <ProjectReference Include="..\..\Tenancy\Medvya.Tenancy.Application\Medvya.Tenancy.Application.csproj" />
     <ProjectReference Include="..\..\Scheduling\Medvya.Scheduling.Application\Medvya.Scheduling.Application.csproj" />
     <ProjectReference Include="..\..\Patients\Medvya.Patients.Application\Medvya.Patients.Application.csproj" />
-    <ProjectReference Include="..\..\Patients\Medvya.Patients.Domain\Medvya.Patients.Domain.csproj" />
   </ItemGroup>
 
   <ItemGroup>

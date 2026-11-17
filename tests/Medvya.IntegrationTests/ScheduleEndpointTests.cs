@@ -63,7 +63,7 @@ public sealed class ScheduleEndpointTests(PostgresFixture sql) : IClassFixture<P
     async Task<List<string>> AuditActions()
     {
         await using var db = sql.Audit(tenant);
-        return await db.Events.OrderBy(e => e.OccurredAt).Select(e => e.Action).ToListAsync();
+        return await db.Events.OrderBy(e => e.OccurredAt).ThenBy(e => e.Id).Select(e => e.Action).ToListAsync();
     }
 
     // The body the clinic app sends: enum names as strings, weekday numbers (0 = Sunday), wall-clock times.

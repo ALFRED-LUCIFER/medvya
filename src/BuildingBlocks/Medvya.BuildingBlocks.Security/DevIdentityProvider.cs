@@ -90,7 +90,7 @@ public static class DevIdentityProvider
                 : (login_hint, null);
             if (name is null && users.All(u => u.Subject != subject)) return Results.BadRequest("Unknown user.");
             var code = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
-            grants[code] = new Grant(subject, name, email, client_id, redirect_uri, nonce, code_challenge, no_mfa != true, DateTimeOffset.UtcNow.AddMinutes(2));
+            grants[code] = new Grant(subject, name, email, client_id, redirect_uri, nonce, code_challenge, no_mfa != true, DateTimeOffset.UtcNow.AddMinutes(2)); // wall clock: sign-in keeps the real clock (DevClock)
             return Results.Redirect($"{redirect_uri}?code={code}&state={Uri.EscapeDataString(state)}");
         });
 
@@ -103,11 +103,11 @@ public static class DevIdentityProvider
         dev.MapPost("/token", async (HttpRequest r) =>
         {
             var f = await r.ReadFormAsync();
-            if (f["grant_type"] != "authorization_code" || !grants.TryRemove(f["code"].ToString(), out var g) || g.Expires < DateTimeOffset.UtcNow
+            if (f["grant_type"] != "authorization_code" || !grants.TryRemove(f["code"].ToString(), out var g) || g.Expires < DateTimeOffset.UtcNow // wall clock: sign-in keeps the real clock (DevClock)
                 || f["client_id"] != g.ClientId || f["redirect_uri"] != g.RedirectUri
                 || Base64UrlEncoder.Encode(SHA256.HashData(Encoding.ASCII.GetBytes(f["code_verifier"].ToString()))) != g.Challenge)
                 return Results.Json(new { error = "invalid_grant" }, statusCode: StatusCodes.Status400BadRequest);
-            var now = DateTime.UtcNow;
+            var now = DateTime.UtcNow; // wall clock: the OIDC handler checks these tokens against the real clock
             var idToken = new JsonWebTokenHandler().CreateToken(new SecurityTokenDescriptor
             {
                 Issuer = issuer,

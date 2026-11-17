@@ -1,4 +1,4 @@
-import { post, send } from '../../schedule/services/scheduleApi';
+import { post, send } from '../../api/services/apiClient';
 import type { GeriatricHistory, MedicineReview, toRecord } from '../domain/olderAdult';
 
 // The older adult review (MDV-P2-037). The patient id is the only thing in the path; scores travel in the body.

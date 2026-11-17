@@ -61,7 +61,7 @@ sealed class StaffUsers(IdentityDbContext db) : IStaffUsers
     }
 }
 
-sealed class OnboardingDrafts(IdentityDbContext db) : IOnboardingDrafts
+sealed class OnboardingDrafts(IdentityDbContext db, TimeProvider clock) : IOnboardingDrafts
 {
     public Task<OnboardingDraft?> GetAsync(Guid userId, CancellationToken cancellationToken = default) =>
         db.OnboardingDrafts.AsNoTracking().SingleOrDefaultAsync(d => d.UserId == userId && d.CompletedAt == null, cancellationToken);
@@ -69,7 +69,7 @@ sealed class OnboardingDrafts(IdentityDbContext db) : IOnboardingDrafts
     public async Task<OnboardingDraft> StartAsync(Guid userId, string country, CancellationToken cancellationToken = default)
     {
         if (await GetAsync(userId, cancellationToken) is { } existing) return existing;
-        var now = DateTimeOffset.UtcNow;
+        var now = clock.GetUtcNow();
         // A finished draft's row is reused, so a person who already has a practice can start another.
         var reused = await db.OnboardingDrafts.Where(d => d.UserId == userId).ExecuteUpdateAsync(s => s
             .SetProperty(d => d.Country, country).SetProperty(d => d.Step, 1).SetProperty(d => d.Data, "{}")
@@ -84,14 +84,14 @@ sealed class OnboardingDrafts(IdentityDbContext db) : IOnboardingDrafts
 
     public async Task<bool> SaveAsync(Guid userId, int resumeStep, string data, CancellationToken cancellationToken = default)
     {
-        var now = DateTimeOffset.UtcNow;
+        var now = clock.GetUtcNow();
         return await db.OnboardingDrafts.Where(d => d.UserId == userId && d.CompletedAt == null)
             .ExecuteUpdateAsync(s => s.SetProperty(d => d.Step, resumeStep).SetProperty(d => d.Data, data).SetProperty(d => d.UpdatedAt, now), cancellationToken) == 1;
     }
 
     public async Task<bool> CompleteAsync(Guid userId, string result, CancellationToken cancellationToken = default)
     {
-        var now = DateTimeOffset.UtcNow;
+        var now = clock.GetUtcNow();
         return await db.OnboardingDrafts.Where(d => d.UserId == userId && d.CompletedAt == null)
             .ExecuteUpdateAsync(s => s.SetProperty(d => d.Data, result).SetProperty(d => d.CompletedAt, now).SetProperty(d => d.UpdatedAt, now), cancellationToken) == 1;
     }

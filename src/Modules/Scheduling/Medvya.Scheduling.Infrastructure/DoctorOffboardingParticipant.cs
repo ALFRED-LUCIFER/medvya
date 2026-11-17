@@ -10,6 +10,7 @@ using Medvya.Tenancy.Application;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Npgsql;
 
 namespace Medvya.Scheduling.Infrastructure;
 
@@ -17,13 +18,47 @@ namespace Medvya.Scheduling.Infrastructure;
 /// A doctor left a facility of the practice (MDV-P1-009): their future booked visits there (not at the practice's other sites, #877) become "needs rebooking" (slots freed, audited, queued
 /// reminders cancelled; the patient is asked to rebook only if the admin chose to offer new slots),
 /// board told after the commit). It runs inside the offboarding transaction on its connection, so the tenant's row-level security applies and
-/// the move commits or rolls back with the membership change. The caller has already authorised staff administration. Takes the same
-/// per-doctor-day app locks as every booking change, so a booking cannot slip in between.
+/// the move commits or rolls back with the membership change. The caller has already authorised staff administration. The doctor's calendar
+/// lock is held exclusive (every booking change holds it shared) from before the roster's transaction to after its commit (<see cref="HoldAsync"/>),
+/// so no booking of the doctor is in flight during it, and one that waited sees the membership offboarded (it re-checks under the lock).
 /// </summary>
 public sealed class DoctorOffboardingParticipant(
     ICurrentTenant tenant, ICurrentUser user, IFacilityDirectory facilities, IAuditLog audit, IOptions<SchedulingOptions> options,
     TimeProvider clock, IBoardNotifier notifier, ILogger<DoctorOffboardingParticipant> log, IEnumerable<IRebookingParticipant> rebooking) : IStaffOffboardingParticipant
 {
+    public async Task<IAsyncDisposable> HoldAsync(Guid userId, DbConnection connection, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(connection);
+        var key = DoctorDayTransaction.DoctorKey(tenant.TenantId ?? throw new InvalidOperationException("No tenant context."), userId);
+        // A session lock, taken outside any transaction: an advisory xact lock would be taken after the serializable snapshot and wait in vain.
+        await using (var take = connection.CreateCommand())
+        {
+            take.CommandText = "SELECT set_config('lock_timeout', @timeout, false); SELECT pg_advisory_lock(hashtextextended(@key, 0));";
+            take.Parameters.Add(new NpgsqlParameter("timeout", ((int)options.Value.LockTimeout.TotalMilliseconds).ToString(System.Globalization.CultureInfo.InvariantCulture)));
+            take.Parameters.Add(new NpgsqlParameter("key", key));
+            try { await take.ExecuteNonQueryAsync(cancellationToken); }
+            finally
+            {
+                await using var reset = connection.CreateCommand();
+                reset.CommandText = "RESET lock_timeout";
+                await reset.ExecuteNonQueryAsync(CancellationToken.None);
+            }
+        }
+        return new SessionLock(connection, key);
+    }
+
+    /// <summary>Releases the session lock (closing the connection would too: the pool's reset discards it).</summary>
+    sealed class SessionLock(DbConnection connection, string key) : IAsyncDisposable
+    {
+        public async ValueTask DisposeAsync()
+        {
+            await using var release = connection.CreateCommand();
+            release.CommandText = "SELECT pg_advisory_unlock(hashtextextended(@key, 0))";
+            release.Parameters.Add(new NpgsqlParameter("key", key));
+            await release.ExecuteNonQueryAsync();
+        }
+    }
+
     public async Task<OffboardingShare> OffboardedAsync(Guid doctorUserId, Guid facilityId, bool offerRebooking, DbTransaction transaction, CancellationToken cancellationToken)
     {
         var (now, me, tenantId) = (clock.GetUtcNow(), user.UserId, tenant.TenantId ?? throw new InvalidOperationException("No tenant context."));

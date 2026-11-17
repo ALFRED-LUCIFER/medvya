@@ -5,7 +5,7 @@ import { Button, buttonVariants, PageHeader, PageMessage } from '@medvya/ui';
 import type { OrderSlip } from '../domain/orders';
 import PaperPrintPage, { Ident, Item, Items, Masthead, Meta, Row, Rows, Signature } from '../../prescription/components/PaperPrintPage';
 
-type Props = { slip: OrderSlip | null; loading: boolean; nothingPlaced: boolean; failed: boolean; onPrint: () => void; consultPath: string;
+type Props = { timeZone: string; slip: OrderSlip | null; loading: boolean; nothingPlaced: boolean; failed: boolean; onPrint: () => void; consultPath: string;
   downloading: boolean; pdfProblem: 'unsupported' | 'failed' | null; onPdf: () => void };
 
 /**
@@ -24,7 +24,7 @@ export default function SlipPage(p: Props) {
       </div>
     );
   const { slip } = p;
-  const ordered = t('paper.ordered', { when: formatDate(new Date(slip.orderedAt)) });
+  const ordered = t('paper.ordered', { when: formatDate(new Date(slip.orderedAt), p.timeZone) });
   const toolbar = <>
     <div className="flex flex-wrap gap-3">
       <Button onClick={p.onPrint}><Printer aria-hidden className="size-4" />{t('orders.slip.print')}</Button>

@@ -7,7 +7,6 @@ import os
 import signal
 import socket
 import time
-import uuid
 from collections.abc import Mapping
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -36,16 +35,16 @@ def safe_error(exc: BaseException) -> str:
 
 
 async def heartbeat(
-    sm: async_sessionmaker[AsyncSession], job_id: uuid.UUID, every: float = queue.HEARTBEAT_SECONDS
+    sm: async_sessionmaker[AsyncSession], job: queue.Job, every: float = queue.HEARTBEAT_SECONDS
 ) -> None:
     """Runs beside a handler; cancelled when it finishes. A failed touch is retried next tick."""
     while True:
         await asyncio.sleep(every)
         try:
             async with sm() as db, db.begin():
-                await queue.touch(db, job_id)
+                await queue.touch(db, job)
         except Exception:
-            log.warning("heartbeat failed id=%s", job_id)
+            log.warning("heartbeat failed id=%s", job.id)
 
 
 async def run_once(
@@ -60,10 +59,14 @@ async def run_once(
     if job is None:
         return False
     handler = handlers.get(job.kind)
-    beat = asyncio.create_task(heartbeat(sm, job.id))
+    beat = asyncio.create_task(heartbeat(sm, job))
     try:
         if handler is None:
             raise ProviderError("NO_HANDLER")
+        # shortcut: the handler's transaction stays open (idle) across provider calls of up to
+        # ~5 min, holding one pooled connection and the row locks it took; splitting it would lose
+        # the all-or-nothing consent assertion in complete(). Move to read -> commit -> call ->
+        # reopen-and-recheck (MDV-P3-007 job/callback design) before running several workers.
         async with sm() as db, db.begin():
             await set_tenant(db, job.clinic_id)
             if job.kind in queue.SESSION_PIPELINE:
@@ -97,12 +100,17 @@ async def run_forever(
     sm: async_sessionmaker[AsyncSession], deps: Deps, stop: asyncio.Event, worker_id: str
 ) -> None:
     poll = deps.settings.worker_poll_seconds
-    next_sweep = 0.0
+    next_sweep = next_stale_check = 0.0
     while not stop.is_set():
         try:
             if time.monotonic() >= next_sweep:
                 await enqueue_retention_sweeps(sm)
                 next_sweep = time.monotonic() + RETENTION_INTERVAL_SECONDS
+            if time.monotonic() >= next_stale_check:
+                async with sm() as db, db.begin():
+                    if n := await queue.fail_exhausted_stale(db):
+                        log.warning("failed %d job(s) whose worker died on the last attempt", n)
+                next_stale_check = time.monotonic() + queue.HEARTBEAT_SECONDS
             worked = await run_once(sm, deps, worker_id)
         except Exception:  # DB briefly unreachable: back off, keep running
             log.exception("worker loop error")

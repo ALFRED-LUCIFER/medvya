@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useInfiniteQuery, useMutation, useQuery } from '@tanstack/react-query';
 import { useI18n } from '@medvya/i18n';
-import { ApiError } from '../../schedule/services/scheduleApi';
+import { ApiError } from '../../api/services/apiClient';
 import { usePatientSearch } from '../../patients/hooks/usePatientSearch';
 import { fetchStaff } from '../../staff/services/staffApi';
 import { useSessionController } from '../../session/hooks/useSessionController';

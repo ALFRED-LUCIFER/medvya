@@ -1,5 +1,5 @@
 import { fireEvent, screen } from '@testing-library/react-native';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, Text } from 'react-native';
 import { cast } from '../dev/cast';
 import { useSession, useSignedIn } from '../features/session/hooks/session';
@@ -12,10 +12,11 @@ function SignedInScreen() {
 }
 function Harness() {
   const { session, begin } = useSession();
-  const wasIn = useRef(false);
-  useEffect(() => { begin({ person: cast.people[0]!, phone: '+919000000101', clinic: cast.clinic }, false); }, []); // once, on mount
-  if (session) wasIn.current = true;
-  return <>{session ? null : <Text>signed out</Text>}{wasIn.current ? <SignedInScreen /> : null}</>;
+  const [wasIn, setWasIn] = useState(false);
+  const began = useRef(false);
+  useEffect(() => { if (!began.current) { began.current = true; begin({ person: cast.people[0]!, phone: '+919000000101', clinic: cast.clinic }, false); } }, [begin]); // once, on mount
+  if (session && !wasIn) setWasIn(true);
+  return <>{session ? null : <Text>signed out</Text>}{wasIn ? <SignedInScreen /> : null}</>;
 }
 
 it('signs out without crashing the screens that are still mounted', async () => {

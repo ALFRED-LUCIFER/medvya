@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { useI18n } from '@medvya/i18n';
 import { fetchLocations } from '../../settings/services/settingsApi';
-import { ApiError } from '../../schedule/services/scheduleApi';
+import { ApiError } from '../../api/services/apiClient';
 import { useTableController } from '../../table/hooks/useTableController';
 import { roleOfValue, roleValue, addStaffSchema, offboardSchema, reactivateSchema, rebookingMissing, locationsOf, locationsSchema, reasonMissing, type LocationsForm, type AddStaffForm, type OffboardForm, type ReactivateForm, type StaffMember, type AssignableRole, type RoleChoice, type Step, planFullText, type PlanLimit } from '../domain/staff';
 import { staffSort } from '../domain/staffTable';

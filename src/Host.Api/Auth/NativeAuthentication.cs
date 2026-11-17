@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Encodings.Web;
+using Medvya.Identity.Api;
 using Medvya.Identity.Application;
 using Medvya.Identity.Domain;
 using Medvya.Tenancy.Application;
@@ -24,7 +25,7 @@ namespace Host.Api.Auth;
 /// </summary>
 public static partial class NativeAuthentication
 {
-    public const string Scheme = "Native";
+    public const string Scheme = SessionEndpoints.NativeScheme;
     public static readonly TimeSpan AccessLifetime = TimeSpan.FromMinutes(15);
     static readonly TimeSpan CodeLifetime = TimeSpan.FromMinutes(2);
     const string ChallengeItem = "medvya.native.challenge", RedirectItem = "medvya.native.redirect";
@@ -40,7 +41,7 @@ public static partial class NativeAuthentication
     public static string? SelectScheme(HttpContext ctx) =>
         ctx.Request.Headers.Authorization.ToString().StartsWith("Bearer ", StringComparison.Ordinal) ? Scheme : null;
 
-    public static bool IsNative(ClaimsPrincipal principal) => principal.Identity?.AuthenticationType == Scheme;
+    public static bool IsNative(ClaimsPrincipal principal) => SessionEndpoints.IsNative(principal);
 
     static TicketDataFormat Format(IServiceProvider services, string purpose) =>
         new(services.GetRequiredService<IDataProtectionProvider>().CreateProtector(purpose));
@@ -91,7 +92,7 @@ public static partial class NativeAuthentication
                 var secret = RandomNumberGenerator.GetBytes(32);
                 if (await http.RequestServices.GetRequiredService<IStaffSessions>().RotateRefreshAsync(sessionId, null, SHA256.HashData(secret), http.RequestAborted) != RefreshRotation.Rotated)
                     return Results.BadRequest();
-                var code = new AuthenticationProperties { ExpiresUtc = DateTimeOffset.UtcNow + CodeLifetime };
+                var code = new AuthenticationProperties { ExpiresUtc = http.RequestServices.GetRequiredService<TimeProvider>().GetUtcNow() + CodeLifetime };
                 code.Items["sid"] = sessionId.ToString();
                 code.Items["uid"] = userId.ToString();
                 code.Items["secret"] = Base64Url.EncodeToString(secret);
@@ -126,7 +127,7 @@ public static partial class NativeAuthentication
     {
         var ticket = code.Length is > 0 and <= 2048 ? Format(http.RequestServices, CodePurpose).Unprotect(code) : null;
         string? Item(string key) => ticket?.Properties.Items.TryGetValue(key, out var value) == true ? value : null;
-        if (ticket?.Properties.ExpiresUtc is not { } expires || expires <= DateTimeOffset.UtcNow
+        if (ticket?.Properties.ExpiresUtc is not { } expires || expires <= http.RequestServices.GetRequiredService<TimeProvider>().GetUtcNow()
             || Item(RedirectItem) != redirectUri
             || verifier.Length is < 43 or > 128
             || Base64Url.EncodeToString(SHA256.HashData(Encoding.ASCII.GetBytes(verifier))) != Item(ChallengeItem)
@@ -163,7 +164,7 @@ public static partial class NativeAuthentication
         // shortcut: no device key is registered, as for patients (Medvya.Identity.Api.PatientAuthentication.StartAsync says why and when).
         if (device is not null) await sessions.LabelDeviceAsync(sessionId, device, http.RequestAborted);
         var access = Format(http.RequestServices, AccessPurpose).Protect(new AuthenticationTicket(principal,
-            new AuthenticationProperties { ExpiresUtc = DateTimeOffset.UtcNow + AccessLifetime }, Scheme));
+            new AuthenticationProperties { ExpiresUtc = http.RequestServices.GetRequiredService<TimeProvider>().GetUtcNow() + AccessLifetime }, Scheme));
         http.Response.Headers.CacheControl = "no-store";
         return Results.Ok(new { access_token = access, token_type = "Bearer", expires_in = (int)AccessLifetime.TotalSeconds, refresh_token = refresh });
     }

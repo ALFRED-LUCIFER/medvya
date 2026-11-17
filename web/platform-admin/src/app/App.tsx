@@ -1,6 +1,6 @@
 import { useI18n, type Locale } from '@medvya/i18n';
 import { Route, Routes } from 'react-router';
-import LanguageSwitcher from '../features/locale/components/LanguageSwitcher';
+import { LanguageSwitcher } from '@medvya/ui';
 import SignInPage from '../features/session/components/SignInPage';
 import { useSessionController } from '../features/session/hooks/useSessionController';
 import ConsoleShell from '../features/shell/components/ConsoleShell';

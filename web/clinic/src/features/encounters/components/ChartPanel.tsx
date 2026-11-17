@@ -10,7 +10,7 @@ import { SignChecklist } from './NoteSign';
 export type ChartPanelProps = {
   panel: StudioPanel; onPanel: (panel: StudioPanel) => void;
   chart: { data: Patient360['chart'] | null; loading: boolean; failed: boolean };
-  timeZone: string | undefined;
+  timeZone: string;
   checklist: ChecklistItem[];
   /** NoteAssist, composed in by the page; the Assist tab shows only when it is passed (not when recording was declined). */
   assist?: ReactNode;
@@ -69,7 +69,7 @@ export function ChartDrawerButton({ open, onOpen }: { open: boolean; onOpen: () 
   );
 }
 
-type ChartState = ChartPanelProps['chart'] & { timeZone: string | undefined };
+type ChartState = ChartPanelProps['chart'] & { timeZone: string };
 
 function Loaded({ data, loading, failed, children }: ChartPanelProps['chart'] & { children: (data: Patient360['chart']) => ReactNode }) {
   const { t } = useI18n();

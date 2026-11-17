@@ -57,44 +57,45 @@ An arrow means the project of the first module references the application, domai
 flowchart LR
   Audit -->|"Application"| Identity
   Audit -->|"Application"| Patients
-  Audit -->|"Api"| Tenancy
-  Billing -->|"Api, Application"| Audit
+  Audit -->|"Application"| Tenancy
+  Billing -->|"Application"| Audit
   Billing -->|"Application"| Patients
   Billing -->|"Application"| Scheduling
-  Billing -->|"Api, Application"| Tenancy
-  Encounters -->|"Api, Application"| Audit
+  Billing -->|"Application"| Tenancy
+  Encounters -->|"Application"| Audit
   Encounters -->|"Application"| Identity
   Encounters -->|"Application"| Patients
   Encounters -->|"Application"| Scheduling
-  Encounters -->|"Api, Application"| Tenancy
+  Encounters -->|"Application"| Tenancy
   Identity -->|"Application"| Audit
   Identity -->|"Application"| Notifications
   Identity -->|"Application"| Patients
-  Identity -->|"Api"| Tenancy
-  Notifications -->|"Api, Application"| Audit
+  Identity -->|"Application"| Tenancy
+  Notifications -->|"Application"| Audit
   Notifications -->|"Application"| Identity
-  Notifications -->|"Application, Domain"| Patients
+  Notifications -->|"Application"| Patients
   Notifications -->|"Application"| Scheduling
-  Notifications -->|"Api, Application, Domain"| Tenancy
-  Patients -->|"Api, Application"| Audit
-  Patients -->|"Api, Application"| Tenancy
+  Notifications -->|"Application"| Tenancy
+  Patients -->|"Application"| Audit
+  Patients -->|"Application"| Identity
+  Patients -->|"Application"| Tenancy
   Platform -->|"Application"| Prescribing
   Platform -->|"Application"| Tenancy
-  Prescribing -->|"Api, Application"| Audit
+  Prescribing -->|"Application"| Audit
   Prescribing -->|"Application"| Encounters
   Prescribing -->|"Application"| Identity
   Prescribing -->|"Application"| Notifications
   Prescribing -->|"Application"| Patients
-  Prescribing -->|"Api, Application"| Tenancy
-  Scheduling -->|"Api, Application"| Audit
+  Prescribing -->|"Application"| Tenancy
+  Scheduling -->|"Application"| Audit
   Scheduling -->|"Application"| Encounters
   Scheduling -->|"Application"| Identity
   Scheduling -->|"Application"| Patients
   Scheduling -->|"Application"| Prescribing
-  Scheduling -->|"Api, Application, Domain"| Tenancy
+  Scheduling -->|"Application"| Tenancy
   Tenancy -->|"Application"| Audit
   Tenancy -->|"Application"| Identity
-  Tenancy -->|"Application, Domain"| Scheduling
+  Tenancy -->|"Application"| Scheduling
 ```
 
 `Host.Api` references: Audit, Billing, Encounters, Identity, Leads, Notifications, Patients, Prescribing, Scheduling, Tenancy. Modules with no incoming arrow from another module: Billing, Leads, Platform.

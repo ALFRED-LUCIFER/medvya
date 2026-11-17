@@ -83,6 +83,7 @@ def settings() -> Settings:
         encryption_master_key=base64.b64encode(os.urandom(32)).decode(),
         max_chunk_bytes=1024,
         auth_mode="disabled",
+        environment="development",
         llm_provider="fake",
         _env_file=None,
     )

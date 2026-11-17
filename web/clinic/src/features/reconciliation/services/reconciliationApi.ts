@@ -1,4 +1,4 @@
-import { post, send } from '../../schedule/services/scheduleApi';
+import { post, send } from '../../api/services/apiClient';
 import type { DecisionKind, Reconciliation, TaperStep } from '../domain/reconciliation';
 
 // Medication reconciliation (MDV-P2-011). Only the encounter id is in a path; a medicine's name, dose and the reason go in bodies, never a URL.

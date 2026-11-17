@@ -1,8 +1,8 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import type { Locale } from '@medvya/i18n';
 import { I18nProvider, useI18n } from '@medvya/i18n';
-import { SystemState } from '@medvya/ui';
-import { Navigate, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router';
+import { LanguageSwitcher, SystemState } from '@medvya/ui';
+import { Navigate, Outlet, Route, Routes, useLocation, useNavigate, useParams } from 'react-router';
 import OfflineStrip from '../features/connectivity/components/OfflineStrip';
 import { useConnectivityController } from '../features/connectivity/hooks/useConnectivityController';
 import { OfflineNoteContext } from '../features/connectivity/hooks/useOfflineNote';
@@ -13,7 +13,6 @@ import TermsNotice from '../features/settings/components/TermsNotice';
 import { useTermsNotice } from '../features/settings/hooks/useTermsNotice';
 import OrganisationNotice from '../features/onboarding/components/OrganisationNotice';
 import { organisationPath } from '../features/onboarding/domain/organisationRequest';
-import LanguageSwitcher from '../features/locale/components/LanguageSwitcher';
 import FacilityPicker from '../features/session/components/FacilityPicker';
 import SessionEndingNotice from '../features/session/components/SessionEndingNotice';
 import SessionExpiredPage from '../features/session/components/SessionExpiredPage';
@@ -130,7 +129,7 @@ export default function App({ locale, onLocaleChange }: Props) {
   // The Patient record's tabs (MDV-P2-051): exactly the patient screens this role already has routes for below.
   const clinical = allows(active ?? null, clinicalRecord);
   const record = { clinical, details: !!searchPath, documents: clinical || deskDocuments };
-  const registration = <RegistrationRoute country={country} scope={active?.facilityId ?? ''} actorName={shell.displayName ?? ''} timeZone={active?.timeZone} bookPath={pathOf('schedule')} checkInPath={walkInPath} />;
+  const registration = active && <RegistrationRoute country={country} scope={active.facilityId} actorName={shell.displayName ?? ''} timeZone={active.timeZone} bookPath={pathOf('schedule')} checkInPath={walkInPath} />;
 
   // F-05a: an ended session replaces every screen; signing in again comes back to this route.
   const routes = shell.loading ? <Route path="*" element={<ShellMessage standalone busy title={t('shell.loading')} />} />
@@ -175,7 +174,7 @@ export default function App({ locale, onLocaleChange }: Props) {
             ? <ScheduleRoute facilityId={active.facilityId} userId={shell.session?.user.id ?? ''} userName={shell.session?.user.displayName ?? ''} canBook={active.capabilities.RegisterBookPatients === 'Full'}
                 canCheckIn={active.capabilities.CheckInQueue === 'Full'} registerPath={registerPath} leavePath={leavePath} />
             // My day (MDV-P2-002, named in MDV-P2-051): the doctor's own day, never the board.
-            : i.id === 'today' ? <TodayRoute facilityId={active.facilityId} online={online} userId={shell.session?.user.id ?? ''} otherLocations={otherLocations} onSwitch={switchTo} switchingTo={shell.choosingId} />
+            : i.id === 'today' ? <TodayRoute facilityId={active.facilityId} timeZone={active.timeZone} online={online} userId={shell.session?.user.id ?? ''} otherLocations={otherLocations} onSwitch={switchTo} switchingTo={shell.choosingId} />
             : i.id === 'frontDesk'
             ? <FrontDeskRoute facilityId={active.facilityId} online={online} userId={shell.session?.user.id ?? ''} canMove={active.capabilities.CheckInQueue === 'Full'} canCancel={active.capabilities.RegisterBookPatients === 'Full'}
                 registerPath={registerPath} walkInPath={walkInPath} waitlistPath={waitlistPath} bookPath={active.capabilities.RegisterBookPatients === 'Full' ? pathOf('schedule') : null} billingPath={shell.items.find(b => b.id === 'billing')?.path ?? null}
@@ -186,7 +185,7 @@ export default function App({ locale, onLocaleChange }: Props) {
             : i.id === 'nurse' ? <NurseQueueRoute facilityId={active.facilityId} online={online} nursePath={i.path} />
             : i.id === 'clinicToday' ? <ClinicTodayRoute facilityId={active.facilityId} userId={shell.session?.user.id ?? ''}
                 paths={{ myDay: pathOf('today'), directory: searchPath, waitingRoom: pathOf('frontDesk') && `${pathOf('frontDesk')}/overview` }} />
-            : i.id === 'settings' ? <TabletOnly title={t('settings.title')}><SettingsRoute facilityId={active.facilityId} country={active.country ?? null} userId={shell.session?.user.id ?? ''} billing={active.flags.includes('billing.invoices')} /></TabletOnly>
+            : i.id === 'settings' ? <TabletOnly title={t('settings.title')}><SettingsRoute facilityId={active.facilityId} country={active.country ?? null} userId={shell.session?.user.id ?? ''} timeZone={active.timeZone} billing={active.flags.includes('billing.invoices')} /></TabletOnly>
             // Patients opens the directory, its page (same rule, so searchPath is set); /patients stays the menu's address.
             : i.id === 'patients' && searchPath ? <Navigate to={searchPath} replace />
             : <ComingSoon title={t(`nav.${i.id}`)} phase={i.phase} />} />)}
@@ -217,19 +216,19 @@ export default function App({ locale, onLocaleChange }: Props) {
           {/* A consultation (MDV-P2-001); the server checks the care relationship on every call. */}
           {/* Only the full chart opens one: its note needs it on the server, so a nurse gets the one "not your role" message, not two errors (MDV-P1-096). */}
           {active.capabilities.Patient360Chart === 'Full' &&
-            <Route path="/consult/:encounterId" element={<ConsultRoute boardPath={pathOf('frontDesk') ?? '/'} online={online} canOrder={active.capabilities.PrescriptionsOrders === 'Sign'} canReconcile={active.capabilities.Patient360Chart === 'Full'} canSign={active.capabilities.ClinicalNotes === 'Sign'} userId={shell.session?.user.id ?? ''} />} />}
+            <Route path="/consult/:encounterId" element={<ConsultRoute boardPath={pathOf('frontDesk') ?? '/'} online={online} timeZone={active.timeZone} canOrder={active.capabilities.PrescriptionsOrders === 'Sign'} canReconcile={active.capabilities.Patient360Chart === 'Full'} canSign={active.capabilities.ClinicalNotes === 'Sign'} userId={shell.session?.user.id ?? ''} />} />}
           {/* The signed note's print view and PDF (MDV-P2-013): the note's readers (Patient 360 at Full); the server decides for this patient. */}
           {active.capabilities.Patient360Chart === 'Full' &&
             <Route path="/consult/:encounterId/note/print" element={<NotePrintRoute />} />}
           {/* The investigation slip (MDV-P2-018) and the printed prescription (MDV-P2-017): same roles; the server lets only an ordering doctor read them. */}
           {active.capabilities.PrescriptionsOrders === 'Sign' && <>
-            <Route path="/consult/:encounterId/slip" element={<SlipRoute />} />
+            <Route path="/consult/:encounterId/slip" element={<SlipRoute timeZone={active.timeZone} />} />
             <Route path="/consult/:encounterId/rx/print" element={<RxPrintRoute />} />
-            <Route path="/consult/:encounterId/referrals/:referralId/letter" element={<LetterRoute />} />
+            <Route path="/consult/:encounterId/referrals/:referralId/letter" element={<LetterRoute timeZone={active.timeZone} />} />
           </>}
           {/* Medication reconciliation (MDV-P2-011) and diagnosis coding (MDV-P2-010), E-07: a doctor's, inside a consultation. */}
           {active.capabilities.Patient360Chart === 'Full' && <>
-            <Route path="/consult/:encounterId/medicines" element={<ReconciliationRoute boardPath={pathOf('frontDesk') ?? '/'} online={online} />} />
+            <Route path="/consult/:encounterId/medicines" element={<ReconciliationRoute boardPath={pathOf('frontDesk') ?? '/'} online={online} timeZone={active.timeZone} />} />
             <Route path="/consult/:encounterId/problems" element={<ProblemsRoute boardPath={pathOf('frontDesk') ?? '/'} online={online} />} />
           </>}
           {/* Without Register patient (a nurse), /patients/new is not a patient id: say the role cannot register instead of "patient not found". */}
@@ -239,7 +238,7 @@ export default function App({ locale, onLocaleChange }: Props) {
             {/* Summary and Timeline: Patient 360 (MDV-P2-004, E-01) and the timeline (MDV-P2-005), for the clinical record's roles. */}
             {clinical && <>
               <Route path="/patients/:patientId" element={<Patient360Route backPath={searchPath ?? '/'} canEditHistory={active.capabilities.VitalsAllergiesEntry === 'Full'} canManagePregnancy={active.capabilities.ClinicalNotes === 'Sign'} canOrder={active.capabilities.PrescriptionsOrders === 'Sign'} online={online} userId={shell.session?.user.id ?? ''} />} />
-              <Route path="/patients/:patientId/timeline" element={<TimelineRoute printRx={active.capabilities.PrescriptionsOrders === 'Sign'} />} />
+              <Route path="/patients/:patientId/timeline" element={<TimelineRoute printRx={active.capabilities.PrescriptionsOrders === 'Sign'} userId={shell.session?.user.id ?? ''} />} />
             </>}
             {/* Documents (MDV-P2-006): clinicians, and the front desk (upload and list only; the server refuses it any file). */}
             {record.documents && <Route path="/patients/:patientId/docs" element={<DocumentsRoute />} />}
@@ -274,13 +273,16 @@ export default function App({ locale, onLocaleChange }: Props) {
             <Routes>
               {UiGallery && <Route path="/__ui" element={<UiGallery switcher={switcher} />} />}
               {/* Public and token-based (F-06): the same page whether or not someone is signed in. */}
-              <Route path="/invite/:token" element={<InvitationRoute switcher={switcher} />} />
+              <Route path="/invite" element={<InvitationRoute switcher={switcher} />} />
+              {/* shortcut: links emailed or texted before #1417 carry the token in the path; they move it to the fragment. Remove after 2026-12-01 (invitations last 7 days, shared prescriptions 3). */}
+              <Route path="/invite/:token" element={<TokenToFragment to="/invite" />} />
+              <Route path="/rx/:token" element={<TokenToFragment to="/rx" />} />
               {/* The QR code on a printed prescription (MDV-P2-017): public, validity only. */}
               <Route path="/verify/rx/:token" element={<RxVerifyRoute switcher={switcher} />} />
               {/* The QR code on an investigation slip or referral letter (MDV-P2-018/019): public, what the paper is, never whose. */}
               <Route path="/verify/paper/:token" element={<PaperVerifyRoute switcher={switcher} />} />
               {/* A shared prescription link (MDV-P2-020): public, it opens with the code sent to the patient's mobile. */}
-              <Route path="/rx/:token" element={<SharedRxRoute switcher={switcher} />} />
+              <Route path="/rx" element={<SharedRxRoute switcher={switcher} />} />
               {routes}
             </Routes>
           </Suspense>
@@ -288,4 +290,9 @@ export default function App({ locale, onLocaleChange }: Props) {
       </OfflineNoteContext>
     </I18nProvider>
   );
+}
+
+/** An old link with its token in the path moves it to the fragment (#1417), where the page reads it and no later request carries it. */
+function TokenToFragment({ to }: { to: string }) {
+  return <Navigate to={{ pathname: to, hash: `t=${useParams().token ?? ''}` }} replace />;
 }

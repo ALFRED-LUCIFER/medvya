@@ -5,9 +5,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\BuildingBlocks\Medvya.BuildingBlocks.Security\Medvya.BuildingBlocks.Security.csproj" />
     <ProjectReference Include="..\Medvya.Patients.Application\Medvya.Patients.Application.csproj" />
-    <ProjectReference Include="..\..\Audit\Medvya.Audit.Api\Medvya.Audit.Api.csproj" />
-    <ProjectReference Include="..\..\Tenancy\Medvya.Tenancy.Api\Medvya.Tenancy.Api.csproj" />
+    <ProjectReference Include="..\..\Audit\Medvya.Audit.Application\Medvya.Audit.Application.csproj" />
+    <ProjectReference Include="..\..\Tenancy\Medvya.Tenancy.Application\Medvya.Tenancy.Application.csproj" />
+    <ProjectReference Include="..\..\Identity\Medvya.Identity.Application\Medvya.Identity.Application.csproj" />
   </ItemGroup>
 
 </Project>

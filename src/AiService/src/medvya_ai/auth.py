@@ -1,5 +1,7 @@
-"""Bearer-token identity (OIDC / Entra ID). The token proves who calls; clinic and role come
-from app_user, never from the client. AUTH_MODE=disabled keeps the no-login test build."""
+"""Bearer-token identity (Entra ID). AUTH_MODE=service: the token proves the caller is Medvya's
+API (allow-listed client id plus an app role); only then are the tenant and user it asserts in
+headers trusted. AUTH_MODE=entra: the token's subject selects an app_user. AUTH_MODE=disabled
+(development only) has no token."""
 
 import asyncio
 from collections.abc import Callable
@@ -19,6 +21,8 @@ LEEWAY_SECONDS = 60
 @dataclass(frozen=True)
 class Claims:
     subject: str  # Entra `oid` (stable per directory user), else `sub`
+    client_id: str | None = None  # `azp` (v2 tokens) or `appid` (v1): the calling application
+    roles: tuple[str, ...] = ()  # app roles granted to the caller
 
 
 class TokenVerifier(Protocol):
@@ -64,7 +68,21 @@ class JwtVerifier:
         subject = payload.get("oid") or payload.get("sub")
         if not isinstance(subject, str) or not subject:
             raise _unauthenticated("Token has no subject")
-        return Claims(subject=subject)
+        client = payload.get("azp") or payload.get("appid")
+        roles = payload.get("roles")
+        return Claims(
+            subject=subject,
+            client_id=client if isinstance(client, str) else None,
+            roles=tuple(r for r in roles if isinstance(r, str)) if isinstance(roles, list) else (),
+        )
+
+
+def authorise_service(claims: Claims, settings: Settings) -> None:
+    """AUTH_MODE=service: a valid token is not enough; it must be Medvya's API with the app role."""
+    if claims.client_id not in settings.csv(settings.auth_allowed_client_ids):
+        raise AppError(403, "CALLER_NOT_ALLOWED", "This application may not call the AI service")
+    if settings.auth_required_role not in claims.roles:
+        raise AppError(403, "CALLER_NOT_ALLOWED", "The caller lacks the required app role")
 
 
 def jwks_url(settings: Settings) -> str:
@@ -77,11 +95,19 @@ def jwks_url(settings: Settings) -> str:
 
 
 def build_verifier(settings: Settings) -> TokenVerifier | None:
-    """None in disabled mode. In entra mode a misconfiguration fails at startup, not per request."""
+    """None in disabled mode. Otherwise a misconfiguration fails at startup, not per request."""
     if settings.auth_mode == "disabled":
         return None
     if not settings.auth_issuer or not settings.auth_audience:
-        raise RuntimeError("AUTH_ISSUER and AUTH_AUDIENCE are required when AUTH_MODE=entra")
+        raise RuntimeError(
+            f"AUTH_ISSUER and AUTH_AUDIENCE are required when AUTH_MODE={settings.auth_mode}"
+        )
+    if settings.auth_mode == "service" and not (
+        settings.csv(settings.auth_allowed_client_ids) and settings.auth_required_role
+    ):
+        raise RuntimeError(
+            "AUTH_ALLOWED_CLIENT_IDS and AUTH_REQUIRED_ROLE are required when AUTH_MODE=service"
+        )
     client = jwt.PyJWKClient(jwks_url(settings), cache_keys=True, lifespan=3600)
     return JwtVerifier(
         issuer=settings.auth_issuer,

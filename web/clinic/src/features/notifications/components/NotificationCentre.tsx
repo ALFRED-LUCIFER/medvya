@@ -6,6 +6,8 @@ import { Button } from '@medvya/ui';
 import { badgeText, notificationTarget, type NotificationList, type StaffNotification } from '../domain/notifications';
 
 type Props = {
+  /** The facility's IANA zone: instants show facility time, not the browser's (AGENTS.md 3.5). */
+  timeZone: string;
   open: boolean;
   list: NotificationList | null;
   unread: number;
@@ -18,8 +20,6 @@ type Props = {
   onRetry: () => void;
   onMarkAllRead: () => void;
   onMarkRead: (id: string) => void;
-  /** The facility's IANA zone: times show facility time, not the browser's (AGENTS.md 3.5). */
-  timeZone?: string;
 };
 
 /** The words of one item; a licence says how many days are left, or that it has expired; visits to rebook say how many and from when. */

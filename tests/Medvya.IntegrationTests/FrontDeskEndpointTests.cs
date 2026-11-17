@@ -72,13 +72,13 @@ public sealed class FrontDeskEndpointTests(PostgresFixture sql) : IClassFixture<
     async Task<List<string>> AuditActions()
     {
         await using var db = sql.Audit(h.Tenant);
-        return await db.Events.OrderBy(e => e.OccurredAt).Select(e => e.Action).ToListAsync();
+        return await db.Events.OrderBy(e => e.OccurredAt).ThenBy(e => e.Id).Select(e => e.Action).ToListAsync();
     }
 
     async Task<List<(Guid? Actor, AuditOutcome Outcome)>> BoardReads()
     {
         await using var db = sql.Audit(h.Tenant);
-        return (await db.Events.Where(e => e.Action == "front_desk.board.read").OrderBy(e => e.OccurredAt).Select(e => new { e.ActorUserId, e.Outcome }).ToListAsync())
+        return (await db.Events.Where(e => e.Action == "front_desk.board.read").OrderBy(e => e.OccurredAt).ThenBy(e => e.Id).Select(e => new { e.ActorUserId, e.Outcome }).ToListAsync())
             .Select(e => (e.ActorUserId, e.Outcome)).ToList();
     }
 

@@ -4,6 +4,7 @@ import { useI18n, type MessageKey } from '@medvya/i18n';
 import { Button, Card, ChoiceRow, ErrorSummary, Field, Input, PageContainer, PageHeader, StickyActionBar, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState, Textarea } from '@medvya/ui';
 import type { UseFormReturn } from 'react-hook-form';
 import { assistKey, featureChoices, featureLabel, historyColumns, planColumns, planName, type Plan, type PlanForm, type PlanPrice, type PlanVersion } from '../domain/plans';
+import { operatorZone } from '../../session/domain/session';
 
 type Props = {
   vm: {
@@ -116,7 +117,7 @@ export default function PlansPage({ vm }: Props) {
               <TableRow key={code}>
                 <TableHead scope="row" className="font-normal">
                   <p className="font-semibold">{name(code)}</p>
-                  <p className="text-sm text-muted-foreground">{t('platform.plans.versionOn', { version: v.version, date: formatDate(new Date(v.createdAt)) })}</p>
+                  <p className="text-sm text-muted-foreground">{t('platform.plans.versionOn', { version: v.version, date: formatDate(new Date(v.createdAt), operatorZone) })}</p>
                 </TableHead>
                 {(['IN', 'AE'] as const).map(c => (
                   <TableCell key={c} label={t(`platform.plans.country.${c}`)}>
@@ -158,7 +159,7 @@ export default function PlansPage({ vm }: Props) {
               {vm.history.history.map(v => (
                 <TableRow key={v.id}>
                   <TableHead scope="row">{t('platform.plans.versionN', { version: v.version })}</TableHead>
-                  <TableCell label={t('platform.plans.saved')}><time dateTime={v.createdAt}>{formatDate(new Date(v.createdAt))}</time></TableCell>
+                  <TableCell label={t('platform.plans.saved')}><time dateTime={v.createdAt}>{formatDate(new Date(v.createdAt), operatorZone)}</time></TableCell>
                   <TableCell label={t('platform.plans.by')}>{v.createdBy ?? t('platform.plans.approvedList')}</TableCell>
                   <TableCell label={t('platform.plans.reason')}>{v.reason ?? t('platform.audit.noReason')}</TableCell>
                   {(['IN', 'AE'] as const).map(c => (

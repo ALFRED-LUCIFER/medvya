@@ -31,7 +31,7 @@ public sealed class NotificationsDbContext(DbContextOptions<NotificationsDbConte
             e.Property(x => x.FailureCode).HasMaxLength(60);
             // The same outbox event never makes the same message twice.
             e.HasIndex(x => new { x.TenantId, x.SourceEventId, x.Kind, x.Channel }).IsUnique();
-            e.HasIndex(x => new { x.Status, x.SendAt }); // the sender's "what is due" scan
+            e.HasIndex(x => new { x.TenantId, x.Status, x.SendAt }); // the sender's "what is due" scan, run per tenant
             e.HasIndex(x => new { x.TenantId, x.AppointmentId });
             e.HasIndex(x => new { x.TenantId, x.FacilityId, x.CreatedAt });
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);

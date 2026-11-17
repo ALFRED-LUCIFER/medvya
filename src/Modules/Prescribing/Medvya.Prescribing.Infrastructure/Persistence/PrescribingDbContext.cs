@@ -108,6 +108,8 @@ public sealed class PrescribingDbContext(DbContextOptions<PrescribingDbContext> 
             e.Property(x => x.Instructions).HasMaxLength(200);
             e.HasIndex(x => new { x.TenantId, x.EncounterId });
             e.HasIndex(x => new { x.TenantId, x.PatientId }); // merges
+            // The clinic-today "to authorise" scan groups a facility's lines by visit: index-only, never the table.
+            e.HasIndex(x => new { x.TenantId, x.FacilityId, x.EncounterId }).IncludeProperties(x => new { x.Included, x.UpdatedAt });
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<RxAlertOverride>(e =>

@@ -68,7 +68,7 @@ public sealed class WriteAuditTransactionTests(PostgresFixture sql) : IClassFixt
     async Task<List<AuditEvent>> Events()
     {
         await using var db = sql.Audit(h.Tenant);
-        return await db.Events.OrderBy(e => e.OccurredAt).ToListAsync();
+        return await db.Events.OrderBy(e => e.OccurredAt).ThenBy(e => e.Id).ToListAsync();
     }
 
     /// <summary>The request fails (the test server surfaces the error, a real host answers 500) and writes no audit event.</summary>

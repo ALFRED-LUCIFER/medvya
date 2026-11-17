@@ -85,6 +85,26 @@ public sealed class StaffRoster(TenancyDbContext db, ICurrentTenant tenant, ICur
     async Task<OffboardResult> OffboardCoreAsync(Guid membershipId, string? reason, bool offerRebooking, bool allLocations, CancellationToken cancellationToken)
     {
         reason = ValidReason(reason);
+        // The participants' locks (a doctor's calendar) are taken before the serializable transaction's snapshot: a booking they wait for
+        // commits first and is then seen by the transaction. Inside it, the snapshot would predate the wait and miss it.
+        if (await db.Memberships.Where(m => m.Id == membershipId).Select(m => m.UserId).SingleOrDefaultAsync(cancellationToken) is not { } person)
+            return await OffboardInTransactionAsync(membershipId, reason, offerRebooking, allLocations, cancellationToken);
+        await db.Database.OpenConnectionAsync(cancellationToken);
+        var holds = new List<IAsyncDisposable>();
+        try
+        {
+            foreach (var part in offboarding) holds.Add(await part.HoldAsync(person, db.Database.GetDbConnection(), cancellationToken));
+            return await OffboardInTransactionAsync(membershipId, reason, offerRebooking, allLocations, cancellationToken);
+        }
+        finally
+        {
+            foreach (var hold in holds) await hold.DisposeAsync();
+            await db.Database.CloseConnectionAsync();
+        }
+    }
+
+    async Task<OffboardResult> OffboardInTransactionAsync(Guid membershipId, string reason, bool offerRebooking, bool allLocations, CancellationToken cancellationToken)
+    {
         // Serializable: two administrators offboarding each other at once must not both pass the last-administrator check.
         // shortcut: the one PostgreSQL refuses (40001) gets a 500 and nothing is changed; retry it here once pilot owners report it.
         await using var tx = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, cancellationToken);
@@ -111,6 +131,7 @@ public sealed class StaffRoster(TenancyDbContext db, ICurrentTenant tenant, ICur
         }
         var now = clock.GetUtcNow();
         var afterCommit = new List<Func<Task>>();
+        var audits = new List<AuditEvent>();
         var open = 0;
         foreach (var one in leaving)
         {
@@ -129,11 +150,11 @@ public sealed class StaffRoster(TenancyDbContext db, ICurrentTenant tenant, ICur
                 Before = JsonSerializer.Serialize(new { status = before }, Json), After = JsonSerializer.Serialize(new { status = one.Status, reason }, Json),
             });
             await db.SaveChangesAsync(cancellationToken);
-            await audit.WriteAsync(new AuditEvent
+            audits.Add(new AuditEvent
             {
                 Id = Guid.CreateVersion7(), TenantId = TenantId, ActorUserId = user.UserId, Action = "staff.offboard", ResourceType = "membership", ResourceId = one.Id,
                 Purpose = "operations", Outcome = AuditOutcome.Allowed, OccurredAt = now,
-            }, tx.GetDbTransaction(), cancellationToken);
+            });
             // Other modules' share (a doctor's future visits to "needs rebooking") joins this transaction: all of it commits, or none.
             if (one.UserId is { } gone)
                 foreach (var part in offboarding)
@@ -143,6 +164,9 @@ public sealed class StaffRoster(TenancyDbContext db, ICurrentTenant tenant, ICur
                     open += share.OpenItems;
                 }
         }
+        // Written after the participants: an audit row takes the tenant's ledger lock until commit, and the participants take doctor-day locks,
+        // which a booking takes before its own audit row; the other order would deadlock with it.
+        foreach (var e in audits) await audit.WriteAsync(e, tx.GetDbTransaction(), cancellationToken);
         await tx.CommitAsync(cancellationToken);
         foreach (var after in afterCommit) await after();
         return new(OffboardOutcome.Done, member.UserId, open, ids);

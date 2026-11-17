@@ -7,7 +7,6 @@ using System.Text.RegularExpressions;
 using Medvya.Audit.Infrastructure;
 using Medvya.BuildingBlocks.Domain;
 using Medvya.Identity.Domain;
-using Medvya.Tenancy.Api;
 using Medvya.Tenancy.Application;
 using Medvya.Tenancy.Domain;
 using Medvya.Tenancy.Infrastructure;
@@ -283,7 +282,7 @@ public sealed partial class StaffLocationsTests(PostgresFixture sql) : IClassFix
 
         public string Token() => LinkToken().Match(last ?? throw new InvalidOperationException("No email sent.")).Groups[1].Value;
 
-        [GeneratedRegex(@"/invite/(\S+)")]
+        [GeneratedRegex(@"/invite#t=(\S+)")]
         private static partial Regex LinkToken();
     }
 

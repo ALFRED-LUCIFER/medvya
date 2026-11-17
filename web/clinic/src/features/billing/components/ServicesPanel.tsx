@@ -3,11 +3,10 @@ import { Controller, type FieldError, type UseFormReturn } from 'react-hook-form
 import { CircleCheck } from 'lucide-react';
 import { useI18n, type MessageKey } from '@medvya/i18n';
 import {
-  Button, ChoiceRow, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Sheet, SheetContent, SheetTitle, StickyActionBar,
+  Button, Card, ChoiceRow, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Sheet, SheetContent, SheetTitle, StickyActionBar,
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState,
 } from '@medvya/ui';
 import { cardBar, fieldError, fieldGrid } from '../../settings/components/fieldStyles';
-import { Section } from '../../settings/components/Section';
 import type { TableView } from '../../table/domain/tableSort';
 import {
   isServiceSortable, linePreview, serviceCategories, serviceColumns, taxTreatments,
@@ -23,6 +22,8 @@ type Props = {
   rows: PriceRow[]; pricesLoading: boolean; pricesFailed: boolean;
   priceForm: UseFormReturn<PriceForm>; priceDoctor: string | null; onPriceDoctor: (doctorId: string | null) => void; priceError: CatalogueProblem | null;
   pricing: boolean; today: string; onAddPrice: FormEventHandler<HTMLFormElement>;
+  /** The facility's IANA zone: a price's start instant shows facility time. */
+  timeZone: string;
 };
 
 /** Settings, Services (MDV-P4-002): the catalogue a bill is priced from, and a drawer to edit one service and its prices per doctor. */
@@ -35,7 +36,7 @@ export default function ServicesPanel(p: Props) {
   const money = (minor: number | null, currency: Currency) => (minor === null ? t('billing.services.noPrice') : formatMoney(minor, currency));
 
   return (
-    <Section title={t('billing.services.title')} intro={t('billing.services.intro')}
+    <Card title={t('billing.services.title')} intro={t('billing.services.intro')}
       actions={<Button variant="outline" onClick={() => p.onOpen('new')}>{t('billing.services.add')}</Button>}>
       <ChoiceRow type="checkbox" checked={p.archived} onChange={e => p.onArchived(e.target.checked)}>{t('billing.services.showArchived')}</ChoiceRow>
       <TableState state={state} messages={{ loading: t('billing.services.loading'), error: t('billing.services.loadFailed'), empty: t('billing.services.empty') }}>
@@ -64,9 +65,9 @@ export default function ServicesPanel(p: Props) {
         </Table>
       </TableState>
       <Sheet open={p.editing !== null} onOpenChange={o => { if (!o) p.onClose(); }}>
-        {p.editing !== null && <ServiceEditor p={p} tax={tax} money={money} formatDate={formatDate} />}
+        {p.editing !== null && <ServiceEditor p={p} tax={tax} money={money} formatDate={d => formatDate(d, p.timeZone)} />}
       </Sheet>
-    </Section>
+    </Card>
   );
 }
 

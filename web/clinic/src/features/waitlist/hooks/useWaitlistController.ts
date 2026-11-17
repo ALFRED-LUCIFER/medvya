@@ -3,7 +3,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { usePatientSearch } from '../../patients/hooks/usePatientSearch';
-import { ApiError, fetchScheduleDay, findPatient } from '../../schedule/services/scheduleApi';
+import { ApiError } from '../../api/services/apiClient';
+import { fetchScheduleDay, findPatient } from '../../schedule/services/scheduleApi';
 import { emptyWaitlistForm, waitlistError, waitlistSchema, type Outcome, type WaitlistEntry, type WaitlistForm } from '../domain/waitlist';
 import { acceptOffer, addToWaitlist, declineOffer, fetchWaitlist, offerSlot, removeFromWaitlist } from '../services/waitlistApi';
 

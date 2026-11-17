@@ -1,9 +1,9 @@
-import { csrf, post, send } from '../../schedule/services/scheduleApi';
+import { post, send } from '../../api/services/apiClient';
 import type { Service } from '../domain/catalogue';
 import type { Invoice, InvoiceRow, InvoiceState, PaymentLinkResult } from '../domain/invoice';
 
 // Bills and payments (MDV-P4-004). Ids in paths; filters, amounts and reasons in bodies, so no patient detail reaches a URL.
-const put = <T>(url: string, body: unknown) => send<T>(url, { method: 'PUT', headers: { ...csrf, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+const put = <T>(url: string, body: unknown) => send<T>(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 const bill = (id: string) => `/v1/billing/invoices/${id}`;
 
 export const searchInvoices = (filters: { state: InvoiceState | null; from: string | null; to: string | null; patientId: string | null }) =>

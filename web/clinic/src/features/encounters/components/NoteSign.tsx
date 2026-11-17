@@ -89,7 +89,7 @@ function SignProblemText({ problem }: { problem: SignProblem }) {
 }
 
 /** Who signed (the server's one name for the signer), with the licence the owner attested, and when. */
-export function SignedLine({ signature, timeZone }: { signature: NoteSignature; timeZone: string | undefined }) {
+export function SignedLine({ signature, timeZone }: { signature: NoteSignature; timeZone: string }) {
   const { t, formatDate, formatTime } = useI18n();
   const at = new Date(signature.signedAt);
   const when = { date: formatDate(at, timeZone), time: formatTime(at, timeZone), version: String(signature.versionNo) };

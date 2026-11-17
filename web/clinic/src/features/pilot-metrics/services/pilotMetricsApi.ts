@@ -1,4 +1,4 @@
-import { post, send } from '../../schedule/services/scheduleApi';
+import { post, send } from '../../api/services/apiClient';
 import { windowDays, type Baseline, type DeliveryReport, type PilotMetrics } from '../domain/pilotMetrics';
 
 const query = (facilityId: string) => new URLSearchParams({ facilityId, days: String(windowDays) });

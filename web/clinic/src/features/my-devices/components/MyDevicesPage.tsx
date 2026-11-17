@@ -6,7 +6,7 @@ import { canEnd, deviceColumns, type DeviceSession } from '../domain/devices';
 
 type Props = {
   devices: DeviceSession[]; loading: boolean; failed: boolean; endingId: string | null; endFailed: boolean; ended: boolean;
-  timeZone?: string; onEnd: (id: string) => void;
+  timeZone: string; onEnd: (id: string) => void;
   /** More of the person's own account under the list (a doctor's signature image). */
   children?: ReactNode;
 };

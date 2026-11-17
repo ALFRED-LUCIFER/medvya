@@ -90,40 +90,6 @@ def _extract(payload: dict[str, Any]) -> BaseModel:
     )
 
 
-def _receptionist(payload: dict[str, Any]) -> BaseModel:
-    """Scripted intake: asks for name, then reason, then date; complete on the third answer."""
-    from medvya_ai.services.receptionist import Intake, ReceptionistTurn
-
-    answers = [m["text"] for m in payload["messages"] if m["role"] == "patient"]
-    name = answers[0] if len(answers) >= 1 else None
-    reason = answers[1] if len(answers) >= 2 else None
-    when = answers[2] if len(answers) >= 3 else None
-    questions = [
-        "Hello! May I have the patient's name?",
-        "What is the reason for the visit?",
-        "Which date would you prefer?",
-    ]
-    done = len(answers) >= 3
-    reply = (
-        f"Thank you {name}. Booking for {reason} on {when}. The doctor will see you then."
-        if done
-        else questions[len(answers)]
-    )
-    return ReceptionistTurn(
-        reply=reply,
-        language="en-IN",
-        intake=Intake(
-            patient_name=name,
-            reason=reason,
-            preferred_date=when,
-            preferred_time=None,
-            specialty=None,
-            urgency="routine",
-        ),
-        complete=done,
-    )
-
-
 def _fact(cat: Any, label: str, idx: int, quote: str, med: MedicationIn | None) -> FactIn:
     return FactIn(
         category=cat,
@@ -144,7 +110,6 @@ class FakeLLM:
         self._responders: dict[Task, Responder] = {
             "normalise": _normalise,
             "extract": _extract,
-            "receptionist": _receptionist,
         }
         self._responders.update(responders or {})
         self.calls: list[Task] = []

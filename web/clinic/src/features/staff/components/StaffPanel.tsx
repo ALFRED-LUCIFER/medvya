@@ -1,17 +1,18 @@
 import { ChevronDown, Lock, Plus } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, ChoiceRow, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, Field, Input, Table, TableBody, TableCell, TableHead, TableHeader, TablePagination, TableRow, TableState, StickyActionBar, Textarea } from '@medvya/ui';
+import { Card, Button, ChoiceRow, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, Field, Input, Table, TableBody, TableCell, TableHead, TableHeader, TablePagination, TableRow, TableState, StickyActionBar, Textarea } from '@medvya/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { cardBar, fieldError, fieldGrid } from '../../settings/components/fieldStyles';
 import type { Location } from '../../settings/domain/settings';
-import { Section } from '../../settings/components/Section';
 import type { TableView } from '../../table/domain/tableSort';
 import { staffActions, staffColumns, type StaffAction, type StaffSortColumn } from '../domain/staffTable';
 import { isOwnerAmong, offboardBlock, roleValue, assignableRoles, canOffboard, locationsOf, isDoctor, permissionRows, statusLabel, type AddStaffForm, type LocationsForm, type OffboardForm, type ReactivateForm, type RoleCatalogue, type RoleChoice, type StaffMember, type Step } from '../domain/staff';
 
 type Props = {
+  /** The facility's IANA zone: instants show facility time, not the browser's (AGENTS.md 3.5). */
+  timeZone: string;
   /** Everyone, for the rules that look across rows (owner, locations); `table.rows` is the sorted page shown. */
   staff: StaffMember[];
   table: TableView<StaffMember, StaffSortColumn>;
@@ -96,7 +97,7 @@ export default function StaffPanel(p: Props) {
 
   return (
     <div className="flex flex-col gap-4">
-      <Section title={t('staff.title')} intro={t('staff.intro')}>
+      <Card title={t('staff.title')} intro={t('staff.intro')}>
         <div aria-live="polite" className="text-sm font-semibold text-success-700">
           {p.notice && t(`staff.notice.${p.notice}`)}
           {p.notice === 'offboarded' && p.openVisits > 0 && <span className="block text-foreground">{t('staff.notice.openVisits', { count: p.openVisits })}</span>}
@@ -135,7 +136,7 @@ export default function StaffPanel(p: Props) {
                     <TableCell label={t('staff.col.mfa')}>{t(`staff.mfa.${m.mfa}`)}</TableCell>
                     <TableCell label={t('staff.col.status')}>
                       {t(`staff.status.${statusLabel(m)}`)}
-                      {m.invitationState === 'pending' && <span className="block text-muted-foreground">{t(`staff.invitation.${m.invitationState}`, { date: m.invitationExpiresAt ? formatDate(new Date(m.invitationExpiresAt)) : '' })}</span>}
+                      {m.invitationState === 'pending' && <span className="block text-muted-foreground">{t(`staff.invitation.${m.invitationState}`, { date: m.invitationExpiresAt ? formatDate(new Date(m.invitationExpiresAt), p.timeZone) : '' })}</span>}
                     </TableCell>
                     <TableCell>
                       <span className="flex flex-wrap items-center gap-2">
@@ -169,10 +170,10 @@ export default function StaffPanel(p: Props) {
           <TablePagination page={p.table.page} pageCount={p.table.pageCount} onPage={p.table.onPage} />
         </TableState>
         {!p.step && !p.loading && !p.failed && <Button type="button" className="self-start" onClick={p.onOpen}><Plus aria-hidden className="size-4" />{t('staff.add')}</Button>}
-      </Section>
+      </Card>
 
       {p.offboarding && (
-        <Section title={t('staff.offboardTitle', { name: p.offboarding.name ?? p.offboarding.email ?? '' })} intro={t('staff.offboardIntro')}>
+        <Card title={t('staff.offboardTitle', { name: p.offboarding.name ?? p.offboarding.email ?? '' })} intro={t('staff.offboardIntro')}>
           <form noValidate onSubmit={p.onOffboardSubmit} className="flex flex-col gap-4">
             <Field id="staff-offboard-reason" label={t('staff.offboardReason')} error={p.offboardForm.formState.errors.reason && t('staff.offboardReasonRequired')}>
               <Textarea autoFocus rows={3} maxLength={500} {...p.offboardForm.register('reason')} />
@@ -196,7 +197,7 @@ export default function StaffPanel(p: Props) {
               <Button type="button" variant="outline" onClick={p.onOffboardCancel}>{t('settings.cancel')}</Button>
             </div>
           </form>
-        </Section>
+        </Card>
       )}
 
       {p.locating && (() => {
@@ -205,7 +206,7 @@ export default function StaffPanel(p: Props) {
         const removing = current.some(id => !chosen.includes(id));
         const toggle = (id: string) => p.locationsForm.setValue('facilityIds', chosen.includes(id) ? chosen.filter(x => x !== id) : [...chosen, id], { shouldValidate: true });
         return (
-          <Section title={t('staff.locationsTitle', { name: p.locating.name ?? p.locating.email ?? '' })} intro={t('staff.locationsIntro')}>
+          <Card title={t('staff.locationsTitle', { name: p.locating.name ?? p.locating.email ?? '' })} intro={t('staff.locationsIntro')}>
             <form noValidate onSubmit={p.onLocationsSubmit} className="flex flex-col gap-4">
               <fieldset className="flex flex-col gap-2" aria-describedby={p.locationsForm.formState.errors.facilityIds ? 'staff-locations-error' : undefined}>
                 <legend className="mb-1 font-bold">{t('staff.facility')}</legend>
@@ -227,12 +228,12 @@ export default function StaffPanel(p: Props) {
                 <Button type="button" variant="outline" onClick={p.onLocationsCancel}>{t('settings.cancel')}</Button>
               </div>
             </form>
-          </Section>
+          </Card>
         );
       })()}
 
       {p.changing && (
-        <Section title={t('staff.changeRoleTitle', { name: p.changing.name ?? p.changing.email ?? '' })} intro={t('staff.changeRoleIntro')}>
+        <Card title={t('staff.changeRoleTitle', { name: p.changing.name ?? p.changing.email ?? '' })} intro={t('staff.changeRoleIntro')}>
           <form noValidate onSubmit={p.onChangeRoleSubmit} className="flex flex-col gap-4">
             <Select value={p.newRole} onValueChange={p.onNewRole}>
               <Field id="staff-change-role" label={t('staff.changeRoleTo')}>
@@ -249,11 +250,11 @@ export default function StaffPanel(p: Props) {
               <Button type="button" variant="outline" onClick={p.onChangeRoleCancel}>{t('settings.cancel')}</Button>
             </div>
           </form>
-        </Section>
+        </Card>
       )}
 
       {p.reactivating && (
-        <Section title={t('staff.reactivateTitle', { name: p.reactivating.name ?? p.reactivating.email ?? '' })} intro={t('staff.reactivateIntro')}>
+        <Card title={t('staff.reactivateTitle', { name: p.reactivating.name ?? p.reactivating.email ?? '' })} intro={t('staff.reactivateIntro')}>
           <form noValidate onSubmit={p.onReactivateSubmit} className="flex flex-col gap-4">
             <Field id="staff-reactivate-reason" label={t('staff.offboardReason')} error={p.reactivateForm.formState.errors.reason && t('staff.offboardReasonRequired')}>
               <Textarea rows={3} maxLength={500} {...p.reactivateForm.register('reason')} />
@@ -264,11 +265,11 @@ export default function StaffPanel(p: Props) {
               <Button type="button" variant="outline" onClick={p.onReactivateCancel}>{t('settings.cancel')}</Button>
             </div>
           </form>
-        </Section>
+        </Card>
       )}
 
       {p.step && (
-        <Section title={t('staff.add')} intro={t('staff.stepOf', { n: stepIndex + 1, total: stepOrder.length, name: t(`staff.step.${p.step}`) })}>
+        <Card title={t('staff.add')} intro={t('staff.stepOf', { n: stepIndex + 1, total: stepOrder.length, name: t(`staff.step.${p.step}`) })}>
           <form noValidate onSubmit={p.onSubmit} className="flex flex-col gap-4">
             {p.step === 'role' && (
               <fieldset className="flex flex-col gap-2">
@@ -333,7 +334,7 @@ export default function StaffPanel(p: Props) {
               <Button type="button" variant="outline" onClick={p.onClose}>{t('settings.cancel')}</Button>
             </StickyActionBar>
           </form>
-        </Section>
+        </Card>
       )}
     </div>
   );

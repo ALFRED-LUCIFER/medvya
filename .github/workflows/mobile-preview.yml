@@ -7,11 +7,10 @@ name: mobile-preview
 # Not a required check. Download and install: docs/05-delivery/session-handoff.md §8.
 on:
   pull_request:
+    # Not the lockfile: every dependency PR touches it, and pr.yml already bundles both apps. main still rebuilds on a lockfile change.
     paths:
       - 'mobile/**'
       - 'packages/ui-native/**'
-      - 'pnpm-lock.yaml'
-      - 'pnpm-workspace.yaml'
       - '.github/workflows/mobile-preview.yml'
   push:
     branches: [main]

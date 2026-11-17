@@ -20,8 +20,8 @@ namespace Medvya.BuildingBlocks.Infrastructure;
 /// ChainSeq, PrevHash and RowHash (anything the client sent is overwritten), so concurrent inserts for one tenant queue and never fork
 /// the chain; other tenants do not wait. BEFORE UPDATE/DELETE/TRUNCATE triggers refuse for every role, and are ENABLE ALWAYS so
 /// session_replication_role = replica does not skip them. shortcut: a superuser can still DISABLE TRIGGER and rewrite rows; that is
-/// not prevented, it is detected: ledger.verify_chain finds an altered or removed middle row, and the daily signed digest in immutable
-/// Blob catches a rewrite of the tail or a deleted last row. Deadlock risk: one transaction inserting into two ledgered tables in the
+/// not prevented, it is detected: ledger.verify_chain finds an altered or removed middle row (daily for rows since the last digest,
+/// ledger.verify_chain_from; weekly and on demand for the whole chain), and the daily signed digest in immutable Blob catches a rewrite of the tail or a deleted last row. Deadlock risk: one transaction inserting into two ledgered tables in the
 /// opposite order to another; upgrade to a fixed lock order if it shows up.
 /// </summary>
 public static class LedgerSql
@@ -82,14 +82,15 @@ public static class LedgerSql
             RAISE EXCEPTION '% is append only: % is refused', TG_TABLE_NAME, TG_OP USING ERRCODE = 'restrict_violation';
         END $$;
 
-        -- Id of the first row whose sequence, link or hash does not match, or NULL when the chain is intact.
-        CREATE OR REPLACE FUNCTION ledger.verify_chain(tbl text, tenant uuid) RETURNS uuid LANGUAGE plpgsql SET timezone = 'UTC' AS $$
-        DECLARE r record; prev bytea := {{Zero}}; n bigint := 0; cols text[];
+        -- Id of the first row after (from_seq, from_hash) whose sequence, link or hash does not match, or NULL when that part is intact.
+        -- From a digest head whose stored hash still matches, it checks only what was written since (the daily verify, MDV-P0-036).
+        CREATE OR REPLACE FUNCTION ledger.verify_chain_from(tbl text, tenant uuid, from_seq bigint, from_hash bytea) RETURNS uuid LANGUAGE plpgsql SET timezone = 'UTC' AS $$
+        DECLARE r record; prev bytea := from_hash; n bigint := from_seq; cols text[];
         BEGIN
             IF NOT ledger.is_ledger(tbl) THEN RAISE EXCEPTION 'not a ledger table'; END IF;
             SELECT "Columns" INTO cols FROM ledger."Tables" WHERE "Name" = tbl;
-            FOR r IN EXECUTE format('SELECT t."Id", t."ChainSeq", t."PrevHash", t."RowHash", ledger.row_hash(to_jsonb(t), t."PrevHash", $2) AS calc FROM %I.%I t WHERE t."TenantId" = $1 ORDER BY t."ChainSeq"',
-                                    split_part(tbl, '.', 1), split_part(tbl, '.', 2)) USING tenant, cols LOOP
+            FOR r IN EXECUTE format('SELECT t."Id", t."ChainSeq", t."PrevHash", t."RowHash", ledger.row_hash(to_jsonb(t), t."PrevHash", $2) AS calc FROM %I.%I t WHERE t."TenantId" = $1 AND t."ChainSeq" > $3 ORDER BY t."ChainSeq"',
+                                    split_part(tbl, '.', 1), split_part(tbl, '.', 2)) USING tenant, cols, from_seq LOOP
                 n := n + 1;
                 IF r."ChainSeq" <> n OR r."PrevHash" <> prev OR r.calc <> r."RowHash" THEN RETURN r."Id"; END IF;
                 prev := r."RowHash";
@@ -97,12 +98,19 @@ public static class LedgerSql
             RETURN NULL;
         END $$;
 
-        -- The head (last sequence and hash) of every chain the session can see (row-level security: the session's tenant), for the daily digest.
-        CREATE OR REPLACE FUNCTION ledger.heads() RETURNS TABLE (tbl text, tenant uuid, seq bigint, hash bytea) LANGUAGE plpgsql AS $$
+        -- The whole chain: id of the first row whose sequence, link or hash does not match, or NULL when the chain is intact (runbook, weekly job).
+        CREATE OR REPLACE FUNCTION ledger.verify_chain(tbl text, tenant uuid) RETURNS uuid LANGUAGE plpgsql SET timezone = 'UTC' AS $$
+        BEGIN
+            RETURN ledger.verify_chain_from(tbl, tenant, 0, {{Zero}});
+        END $$;
+
+        -- The head (last sequence and hash) of every chain of the session's tenant (medvya.tenant_id; row-level security applies too), for the
+        -- daily digest: one backward step on UX_<table>_Chain per table, never a scan of the chain (enable_sort = off, as in ledger.chain()).
+        CREATE OR REPLACE FUNCTION ledger.heads() RETURNS TABLE (tbl text, tenant uuid, seq bigint, hash bytea) LANGUAGE plpgsql SET enable_sort = off AS $$
         DECLARE t text;
         BEGIN
             FOR t IN SELECT "Name" FROM ledger."Tables" WHERE ledger.is_ledger("Name") ORDER BY 1 LOOP
-                RETURN QUERY EXECUTE format('SELECT %L::text, "TenantId", max("ChainSeq"), (array_agg("RowHash" ORDER BY "ChainSeq" DESC))[1] FROM %I.%I GROUP BY "TenantId"',
+                RETURN QUERY EXECUTE format('SELECT %L::text, "TenantId", "ChainSeq", "RowHash" FROM %I.%I WHERE "TenantId" = nullif(current_setting(''medvya.tenant_id'', true), '''')::uuid ORDER BY "ChainSeq" DESC LIMIT 1',
                                             t, split_part(t, '.', 1), split_part(t, '.', 2));
             END LOOP;
         END $$;

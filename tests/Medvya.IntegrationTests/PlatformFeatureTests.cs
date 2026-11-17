@@ -162,7 +162,7 @@ public sealed class PlatformFeatureTests(PostgresFixture sql) : IClassFixture<Po
             clinics.Add(id);
         }
         // A fresh cache per check: the clinic host's at most 60 s old copy, already expired.
-        FeatureFlags Clinic(Guid id) => new(sql.Context(id), new PostgresFixture.FixedTenant(id), new FixedUser(), new AuditLog(sql.Audit(id)), new FeatureReleaseCache(TimeProvider.System, new HashSet<Guid>()));
+        FeatureFlags Clinic(Guid id) => new(sql.Context(id), new PostgresFixture.FixedTenant(id), new FixedUser(), new AuditLog(sql.Audit(id)), new FeatureReleaseCache(TimeProvider.System, new HashSet<Guid>()), TimeProvider.System);
         foreach (var id in clinics) Assert.True(await Clinic(id).IsEnabledAsync(Features.NurseIntake));
 
         using var c = await Console(PlatformRole.Owner);

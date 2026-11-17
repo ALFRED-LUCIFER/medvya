@@ -48,12 +48,12 @@ export function makeI18n(locale: Locale, country: Country) {
       return translate(locale, (key in en ? key : `${base}.other`) as MessageKey, { count });
     },
     formatNumber: (n: number) => new Intl.NumberFormat(tag).format(n),
-    /** A day; pass the facility's zone for an instant, omit it for a calendar date built in local time. */
-    formatDate: (d: Date, timeZone?: string) => new Intl.DateTimeFormat(tag, { day: '2-digit', month: 'short', year: 'numeric', timeZone }).format(d),
+    /** An instant's day in an IANA zone (the facility's, or the console operator's); a calendar date is formatCalendarDate. */
+    formatDate: (d: Date, timeZone: string) => new Intl.DateTimeFormat(tag, { day: '2-digit', month: 'short', year: 'numeric', timeZone }).format(d),
     /** A calendar date (YYYY-MM-DD, or an ISO string's day part) in the same format as formatDate, e.g. "12 Mar 1972"; never shifts a day by zone. */
     formatCalendarDate: (date: string) => new Intl.DateTimeFormat(tag, { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${date.slice(0, 10)}T12:00:00Z`)),
     /** 24-hour time in an IANA zone: schedules show facility time whatever the device's zone is. */
-    formatTime: (d: Date, timeZone?: string) => new Intl.DateTimeFormat(tag, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone }).format(d),
+    formatTime: (d: Date, timeZone: string) => new Intl.DateTimeFormat(tag, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone }).format(d),
     /** A calendar date (YYYY-MM-DD) as a long day, e.g. "Monday, 19 October 2026". */
     formatDay: (date: string) => new Intl.DateTimeFormat(tag, { dateStyle: 'full', timeZone: 'UTC' }).format(new Date(`${date}T12:00:00Z`)),
     /** A calendar date (YYYY-MM-DD) as a short day for narrow headers, e.g. "Mon, 19 Oct". */
@@ -81,3 +81,5 @@ export function I18nProvider({ locale, country, children }: { locale: Locale; co
 }
 
 export const useI18n = () => useContext(I18nContext);
+export { isLocale, directionOf, readLocale, useLocaleController } from './locale';
+export { dateIn, todayIn, isDeviceTimeZone } from './dates';

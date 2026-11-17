@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { ApiError } from '../../schedule/services/scheduleApi';
+import { ApiError } from '../../api/services/apiClient';
 import { attention, type AttentionScreens } from '../domain/clinicToday';
 import { fetchClinicToday } from '../services/clinicTodayApi';
 

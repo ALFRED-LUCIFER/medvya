@@ -138,7 +138,7 @@ public sealed partial class RxShareTests(PostgresFixture sql, AzuriteFixture blo
 
     Task<HttpResponseMessage> OpenAsync(string token, string? code) => Client(null).PostAsJsonAsync(U("/v1/prescriptions/shared/open"), new { token, code });
 
-    [GeneratedRegex(@"/rx/([A-Za-z0-9_-]+)")]
+    [GeneratedRegex(@"/rx#t=([A-Za-z0-9_-]+)")]
     private static partial Regex LinkPattern();
 
     [GeneratedRegex(@"\b(\d{6})\b")]
@@ -199,7 +199,7 @@ public sealed partial class RxShareTests(PostgresFixture sql, AzuriteFixture blo
         }
         var link = Assert.Single(sms.Sent);
         Assert.Equal(("+919000000101", "MEDVYA", "1107000000000000001"), (link.To, link.Sender, link.TemplateId));
-        Assert.StartsWith("Adyar (synthetic) has shared a document with you: https://clinic.test/app/rx/", link.Text, StringComparison.Ordinal);
+        Assert.StartsWith("Adyar (synthetic) has shared a document with you: https://clinic.test/app/rx#t=", link.Text, StringComparison.Ordinal);
         var token = TokenIn(link.Text);
         foreach (var phi in Phi) Assert.DoesNotContain(phi, link.Text, StringComparison.OrdinalIgnoreCase);
 

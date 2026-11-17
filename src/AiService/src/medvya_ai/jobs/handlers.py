@@ -37,7 +37,7 @@ def _llm_usage(deps: Deps, start: Usage, task: Task) -> dict[str, Any]:
         **deps.llm.usage.since(start),
         "provider": type(deps.llm).__name__,  # the adapter actually used
         "model": deps.llm.model_names.get(task),
-        "endpoint": deps.settings.foundry_endpoint,
+        "endpoint_host": getattr(deps.llm, "endpoint_host", None),  # the host actually called
     }
 
 
@@ -50,7 +50,7 @@ async def transcribe(db: AsyncSession, deps: Deps, job: Job) -> Counters:
         wrapper=deps.wrapper,
         transcriber=deps.transcriber,
         settings=deps.settings,
-        before_call=partial(ensure_active, db, job.id),
+        before_call=partial(ensure_active, db, job),
     )
     log.info("transcribe done session=%s phrases=%d", sid, n)
     await enqueue(
@@ -69,14 +69,15 @@ async def transcribe(db: AsyncSession, deps: Deps, job: Job) -> Counters:
         "audio_ms": int(audio_ms or 0),
         "phrases": n,
         "provider": type(deps.transcriber).__name__,
-        "region": deps.settings.speech_region,
+        # the host actually called (processing-region evidence), not the configured region name
+        "endpoint_host": getattr(deps.transcriber, "endpoint_host", None),
     }
 
 
 async def normalise(db: AsyncSession, deps: Deps, job: Job) -> Counters:
     sid = _sid(job)
     start = deps.llm.usage.snapshot()
-    n = await run_normalise(db, deps.llm, sid, before_call=partial(ensure_active, db, job.id))
+    n = await run_normalise(db, deps.llm, sid, before_call=partial(ensure_active, db, job))
     log.info("normalise done session=%s translated=%d", sid, n)
     await enqueue(
         db, clinic_id=job.clinic_id, session_id=sid, kind="extract", consent_epoch=job.consent_epoch
@@ -92,7 +93,7 @@ async def extract(db: AsyncSession, deps: Deps, job: Job) -> Counters:
         deps.llm,
         clinic_id=job.clinic_id,
         session_id=sid,
-        before_call=partial(ensure_active, db, job.id),
+        before_call=partial(ensure_active, db, job),
     )
     log.info(
         "extract done session=%s facts=%d medications=%d rejected=%d",
@@ -105,11 +106,17 @@ async def extract(db: AsyncSession, deps: Deps, job: Job) -> Counters:
 
 
 async def retention_sweep(db: AsyncSession, deps: Deps, job: Job) -> Counters:
+    now = datetime.now(UTC)
     n = await retention.sweep(
-        db, deps.blobs, clinic_id=job.clinic_id, now=datetime.now(UTC), settings=deps.settings
+        db, deps.blobs, clinic_id=job.clinic_id, now=now, settings=deps.settings
     )
-    log.info("retention sweep clinic=%s chunks_deleted=%d", job.clinic_id, n)
-    return {"chunks_deleted": n}
+    expired = await retention.expire_sessions(
+        db, clinic_id=job.clinic_id, now=now, settings=deps.settings
+    )
+    log.info(
+        "retention sweep clinic=%s chunks_deleted=%d sessions_expired=%d", job.clinic_id, n, expired
+    )
+    return {"chunks_deleted": n, "sessions_expired": expired}
 
 
 async def purge_session(db: AsyncSession, deps: Deps, job: Job) -> Counters:

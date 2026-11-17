@@ -1,10 +1,13 @@
 import type { ReactNode } from 'react';
-import { Controller, type Control, type FieldErrors, type UseFormRegister } from 'react-hook-form';
+import type { Control, FieldErrors, UseFormRegister } from 'react-hook-form';
 import { CircleAlert } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { ChoiceRow, ErrorSummary, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
+import { ChoiceRow } from '@medvya/ui';
 import type { Country } from '@medvya/i18n';
 import { errorCode, fieldLabel, sexes, type FormField, type RegistrationForm } from '../domain/registration';
+import { TextField as FormTextField, type TextFieldProps } from '../../forms/components/TextField';
+import { SelectField as FormSelectField } from '../../forms/components/SelectField';
+import { StepErrorSummary } from '../../forms/components/StepErrorSummary';
 
 type FormProps = { register: UseFormRegister<RegistrationForm>; control: Control<RegistrationForm>; errors: FieldErrors<RegistrationForm> };
 
@@ -20,23 +23,14 @@ export function FormErrorSummary({ f, summary, country, values, quick }: {
   f: FormProps; summary: { focusKey: string; fields: FormField[] }; country: Country; values: RegistrationForm; quick: boolean;
 }) {
   const { t } = useI18n();
-  const errors = summary.fields.map(field => ({
+  return <StepErrorSummary fields={summary.fields} focusKey={summary.focusKey} entry={field => ({
     id: field, label: t(fieldLabel(field, country, values, quick)), message: t(`registration.error.${errorCode(f.errors[field]?.message)}`),
-  }));
-  return <ErrorSummary title={t('field.errorSummary')} focusKey={summary.focusKey} errors={errors} />;
+  })} />;
 }
 
 /** A text input bound to one form field; LTR for numbers and codes so they read the same in Arabic. */
-export function TextField({ f, name, label, required, hint, ltr, wide, type = 'text', inputMode, dir }: {
-  f: FormProps; name: FormField; label: string; required?: boolean; hint?: ReactNode; ltr?: boolean; wide?: boolean;
-  type?: 'text' | 'tel' | 'email' | 'date'; inputMode?: 'numeric' | 'tel' | 'email'; dir?: 'rtl';
-}) {
-  return (
-    <Field id={name} label={label} required={required} error={useFieldError(f, name)} hint={hint} className={wide ? 'md:col-span-2' : undefined}>
-      <Input {...f.register(name)} type={type} inputMode={inputMode} dir={dir ?? (ltr ? 'ltr' : undefined)}
-        lang={dir === 'rtl' ? 'ar' : undefined} autoComplete="off" spellCheck={false} />
-    </Field>
-  );
+export function TextField({ f, name, ...props }: { f: FormProps; name: FormField } & Omit<TextFieldProps<RegistrationForm>, 'register' | 'name' | 'error'>) {
+  return <FormTextField register={f.register} name={name} error={useFieldError(f, name)} {...props} />;
 }
 
 /** A choice from a fixed list (shadcn Select). Value "" = nothing chosen. */
@@ -44,17 +38,8 @@ export function SelectField<T extends string>({ f, name, label, required, hint, 
   f: FormProps; name: FormField; label: string; required?: boolean; hint?: ReactNode; options: readonly T[];
   optionLabel: (value: T) => string; placeholder: string; wide?: boolean;
 }) {
-  const error = useFieldError(f, name);
-  return (
-    <Controller control={f.control} name={name} render={({ field }) => (
-      <Select value={field.value as string} onValueChange={field.onChange}>
-        <Field id={name} label={label} required={required} error={error} hint={hint} className={wide ? 'md:col-span-2' : undefined}>
-          <SelectTrigger className="w-full" onBlur={field.onBlur}><SelectValue placeholder={placeholder} /></SelectTrigger>
-        </Field>
-        <SelectContent>{options.map(o => <SelectItem key={o} value={o}>{optionLabel(o)}</SelectItem>)}</SelectContent>
-      </Select>
-    )} />
-  );
+  return <FormSelectField control={f.control} name={name} error={useFieldError(f, name)} label={label} required={required} hint={hint} options={options}
+    optionLabel={optionLabel} placeholder={placeholder} wide={wide} />;
 }
 
 /** Radio buttons, so a fieldset rather than a Field; the same words and error styling as Field. The first radio carries the id the error summary links to. */

@@ -12,6 +12,6 @@ describe('queue display api', () => {
     const [url, init] = fetch.mock.calls[0]!;
     expect(url).toBe('/v1/queue/displays/q-1/link');
     expect(init?.method).toBe('POST');
-    expect(init!.headers).toMatchObject({ 'X-Medvya-Csrf': '1' });
+    expect(new Headers(init!.headers).get('X-Medvya-Csrf')).toBe('1'); // apiFetch adds it to every write
   });
 });

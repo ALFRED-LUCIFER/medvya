@@ -1,4 +1,3 @@
-using Medvya.Tenancy.Api;
 using System.Globalization;
 using System.Security.Claims;
 using System.Text;
@@ -73,7 +72,7 @@ public static class AccessLogEndpoints
         var rows = await Enrich(sp, page!.Items, withPatientName: false, ct);
         var exporter = Guid.TryParse(principal.FindFirstValue(ClaimTypes.NameIdentifier), out var id)
             ? (await sp.GetRequiredService<IStaffUsers>().DisplayNamesAsync([id], ct)).GetValueOrDefault(id) ?? id.ToString() : "unknown";
-        var csv = Csv(rows, exporter, DateTimeOffset.UtcNow, truncated: page.Next is not null);
+        var csv = Csv(rows, exporter, sp.GetRequiredService<TimeProvider>().GetUtcNow(), truncated: page.Next is not null);
         return Results.File(Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes(csv)).ToArray(), "text/csv; charset=utf-8", "access-log.csv");
     }
 
@@ -83,7 +82,7 @@ public static class AccessLogEndpoints
         catch (ArgumentException) { return null; } // a cursor that is not one of ours
     }
 
-    static string? Clean(string? action) => string.IsNullOrWhiteSpace(action) ? null : action.Trim()[..Math.Min(action.Trim().Length, 64)];
+    static string? Clean(string? action) => TextInput.Clean(action) is { } a ? a[..Math.Min(a.Length, 64)] : null; // and at most 64 characters
 
     static async Task<IReadOnlyList<Row>> Enrich(IServiceProvider sp, IReadOnlyList<AuditEvent> events, bool withPatientName, CancellationToken ct)
     {

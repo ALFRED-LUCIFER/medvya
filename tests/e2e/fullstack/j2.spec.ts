@@ -54,7 +54,7 @@ async function stepUp(page: Page) {
   await page.waitForURL(/\/app\/consult\/[0-9a-f-]{36}(\?resume=(authorise|sign))?$/); // MDV-P2-047: the page then drops the word
 }
 
-/** The verify page shows `answer` for the paper's QR token (public: opened signed out). The stack's link origin is the dev server's, so the path is opened here. */
+/** The verify page shows `answer` for the paper's QR token (public: opened signed out). The token comes from the page, so the path is opened on this stack. */
 async function expectVerified(page: Page, token: string, answer: string | RegExp) {
   const scan = await page.context().browser()!.newPage({ baseURL: new URL(page.url()).origin });
   await scan.goto(`/app/verify/rx/${token}`);

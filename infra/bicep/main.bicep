@@ -19,12 +19,12 @@ param country string = 'IN'
 param databaseName string = 'medvya'
 @description('Zone-redundant HA (needs a General Purpose or Memory Optimized SKU). On for production.')
 param postgresHaEnabled bool = env == 'prod'
-@description('Point-in-time restore window in days (7 to 35). Production 14; dev 7.')
+@description('Point-in-time restore window in days (7 to 35). Production 35 (the retention map and restore runbook promise it); dev and test 7.')
 @minValue(7)
 @maxValue(35)
-param pitrRetentionDays int = env == 'prod' ? 14 : 7
-@description('Copy backups to the Azure paired region. Only valid when the pair is in the same country; the module checks.')
-param geoRedundantBackup bool = false
+param pitrRetentionDays int = env == 'prod' ? 35 : 7
+@description('Copy backups to the Azure paired region. Only valid when the pair is in the same country; the module checks. Azure sets it only when a server is created: dev was created without it (docs/runbooks/environments.md).')
+param geoRedundantBackup bool = env == 'prod'
 param postgresSkuName string = env == 'prod' ? 'Standard_D2ds_v5' : 'Standard_B1ms'
 @allowed(['Burstable', 'GeneralPurpose', 'MemoryOptimized'])
 param postgresSkuTier string = env == 'prod' ? 'GeneralPurpose' : 'Burstable'
@@ -49,9 +49,9 @@ param appServiceSku string = 'B1'
 param ledgerDigestRetentionDays int = env == 'prod' ? 3650 : 7
 @description('True once the ledger-digests policy is locked: Azure refuses any write to a locked policy, even with the same values, so the template leaves it alone.')
 param ledgerDigestPolicyLocked bool = false
-@description('Image of the database deploy job (migrations and roles inside the VNet). Pinned; the job downloads db-migrate from Blob.')
-param dbJobImage string = 'mcr.microsoft.com/azure-cli:2.92.0'
-@description('Plan cap (MDV-P1-069, StarterPlan.cs): doctors and other staff an organisation may have. Dev is raised so the pilot audit can set up a 3-doctor clinic; every other environment keeps the starter plan.')
+@description('Image of the database deploy job (migrations and roles inside the VNet). Pinned by digest (a moved tag cannot change it); the job downloads db-migrate from Blob.')
+param dbJobImage string = 'mcr.microsoft.com/azure-cli:2.92.0@sha256:a4e2660b4099b76f02001a9316a0eb0dc56e330b5f7d1d1312c932200645bf26'
+@description('Plan cap (MDV-P1-069, StarterPlan.cs): doctors and other staff an organisation may have. Dev is raised so the pilot audit can set up a 3-doctor clinic; test sets the same in test.bicepparam; any other environment keeps the starter plan.')
 param planDoctors int = env == 'dev' ? 3 : 1
 param planStaff int = env == 'dev' ? 5 : 2
 @description('Platform console (ADR-014): application (client) id of its Entra app registration in the company tenant (infra/entra/console-app.sh). Not a secret.')
@@ -62,6 +62,10 @@ param consoleClientId string
 param consoleOwnerObjectId string
 @description('Platform console: the company (workforce) tenant its sign-on uses. Defaults to this subscription\'s tenant.')
 param consoleTenantId string = tenant().tenantId
+@description('ASP.NET Core environment of both web apps. Every Azure environment so far runs Staging.')
+param aspnetEnvironment string = 'Staging'
+@description('Log Analytics daily ingestion cap in GB, as text (Bicep has no decimals). -1 is no cap. An alert mails the owner when the cap is reached.')
+param logDailyCapGb string = env == 'dev' ? '1' : env == 'test' ? '0.5' : '-1'
 
 var suffix = take(uniqueString(resourceGroup().id), 6)
 var name = 'medvya-${env}-${suffix}'
@@ -78,9 +82,11 @@ resource logs 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
   tags: tags
   properties: {
     sku: { name: 'PerGB2018' }
-    retentionInDays: 30
-    // 0.1 GB was hit on 7 Nov by pgaudit read/write lines of a bulk seed (170 MB), which silenced App Insights until the 12:00Z reset. With pgaudit read off, ingestion is far lower. 0.2 GB a day keeps the month near the free 5 GB tier (worst case about 6 GB).
-    workspaceCapping: { dailyQuotaGb: json('0.2') }
+    // 90 days, as docs/compliance retention-map promises. The first 31 days are free; the rest costs about US$0.10 per GB a month (about US$1 at dev volumes).
+    retentionInDays: 90
+    // 0.1 GB was hit on 7 Nov by pgaudit read/write lines of a bulk seed (170 MB), which silenced App Insights until the 12:00Z reset; pgaudit read is now off.
+    // The cap stops runaway cost, and logCapReached says when it silences the 5xx alert below.
+    workspaceCapping: { dailyQuotaGb: json(logDailyCapGb) }
   }
 }
 
@@ -107,7 +113,7 @@ resource alertOwner 'Microsoft.Insights/actionGroups@2023-01-01' = {
 }
 
 // MDV-P0-018: server errors above 2 % of requests in 5 minutes. Below 10 requests a single error is not a rate, so it does not fire.
-// shortcut: blind while the workspace's daily cap (0.1 GB) is reached; raise the cap before real clinic traffic.
+// shortcut: blind while the workspace's daily cap is reached (logCapReached mails when that happens); production has no cap.
 resource serverErrors 'Microsoft.Insights/scheduledQueryRules@2023-12-01' = {
   name: 'alert-5xx-${name}'
   location: location
@@ -135,7 +141,49 @@ resource serverErrors 'Microsoft.Insights/scheduledQueryRules@2023-12-01' = {
   }
 }
 
+// Ingestion stopped for the rest of the day (until the cap resets): telemetry and the 5xx alert are blind. The _LogOperation table still fills.
+resource logCapReached 'Microsoft.Insights/scheduledQueryRules@2023-12-01' = if (logDailyCapGb != '-1') {
+  name: 'alert-logcap-${name}'
+  location: location
+  tags: tags
+  properties: {
+    displayName: 'Medvya ${env}: Log Analytics daily cap reached'
+    severity: 2
+    enabled: true
+    scopes: [logs.id]
+    evaluationFrequency: 'PT1H'
+    windowSize: 'PT1H'
+    criteria: {
+      allOf: [
+        {
+          query: '_LogOperation | where Category =~ "Ingestion" | where Detail contains "OverQuota"'
+          timeAggregation: 'Count'
+          operator: 'GreaterThan'
+          threshold: 0
+          failingPeriods: { numberOfEvaluationPeriods: 1, minFailingPeriodsToAlert: 1 }
+        }
+      ]
+    }
+    autoMitigate: false
+    actions: { actionGroups: [alertOwner.id] }
+  }
+}
+
+// Who read or changed which key or secret, in both vaults (the payments vault holds every clinic's Razorpay secrets).
+resource vaultAudit 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
+  name: 'to-log-analytics'
+  scope: vault
+  properties: { workspaceId: logs.id, logs: [{ category: 'AuditEvent', enabled: true }] }
+}
+
+resource paymentsVaultAudit 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
+  name: 'to-log-analytics'
+  scope: paymentsVault
+  properties: { workspaceId: logs.id, logs: [{ category: 'AuditEvent', enabled: true }] }
+}
+
 resource storage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
+  #disable-next-line BCP334 // the compiler cannot see through replace(); the name is 'st' plus 'medvya<env><6-char suffix>', never under 3
   name: take('st${replace(name, '-', '')}', 24)
   location: location
   tags: tags
@@ -145,6 +193,9 @@ resource storage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
     allowBlobPublicAccess: false
     minimumTlsVersion: 'TLS1_2'
     supportsHttpsTrafficOnly: true
+    // Entra only: the app, the database job and the deploy all use their identities; no account key or account SAS works (Azurite is local).
+    allowSharedKeyAccess: false
+    defaultToOAuthAuthentication: true
   }
 }
 
@@ -306,6 +357,39 @@ resource nationalIdKeyApp 'Microsoft.Authorization/roleAssignments@2022-04-01' =
   properties: { roleDefinitionId: cryptoUser, principalId: app.identity.principalId, principalType: 'ServicePrincipal' }
 }
 
+// The ASP.NET Core data-protection key rings (#1417): they sign staff and console cookies, app tokens and link tokens. Each host has its own
+// key and its own container, and its identity can reach only those: the internet-facing API cannot write (or forge) the console's ring.
+// Neither the blob nor the App Service files alone forge a cookie.
+var dataProtectionHosts = ['api', 'platform'] // index 0 the app, 1 the console
+
+resource dataProtectionKey 'Microsoft.KeyVault/vaults/keys@2023-07-01' = [for h in dataProtectionHosts: {
+  parent: vault
+  name: 'dataprotection-${h}'
+  properties: {
+    kty: 'RSA'
+    keySize: 3072
+    keyOps: ['wrapKey', 'unwrapKey']
+  }
+}]
+
+resource dataProtectionKeys 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = [for h in dataProtectionHosts: {
+  parent: blobProtection
+  name: 'data-protection-medvya-${h}'
+  properties: { publicAccess: 'None' }
+}]
+
+resource dataProtectionKeyRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = [for (h, i) in dataProtectionHosts: {
+  scope: dataProtectionKey[i]
+  name: guid(dataProtectionKey[i].id, h, cryptoUser)
+  properties: { roleDefinitionId: cryptoUser, principalId: i == 0 ? app.identity.principalId : console.identity.principalId, principalType: 'ServicePrincipal' }
+}]
+
+resource dataProtectionKeysRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = [for (h, i) in dataProtectionHosts: {
+  scope: dataProtectionKeys[i]
+  name: guid(dataProtectionKeys[i].id, h, blobContributor)
+  properties: { roleDefinitionId: blobContributor, principalId: i == 0 ? app.identity.principalId : console.identity.principalId, principalType: 'ServicePrincipal' }
+}]
+
 // Clinic payment keys (MDV-P4-007, ADR-023): each clinic's Razorpay key secret and webhook secret, written by the API when the clinic
 // admin connects Razorpay. A vault of its own, because writing needs "Key Vault Secrets Officer" on the vault, and on the main vault that
 // would let the app read and change every platform secret. Nothing else lives here.
@@ -461,6 +545,8 @@ module postgres 'postgres.bicep' = {
   }
 }
 
+// shortcut: one instance only. SignalR has no backplane and rate limits are in memory, so a second instance would split the live board and
+// double every limit. Add Azure SignalR (or a Redis backplane) and a shared rate-limit store before scaling out (MDV-P1-039).
 resource plan 'Microsoft.Web/serverfarms@2023-12-01' = {
   name: 'asp-${name}'
   location: location
@@ -498,10 +584,11 @@ resource app 'Microsoft.Web/sites@2023-12-01' = {
       alwaysOn: true
       minTlsVersion: '1.2'
       ftpsState: 'Disabled'
+      healthCheckPath: '/health'
       appSettings: concat(emailSettings, [
         { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: insights.properties.ConnectionString }
-        { name: 'ASPNETCORE_ENVIRONMENT', value: 'Staging' }
-        { name: 'Onboarding__DeploymentCountry', value: 'IN' }
+        { name: 'ASPNETCORE_ENVIRONMENT', value: aspnetEnvironment }
+        { name: 'Onboarding__DeploymentCountry', value: country }
         // Ledger digests go to Blob with the managed identity (no account key, no connection string).
         { name: 'Storage__BlobEndpoint', value: storage.properties.primaryEndpoints.blob }
         { name: 'Audit__DigestKey', value: '@Microsoft.KeyVault(VaultName=${vault.name};SecretName=audit-digest-key)' }
@@ -518,8 +605,9 @@ resource app 'Microsoft.Web/sites@2023-12-01' = {
         { name: 'Plan__Staff', value: string(planStaff) }
         // No password anywhere: the app signs in with an Entra token for its managed identity, a login IN ROLE medvya_app made by the
         // database job (PostgresDataSources). The login name is the app's name. The server certificate is checked.
-        { name: 'ConnectionStrings__Medvya', value: 'Host=${postgres.outputs.fqdn};Database=${postgres.outputs.databaseName};Username=${appName};SslMode=VerifyFull' }
+        { name: 'ConnectionStrings__Medvya', value: 'Host=${postgres.outputs.fqdn};Database=${postgres.outputs.databaseName};Username=${appName};SslMode=VerifyFull;Maximum Pool Size=35' }
         { name: 'NationalIdProtection__KeyVaultKeyId', value: nationalIdKey.properties.keyUri }
+        { name: 'DataProtection__KeyVaultKeyId', value: dataProtectionKey[0].properties.keyUri }
         { name: 'Razorpay__KeyVaultUri', value: paymentsVault.properties.vaultUri }
         // Staff sign-in (MDV-P0-011): single-tenant Entra app; the client secret is a Key Vault reference, never a value here.
         { name: 'Authentication__Oidc__Authority', value: '${environment().authentication.loginEndpoint}${tenant().tenantId}/v2.0' }
@@ -580,7 +668,7 @@ resource console 'Microsoft.Web/sites@2023-12-01' = {
       // No APPLICATIONINSIGHTS_CONNECTION_STRING: the console has no exporter yet (Host.Platform shortcut), and the platform agent would skip the scrubber.
       // shortcut: email works with emailProvider=Acs (managed identity) only; with Smtp the console cannot read sendgrid-api-key. Grant it that secret if Smtp is used.
       appSettings: concat(emailSettings, [
-        { name: 'ASPNETCORE_ENVIRONMENT', value: 'Staging' }
+        { name: 'ASPNETCORE_ENVIRONMENT', value: aspnetEnvironment }
         { name: 'Authentication__Oidc__Authority', value: consoleIssuer }
         { name: 'Authentication__Oidc__ClientId', value: consoleClientId }
         { name: 'Authentication__Oidc__ClientSecret', value: '@Microsoft.KeyVault(VaultName=${vault.name};SecretName=${consoleSecret.name})' }
@@ -599,6 +687,7 @@ resource console 'Microsoft.Web/sites@2023-12-01' = {
         { name: 'ConnectionStrings__Formulary', value: '${consoleDb};Username=${consoleFormularyDb.name};Entra Client Id=${consoleFormularyDb.properties.clientId}' }
         // Organisation documents (practice-assets, read only) through a user-delegation link signed with the system identity.
         { name: 'Storage__BlobEndpoint', value: storage.properties.primaryEndpoints.blob }
+        { name: 'DataProtection__KeyVaultKeyId', value: dataProtectionKey[1].properties.keyUri }
       ])
     }
   }

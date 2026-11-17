@@ -2,10 +2,9 @@ import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { Link } from 'react-router';
 import { ltr, useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, Field, Input, StickyActionBar, Textarea } from '@medvya/ui';
+import { Card, Button, buttonVariants, Field, Input, StickyActionBar, Textarea } from '@medvya/ui';
 import { CircleAlert, CircleCheck, Lightbulb } from 'lucide-react';
 import { cardBar, fieldError } from '../../settings/components/fieldStyles';
-import { Section } from '../../settings/components/Section';
 import { planHeading } from '../../encounters/domain/encounter';
 import { geriatricFields, geriLines, type GeriError, type GeriatricAssessment, type GeriatricForm, type MedicineReview } from '../domain/olderAdult';
 
@@ -27,7 +26,7 @@ export default function OlderAdultCards(p: Props) {
   const { t, formatDate } = useI18n();
   return (
     <>
-      <Section title={t('olderAdult.title')}>
+      <Card title={t('olderAdult.title')}>
         {p.loading ? <p role="status">{t('patient360.loading')}</p>
           : p.failed ? <p role="alert" className={fieldError}>{t('patient360.loadFailed')}</p>
           : p.latest ? (
@@ -51,7 +50,7 @@ export default function OlderAdultCards(p: Props) {
           ) : <p className="text-muted-foreground">{t('olderAdult.empty')}</p>}
         {!p.rulesSignedOff && !p.loading && <p className="text-sm text-muted-foreground">{t('olderAdult.rulesDraft')}</p>}
         {p.recording ? <AssessmentForm {...p} /> : <div><Button variant="outline" onClick={p.onRecord}>{t('olderAdult.record')}</Button></div>}
-      </Section>
+      </Card>
       {p.review && !p.reviewHidden && p.review.olderAdult && <ReviewCard review={p.review} consultPath={p.consultPath} planHint={p.planHint} onPlanChange={p.onPlanChange} />}
       {p.reviewFailed && <p role="alert" className={fieldError}>{t('olderAdult.review.failed')}</p>}
     </>
@@ -90,7 +89,7 @@ function AssessmentForm(p: Props) {
 function ReviewCard({ review, consultPath, planHint, onPlanChange }: { review: MedicineReview; consultPath: string | null; planHint: string | null; onPlanChange: (m: string) => void }) {
   const { t } = useI18n();
   return (
-    <Section title={t('olderAdult.review.title', { count: review.medicines })}>
+    <Card title={t('olderAdult.review.title', { count: review.medicines })}>
       <p className="inline-flex items-center gap-1.5 self-start rounded-md border px-2 py-0.5 text-sm font-bold"><Lightbulb aria-hidden className="size-4 shrink-0" />{t('olderAdult.review.decides')}</p>
       {review.suggestions.length === 0 ? <p className="text-muted-foreground">{t('olderAdult.review.none')}</p> : (
         <ul className="flex flex-col divide-y rounded-lg border">
@@ -119,6 +118,6 @@ function ReviewCard({ review, consultPath, planHint, onPlanChange }: { review: M
         </ul>
       )}
       {!review.rulesSignedOff && <p className="text-sm text-muted-foreground">{t('olderAdult.review.draft')}</p>}
-    </Section>
+    </Card>
   );
 }

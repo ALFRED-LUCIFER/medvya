@@ -4,8 +4,9 @@ import base64
 import binascii
 from functools import lru_cache
 from typing import Literal
+from urllib.parse import urlsplit
 
-from pydantic import SecretStr, field_validator
+from pydantic import SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -30,25 +31,39 @@ class Settings(BaseSettings):
     foundry_api_key: SecretStr | None = None
     foundry_deployment_extract: str | None = None
     foundry_deployment_normalise: str | None = None
-    foundry_deployment_receptionist: str | None = None  # defaults to the extract deployment
+
+    # Country data stays in country (AGENTS.md 1.6): the exact Speech and Foundry hosts this
+    # deployment's country may use, comma separated (India: the Central India resources). The
+    # worker refuses to start when a real provider's endpoint host is not listed.
+    processing_endpoint_hosts: str = ""
 
     # No silent fake default: a deployment that forgets the variable must fail, not emit fake notes.
     transcription_provider: Literal["azure_fast", "fake"] = "azure_fast"
     llm_provider: Literal["foundry", "fake"] = "foundry"
 
-    # entra: every request needs a verified bearer token mapped to app_user.external_subject.
-    # disabled: no login, demo doctor (local development and tests only).
-    auth_mode: Literal["entra", "disabled"] = "entra"
+    # development | test | production ... Only "development" may run AUTH_MODE=disabled.
+    environment: str = "production"
+
+    # service: Medvya's API calls with its managed-identity token (aud, issuer, allow-listed
+    #   client id, app role) and asserts tenant, user and role in headers (ADR-021 pilot gate 1).
+    # entra: a per-user bearer token mapped to app_user.external_subject.
+    # disabled: no token, X-Clinic-Id picks the clinic (ENVIRONMENT=development only).
+    auth_mode: Literal["service", "entra", "disabled"] = "service"
     auth_issuer: str | None = None
     auth_audience: str | None = None
     auth_jwks_url: str | None = None
+    auth_allowed_client_ids: str = ""  # comma separated azp/appid of the callers (service mode)
+    auth_required_role: str | None = None  # app role the caller's token must carry (service mode)
 
     retention_audio_after_approval_hours: int = 24
     retention_draft_audio_days: int = 7
+    # Working data (transcript, facts, rejections, corrections, participant names) is purged this
+    # many days after the session finished (or was created, if never recorded). Medvya keeps the
+    # signed note. Proposed in ADR-021; the owner confirms the period.
+    retention_session_days: int = 30
 
     encryption_master_key: SecretStr
 
-    cors_origins: str = "http://localhost:5173"
     max_chunk_bytes: int = 8 * 1024 * 1024
     max_session_chunks: int = 20_000
     max_session_bytes: int = 512 * 1024 * 1024
@@ -77,9 +92,28 @@ class Settings(BaseSettings):
             raise ValueError("ENCRYPTION_MASTER_KEY must decode to exactly 32 bytes")
         return v
 
+    @model_validator(mode="after")
+    def _disabled_only_in_development(self) -> "Settings":
+        if self.auth_mode == "disabled" and self.environment != "development":
+            raise ValueError("AUTH_MODE=disabled is allowed only with ENVIRONMENT=development")
+        return self
+
     @property
-    def cors_origin_list(self) -> list[str]:
-        return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+    def speech_endpoint_url(self) -> str:
+        return self.speech_endpoint or f"https://{self.speech_region}.api.cognitive.microsoft.com"
+
+    def allowed_host(self, url: str) -> str:
+        """The URL's host, or RuntimeError when it is not on PROCESSING_ENDPOINT_HOSTS."""
+        host = (urlsplit(url).hostname or "").lower()
+        if host not in {h.lower() for h in self.csv(self.processing_endpoint_hosts)}:
+            raise RuntimeError(
+                f"endpoint host {host or '(none)'} is not in PROCESSING_ENDPOINT_HOSTS"
+            )
+        return host
+
+    @staticmethod
+    def csv(value: str) -> list[str]:
+        return [v.strip() for v in value.split(",") if v.strip()]
 
     @property
     def master_key_bytes(self) -> bytes:

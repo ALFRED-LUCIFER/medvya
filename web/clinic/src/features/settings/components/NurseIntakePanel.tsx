@@ -1,7 +1,6 @@
 import { useI18n } from '@medvya/i18n';
-import { Button, Dialog, DialogContent, DialogDescription, DialogTitle, Switch } from '@medvya/ui';
+import { Card, Button, Dialog, DialogContent, DialogDescription, DialogTitle, Switch } from '@medvya/ui';
 import { fieldError } from './fieldStyles';
-import { Section } from './Section';
 
 type Props = {
   enabled: boolean; loading: boolean; forbidden: boolean; unavailable: boolean; loadFailed: boolean; saving: boolean; saveFailed: boolean;
@@ -17,11 +16,11 @@ const switchId = 'nurse-intake-switch';
 export default function NurseIntakePanel(p: Props) {
   const { t } = useI18n();
   if (p.loading) return <p role="status">{t('settings.loading')}</p>;
-  if (p.unavailable) return <Section title={t('settings.nurseIntake.title')}><p role="status">{t('settings.nurseIntake.unavailable')}</p></Section>;
+  if (p.unavailable) return <Card title={t('settings.nurseIntake.title')}><p role="status">{t('settings.nurseIntake.unavailable')}</p></Card>;
   if (p.loadFailed) return <p role="alert" className={fieldError}>{t(p.forbidden ? 'settings.forbidden' : 'settings.loadFailed')}</p>;
   const turn = p.confirming ? 'on' : 'off';
   return (
-    <Section title={t('settings.nurseIntake.title')} intro={t('settings.nurseIntake.intro')}>
+    <Card title={t('settings.nurseIntake.title')} intro={t('settings.nurseIntake.intro')}>
       <label className="flex min-h-control items-center gap-3 font-bold">
         <Switch id={switchId} checked={p.enabled} disabled={p.saving} onCheckedChange={p.onChange} />
         <span>{t('settings.nurseIntake.label')}</span>
@@ -43,6 +42,6 @@ export default function NurseIntakePanel(p: Props) {
           </div>
         </DialogContent>
       </Dialog>
-    </Section>
+    </Card>
   );
 }

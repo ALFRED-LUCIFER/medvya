@@ -98,7 +98,7 @@ public static class OrganisationApprovalEndpoints
         {
             await using var scope = http.RequestServices.EnterLinkTenant(tenantId);
             if (await scope.ServiceProvider.GetRequiredService<IOrganisationRequests>().DocumentLinkAsync(documentId, ct) is not { } url) return Results.NotFound();
-            return Results.Ok(new DocumentLink(url, DateTimeOffset.UtcNow.AddMinutes(5)));
+            return Results.Ok(new DocumentLink(url, DateTimeOffset.UtcNow.AddMinutes(5))); // wall clock: when the storage service stops honouring the link
         });
 
         act.MapPost("/{tenantId:guid}/approve", (Guid tenantId, [FromBody] Decision body, HttpContext http, CancellationToken ct) => Apply(http, tenantId, OrganisationState.Approved, body, ct, OrganisationState.Submitted));
@@ -109,8 +109,16 @@ public static class OrganisationApprovalEndpoints
         return app;
     }
 
+    /// <summary>How long an identity step-up counts for a decision: the same five minutes as signing a note or offboarding.</summary>
+    static readonly TimeSpan StepUpWindow = TimeSpan.FromMinutes(5);
+
     static async Task<IResult> Apply(HttpContext http, Guid tenantId, OrganisationState to, Decision body, CancellationToken ct, OrganisationState? from = null)
     {
+        // A decision opens or closes a whole organisation, and these approvers carry no security key: each one asks for a fresh identity step-up.
+        // shortcut: remove when the console runs on Azure (ADR-014); its approvals need the member's own security key. SAFETY: mutation-checked in OrganisationRequestTests.
+        var now = http.RequestServices.GetRequiredService<TimeProvider>().GetUtcNow();
+        if (http.RequestServices.GetRequiredService<ICurrentUser>().ReauthenticatedAt is not { } at || now - at > StepUpWindow || at > now.AddMinutes(1))
+            return Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "Confirm your identity to decide", extensions: new Dictionary<string, object?> { ["code"] = "reauth_required" });
         var reason = body.Reason?.Trim();
         if (string.IsNullOrEmpty(reason)) throw new SettingsValidationException([new("reason", "required")]);
         if (reason.Length < 5) throw new SettingsValidationException([new("reason", "too_short")]);

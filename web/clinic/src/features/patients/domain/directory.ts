@@ -1,7 +1,8 @@
+import type { Schemas } from '@medvya/api-client';
 import type { MessageKey } from '@medvya/i18n';
 
 // Mirrors src/Modules/Patients (Medvya.Patients.Application / Medvya.Patients.Api); the server is the authority.
-export type DirectoryFilter = 'All' | 'Incomplete' | 'Recent';
+export type DirectoryFilter = Schemas['DirectoryFilter'];
 export type SearchKind = 'Directory' | 'Name' | 'Phone' | 'Mrn' | 'Identifier' | 'Number';
 export type SexAtBirth = 'Female' | 'Male' | 'Other';
 export type RegistrationStatus = 'Complete' | 'Incomplete';
@@ -43,7 +44,7 @@ export function spokenExtras(row: Pick<PatientSummary, 'lastVisitOn' | 'duplicat
 export type SearchResult = { matchedOn: SearchKind; items: PatientSummary[]; page: number; pageSize: number; total: number };
 
 /** Search text goes in the POST body only: names, phones and IDs are PHI and never belong in a URL. */
-export type SearchRequest = { query: string | null; filter: DirectoryFilter; page: number };
+export type SearchRequest = Required<Schemas['SearchRequest']>;
 
 export type PatientAddress = {
   line1: string; line2?: string | null; city?: string | null; district?: string | null; region?: string | null;

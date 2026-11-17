@@ -6,3 +6,8 @@ packages:
 allowBuilds:
   '@parcel/watcher': false
   esbuild: true
+# Security floors for test-only tooling (jest 30, test-exclude, @expo/fingerprint): Dependabot alerts on glob (AbortSignal bypass,
+# GHSA fixed in 14.0.2) and minimatch (globparts DoS, fixed in 11.0.1). Remove when jest and expo ship these versions themselves.
+overrides:
+  'glob@>=9.0.0 <14.0.2': ^14.0.2
+  'minimatch@>=7.0.0 <11.0.1': ^11.0.1

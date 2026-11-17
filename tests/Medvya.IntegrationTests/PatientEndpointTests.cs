@@ -121,7 +121,7 @@ public sealed class PatientEndpointTests(PostgresFixture sql) : IClassFixture<Po
     async Task<List<(string Action, string Purpose, Guid? PatientId)>> AuditTrail()
     {
         await using var db = sql.Audit(tenant);
-        return (await db.Events.OrderBy(e => e.OccurredAt).ToListAsync()).Select(e => (e.Action, e.Purpose, e.PatientId)).ToList();
+        return (await db.Events.OrderBy(e => e.OccurredAt).ThenBy(e => e.Id).ToListAsync()).Select(e => (e.Action, e.Purpose, e.PatientId)).ToList();
     }
 
     [Fact]
@@ -198,7 +198,7 @@ public sealed class PatientEndpointTests(PostgresFixture sql) : IClassFixture<Po
         Assert.Equal(HttpStatusCode.Forbidden, (await it.GetAsync(new Uri($"/v1/patients/{meera}", UriKind.Relative))).StatusCode);
 
         await using var db = sql.Audit(tenant);
-        var denied = await db.Events.Where(e => e.ActorUserId == users["it"]).OrderBy(e => e.OccurredAt).Select(e => new { e.Action, e.PatientId, e.Outcome }).ToListAsync();
+        var denied = await db.Events.Where(e => e.ActorUserId == users["it"]).OrderBy(e => e.OccurredAt).ThenBy(e => e.Id).Select(e => new { e.Action, e.PatientId, e.Outcome }).ToListAsync();
         Assert.Equal([new { Action = "patient.search", PatientId = (Guid?)null, Outcome = Medvya.Audit.Domain.AuditOutcome.Denied },
             new { Action = "patient.read", PatientId = (Guid?)meera, Outcome = Medvya.Audit.Domain.AuditOutcome.Denied }], denied);
     }

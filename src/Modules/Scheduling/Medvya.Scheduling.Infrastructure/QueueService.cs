@@ -71,7 +71,7 @@ public sealed class QueueService(SchedulingDbContext db, SchedulingContext conte
     public async Task<CreatedDisplay> CreateDisplayAsync(CreateDisplay command, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
-        var name = ScheduleService.Clean(command.Name);
+        var name = TextInput.Clean(command.Name);
         var errors = new List<ValidationError>();
         if (name is null) errors.Add(new("name", "required"));
         else if (name.Length > MaxName) errors.Add(new("name", "too_long"));

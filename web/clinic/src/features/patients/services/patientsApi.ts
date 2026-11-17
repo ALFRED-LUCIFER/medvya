@@ -3,7 +3,7 @@ import type { ConsentState } from '../domain/consents';
 import type { PatientDetails, RevealedIdentifiers, SearchRequest, SearchResult } from '../domain/directory';
 
 // Same-origin BFF calls (ADR-004): the session cookie rides along; state-changing calls carry the CSRF header.
-export const jsonHeaders = { 'Content-Type': 'application/json', 'X-Medvya-Csrf': '1' };
+export const jsonHeaders = { 'Content-Type': 'application/json' };
 
 export type FieldError = { field: string; code: string };
 

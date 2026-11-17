@@ -37,13 +37,13 @@ You need: an Application Administrator in the company Entra tenant, Key Vault Se
    | `CONSOLE_SIGNIN_CLIENT_ID` | the id step 1 printed |
    | `CONSOLE_OWNER_OBJECT_ID` | the first owner's Entra object id: signed in as that person, `az ad signed-in-user show --query id -o tsv` |
 
-   From now on `infra-dev` refuses to run without both variables and without the secret of step 1.
+   From now on the `infra` workflow refuses to run without both variables and without the secret of step 1.
 
-3. **Run `infra-dev`** (Actions → infra-dev → Run workflow, from `main`). Read the what-if before approving `dev-infra`: it adds the console web app, the `id-review-*`, `id-features-*` and `id-formulary-*` identities, four role assignments (the secret, `practice-assets`, the storage account delegator, Communication Services) and the console's four login steps in the database job. Nothing on the clinic app changes.
+3. **Run `infra`** (Actions → infra → Run workflow, from `main`, environment `dev`). Read the what-if before approving the deploy job on `dev-infra`: it adds the console web app, the `id-review-*`, `id-features-*` and `id-formulary-*` identities, four role assignments (the secret, `practice-assets`, the storage account delegator, Communication Services) and the console's four login steps in the database job. Nothing on the clinic app changes.
 
-4. **Set `AZURE_CONSOLE_WEBAPP_NAME`** on the `dev` environment to `console-medvya-dev-<suffix>` (output `consoleName` of the deployment). Until this variable exists, `deploy-dev` skips the console.
+4. **Set `AZURE_CONSOLE_WEBAPP_NAME`** on the `dev` environment to `console-medvya-dev-<suffix>` (output `consoleName` of the deployment). Until this variable exists, the deploy skips the console.
 
-5. **Run `deploy-dev`** from `main` (`gh workflow run deploy-dev.yml --ref main`). After the database job (which now also maps the four console logins) and the clinic app, it deploys the console and smoke-tests it: `/health` reports the new version, `/` serves the console, `/v1/me` without a session answers 401, and `/bff/login` redirects to Entra with the `https://<host>/signin-oidc` callback.
+5. **Run `release`** from `main` (`gh workflow run release.yml --ref main`, then approve `dev`). After the database job (which now also maps the four console logins) and the clinic app, it deploys the console and smoke-tests it: `/health` reports the new version, `/` serves the console, `/v1/me` without a session answers 401, and `/bff/login` redirects to Entra with the `https://<host>/signin-oidc` callback.
 
 6. **Sign in as the first owner.** Open `https://console-medvya-dev-<suffix>.azurewebsites.net`, choose "Continue with company sign-on" and sign in with the account whose object id is `CONSOLE_OWNER_OBJECT_ID`. Entra may ask once for consent to sign you in and read your profile. The console creates you as owner because the team is empty (`team.bootstrap` in the audit log); nobody else can sign on yet.
 

@@ -5,7 +5,7 @@ export { Input } from '#components/ui/input';
 export { Label } from '#components/ui/label';
 export { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '#components/ui/select';
 export { Textarea } from '#components/ui/textarea';
-export { PageContainer, PageHeader, pageWidths, type PageWidth } from '#components/ui/page';
+export { PageContainer, PageHeader, type PageWidth } from '#components/ui/page';
 export { Tabs, TabsContent, TabsList, TabsTrigger } from '#components/ui/tabs';
 export { Dialog, DialogTrigger, DialogContent, DialogTitle, DialogDescription } from '#components/ui/dialog';
 export { Switch } from '#components/ui/switch';
@@ -16,10 +16,10 @@ export { Chip, FilterChip, toneClasses, type Tone, type ChipProps } from '#compo
 export { Tag, type TagProps } from '#components/ui/tag';
 export { Banner, type BannerProps } from '#components/ui/banner';
 export { PatientBanner, AllergyBlock, bannerFields, allergiesInWords, type AllergyState, type BannerAllergy, type BannerClinical, type BannerDeskPatient, type BannerIdentity } from '#components/ui/patient-banner';
-export { Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TablePagination, TableRow, TableState, type SortDirection } from '#components/ui/table';
+export { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TablePagination, TableRow, TableState, type SortDirection } from '#components/ui/table';
 export { Card, Section, type CardProps } from '#components/ui/card';
 export { PageMessage, EmptyState, type PageMessageProps } from '#components/ui/page-message';
-export { Skeleton, SkeletonGroup, skeletonDelayMs } from '#components/ui/skeleton';
+export { Skeleton, SkeletonGroup } from '#components/ui/skeleton';
 export { SegmentedControl, type SegmentedControlProps } from '#components/ui/segmented-control';
 export { Sheet, SheetTrigger, SheetContent, SheetTitle, SheetDescription } from '#components/ui/sheet';
 export { SplitLayout, useWide } from '#components/ui/split-layout';
@@ -29,6 +29,8 @@ export { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 export { AccountMenu, type AccountMenuProps } from '#components/ui/account-menu';
 export { NavRailItem, type NavRailItemProps } from '#components/ui/nav-rail-item';
 export { Tooltip, type TooltipProps } from '#components/ui/tooltip';
+export { LanguageSwitcher } from '#components/ui/language-switcher';
+export { DetailList, Detail, type DetailListProps, type DetailProps, type DetailLayout } from '#components/ui/detail-list';
 // Radix's focus scope (the one Dialog uses), for a panel that is modal only at some widths (the schedule's tablet drawer).
 import { FocusScope as FocusScopePrimitive } from 'radix-ui/internal';
 export const FocusScope = FocusScopePrimitive.FocusScope;

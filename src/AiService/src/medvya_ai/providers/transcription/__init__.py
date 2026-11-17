@@ -10,11 +10,9 @@ def build_transcriber(settings: Settings) -> Transcriber:
         return FakeTranscriber()
     if settings.speech_key is None:
         raise RuntimeError("SPEECH_KEY is required when TRANSCRIPTION_PROVIDER=azure_fast")
-    endpoint = (
-        settings.speech_endpoint or f"https://{settings.speech_region}.api.cognitive.microsoft.com"
-    )
+    settings.allowed_host(settings.speech_endpoint_url)  # in-country only, checked at startup
     return AzureFastTranscriber(
-        endpoint=endpoint,
+        endpoint=settings.speech_endpoint_url,
         api_key=settings.speech_key.get_secret_value(),
         api_version=settings.speech_api_version,
     )

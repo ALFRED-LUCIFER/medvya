@@ -1,0 +1,39 @@
+{
+  "$comment": "Synthetic samples of the country formats, shared by the server's CountryRules test, the clinic registration test and the patient app's sign-in test (#1417): a rule copied into a client must agree with the server on every one. IDs fail their real checksums (pnpm check:synthetic).",
+  "IN": {
+    "mobile": {
+      "valid": ["+91 90000 00002", "9000000002", "09000000002", "0091 90000 00002", "91-90000-00002", "(+91) 90000.00002"],
+      "invalid": ["5000000002", "+91 9000000", "+971 500000001", "90000abc00002", "900000000212"]
+    },
+    "abha": {
+      "valid": ["12-3456-7890-1234", "12345678901234", "12 3456 7890 1234", "1234 5678 9012 34"],
+      "invalid": ["1234567890123", "123456789012345", "12-3456-7890-123A"]
+    },
+    "abhaAddress": {
+      "valid": ["ravi.synthetic@sbx", "Ravi_1@abdm"],
+      "invalid": ["ra@sbx", "ravi@example.com", ".ravi@sbx"]
+    },
+    "aadhaarLast4": {
+      "valid": ["0201", "02 01"],
+      "invalid": ["020", "02011", "ABCD", "1234 5678 9012"]
+    },
+    "pin": {
+      "valid": ["682001"],
+      "invalid": ["68200", "6820011", "ABCDEF"]
+    }
+  },
+  "AE": {
+    "mobile": {
+      "valid": ["050 000 0001", "+971 50 000 0001", "00971500000001", "971500000001", "500000001"],
+      "invalid": ["040 000 0001", "+91 90000 00002", "05000000", "0500000001x"]
+    },
+    "emiratesId": {
+      "valid": ["784-1990-1234567-1", "784199012345671"],
+      "invalid": ["784-19901234567-1", "785-1990-1234567-1", "784-1990-123456-1", "784 1990 1234567 1"]
+    },
+    "makani": {
+      "valid": ["1234567890"],
+      "invalid": ["123456789", "12345678901", "ABCDEFGHIJ"]
+    }
+  }
+}

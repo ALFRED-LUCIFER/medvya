@@ -37,7 +37,7 @@ public sealed class ClinicalAccessTests(PostgresFixture sql) : IClassFixture<Pos
     async Task<ClinicalAccessDeniedException> RefusedAsync(Guid user, Guid patient, Capability capability = Capability.Patient360Chart) =>
         await Assert.ThrowsAsync<ClinicalAccessDeniedException>(() => CheckAsync(user, patient, capability));
 
-    Task<ClinicalAccessPolicy> AssignedOnlyAsync() => h.Settings(h.Admin).SaveClinicalAccessAsync(ClinicalAccessPolicy.AssignedOnly);
+    Task<ClinicalAccessPolicy?> AssignedOnlyAsync() => h.Settings(h.Admin).SaveClinicalAccessAsync(ClinicalAccessPolicy.AssignedOnly);
 
     [Fact]
     public async Task ByDefaultEveryClinicianOfTheFacilityTreatsItsPatientsAndNooneElse()
@@ -112,6 +112,43 @@ public sealed class ClinicalAccessTests(PostgresFixture sql) : IClassFixture<Pos
         var visit = await h.BookAsync(10, patient: h.Patient);
         await h.Booking(h.Reception).CancelAsync(visit.Id, new CancelAppointment { Reason = Scheduling.Domain.CancelReason.BookedInError });
         Assert.True((await RefusedAsync(h.Doctor, h.Patient)).CanRequest);
+    }
+
+    // SAFETY: mutation check: removed the BookedBy/arrived condition in VisitCareRelationship (Assigned) -> AVisitTheDoctorBookedThemselfCountsOnlyOnceThePatientArrives failed.
+    [Fact]
+    public async Task AVisitTheDoctorBookedThemselfCountsOnlyOnceThePatientArrives()
+    {
+        await AssignedOnlyAsync();
+        var booking = h.Booking(h.Doctor); // a doctor can book any patient of the facility, so the booking alone opens no chart
+        var hold = await booking.HoldAsync(new HoldSlot { FacilityId = h.Facility, CalendarId = h.Doctor, Start = SchedulingHarness.At(10), VisitType = Scheduling.Domain.VisitType.FollowUp });
+        var visit = await booking.BookAsync(new BookAppointment
+        {
+            HoldId = hold.Id, PatientId = h.SecondPatient, ReasonCategory = Scheduling.Domain.ReasonCategory.ChronicReview, Channel = Scheduling.Domain.BookingChannel.Phone,
+        });
+        Assert.True((await RefusedAsync(h.Doctor, h.SecondPatient)).CanRequest);
+
+        await h.FrontDesk(h.Reception).CheckInAsync(visit.Id, new CheckIn()); // the patient came: now the doctor's patient
+        Assert.Equal(Access.Full, await CheckAsync(h.Doctor, h.SecondPatient));
+    }
+
+    // SAFETY: mutation check: removed the Reschedules condition in VisitCareRelationship (Assigned) -> AVisitTheDoctorMovedIntoTheirOwnCalendarCountsOnlyOnceThePatientArrives failed.
+    [Fact]
+    public async Task AVisitTheDoctorMovedIntoTheirOwnCalendarCountsOnlyOnceThePatientArrives()
+    {
+        await AssignedOnlyAsync();
+        await h.Schedule(h.Admin).SaveTemplateAsync(h.DoctorTemplate() with { CalendarId = h.SecondDoctor });
+        var desk = h.Booking(h.Reception);
+        var hold = await desk.HoldAsync(new HoldSlot { FacilityId = h.Facility, CalendarId = h.SecondDoctor, Start = SchedulingHarness.At(10), VisitType = Scheduling.Domain.VisitType.FollowUp });
+        var visit = await desk.BookAsync(new BookAppointment
+        {
+            HoldId = hold.Id, PatientId = h.SecondPatient, ReasonCategory = Scheduling.Domain.ReasonCategory.ChronicReview, Channel = Scheduling.Domain.BookingChannel.Phone,
+        });
+        // Reception booked it for a colleague; the doctor moves it into their own calendar: booked by someone else, but no way into the chart yet.
+        await h.Booking(h.Doctor).RescheduleAsync(visit.Id, new RescheduleAppointment { CalendarId = h.Doctor, Start = SchedulingHarness.At(11) });
+        Assert.True((await RefusedAsync(h.Doctor, h.SecondPatient)).CanRequest);
+
+        await h.FrontDesk(h.Reception).CheckInAsync(visit.Id, new CheckIn()); // the patient came: now the doctor's patient
+        Assert.Equal(Access.Full, await CheckAsync(h.Doctor, h.SecondPatient));
     }
 
     [Fact]
@@ -213,9 +250,14 @@ public sealed class ClinicalAccessTests(PostgresFixture sql) : IClassFixture<Pos
         await other.CloseAsync();
     }
 
+    // SAFETY: mutation check: removed the owner check in PracticeSettings.SaveClinicalAccessAsync -> ThePolicyIsASettingOfTheOwnerAuditedWithItsBeforeAndAfter failed.
     [Fact]
     public async Task ThePolicyIsASettingOfTheOwnerAuditedWithItsBeforeAndAfter()
     {
+        // It holds for every location, so an administrator of one location (or a doctor) who does not own the practice cannot widen or narrow it.
+        Assert.Null(await h.Settings(h.Elsewhere).SaveClinicalAccessAsync(ClinicalAccessPolicy.AssignedOnly));
+        Assert.Null(await h.Settings(h.Doctor).SaveClinicalAccessAsync(ClinicalAccessPolicy.AssignedOnly));
+        Assert.Equal(ClinicalAccessPolicy.AllFacilityClinicians, await h.Settings(h.Admin).GetClinicalAccessAsync());
         Assert.Equal(ClinicalAccessPolicy.AssignedOnly, await h.Settings(h.Admin).SaveClinicalAccessAsync(ClinicalAccessPolicy.AssignedOnly));
         Assert.Equal(ClinicalAccessPolicy.AssignedOnly, await h.Settings(h.Doctor).GetClinicalAccessAsync());
         await Assert.ThrowsAsync<SettingsValidationException>(() => h.Settings(h.Admin).SaveClinicalAccessAsync((ClinicalAccessPolicy)7));

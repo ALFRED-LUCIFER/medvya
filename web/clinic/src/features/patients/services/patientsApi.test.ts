@@ -21,7 +21,7 @@ describe('patients api', () => {
     expect(url).toBe('/v1/patients/search');
     expect(init?.method).toBe('POST');
     expect(JSON.parse(String(init?.body))).toEqual({ query: phone, filter: 'All', page: 1 });
-    expect(init!.headers).toMatchObject({ 'X-Medvya-Csrf': '1' });
+    expect(new Headers(init!.headers).get('X-Medvya-Csrf')).toBe('1');
   });
 
   it('reports a refused search by status and code, without the text that was sent', async () => {
@@ -38,7 +38,7 @@ describe('patients api', () => {
     const [url, init] = fetch.mock.calls[0]!;
     expect(url).toBe('/v1/patients/5e1d0001-0004-4000-8000-000000000001/identifiers/reveal');
     expect(init?.method).toBe('POST');
-    expect(init!.headers).toMatchObject({ 'X-Medvya-Csrf': '1' });
+    expect(new Headers(init!.headers).get('X-Medvya-Csrf')).toBe('1');
   });
 
   it('opens a record by its opaque id only', async () => {

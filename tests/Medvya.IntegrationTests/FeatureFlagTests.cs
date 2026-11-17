@@ -1,10 +1,8 @@
 using System.Net;
-using Medvya.Audit.Api;
 using Medvya.Audit.Application;
 using Medvya.Audit.Domain;
 using Medvya.Audit.Infrastructure;
 using Medvya.BuildingBlocks.Domain;
-using Medvya.Tenancy.Api;
 using Medvya.Tenancy.Application;
 using Medvya.Tenancy.Domain;
 using Medvya.Tenancy.Infrastructure;
@@ -48,7 +46,7 @@ public class FeatureFlagTests(PostgresFixture sql) : IClassFixture<PostgresFixtu
 
     FeatureFlags Flags(Guid? tenant, IAuditLog? audit = null, params Guid[] internalOrganisations) =>
         new(sql.Context(tenant), new PostgresFixture.FixedTenant(tenant), new FixedUser(actor), audit ?? new AuditLog(sql.Audit(tenant)),
-            new FeatureReleaseCache(TimeProvider.System, internalOrganisations.ToHashSet()));
+            new FeatureReleaseCache(TimeProvider.System, internalOrganisations.ToHashSet()), TimeProvider.System);
 
     FeatureReleaseConsole Console() => new(new Dictionary<string, string> { ["IN"] = sql.As("medvya_features"), ["AE"] = sql.As("medvya_features") }, TimeProvider.System);
 
@@ -95,7 +93,7 @@ public class FeatureFlagTests(PostgresFixture sql) : IClassFixture<PostgresFixtu
         Assert.Equal(("clinical-team", actor, actor), (flag.Owner, flag.CreatedBy, flag.ChangedBy));
 
         await using var audit = sql.Audit(tenantA);
-        var events = await audit.Events.Where(e => e.ResourceId == flag.Id).OrderBy(e => e.OccurredAt).Select(e => new { e.Action, e.ActorUserId }).ToListAsync();
+        var events = await audit.Events.Where(e => e.ResourceId == flag.Id).OrderBy(e => e.OccurredAt).ThenBy(e => e.Id).Select(e => new { e.Action, e.ActorUserId }).ToListAsync();
         Assert.Equal(["flag.enable", "flag.disable"], events.Select(e => e.Action));
         Assert.All(events, e => Assert.Equal(actor, e.ActorUserId));
     }

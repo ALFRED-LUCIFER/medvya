@@ -34,7 +34,8 @@ public sealed class KeyVaultRazorpayCredentialStore(SecretClient vault, TimeProv
         return Remember(tenantId, new(s.KeyId, s.KeySecret, s.WebhookSecret, s.WebhookKey));
     }
 
-    // shortcut: an unknown well-formed key still reads Key Vault each time; the webhook endpoint (part 2) gets a rate limit.
+    // shortcut: no negative cache, so each request with an unknown well-formed key reads Key Vault once (the webhook's per-address limit,
+    // RateLimiting:PaymentWebhooksPerMinute, bounds it); cache misses briefly if a scan shows up in the vault's metrics.
     public async Task<(Guid TenantId, RazorpayCredentials Credentials)?> FindByWebhookKeyAsync(string webhookKey, CancellationToken ct)
     {
         if (!RazorpayCredentials.IsWebhookKey(webhookKey)) return null;

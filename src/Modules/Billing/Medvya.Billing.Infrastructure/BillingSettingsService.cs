@@ -41,9 +41,8 @@ public sealed class BillingSettingsService(BillingDbContext db, ICurrentTenant t
         if (command.MaxDiscountPercent is not (>= 0 and <= 100)) errors.Add(("maxDiscountPercent", "range"));
         if (command.PaymentLinkExpiryMinutes is not (>= BillingSettings.MinLinkExpiry and <= BillingSettings.MaxLinkExpiry)) errors.Add(("paymentLinkExpiryMinutes", "range"));
         var tenantId = tenant.TenantId ?? throw new InvalidOperationException("No tenant context.");
-        // Resolved only here: the secret store needs the payments vault (or Development), which the other settings never do.
         // SAFETY: mutation check: removed this check -> BillingInvoiceTests.RazorpayLinksNeedAConnectedAccount failed (saved without an account)
-        if (methods.Contains(PaymentMethod.RazorpayLink) && await services.GetRequiredService<IRazorpayCredentialStore>().GetAsync(tenantId, cancellationToken) is null)
+        if (methods.Contains(PaymentMethod.RazorpayLink) && !await RazorpayConnectedAsync(tenantId, cancellationToken))
             errors.Add(("paymentMethods", "razorpay_not_connected"));
         BillingValidationException.ThrowIfAny(errors);
 
@@ -75,6 +74,18 @@ public sealed class BillingSettingsService(BillingDbContext db, ICurrentTenant t
         }, tx.GetDbTransaction(), cancellationToken);
         await tx.CommitAsync(cancellationToken);
         return View(settings, db.Entry(settings).Property<uint>("xmin").CurrentValue);
+    }
+
+    /// <summary>
+    /// Resolved only here: the secret store needs the payments vault (or Development), which the other settings never do. Where it cannot be built
+    /// (no Razorpay:KeyVaultUri outside Development) no clinic can have connected, so that is "not connected", not a server error.
+    /// </summary>
+    async Task<bool> RazorpayConnectedAsync(Guid tenantId, CancellationToken cancellationToken)
+    {
+        IRazorpayCredentialStore store;
+        try { store = services.GetRequiredService<IRazorpayCredentialStore>(); }
+        catch (InvalidOperationException) { return false; }
+        return await store.GetAsync(tenantId, cancellationToken) is not null;
     }
 
     static BillingSettingsView View(BillingSettings s, uint version) =>

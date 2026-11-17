@@ -211,7 +211,59 @@ public sealed partial class BillingInvoiceTests
 
         var huge = "{\"event\":\"payment_link.paid\",\"pad\":\"" + new string('x', 70_000) + "\"}";
         Assert.Equal(HttpStatusCode.RequestEntityTooLarge, await DeliverAsync(client, huge, Sign(RazorpayTestKeys.WebhookSecret, huge), "evt_huge"));
+        // The same without a Content-Length (chunked): the limit is on the bytes read, never on the caller's header.
+        using (var chunked = new HttpRequestMessage(HttpMethod.Post, new Uri($"/v1/webhooks/razorpay/{RazorpayTestKeys.WebhookKey}", UriKind.Relative)) { Content = new Chunked(Encoding.UTF8.GetBytes(huge)) })
+        {
+            chunked.Headers.Add("X-Razorpay-Signature", Sign(RazorpayTestKeys.WebhookSecret, huge));
+            chunked.Headers.Add("x-razorpay-event-id", "evt_huge_chunked");
+            Assert.Equal(HttpStatusCode.RequestEntityTooLarge, (await client.SendAsync(chunked)).StatusCode);
+        }
         Assert.Equal(HttpStatusCode.BadRequest, await DeliverAsync(client, body, Sign(RazorpayTestKeys.WebhookSecret, body), new string('e', 65)));
+    }
+
+    sealed class Chunked(byte[] bytes) : HttpContent
+    {
+        protected override Task SerializeToStreamAsync(Stream stream, TransportContext? context) => stream.WriteAsync(bytes).AsTask();
+        protected override bool TryComputeLength(out long length) { length = 0; return false; }
+    }
+
+    /// <summary>Wrong or revoked keys: retrying cannot help, so the webhook is answered (Razorpay keeps the clinic's webhook on), not recorded, and logged.</summary>
+    [Fact]
+    public async Task RefusedKeysAreAnsweredAndLeftPending()
+    {
+        var (bill, payment) = await PendingLinkAsync(40_000);
+        var logs = new List<string>();
+        var client = Client(h.Reception, s => s.AddSingleton<ILoggerProvider>(new CaptureLogs(logs)));
+        client.DefaultRequestHeaders.Remove("X-Test-User");
+        var body = Paid();
+        foreach (var error in new[] { PaymentProviderError.Unauthorized, PaymentProviderError.Rejected, PaymentProviderError.NotConnected })
+        {
+            links.Fail = error;
+            Assert.Equal(HttpStatusCode.OK, await DeliverAsync(client, body, Sign(RazorpayTestKeys.WebhookSecret, body), "evt_refused"));
+        }
+        Assert.Equal(PaymentState.Pending, await StateAsync(bill, payment));
+        Assert.Empty(await ProviderEventsAsync(h.Tenant));
+        Assert.Contains(logs, l => l.Contains("could not confirm its payment link: Unauthorized", StringComparison.Ordinal));
+        (links.Fail, links.State) = (null, new PaymentLinkState(LinkId, PaymentLinkStatus.Paid, new Money(40_000, Currency.Inr), ["pay_synthetic"]));
+        Assert.Equal(HttpStatusCode.OK, await DeliverAsync(client, body, Sign(RazorpayTestKeys.WebhookSecret, body), "evt_refused")); // keys fixed: the next delivery settles
+        Assert.Equal(PaymentState.Succeeded, await StateAsync(bill, payment));
+    }
+
+    /// <summary>The same event delivered twice at once: the second save meets the first's row and answers "replay", no error.</summary>
+    [Fact]
+    public async Task TwoDeliveriesAtOnceRecordTheEventOnce()
+    {
+        await PendingLinkAsync(40_000);
+        links.DuringFetch = async () =>
+        {
+            links.DuringFetch = null;
+            await using var other = sql.Billing(h.Tenant);
+            other.ProviderEvents.Add(new ProviderEvent { TenantId = h.Tenant, Provider = "razorpay", EventId = "evt_twice", Type = "payment_link.paid", ReceivedAt = h.Clock.GetUtcNow() });
+            await other.SaveChangesAsync();
+        };
+        var account = h.Get<IRazorpayAccount>(h.Admin, s => { RazorpayTestKeys.Connect(s, h.Tenant); s.Replace(ServiceDescriptor.Singleton<IPaymentLinks>(links)); });
+        Assert.False(await account.HandleWebhookAsync(new RazorpayWebhookEvent("evt_twice", "payment_link.paid", LinkId)));
+        Assert.Equal(["evt_twice"], await ProviderEventsAsync(h.Tenant));
     }
 
     [Fact]
@@ -333,6 +385,8 @@ public sealed partial class BillingInvoiceTests
             PaymentLinkExpiryMinutes = 30, Version = 0,
         };
         Assert.Equal("paymentMethods:razorpay_not_connected", await Refused(h.Get<IBillingSettings>(h.Admin, s => RazorpayTestKeys.Connect(s)).SaveAsync(command)));
+        // No secret store can be built here (as on a host without Razorpay:KeyVaultUri outside Development): not connected, not a server error.
+        Assert.Equal("paymentMethods:razorpay_not_connected", await Refused(h.Get<IBillingSettings>(h.Admin).SaveAsync(command)));
         Assert.Equal([PaymentMethod.Cash, PaymentMethod.RazorpayLink], (await h.Get<IBillingSettings>(h.Admin, s => RazorpayTestKeys.Connect(s, h.Tenant)).SaveAsync(command)).PaymentMethods);
     }
 }

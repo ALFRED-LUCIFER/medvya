@@ -648,11 +648,15 @@ public sealed partial class BillingInvoiceTests(PostgresFixture sql) : IClassFix
         /// <summary>The tenants each fetch was made for: a webhook only ever prompts a fetch.</summary>
         public List<Guid> Fetches { get; } = [];
 
-        public Task<PaymentLinkState> FetchAsync(Guid tenantId, string linkId, CancellationToken ct)
+        /// <summary>Runs while the provider is "answering" a fetch: another delivery of the same webhook at that moment.</summary>
+        public Func<Task>? DuringFetch { get; set; }
+
+        public async Task<PaymentLinkState> FetchAsync(Guid tenantId, string linkId, CancellationToken ct)
         {
             lock (Fetches) Fetches.Add(tenantId);
             if (Fail is { } error) throw new PaymentProviderException(error);
-            return Task.FromResult(State ?? new PaymentLinkState(linkId, PaymentLinkStatus.Created, Money.Zero(Currency.Inr), []));
+            if (DuringFetch is { } during) await during();
+            return State ?? new PaymentLinkState(linkId, PaymentLinkStatus.Created, Money.Zero(Currency.Inr), []);
         }
 
         public Task<PaymentLinkStatus> CancelAsync(Guid tenantId, string linkId, CancellationToken ct)

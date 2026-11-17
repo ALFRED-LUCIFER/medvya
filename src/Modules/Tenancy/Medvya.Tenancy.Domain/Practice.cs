@@ -4,8 +4,7 @@ namespace Medvya.Tenancy.Domain;
 
 /// <summary>
 /// What onboarding collects beyond the practice profile and opening hours of settings (MDV-P1-005): the doctor's own profile,
-/// appointment length, fee defaults and note templates. One per tenant. Fees are integer minor units in the tenant's currency
-/// (AGENTS.md 3.4). The booking windows keep the morning and evening split that the one-row-per-day OperatingHours cannot hold,
+/// appointment length and note templates. One per tenant. The booking windows keep the morning and evening split that the one-row-per-day OperatingHours cannot hold,
 /// to seed schedule templates later.
 /// </summary>
 public sealed class PracticeDefaults
@@ -15,6 +14,8 @@ public sealed class PracticeDefaults
     [Classification(DataClass.Public)] public string? Qualifications { get; set; }
     [Classification(DataClass.Public)] public string? Languages { get; set; }
     [Classification(DataClass.Internal)] public int SlotMinutes { get; set; }
+    /// <summary>No longer written or read: fees live in the Billing catalogue (MDV-P4-002), which copied these once (migration ServicesCatalogue).</summary>
+    // shortcut: column kept, unused; drop only after every environment has applied Billing's ServicesCatalogue migration (db-migrate runs Tenancy's migrations first, so an earlier drop breaks the copy).
     [Classification(DataClass.Internal)] public long NewVisitFeeMinor { get; set; }
     [Classification(DataClass.Internal)] public long FollowUpFeeMinor { get; set; }
     [Classification(DataClass.Internal)] public required string Currency { get; init; }
@@ -50,8 +51,7 @@ public sealed class DoctorLicence
 }
 
 /// <summary>
-/// A doctor added in clinic mode (MDV-P1-007), one per doctor membership: the profile shown on the doctor list, fee defaults and the
-/// signature image. Fees are integer minor units in the tenant's currency (AGENTS.md 3.4).
+/// A doctor added in clinic mode (MDV-P1-007), one per doctor membership: the profile shown on the doctor list and the signature image.
 /// </summary>
 public sealed class DoctorProfile
 {
@@ -61,6 +61,8 @@ public sealed class DoctorProfile
     [Classification(DataClass.Public)] public string? Specialty { get; set; }
     [Classification(DataClass.Public)] public string? Qualifications { get; set; }
     [Classification(DataClass.Public)] public string? Languages { get; set; }
+    /// <summary>No longer written or read: the doctor's fees are their prices in the Billing catalogue (MDV-P4-002), copied once by migration ServicesCatalogue.</summary>
+    // shortcut: column kept, unused; drop only after every environment has applied Billing's ServicesCatalogue migration (db-migrate runs Tenancy's migrations first, so an earlier drop breaks the copy).
     [Classification(DataClass.Internal)] public long NewVisitFeeMinor { get; set; }
     [Classification(DataClass.Internal)] public long FollowUpFeeMinor { get; set; }
     /// <summary>The room this doctor sees patients in at this location, e.g. "Room 2" (MDV-P1-111): on the board, the TV and the token slip.</summary>

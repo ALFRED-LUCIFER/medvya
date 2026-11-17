@@ -199,6 +199,7 @@ export const settingsTabs = [
   'nurse', 'queue', 'medicines',
   'notifications',
   'requests', 'policy', 'review', 'audit', 'data',
+  'services', 'billing',
 ] as const;
 export type SettingsTab = (typeof settingsTabs)[number];
 
@@ -209,9 +210,12 @@ export const settingsGroups = {
   clinical: ['nurse', 'queue', 'medicines'],
   messages: ['notifications'],
   security: ['requests', 'policy', 'review', 'audit', 'data'],
+  billing: ['services', 'billing'],
 } as const satisfies Record<string, readonly SettingsTab[]>;
 export type SettingsGroup = keyof typeof settingsGroups;
 export const settingsGroupIds = Object.keys(settingsGroups) as SettingsGroup[];
+/** The groups shown: Billing only while the billing.invoices flag is on (MDV-P4-002); its API answers 404 otherwise. */
+export const visibleGroups = (billing: boolean): SettingsGroup[] => settingsGroupIds.filter(g => billing || g !== 'billing');
 export const groupOf = (tab: SettingsTab): SettingsGroup =>
   settingsGroupIds.find(g => (settingsGroups[g] as readonly SettingsTab[]).includes(tab))!;
 

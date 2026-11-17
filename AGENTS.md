@@ -27,7 +27,7 @@ Medvya handles patient health data in India and the UAE. **Production quality is
 
 ## 3 · Back end (.NET 10, `src/`)
 
-1. **Modular monolith.** A module (`src/Modules/<M>/{Domain,Application,Infrastructure,Api}`) never touches another module's tables or DbContext. Talk through application services, contracts or domain events.
+1. **Modular monolith.** A module (`src/Modules/<M>/{Domain,Application,Infrastructure,Api}`) never touches another module's tables or DbContext. Talk through application services, contracts or domain events. One exception: a one-time data copy inside a forward-only migration may read another module's tables, read-only, tenant by tenant under row-level security; the migration comment names it (first: Billing's `ServicesCatalogue`, MDV-P4-002).
 2. **Every domain property carries `[Classification(DataClass.X)]`** (architecture test). National/insurance IDs are `NationalId` → application-level envelope encryption with a blind index (ADR-012).
 3. Country rules live in country rule classes, never in scattered `if (country == …)`.
 4. Money is integer minor units (`long`) plus ISO currency. Never `decimal`/`double` for stored money.

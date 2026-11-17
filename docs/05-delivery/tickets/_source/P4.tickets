@@ -44,7 +44,7 @@ ac:
 - Amount in words matches the design examples for INR and AED.
 
 === MDV-P4-002
-title: Services and fees catalogue with price versions, India GST/SAC, UAE CPT/VAT, payer price lists and packages (F-11)
+title: Services and fees catalogue with price versions, per-doctor prices, India GST/SAC and billing settings (F-11)
 type: Story
 epic: MDV-P4-E01
 prd: P4-01
@@ -58,13 +58,14 @@ depends: MDV-P4-001
 confidence: 72 | Price-version rule and preview are designed; settings data truncated; tax treatment must be confirmed by advisers.
 sources: docs/02-design/source/Medvya Clinician App (Settings → Services); docs/02-design/screen-specs.md#practice-settings-f-08--f-12--medvya-clinician-app--data-truncated-labels-only
 desc:
-SERVICE_CATALOGUE (name, category, code, SAC (IN) or CPT (AE), tax code, duration) with PRICE_VERSION (amount, currency, effective_from, optional payer price list), packages (items, sessions, validity, price). Editor with invoice line preview; saving creates a new price version effective from a date; archive instead of delete. Note "Tax treatment must be confirmed with your tax advisor".
+SERVICE_CATALOGUE (name, category, clinic code, SAC (IN), tax treatment Exempt or Taxable with a GST rate, duration, consultation kind) with immutable PRICE_VERSION (amount, currency, effective_from, doctor or clinic default). The catalogue is the only store of prices: a doctor's new-visit and follow-up fees are that doctor's prices for the two consultation services, written by Settings, Doctors and onboarding through a Billing contract, and Tenancy's old fee columns are copied once and no longer used. Billing settings: invoice, receipt and credit note prefixes (country numbering rules), payment methods, discount reasons, the largest discount without the Config capability, payment link expiry. Editor with invoice line preview and a price per doctor list; saving creates a new price version effective from a date in the facility time zone; archive instead of delete. Note "Tax treatment must be confirmed with your tax advisor". Everything behind the billing.invoices flag (release stage Internal while billing is built), except the doctor fees, which exist before billing is switched on. Payer price lists and UAE CPT/VAT move to the UAE launch (MDV-P4-008); packages to MDV-P4-010.
 ac:
-- Saving a price creates a new version; issued invoices keep the price version they were issued with (test).
-- India services carry SAC and GST rate/exemption; UAE services carry CPT and VAT rate (5 % or zero-rated) per line.
-- Payer-specific price lists override the default for insured patients (UAE).
-- Packages define sessions and validity and are sellable from billing.
-- Changes are audited; only admins can edit.
+- Saving a price creates a new version; versions are never changed or deleted (database rights); an issued invoice keeps the price version it was issued with (MDV-P4-004 test).
+- A doctor's own price beats the clinic default; a future-dated version is not used before its day.
+- India services carry SAC and GST exemption or rate (0-28 %).
+- Doctor fees on Settings, Doctors and in onboarding are catalogue prices, saved in the same transaction as the doctor; existing fees are copied into the catalogue once.
+- Billing settings validate prefixes by the country's numbering rules, a payment link expiry of 15-1440 minutes and at least one payment method.
+- Changes are audited; only practice configuration can edit; the front desk (Invoices and payments) can read the catalogue; tenant isolation by EF filter and row-level security.
 
 === MDV-P4-003
 title: Price list import tool (billing setup service)
@@ -193,11 +194,12 @@ depends: MDV-P4-007
 confidence: 68 | Provider choice open (Network International vs Stripe); depends on merchant approval and UAE launch timing.
 sources: PRD v2 P4-03; docs/02-design/source/Medvya Clinician App (Card on terminal, no card data stored)
 desc:
-Second adapter for the UAE provider (decision recorded) and a "card on terminal" method recording terminal batch reference without card data; insurer co-pay collection.
+Second adapter for the UAE provider (decision recorded) and a "card on terminal" method recording terminal batch reference without card data; insurer co-pay collection. With the UAE launch: CPT codes and VAT rate (5 % or zero-rated) per service, and payer-specific price lists that override the default price for insured patients (moved from MDV-P4-002).
 ac:
 - Provider choice recorded in an ADR; adapter passes the same contract tests as Razorpay.
 - Card-on-terminal records reference and amount only and reconciles in day close.
 - Co-pay collection is linked to the insurer-pending invoice.
+- UAE services carry CPT and VAT rate per line; a payer price list overrides the default for insured patients.
 
 === MDV-P4-009
 title: Split and partial payments with advance usage; balance moves to dues (P-10)
@@ -238,7 +240,7 @@ depends: MDV-P4-002, MDV-P4-009
 confidence: 86 | Designed with redemption rule and ₹0 line.
 sources: docs/02-design/source/Medvya Clinician App (P-11 packages)
 desc:
-Sell a package (advance receipt), track sessions used/left with validity and status (Active, Expires soon, Completed). "Redeem 1 session today" books it against today's visit and adds a ₹0/AED 0 line on the invoice. Expired balances follow the refund policy from settings.
+Define packages in the catalogue (items, sessions, validity, price; moved from MDV-P4-002), sell a package (advance receipt), track sessions used/left with validity and status (Active, Expires soon, Completed). "Redeem 1 session today" books it against today's visit and adds a ₹0/AED 0 line on the invoice. Expired balances follow the refund policy from settings.
 ac:
 - Redemption decrements sessions atomically and cannot exceed the total.
 - Expiry status updates daily; expiring-soon packages are listed for reception.

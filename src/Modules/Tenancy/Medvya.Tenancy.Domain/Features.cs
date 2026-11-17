@@ -25,10 +25,14 @@ public static class Features
     /// <summary>The nurse step before the doctor (MDV-P2-007): intake endpoints exist, and a visit leaves the nurse only by the nurse's handoff.</summary>
     public static readonly Feature NurseIntake = new("clinical.nurse-intake", Clinical: true, ClinicSwitch: true, AlwaysOn: false, ReleaseStage.Everyone, Both);
 
-    /// <summary>Billing as a visit step (P4): payment on the board's Billing cards.</summary>
-    public static readonly Feature Billing = new("billing.invoices", Clinical: false, ClinicSwitch: true, AlwaysOn: false, ReleaseStage.Everyone, Both);
+    /// <summary>
+    /// Billing (P4): payment on the board's Billing cards, the services catalogue and billing settings. Internal while billing is built (MDV-P4-002), so only
+    /// Medvya's own test organisations reach it; Medvya's release console moves it on.
+    /// </summary>
+    public static readonly Feature Billing = new("billing.invoices", Clinical: false, ClinicSwitch: true, AlwaysOn: false, ReleaseStage.Internal, Both);
 
-    // Keys that existed before Medvya's release switch start at Everyone, so nothing disappears for a clinic; a new key starts Off.
+    // Keys that existed before Medvya's release switch start at Everyone, so nothing disappears for a clinic; a new key starts Off. Billing starts
+    // Internal: no clinic had it switched on yet.
     // Always on: the core of the record, shown locked in the console. Nothing gates them; they are listed so they can never be switched off.
     public static readonly IReadOnlyList<Feature> All =
     [

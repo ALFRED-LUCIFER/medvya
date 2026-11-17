@@ -18,10 +18,62 @@ namespace Medvya.Billing.Infrastructure.Persistence.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasDefaultSchema("billing")
-                .HasAnnotation("ProductVersion", "10.0.14")
+                .HasAnnotation("ProductVersion", "10.0.15")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("Medvya.Billing.Domain.BillingSettings", b =>
+                {
+                    b.Property<Guid>("TenantId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("ChangedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ChangedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CreditNotePrefix")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.PrimitiveCollection<string[]>("DiscountReasons")
+                        .IsRequired()
+                        .HasColumnType("text[]");
+
+                    b.Property<string>("InvoicePrefix")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<int>("MaxDiscountPercent")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("PaymentLinkExpiryMinutes")
+                        .HasColumnType("integer");
+
+                    b.PrimitiveCollection<string[]>("PaymentMethods")
+                        .IsRequired()
+                        .HasColumnType("text[]");
+
+                    b.Property<string>("ReceiptPrefix")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("TenantId");
+
+                    b.ToTable("Settings", "billing");
+                });
 
             modelBuilder.Entity("Medvya.Billing.Domain.DocSequence", b =>
                 {
@@ -67,6 +119,136 @@ namespace Medvya.Billing.Infrastructure.Persistence.Migrations
 
                             t.HasCheckConstraint("CK_DocSequences_NextNumber", "\"NextNumber\" >= 1");
                         });
+                });
+
+            modelBuilder.Entity("Medvya.Billing.Domain.PriceVersion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("AmountMinor")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character(3)")
+                        .IsFixedLength();
+
+                    b.Property<Guid?>("DoctorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("EffectiveFrom")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ServiceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ServiceId", "DoctorId", "EffectiveFrom");
+
+                    b.ToTable("PriceVersions", "billing", t =>
+                        {
+                            t.HasCheckConstraint("CK_PriceVersions_Amount", "\"AmountMinor\" BETWEEN 0 AND 100000000");
+                        });
+                });
+
+            modelBuilder.Entity("Medvya.Billing.Domain.Service", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("ArchivedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTimeOffset>("ChangedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ChangedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Code")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("ConsultationKind")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("DurationMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("GstRateBasisPoints")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Sac")
+                        .HasMaxLength(6)
+                        .HasColumnType("character(6)")
+                        .IsFixedLength();
+
+                    b.Property<string>("TaxTreatment")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "ConsultationKind")
+                        .IsUnique()
+                        .HasFilter("\"ConsultationKind\" IS NOT NULL AND \"ArchivedAt\" IS NULL");
+
+                    b.ToTable("Services", "billing", t =>
+                        {
+                            t.HasCheckConstraint("CK_Services_GstRate", "(\"TaxTreatment\" = 'Taxable' AND \"GstRateBasisPoints\" BETWEEN 0 AND 2800) OR (\"TaxTreatment\" = 'Exempt' AND \"GstRateBasisPoints\" IS NULL)");
+
+                            t.HasCheckConstraint("CK_Services_Sac", "\"Sac\" IS NULL OR \"Sac\" ~ '^[0-9]{6}$'");
+                        });
+                });
+
+            modelBuilder.Entity("Medvya.Billing.Domain.PriceVersion", b =>
+                {
+                    b.HasOne("Medvya.Billing.Domain.Service", null)
+                        .WithMany()
+                        .HasForeignKey("ServiceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }

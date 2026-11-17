@@ -181,7 +181,7 @@ export default function App({ locale, onLocaleChange }: Props) {
             : i.id === 'nurse' ? <NurseQueueRoute facilityId={active.facilityId} online={online} nursePath={i.path} />
             : i.id === 'clinicToday' ? <ClinicTodayRoute facilityId={active.facilityId} userId={shell.session?.user.id ?? ''}
                 paths={{ myDay: pathOf('today'), directory: searchPath, waitingRoom: pathOf('frontDesk') && `${pathOf('frontDesk')}/overview` }} />
-            : i.id === 'settings' ? <TabletOnly title={t('settings.title')}><SettingsRoute facilityId={active.facilityId} country={active.country ?? null} userId={shell.session?.user.id ?? ''} /></TabletOnly>
+            : i.id === 'settings' ? <TabletOnly title={t('settings.title')}><SettingsRoute facilityId={active.facilityId} country={active.country ?? null} userId={shell.session?.user.id ?? ''} billing={active.flags.includes('billing.invoices')} /></TabletOnly>
             // Patients opens the directory, its page (same rule, so searchPath is set); /patients stays the menu's address.
             : i.id === 'patients' && searchPath ? <Navigate to={searchPath} replace />
             : <ComingSoon title={t(`nav.${i.id}`)} phase={i.phase} />} />)}

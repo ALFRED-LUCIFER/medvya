@@ -35,8 +35,13 @@ public interface IInvitations
     /// </summary>
     Task<InvitationCreated?> CreateAndEmailLaterAsync(string email, Role role, Guid facilityId, CancellationToken cancellationToken = default);
 
-    /// <summary><paramref name="stage"/> may add more rows to the shared tenant context for the new membership; they save, and fail, with it (MDV-P1-007).</summary>
-    Task<InvitationCreated?> CreateAsync(string email, Role role, Guid facilityId, Action<Membership> stage, IReadOnlyList<Guid>? alsoFacilityIds = null, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// <paramref name="stage"/> may add more rows to the shared tenant context for the new membership; they save, and fail, with it (MDV-P1-007).
+    /// <paramref name="saved"/> runs in the same transaction once they are saved, before the email: another module's rows for the membership (a doctor's
+    /// fees, MDV-P4-002) commit or roll back with it.
+    /// </summary>
+    Task<InvitationCreated?> CreateAsync(string email, Role role, Guid facilityId, Action<Membership> stage, IReadOnlyList<Guid>? alsoFacilityIds,
+        Func<System.Data.Common.DbTransaction, CancellationToken, Task> saved, CancellationToken cancellationToken = default);
 
     /// <summary>Revokes a pending invitation of the current tenant. False when there is none (unknown, used, revoked).</summary>
     Task<bool> RevokeAsync(Guid invitationId, CancellationToken cancellationToken = default);

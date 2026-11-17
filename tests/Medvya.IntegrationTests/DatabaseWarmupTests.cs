@@ -34,7 +34,7 @@ public sealed class DatabaseWarmupTests(PostgresFixture sql) : IClassFixture<Pos
 
         var (level, message) = Assert.Single(log.Entries);
         Assert.Equal(LogLevel.Information, level);
-        Assert.StartsWith("Database warm-up finished: 9 contexts", message, StringComparison.Ordinal);
+        Assert.StartsWith("Database warm-up finished: 10 contexts", message, StringComparison.Ordinal); // Billing joined the host (MDV-P4-002)
         Assert.Equal(0, unordered.Count); // #1365: start-up logged one such warning per table
         Assert.Equal((audit, outbox), (await Rows("audit.\"AuditEvents\""), await Rows("scheduling.\"OutboxEvents\"")));
     }

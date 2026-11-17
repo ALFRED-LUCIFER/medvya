@@ -76,7 +76,7 @@ public sealed class PlatformFeatureTests(PostgresFixture sql) : IClassFixture<Po
         Assert.Equal(HttpStatusCode.NoContent, (await Set(c, "IN", Features.Billing.Key, "Percentage", percentage: 20)).StatusCode);
         var row = await Row(c, "IN", Features.Billing.Key);
         Assert.Equal(("Percentage", 20, false), (row.GetProperty("stage").GetString(), row.GetProperty("percentage").GetInt32(), row.GetProperty("isNew").GetBoolean()));
-        Assert.Equal("Everyone", (await Row(c, "AE", Features.Billing.Key)).GetProperty("stage").GetString()); // the other country is untouched
+        Assert.Equal("Internal", (await Row(c, "AE", Features.Billing.Key)).GetProperty("stage").GetString()); // the other country is untouched: still the initial stage
 
         var entry = Assert.Single(await Audit(Features.Billing.Key));
         Assert.Equal(("feature.percentage", "feature:billing.invoices:IN", "Pilot clinics asked for it"), (entry.Action, entry.ResourceType, entry.Reason));

@@ -18,6 +18,8 @@
     <ProjectReference Include="..\Modules\Prescribing\Medvya.Prescribing.Api\Medvya.Prescribing.Api.csproj" />
     <ProjectReference Include="..\Modules\Prescribing\Medvya.Prescribing.Infrastructure\Medvya.Prescribing.Infrastructure.csproj" />
     <ProjectReference Include="..\Modules\Notifications\Medvya.Notifications.Infrastructure\Medvya.Notifications.Infrastructure.csproj" />
+    <ProjectReference Include="..\Modules\Billing\Medvya.Billing.Api\Medvya.Billing.Api.csproj" />
+    <ProjectReference Include="..\Modules\Billing\Medvya.Billing.Infrastructure\Medvya.Billing.Infrastructure.csproj" />
     <ProjectReference Include="..\BuildingBlocks\Medvya.BuildingBlocks.Domain\Medvya.BuildingBlocks.Domain.csproj" />
   </ItemGroup>
 

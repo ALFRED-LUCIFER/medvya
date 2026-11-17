@@ -210,6 +210,18 @@ public static class SyntheticSeed
         new(Options<SchedulingDbContext>(connectionString, tenantId), new FixedTenant(tenantId));
 
     sealed class FixedTenant(Guid? id) : ICurrentTenant { public Guid? TenantId => id; }
+    sealed class NoUser : ICurrentUser { public Guid? UserId => null; }
+
+    /// <summary>Saves the tenancy rows and the new doctors' fees, which are Billing catalogue prices (MDV-P4-002), in one transaction.</summary>
+    internal static async Task SaveWithFeesAsync(TenancyDbContext db, string connectionString, Guid tenant, IReadOnlyCollection<Guid> newDoctors, CancellationToken ct)
+    {
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await db.SaveChangesAsync(ct);
+        await using var billing = new Medvya.Billing.Infrastructure.Persistence.BillingDbContext(Options<Medvya.Billing.Infrastructure.Persistence.BillingDbContext>(connectionString, tenant), new FixedTenant(tenant));
+        var fees = new Medvya.Billing.Infrastructure.DoctorFees(billing, new FixedTenant(tenant), new NoUser(), TimeProvider.System);
+        foreach (var doctor in newDoctors) await fees.SetAsync(doctor, "IN", 50_000, 30_000, Microsoft.EntityFrameworkCore.Storage.DbContextTransactionExtensions.GetDbTransaction(tx), ct);
+        await tx.CommitAsync(ct);
+    }
 
     internal static TenancyDbContext Tenancy(string connectionString, Guid? tenantId) =>
         new(Options<TenancyDbContext>(connectionString, tenantId), new FixedTenant(tenantId));

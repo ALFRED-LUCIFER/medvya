@@ -4,6 +4,7 @@ using System.Text.Json;
 using Host.Api.Auth;
 using Medvya.Identity.Domain;
 using Medvya.Tenancy.Domain;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,13 +13,15 @@ namespace Medvya.IntegrationTests;
 /// <summary>MDV-P0-012: facility picker, /v1/me/context, server-side idle timeout and session revocation, with audit.</summary>
 public sealed class SessionControlTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IDisposable
 {
-    readonly WebApplicationFactory<Program> factory = StaffSignInTests.CreateFactory(sql.ConnectionString);
     readonly Guid tenantA = Guid.NewGuid(), tenantB = Guid.NewGuid();
     Guid facilityA, facilityB;
+    WebApplicationFactory<Program>? factory;
 
-    public void Dispose() => factory.Dispose();
+    public void Dispose() => factory?.Dispose();
 
-    HttpClient Browser() => factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
+    // Tenant A is one of Medvya's own test organisations, so billing (release stage Internal, MDV-P4-002) reaches it once its switch is on.
+    HttpClient Browser() => (factory ??= StaffSignInTests.CreateFactory(sql.ConnectionString, b => b.UseSetting("Features:InternalOrganisations:0", tenantA.ToString())))
+        .CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
 
     async Task Clinics()
     {

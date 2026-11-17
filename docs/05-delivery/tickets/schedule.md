@@ -441,7 +441,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P3-029](P3-ai-scribe/MDV-P3-029.md) | ai-notes in Medvya: the Encounters module calls the AI service and puts the draft into the consult note for review | P3 | wk 16–17 | 75% |
 | [MDV-P3-030](P3-ai-scribe/MDV-P3-030.md) | AI service on Azure India dev and its pilot conditions (service identity, Key Vault key, allow-list telemetry, in-region Foundry) | P3 | wk 17–18 | 70% |
 | [MDV-P4-001](P4-clinic-operations/MDV-P4-001.md) | Money and legal document numbering foundation (minor units, DOC_SEQUENCE per country and financial year) | P4 | wk 17–17 | 88% |
-| [MDV-P4-002](P4-clinic-operations/MDV-P4-002.md) | Services and fees catalogue with price versions, India GST/SAC, UAE CPT/VAT, payer price lists and packages (F-11) | P4 | wk 17–18 | 72% |
+| [MDV-P4-002](P4-clinic-operations/MDV-P4-002.md) | Services and fees catalogue with price versions, per-doctor prices, India GST/SAC and billing settings (F-11) | P4 | wk 17–18 | 72% |
 | [MDV-P4-032](P4-clinic-operations/MDV-P4-032.md) | Apply for payment gateway merchant accounts and WhatsApp Business template approvals | P4 | wk 17–17 | 60% |
 
 ## Week 18 · 22 Feb 2027 – 26 Feb 2027 · load 14.2 dev-days ⚠ over capacity
@@ -455,7 +455,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P3-019](P3-ai-scribe/MDV-P3-019.md) | Audio retention purge and legal hold | P3 | wk 18–18 | 85% |
 | [MDV-P3-021](P3-ai-scribe/MDV-P3-021.md) | Mobile capture and note review (swipe to accept, evidence bottom sheet) (X-01) | P3 | wk 18–19 | 84% |
 | [MDV-P3-030](P3-ai-scribe/MDV-P3-030.md) | AI service on Azure India dev and its pilot conditions (service identity, Key Vault key, allow-list telemetry, in-region Foundry) | P3 | wk 17–18 | 70% |
-| [MDV-P4-002](P4-clinic-operations/MDV-P4-002.md) | Services and fees catalogue with price versions, India GST/SAC, UAE CPT/VAT, payer price lists and packages (F-11) | P4 | wk 17–18 | 72% |
+| [MDV-P4-002](P4-clinic-operations/MDV-P4-002.md) | Services and fees catalogue with price versions, per-doctor prices, India GST/SAC and billing settings (F-11) | P4 | wk 17–18 | 72% |
 | [MDV-P4-003](P4-clinic-operations/MDV-P4-003.md) | Price list import tool (billing setup service) | P4 | wk 18–18 | 85% |
 | [MDV-P4-004](P4-clinic-operations/MDV-P4-004.md) | Charge capture and invoice lifecycle (draft → issued → paid/failed/refunded), separate from clinical sign-off (P-06) | P4 | wk 18–19 | 86% |
 

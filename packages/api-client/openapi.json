@@ -7649,6 +7649,248 @@
           }
         }
       }
+    },
+    "/v1/settings/services": {
+      "get": {
+        "tags": [
+          "CatalogueEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "archived",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/SaveService"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/settings/services/{id}": {
+      "put": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/SaveService"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/settings/services/{id}/archive": {
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/settings/services/{id}/unarchive": {
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/settings/services/{id}/prices": {
+      "get": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AddPrice"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/settings/billing": {
+      "get": {
+        "tags": [
+          "Host.Api"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Host.Api"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/SaveBillingSettings"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/billing/services": {
+      "get": {
+        "tags": [
+          "Host.Api"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -8004,6 +8246,34 @@
               "string"
             ],
             "format": "uuid"
+          }
+        }
+      },
+      "AddPrice": {
+        "type": "object",
+        "properties": {
+          "doctorId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "amountMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "effectiveOn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
           }
         }
       },
@@ -9474,6 +9744,13 @@
           "InformationExchange",
           "Portal",
           "Marketing"
+        ]
+      },
+      "ConsultationKind": {
+        "enum": [
+          "New",
+          "FollowUp",
+          null
         ]
       },
       "ContactChange": {
@@ -11543,6 +11820,14 @@
           "GovernmentScheme"
         ]
       },
+      "PaymentMethod": {
+        "enum": [
+          "Cash",
+          "Card",
+          "UpiDirect",
+          "RazorpayLink"
+        ]
+      },
       "PilotMetric": {
         "enum": [
           "CheckInSeconds",
@@ -12829,6 +13114,74 @@
           }
         }
       },
+      "SaveBillingSettings": {
+        "type": "object",
+        "properties": {
+          "invoicePrefix": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "receiptPrefix": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "creditNotePrefix": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "paymentMethods": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/PaymentMethod"
+            }
+          },
+          "discountReasons": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "maxDiscountPercent": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "paymentLinkExpiryMinutes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "uint32"
+          }
+        }
+      },
       "SaveCustomRole": {
         "type": "object",
         "properties": {
@@ -13104,6 +13457,86 @@
                 "$ref": "#/components/schemas/OnboardingData"
               }
             ]
+          }
+        }
+      },
+      "SaveService": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "category": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ServiceCategory"
+              }
+            ]
+          },
+          "code": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sac": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "taxTreatment": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/TaxTreatment"
+              }
+            ]
+          },
+          "gstRateBasisPoints": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "durationMinutes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "consultationKind": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ConsultationKind"
+              }
+            ]
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "uint32"
           }
         }
       },
@@ -13473,6 +13906,15 @@
             }
           }
         }
+      },
+      "ServiceCategory": {
+        "enum": [
+          "Consultation",
+          "Procedure",
+          "Test",
+          "Other",
+          null
+        ]
       },
       "SetAllergyStatus": {
         "required": [
@@ -13877,6 +14319,13 @@
             "format": "int32"
           }
         }
+      },
+      "TaxTreatment": {
+        "enum": [
+          "Exempt",
+          "Taxable",
+          null
+        ]
       },
       "TemplatePreview": {
         "required": [
@@ -14730,6 +15179,9 @@
     },
     {
       "name": "FormularyEndpoints"
+    },
+    {
+      "name": "CatalogueEndpoints"
     }
   ]
 }

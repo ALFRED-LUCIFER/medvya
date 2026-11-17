@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using Host.Api.Auth;
 using Medvya.Audit.Domain;
+using Medvya.Billing.Domain;
 using Medvya.BuildingBlocks.Domain;
 using Medvya.Identity.Domain;
 using Medvya.Tenancy.Application;
@@ -175,7 +176,14 @@ public sealed partial class OnboardingTests(PostgresFixture sql) : IClassFixture
             var owner = await db.Memberships.SingleAsync(m => m.UserId == userId);
             Assert.Equal((Role.SoloDoctor, MembershipStatus.Active), (owner.Role, owner.Status));
             var profile = await db.PracticeDefaultsSet.SingleAsync();
-            Assert.Equal((20, 100_000L, 60_000L, "INR"), (profile.SlotMinutes, profile.NewVisitFeeMinor, profile.FollowUpFeeMinor, profile.Currency));
+            Assert.Equal((20, "INR"), (profile.SlotMinutes, profile.Currency));
+            // The fees entered are the clinic default and the owner-doctor's own prices in the Billing catalogue (MDV-P4-002).
+            await using (var billing = sql.Billing(tenantId))
+            {
+                var prices = await billing.PriceVersions.Join(billing.Services, v => v.ServiceId, s => s.Id, (v, s) => new { s.ConsultationKind, v.DoctorId, v.AmountMinor }).ToListAsync();
+                Assert.Equal([(ConsultationKind.FollowUp, null, 60_000L), (ConsultationKind.FollowUp, owner.Id, 60_000L), (ConsultationKind.New, null, 100_000L), (ConsultationKind.New, owner.Id, 100_000L)],
+                    prices.Select(p => (p.ConsultationKind!.Value, p.DoctorId, p.AmountMinor)).OrderBy(p => p.Item1.ToString()).ThenBy(p => p.DoctorId.HasValue));
+            }
             var address = await db.Profiles.SingleAsync();
             Assert.Equal(("12 Test Street, Chennai", "CE-0001"), (address.Address, address.RegistrationNumber));
             var open = await db.OperatingHours.Where(h => h.Weekday == DayOfWeek.Monday).SingleAsync();

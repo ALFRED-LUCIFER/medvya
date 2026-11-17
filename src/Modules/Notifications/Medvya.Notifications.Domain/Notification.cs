@@ -65,7 +65,7 @@ public sealed class NotificationAttempt
 
 /// <summary>What a staff notification is about. The screen words each kind itself, so no text is stored.</summary>
 [JsonConverter(typeof(JsonStringEnumConverter<StaffNotificationKind>))]
-public enum StaffNotificationKind { MessageFailed, LicenceExpiring, AccessReviewDue, AccessRequested, RegistrationExpiring }
+public enum StaffNotificationKind { MessageFailed, LicenceExpiring, AccessReviewDue, AccessRequested, RegistrationExpiring, VisitsNeedRebooking }
 
 /// <summary>
 /// STAFF_NOTIFICATION (MDV-P1-034): one in-app item for the staff of a facility (the notification centre, D-03). It holds ids and a
@@ -77,10 +77,12 @@ public sealed class StaffNotification
     [Classification(DataClass.Internal)] public Guid TenantId { get; init; }
     [Classification(DataClass.Internal)] public Guid FacilityId { get; init; }
     [Classification(DataClass.Internal)] public StaffNotificationKind Kind { get; init; }
-    /// <summary>The appointment (or other record) it points at.</summary>
+    /// <summary>The appointment (or other record) it points at; for visits to rebook, the doctor's calendar.</summary>
     [Classification(DataClass.Internal)] public Guid? RefId { get; init; }
-    /// <summary>A number the screen needs: days until a licence expires (0 = on its last valid day, below 0 = already expired). Null for other kinds.</summary>
+    /// <summary>A number the screen needs: days until a licence expires (0 = on its last valid day, below 0 = already expired), or how many visits need rebooking. Null for other kinds.</summary>
     [Classification(DataClass.Internal)] public int? Detail { get; init; }
+    /// <summary>The facility-local day the screen opens: the first day with a visit to rebook. Null for other kinds.</summary>
+    [Classification(DataClass.Internal)] public DateOnly? Day { get; init; }
     /// <summary>With the tenant it makes raising the same event twice harmless, e.g. "failed:" and the notification id.</summary>
     [Classification(DataClass.Internal)] public string DedupeKey { get; init; } = "";
     [Classification(DataClass.Internal)] public DateTimeOffset CreatedAt { get; init; }

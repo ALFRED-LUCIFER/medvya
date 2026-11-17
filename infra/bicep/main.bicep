@@ -306,6 +306,29 @@ resource nationalIdKeyApp 'Microsoft.Authorization/roleAssignments@2022-04-01' =
   properties: { roleDefinitionId: cryptoUser, principalId: app.identity.principalId, principalType: 'ServicePrincipal' }
 }
 
+// Clinic payment keys (MDV-P4-007, ADR-023): each clinic's Razorpay key secret and webhook secret, written by the API when the clinic
+// admin connects Razorpay. A vault of its own, because writing needs "Key Vault Secrets Officer" on the vault, and on the main vault that
+// would let the app read and change every platform secret. Nothing else lives here.
+resource paymentsVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
+  name: take('kvp-${name}', 24) // vault names stop at 24 characters; 'staging' would make 25
+  location: location
+  tags: tags
+  properties: {
+    sku: { family: 'A', name: 'standard' }
+    tenantId: tenant().tenantId
+    enableRbacAuthorization: true
+    enableSoftDelete: true
+    enablePurgeProtection: true
+  }
+}
+
+var secretsOfficer = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b86a8fe4-44ce-4948-aee5-eccb2c155cd7')
+resource paymentsVaultApp 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: paymentsVault
+  name: guid(paymentsVault.id, app.id, secretsOfficer)
+  properties: { roleDefinitionId: secretsOfficer, principalId: app.identity.principalId, principalType: 'ServicePrincipal' }
+}
+
 // Transactional email (MDV-P1-032): Azure Communication Services Email with an Azure-managed sender domain (no domain to own or verify).
 // The app sends with its managed identity (role below): no key or password exists. Needs the Microsoft.Communication provider registered.
 resource emailService 'Microsoft.Communication/emailServices@2023-04-01' = {
@@ -497,6 +520,7 @@ resource app 'Microsoft.Web/sites@2023-12-01' = {
         // database job (PostgresDataSources). The login name is the app's name. The server certificate is checked.
         { name: 'ConnectionStrings__Medvya', value: 'Host=${postgres.outputs.fqdn};Database=${postgres.outputs.databaseName};Username=${appName};SslMode=VerifyFull' }
         { name: 'NationalIdProtection__KeyVaultKeyId', value: nationalIdKey.properties.keyUri }
+        { name: 'Razorpay__KeyVaultUri', value: paymentsVault.properties.vaultUri }
         // Staff sign-in (MDV-P0-011): single-tenant Entra app; the client secret is a Key Vault reference, never a value here.
         { name: 'Authentication__Oidc__Authority', value: '${environment().authentication.loginEndpoint}${tenant().tenantId}/v2.0' }
         { name: 'Authentication__Oidc__ClientId', value: oidcClientId }

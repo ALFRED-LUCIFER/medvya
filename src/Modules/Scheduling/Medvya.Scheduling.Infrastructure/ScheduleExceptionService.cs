@@ -3,6 +3,7 @@ using Medvya.Scheduling.Application;
 using Medvya.Scheduling.Domain;
 using Medvya.Scheduling.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 
 namespace Medvya.Scheduling.Infrastructure;
@@ -16,7 +17,8 @@ namespace Medvya.Scheduling.Infrastructure;
 /// for the patient come with the patient portal (P2).
 /// </summary>
 public sealed class ScheduleExceptionService(
-    SchedulingDbContext db, SchedulingContext context, DoctorDayTransaction transaction, IBoardNotifier notifier, ILogger<ScheduleExceptionService> log) : IScheduleExceptionService
+    SchedulingDbContext db, SchedulingContext context, DoctorDayTransaction transaction, IBoardNotifier notifier, ILogger<ScheduleExceptionService> log,
+    IEnumerable<IRebookingParticipant> rebooking) : IScheduleExceptionService
 {
     public async Task<IReadOnlyList<ExceptionView>> ListAsync(Guid facilityId, Guid? calendarId, CancellationToken cancellationToken = default)
     {
@@ -103,6 +105,9 @@ public sealed class ScheduleExceptionService(
             await context.AuditAsync(old is null ? SchedulingAudit.ExceptionCreate : SchedulingAudit.ExceptionUpdate, SchedulingAudit.ExceptionResource, SchedulingAudit.Operations, exception.Id, null, cancellationToken);
             foreach (var a in affected)
                 await context.AuditAsync(SchedulingAudit.NeedsRebooking, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment, a.Id, a.PatientId, cancellationToken);
+            if (affected.Count > 0) // the desk's notification-centre item (MDV-P1-034), committed with the move
+                foreach (var p in rebooking)
+                    await p.NeedsRebookingAsync(command.FacilityId, calendar.Id, affected.Min(a => ScheduleRules.LocalDate(a.Start, zone)), affected.Count, db.Database.CurrentTransaction!.GetDbTransaction(), cancellationToken);
             return (byId.Count(p => p.Value == RebookAction.Offer), byId.Count(p => p.Value == RebookAction.Manual), affected);
         }, cancellationToken);
 

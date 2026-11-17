@@ -13,18 +13,21 @@ type Props = {
   loadFailed: boolean;
   adding: boolean;
   addFailed: boolean;
-  created: { name: string; link: string } | null;
+  created: { name: string; link: string; replaced: boolean } | null;
   copied: boolean;
   revokingId: string | null;
   revokeFailed: boolean;
+  relinkingId: string | null;
+  relinkFailed: boolean;
   onSubmit: FormEventHandler<HTMLFormElement>;
   onCopy: () => void;
   onRevoke: (id: string) => void;
+  onNewLink: (id: string) => void;
 };
 
 const fieldError = 'text-sm font-semibold text-danger-700';
 
-/** Queue displays (MDV-P1-031): the facility's waiting-room TVs. Each gets its link once; revoking one ends it at once. */
+/** Queue displays (MDV-P1-031): the facility's waiting-room TVs. Each link is shown once; New link replaces a lost one (#1413); revoking ends a display at once. */
 export default function DisplaysPage(p: Props) {
   const { t, formatDate } = useI18n();
   const { errors } = p.form.formState;
@@ -47,7 +50,7 @@ export default function DisplaysPage(p: Props) {
             {p.addFailed && <p role="alert" className={fieldError}>{t('displays.addFailed')}</p>}
             {p.created && (
               <div className="flex flex-col gap-2 rounded-lg border border-action-600 p-3">
-                <p className="font-bold">{t('displays.created', { name: p.created.name })}</p>
+                <p className="font-bold">{t(p.created.replaced ? 'displays.replaced' : 'displays.created', { name: p.created.name })}</p>
                 <Label htmlFor="display-link">{t('displays.link')}</Label>
                 <div className="flex flex-wrap gap-2">
                   <Input id="display-link" readOnly value={p.created.link} className="min-w-0 flex-1 font-mono text-xs" onFocus={e => e.currentTarget.select()} />
@@ -68,14 +71,19 @@ export default function DisplaysPage(p: Props) {
                     </span>
                   </span>
                   {!d.revokedAt && (
-                    <Button type="button" variant="outline" loading={p.revokingId === d.id} onClick={() => p.onRevoke(d.id)}
-                      aria-label={t('displays.revokeNamed', { name: d.name })}>{t('displays.revoke')}</Button>
+                    <span className="flex flex-wrap gap-2">
+                      <Button type="button" variant="outline" loading={p.relinkingId === d.id} onClick={() => p.onNewLink(d.id)}
+                        aria-label={t('displays.newLinkNamed', { name: d.name })}>{t('displays.newLink')}</Button>
+                      <Button type="button" variant="outline" loading={p.revokingId === d.id} onClick={() => p.onRevoke(d.id)}
+                        aria-label={t('displays.revokeNamed', { name: d.name })}>{t('displays.revoke')}</Button>
+                    </span>
                   )}
                 </li>
               ))}
             </ul>
           )}
           {p.revokeFailed && <p role="alert" className={fieldError}>{t('displays.revokeFailed')}</p>}
+          {p.relinkFailed && <p role="alert" className={fieldError}>{t('displays.newLinkFailed')}</p>}
         </>}
     </Card>
   );

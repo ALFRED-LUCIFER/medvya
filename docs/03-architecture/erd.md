@@ -2701,7 +2701,7 @@ erDiagram
 | `Notifications` | 17 | Id | tenant-scoped |
 | `Attempts` | 6 | Id | tenant-scoped |
 | `Preferences` | 12 | TenantId | tenant-scoped |
-| `StaffNotifications` | 9 | Id | tenant-scoped |
+| `StaffNotifications` | 10 | Id | tenant-scoped |
 | `StaffNotificationReads` | 4 | NotificationId, UserId | tenant-scoped |
 
 <details><summary><code>notifications.Notifications</code> columns</summary>
@@ -2766,6 +2766,7 @@ erDiagram
 |---|---|---|---|
 | `Id` | guid |  |  |
 | `CreatedAt` | timestamptz |  |  |
+| `Day` | date | yes |  |
 | `DedupeKey` | character varying(80) |  |  |
 | `Detail` | int | yes |  |
 | `FacilityId` | guid |  | id of `tenancy.Facilities` |

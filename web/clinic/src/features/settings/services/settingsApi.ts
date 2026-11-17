@@ -76,11 +76,13 @@ export const fetchNotificationPrefs = () => send<NotificationPrefs>('/v1/setting
 export const saveNotificationPrefs = (prefs: NotificationPrefs) => send<NotificationPrefs>('/v1/settings/notifications', json('PUT', prefs));
 export const fetchTemplatePreviews = (language: string) => send<TemplatePreview[]>(`/v1/settings/notifications/templates?${new URLSearchParams({ language })}`);
 
-// Nurse intake before the doctor (MDV-P2-007): one practice-wide switch; the server lets only an owner or practice admin change it and audits it.
-// withNurse: how many of the practice's patients are with the nurse now (MDV-P2-055), said before the switch changes.
-export const fetchNurseIntake = () => send<NurseIntake>('/v1/settings/nurse-intake');
-export const saveNurseIntake = (enabled: boolean) => send<NurseIntake>('/v1/settings/nurse-intake', json('PUT', { enabled }));
-type NurseIntake = { enabled: boolean; withNurse: number };
+// Practice-wide switches: nurse intake before the doctor (MDV-P2-007) and billing (MDV-P4-002, #1430). The server lets only an owner or an
+// administrator of every location change one, audits it, and answers 404 while Medvya's release does not reach the practice.
+// withNurse (nurse intake only): how many of the practice's patients are with the nurse now (MDV-P2-055), said before the switch changes.
+export type FeatureSwitchName = 'nurse-intake' | 'billing-switch';
+export const fetchFeatureSwitch = (name: FeatureSwitchName) => send<FeatureSwitch>(`/v1/settings/${name}`);
+export const saveFeatureSwitch = (name: FeatureSwitchName, enabled: boolean) => send<FeatureSwitch>(`/v1/settings/${name}`, json('PUT', { enabled }));
+type FeatureSwitch = { enabled: boolean; withNurse?: number };
 
 // The queue rule (MDV-P1-103): only an owner or practice admin may change it; the server audits each change.
 export const fetchQueueRule = () => send<QueueRule>('/v1/settings/queue-rule');

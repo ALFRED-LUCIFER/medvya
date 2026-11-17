@@ -10,7 +10,7 @@ export const billingOwner = (country: 'IN' | 'AE' = 'IN', flags: string[] = ['bi
 
 type Service = Record<string, unknown> & { id: string; name: string };
 
-export async function mockBilling(page: Page, { country = 'IN', flags, locale = 'en' }: { country?: 'IN' | 'AE'; flags?: string[]; locale?: string } = {}) {
+export async function mockBilling(page: Page, { country = 'IN', flags, locale = 'en', released = true }: { country?: 'IN' | 'AE'; flags?: string[]; locale?: string; released?: boolean } = {}) {
   const currency = country === 'IN' ? 'INR' : 'AED';
   const consultation: Service = {
     id: 'svc-new', name: 'Consultation (new visit)', category: 'Consultation', code: null, sac: '999312', taxTreatment: 'Exempt', gstRateBasisPoints: null,
@@ -21,12 +21,23 @@ export async function mockBilling(page: Page, { country = 'IN', flags, locale = 
     'svc-new': [{ id: 'pv-1', doctorId: null, amountMinor: 50_000, currency, effectiveFrom: '2026-09-01T00:00:00Z', createdAt: '2026-09-01T00:00:00Z' }],
   };
   const posts: { path: string; body: unknown }[] = [];
+  // #1430: the owner's billing switch; the session's flags follow it, as the server's do.
+  const session = billingOwner(country, flags);
   // MDV-P4-007: the clinic's Razorpay connection; secrets go in, only the status comes back.
   let razorpay: Record<string, unknown> = { connected: false, mode: null, keyIdEnding: null, webhookPath: null };
   let settings = { invoicePrefix: 'INV', receiptPrefix: 'RCT', creditNotePrefix: 'CN', paymentMethods: ['Cash', 'Card', 'UpiDirect'], discountReasons: [] as string[], maxDiscountPercent: 10, paymentLinkExpiryMinutes: 60, version: 0 };
 
   await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
-  await page.route('**/v1/me/context', r => r.fulfill({ json: billingOwner(country, flags) }));
+  await page.route('**/v1/me/context', r => r.fulfill({ json: session }));
+  await page.route('**/v1/settings/billing-switch', r => {
+    if (!released) return r.fulfill({ status: 404 }); // Medvya's release does not reach the practice (MDV-P5-041)
+    if (r.request().method() === 'PUT') {
+      const body = r.request().postDataJSON() as { enabled: boolean };
+      posts.push({ path: 'billing-switch', body });
+      session.active.flags = body.enabled ? ['billing.invoices'] : [];
+    }
+    return r.fulfill({ json: { enabled: session.active.flags.includes('billing.invoices') } });
+  });
   await page.route('**/v1/notifications/inbox?*', r => r.fulfill({ json: { unread: 0, items: [] } }));
   await page.route('**/v1/settings/locations', r => r.fulfill({ json: [{ id: 'f-1', name: 'Adyar', address: null, timeZone: country === 'IN' ? 'Asia/Kolkata' : 'Asia/Dubai' }] }));
   await page.route('**/v1/settings/doctors', r => r.fulfill({

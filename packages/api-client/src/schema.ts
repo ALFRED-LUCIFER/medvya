@@ -48,7 +48,6 @@ export interface paths {
             parameters: {
                 query?: {
                     returnUrl?: string;
-                    invitation?: string;
                     signup?: boolean;
                 };
                 header?: never;
@@ -4997,6 +4996,60 @@ export interface paths {
             requestBody: {
                 content: {
                     "application/json": components["schemas"]["NurseIntakeBody"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/settings/billing-switch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["BillingSwitch"];
                 };
             };
             responses: {
@@ -10685,6 +10738,9 @@ export interface components {
             toDate: string;
             /** Format: date-time */
             recordedAt: string;
+        };
+        BillingSwitch: {
+            enabled: boolean;
         };
         BoardCard: {
             /** Format: uuid */

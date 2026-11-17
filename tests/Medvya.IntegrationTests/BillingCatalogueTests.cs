@@ -391,6 +391,50 @@ public sealed class BillingCatalogueTests(PostgresFixture sql) : IClassFixture<P
         Assert.Equal(HttpStatusCode.OK, (await admin.GetAsync(new Uri("/v1/settings/services", UriKind.Relative))).StatusCode);
     }
 
+    /// <summary>
+    /// #1430: the owner switches billing on and off in Settings; every billing route follows, the desk and an administrator of one branch cannot switch
+    /// it, each change is audited by the flag service, and the switch itself is 404 while Medvya's release does not reach the practice.
+    /// SAFETY: mutation check: RequireRelease(Features.Billing) removed from PUT /billing-switch -> OnlyTheOwnerSwitchesBillingAndEveryRouteFollows failed
+    /// </summary>
+    [Fact]
+    public async Task OnlyTheOwnerSwitchesBillingAndEveryRouteFollows()
+    {
+        var (services, switchPath) = (new Uri("/v1/billing/services", UriKind.Relative), new Uri("/v1/settings/billing-switch", UriKind.Relative));
+        using var admin = Client(h.Admin);
+        Assert.False((await admin.GetFromJsonAsync<JsonElement>(switchPath)).GetProperty("enabled").GetBoolean()); // off until the owner says so
+        Assert.Equal(HttpStatusCode.NotFound, (await admin.GetAsync(services)).StatusCode);
+
+        var branchAdmin = Guid.NewGuid(); // administers Adyar, not Velachery, and is no owner
+        await using (var db = sql.Context(h.Tenant))
+        {
+            db.Memberships.Add(new Membership { Id = Guid.NewGuid(), TenantId = h.Tenant, UserId = branchAdmin, FacilityId = h.Facility, Role = Role.PracticeAdmin, Status = MembershipStatus.Active });
+            await db.SaveChangesAsync();
+        }
+        using var desk = Client(h.Reception);
+        using var branch = Client(branchAdmin);
+        foreach (var refused in new[] { desk, branch })
+            Assert.Equal(HttpStatusCode.Forbidden, (await refused.PutAsJsonAsync(switchPath, new { enabled = true })).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await admin.GetAsync(services)).StatusCode); // neither refusal switched it
+
+        var on = await admin.PutAsJsonAsync(switchPath, new { enabled = true });
+        Assert.True((await on.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("enabled").GetBoolean());
+        Assert.True((await admin.GetFromJsonAsync<JsonElement>(switchPath)).GetProperty("enabled").GetBoolean());
+        Assert.Equal(HttpStatusCode.OK, (await desk.GetAsync(services)).StatusCode);
+
+        // The clinic's switch exists only while Medvya's release (Internal) reaches the organisation.
+        using var outside = Client(h.Admin, internalOrganisation: false);
+        Assert.Equal(HttpStatusCode.NotFound, (await outside.GetAsync(switchPath)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await outside.PutAsJsonAsync(switchPath, new { enabled = false })).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await desk.GetAsync(services)).StatusCode); // the refused change changed nothing
+
+        Assert.Equal(HttpStatusCode.OK, (await admin.PutAsJsonAsync(switchPath, new { enabled = false })).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await desk.GetAsync(services)).StatusCode);
+
+        await using var audit = sql.Audit(h.Tenant);
+        var rows = (await audit.Events.Where(e => e.Action.StartsWith("flag.")).ToListAsync()).OrderBy(e => e.Id).Select(e => (e.Action, e.ActorUserId)).ToList();
+        Assert.Equal([("flag.enable", (Guid?)h.Admin), ("flag.disable", (Guid?)h.Admin)], rows);
+    }
+
     Task BillingOnAsync() => h.Get<IFeatureFlags>(h.Admin).SetAsync(Features.Billing, true, "practice", "Billing (synthetic test)");
 
     static async Task<(long, long)> FeesOf(HttpClient client, Guid doctor)

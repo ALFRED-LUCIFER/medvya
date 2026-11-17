@@ -10,7 +10,7 @@ import LocationsPanel from '../features/settings/components/LocationsPanel';
 import ProfilePanel from '../features/settings/components/ProfilePanel';
 import DataPanel from '../features/settings/components/DataPanel';
 import NotificationsPanel from '../features/settings/components/NotificationsPanel';
-import NurseIntakePanel from '../features/settings/components/NurseIntakePanel';
+import FeatureSwitchPanel from '../features/settings/components/FeatureSwitchPanel';
 import QueueRulePanel from '../features/settings/components/QueueRulePanel';
 import TermsPanel from '../features/settings/components/TermsPanel';
 import SettingsPage from '../features/settings/components/SettingsPage';
@@ -20,14 +20,14 @@ import ServicesPanel from '../features/billing/components/ServicesPanel';
 import { useBillingSettingsController } from '../features/billing/hooks/useBillingSettingsController';
 import { useRazorpayController } from '../features/billing/hooks/useRazorpayController';
 import { useServicesController } from '../features/billing/hooks/useServicesController';
-import { settingsGroups, visibleGroups, type SettingsTab } from '../features/settings/domain/settings';
+import { visibleTabs, type SettingsTab } from '../features/settings/domain/settings';
 import { useDoctorsController } from '../features/settings/hooks/useDoctorsController';
 import { useHolidaysController } from '../features/settings/hooks/useHolidaysController';
 import { useOpeningHoursController, useSchedulesController } from '../features/settings/hooks/useHoursController';
 import { useLocationChoice } from '../features/settings/hooks/useLocationChoice';
 import { useLocationsController } from '../features/settings/hooks/useLocationsController';
 import { useNotificationSettingsController } from '../features/settings/hooks/useNotificationSettingsController';
-import { useNurseIntakeController } from '../features/settings/hooks/useNurseIntakeController';
+import { useFeatureSwitchController } from '../features/settings/hooks/useFeatureSwitchController';
 import { useQueueRuleController } from '../features/settings/hooks/useQueueRuleController';
 import { useTermsController } from '../features/settings/hooks/useTermsController';
 import { useProfileController } from '../features/settings/hooks/useProfileController';
@@ -83,7 +83,8 @@ const Metrics = ({ facilityId }: { facilityId: string }) => <PilotMetricsPanel {
 const Review = ({ timeZone }: { timeZone: string }) => <AccessReviewPanel {...useAccessReviewController()} timeZone={timeZone} />;
 const AccessRequests = ({ timeZone }: { timeZone: string }) => <AccessRequestsPanel {...useAccessRequestsController()} timeZone={timeZone} />;
 const ClinicalPolicy = () => <ClinicalPolicyPanel {...useClinicalPolicyController()} />;
-const NurseIntake = () => <NurseIntakePanel {...useNurseIntakeController()} />;
+const NurseIntake = () => <FeatureSwitchPanel copy="nurseIntake" {...useFeatureSwitchController('nurse-intake')} />;
+const BillingSwitch = () => <FeatureSwitchPanel copy="billingSwitch" {...useFeatureSwitchController('billing-switch')} />;
 const Queue = () => <QueueRulePanel {...useQueueRuleController()} />;
 const BillingSettings = () => <BillingSettingsPanel {...useBillingSettingsController()} />;
 const Razorpay = () => <RazorpayPanel {...useRazorpayController()} />;
@@ -104,9 +105,9 @@ function Staff({ facilityId, userId, timeZone }: { facilityId: string; userId: s
 export default function SettingsRoute({ facilityId, country, userId, timeZone, billing }: { facilityId: string; country: 'IN' | 'AE' | null; userId: string; timeZone: string; billing: boolean }) {
   const [params, setParams] = useSearchParams();
   const asked = params.get('tab');
-  const groups = visibleGroups(billing);
-  const tabs: readonly string[] = groups.flatMap(g => settingsGroups[g]);
+  const groups = visibleTabs(billing);
+  const tabs: readonly string[] = Object.values(groups).flat();
   const tab: SettingsTab = tabs.includes(asked ?? '') ? (asked as SettingsTab) : 'profile';
-  const panels = { profile: <Profile />, locations: <Locations facilityId={facilityId} country={country} />, hours: <Hours facilityId={facilityId} />, holidays: <Holidays facilityId={facilityId} />, staff: <Staff facilityId={facilityId} userId={userId} timeZone={timeZone} />, nurse: <NurseIntake />, queue: <Queue />, requests: <AccessRequests timeZone={timeZone} />, policy: <ClinicalPolicy />, review: <Review timeZone={timeZone} />, doctors: <Doctors facilityId={facilityId} timeZone={timeZone} />, medicines: <Medicines country={country} />, displays: <Displays facilityId={facilityId} timeZone={timeZone} />, audit: <Audit />, metrics: <Metrics facilityId={facilityId} />, terms: <Terms timeZone={timeZone} />, notifications: <Notifications />, data: <DataPanel country={country} accessLogPath="/settings?tab=audit" />, services: <Services timeZone={timeZone} />, billing: <><BillingSettings />{country === 'IN' && <Razorpay />}</> };
+  const panels = { profile: <Profile />, locations: <Locations facilityId={facilityId} country={country} />, hours: <Hours facilityId={facilityId} />, holidays: <Holidays facilityId={facilityId} />, staff: <Staff facilityId={facilityId} userId={userId} timeZone={timeZone} />, nurse: <NurseIntake />, queue: <Queue />, requests: <AccessRequests timeZone={timeZone} />, policy: <ClinicalPolicy />, review: <Review timeZone={timeZone} />, doctors: <Doctors facilityId={facilityId} timeZone={timeZone} />, medicines: <Medicines country={country} />, displays: <Displays facilityId={facilityId} timeZone={timeZone} />, audit: <Audit />, metrics: <Metrics facilityId={facilityId} />, terms: <Terms timeZone={timeZone} />, notifications: <Notifications />, data: <DataPanel country={country} accessLogPath="/settings?tab=audit" />, services: <Services timeZone={timeZone} />, billing: <><BillingSwitch />{billing && <><BillingSettings />{country === 'IN' && <Razorpay />}</>}</> };
   return <SettingsPage tab={tab} onTab={next => setParams({ tab: next }, { replace: true })} panels={panels} groups={groups} />;
 }

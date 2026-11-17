@@ -47,6 +47,7 @@ async function mockCashDay(page: Page, { locale = 'en', colleague = false, open 
   await page.route('**/v1/billing/cash-sessions/cs-1/confirm', r => {
     posts.push({ path: 'confirm', body: r.request().postDataJSON() });
     const s = day.awaiting[0];
+    if (!s) return r.fulfill({ status: 400, json: { errors: { state: ['invalid'] } } });
     close(s, 'Priya N. (synthetic)');
     return r.fulfill({ json: s });
   });

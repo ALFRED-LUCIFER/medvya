@@ -1,0 +1,46 @@
+import { describe, expect, it } from 'vitest';
+import { byPhase, dentalErrors, errorKey, findingProblem, marksFor, nextSteps, sortSurfaces, type PlanItem, type ToothFinding } from './dental';
+import en from '../../../../../../packages/i18n/messages/en.json';
+
+const item = (id: string, phase: number): PlanItem => ({
+  id, serviceId: 's', serviceName: id, tooth: '36', surfaces: null, phase, estimateMinor: 100, currency: 'INR', status: 'Planned', reason: null,
+  createdAt: '2026-11-06T04:30:00Z', changedAt: '2026-11-06T04:30:00Z', doneAt: null, version: 1,
+});
+
+describe('dental chart and plan (MDV-P8-011, MDV-P8-012)', () => {
+  it('sends surfaces in the server\'s order, whatever order they were picked in', () => {
+    expect(sortSurfaces('OD')).toBe('DO');
+    expect(sortSurfaces(['L', 'M', 'O'])).toBe('MOL');
+    expect(sortSurfaces('')).toBe('');
+  });
+
+  it('asks for a surface only on caries and fillings', () => {
+    expect(findingProblem(null, '')).toBe('condition');
+    expect(findingProblem('Caries', '')).toBe('surfaces:required');
+    expect(findingProblem('Filling', 'O')).toBeNull();
+    expect(findingProblem('Missing', '')).toBeNull();
+  });
+
+  it('offers only the steps the server allows: Done is final, a declined item can be offered again', () => {
+    expect(nextSteps('Planned')).toEqual(['start', 'decline']);
+    expect(nextSteps('InProgress')).toEqual(['done', 'decline']);
+    expect(nextSteps('Declined')).toEqual(['offer']);
+    expect(nextSteps('Done')).toEqual([]);
+  });
+
+  it('groups the plan by phase in phase order', () => {
+    expect(byPhase([item('a', 2), item('b', 1), item('c', 2)]).map(g => [g.phase, g.items.map(i => i.id)])).toEqual([[1, ['b']], [2, ['a', 'c']]]);
+  });
+
+  it('marks a recorded tooth with its code and words, surfaces included', () => {
+    const f: ToothFinding = { id: '1', tooth: '36', condition: 'Caries', surfaces: 'DO', note: null, encounterId: 'e', recordedBy: 'u', recordedAt: '', author: null };
+    const t = (key: string) => (en as Record<string, string>)[key] ?? key;
+    expect(marksFor([f], t as never)['36']).toEqual({ abbr: 'C', label: 'Caries (DO)', tone: 'danger' });
+  });
+
+  it('has words for every error the dental routes answer, and none for an unknown one', () => {
+    for (const code of dentalErrors) expect((en as Record<string, string>)[errorKey(code)!], code).toBeTruthy();
+    expect(errorKey('version:stale')).toBeNull();
+    expect(errorKey(undefined)).toBeNull();
+  });
+});

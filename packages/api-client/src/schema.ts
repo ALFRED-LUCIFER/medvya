@@ -1326,6 +1326,268 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/patients/{patientId}/dental": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/patients/{patientId}/dental/services": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/encounters/{encounterId}/dental/findings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    encounterId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["RecordToothFinding"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/patients/{patientId}/dental/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["AddDentalPlanItem"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/patients/{patientId}/dental/plan/{itemId}/move": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                    itemId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["MoveDentalPlanItem"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/patients/{patientId}/dental/estimate/acceptance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["AcceptDentalEstimate"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/patients/{patientId}/dental/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/patients/{patientId}/chronic-care": {
         parameters: {
             query?: never;
@@ -5050,6 +5312,60 @@ export interface paths {
             requestBody: {
                 content: {
                     "application/json": components["schemas"]["BillingSwitch"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/settings/dental": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DentalSwitch"];
                 };
             };
             responses: {
@@ -9821,6 +10137,39 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/settings/services/dental-starter": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/settings/billing": {
         parameters: {
             query?: never;
@@ -10735,6 +11084,12 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @enum {unknown} */
+        AcceptanceMethod: "OnTablet" | "PrintedAndSigned" | null;
+        AcceptDentalEstimate: {
+            acceptedBy: null | string;
+            method: null | components["schemas"]["AcceptanceMethod"];
+        };
         AccessRequestBody: {
             reason: components["schemas"]["AccessRequestReason"];
         };
@@ -10758,6 +11113,14 @@ export interface components {
             /** Format: int64 */
             amountMinor?: null | number | string;
             reason?: null | string;
+        };
+        AddDentalPlanItem: {
+            /** Format: uuid */
+            serviceId: null | string;
+            tooth: null | string;
+            surfaces: null | string;
+            /** Format: int32 */
+            phase: null | number | string;
         };
         AddDoctor: {
             fullName?: null | string;
@@ -11285,6 +11648,11 @@ export interface components {
         Decision: {
             reason: null | string;
         };
+        /** @enum {unknown} */
+        DentalPlanStatus: "Planned" | "InProgress" | "Done" | "Declined" | null;
+        DentalSwitch: {
+            enabled: boolean;
+        };
         /**
          * @default All
          * @enum {unknown}
@@ -11579,6 +11947,14 @@ export interface components {
         MilestoneAnswer: "Yes" | "No" | "Unsure" | null;
         /** @enum {unknown} */
         MilestoneAnswerer: "Parent" | "Clinician" | null;
+        MoveDentalPlanItem: {
+            to: null | components["schemas"]["DentalPlanStatus"];
+            reason: null | string;
+            /** Format: uuid */
+            encounterId: null | string;
+            /** Format: uint32 */
+            version: null | number | string;
+        };
         MoveVisit: {
             state?: null | components["schemas"]["AppointmentState"];
         };
@@ -11911,6 +12287,12 @@ export interface components {
             /** Format: int64 */
             amountMinor?: null | number | string;
             reference?: null | string;
+        };
+        RecordToothFinding: {
+            tooth: null | string;
+            condition: null | components["schemas"]["ToothCondition"];
+            surfaces: null | string;
+            note: null | string;
         };
         /** @enum {unknown} */
         ReferralChannel: "Print" | "Email" | "PatientCarries" | null;
@@ -12346,6 +12728,8 @@ export interface components {
             daily: boolean;
             qr: string[];
         };
+        /** @enum {unknown} */
+        ToothCondition: "Sound" | "Caries" | "Filling" | "Crown" | "RootCanalTreated" | "Missing" | "Implant" | "Bridge" | "Mobile" | "Fractured" | null;
         UnavailableBlock: {
             /** Format: date-time */
             start: string;

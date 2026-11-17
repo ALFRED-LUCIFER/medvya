@@ -17,6 +17,8 @@ import SettingsPage from '../features/settings/components/SettingsPage';
 import BillingSettingsPanel from '../features/billing/components/BillingSettingsPanel';
 import RazorpayPanel from '../features/billing/components/RazorpayPanel';
 import ServicesPanel from '../features/billing/components/ServicesPanel';
+import DentalStarterCard from '../features/dental/components/DentalStarterCard';
+import { useDentalStarterController } from '../features/dental/hooks/useDentalStarterController';
 import { useBillingSettingsController } from '../features/billing/hooks/useBillingSettingsController';
 import { useRazorpayController } from '../features/billing/hooks/useRazorpayController';
 import { useServicesController } from '../features/billing/hooks/useServicesController';
@@ -85,6 +87,12 @@ const AccessRequests = ({ timeZone }: { timeZone: string }) => <AccessRequestsPa
 const ClinicalPolicy = () => <ClinicalPolicyPanel {...useClinicalPolicyController()} />;
 const NurseIntake = () => <FeatureSwitchPanel copy="nurseIntake" {...useFeatureSwitchController('nurse-intake')} />;
 const BillingSwitch = () => <FeatureSwitchPanel copy="billingSwitch" {...useFeatureSwitchController('billing-switch')} />;
+/** Dental (MDV-P8-E02): the owner's switch, then, with it and billing on, the dental services starter list (MDV-P8-010). */
+function Dental({ billing }: { billing: boolean }) {
+  const dental = useFeatureSwitchController('dental');
+  return <><FeatureSwitchPanel copy="dental" {...dental} />{billing && dental.enabled && <DentalStarter />}</>;
+}
+const DentalStarter = () => <DentalStarterCard {...useDentalStarterController()} />;
 const Queue = () => <QueueRulePanel {...useQueueRuleController()} />;
 const BillingSettings = () => <BillingSettingsPanel {...useBillingSettingsController()} />;
 const Razorpay = () => <RazorpayPanel {...useRazorpayController()} />;
@@ -108,6 +116,6 @@ export default function SettingsRoute({ facilityId, country, userId, timeZone, b
   const groups = visibleTabs(billing);
   const tabs: readonly string[] = Object.values(groups).flat();
   const tab: SettingsTab = tabs.includes(asked ?? '') ? (asked as SettingsTab) : 'profile';
-  const panels = { profile: <Profile />, locations: <Locations facilityId={facilityId} country={country} />, hours: <Hours facilityId={facilityId} />, holidays: <Holidays facilityId={facilityId} />, staff: <Staff facilityId={facilityId} userId={userId} timeZone={timeZone} />, nurse: <NurseIntake />, queue: <Queue />, requests: <AccessRequests timeZone={timeZone} />, policy: <ClinicalPolicy />, review: <Review timeZone={timeZone} />, doctors: <Doctors facilityId={facilityId} timeZone={timeZone} />, medicines: <Medicines country={country} />, displays: <Displays facilityId={facilityId} timeZone={timeZone} />, audit: <Audit />, metrics: <Metrics facilityId={facilityId} />, terms: <Terms timeZone={timeZone} />, notifications: <Notifications />, data: <DataPanel country={country} accessLogPath="/settings?tab=audit" />, services: <Services timeZone={timeZone} />, billing: <><BillingSwitch />{billing && <><BillingSettings />{country === 'IN' && <Razorpay />}</>}</> };
+  const panels = { profile: <Profile />, locations: <Locations facilityId={facilityId} country={country} />, hours: <Hours facilityId={facilityId} />, holidays: <Holidays facilityId={facilityId} />, staff: <Staff facilityId={facilityId} userId={userId} timeZone={timeZone} />, nurse: <NurseIntake />, queue: <Queue />, requests: <AccessRequests timeZone={timeZone} />, policy: <ClinicalPolicy />, review: <Review timeZone={timeZone} />, doctors: <Doctors facilityId={facilityId} timeZone={timeZone} />, medicines: <Medicines country={country} />, dental: <Dental billing={billing} />, displays: <Displays facilityId={facilityId} timeZone={timeZone} />, audit: <Audit />, metrics: <Metrics facilityId={facilityId} />, terms: <Terms timeZone={timeZone} />, notifications: <Notifications />, data: <DataPanel country={country} accessLogPath="/settings?tab=audit" />, services: <Services timeZone={timeZone} />, billing: <><BillingSwitch />{billing && <><BillingSettings />{country === 'IN' && <Razorpay />}</>}</> };
   return <SettingsPage tab={tab} onTab={next => setParams({ tab: next }, { replace: true })} panels={panels} groups={groups} />;
 }

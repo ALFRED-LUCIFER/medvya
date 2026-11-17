@@ -1,6 +1,6 @@
 import { patientDirectory } from '../../shell/domain/navigation';
 
-export type RecordTab = 'summary' | 'details' | 'timeline' | 'documents';
+export type RecordTab = 'summary' | 'details' | 'timeline' | 'documents' | 'dental';
 
 /** What this role may already open of a patient; the routes and the server decide the same, so a tab never widens access. */
 export type RecordAccess = {
@@ -10,6 +10,8 @@ export type RecordAccess = {
   details: boolean;
   /** Documents: clinicians, and the front desk (upload and list only). */
   documents: boolean;
+  /** Dental: the tooth chart and plan (MDV-P8-E02), for the clinical record's roles while the practice has the dental switch on. */
+  dental?: boolean;
 };
 
 /**
@@ -22,6 +24,7 @@ export function recordTabs(patientId: string, access: RecordAccess): { tab: Reco
     ['details', `${patientDirectory.path}/${patientId}`, access.details],
     ['timeline', `/patients/${patientId}/timeline`, access.clinical],
     ['documents', `/patients/${patientId}/docs`, access.documents],
+    ['dental', `/patients/${patientId}/dental`, access.clinical && !!access.dental],
   ];
   return tabs.filter(([, , may]) => may).map(([tab, path]) => ({ tab, path }));
 }

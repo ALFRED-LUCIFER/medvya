@@ -196,7 +196,7 @@ export type LocationChoice = { locations: Location[]; locationId: string; onLoca
 export const settingsTabs = [
   'profile', 'locations', 'hours', 'holidays', 'displays', 'metrics', 'terms',
   'staff', 'doctors',
-  'nurse', 'queue', 'medicines',
+  'nurse', 'queue', 'medicines', 'dental',
   'notifications',
   'requests', 'policy', 'review', 'audit', 'data',
   'services', 'billing',
@@ -207,7 +207,7 @@ export type SettingsTab = (typeof settingsTabs)[number];
 export const settingsGroups = {
   practice: ['profile', 'locations', 'hours', 'holidays', 'displays', 'metrics', 'terms'],
   people: ['staff', 'doctors'],
-  clinical: ['nurse', 'queue', 'medicines'],
+  clinical: ['nurse', 'queue', 'medicines', 'dental'],
   messages: ['notifications'],
   security: ['requests', 'policy', 'review', 'audit', 'data'],
   billing: ['services', 'billing'],

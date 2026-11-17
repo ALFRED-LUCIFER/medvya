@@ -79,6 +79,6 @@ describe('billing settings', () => {
   it('shows Services only while billing is on, and the Billing tab (its switch, #1430) always', () => {
     expect(visibleTabs(false).billing).toEqual(['billing']);
     expect(visibleTabs(true).billing).toEqual(['services', 'billing']);
-    expect(visibleTabs(false).clinical).toEqual(['nurse', 'queue', 'medicines']);
+    expect(visibleTabs(false).clinical).toEqual(['nurse', 'queue', 'medicines', 'dental']); // Dental (MDV-P8-E02): its switch, shown whatever billing is
   });
 });

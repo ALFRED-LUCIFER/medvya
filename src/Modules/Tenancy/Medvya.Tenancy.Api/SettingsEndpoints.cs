@@ -26,6 +26,7 @@ public static class SettingsEndpoints
     /// <summary>The switch and how many patients are with the nurse now, which the owner is told before switching (MDV-P2-055).</summary>
     public sealed record NurseIntakeView(bool Enabled, int WithNurse);
     public sealed record BillingSwitch(bool Enabled);
+    public sealed record DentalSwitch(bool Enabled);
 
     /// <summary>
     /// A setting of the whole organisation (legal profile printed on prescriptions, logo, a new location, queue rule, nurse intake, billing) needs an
@@ -111,6 +112,16 @@ public static class SettingsEndpoints
             await flags.SetAsync(Features.Billing, body.Enabled, "practice", "Billing (MDV-P4-002)", ct);
             return Results.Ok(body);
         }).RequireRelease(Features.Billing).AddEndpointFilter(OrganisationWide);
+
+        // Dental (MDV-P8-E02): the same practice-wide switch for the tooth chart and plan, off until the owner turns it on, and only while Medvya's release
+        // reaches the practice (a clinical feature: everyone only after a dentist's sign-off, MDV-P8-022).
+        g.MapGet("/dental", async ([FromServices] IFeatureFlags flags, CancellationToken ct) =>
+            Results.Ok(new DentalSwitch(await flags.IsEnabledAsync(Features.Dental, ct)))).RequireRelease(Features.Dental);
+        g.MapPut("/dental", async ([FromBody] DentalSwitch body, [FromServices] IFeatureFlags flags, CancellationToken ct) =>
+        {
+            await flags.SetAsync(Features.Dental, body.Enabled, "practice", "Dental chart and plan (MDV-P8-E02)", ct);
+            return Results.Ok(body);
+        }).RequireRelease(Features.Dental).AddEndpointFilter(OrganisationWide);
 
         // Terms of Service and DPA (MDV-P1-019): anyone who administers the practice can see the status; only an owner (practice admin or
         // owner-doctor) can accept, which the service checks. Until accepted, booking and sending are refused (RequireAcceptedTerms).

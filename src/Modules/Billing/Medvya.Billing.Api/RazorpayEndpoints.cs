@@ -44,7 +44,8 @@ public static class RazorpayEndpoints
         // The tenant comes only from the key, never from the payload (whose notes name one).
         // SAFETY: mutation check: entered the tenant named in the payload's notes instead of found.TenantId -> BillingInvoiceTests.AnotherClinicsKeyCannotSettleThisClinicsPayment failed
         if (await store.FindByWebhookKeyAsync(webhookKey, ct) is not { } found) return Results.NotFound();
-        if (http.Request.ContentLength > MaxBody || await ReadAsync(http.Request.Body, ct) is not { } body) return Results.StatusCode(StatusCodes.Status413PayloadTooLarge);
+        // The size limit is enforced on the bytes actually read, not on the caller's Content-Length header.
+        if (await ReadAsync(http.Request.Body, ct) is not { } body) return Results.StatusCode(StatusCodes.Status413PayloadTooLarge);
 
         await using var scope = http.RequestServices.EnterLinkTenant(found.TenantId); // the clinic's RLS context, as for any tenant-bound link
         var account = scope.ServiceProvider.GetRequiredService<IRazorpayAccount>();

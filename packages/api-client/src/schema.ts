@@ -11011,6 +11011,8 @@ export interface components {
             maxDiscountPercent?: null | number | string;
             /** Format: int32 */
             paymentLinkExpiryMinutes?: null | number | string;
+            /** Format: uint32 */
+            version?: null | number | string;
         };
         SaveCustomRole: {
             name?: null | string;

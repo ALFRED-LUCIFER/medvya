@@ -49,7 +49,7 @@ WEEK1 = dt.date(2026, 10, 26)  # keep in sync with tools/prd-extract/render_docs
 PHASE_DIR = {
     "P0": "P0-foundation", "P1": "P1-front-desk", "P2": "P2-doctor-workspace", "P3": "P3-ai-scribe",
     "P4": "P4-clinic-operations", "P5": "P5-commercial-launch", "P6": "P6-clip-advanced-ai",
-    "P7": "P7-hospital-enterprise", "P8": "P8-scale-specialty",
+    "P7": "P7-hospital-enterprise", "P8": "P8-scale-specialty", "P9": "P9-practice-operations",
 }
 SINGLE = {"status", "title", "type", "epic", "prd", "screens", "covers", "priority", "roles", "labels",
           "estimate", "weeks", "depends", "confidence", "sources"}

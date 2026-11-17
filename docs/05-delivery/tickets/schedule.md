@@ -1038,3 +1038,77 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
 | [MDV-P8-007](P8-scale-specialty/MDV-P8-007.md) | Platform: public FHIR APIs, saved migration templates per vendor, specialty templates | P8 | wk 60–64 | 45% |
+
+## Week 65 · 17 Jan 2028 – 21 Jan 2028 · load 3.5 dev-days
+
+| Key | Title | Phase | Window | Confidence |
+|---|---|---|---|---|
+| [MDV-P9-001](P9-practice-operations/MDV-P9-001.md) | P9 intake: adoption target, evidence and rules check for each P9 feature | P9 | wk 65–65 | 85% |
+| [MDV-P9-002](P9-practice-operations/MDV-P9-002.md) | Stock items: categories, units, reorder level and locations (Inventory module) | P9 | wk 65–65 | 65% |
+
+## Week 66 · 24 Jan 2028 – 28 Jan 2028 · load 4.0 dev-days
+
+| Key | Title | Phase | Window | Confidence |
+|---|---|---|---|---|
+| [MDV-P9-003](P9-practice-operations/MDV-P9-003.md) | Batches and expiry: receive with batch and expiry, use first-expiring first, block expired | P9 | wk 66–66 | 70% |
+| [MDV-P9-004](P9-practice-operations/MDV-P9-004.md) | Stock movements: receive, use, adjust and transfer, with reasons and audit | P9 | wk 66–66 | 70% |
+
+## Week 67 · 31 Jan 2028 – 04 Feb 2028 · load 4.0 dev-days
+
+| Key | Title | Phase | Window | Confidence |
+|---|---|---|---|---|
+| [MDV-P9-005](P9-practice-operations/MDV-P9-005.md) | Suppliers and purchase orders: draft, send, receive in part or in full | P9 | wk 67–67 | 65% |
+| [MDV-P9-006](P9-practice-operations/MDV-P9-006.md) | Low-stock and expiry alerts in the notification centre | P9 | wk 67–67 | 75% |
+
+## Week 68 · 07 Feb 2028 – 11 Feb 2028 · load 3.5 dev-days
+
+| Key | Title | Phase | Window | Confidence |
+|---|---|---|---|---|
+| [MDV-P9-007](P9-practice-operations/MDV-P9-007.md) | External lab list and send-out orders from investigation orders | P9 | wk 68–68 | 65% |
+| [MDV-P9-008](P9-practice-operations/MDV-P9-008.md) | Returned lab report goes into results intake | P9 | wk 68–68 | 70% |
+
+## Week 69 · 14 Feb 2028 – 18 Feb 2028 · load 5.0 dev-days
+
+| Key | Title | Phase | Window | Confidence |
+|---|---|---|---|---|
+| [MDV-P9-009](P9-practice-operations/MDV-P9-009.md) | Payment plan on an invoice balance: instalments, due dates and a printed schedule | P9 | wk 69–69 | 60% |
+| [MDV-P9-010](P9-practice-operations/MDV-P9-010.md) | Instalment payments, overdue reminders and plan close | P9 | wk 69–69 | 70% |
+
+## Week 70 · 21 Feb 2028 – 25 Feb 2028 · load 5.0 dev-days
+
+| Key | Title | Phase | Window | Confidence |
+|---|---|---|---|---|
+| [MDV-P9-011](P9-practice-operations/MDV-P9-011.md) | Staff shifts and rota per location | P9 | wk 70–70 | 65% |
+| [MDV-P9-012](P9-practice-operations/MDV-P9-012.md) | Attendance: clock in and out, corrections approved by an admin | P9 | wk 70–70 | 60% |
+| [MDV-P9-013](P9-practice-operations/MDV-P9-013.md) | Staff leave requests and approval; approved doctor leave feeds the schedule | P9 | wk 70–71 | 65% |
+
+## Week 71 · 28 Feb 2028 – 03 Mar 2028 · load 4.0 dev-days
+
+| Key | Title | Phase | Window | Confidence |
+|---|---|---|---|---|
+| [MDV-P9-013](P9-practice-operations/MDV-P9-013.md) | Staff leave requests and approval; approved doctor leave feeds the schedule | P9 | wk 70–71 | 65% |
+| [MDV-P9-014](P9-practice-operations/MDV-P9-014.md) | Calendar sync: a doctor's appointments as busy blocks in Google or Outlook | P9 | wk 71–71 | 55% |
+
+## Week 72 · 06 Mar 2028 – 10 Mar 2028 · load 5.0 dev-days
+
+| Key | Title | Phase | Window | Confidence |
+|---|---|---|---|---|
+| [MDV-P9-015](P9-practice-operations/MDV-P9-015.md) | Patient segments: saved filters for campaigns and reports | P9 | wk 72–72 | 60% |
+| [MDV-P9-016](P9-practice-operations/MDV-P9-016.md) | Campaign messages to a segment with consent, quiet hours, DLT template and opt-out | P9 | wk 72–72 | 50% |
+
+## Week 73 · 13 Mar 2028 – 17 Mar 2028 · load 5.5 dev-days ⚠ over capacity
+
+| Key | Title | Phase | Window | Confidence |
+|---|---|---|---|---|
+| [MDV-P9-017](P9-practice-operations/MDV-P9-017.md) | Patient feedback after a visit: short survey and results per doctor | P9 | wk 73–73 | 65% |
+| [MDV-P9-018](P9-practice-operations/MDV-P9-018.md) | Loyalty points for visits and referrals | P9 | wk 73–73 | 40% |
+| [MDV-P9-019](P9-practice-operations/MDV-P9-019.md) | No-show risk on tomorrow's list, as an explained draft | P9 | wk 73–74 | 50% |
+
+## Week 74 · 20 Mar 2028 – 24 Mar 2028 · load 8.5 dev-days ⚠ over capacity
+
+| Key | Title | Phase | Window | Confidence |
+|---|---|---|---|---|
+| [MDV-P9-019](P9-practice-operations/MDV-P9-019.md) | No-show risk on tomorrow's list, as an explained draft | P9 | wk 73–74 | 50% |
+| [MDV-P9-020](P9-practice-operations/MDV-P9-020.md) | Stock forecast: days until reorder per item | P9 | wk 74–74 | 60% |
+| [MDV-P9-021](P9-practice-operations/MDV-P9-021.md) | Cash-flow forecast for owners from invoices, plans and dues | P9 | wk 74–74 | 55% |
+| [MDV-P9-022](P9-practice-operations/MDV-P9-022.md) | Ask a question about clinic reports in plain English | P9 | wk 74–74 | 45% |

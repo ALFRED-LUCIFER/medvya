@@ -18,6 +18,7 @@ Weeks assume one full-time developer with AI coding help, using the screens alre
 | P6 | Wearable capture and advanced AI | Weeks 33–42 (after hardware is stable) | 07 Jun 2027 | 13 Aug 2027 | R6 · Clip | Doctors issued a Medvya clip, and their practice admins |
 | P7 | Hospital enterprise and integrations | Weeks 36–60 | 28 Jun 2027 | 17 Dec 2027 | R7 · Enterprise | First hospital customer: IT, administrators and clinicians |
 | P8 | Scale and specialty features | Week 52 onward | 18 Oct 2027 | 14 Jan 2028 | R8 · Ongoing | All customers, by demand |
+| P9 | Practice operations and engagement | Week 65 onward | 17 Jan 2028 | 24 Mar 2028 | R9 · Ongoing | All customers, by demand |
 
 ## Milestones
 
@@ -43,6 +44,7 @@ Weeks assume one full-time developer with AI coding help, using the screens alre
 | P6 | R6 · Clip | Pair a clip, record without a phone on the desk, get mixed-language notes and a private earpiece assistant. |
 | P7 | R7 · Enterprise | Connect Medvya to the hospital HIS, sign in with hospital SSO, and write signed notes back with conflicts surfaced. |
 | P8 | R8 · Ongoing | Features released individually as minor versions. |
+| P9 | R9 · Ongoing | Features released individually as minor versions. |
 
 ## Calendar risks spotted while dating the plan
 

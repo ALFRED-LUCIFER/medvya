@@ -29,7 +29,7 @@
 | Key | Status | Title | Type | Prio | PRD | Screens | Est | Weeks | Dates | Confidence |
 |---|---|---|---|---|---|---|---|---|---|---|
 | [MDV-P4-001](MDV-P4-001.md) | Done | Money and legal document numbering foundation (minor units, DOC_SEQUENCE per country and financial year) | Task | MUST | P4-02 | — | 2 | 17–17 | 15 Feb → 19 Feb 2027 | 88% High |
-| [MDV-P4-002](MDV-P4-002.md) | To do | Services and fees catalogue with price versions, India GST/SAC, UAE CPT/VAT, payer price lists and packages (F-11) | Story | MUST | P4-01 | F-11 | 3 | 17–18 | 15 Feb → 26 Feb 2027 | 72% Medium |
+| [MDV-P4-002](MDV-P4-002.md) | To do | Services and fees catalogue with price versions, per-doctor prices, India GST/SAC and billing settings (F-11) | Story | MUST | P4-01 | F-11 | 3 | 17–18 | 15 Feb → 26 Feb 2027 | 72% Medium |
 | [MDV-P4-032](MDV-P4-032.md) | To do | Apply for payment gateway merchant accounts and WhatsApp Business template approvals | Chore | MUST | P4-03, P4-09 | — | 0.5 | 17–17 | 15 Feb → 19 Feb 2027 | 60% Low |
 | [MDV-P4-003](MDV-P4-003.md) | To do | Price list import tool (billing setup service) | Task | MUST | P4-01 | — | 1.5 | 18–18 | 22 Feb → 26 Feb 2027 | 85% High |
 | [MDV-P4-004](MDV-P4-004.md) | To do | Charge capture and invoice lifecycle (draft → issued → paid/failed/refunded), separate from clinical sign-off (P-06) | Story | MUST | P4-02 | P-06 | 3 | 18–19 | 22 Feb → 05 Mar 2027 | 86% High |

@@ -334,6 +334,26 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         ["/v1/waitlist/{id:guid}/offer"] = "as above",
         ["/v1/waitlist/{id:guid}/accept"] = "as above",
         ["/v1/waitlist/{id:guid}/decline"] = "as above",
+        // MDV-P4-002: behind billing.invoices, which this matrix's tenants do not have (every call is 404); another tenant's service is invisible to the EF filter
+        // and to row-level security, and cannot be priced (BillingCatalogueTests.AnotherTenantSeesNoneOfTheCatalogueAndCannotWriteIntoIt).
+        ["/v1/settings/services/{id:guid}"] = "billing catalogue: see the comment above",
+        ["/v1/settings/services/{id:guid}/archive"] = "as above",
+        ["/v1/settings/services/{id:guid}/unarchive"] = "as above",
+        ["/v1/settings/services/{id:guid}/prices"] = "as above",
+        // MDV-P4-004: also behind billing.invoices; another tenant's or another location's bill is not found (EF filter, row-level security and the
+        // facility check), proved by BillingInvoiceTests.AnotherTenantSeesNoneOfTheBillsAndCannotWriteIntoThem.
+        ["/v1/billing/invoices/{id:guid}"] = "bills: see the comment above",
+        ["/v1/billing/visits/{appointmentId:guid}/invoice"] = "as above: a visit of another tenant or location is not found (IConsultVisits, facility check)",
+        ["/v1/billing/invoices/{id:guid}/lines"] = "as above",
+        ["/v1/billing/invoices/{id:guid}/lines/{lineId:guid}"] = "as above",
+        ["/v1/billing/invoices/{id:guid}/lines/{lineId:guid}/remove"] = "as above",
+        ["/v1/billing/invoices/{id:guid}/discount"] = "as above",
+        ["/v1/billing/invoices/{id:guid}/issue"] = "as above",
+        ["/v1/billing/invoices/{id:guid}/cancel"] = "as above",
+        ["/v1/billing/invoices/{id:guid}/payments"] = "as above",
+        ["/v1/billing/invoices/{id:guid}/payment-link"] = "as above",
+        ["/v1/billing/invoices/{id:guid}/payments/{paymentId:guid}/check"] = "as above",
+        ["/v1/billing/invoices/{id:guid}/payments/{paymentId:guid}/cancel"] = "as above",
         ["/v1/patients/{patientId:guid}/care-goals/{goalId:guid}"] = "two ids: only a goal of the route's own patient is found, another's is not (ChronicCareTests, with row-level security); the patient's goal route is in the matrix",
     };
 

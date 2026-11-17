@@ -67,9 +67,10 @@ function Board({ facilityId, online, canMove, canCancel, registerPath, walkInPat
     {/* Words only beside Walk-in: the board's header is one row at 1024 px (MDV-P1-095). */}
     {registerPath && <Link to={registerPath} className={buttonVariants({ variant: walkInPath || doctor ? 'outline' : 'default' })}>{!walkInPath && <UserPlus aria-hidden />}{t('nav.register')}</Link>}
   </> : undefined;
-  const payment = billingPath
-    ? <Link to={billingPath} className={buttonVariants({ variant: 'outline', className: 'whitespace-normal' })}><ReceiptText aria-hidden />{t('board.action.takePayment')}</Link>
-    : undefined;
+  const payment = billingPath ? (card: BoardCard) => (
+    <Link to={`${billingPath}/visit/${card.id}`} className={buttonVariants({ variant: 'outline', className: 'whitespace-normal' })}
+      aria-label={t('board.action.takePaymentFor', { name: card.patientName || t('board.unknownPatient') })}><ReceiptText aria-hidden />{t('board.action.takePayment')}</Link>
+  ) : undefined;
   const waitlist = waitlistPath ? <Link to={waitlistPath} className={buttonVariants({ variant: 'outline' })}>{t('waitlist.title')}</Link> : undefined;
   const consultAction = doctor ? (card: BoardCard, primary: boolean) => (canConsult(card.state) ? <Consult key={card.id} card={card} online={online} primary={primary} /> : null) : undefined;
   const nurseStep = steps.nurse ? (card: BoardCard) => (intakePath

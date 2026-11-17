@@ -12,10 +12,11 @@ namespace Medvya.Tenancy.Infrastructure;
 
 /// <summary>
 /// Doctors added in clinic mode (MDV-P1-007). Adding creates the Invited membership, profile, licence (attested by the owner, ADR-016) and invitation in
-/// one transaction through <see cref="IInvitations"/>. The signature image goes to the same private container as logos under its own key.
+/// one transaction through <see cref="IInvitations"/>. The signature image goes to the same private container as logos under its own key. Fees are the doctor's
+/// prices in the Billing catalogue (<see cref="IDoctorFees"/>, MDV-P4-002), saved in that same transaction.
 /// </summary>
-public sealed class Doctors(TenancyDbContext db, ICurrentTenant tenant, ICurrentUser user, ICurrentFacility facility, IInvitations invitations, IAuditLog audit, ILogoStore store, TimeProvider clock,
-    IStaffAccess access)
+public sealed class Doctors(TenancyDbContext db, ICurrentTenant tenant, ICurrentUser user, ICurrentFacility facility, IInvitations invitations, IAuditLog audit, ILogoStore store,
+    IDoctorFees fees, TimeProvider clock, IStaffAccess access)
     : IDoctors
 {
     const long MaxFeeMinor = 100_000_000;
@@ -26,14 +27,15 @@ public sealed class Doctors(TenancyDbContext db, ICurrentTenant tenant, ICurrent
     public async Task<DoctorList> ListAsync(CancellationToken cancellationToken = default)
     {
         var rules = await RulesAsync(cancellationToken);
-        var defaults = await db.PracticeDefaultsSet.AsNoTracking().SingleOrDefaultAsync(cancellationToken);
-        return new(await QueryAsync(null, rules.Currency, cancellationToken), new(defaults?.NewVisitFeeMinor ?? 0, defaults?.FollowUpFeeMinor ?? 0, rules.Currency), rules.Authorities);
+        var defaults = await fees.DefaultsAsync(cancellationToken);
+        return new(await QueryAsync(null, rules.Currency, cancellationToken), new(defaults.NewVisitMinor ?? 0, defaults.FollowUpMinor ?? 0, rules.Currency), rules.Authorities);
     }
 
     public async Task<DoctorView?> AddAsync(AddDoctor command, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
-        var rules = await RulesAsync(cancellationToken);
+        var country = await CountryAsync(cancellationToken);
+        var rules = OnboardingRules.For(country) ?? throw new InvalidOperationException("Unsupported country.");
         var (name, email, specialty) = (Clean(command.FullName), Clean(command.Email), Clean(command.Specialty));
         var (qualifications, languages) = (Clean(command.Qualifications), Clean(command.Languages));
         var errors = new List<ValidationError>();
@@ -62,7 +64,7 @@ public sealed class Doctors(TenancyDbContext db, ICurrentTenant tenant, ICurrent
             db.DoctorProfiles.Add(new DoctorProfile
             {
                 MembershipId = m.Id, TenantId = TenantId, FullName = name!, Specialty = specialty, Qualifications = qualifications, Languages = languages,
-                NewVisitFeeMinor = command.NewVisitFee!.Value, FollowUpFeeMinor = command.FollowUpFee!.Value, ChangedBy = user.UserId, ChangedAt = now,
+                ChangedBy = user.UserId, ChangedAt = now,
                 Room = m.FacilityId == command.FacilityId ? room : null, // a room belongs to one location
             });
             db.DoctorLicences.Add(new DoctorLicence
@@ -76,7 +78,7 @@ public sealed class Doctors(TenancyDbContext db, ICurrentTenant tenant, ICurrent
                 Id = Guid.CreateVersion7(), TenantId = TenantId, ActorUserId = user.UserId, Section = "doctor", ResourceId = m.Id, OccurredAt = now,
                 After = JsonSerializer.Serialize(new { facilityId = command.FacilityId, authority = command.Authority, number = command.LicenceNumber!.Trim(), expiresOn = command.ExpiresOn, licence = "Attested" }),
             });
-        }, command.AlsoFacilityIds, cancellationToken);
+        }, command.AlsoFacilityIds, (tx, ct) => fees.SetAsync(id, country, command.NewVisitFee!.Value, command.FollowUpFee!.Value, tx, ct), cancellationToken);
         return created is null ? null : (await QueryAsync(id, rules.Currency, cancellationToken))[0];
     }
 
@@ -166,8 +168,9 @@ public sealed class Doctors(TenancyDbContext db, ICurrentTenant tenant, ICurrent
         await db.Memberships.Where(m => m.Id == doctorId).Select(m => (Guid?)m.FacilityId).SingleOrDefaultAsync(ct) is { } at
         && await access.AccessAsync(Capability.StaffRolesIntegrations, at, ct) == Access.Config;
 
-    async Task<OnboardingRules> RulesAsync(CancellationToken ct) =>
-        OnboardingRules.For(await db.Tenants.Select(t => t.CountryCode).SingleAsync(ct)) ?? throw new InvalidOperationException("Unsupported country.");
+    async Task<OnboardingRules> RulesAsync(CancellationToken ct) => OnboardingRules.For(await CountryAsync(ct)) ?? throw new InvalidOperationException("Unsupported country.");
+
+    Task<string> CountryAsync(CancellationToken ct) => db.Tenants.Select(t => t.CountryCode).SingleAsync(ct);
 
     async Task<List<DoctorView>> QueryAsync(Guid? id, string currency, CancellationToken ct)
     {
@@ -182,10 +185,11 @@ public sealed class Doctors(TenancyDbContext db, ICurrentTenant tenant, ICurrent
             let attester = (from am in db.Memberships join ap in db.DoctorProfiles on am.Id equals ap.MembershipId where am.UserId == l.AttestedBy select ap.FullName).FirstOrDefault()
             select new { m.Id, m.UserId, p, m.FacilityId, Facility = f.Name, m.Status, Licence = l, attester }).ToListAsync(ct);
         var today = DateOnly.FromDateTime(clock.GetUtcNow().UtcDateTime);
+        var fee = await fees.ForDoctorsAsync([.. rows.Select(r => r.Id)], ct);
         return [.. rows.Select(r => new DoctorView(
             r.Id, r.p.FullName, r.p.Specialty, r.p.Qualifications, r.p.Languages, r.FacilityId, r.Facility, r.Status,
             r.Licence.Authority, r.Licence.Number, r.Licence.Category, r.Licence.ExpiresOn, LicenceRules.IsExpired(r.Licence, today), r.Licence.AttestedBy, r.attester, r.Licence.AttestedAt,
-            r.p.SignatureKey is not null, r.p.NewVisitFeeMinor, r.p.FollowUpFeeMinor, currency, r.p.Room, r.UserId is not null && r.UserId == user.UserId))];
+            r.p.SignatureKey is not null, fee[r.Id].NewVisitMinor ?? 0, fee[r.Id].FollowUpMinor ?? 0, currency, r.p.Room, r.UserId is not null && r.UserId == user.UserId))];
     }
 
     void Licence(List<ValidationError> errors, OnboardingRules rules, string? authority, string? number, string? category, DateOnly? expiresOn, string? certificate) =>

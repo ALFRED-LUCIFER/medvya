@@ -147,6 +147,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Medvya.Prescribing.Api", "s
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Medvya.Prescribing.SharedList", "src\Modules\Prescribing\Medvya.Prescribing.SharedList\Medvya.Prescribing.SharedList.csproj", "{F5A40CD6-AD0B-4B57-9045-FE5370EDDFD1}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Medvya.Billing.Api", "src\Modules\Billing\Medvya.Billing.Api\Medvya.Billing.Api.csproj", "{A8A93770-8A87-4757-B0CA-F06B3A6CCA55}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -793,6 +795,18 @@ Global
 		{F5A40CD6-AD0B-4B57-9045-FE5370EDDFD1}.Release|x64.Build.0 = Release|Any CPU
 		{F5A40CD6-AD0B-4B57-9045-FE5370EDDFD1}.Release|x86.ActiveCfg = Release|Any CPU
 		{F5A40CD6-AD0B-4B57-9045-FE5370EDDFD1}.Release|x86.Build.0 = Release|Any CPU
+		{A8A93770-8A87-4757-B0CA-F06B3A6CCA55}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A8A93770-8A87-4757-B0CA-F06B3A6CCA55}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A8A93770-8A87-4757-B0CA-F06B3A6CCA55}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{A8A93770-8A87-4757-B0CA-F06B3A6CCA55}.Debug|x64.Build.0 = Debug|Any CPU
+		{A8A93770-8A87-4757-B0CA-F06B3A6CCA55}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{A8A93770-8A87-4757-B0CA-F06B3A6CCA55}.Debug|x86.Build.0 = Debug|Any CPU
+		{A8A93770-8A87-4757-B0CA-F06B3A6CCA55}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A8A93770-8A87-4757-B0CA-F06B3A6CCA55}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A8A93770-8A87-4757-B0CA-F06B3A6CCA55}.Release|x64.ActiveCfg = Release|Any CPU
+		{A8A93770-8A87-4757-B0CA-F06B3A6CCA55}.Release|x64.Build.0 = Release|Any CPU
+		{A8A93770-8A87-4757-B0CA-F06B3A6CCA55}.Release|x86.ActiveCfg = Release|Any CPU
+		{A8A93770-8A87-4757-B0CA-F06B3A6CCA55}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -865,5 +879,6 @@ Global
 		{F182E7D2-6DF3-4719-8368-4E5FCDA590E7} = {5400918A-A59B-A9D5-04CC-324F9BAF43CE}
 		{C55A1240-0249-4765-8D67-EE71C14716BE} = {5400918A-A59B-A9D5-04CC-324F9BAF43CE}
 		{F5A40CD6-AD0B-4B57-9045-FE5370EDDFD1} = {5400918A-A59B-A9D5-04CC-324F9BAF43CE}
+		{A8A93770-8A87-4757-B0CA-F06B3A6CCA55} = {61DCC6D7-ECE4-129F-6A42-39B2DD414C68}
 	EndGlobalSection
 EndGlobal

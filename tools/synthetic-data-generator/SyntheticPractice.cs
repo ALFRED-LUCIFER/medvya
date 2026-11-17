@@ -75,14 +75,15 @@ public static class SyntheticPractice
                 Id = p.MembershipId, TenantId = tenant, UserId = p.UserId, FacilityId = facility, Role = p.Role, Status = MembershipStatus.Active,
             }));
             var listed = await db.DoctorLicences.Select(l => l.MembershipId).ToListAsync(ct);
+            var added = new List<Guid>();
             for (var i = 0; i < Doctors.Length; i++)
             {
                 var (d, m) = (Doctors[i], people[i].MembershipId);
                 if (listed.Contains(m)) continue;
+                added.Add(m);
                 db.DoctorProfiles.Add(new DoctorProfile
                 {
-                    MembershipId = m, TenantId = tenant, FullName = people[i].Name, Specialty = d.Specialty, Qualifications = d.Qualifications, Languages = "English, Malayalam",
-                    NewVisitFeeMinor = 50_000, FollowUpFeeMinor = 30_000, ChangedAt = at,
+                    MembershipId = m, TenantId = tenant, FullName = people[i].Name, Specialty = d.Specialty, Qualifications = d.Qualifications, Languages = "English, Malayalam", ChangedAt = at,
                 });
                 db.DoctorLicences.Add(new DoctorLicence
                 {
@@ -91,7 +92,7 @@ public static class SyntheticPractice
                     AttestedAt = at, AttestedBy = by,
                 });
             }
-            await db.SaveChangesAsync(ct);
+            await SyntheticSeed.SaveWithFeesAsync(db, connectionString, tenant, added, ct);
             doctors = await db.Memberships.CountAsync(m => m.Role == Role.HospitalDoctor, ct);
             nurses = await db.Memberships.CountAsync(m => m.Role == Role.Nurse, ct);
             receptionists = await db.Memberships.CountAsync(m => m.Role == Role.Receptionist, ct);
@@ -161,15 +162,16 @@ public static class SyntheticPractice
                 db.TermsAcceptances.Add(new TermsAcceptance { Id = Det(tenant, "terms:" + TermsPolicy.CurrentVersion), TenantId = tenant,
                     TermsVersion = TermsPolicy.CurrentVersion, AcceptedAt = at, AcceptedBy = by });
             var members = await db.Memberships.Select(m => m.Id).ToListAsync(ct);
+            var added = new List<Guid>();
             for (var i = 0; i < count; i++)
             {
                 var p = people[i];
                 if (members.Contains(p.MembershipId)) continue;
+                added.Add(p.MembershipId);
                 db.Memberships.Add(new Membership { Id = p.MembershipId, TenantId = tenant, UserId = p.UserId, FacilityId = facility, Role = Role.HospitalDoctor, Status = MembershipStatus.Active });
                 db.DoctorProfiles.Add(new DoctorProfile
                 {
-                    MembershipId = p.MembershipId, TenantId = tenant, FullName = p.Name, Specialty = "General Practice", Qualifications = "MBBS", Languages = "English",
-                    NewVisitFeeMinor = 50_000, FollowUpFeeMinor = 30_000, ChangedAt = at,
+                    MembershipId = p.MembershipId, TenantId = tenant, FullName = p.Name, Specialty = "General Practice", Qualifications = "MBBS", Languages = "English", ChangedAt = at,
                 });
                 db.DoctorLicences.Add(new DoctorLicence
                 {
@@ -177,7 +179,7 @@ public static class SyntheticPractice
                     ExpiresOn = DateOnly.FromDateTime(at.UtcDateTime).AddYears(5), AttestedAt = at, AttestedBy = by,
                 });
             }
-            await db.SaveChangesAsync(ct);
+            await SyntheticSeed.SaveWithFeesAsync(db, connectionString, tenant, added, ct);
         }
 
         await using (var identity = new IdentityDbContext(new DbContextOptionsBuilder<IdentityDbContext>().UseNpgsql(connectionString).Options))

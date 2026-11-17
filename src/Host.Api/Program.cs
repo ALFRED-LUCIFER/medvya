@@ -16,6 +16,8 @@ using Medvya.Notifications.Infrastructure;
 using Microsoft.AspNetCore.SignalR;
 using Medvya.Audit.Api;
 using Medvya.Audit.Application;
+using Medvya.Billing.Api;
+using Medvya.Billing.Infrastructure;
 using Medvya.Audit.Infrastructure;
 using Medvya.BuildingBlocks.Domain;
 using Medvya.BuildingBlocks.Infrastructure;
@@ -74,7 +76,7 @@ if (builder.Configuration.GetConnectionString("Medvya") is { } sql)
         .AddIdentityModule(sql).AddPatientsModule(sql).AddSchedulingModule(sql).AddEncountersModule(sql, builder.Configuration, builder.Environment.IsDevelopment()).AddPrescribingModule(sql)
         .AddNotificationsModule(sql, smsSink: builder.Environment.IsDevelopment() && builder.Configuration["Notifications:Sms:Provider"] == "Sink", pushLog: builder.Environment.IsDevelopment())
         .AddScoped<IReminderConsent, PatientReminderConsent>() // after the module: replaces its deny-all default (MDV-P1-019)
-        .AddLeadsModule(sql, builder.Configuration.GetSection("Leads:Email").Get<LeadsEmailOptions>() ?? new()).AddCapabilityPolicies();
+        .AddLeadsModule(sql, builder.Configuration.GetSection("Leads:Email").Get<LeadsEmailOptions>() ?? new()).AddBillingModule(sql).AddCapabilityPolicies();
     DatabaseWarmup.AddTo(builder.Services); // after the modules: it warms the DbContexts they registered (#912)
 }
 // Ledger digests (MDV-P0-036). Development signs them only when a key is set outside the repository (environment Audit__DigestKey);
@@ -184,6 +186,8 @@ app.MapOrderEndpoints();
 app.MapPrescriptionEndpoints();
 app.MapReferralEndpoints();
 app.MapNoteTemplateEndpoints();
+app.MapBillingCatalogue();
+app.MapInvoices();
 if (app.Environment.IsDevelopment() && app.Configuration["Authentication:Oidc:Authority"]?.EndsWith(DevIdentityProvider.Path, StringComparison.Ordinal) == true)
     app.MapDevIdentityProvider(Medvya.Identity.Domain.IdentityProviders.Development, async http =>
         await http.RequestServices.GetRequiredService<Medvya.Identity.Infrastructure.Persistence.IdentityDbContext>().Users.AsNoTracking()

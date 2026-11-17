@@ -23,22 +23,24 @@ public sealed class InvitationOptions
 }
 
 public sealed partial class Invitations(TenancyDbContext db, ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, IEmailSender mail, IOptions<InvitationOptions> options,
-    IStaffAccess access, ILogger<Invitations>? log = null, StarterPlan? plan = null, ILogoStore? logos = null, TimeProvider? clock = null)
+    IStaffAccess access, ILogger<Invitations>? log = null, StarterPlan? plan = null, ILogoStore? logos = null, IDoctorFees? fees = null, TimeProvider? clock = null)
     : IInvitations
 {
     public async Task<IReadOnlyList<FacilityOption>> FacilitiesAsync(CancellationToken cancellationToken = default) =>
         await db.Facilities.OrderBy(f => f.Name).Select(f => new FacilityOption(f.Id, f.Name)).ToListAsync(cancellationToken);
 
     public Task<InvitationCreated?> CreateAsync(string email, Role role, Guid facilityId, Guid? customRoleId = null, IReadOnlyList<Guid>? alsoFacilityIds = null, CancellationToken cancellationToken = default) =>
-        CreateCoreAsync(email, role, facilityId, customRoleId, null, false, alsoFacilityIds, cancellationToken);
+        CreateCoreAsync(email, role, facilityId, customRoleId, null, null, false, alsoFacilityIds, cancellationToken);
 
-    public Task<InvitationCreated?> CreateAsync(string email, Role role, Guid facilityId, Action<Membership> stage, IReadOnlyList<Guid>? alsoFacilityIds = null, CancellationToken cancellationToken = default) =>
-        CreateCoreAsync(email, role, facilityId, null, stage, false, alsoFacilityIds, cancellationToken);
+    public Task<InvitationCreated?> CreateAsync(string email, Role role, Guid facilityId, Action<Membership> stage, IReadOnlyList<Guid>? alsoFacilityIds,
+        Func<DbTransaction, CancellationToken, Task> saved, CancellationToken cancellationToken = default) =>
+        CreateCoreAsync(email, role, facilityId, null, stage, saved, false, alsoFacilityIds, cancellationToken);
 
     public Task<InvitationCreated?> CreateAndEmailLaterAsync(string email, Role role, Guid facilityId, CancellationToken cancellationToken = default) =>
-        CreateCoreAsync(email, role, facilityId, null, null, true, null, cancellationToken);
+        CreateCoreAsync(email, role, facilityId, null, null, null, true, null, cancellationToken);
 
-    async Task<InvitationCreated?> CreateCoreAsync(string email, Role role, Guid facilityId, Guid? customRoleId, Action<Membership>? stage, bool emailLater, IReadOnlyList<Guid>? alsoFacilityIds, CancellationToken cancellationToken)
+    async Task<InvitationCreated?> CreateCoreAsync(string email, Role role, Guid facilityId, Guid? customRoleId, Action<Membership>? stage,
+        Func<DbTransaction, CancellationToken, Task>? saved, bool emailLater, IReadOnlyList<Guid>? alsoFacilityIds, CancellationToken cancellationToken)
     {
         email = Valid(email);
         // Every route gets the same role rule (#875): staff roles only here; a doctor only through Settings → Doctors, which stages the
@@ -68,7 +70,7 @@ public sealed partial class Invitations(TenancyDbContext db, ICurrentTenant tena
         var membership = new Membership { Id = Guid.CreateVersion7(), TenantId = tenantId, FacilityId = facilityId, Role = role, Status = MembershipStatus.Invited, CustomRoleId = customRoleId };
         db.Memberships.Add(membership);
         stage?.Invoke(membership);
-        return await IssueAsync(membership, facility, email, null, emailLater, also, cancellationToken);
+        return await IssueAsync(membership, facility, email, null, emailLater, also, cancellationToken, saved);
     }
 
     public async Task<InvitationCreated?> ResendAsync(Guid invitationId, CancellationToken cancellationToken = default)
@@ -101,7 +103,8 @@ public sealed partial class Invitations(TenancyDbContext db, ICurrentTenant tena
     }
 
     /// <summary>Saves a fresh invitation (and the membership when new) with its audit row and sends the email; a resend revokes the old link in the same transaction.</summary>
-    async Task<InvitationCreated> IssueAsync(Membership membership, Facility facility, string email, Invitation? superseded, bool emailLater, Guid[] also, CancellationToken cancellationToken)
+    async Task<InvitationCreated> IssueAsync(Membership membership, Facility facility, string email, Invitation? superseded, bool emailLater, Guid[] also, CancellationToken cancellationToken,
+        Func<DbTransaction, CancellationToken, Task>? saved = null)
     {
         var tenantId = membership.TenantId;
         var inviter = user.UserId ?? throw new InvalidOperationException("No signed-in user.");
@@ -127,6 +130,7 @@ public sealed partial class Invitations(TenancyDbContext db, ICurrentTenant tena
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
         if (superseded is null) await (plan ?? new()).EnsureRoomAsync(db, tenantId, membership.Role, cancellationToken); // a resend adds no seat
         await db.SaveChangesAsync(cancellationToken);
+        if (saved is not null) await saved(tx.GetDbTransaction(), cancellationToken);
         if (emailLater)
         {
             await Audit(tenantId, inviter, "invitation.create", invitation.Id, now, tx.GetDbTransaction(), cancellationToken);
@@ -226,10 +230,12 @@ public sealed partial class Invitations(TenancyDbContext db, ICurrentTenant tena
         membership.UserId = userId;
         membership.Status = MembershipStatus.Active;
         // The other locations the owner granted with the invitation (MDV-P1-071); a place the person already holds is left as it is.
+        var doctors = new List<(Guid From, Guid To)>();
         foreach (var also in invitation.AlsoFacilityIds)
             if (!await db.Memberships.AnyAsync(m => m.UserId == userId && m.FacilityId == also, cancellationToken))
-                await Locations.AddAsync(db, membership, also, cancellationToken);
+                await Locations.AddAsync(db, membership, also, doctors, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
+        await Locations.CopyFeesAsync(fees, doctors, tx.GetDbTransaction(), cancellationToken);
         await Audit(t.TenantId, userId, "invitation.accept", invitation.Id, now, tx.GetDbTransaction(), cancellationToken);
         await tx.CommitAsync(cancellationToken);
         return true;

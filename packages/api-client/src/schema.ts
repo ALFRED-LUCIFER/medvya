@@ -9510,6 +9510,842 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/settings/services": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    archived?: boolean;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["SaveService"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/settings/services/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["SaveService"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/settings/services/{id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/settings/services/{id}/unarchive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/settings/services/{id}/prices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["AddPrice"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/settings/billing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["SaveBillingSettings"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/billing/services": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/billing/invoices/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["InvoiceSearch"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/billing/invoices/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/billing/invoices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["NewInvoice"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/billing/visits/{appointmentId}/invoice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    appointmentId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/billing/invoices/{id}/lines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["AddLine"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/billing/invoices/{id}/lines/{lineId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    lineId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["UpdateLine"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/billing/invoices/{id}/lines/{lineId}/remove": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    lineId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["InvoiceVersion"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/billing/invoices/{id}/discount": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["SetDiscount"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/billing/invoices/{id}/issue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["InvoiceVersion"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/billing/invoices/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["CancelInvoice"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/billing/invoices/{id}/payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["RecordPayment"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/billing/invoices/{id}/payment-link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/billing/invoices/{id}/payments/{paymentId}/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    paymentId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/billing/invoices/{id}/payments/{paymentId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    paymentId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -9555,6 +10391,14 @@ export interface components {
             followUpFee?: null | number | string;
             room?: null | string;
         };
+        AddLine: {
+            /** Format: uuid */
+            serviceId?: null | string;
+            /** Format: int32 */
+            quantity?: null | number | string;
+            /** Format: uint32 */
+            version?: null | number | string;
+        };
         AddLocation: {
             name?: null | string;
             address?: null | string;
@@ -9583,6 +10427,14 @@ export interface components {
         AddOrderSetOrders: {
             /** Format: uuid */
             orderSetId: null | string;
+        };
+        AddPrice: {
+            /** Format: uuid */
+            doctorId?: null | string;
+            /** Format: int64 */
+            amountMinor?: null | number | string;
+            /** Format: date */
+            effectiveOn?: null | string;
         };
         AddProblem: {
             code: null | string;
@@ -9819,6 +10671,11 @@ export interface components {
             reason?: null | components["schemas"]["CancelReason"];
             note?: null | string;
         };
+        CancelInvoice: {
+            reason?: null | string;
+            /** Format: uint32 */
+            version?: null | number | string;
+        };
         /** @enum {unknown} */
         CancelReason: "PatientRequest" | "PatientUnwell" | "DoctorUnavailable" | "BookedInError" | "ClinicClosed" | "Other" | null;
         CancelRx: {
@@ -9933,6 +10790,8 @@ export interface components {
         };
         /** @enum {unknown} */
         ConsentType: "Treatment" | "Reminders" | "InformationExchange" | "Portal" | "Marketing";
+        /** @enum {unknown} */
+        ConsultationKind: "New" | "FollowUp" | null;
         ContactChange: {
             mobile: null | string;
             alternatePhone: null | string;
@@ -10261,6 +11120,21 @@ export interface components {
             /** Format: uuid */
             facilityId: string;
         };
+        InvoiceSearch: {
+            state?: null | components["schemas"]["InvoiceState"];
+            /** Format: date */
+            from?: null | string;
+            /** Format: date */
+            to?: null | string;
+            /** Format: uuid */
+            patientId?: null | string;
+        };
+        /** @enum {unknown} */
+        InvoiceState: "Draft" | "Issued" | "PartlyPaid" | "Paid" | "Cancelled" | null;
+        InvoiceVersion: {
+            /** Format: uint32 */
+            version?: null | number | string;
+        };
         LicenceAuthority: {
             code: string;
             name: string;
@@ -10293,6 +11167,10 @@ export interface components {
         MilestoneAnswerer: "Parent" | "Clinician" | null;
         MoveVisit: {
             state?: null | components["schemas"]["AppointmentState"];
+        };
+        NewInvoice: {
+            /** Format: uuid */
+            patientId?: null | string;
         };
         NextVisit: {
             /** Format: uuid */
@@ -10419,6 +11297,8 @@ export interface components {
         };
         /** @enum {unknown} */
         PayerKind: "SelfPay" | "Corporate" | "PrivateInsurance" | "GovernmentScheme";
+        /** @enum {unknown} */
+        PaymentMethod: "Cash" | "Card" | "UpiDirect" | "RazorpayLink";
         /** @enum {unknown} */
         PilotMetric: "CheckInSeconds" | "NoShowPercent" | "DoubleBookings" | "ReminderDeliveryPercent";
         PilotMetrics: {
@@ -10608,6 +11488,12 @@ export interface components {
             chiefComplaint: null | string;
             vitals: null | components["schemas"]["VitalReading"][];
         };
+        RecordPayment: {
+            method?: null | components["schemas"]["PaymentMethod"];
+            /** Format: int64 */
+            amountMinor?: null | number | string;
+            reference?: null | string;
+        };
         /** @enum {unknown} */
         ReferralChannel: "Print" | "Email" | "PatientCarries" | null;
         /** @enum {unknown} */
@@ -10716,6 +11602,19 @@ export interface components {
             version?: null | string;
             actions?: components["schemas"]["AppointmentAction"][];
         };
+        SaveBillingSettings: {
+            invoicePrefix?: null | string;
+            receiptPrefix?: null | string;
+            creditNotePrefix?: null | string;
+            paymentMethods?: null | components["schemas"]["PaymentMethod"][];
+            discountReasons?: null | string[];
+            /** Format: int32 */
+            maxDiscountPercent?: null | number | string;
+            /** Format: int32 */
+            paymentLinkExpiryMinutes?: null | number | string;
+            /** Format: uint32 */
+            version?: null | number | string;
+        };
         SaveCustomRole: {
             name?: null | string;
             baseRole?: components["schemas"]["Role"];
@@ -10773,6 +11672,20 @@ export interface components {
             /** Format: int32 */
             validate: null | number | string;
             data: null | components["schemas"]["OnboardingData"];
+        };
+        SaveService: {
+            name?: null | string;
+            category?: null | components["schemas"]["ServiceCategory"];
+            code?: null | string;
+            sac?: null | string;
+            taxTreatment?: null | components["schemas"]["TaxTreatment"];
+            /** Format: int32 */
+            gstRateBasisPoints?: null | number | string;
+            /** Format: int32 */
+            durationMinutes?: null | number | string;
+            consultationKind?: null | components["schemas"]["ConsultationKind"];
+            /** Format: uint32 */
+            version?: null | number | string;
         };
         SaveTemplate: {
             /** Format: uuid */
@@ -10874,6 +11787,8 @@ export interface components {
             seriesId: string;
             occurrences: components["schemas"]["SeriesBooked"][];
         };
+        /** @enum {unknown} */
+        ServiceCategory: "Consultation" | "Procedure" | "Test" | "Other" | null;
         SetAllergyStatus: {
             status: null | components["schemas"]["AllergyStatus"];
         };
@@ -10881,6 +11796,13 @@ export interface components {
             code: null | components["schemas"]["ObservationCode"];
             /** Format: double */
             limit: null | number | string;
+        };
+        SetDiscount: {
+            /** Format: int64 */
+            amountMinor?: null | number | string;
+            reason?: null | string;
+            /** Format: uint32 */
+            version?: null | number | string;
         };
         SetFollowUp: {
             period: null | string;
@@ -10963,6 +11885,8 @@ export interface components {
             /** Format: int32 */
             days: number | string;
         };
+        /** @enum {unknown} */
+        TaxTreatment: "Exempt" | "Taxable" | null;
         TemplatePreview: {
             group: string;
             subject: string;
@@ -11031,6 +11955,12 @@ export interface components {
             type: components["schemas"]["DocumentType"];
             /** Format: date */
             documentDate: string;
+        };
+        UpdateLine: {
+            /** Format: int32 */
+            quantity?: null | number | string;
+            /** Format: uint32 */
+            version?: null | number | string;
         };
         UpdateProblem: {
             verification: null | components["schemas"]["ProblemVerification"];

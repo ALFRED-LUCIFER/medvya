@@ -96,7 +96,8 @@ public sealed partial class StaffLocationsTests(PostgresFixture sql) : IClassFix
     // The invitee joins: the same call the invitation page makes, in the token's tenant.
     async Task<bool> Accept(string token, Guid user) =>
         await new Invitations(sql.Context(tenant), new PostgresFixture.FixedTenant(tenant), new FixedUser(null), new AuditLog(sql.Audit(tenant)), outbox,
-            Options.Create(new InvitationOptions()), null!).AcceptAsync(token, user);
+            Options.Create(new InvitationOptions()), null!,
+            fees: new Medvya.Billing.Infrastructure.DoctorFees(sql.Billing(tenant), new PostgresFixture.FixedTenant(tenant), new FixedUser(null), TimeProvider.System)).AcceptAsync(token, user);
 
     [Fact]
     public async Task AMemberNotAssignedToALocationIsRefusedThereAndTheOtherWorks()
@@ -262,6 +263,10 @@ public sealed partial class StaffLocationsTests(PostgresFixture sql) : IClassFix
             Assert.Equal("Dr. Sana Khan (synthetic)", (await check.DoctorProfiles.SingleAsync(p => p.MembershipId == m.Id)).FullName);
             Assert.Equal("84213", (await check.DoctorLicences.SingleAsync(l => l.MembershipId == m.Id)).Number);
         }
+        // MDV-P4-002: the doctor's fees come along to the second location as their own prices there, in the acceptance's transaction.
+        await using var billing = sql.Billing(tenant);
+        foreach (var m in memberships)
+            Assert.Equal([30000L, 50000L], (await billing.PriceVersions.Where(v => v.DoctorId == m.Id).Select(v => v.AmountMinor).ToListAsync()).Order());
     }
 
     sealed class FixedUser(Guid? id) : ICurrentUser { public Guid? UserId => id; }

@@ -163,8 +163,9 @@ public sealed class EndpointAuditTests(PostgresFixture sql) : IClassFixture<Post
             if (role == Role.SoloDoctor)
                 db.DoctorLicences.Add(new DoctorLicence { MembershipId = membership.Id, TenantId = tenant, Authority = "TNMC", Number = "84213", SubmittedAt = DateTimeOffset.UtcNow });
         }
-        // Feature-gated routes (nurse intake) answer 404 before the audit filter when their flag is off; on, so they are enumerated too.
+        // Feature-gated routes (nurse intake, billing) answer 404 before the audit filter when their flag is off; on, so they are enumerated too.
         db.FeatureFlags.Add(new FeatureFlag { Id = Guid.NewGuid(), TenantId = tenant, Key = "clinical.nurse-intake", Enabled = true, Owner = "clinical-team", Description = "Nurse intake (synthetic test)", CreatedAt = DateTimeOffset.UtcNow, ChangedAt = DateTimeOffset.UtcNow });
+        db.FeatureFlags.Add(new FeatureFlag { Id = Guid.NewGuid(), TenantId = tenant, Key = "billing.invoices", Enabled = true, Owner = "practice", Description = "Billing (synthetic test)", CreatedAt = DateTimeOffset.UtcNow, ChangedAt = DateTimeOffset.UtcNow });
         await db.SaveChangesAsync();
     }
 
@@ -285,6 +286,7 @@ public sealed class EndpointAuditTests(PostgresFixture sql) : IClassFixture<Post
         new WebApplicationFactory<Program>().WithWebHostBuilder(b => b
             .UseSetting("ConnectionStrings:Medvya", sql.ConnectionString)
             .UseSetting("RateLimiting:PermitsPerMinute", "100000") // this test calls every endpoint once per role: more than the per-IP limit of production traffic
+            .UseSetting("Features:InternalOrganisations:0", tenant.ToString()) // billing is at the Internal release stage (MDV-P4-002)
             .ConfigureServices(s => s.AddSingleton<IStartupFilter>(new SignedIn(tenant, facility, extra))));
 
     /// <summary>The synthetic staff user named by <see cref="UserHeader"/>, in the test tenant and facility, plus optional extra endpoints.</summary>

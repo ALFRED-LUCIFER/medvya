@@ -14,7 +14,11 @@ import NurseIntakePanel from '../features/settings/components/NurseIntakePanel';
 import QueueRulePanel from '../features/settings/components/QueueRulePanel';
 import TermsPanel from '../features/settings/components/TermsPanel';
 import SettingsPage from '../features/settings/components/SettingsPage';
-import { settingsTabs, type SettingsTab } from '../features/settings/domain/settings';
+import BillingSettingsPanel from '../features/billing/components/BillingSettingsPanel';
+import ServicesPanel from '../features/billing/components/ServicesPanel';
+import { useBillingSettingsController } from '../features/billing/hooks/useBillingSettingsController';
+import { useServicesController } from '../features/billing/hooks/useServicesController';
+import { settingsGroups, visibleGroups, type SettingsTab } from '../features/settings/domain/settings';
 import { useDoctorsController } from '../features/settings/hooks/useDoctorsController';
 import { useHolidaysController } from '../features/settings/hooks/useHolidaysController';
 import { useOpeningHoursController, useSchedulesController } from '../features/settings/hooks/useHoursController';
@@ -79,6 +83,8 @@ const AccessRequests = ({ timeZone }: { timeZone: string }) => <AccessRequestsPa
 const ClinicalPolicy = () => <ClinicalPolicyPanel {...useClinicalPolicyController()} />;
 const NurseIntake = () => <NurseIntakePanel {...useNurseIntakeController()} />;
 const Queue = () => <QueueRulePanel {...useQueueRuleController()} />;
+const BillingSettings = () => <BillingSettingsPanel {...useBillingSettingsController()} />;
+const Services = ({ timeZone }: { timeZone: string }) => <ServicesPanel {...useServicesController(timeZone)} timeZone={timeZone} />;
 
 function Staff({ facilityId, userId, timeZone }: { facilityId: string; userId: string; timeZone: string }) {
   const staff = useStaffController(facilityId);
@@ -92,10 +98,12 @@ function Staff({ facilityId, userId, timeZone }: { facilityId: string; userId: s
 }
 
 /** Composition only: Settings (F-08) with its tab in the address (?tab=hours), so a tab can be linked and survives a reload. */
-export default function SettingsRoute({ facilityId, country, userId, timeZone }: { facilityId: string; country: 'IN' | 'AE' | null; userId: string; timeZone: string }) {
+export default function SettingsRoute({ facilityId, country, userId, timeZone, billing }: { facilityId: string; country: 'IN' | 'AE' | null; userId: string; timeZone: string; billing: boolean }) {
   const [params, setParams] = useSearchParams();
   const asked = params.get('tab');
-  const tab: SettingsTab = (settingsTabs as readonly string[]).includes(asked ?? '') ? (asked as SettingsTab) : 'profile';
-  const panels = { profile: <Profile />, locations: <Locations facilityId={facilityId} country={country} />, hours: <Hours facilityId={facilityId} />, holidays: <Holidays facilityId={facilityId} />, staff: <Staff facilityId={facilityId} userId={userId} timeZone={timeZone} />, nurse: <NurseIntake />, queue: <Queue />, requests: <AccessRequests timeZone={timeZone} />, policy: <ClinicalPolicy />, review: <Review timeZone={timeZone} />, doctors: <Doctors facilityId={facilityId} timeZone={timeZone} />, medicines: <Medicines country={country} />, displays: <Displays facilityId={facilityId} timeZone={timeZone} />, audit: <Audit />, metrics: <Metrics facilityId={facilityId} />, terms: <Terms timeZone={timeZone} />, notifications: <Notifications />, data: <DataPanel country={country} accessLogPath="/settings?tab=audit" /> };
-  return <SettingsPage tab={tab} onTab={next => setParams({ tab: next }, { replace: true })} panels={panels} />;
+  const groups = visibleGroups(billing);
+  const tabs: readonly string[] = groups.flatMap(g => settingsGroups[g]);
+  const tab: SettingsTab = tabs.includes(asked ?? '') ? (asked as SettingsTab) : 'profile';
+  const panels = { profile: <Profile />, locations: <Locations facilityId={facilityId} country={country} />, hours: <Hours facilityId={facilityId} />, holidays: <Holidays facilityId={facilityId} />, staff: <Staff facilityId={facilityId} userId={userId} timeZone={timeZone} />, nurse: <NurseIntake />, queue: <Queue />, requests: <AccessRequests timeZone={timeZone} />, policy: <ClinicalPolicy />, review: <Review timeZone={timeZone} />, doctors: <Doctors facilityId={facilityId} timeZone={timeZone} />, medicines: <Medicines country={country} />, displays: <Displays facilityId={facilityId} timeZone={timeZone} />, audit: <Audit />, metrics: <Metrics facilityId={facilityId} />, terms: <Terms timeZone={timeZone} />, notifications: <Notifications />, data: <DataPanel country={country} accessLogPath="/settings?tab=audit" />, services: <Services timeZone={timeZone} />, billing: <BillingSettings /> };
+  return <SettingsPage tab={tab} onTab={next => setParams({ tab: next }, { replace: true })} panels={panels} groups={groups} />;
 }

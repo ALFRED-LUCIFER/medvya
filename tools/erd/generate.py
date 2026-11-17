@@ -34,6 +34,14 @@ SOFT_REFS = {
     'ChangedByMemberId': ('platform', 'Members'), 'SignOffByMemberId': ('platform', 'Members'),  # FeatureReleases: the console member (MDV-P5-041)
     'DoctorId': ('identity', 'Users'),  # PrintedPapers: the doctor the slip or letter names (SourceId is the encounter or the referral, by Kind)
 }
+# Per schema, where a column name means something else than in SOFT_REFS. Billing's DoctorId is the doctor's membership (per doctor per location, MDV-P4-002).
+SCHEMA_SOFT_REFS = {'billing': {'DoctorId': ('tenancy', 'Memberships')}}
+
+
+def refs_for(schema: str) -> dict:
+    return {**SOFT_REFS, **SCHEMA_SOFT_REFS.get(schema, {})}
+
+
 # CalendarId (and the from/to of a reschedule) is a doctor (a membership, inferred) or a room, told apart by CalendarKind.
 CALENDAR_COLS = ('CalendarId', 'FromCalendarId', 'ToCalendarId')
 CALENDAR = [('tenancy', 'Memberships', 'doctor calendar'), ('scheduling', 'Resources', 'room calendar')]
@@ -45,6 +53,7 @@ PLANNED_TO_BUILT = {
     'PATIENT': 'patients.Patients', 'PATIENT_IDENTIFIER': 'patients.Identifiers', 'PATIENT_RELATIONSHIP': 'patients.Relationships',
     'PAYER_COVERAGE': 'patients.PayerCoverages', 'CONSENT_RECEIPT': 'patients.ConsentReceipts', 'SCHEDULE_SLOT': 'scheduling.ScheduleSlots',
     'APPOINTMENT': 'scheduling.Appointments', 'WAITLIST_ENTRY': 'scheduling.Waitlist', 'QUEUE_TOKEN': 'scheduling.QueueTokens', 'DOC_SEQUENCE': 'billing.DocSequences',
+    'SERVICE_CATALOGUE': 'billing.Services', 'PRICE_VERSION': 'billing.PriceVersions', 'INVOICE': 'billing.Invoices', 'INVOICE_LINE': 'billing.InvoiceLines', 'PAYMENT': 'billing.Payments',
     'AUDIT_EVENT': 'audit.AuditEvents', 'OUTBOX_EVENT': 'scheduling.OutboxEvents', 'NOTIFICATION': 'notifications.Notifications',
     'NOTIFICATION_ATTEMPT': 'notifications.Attempts', 'ENCOUNTER': 'encounters.Encounters',
     'OBSERVATION': 'encounters.Observations', 'PROBLEM': 'encounters.Problems', 'ALLERGY': 'encounters.Allergies', 'MEDICATION_STATEMENT': 'encounters.MedicationStatements',
@@ -172,7 +181,7 @@ def render() -> str:
     agg: dict[tuple[str, str], set[str]] = {}
     for (schema, table), (mod, e) in tables.items():
         for col in e['cols']:
-            tgt = SOFT_REFS.get(col)
+            tgt = refs_for(schema).get(col)
             if col in ('TenantId',):
                 continue
             if col in CALENDAR_COLS:
@@ -195,6 +204,7 @@ def render() -> str:
             continue
         m = data[mod]
         schema = m['schema']
+        refs = refs_for(schema)
         w(f'### {mod} (schema `{schema}`, {plural(len(m["entities"]))})\n')
         local = {e['name']: e for e in m['entities'].values()}
         w('```mermaid\nerDiagram')
@@ -209,15 +219,15 @@ def render() -> str:
             for col, meta in e['cols'].items():
                 if col == 'TenantId' and col not in e['key']:
                     continue  # on nearly every table; the table list below marks the tenant-scoped ones
-                if col in e['key'] or col in fkcols or col in SOFT_REFS or col in CALENDAR_COLS:
+                if col in e['key'] or col in fkcols or col in refs or col in CALENDAR_COLS:
                     tags = [t for t, on in (('PK', col in e['key']), ('FK', col in fkcols)) if on]
                     note = ''
                     if col in fkcols:
                         note = f' "FK to {fkcols[col]}"'
                     elif col in CALENDAR_COLS:
                         note = ' "doctor or room"'
-                    elif col in SOFT_REFS:
-                        note = f' "id of {SOFT_REFS[col][0]}.{SOFT_REFS[col][1]}"'
+                    elif col in refs:
+                        note = f' "id of {refs[col][0]}.{refs[col][1]}"'
                     w(f'    {mm_type(meta["type"])} {col}{(" " + ", ".join(tags)) if tags else ""}{note}')
             for j in e['json']:
                 w(f'    json {j}')
@@ -235,7 +245,7 @@ def render() -> str:
                             stubs.add(stub)
                         rels.append(f'  {stub} {card(col)}..o{{ {e["table"]} : "{col} ({label})"')
                     continue
-                tgt = SOFT_REFS.get(col)
+                tgt = refs.get(col)
                 if not tgt:
                     continue
                 if tgt[0] != schema:
@@ -265,7 +275,7 @@ def render() -> str:
             w(f'<details><summary><code>{schema}.{e["table"]}</code> columns</summary>\n')
             w('| Column | Type | Null | Links to |\n|---|---|---|---|')
             for col, meta in e['cols'].items():
-                link = f'FK to `{fkcols[col]}`' if col in fkcols else (f'id of `{SOFT_REFS[col][0]}.{SOFT_REFS[col][1]}`' if col in SOFT_REFS and col not in e['key'] and col != 'TenantId' else ('`tenancy.Tenants`' if col == 'TenantId' else ''))
+                link = f'FK to `{fkcols[col]}`' if col in fkcols else (f'id of `{refs[col][0]}.{refs[col][1]}`' if col in refs and col not in e['key'] and col != 'TenantId' else ('`tenancy.Tenants`' if col == 'TenantId' else ''))
                 if col in CALENDAR_COLS:
                     link = 'doctor or room (`CalendarKind`)'
                 w(f'| `{col}` | {meta["type"]} | {"" if meta["required"] else "yes"} | {link} |')

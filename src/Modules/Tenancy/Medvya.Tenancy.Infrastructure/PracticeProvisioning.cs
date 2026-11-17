@@ -17,6 +17,7 @@ namespace Medvya.Tenancy.Infrastructure;
 /// Creates a practice (MDV-P1-004). The new tenant's rows are written in a DI scope entered for the new tenant, so its connection carries
 /// that tenant's session setting and row-level security (layer 2) accepts them exactly as it does for any tenant's own writes; it is never switched off.
 /// The scope's context shares the app's EF model: a context built by hand here cost the first finish on each instance seconds (#205).
+/// The fees entered become the clinic default and the owner-doctor's prices in the Billing catalogue (MDV-P4-002), in the same transaction.
 /// </summary>
 public sealed class PracticeProvisioning(IServiceScopeFactory scopes, ICurrentUser user, IAuditLog audit, TimeProvider clock)
     : IPracticeProvisioning
@@ -54,7 +55,7 @@ public sealed class PracticeProvisioning(IServiceScopeFactory scopes, ICurrentUs
         db.PracticeDefaultsSet.Add(new PracticeDefaults
         {
             TenantId = tenantId, Specialty = specialty, Qualifications = Clean(data.Profile.Qualifications), Languages = Clean(data.Profile.Languages),
-            SlotMinutes = hours.SlotMinutes!.Value, NewVisitFeeMinor = hours.NewVisitFee!.Value, FollowUpFeeMinor = hours.FollowUpFee!.Value, Currency = rules.Currency,
+            SlotMinutes = hours.SlotMinutes!.Value, Currency = rules.Currency,
             WeekdayHours = Windows(hours.Weekdays), SaturdayHours = Windows(hours.Saturday), NoteTemplates = JsonSerializer.Serialize(data.Templates ?? []),
             PatientStart = data.Patients,
         });
@@ -83,8 +84,7 @@ public sealed class PracticeProvisioning(IServiceScopeFactory scopes, ICurrentUs
             db.DoctorProfiles.Add(new DoctorProfile
             {
                 MembershipId = membershipId, TenantId = tenantId, FullName = data.Profile.FullName!.Trim(), Specialty = specialty,
-                Qualifications = Clean(data.Profile.Qualifications), Languages = Clean(data.Profile.Languages),
-                NewVisitFeeMinor = hours.NewVisitFee!.Value, FollowUpFeeMinor = hours.FollowUpFee!.Value, ChangedBy = owner, ChangedAt = now,
+                Qualifications = Clean(data.Profile.Qualifications), Languages = Clean(data.Profile.Languages), ChangedBy = owner, ChangedAt = now,
             });
         }
 
@@ -92,6 +92,9 @@ public sealed class PracticeProvisioning(IServiceScopeFactory scopes, ICurrentUs
         await using (var tx = await db.Database.BeginTransactionAsync(cancellationToken))
         {
             await db.SaveChangesAsync(cancellationToken);
+            var fees = scope.ServiceProvider.GetRequiredService<IDoctorFees>(); // in the new tenant's scope, like the context
+            await fees.SetAsync(null, country, hours.NewVisitFee!.Value, hours.FollowUpFee!.Value, tx.GetDbTransaction(), cancellationToken);
+            if (role == Role.SoloDoctor) await fees.SetAsync(membershipId, country, hours.NewVisitFee!.Value, hours.FollowUpFee!.Value, tx.GetDbTransaction(), cancellationToken);
             await audit.WriteAsync(new AuditEvent
             {
                 Id = Guid.CreateVersion7(), TenantId = tenantId, ActorUserId = owner, Action = $"onboarding.complete.{country}", ResourceType = "tenant",

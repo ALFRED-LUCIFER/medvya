@@ -3,6 +3,7 @@ using Azure.Security.KeyVault.Secrets;
 using Medvya.Billing.Infrastructure.Persistence;
 using Medvya.Billing.Infrastructure.Razorpay;
 using Medvya.BuildingBlocks.Infrastructure;
+using Medvya.Tenancy.Application;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
@@ -11,15 +12,21 @@ using Microsoft.Extensions.Hosting;
 
 namespace Medvya.Billing.Infrastructure;
 
-/// <summary>shortcut: not registered by the host yet; the first caller is invoice issuing (MDV-P4-004), which adds it to Program.cs.</summary>
+/// <summary>Billing (P4): the services catalogue, doctor fees and billing settings (MDV-P4-002), legal numbering, and bills with their payments (MDV-P4-004).</summary>
 public static class BillingModule
 {
     public static IServiceCollection AddBillingModule(this IServiceCollection services, string connectionString)
     {
         services.TryAddScoped<TenantSessionInterceptor>();
+        services.TryAddSingleton(TimeProvider.System);
         return services
             .AddDbContext<BillingDbContext>((sp, o) => o.UseNpgsql(PostgresDataSources.For(connectionString)).AddInterceptors(sp.GetRequiredService<TenantSessionInterceptor>()))
             .AddScoped<IDocumentNumbering, DocumentNumbering>()
+            .AddScoped<ICatalogue, Catalogue>()
+            .AddScoped<IDoctorFees, DoctorFees>()
+            .AddScoped<IBillingSettings, BillingSettingsService>()
+            .AddScoped<IInvoices, Invoices>()
+            // Lazy: the credential store is built on first use (a payment link), never at start-up, so a host without Razorpay:KeyVaultUri still starts.
             .AddRazorpay();
     }
 

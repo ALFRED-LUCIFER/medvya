@@ -4,6 +4,10 @@
     <ProjectReference Include="..\Medvya.Billing.Application\Medvya.Billing.Application.csproj" />
     <ProjectReference Include="..\Medvya.Billing.Domain\Medvya.Billing.Domain.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\Medvya.BuildingBlocks.Infrastructure\Medvya.BuildingBlocks.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Audit\Medvya.Audit.Application\Medvya.Audit.Application.csproj" />
+    <ProjectReference Include="..\..\Tenancy\Medvya.Tenancy.Application\Medvya.Tenancy.Application.csproj" />
+    <ProjectReference Include="..\..\Patients\Medvya.Patients.Application\Medvya.Patients.Application.csproj" />
+    <ProjectReference Include="..\..\Scheduling\Medvya.Scheduling.Application\Medvya.Scheduling.Application.csproj" />
   </ItemGroup>
 
   <ItemGroup>

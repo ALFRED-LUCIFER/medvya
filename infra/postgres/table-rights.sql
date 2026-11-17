@@ -28,6 +28,17 @@ BEGIN
         REVOKE UPDATE, DELETE, TRUNCATE ON platform."PlanVersions", platform."PlanPrices" FROM medvya_platform;
     END IF;
 
+    -- Service prices are versions (MDV-P4-002): a new price is a new row; an issued invoice points at the version it was priced from, which never changes.
+    IF to_regclass('billing."PriceVersions"') IS NOT NULL THEN
+        REVOKE UPDATE, DELETE, TRUNCATE ON billing."PriceVersions" FROM medvya_billing;
+    END IF;
+
+    -- A draft bill's line can be removed (MDV-P4-004); bills and payments themselves are never deleted (billing has no DELETE right), and an issued
+    -- bill's lines are left alone by the application (InvoiceFlow.CanEdit).
+    IF to_regclass('billing."InvoiceLines"') IS NOT NULL THEN
+        GRANT DELETE ON billing."InvoiceLines" TO medvya_billing;
+    END IF;
+
     -- The chain trigger lists a tenant's first row in ledger."Chains"; ledger."Tables" stays read-only (roles.sql).
     IF to_regclass('ledger."Chains"') IS NOT NULL THEN
         GRANT INSERT ON ledger."Chains" TO medvya_tenancy, medvya_patients, medvya_audit, medvya_encounters, medvya_prescribing;

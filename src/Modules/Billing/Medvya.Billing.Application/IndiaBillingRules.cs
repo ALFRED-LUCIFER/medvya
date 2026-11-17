@@ -52,6 +52,16 @@ sealed partial class IndiaBillingRules : BillingCountryRules
         return max - 1;
     }
 
+    /// <summary>
+    /// The payable total to the nearest rupee: 50 paise or more rounds up, less rounds down (₹1,234.50 → +0.50, ₹1,234.49 → −0.49). Lines and tax stay
+    /// exact; the e-invoice RndOffAmt carries this amount (MDV-P4-004).
+    /// </summary>
+    public override long RoundOff(long exactMinor)
+    {
+        var paise = exactMinor % Currency.MinorPerMajor;
+        return paise >= 50 ? Currency.MinorPerMajor - paise : -paise;
+    }
+
     public override string AmountInWords(Money amount)
     {
         var (rupees, paise) = Split(amount);

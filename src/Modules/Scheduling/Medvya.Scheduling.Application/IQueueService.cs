@@ -27,7 +27,7 @@ public sealed class CreateDisplay
 
 public sealed record DisplayView(Guid Id, Guid FacilityId, string Name, DateTimeOffset CreatedAt, DateTimeOffset? RevokedAt);
 
-/// <summary>The new display and its token, returned once: only a hash is stored, so a lost token means a new display.</summary>
+/// <summary>The display and its link token, returned once: only a hash is stored, so a lost token means a new link (#1413).</summary>
 public sealed record CreatedDisplay(DisplayView Display, string Token);
 
 /// <summary>A live display: the TV it is and the one facility whose queue it may show.</summary>
@@ -48,6 +48,14 @@ public interface IQueueService
     /// <summary>Ends the display: its next request is refused. Revoking twice is a no-op.</summary>
     /// <exception cref="DisplayNotFoundException">No display with this id in the tenant.</exception>
     Task RevokeDisplayAsync(Guid displayId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Replaces a live display's link (#1413): the old link and any screen paired with it are refused from their next request,
+    /// and the new link is returned once.
+    /// </summary>
+    /// <exception cref="DisplayNotFoundException">No live display with this id in the tenant.</exception>
+    /// <exception cref="SchedulingAccessDeniedException">Not allowed to manage the facility's devices.</exception>
+    Task<CreatedDisplay> NewDisplayLinkAsync(Guid displayId, CancellationToken cancellationToken = default);
 
     /// <summary>The live display with this token hash in the current tenant, or null when it is unknown or revoked.</summary>
     Task<DisplaySession?> FindDisplayAsync(byte[] tokenHash, CancellationToken cancellationToken = default);

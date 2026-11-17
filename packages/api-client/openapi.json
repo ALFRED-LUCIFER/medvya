@@ -3115,6 +3115,36 @@
         }
       }
     },
+    "/v1/queue/displays/{displayId}/link": {
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "displayId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatedDisplay"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/appointments/{appointmentId}/notifications": {
       "get": {
         "tags": [

@@ -5761,7 +5761,7 @@
   "billing.refund.cardReference": "टर्मिनल वापसी संदर्भ",
   "billing.refund.reason": "कारण",
   "billing.refund.reasonHint": "स्क्रीन पर दिखता है, प्रिंट नहीं होता। कोई चिकित्सीय विवरण न लिखें।",
-  "billing.refund.needsAdmin": "{amount} से अधिक की वापसी प्रैक्टिस एडमिन करते हैं।",
+  "billing.refund.needsAdmin": "जब किसी बिल की कुल वापसी {amount} से अधिक हो, तो वापसी प्रैक्टिस एडमिन करते हैं।",
   "billing.refund.confirm": "पैसे वापस करें और क्रेडिट नोट जारी करें",
   "billing.refund.keep": "बिल जैसा है वैसा रखें",
   "billing.invoice.total": "कुल देय",

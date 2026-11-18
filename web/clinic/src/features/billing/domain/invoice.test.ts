@@ -20,7 +20,7 @@ describe('invoice actions per state (screen-specs "Billing (P4)")', () => {
     expect(actionsFor({ state: 'Issued', paidMinor: 0, payments: [], lines: [line()] }))
       .toEqual({ edit: false, issue: false, pay: true, cancel: true, printBill: true, printReceipt: false, refund: false });
     expect(actionsFor({ state: 'PartlyPaid', paidMinor: 100, payments: [], lines: [line()] }))
-      .toEqual({ edit: false, issue: false, pay: true, cancel: false, printBill: true, printReceipt: true, refund: false });
+      .toEqual({ edit: false, issue: false, pay: true, cancel: false, printBill: true, printReceipt: true, refund: true });
     expect(actionsFor({ state: 'Issued', paidMinor: 0, payments: [pay('Pending')], lines: [line()] })).toMatchObject({ pay: false, cancel: false });
     expect(actionsFor({ state: 'Paid', paidMinor: 100, payments: [], lines: [line()] }))
       .toEqual({ edit: false, issue: false, pay: false, cancel: false, printBill: true, printReceipt: true, refund: true });
@@ -97,7 +97,6 @@ describe('refunds and credit notes (MDV-P4-006)', () => {
 
   it('offers a refund only on a paid bill; a refunded one takes no more', () => {
     expect(actionsFor({ state: 'Refunded', paidMinor: 100, payments: [], lines: [line()] })).toMatchObject({ refund: false, printBill: true, printReceipt: true });
-    expect(actionsFor({ state: 'PartlyPaid', paidMinor: 100, payments: [], lines: [line()] }).refund).toBe(false);
   });
 
   it('gives back up to what is left in cash, and to a card or UPI at most what was paid that way', () => {
@@ -108,11 +107,18 @@ describe('refunds and credit notes (MDV-P4-006)', () => {
     expect(refundable({ ...bill, refundedMinor: 35_000, creditNotes: [note('Cash', 10_000), note('Card', 25_000)] }, 'Card')).toBe(5_000);
   });
 
-  it('asks for the practice admin above the threshold, unless the user has practice configuration', () => {
+  it('asks for the practice admin once the bill\'s refunds together pass the threshold, unless the user has practice configuration', () => {
     const options = { paymentMethods: [], discountReasons: [], maxDiscountPercent: 10, mayExceedMaxDiscount: false, refundApprovalAboveMinor: 100_000 };
-    expect(needsApproval(100_000, options)).toBe(false);
-    expect(needsApproval(100_001, options)).toBe(true);
-    expect(needsApproval(500_000, { ...options, mayExceedMaxDiscount: true })).toBe(false);
+    expect(needsApproval(100_000, { refundedMinor: 0, options })).toBe(false);
+    expect(needsApproval(100_001, { refundedMinor: 0, options })).toBe(true);
+    expect(needsApproval(60_000, { refundedMinor: 50_000, options })).toBe(true); // two small refunds cannot pass it together
+    expect(needsApproval(500_000, { refundedMinor: 0, options: { ...options, mayExceedMaxDiscount: true } })).toBe(false);
+  });
+
+  it('refunds a partly paid bill, then takes no more payments, and cancels it once all is given back', () => {
+    expect(actionsFor({ state: 'PartlyPaid', paidMinor: 50_000, refundedMinor: 0, payments: [], lines: [line()] })).toMatchObject({ refund: true, pay: true, cancel: false });
+    expect(actionsFor({ state: 'PartlyPaid', paidMinor: 50_000, refundedMinor: 20_000, payments: [], lines: [line()] })).toMatchObject({ refund: true, pay: false, cancel: false });
+    expect(actionsFor({ state: 'PartlyPaid', paidMinor: 50_000, refundedMinor: 50_000, payments: [], lines: [line()] })).toMatchObject({ refund: false, pay: false, cancel: true });
   });
 
   it('needs a reason, and a reference that is never a card number for a card or UPI refund', () => {

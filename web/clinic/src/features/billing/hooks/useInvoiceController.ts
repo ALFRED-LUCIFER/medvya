@@ -114,7 +114,7 @@ export function useInvoiceController(id: string) {
     printingNote: printNote.isPending ? printNote.variables : null, onPrintNote: (noteId: string) => printNote.mutate(noteId),
     // MDV-P4-006: "Refund" opens the form with what may still go back in cash; the server checks the amount, the method's share and the threshold again.
     refunding, refundForm, refundMethod, refundMax, refunded: refund.isPending,
-    refundNeedsAdmin: invoice !== null && Number.isFinite(refundAmount) && needsApproval(refundAmount, invoice.options),
+    refundNeedsAdmin: invoice !== null && Number.isFinite(refundAmount) && needsApproval(refundAmount, invoice),
     refundOver: Number.isFinite(refundAmount) && refundAmount > refundMax,
     onStartRefund: () => {
       if (!invoice) return;

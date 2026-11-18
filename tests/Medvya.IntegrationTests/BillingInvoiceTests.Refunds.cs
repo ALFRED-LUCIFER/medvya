@@ -65,7 +65,10 @@ public sealed partial class BillingInvoiceTests
         Assert.NotNull(await Drawer().ReportAsync(session.Id)); // the shift report lists the refunds
 
         await using var audit = sql.Audit(h.Tenant);
-        Assert.Equal(3, await audit.Events.CountAsync(e => e.ResourceId == bill.Id && e.Action == "billing.refund" && e.PatientId == h.Patient));
+        var details = await audit.Events.Where(e => e.ResourceId == bill.Id && e.Action == "billing.refund" && e.PatientId == h.Patient).OrderBy(e => e.Id).Select(e => e.Detail).ToListAsync();
+        Assert.Equal(3, details.Count);
+        Assert.Equal($"creditNote:{note.Id};amountMinor:10000;method:Cash", details[0]); // which refund, never the reason
+        Assert.DoesNotContain(details, d => d!.Contains("Dressing", StringComparison.Ordinal));
     }
 
     /// <summary>
@@ -117,6 +120,8 @@ public sealed partial class BillingInvoiceTests
         Assert.Equal(100_000L, (await Desk().GetAsync(bill.Id))!.Options.RefundApprovalAboveMinor);
         Assert.Equal("amountMinor:approval_required", await Refused(Desk().RefundAsync(bill.Id, big)));
         Assert.Equal(10_000L, (await Desk().RefundAsync(bill.Id, big with { AmountMinor = 10_000 }))!.RefundedMinor); // below it: the desk alone
+        // The threshold is on all the bill gives back: ₹100 then ₹950 is ₹1,050, past ₹1,000, so the second needs the admin too.
+        Assert.Equal("amountMinor:approval_required", await Refused(Desk().RefundAsync(bill.Id, big with { AmountMinor = 95_000 })));
         Assert.Equal(160_000L, (await Desk(h.Admin).RefundAsync(bill.Id, big))!.RefundedMinor);
 
         var settings = h.Get<IBillingSettings>(h.Admin);
@@ -196,5 +201,45 @@ public sealed partial class BillingInvoiceTests
                 (await refused.PostAsJsonAsync($"/v1/billing/invoices/{bill.Id}/refunds", new { method = "Cash", amountMinor = 100, reason = "Synthetic" })).StatusCode);
         }
         Assert.Equal(5_000L, (await Desk().GetAsync(bill.Id))!.RefundedMinor);
+    }
+
+    /// <summary>
+    /// A deposit on a partly paid bill goes back when the procedure is called off: the bill stays PartlyPaid and takes no more payments, and once everything
+    /// paid is given back it can be cancelled (it keeps its number and its credit notes).
+    /// </summary>
+    [Fact]
+    public async Task ADepositGoesBackAndTheBillIsThenCancelled()
+    {
+        var bill = await IssuedAsync(100_000);
+        await Desk().RecordPaymentAsync(bill.Id, new RecordPayment { Method = PaymentMethod.Cash, AmountMinor = 50_000 });
+        var cancel = new CancelInvoice { Reason = "Procedure called off (synthetic)" };
+
+        var part = (await Desk().RefundAsync(bill.Id, new RecordRefund { Method = PaymentMethod.Cash, AmountMinor = 20_000, Reason = "Synthetic" }))!;
+        Assert.Equal((InvoiceState.PartlyPaid, 20_000L), (part.State, part.RefundedMinor));
+        Assert.Equal("state:invalid", await Refused(Desk().RecordPaymentAsync(bill.Id, new RecordPayment { Method = PaymentMethod.Cash, AmountMinor = 100 }))); // a refund ends collecting
+        Assert.Equal("state:invalid", await Refused(Desk().CancelAsync(bill.Id, cancel with { Version = part.Version }))); // ₹300 still kept
+        var back = (await Desk().RefundAsync(bill.Id, new RecordRefund { Method = PaymentMethod.Cash, AmountMinor = 30_000, Reason = "Synthetic" }))!;
+        Assert.Equal((InvoiceState.PartlyPaid, 50_000L), (back.State, back.RefundedMinor));
+        var cancelled = (await Desk().CancelAsync(bill.Id, cancel with { Version = back.Version }))!;
+        Assert.Equal((InvoiceState.Cancelled, bill.Number, 2, 0L), (cancelled.State, cancelled.Number, cancelled.CreditNotes.Count, cancelled.BalanceMinor));
+    }
+
+    /// <summary>A day counted before refunds existed has no refund fields in its stored totals: it still reads (as no refunds) and closes.</summary>
+    [Fact]
+    public async Task ADayCountedBeforeRefundsExistedStillReadsAndCloses()
+    {
+        var session = await Drawer().OpenAsync(new OpenCashSession { OpeningFloatMinor = 10_000 });
+        h.Clock.Advance(TimeSpan.FromMinutes(1));
+        await PaidAsync(20_000, PaymentMethod.Cash);
+        var counted = (await Drawer().CountAsync(session.Id, new CountCashSession { Counts = Notes(0, 2), Note = "Synthetic short", Version = session.Version }))!;
+        Assert.Equal(CashSessionState.AwaitingConfirmation, counted.State);
+        await using (var owner = sql.BillingAsAdmin(h.Tenant)) // the totals JSON as the previous release wrote it
+            await owner.Database.ExecuteSqlRawAsync("""UPDATE billing."CashSessions" SET "Totals" = @totals::jsonb WHERE "Id" = @id""",
+                new NpgsqlParameter("totals", """[{"Method":"Cash","Payments":1,"AmountMinor":20000}]"""), new NpgsqlParameter("id", session.Id));
+
+        var old = Assert.Single((await Drawer(h.Admin).DayAsync()).Awaiting);
+        Assert.Equal((PaymentMethod.Cash, 20_000L, 0, 0L, 30_000L), (old.Totals[0].Method, old.Totals[0].AmountMinor, old.Totals[0].Refunds, old.Totals[0].RefundsMinor, old.ExpectedMinor));
+        Assert.Equal(CashSessionState.Closed, (await Drawer(h.Admin).ConfirmAsync(session.Id, new ConfirmCashSession { Version = old.Version }))!.State);
+        Assert.NotNull(await Drawer().ReportAsync(session.Id));
     }
 }

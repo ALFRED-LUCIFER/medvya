@@ -163,21 +163,29 @@ public static class InvoiceFlow
 
     public static bool CanIssue(InvoiceState state) => state == InvoiceState.Draft;
 
-    /// <summary>Payments are taken on an issued bill until it is paid.</summary>
-    public static bool CanPay(InvoiceState state) => state is InvoiceState.Issued or InvoiceState.PartlyPaid;
+    /// <summary>Payments are taken on an issued bill until it is paid, and never after money went back on it (a refund ends collecting).</summary>
+    public static bool CanPay(InvoiceState state, long refundedMinor) => state is InvoiceState.Issued or InvoiceState.PartlyPaid && refundedMinor == 0;
 
-    /// <summary>A draft, or an issued bill nobody has paid anything towards (a ₹0 bill is Paid when issued, with nothing paid); it keeps its number.</summary>
-    public static bool CanCancel(InvoiceState state, long paidMinor) => state == InvoiceState.Draft || state is InvoiceState.Issued or InvoiceState.Paid && paidMinor == 0;
+    /// <summary>
+    /// A draft, or an issued bill that keeps no money: nothing paid (a ₹0 bill is Paid when issued, with nothing paid), or a partly paid bill whose payments
+    /// were all given back (a deposit returned when the procedure is called off). It keeps its number.
+    /// </summary>
+    public static bool CanCancel(InvoiceState state, long paidMinor, long refundedMinor) =>
+        state == InvoiceState.Draft || state is InvoiceState.Issued or InvoiceState.Paid or InvoiceState.PartlyPaid && paidMinor == refundedMinor;
 
     /// <summary>The state an issued bill is in once <paramref name="paidMinor"/> of <paramref name="totalMinor"/> is paid.</summary>
     public static InvoiceState AfterPayment(long totalMinor, long paidMinor) =>
         paidMinor <= 0 && totalMinor > 0 ? InvoiceState.Issued : paidMinor < totalMinor ? InvoiceState.PartlyPaid : InvoiceState.Paid;
 
-    /// <summary>A paid bill takes refunds until all it was paid is given back; it is then Refunded, which is final.</summary>
-    public static bool CanRefund(InvoiceState state) => state == InvoiceState.Paid;
+    /// <summary>A paid or partly paid bill takes refunds until all it was paid is given back (the amount check is the caller's).</summary>
+    public static bool CanRefund(InvoiceState state) => state is InvoiceState.Paid or InvoiceState.PartlyPaid;
 
-    /// <summary>The state after a refund: Refunded once everything paid is given back, else still Paid (the credit notes say how much went back).</summary>
-    public static InvoiceState AfterRefund(long paidMinor, long refundedMinor) => refundedMinor >= paidMinor ? InvoiceState.Refunded : InvoiceState.Paid;
+    /// <summary>
+    /// The state after a refund: a paid bill is Refunded once everything paid is given back, which is final; otherwise the state stays (the credit notes
+    /// say how much went back). A partly paid bill stays PartlyPaid: it takes no more payments, and once all is given back it may be cancelled.
+    /// </summary>
+    public static InvoiceState AfterRefund(InvoiceState state, long paidMinor, long refundedMinor) =>
+        state == InvoiceState.Paid && refundedMinor >= paidMinor ? InvoiceState.Refunded : state;
 
     /// <summary>Only a pending payment moves, and only once: Succeeded, Failed and Expired are final.</summary>
     public static bool CanSettle(PaymentState state) => state == PaymentState.Pending;

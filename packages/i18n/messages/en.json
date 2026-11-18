@@ -5813,7 +5813,7 @@
   "billing.refund.cardReference": "Terminal refund reference",
   "billing.refund.reason": "Reason",
   "billing.refund.reasonHint": "Shown on screen, not printed. No clinical details.",
-  "billing.refund.needsAdmin": "Refunds above {amount} are made by the practice admin.",
+  "billing.refund.needsAdmin": "When a bill's refunds add up to more than {amount}, the practice admin makes them.",
   "billing.refund.confirm": "Give back and issue credit note",
   "billing.refund.keep": "Keep the bill as it is",
   "billing.invoice.total": "Total payable",

@@ -22,8 +22,8 @@ export const billingSettingsSchema = z.object({
   discountReasons: z.string(),
   maxDiscountPercent: whole(0, 100),
   paymentLinkExpiryMinutes: whole(15, 1440),
-  /** Whole rupees (or dirhams): refunds above it need the practice admin. */
-  refundApprovalAbove: z.string().trim().regex(/^\d{1,7}$/),
+  /** Whole rupees (or dirhams), at most ₹10 lakh as the server: refunds above it need the practice admin. */
+  refundApprovalAbove: z.string().trim().regex(/^\d{1,7}$/).refine(v => Number(v) <= 1_000_000),
 });
 export type BillingSettingsForm = z.infer<typeof billingSettingsSchema>;
 

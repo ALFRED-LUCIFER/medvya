@@ -5810,7 +5810,7 @@
   "billing.refund.cardReference": "مرجع الاسترداد من الجهاز",
   "billing.refund.reason": "السبب",
   "billing.refund.reasonHint": "يظهر على الشاشة ولا يُطبع. بدون تفاصيل سريرية.",
-  "billing.refund.needsAdmin": "يُجري مسؤول العيادة الاستردادات التي تزيد على {amount}.",
+  "billing.refund.needsAdmin": "عندما يتجاوز مجموع استردادات الفاتورة {amount}، يُجريها مسؤول العيادة.",
   "billing.refund.confirm": "أعِد المبلغ وأصدر إشعارًا دائنًا",
   "billing.refund.keep": "أبقِ الفاتورة كما هي",
   "billing.invoice.total": "الإجمالي المستحق",

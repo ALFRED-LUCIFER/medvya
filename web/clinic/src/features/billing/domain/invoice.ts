@@ -62,19 +62,21 @@ export type InvoiceSortColumn = keyof typeof invoiceSort;
 export const isInvoiceSortable = (c: InvoiceColumn): c is InvoiceSortColumn => c in invoiceSort;
 
 /** What the bill's state lets the desk do (docs/02-design/screen-specs.md "Billing (P4)"); the server refuses anything else. */
-export function actionsFor(i: Pick<Invoice, 'state' | 'paidMinor' | 'payments' | 'lines'>) {
+export function actionsFor(i: Pick<Invoice, 'state' | 'paidMinor' | 'payments' | 'lines'> & { refundedMinor?: number }) {
   const pending = i.payments.some(p => p.state === 'Pending');
+  const refunded = i.refundedMinor ?? 0;
   return {
     edit: i.state === 'Draft',
     issue: i.state === 'Draft' && i.lines.length > 0 && !i.lines.some(l => l.suggested),
-    pay: (i.state === 'Issued' || i.state === 'PartlyPaid') && !pending,
-    // A ₹0 bill is Paid when issued with nothing paid: it can still be cancelled.
-    cancel: (i.state === 'Draft' || ((i.state === 'Issued' || i.state === 'Paid') && i.paidMinor === 0)) && !pending,
+    // A refund ends collecting (MDV-P4-006).
+    pay: (i.state === 'Issued' || i.state === 'PartlyPaid') && !pending && refunded === 0,
+    // A ₹0 bill is Paid when issued with nothing paid, and a partly paid bill whose payments all went back keeps no money: both can be cancelled.
+    cancel: (i.state === 'Draft' || ((i.state === 'Issued' || i.state === 'Paid' || i.state === 'PartlyPaid') && i.paidMinor === refunded)) && !pending,
     // MDV-P4-005: an issued bill prints; its receipt once something is paid. A draft or cancelled bill prints nothing.
     printBill: i.state !== 'Draft' && i.state !== 'Cancelled',
     printReceipt: i.state !== 'Draft' && i.state !== 'Cancelled' && i.paidMinor > 0,
-    // MDV-P4-006: money goes back only on a paid bill, until all of it is given back (then Refunded).
-    refund: i.state === 'Paid' && i.paidMinor > 0,
+    // MDV-P4-006: money goes back on a paid or partly paid bill, until all of it is given back (a paid bill is then Refunded).
+    refund: (i.state === 'Paid' || i.state === 'PartlyPaid') && i.paidMinor > refunded,
   };
 }
 
@@ -87,8 +89,9 @@ export function refundable(i: Pick<Invoice, 'paidMinor' | 'refundedMinor' | 'pay
   return Math.min(left, paid - back);
 }
 
-/** A refund above the clinic's threshold needs the practice admin (the server refuses it to anyone else). */
-export const needsApproval = (amountMinor: number, options: Invoice['options']) => amountMinor > options.refundApprovalAboveMinor && !options.mayExceedMaxDiscount;
+/** A refund that takes all the bill gives back above the clinic's threshold needs the practice admin (the server refuses it to anyone else). */
+export const needsApproval = (amountMinor: number, i: Pick<Invoice, 'refundedMinor' | 'options'>) =>
+  i.refundedMinor + amountMinor > i.options.refundApprovalAboveMinor && !i.options.mayExceedMaxDiscount;
 
 /** The paper a bill or receipt prints on (MDV-P4-005): A5 for a standard printer, or the 80 mm thermal roll. */
 export const printPapers = ['a5', 'thermal'] as const;

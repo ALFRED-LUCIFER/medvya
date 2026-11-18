@@ -328,7 +328,7 @@ public sealed partial class Invoices(
         await using (var tx = await db.Database.BeginTransactionAsync(cancellationToken))
         {
             if (await LockAsync(id, command.Version, cancellationToken) is not { } invoice) return null;
-            if (!InvoiceFlow.CanCancel(invoice.State, invoice.PaidMinor)) throw new BillingValidationException([("state", "invalid")]);
+            if (!InvoiceFlow.CanCancel(invoice.State, invoice.PaidMinor, invoice.RefundedMinor)) throw new BillingValidationException([("state", "invalid")]);
             // A link the patient may still pay is closed first ("Cancel link"), so no money arrives for a cancelled bill.
             if (await db.Payments.AnyAsync(p => p.InvoiceId == id && p.State == PaymentState.Pending, cancellationToken)) throw new BillingValidationException([("payment", "pending")]);
             (invoice.State, invoice.CancelReason, invoice.CancelledAt) = (InvoiceState.Cancelled, reason, clock.GetUtcNow()); // keeps its number; never deleted
@@ -358,7 +358,7 @@ public sealed partial class Invoices(
         await using (var tx = await db.Database.BeginTransactionAsync(cancellationToken))
         {
             if (await LockAsync(id, null, cancellationToken) is not { } invoice) return null;
-            if (!InvoiceFlow.CanPay(invoice.State)) throw new BillingValidationException([("state", "invalid")]);
+            if (!InvoiceFlow.CanPay(invoice.State, invoice.RefundedMinor)) throw new BillingValidationException([("state", "invalid")]);
             // SAFETY: mutation check: removed this over-collection check -> BillingInvoiceTests.TwoPaymentsAtOnceCannotOverCollect failed (CK_Invoices_Paid then threw on the second save)
             if (command.AmountMinor > await AvailableAsync(invoice, cancellationToken)) throw new BillingValidationException([("amountMinor", "over_collected")]);
             var now = clock.GetUtcNow();
@@ -394,9 +394,7 @@ public sealed partial class Invoices(
         else if (reason.Length > CreditNote.MaxReason) errors.Add(("reason", "too_long"));
         if (command.Method is PaymentMethod.Card or PaymentMethod.UpiDirect) CheckReference(reference, errors);
         BillingValidationException.ThrowIfAny(errors);
-        // SAFETY: mutation check: removed this threshold check -> BillingInvoiceTests.ARefundAboveTheThresholdNeedsPracticeConfiguration failed (the desk refunded ₹1,500 alone)
-        if (command.AmountMinor > s.RefundApprovalAboveMinor && await staff.AccessAsync(Capability.StaffRolesIntegrations, cancellationToken) != Access.Config)
-            throw new BillingValidationException([("amountMinor", "approval_required")]);
+        var admin = await staff.AccessAsync(Capability.StaffRolesIntegrations, cancellationToken) == Access.Config;
 
         await using (var tx = await db.Database.BeginTransactionAsync(cancellationToken))
         {
@@ -404,6 +402,9 @@ public sealed partial class Invoices(
             if (!InvoiceFlow.CanRefund(invoice.State)) throw new BillingValidationException([("state", "invalid")]);
             var rules = await RulesAsync(cancellationToken);
             var amount = command.AmountMinor!.Value;
+            // The threshold is on all the bill gives back, so two small refunds cannot pass it together.
+            // SAFETY: mutation check: compared the threshold with this refund alone -> BillingInvoiceTests.ARefundAboveTheThresholdNeedsPracticeConfiguration failed (two refunds under ₹1,000 gave back ₹1,500 without the admin)
+            if (invoice.RefundedMinor + amount > s.RefundApprovalAboveMinor && !admin) throw new BillingValidationException([("amountMinor", "approval_required")]);
             // SAFETY: mutation check: removed this over-refund check -> BillingInvoiceTests.ARefundIsAtMostWhatWasPaidAndACardRefundAtMostWhatTheCardPaid failed (no over_refunded refusal)
             if (amount > invoice.PaidMinor - invoice.RefundedMinor) throw new BillingValidationException([("amountMinor", "over_refunded")]);
             if (command.Method is PaymentMethod.Card or PaymentMethod.UpiDirect)
@@ -416,17 +417,19 @@ public sealed partial class Invoices(
             var now = clock.GetUtcNow();
             // The credit note's legal number in this transaction: a rollback gives it back, so the series has no gaps (MDV-P4-001).
             var number = await numbering.IssueAsync(rules.CountryCode, DocumentType.CreditNote, s.CreditNotePrefix, now, cancellationToken);
-            db.CreditNotes.Add(new CreditNote
+            var note = new CreditNote
             {
                 Id = Guid.CreateVersion7(), TenantId = invoice.TenantId, FacilityId = invoice.FacilityId, InvoiceId = id, Number = number.Value, Currency = invoice.Currency,
                 AmountMinor = amount, Method = command.Method!.Value, Reference = command.Method == PaymentMethod.Cash ? null : reference, Reason = reason!,
                 CashSessionId = await OpenCashSessionAsync(invoice.FacilityId, cancellationToken), CreatedBy = user.UserId, CreatedAt = now,
-            });
+            };
+            db.CreditNotes.Add(note);
             invoice.RefundedMinor += amount;
-            invoice.State = InvoiceFlow.AfterRefund(invoice.PaidMinor, invoice.RefundedMinor);
+            invoice.State = InvoiceFlow.AfterRefund(invoice.State, invoice.PaidMinor, invoice.RefundedMinor);
             Touch(invoice);
             await db.SaveChangesAsync(cancellationToken);
-            await AuditAsync(tx, "billing.refund", invoice, cancellationToken);
+            // Which refund: ids, amount and method only; the reason may name the patient and stays out of the audit detail.
+            await AuditAsync(tx, "billing.refund", invoice, cancellationToken, $"creditNote:{note.Id};amountMinor:{amount};method:{note.Method}");
             await tx.CommitAsync(cancellationToken);
         }
         return await GetAsync(id, cancellationToken);
@@ -462,7 +465,7 @@ public sealed partial class Invoices(
         {
             if (await LockAsync(id, null, cancellationToken) is not { } locked) return null;
             invoice = locked;
-            if (!InvoiceFlow.CanPay(invoice.State)) throw new BillingValidationException([("state", "invalid")]);
+            if (!InvoiceFlow.CanPay(invoice.State, invoice.RefundedMinor)) throw new BillingValidationException([("state", "invalid")]);
             if (await db.Payments.AnyAsync(p => p.InvoiceId == id && p.State == PaymentState.Pending, cancellationToken)) throw new BillingValidationException([("payment", "pending")]);
             var balance = await AvailableAsync(invoice, cancellationToken);
             if (balance < MinLinkMinor) throw new BillingValidationException([("amountMinor", "too_small")]);
@@ -642,10 +645,11 @@ public sealed partial class Invoices(
     void Touch(Invoice invoice) => (invoice.ChangedBy, invoice.ChangedAt) = (user.UserId, clock.GetUtcNow());
 
     /// <summary>The audit row, written last before the commit (AGENTS.md 3.1).</summary>
-    Task AuditAsync(IDbContextTransaction tx, string action, Invoice invoice, CancellationToken cancellationToken) => audit.WriteAsync(new AuditEvent
+    Task AuditAsync(IDbContextTransaction tx, string action, Invoice invoice, CancellationToken cancellationToken, string? detail = null) => audit.WriteAsync(new AuditEvent
     {
         Id = Guid.CreateVersion7(), TenantId = invoice.TenantId, ActorUserId = user.UserId, Action = action, ResourceType = Resource, ResourceId = invoice.Id,
         PatientId = invoice.PatientId, Purpose = AuditPurpose.Billing, Outcome = AuditOutcome.Allowed, OccurredAt = clock.GetUtcNow(), FacilityId = invoice.FacilityId,
+        Detail = detail,
     }, tx.GetDbTransaction(), cancellationToken);
 
     async Task<BillingCountryRules> RulesAsync(CancellationToken cancellationToken) =>

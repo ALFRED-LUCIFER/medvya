@@ -21,7 +21,14 @@ public sealed record MoveDentalPlanItem(DentalPlanStatus? To, string? Reason, Gu
 /// <summary>A plan item. <see cref="ConsentKey"/>: the procedure consent it needs before it starts (MDV-P8-019), with the latest one signed (<see cref="Consent"/>).</summary>
 public sealed record DentalPlanItemView(
     Guid Id, Guid ServiceId, string ServiceName, string? Tooth, string? Surfaces, int Phase, long EstimateMinor, string Currency, DentalPlanStatus Status,
-    string? Reason, DateTimeOffset CreatedAt, DateTimeOffset ChangedAt, DateTimeOffset? DoneAt, uint Version, string? ConsentKey = null, DentalConsentView? Consent = null);
+    string? Reason, DateTimeOffset CreatedAt, DateTimeOffset ChangedAt, DateTimeOffset? DoneAt, uint Version, string? ConsentKey = null, DentalConsentView? Consent = null,
+    IReadOnlyList<DentalStageView>? Stages = null);
+
+/// <summary>A stage of a multi-visit item (MDV-P8-013): its name, the length its visit is booked for, and when and on which visit it was done (null: not yet).</summary>
+public sealed record DentalStageView(string Name, int Minutes, DateTimeOffset? DoneAt, Guid? EncounterId);
+
+/// <summary>Marks the next stage of an item done on a visit whose note is signed. <see cref="Stage"/> is the stage's position, from 0.</summary>
+public sealed record MarkDentalStage(Guid? EncounterId, int? Stage);
 
 /// <summary>
 /// The patient signs a plan item's procedure consent on the tablet (MDV-P8-019), in the patient's open consultation: the language the form was read in, the
@@ -54,8 +61,9 @@ public sealed record DentalPlanView(IReadOnlyList<DentalPlanItemView> Items, lon
 /// open consultation with the patient at this facility, where findings are recorded and items started or finished (null: none open).
 /// </summary>
 /// <see cref="HistoryCheck"/>: the latest medical history check (MDV-P8-014), null when never confirmed.
+/// <see cref="OpenVisitChairId"/>: the chair the open consultation's visit holds (MDV-P8-009), so the next stage is booked in it.
 public sealed record DentalChartView(IReadOnlyList<ToothFindingView> Teeth, IReadOnlyList<ToothFindingView> History, DentalPlanView Plan, Guid? OpenEncounterId = null,
-    DentalHistoryCheckView? HistoryCheck = null);
+    DentalHistoryCheckView? HistoryCheck = null, Guid? OpenVisitChairId = null);
 
 /// <summary>The history check as confirmed with the patient: a yes or no for every question (MDV-P8-014), and an optional note.</summary>
 public sealed record ConfirmDentalHistory(IReadOnlyDictionary<DentalHistoryQuestion, bool>? Answers, string? Note);
@@ -96,6 +104,10 @@ public interface IDental
 
     /// <exception cref="DentalValidationException">Field errors; "serviceId:unknown" or "serviceId:no_price".</exception>
     Task<DentalPlanItemView> AddPlanItemAsync(Guid patientId, Guid facilityId, AddDentalPlanItem command, CancellationToken cancellationToken = default);
+
+    /// <summary>Marks the next stage of a multi-visit item done (MDV-P8-013); null when the item is not the patient's.</summary>
+    /// <exception cref="DentalValidationException">"stages:none", "stage:not_next", "item:not_started", "encounterId:required|invalid", "encounter:unsigned".</exception>
+    Task<DentalPlanItemView?> MarkStageAsync(Guid patientId, Guid facilityId, Guid itemId, MarkDentalStage command, CancellationToken cancellationToken = default);
 
     /// <summary>Records the patient's signed consent for a plan item (MDV-P8-019); null when the item is not the patient's.</summary>
     /// <exception cref="DentalValidationException">"consent:not_needed", "language:invalid", "signedBy:required|too_long", "signature:invalid", "encounterId:required|invalid|ended".</exception>

@@ -390,6 +390,14 @@ test('a dental booking: the procedure sets the length, reception lengthens it, a
   await expect(column(page, 'Dr. Arjun Rao (synthetic)')).toHaveCount(0);
 });
 
+test('booking the next stage of a procedure from the Dental tab: the slot is held for its length in its chair (MDV-P8-013)', async ({ page }) => {
+  const calls = await open(page);
+  const chair = '5e1d0001-0009-4000-8000-000000000001'; // an opaque id; anything else in the address is ignored
+  await page.goto(`/schedule?patient=${patientId}&doctor=d-1&minutes=45&chair=${chair}`);
+  await bookButton(page, '10:00').click();
+  await expect.poll(() => calls.holds.at(-1)).toEqual({ facilityId: 'f-1', calendarId: 'd-1', start: ist('2026-10-19', '10:00'), visitType: 'Procedure', minutes: 45, resourceId: chair });
+});
+
 test('reception books an empty slot: hold, longer visit type, confirm the patient, book', async ({ page }) => {
   const calls = await open(page);
   await expect(bookButton(page, '09:40')).toHaveCount(0); // being booked elsewhere

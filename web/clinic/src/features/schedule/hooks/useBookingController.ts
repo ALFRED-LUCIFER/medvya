@@ -4,7 +4,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
-import { bookingSchema, emptyBooking, lengthFor, readSlotReturn, slotError, withoutSlotReturn, type BookedAppointment, type BookingForm, type SlotChoice } from '../domain/booking';
+import { bookingSchema, carriedStageOf, emptyBooking, lengthFor, readSlotReturn, slotError, withoutSlotReturn, type BookedAppointment, type BookingForm, type SlotChoice } from '../domain/booking';
 import type { ScheduleColumn, VisitType } from '../domain/schedule';
 import { includedStarts, maxRepeat, moveRow, planOf, replanOf, summarise, toggleRow, type PlanRow, type SeriesDone } from '../domain/series';
 import { forgetKey, type HeldKey, keyFor } from '../../api/services/idempotencyKey';
@@ -27,6 +27,8 @@ export function useBookingController(facilityId: string, timeZone: string | null
   const [resumed] = useState(() => { const back = readSlotReturn(params); return back && { choice: { ...back, calendarName: '' }, patientId: back.patientId }; });
   // From the global search's "Book" (MDV-P2-003): the address names a patient but no slot, and the next slot chosen is booked for them.
   const [carried, setCarried] = useState(() => { const id = params.get('patient') ?? ''; return !readSlotReturn(params) && z.uuid().safeParse(id).success ? id : ''; });
+  // MDV-P8-013: booking a procedure's next stage carries its length and the chair, filled in on the slot chosen.
+  const [carriedStage] = useState(() => carriedStageOf(params));
   const [choice, setChoice] = useState<SlotChoice | null>(resumed?.choice ?? null);
   const [booked, setBooked] = useState<BookedAppointment | null>(null);
   // A no-show's rebook (MDV-P1-024): the next slot chosen is booked for this patient, already filled in.
@@ -165,7 +167,10 @@ export function useBookingController(facilityId: string, timeZone: string | null
     onBackToForm: () => { setPlan(null); bookMany.reset(); },
     onDismissSeries: () => setSeriesDone(null),
     booked,
-    onSlot: (calendarId: string, calendarName: string, start: string) => { typePicked.current = false; choose({ calendarId, calendarName, start, visitType: 'FollowUp' }); },
+    onSlot: (calendarId: string, calendarName: string, start: string) => {
+      typePicked.current = !!carriedStage;
+      choose(carriedStage ? { calendarId, calendarName, start, visitType: 'Procedure', minutes: carriedStage.minutes, resourceId: carriedStage.chair } : { calendarId, calendarName, start, visitType: 'FollowUp' });
+    },
     onVisitType: (visitType: VisitType) => { typePicked.current = true; if (choice) choose({ ...choice, visitType }); },
     // MDV-P8-009: a procedure sets the length; reception can lengthen it; a chair is held with the dentist. Each change holds again (one hold per user).
     procedures: onDoctor ? procedures.data ?? [] : [],

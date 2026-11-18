@@ -38,6 +38,7 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
     public DbSet<DentalFinding> DentalFindings => Set<DentalFinding>();
     public DbSet<DentalHistoryCheck> DentalHistoryChecks => Set<DentalHistoryCheck>();
     public DbSet<DentalConsent> DentalConsents => Set<DentalConsent>();
+    public DbSet<DentalStageDone> DentalStagesDone => Set<DentalStageDone>();
     public DbSet<DentalPlanItem> DentalPlanItems => Set<DentalPlanItem>();
     public DbSet<DentalEstimateAcceptance> DentalEstimateAcceptances => Set<DentalEstimateAcceptance>();
 
@@ -181,8 +182,18 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
             e.ToTable(t => t.HasCheckConstraint("CK_DentalConsents_Withdrawal", "(\"WithdrawnAt\" IS NULL) = (\"WithdrawalReason\" IS NULL)"));
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
+        // MDV-P8-013: append-only, each stage of an item once.
+        modelBuilder.Entity<DentalStageDone>(e =>
+        {
+            e.ToTable("DentalStagesDone");
+            e.Property(x => x.StageName).HasMaxLength(40);
+            e.HasIndex(x => new { x.TenantId, x.PlanItemId, x.Stage }).IsUnique();
+            e.HasIndex(x => new { x.TenantId, x.PatientId });
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
         modelBuilder.Entity<DentalPlanItem>(e =>
         {
+            e.Property(x => x.StagesKey).HasMaxLength(30);
             e.Property(x => x.ConsentKey).HasMaxLength(30);
             e.Property(x => x.ServiceName).HasMaxLength(DentalPlanItem.MaxServiceName);
             e.Property(x => x.Tooth).HasMaxLength(2);

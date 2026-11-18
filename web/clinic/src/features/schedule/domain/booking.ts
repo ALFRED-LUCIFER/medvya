@@ -23,6 +23,17 @@ export type SlotChoice = {
   procedureId?: string | null; minutes?: number | null; resourceId?: string | null;
 };
 
+/**
+ * MDV-P8-013: the next stage of a procedure, carried in the address from the Dental tab: its length (5 to 480 minutes) and the chair (an opaque id), or
+ * null when the address names none.
+ */
+export function carriedStageOf(params: URLSearchParams): { minutes: number; chair: string | null } | null {
+  const minutes = Number(params.get('minutes'));
+  if (!Number.isInteger(minutes) || minutes < 5 || minutes > 480) return null;
+  const chair = params.get('chair');
+  return { minutes, chair: chair && z.uuid().safeParse(chair).success ? chair : null };
+}
+
 /** A procedure of the catalogue with its usual length (GET /v1/schedule/procedures). */
 export type Procedure = { id: string; name: string; code: string | null; durationMinutes: number };
 

@@ -60,6 +60,11 @@ BEGIN
         REVOKE UPDATE, DELETE, TRUNCATE ON encounters."DentalConsents" FROM medvya_encounters;
         GRANT UPDATE ("PatientId", "MergedFromPatientId", "WithdrawnAt", "WithdrawnBy", "WithdrawalReason") ON encounters."DentalConsents" TO medvya_encounters;
     END IF;
+    -- A stage done on a signed visit is never changed or removed (MDV-P8-013).
+    IF to_regclass('encounters."DentalStagesDone"') IS NOT NULL THEN
+        REVOKE UPDATE, DELETE, TRUNCATE ON encounters."DentalStagesDone" FROM medvya_encounters;
+        GRANT UPDATE ("PatientId", "MergedFromPatientId") ON encounters."DentalStagesDone" TO medvya_encounters;
+    END IF;
 
     -- The chain trigger lists a tenant's first row in ledger."Chains"; ledger."Tables" stays read-only (roles.sql).
     IF to_regclass('ledger."Chains"') IS NOT NULL THEN

@@ -295,6 +295,7 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/dental/history-check", """{"answers":{"BloodThinners":false,"Diabetes":false,"Pregnancy":false,"HeartOrEndocarditisRisk":false,"Bisphosphonates":false,"LocalAnaestheticAllergy":false}}""")),
         (Role.SoloDoctor, new("POST", "/v1/patients/{patient}/dental/plan", """{"serviceId":"{dentalItem}","phase":1}""")),
         (Role.SoloDoctor, new("POST", "/v1/patients/{patient}/dental/plan/{dentalItem}/move", """{"to":"Declined","reason":"Synthetic"}""")),
+        (Role.SoloDoctor, new("POST", "/v1/patients/{patient}/dental/plan/{dentalItem}/stages", """{"stage":0}""")),
         (Role.SoloDoctor, new("POST", "/v1/patients/{patient}/dental/plan/{dentalItem}/consent", """{"language":"en","signedBy":"Synthetic"}""")),
         (Role.SoloDoctor, new("POST", "/v1/patients/{patient}/dental/consents/{dentalConsent}/withdraw", """{"reason":"Synthetic"}""")),
         (Role.SoloDoctor, new("POST", "/v1/patients/{patient}/dental/consents/{dentalConsent}/pdf")),

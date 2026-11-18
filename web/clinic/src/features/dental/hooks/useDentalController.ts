@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useI18n } from '@medvya/i18n';
 import { ApiError } from '../../api/services/apiClient';
 import { errorKey, findingProblem, historyComplete, historyOnVisit, sortSurfaces, stepTarget, type AcceptanceMethod, type Dentition, type DentalView, type HistoryQuestion, type PlanItem, type ToothCondition } from '../domain/dental';
-import { acceptEstimate, addPlanItem, confirmHistory, downloadConsentPdf, downloadDentalPdf, fetchDental, fetchDentalServices, movePlanItem, recordFinding, signConsent, withdrawConsent } from '../services/dentalApi';
+import { acceptEstimate, addPlanItem, confirmHistory, markStage, downloadConsentPdf, downloadDentalPdf, fetchDental, fetchDentalServices, movePlanItem, recordFinding, signConsent, withdrawConsent } from '../services/dentalApi';
 
 const status = (e: unknown) => (e instanceof ApiError ? e.status : null);
 const code = (e: unknown) => (e instanceof ApiError ? e.code : undefined);
@@ -75,6 +75,11 @@ export function useDentalController(patientId: string, canChange: boolean): Dent
     onSuccess: () => { setWithdrawing(null); setWithdrawReason(''); void reload(); },
   });
   const consentPdf = useMutation({ mutationFn: (consentId: string) => downloadConsentPdf(patientId, consentId) });
+  // MDV-P8-013: the next stage of a multi-visit item, on this visit (the server needs its note signed and says so).
+  const stage = useMutation({
+    mutationFn: ({ item, index }: { item: PlanItem; index: number }) => markStage(patientId, item.id, { encounterId: encounterId!, stage: index }),
+    onSuccess: () => { void reload(); },
+  });
 
   // MDV-P8-014: the history check, answered with the patient on this visit; nothing is pre-filled from the last check (each answer is asked again).
   const [answers, setAnswers] = useState<Partial<Record<HistoryQuestion, boolean>>>({});
@@ -157,6 +162,10 @@ export function useDentalController(patientId: string, canChange: boolean): Dent
     withdrawSaving: withdraw.isPending, withdrawFailed: withdraw.isError,
     onWithdraw: () => { if (withdrawing && withdrawReason.trim()) withdraw.mutate(); },
     onConsentPdf: (id: string) => consentPdf.mutate(id), consentPdfFailed: consentPdf.isError,
+    staging: stage.isPending ? stage.variables?.item.id ?? null : null,
+    stageError: stage.isError ? errorKey(code(stage.error)) : null,
+    stageFailed: stage.isError && !errorKey(code(stage.error)),
+    onStage: (item: PlanItem, index: number) => { if (encounterId) stage.mutate({ item, index }); },
   };
 }
 

@@ -21,12 +21,12 @@ namespace Medvya.Encounters.Infrastructure;
 /// </summary>
 public sealed class DentalService(
     EncountersDbContext db, IClinicalAccess clinical, ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, TimeProvider clock, ICatalogue catalogue,
-    IPatientDirectory patients, IFacilityDirectory facilities, IStaffUsers staff, IDocumentStore documents) : IDental, IDentalCharges
+    IPatientDirectory patients, IFacilityDirectory facilities, IStaffUsers staff, IDocumentStore documents, Medvya.Scheduling.Application.IConsultVisits visits) : IDental, IDentalCharges
 {
     public const string ReadAction = "patient.dental.read", FindingAction = "patient.dental.finding", PlanAction = "patient.dental.plan",
         MoveAction = "patient.dental.plan_move", AcceptAction = "patient.dental.estimate_accept", PdfAction = "patient.dental.pdf",
         HistoryAction = "patient.dental.history_check", ConsentAction = "patient.dental.consent_sign", WithdrawAction = "patient.dental.consent_withdraw",
-        ConsentPdfAction = "patient.dental.consent_pdf";
+        ConsentPdfAction = "patient.dental.consent_pdf", StageAction = "patient.dental.stage_done";
     static readonly Access[] Treats = [Access.Read, Access.Limited, Access.Full, Access.Sign];
     static readonly Access[] Dentists = [Access.Sign];
 
@@ -38,8 +38,10 @@ public sealed class DentalService(
         await clinical.RequireAsync(patientId, facilityId, Capability.Patient360Chart, Treats, cancellationToken);
         await audit.WriteAsync(Event(ReadAction, patientId), cancellationToken);
         var open = await db.Encounters.AsNoTracking().Where(e => e.PatientId == patientId && e.FacilityId == facilityId && e.Status == EncounterStatus.Active && e.LeadClinicianId == Me)
-            .OrderByDescending(e => e.StartedAt).Select(e => (Guid?)e.Id).FirstOrDefaultAsync(cancellationToken);
-        return await ReadAsync(patientId, cancellationToken) with { OpenEncounterId = open };
+            .OrderByDescending(e => e.StartedAt).Select(e => new { e.Id, e.AppointmentId }).FirstOrDefaultAsync(cancellationToken);
+        // MDV-P8-013: the chair of the open visit, so the next stage of a procedure is booked in it.
+        var chair = open is null ? null : (await visits.FindAsync(open.AppointmentId, cancellationToken))?.ResourceId;
+        return await ReadAsync(patientId, cancellationToken) with { OpenEncounterId = open?.Id, OpenVisitChairId = chair };
     }
 
     async Task<DentalChartView> ReadAsync(Guid patientId, CancellationToken cancellationToken)
@@ -82,9 +84,11 @@ public sealed class DentalService(
             .OrderBy(i => i.Phase).ThenBy(i => i.CreatedAt).ThenBy(i => i.Id).ToListAsync(cancellationToken);
         var consents = (await db.DentalConsents.AsNoTracking().Where(c => c.PatientId == patientId).ToListAsync(cancellationToken))
             .GroupBy(c => c.PlanItemId).ToDictionary(g => g.Key, g => g.OrderByDescending(c => c.SignedAt).ThenByDescending(c => c.Id).First());
+        var stages = (await db.DentalStagesDone.AsNoTracking().Where(s => s.PatientId == patientId).ToListAsync(cancellationToken)).ToLookup(s => s.PlanItemId);
         var accepted = await db.DentalEstimateAcceptances.AsNoTracking().Where(a => a.PatientId == patientId)
             .OrderByDescending(a => a.AcceptedAt).ThenByDescending(a => a.Id).FirstOrDefaultAsync(cancellationToken);
-        return new DentalPlanView([.. items.Select(i => View(i) with { Consent = consents.GetValueOrDefault(i.Id) is { } c ? View(c) : null })], DentalRules.EstimateTotal(items), items.FirstOrDefault()?.Currency,
+        return new DentalPlanView([.. items.Select(i => View(i) with { Consent = consents.GetValueOrDefault(i.Id) is { } c ? View(c) : null, Stages = Stages(i, stages[i.Id]) })],
+            DentalRules.EstimateTotal(items), items.FirstOrDefault()?.Currency,
             accepted is null ? null : new(accepted.Id, accepted.AcceptedByName, accepted.Method, accepted.TotalMinor, accepted.Currency, accepted.AcceptedAt, accepted.RecordedBy),
             accepted is not null && accepted.ItemsKey == DentalRules.EstimateKey(items));
     }
@@ -134,7 +138,7 @@ public sealed class DentalService(
         var row = new DentalPlanItem
         {
             Id = Guid.CreateVersion7(), TenantId = TenantId, PatientId = patientId, FacilityId = facilityId, ServiceId = service.Id, ServiceName = service.Name,
-            Tooth = tooth, Surfaces = DentalRules.Surfaces(command.Surfaces) is { Length: > 0 } s ? s : null, Phase = command.Phase!.Value, ConsentKey = DentalConsentRules.For(service.Code),
+            Tooth = tooth, Surfaces = DentalRules.Surfaces(command.Surfaces) is { Length: > 0 } s ? s : null, Phase = command.Phase!.Value, ConsentKey = DentalConsentRules.For(service.Code), StagesKey = DentalStageRules.For(service.Code),
             EstimateMinor = price.AmountMinor, Currency = price.Currency, Status = DentalPlanStatus.Planned, CreatedBy = Me, CreatedAt = now, ChangedBy = Me, ChangedAt = now,
         };
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
@@ -242,6 +246,44 @@ public sealed class DentalService(
 
     static DentalConsentView View(DentalConsent c) => new(c.Id, c.PlanItemId, c.TemplateKey, c.TemplateVersion, c.Language, c.SignedByName, c.SignedAt, c.WithdrawnAt,
         c.WithdrawalReason, c.WithdrawnAt is null && DentalConsentRules.Versions.GetValueOrDefault(c.TemplateKey) == c.TemplateVersion);
+
+    /// <summary>The item's stages in order, each with when and on which visit it was done; null for a one-visit item.</summary>
+    static IReadOnlyList<DentalStageView>? Stages(DentalPlanItem item, IEnumerable<DentalStageDone> done)
+    {
+        if (item.StagesKey is not { } key || !DentalStageRules.Sets.TryGetValue(key, out var set)) return null;
+        var byStage = done.ToDictionary(d => d.Stage);
+        return [.. set.Select((s, i) => new DentalStageView(s.Name, s.Minutes, byStage.GetValueOrDefault(i)?.DoneAt, byStage.GetValueOrDefault(i)?.EncounterId))];
+    }
+
+    public async Task<DentalPlanItemView?> MarkStageAsync(Guid patientId, Guid facilityId, Guid itemId, MarkDentalStage command, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        await clinical.RequireAsync(patientId, facilityId, Capability.ClinicalNotes, Dentists, cancellationToken);
+        if (await db.DentalPlanItems.AsNoTracking().SingleOrDefaultAsync(i => i.Id == itemId && i.PatientId == patientId, cancellationToken) is not { } item) return null;
+        var done = await db.DentalStagesDone.AsNoTracking().Where(s => s.PlanItemId == item.Id).ToListAsync(cancellationToken);
+        var errors = new List<(string, string)>();
+        var set = item.StagesKey is { } key ? DentalStageRules.Sets.GetValueOrDefault(key) : null;
+        if (set is null) errors.Add(("stages", "none"));
+        else if (command.Stage != done.Count || done.Count >= set.Count) errors.Add(("stage", "not_next")); // in order, each once
+        if (item.Status != DentalPlanStatus.InProgress) errors.Add(("item", "not_started"));
+        if (command.EncounterId is not { } encounterId) errors.Add(("encounterId", "required"));
+        else if (await db.Encounters.AsNoTracking().SingleOrDefaultAsync(e => e.Id == encounterId, cancellationToken) is not { } encounter
+            || encounter.PatientId != patientId || encounter.FacilityId != facilityId) errors.Add(("encounterId", "invalid"));
+        // AC3: a stage is part of a signed record, so the visit's note must be signed first.
+        else if (!await db.ConsultNotes.AnyAsync(n => n.EncounterId == encounterId && n.Status == NoteStatus.Signed, cancellationToken)) errors.Add(("encounter", "unsigned"));
+        if (errors.Count > 0) throw new DentalValidationException(errors);
+        var row = new DentalStageDone
+        {
+            Id = Guid.CreateVersion7(), TenantId = TenantId, PatientId = patientId, FacilityId = facilityId, PlanItemId = item.Id, Stage = done.Count, StageName = set![done.Count].Name,
+            EncounterId = command.EncounterId!.Value, DoneBy = Me, DoneAt = clock.GetUtcNow(),
+        };
+        await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
+        db.DentalStagesDone.Add(row);
+        await db.SaveChangesAsync(cancellationToken); // the unique (item, stage) index refuses the same stage twice, even in a race
+        await audit.WriteAsync(Event(StageAction, patientId, item.Id), tx.GetDbTransaction(), cancellationToken);
+        await tx.CommitAsync(cancellationToken);
+        return View(item) with { Stages = Stages(item, [.. done, row]) };
+    }
 
     public async Task<DentalConsentView?> SignConsentAsync(Guid patientId, Guid facilityId, Guid itemId, SignDentalConsent command, CancellationToken cancellationToken = default)
     {

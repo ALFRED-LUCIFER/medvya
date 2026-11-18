@@ -63,6 +63,8 @@ public sealed class DentalPlanItem
     [Classification(DataClass.Internal)] public Guid? MergedFromPatientId { get; init; }
     /// <summary>Opaque id of the service in the Billing module.</summary>
     /// <summary>The procedure consent this item needs before it starts (MDV-P8-019, <see cref="DentalConsentRules"/>), from the service's code when planned; null: none.</summary>
+    /// <summary>The procedure's stages across visits (MDV-P8-013, <see cref="DentalStageRules"/>), from the service's code when planned; null: one visit.</summary>
+    [Classification(DataClass.Internal)] public string? StagesKey { get; init; }
     [Classification(DataClass.Internal)] public string? ConsentKey { get; init; }
     [Classification(DataClass.Internal)] public Guid ServiceId { get; init; }
     /// <summary>The service's name when planned, so the plan reads the same after the catalogue is renamed.</summary>
@@ -288,4 +290,52 @@ public static class DentalConsentRules
 
     /// <summary>A PNG image (by its signature bytes), not empty and not too large.</summary>
     public static bool IsSignature(byte[]? png) => png is { Length: > 8 and <= MaxSignatureBytes } && png.AsSpan(0, 8).SequenceEqual(new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A });
+}
+
+/// <summary>
+/// DENTAL_STAGE (MDV-P8-013): one stage of a multi-visit procedure done on a visit, in order (root canal: access and cleaning, shaping, obturation).
+/// Append-only. A stage is marked done only on a visit whose note is signed, so each stage is part of a signed record.
+/// </summary>
+public sealed class DentalStageDone
+{
+    [Classification(DataClass.Internal)] public Guid Id { get; init; }
+    [Classification(DataClass.Internal)] public Guid TenantId { get; init; }
+    [Classification(DataClass.Internal)] public Guid PatientId { get; init; }
+    [Classification(DataClass.Internal)] public Guid FacilityId { get; init; }
+    [Classification(DataClass.Internal)] public Guid? MergedFromPatientId { get; init; }
+    [Classification(DataClass.Internal)] public Guid PlanItemId { get; init; }
+    /// <summary>The stage's position in its set, from 0.</summary>
+    [Classification(DataClass.Internal)] public int Stage { get; init; }
+    [Classification(DataClass.Internal)] public required string StageName { get; init; }
+    [Classification(DataClass.Internal)] public Guid EncounterId { get; init; }
+    [Classification(DataClass.Internal)] public Guid DoneBy { get; init; }
+    [Classification(DataClass.Internal)] public DateTimeOffset DoneAt { get; init; }
+}
+
+/// <summary>
+/// The stages of the multi-visit procedures (MDV-P8-013), each with the length its visit is usually booked for, by the starter list's service codes. A
+/// dentist approves the stages and lengths (intake record). Stage names are i18n keys (dental.stage.&lt;name&gt;).
+/// shortcut: braces have one adjustment stage, though real treatment repeats it; add repeating stages when an orthodontist pilots it.
+/// </summary>
+public static class DentalStageRules
+{
+    public static readonly IReadOnlyDictionary<string, IReadOnlyList<(string Name, int Minutes)>> Sets = new Dictionary<string, IReadOnlyList<(string Name, int Minutes)>>
+    {
+        ["rootCanal"] = [("accessAndCleaning", 60), ("shaping", 45), ("obturation", 45)],
+        ["crown"] = [("preparation", 60), ("fitting", 30)],
+        ["implant"] = [("placement", 90), ("healingReview", 20), ("crownFitting", 45)],
+        ["braces"] = [("bonding", 90), ("adjustment", 30), ("debonding", 60)],
+        ["denture"] = [("impressions", 30), ("trial", 30), ("fitting", 30)],
+    };
+
+    /// <summary>The stage set of a service, from its code (DentalStarterList); null: done in one visit.</summary>
+    public static string? For(string? serviceCode) => serviceCode switch
+    {
+        "DN-END001" or "DN-END002" or "DN-END003" or "DN-END004" => "rootCanal",
+        "DN-PRS001" or "DN-PRS002" or "DN-PRS003" or "DN-PRS004" or "DN-PRS005" or "DN-PRS012" => "crown",
+        "DN-PRS011" => "implant",
+        "DN-ORT002" or "DN-ORT003" or "DN-ORT004" or "DN-ORT005" => "braces",
+        "DN-PRS006" or "DN-PRS007" or "DN-PRS008" or "DN-PRS009" or "DN-PRS010" => "denture",
+        _ => null,
+    };
 }

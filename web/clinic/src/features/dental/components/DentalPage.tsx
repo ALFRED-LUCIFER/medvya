@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import { ltr, useI18n } from '@medvya/i18n';
+import { ltr, useI18n, type MessageKey } from '@medvya/i18n';
 import {
   Button, buttonVariants, Card, PageContainer, PageHeader, PageMessage, Chip, ChoiceRow, Field, FilterChip, Input, Section, SegmentedControl, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SignaturePad, Textarea, ToothChart,
 } from '@medvya/ui';
@@ -7,7 +7,7 @@ import { CircleAlert, CircleCheck, Clock, Ban, CircleDot, FileDown, Lock } from 
 import { fieldError } from '../../settings/components/fieldStyles';
 import { ChartBanner } from '../../patient360/components/Patient360Page';
 import type { Patient360 } from '../../patient360/domain/chart';
-import { byPhase, conditions, conditionTone, dentitions, historyQuestions, marksFor, money, needsConsent, nextSteps, surfaceConditions, surfaceOrder, type ConsentKey, type DentalView, type PlanItem, type PlanStatus } from '../domain/dental';
+import { byPhase, conditions, conditionTone, dentitions, historyQuestions, marksFor, money, needsConsent, nextStage, nextSteps, surfaceConditions, surfaceOrder, type ConsentKey, type DentalView, type PlanItem, type PlanStatus } from '../domain/dental';
 
 const statusLook: Record<PlanStatus, { tone: 'info' | 'warning' | 'success' | 'neutral'; icon: typeof Clock }> = {
   Planned: { tone: 'info', icon: CircleDot }, InProgress: { tone: 'warning', icon: Clock }, Done: { tone: 'success', icon: CircleCheck }, Declined: { tone: 'neutral', icon: Ban },
@@ -19,7 +19,7 @@ const statusLook: Record<PlanStatus, { tone: 'info' | 'warning' | 'success' | 'n
  * the printed chart and estimate. A finding is never edited (a correction is a newer finding). Changing anything needs a doctor who signs notes; the
  * server decides again on every call. The rules are a draft until a dentist signs them, and the screen says so.
  */
-export default function DentalPage(p: DentalView & { consultPath: string | null; patient: Patient360 | null }) {
+export default function DentalPage(p: DentalView & { consultPath: string | null; patient: Patient360 | null; bookStage?: (minutes: number) => string | null }) {
   const { t, formatDate, formatTime, formatMoney } = useI18n();
   const header = <PageHeader title={t('dental.title')} />;
   if (p.loading) return <PageContainer>{header}<PageMessage kind="busy">{t('dental.loading')}</PageMessage></PageContainer>;
@@ -180,7 +180,7 @@ function FindingForm(p: DentalView & { consultPath: string | null }) {
   );
 }
 
-function PlanCard(p: DentalView & { consultPath: string | null; amount: (minor: number, currency: string | null) => string; when: (at: string) => string }) {
+function PlanCard(p: DentalView & { consultPath: string | null; amount: (minor: number, currency: string | null) => string; when: (at: string) => string; bookStage?: (minutes: number) => string | null }) {
   const { t } = useI18n();
   const plan = p.chart!.plan;
   return (
@@ -220,7 +220,7 @@ function PlanCard(p: DentalView & { consultPath: string | null; amount: (minor: 
   );
 }
 
-function PlanRow({ item, ...p }: DentalView & { item: PlanItem; amount: (minor: number, currency: string | null) => string }) {
+function PlanRow({ item, ...p }: DentalView & { item: PlanItem; amount: (minor: number, currency: string | null) => string; bookStage?: (minutes: number) => string | null }) {
   const { t } = useI18n();
   const look = statusLook[item.status];
   const steps = p.canChange ? nextSteps(item.status) : [];
@@ -234,6 +234,7 @@ function PlanRow({ item, ...p }: DentalView & { item: PlanItem; amount: (minor: 
       </div>
       {item.reason && <p className="text-caption">{t('dental.plan.reason', { reason: item.reason })}</p>}
       {item.status === 'Done' && <p className="text-caption text-muted-foreground">{t('dental.plan.billed')}</p>}
+      {item.stages && <StagesLine item={item} {...p} />}
       {item.consentKey && item.status !== 'Done' && item.status !== 'Declined' && <ConsentLine item={item} {...p} />}
       {p.declining === item.id ? (
         <form className="flex flex-col gap-2" onSubmit={e => { e.preventDefault(); p.onStep(item, 'decline'); }}>
@@ -254,6 +255,41 @@ function PlanRow({ item, ...p }: DentalView & { item: PlanItem; amount: (minor: 
         </div>
       )}
     </li>
+  );
+}
+
+/**
+ * MDV-P8-013: a multi-visit procedure's stages: how many are done, the current one and the next with its visit length; the dentist marks the next stage
+ * done on this visit (once its note is signed) and books the next stage with the schedule filled in.
+ */
+function StagesLine({ item, ...p }: DentalView & { item: PlanItem; bookStage?: (minutes: number) => string | null }) {
+  const { t } = useI18n();
+  const stages = item.stages!;
+  const next = nextStage(item);
+  const done = stages.filter(s => s.doneAt).length;
+  const book = next && p.bookStage?.(next.stage.minutes);
+  return (
+    <div className="flex flex-col gap-2">
+      <ol className="flex flex-wrap gap-2" aria-label={t('dental.stage.list', { done: String(done), total: String(stages.length) })}>
+        {stages.map((s, i) => (
+          <li key={s.name} className="flex items-center gap-1 text-caption">
+            {s.doneAt ? <CircleCheck aria-hidden className="size-4 shrink-0" /> : i === next?.index ? <CircleDot aria-hidden className="size-4 shrink-0" /> : <Clock aria-hidden className="size-4 shrink-0 text-muted-foreground" />}
+            <span className={s.doneAt ? '' : i === next?.index ? 'font-bold' : 'text-muted-foreground'}>
+              {t(s.doneAt ? 'dental.stage.done' : i === next?.index ? 'dental.stage.next' : 'dental.stage.later', { stage: t(`dental.stage.${s.name}` as MessageKey), minutes: String(s.minutes) })}
+            </span>
+          </li>
+        ))}
+      </ol>
+      {next && item.status === 'InProgress' && (
+        <div className="flex flex-wrap gap-2">
+          {p.canChange && p.encounterId && <Button variant="outline" loading={p.staging === item.id} onClick={() => p.onStage(item, next.index)}>
+            {t('dental.stage.mark', { stage: t(`dental.stage.${next.stage.name}` as MessageKey) })}</Button>}
+          {book && <Link to={book} className={buttonVariants({ variant: 'ghost' })}>{t('dental.stage.book', { minutes: String(next.stage.minutes) })}</Link>}
+        </div>
+      )}
+      {p.stageError && p.staging === null && <p role="alert" className={fieldError}>{t(p.stageError)}</p>}
+      {p.stageFailed && <p role="alert" className={fieldError}>{t('dental.stage.failed')}</p>}
+    </div>
   );
 }
 

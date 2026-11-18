@@ -657,6 +657,10 @@ namespace Medvya.Encounters.Infrastructure.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<string>("StagesKey")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -695,6 +699,54 @@ namespace Medvya.Encounters.Infrastructure.Persistence.Migrations
 
                             t.HasCheckConstraint("CK_DentalPlanItems_Phase", "\"Phase\" BETWEEN 1 AND 9");
                         });
+                });
+
+            modelBuilder.Entity("Medvya.Encounters.Domain.DentalStageDone", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("DoneAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("DoneBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("EncounterId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("FacilityId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("MergedFromPatientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PlanItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Stage")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("StageName")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "PatientId");
+
+                    b.HasIndex("TenantId", "PlanItemId", "Stage")
+                        .IsUnique();
+
+                    b.ToTable("DentalStagesDone", "encounters");
                 });
 
             modelBuilder.Entity("Medvya.Encounters.Domain.DoctorNoteTemplate", b =>

@@ -22,3 +22,5 @@ export const signConsent = (patientId: string, itemId: string, body: { encounter
 export const withdrawConsent = (patientId: string, consentId: string, reason: string) =>
   post<Consent>(`/v1/patients/${patientId}/dental/consents/${consentId}/withdraw`, { reason });
 export const downloadConsentPdf = (patientId: string, consentId: string) => downloadPaperPdf(`/v1/patients/${patientId}/dental/consents/${consentId}/pdf`, 'dental-consent.pdf');
+export const markStage = (patientId: string, itemId: string, body: { encounterId: string; stage: number }) =>
+  post<PlanItem>(`/v1/patients/${patientId}/dental/plan/${itemId}/stages`, body);

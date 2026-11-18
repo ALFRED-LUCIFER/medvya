@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { byPhase, dentalErrors, errorKey, findingProblem, historyComplete, historyOnVisit, historyQuestions, marksFor, needsConsent, nextSteps, sortSurfaces, type PlanItem, type ToothFinding } from './dental';
+import { byPhase, dentalErrors, errorKey, findingProblem, historyComplete, historyOnVisit, historyQuestions, marksFor, needsConsent, nextStage, nextStageAddress, nextSteps, sortSurfaces, type PlanItem, type ToothFinding } from './dental';
 import en from '../../../../../../packages/i18n/messages/en.json';
 
 const item = (id: string, phase: number): PlanItem => ({
   id, serviceId: 's', serviceName: id, tooth: '36', surfaces: null, phase, estimateMinor: 100, currency: 'INR', status: 'Planned', reason: null,
-  createdAt: '2026-11-06T04:30:00Z', changedAt: '2026-11-06T04:30:00Z', doneAt: null, version: 1, consentKey: null, consent: null,
+  createdAt: '2026-11-06T04:30:00Z', changedAt: '2026-11-06T04:30:00Z', doneAt: null, version: 1, consentKey: null, consent: null, stages: null,
 });
 
 describe('dental chart and plan (MDV-P8-011, MDV-P8-012)', () => {
@@ -65,5 +65,16 @@ describe('the procedure consent (MDV-P8-019)', () => {
     expect(needsConsent({ consentKey: 'extraction', consent: null })).toBe(true);
     expect(needsConsent({ consentKey: 'extraction', consent: c(false) })).toBe(true);
     expect(needsConsent({ consentKey: 'extraction', consent: c(true) })).toBe(false);
+  });
+});
+
+describe('multi-visit stages (MDV-P8-013)', () => {
+  it('finds the next stage and builds the booking address with the stage length and the chair', () => {
+    const s = (name: string, doneAt: string | null) => ({ name, minutes: 45, doneAt, encounterId: null });
+    expect(nextStage({ stages: [s('a', '2026-11-06T04:30:00Z'), s('b', null), s('c', null)] })).toEqual({ index: 1, stage: s('b', null) });
+    expect(nextStage({ stages: [s('a', '2026-11-06T04:30:00Z')] })).toBeNull();
+    expect(nextStage({ stages: null })).toBeNull();
+    expect(nextStageAddress('p-1', 'd-1', 45, 'r-1')).toBe('patient=p-1&doctor=d-1&minutes=45&chair=r-1');
+    expect(nextStageAddress('p-1', 'd-1', 45, null)).toBe('patient=p-1&doctor=d-1&minutes=45');
   });
 });

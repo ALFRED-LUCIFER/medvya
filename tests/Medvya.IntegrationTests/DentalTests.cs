@@ -217,6 +217,45 @@ public sealed class DentalTests(PostgresFixture sql) : IClassFixture<PostgresFix
             (await audit.Events.Where(e => e.Action.StartsWith("patient.dental.consent")).Select(e => e.Action).ToListAsync()).Order());
     }
 
+    /// <summary>
+    /// MDV-P8-013: a root canal has three stages, each with its visit length; the plan shows which are done and which is next; a stage is marked done in order,
+    /// once, on a visit whose note is signed, and only once the item has started. SAFETY (mutation check: skip the signed-note check, or the order, and this fails).
+    /// </summary>
+    [Fact]
+    public async Task AMultiVisitProcedureMovesStageByStageOnSignedVisitsOnly()
+    {
+        var (encounter, _) = await ConsultAsync(10);
+        await CheckedAsync(encounter);
+        var catalogue = h.Get<ICatalogue>(h.Admin);
+        var rct = await catalogue.CreateAsync(new SaveService { Name = "Root canal, molar (synthetic)", Code = "DN-END003", Category = ServiceCategory.Procedure, Sac = "999312", DurationMinutes = 60 });
+        await catalogue.AddPriceAsync(rct.Id, new AddPrice { AmountMinor = 650_000 });
+        var item = await Dental().AddPlanItemAsync(h.Patient, h.Facility, new(rct.Id, "36", null, 1));
+        Assert.Equal("item:not_started", await Refused(Dental().MarkStageAsync(h.Patient, h.Facility, item.Id, new(encounter, 0)))
+            .ContinueWith(t => t.Result.Split(',').Single(c => c.StartsWith("item", StringComparison.Ordinal))));
+        await Dental().SignConsentAsync(h.Patient, h.Facility, item.Id, new(encounter, "en", "Meera Iyer (synthetic)", Signature));
+        var started = (await Dental().MovePlanItemAsync(h.Patient, h.Facility, item.Id, new(DentalPlanStatus.InProgress, null, encounter, item.Version)))!;
+
+        var stages = (await Dental().ChartAsync(h.Patient, h.Facility)).Plan.Items.Single(i => i.Id == item.Id).Stages!;
+        Assert.Equal([("accessAndCleaning", 60), ("shaping", 45), ("obturation", 45)], stages.Select(s => (s.Name, s.Minutes)));
+        Assert.All(stages, s => Assert.Null(s.DoneAt));
+        Assert.Equal("encounter:unsigned", await Refused(Dental().MarkStageAsync(h.Patient, h.Facility, item.Id, new(encounter, 0)))); // the visit's note is not signed yet
+
+        await using (var db = sql.Encounters(h.Tenant))
+        {
+            db.ConsultNotes.Add(new ConsultNote { Id = Guid.NewGuid(), TenantId = h.Tenant, EncounterId = encounter, TemplateKey = "dental", TemplateVersion = 1, Status = NoteStatus.Signed, UpdatedBy = h.Doctor, UpdatedAt = h.Clock.GetUtcNow() });
+            await db.SaveChangesAsync();
+        }
+        Assert.Equal("stage:not_next", await Refused(Dental().MarkStageAsync(h.Patient, h.Facility, item.Id, new(encounter, 1)))); // in order
+        var first = (await Dental().MarkStageAsync(h.Patient, h.Facility, item.Id, new(encounter, 0)))!;
+        Assert.Equal((encounter, (DateTimeOffset?)null), (first.Stages![0].EncounterId!.Value, first.Stages[1].DoneAt));
+        Assert.Equal("stage:not_next", await Refused(Dental().MarkStageAsync(h.Patient, h.Facility, item.Id, new(encounter, 0)))); // once
+        Assert.Equal("stages:none", await Refused(Dental().MarkStageAsync(h.Patient, h.Facility, (await Dental().AddPlanItemAsync(h.Patient, h.Facility, new((await PricedAsync("Scaling (synthetic)", 1)).Id, null, null, 1))).Id, new(encounter, 0)))
+            .ContinueWith(t => t.Result.Split(',').Single(c => c.StartsWith("stages", StringComparison.Ordinal))));
+        Assert.Equal(DentalPlanStatus.InProgress, started.Status);
+        await using var audit = sql.Audit(h.Tenant);
+        Assert.Equal(1, await audit.Events.CountAsync(e => e.Action == "patient.dental.stage_done"));
+    }
+
     /// <summary>SAFETY (mutation check: let MovePlanItemAsync skip DentalRules.CanMove, the decline reason or the encounter check, and this fails).</summary>
     [Fact]
     public async Task APlanItemIsPricedFromTheCatalogueAndMovesOnlyByTheAllowedSteps()

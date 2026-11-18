@@ -46,7 +46,8 @@ public sealed class EncounterMergeParticipant(EncountersDbContext db, ICurrentTe
         || await db.DentalPlanItems.AsNoTracking().AnyAsync(d => d.PatientId == patientId, cancellationToken)
         || await db.DentalEstimateAcceptances.AsNoTracking().AnyAsync(d => d.PatientId == patientId, cancellationToken)
         || await db.DentalHistoryChecks.AsNoTracking().AnyAsync(d => d.PatientId == patientId, cancellationToken)
-        || await db.DentalConsents.AsNoTracking().AnyAsync(d => d.PatientId == patientId, cancellationToken);
+        || await db.DentalConsents.AsNoTracking().AnyAsync(d => d.PatientId == patientId, cancellationToken)
+        || await db.DentalStagesDone.AsNoTracking().AnyAsync(d => d.PatientId == patientId, cancellationToken);
 
     public Task<int> VisitsAsync(Guid patientId, CancellationToken cancellationToken) => Task.FromResult(0); // visits are Scheduling's to count
 
@@ -101,6 +102,8 @@ public sealed class EncounterMergeParticipant(EncountersDbContext db, ICurrentTe
             .ExecuteUpdateAsync(s => s.SetProperty(e => e.PatientId, toPatientId).SetProperty(e => e.MergedFromPatientId, fromPatientId), cancellationToken);
         await shared.DentalConsents.Where(e => e.PatientId == fromPatientId)
             .ExecuteUpdateAsync(s => s.SetProperty(e => e.PatientId, toPatientId).SetProperty(e => e.MergedFromPatientId, fromPatientId), cancellationToken);
+        await shared.DentalStagesDone.Where(e => e.PatientId == fromPatientId)
+            .ExecuteUpdateAsync(s => s.SetProperty(e => e.PatientId, toPatientId).SetProperty(e => e.MergedFromPatientId, fromPatientId), cancellationToken);
     }
 
     public async Task RestoreAsync(Guid fromPatientId, Guid toPatientId, DbTransaction transaction, CancellationToken cancellationToken)
@@ -151,6 +154,8 @@ public sealed class EncounterMergeParticipant(EncountersDbContext db, ICurrentTe
         await shared.DentalHistoryChecks.Where(e => e.PatientId == toPatientId && e.MergedFromPatientId == fromPatientId)
             .ExecuteUpdateAsync(s => s.SetProperty(e => e.PatientId, fromPatientId).SetProperty(e => e.MergedFromPatientId, (Guid?)null), cancellationToken);
         await shared.DentalConsents.Where(e => e.PatientId == toPatientId && e.MergedFromPatientId == fromPatientId)
+            .ExecuteUpdateAsync(s => s.SetProperty(e => e.PatientId, fromPatientId).SetProperty(e => e.MergedFromPatientId, (Guid?)null), cancellationToken);
+        await shared.DentalStagesDone.Where(e => e.PatientId == toPatientId && e.MergedFromPatientId == fromPatientId)
             .ExecuteUpdateAsync(s => s.SetProperty(e => e.PatientId, fromPatientId).SetProperty(e => e.MergedFromPatientId, (Guid?)null), cancellationToken);
     }
 

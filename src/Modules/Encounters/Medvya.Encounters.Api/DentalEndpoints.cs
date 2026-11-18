@@ -20,7 +20,7 @@ namespace Medvya.Encounters.Api;
 /// </summary>
 public sealed record DentalChartResponse(
     IReadOnlyList<ToothFindingView> Teeth, IReadOnlyList<ToothFindingView> History, DentalPlanView Plan, Guid? OpenEncounterId, string TimeZone, bool RulesSignedOff,
-    DentalHistoryCheckView? HistoryCheck = null);
+    DentalHistoryCheckView? HistoryCheck = null, Guid? OpenVisitChairId = null);
 
 public static class DentalEndpoints
 {
@@ -53,6 +53,10 @@ public static class DentalEndpoints
         app.MapPost("/v1/patients/{patientId:guid}/dental/plan/{itemId:guid}/move", Move)
             .RequireCapability(Capability.ClinicalNotes, Access.Sign)
             .AuditedByUseCase("patient.dental.plan_move", "dental_plan", AuditPurpose.Treatment, patientRouteKey: "patientId")
+            .AddEndpointFilter(MapErrors).RequireFeature(Features.Dental);
+        app.MapPost("/v1/patients/{patientId:guid}/dental/plan/{itemId:guid}/stages", MarkStage)
+            .RequireCapability(Capability.ClinicalNotes, Access.Sign)
+            .AuditedByUseCase("patient.dental.stage_done", "dental_plan", AuditPurpose.Treatment, patientRouteKey: "patientId")
             .AddEndpointFilter(MapErrors).RequireFeature(Features.Dental);
         // MDV-P8-019: the procedure consent signed on the tablet, its withdrawal, and the stored form.
         app.MapPost("/v1/patients/{patientId:guid}/dental/plan/{itemId:guid}/consent", SignConsent)
@@ -88,7 +92,7 @@ public static class DentalEndpoints
         ToothFindingView Named(ToothFindingView f) => f with { Author = names.GetValueOrDefault(f.RecordedBy) };
         return Results.Ok(new DentalChartResponse([.. chart.Teeth.Select(Named)], [.. chart.History.Select(Named)], chart.Plan, chart.OpenEncounterId,
             (await facilities.FindAsync(facilityId, ct) ?? throw new InvalidOperationException("Session facility not in this tenant.")).TimeZone, DentalRules.SignOff is not null,
-            chart.HistoryCheck is { } check ? check with { Author = names.GetValueOrDefault(check.ConfirmedBy) } : null));
+            chart.HistoryCheck is { } check ? check with { Author = names.GetValueOrDefault(check.ConfirmedBy) } : null, chart.OpenVisitChairId));
     }
 
     static async Task<IResult> Services(Guid patientId, [FromServices] IDental service, [FromServices] IPatientDirectory patients, [FromServices] ICurrentFacility current, CancellationToken ct)
@@ -132,6 +136,15 @@ public static class DentalEndpoints
         if (!(await patients.SummariesAsync([patientId], ct)).ContainsKey(patientId)) return Results.NotFound();
         if (body is null) return Results.ValidationProblem(new Dictionary<string, string[]> { ["move"] = ["empty"] });
         return await service.MovePlanItemAsync(patientId, facilityId, itemId, body, ct) is { } item ? Results.Ok(item) : Results.NotFound();
+    }
+
+    static async Task<IResult> MarkStage(Guid patientId, Guid itemId, [FromBody] MarkDentalStage? body, [FromServices] IDental service, [FromServices] IPatientDirectory patients,
+        [FromServices] ICurrentFacility current, CancellationToken ct)
+    {
+        if (current.FacilityId is not { } facilityId) return NoFacility();
+        if (!(await patients.SummariesAsync([patientId], ct)).ContainsKey(patientId)) return Results.NotFound();
+        if (body is null) return Results.ValidationProblem(new Dictionary<string, string[]> { ["stage"] = ["empty"] });
+        return await service.MarkStageAsync(patientId, facilityId, itemId, body, ct) is { } item ? Results.Ok(item) : Results.NotFound();
     }
 
     static async Task<IResult> SignConsent(Guid patientId, Guid itemId, [FromBody] SignDentalConsent? body, [FromServices] IDental service, [FromServices] IPatientDirectory patients,

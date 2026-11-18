@@ -16,7 +16,20 @@ export type PlanItem = {
   status: PlanStatus; reason: string | null; createdAt: string; changedAt: string; doneAt: string | null; version: number;
   /** The procedure consent the item needs before it starts (MDV-P8-019), and the latest one signed. */
   consentKey: string | null; consent: Consent | null;
+  /** The stages of a multi-visit procedure (MDV-P8-013), in order, each with its visit length and when it was done; null: one visit. */
+  stages: Stage[] | null;
 };
+export type Stage = { name: string; minutes: number; doneAt: string | null; encounterId: string | null };
+
+/** The stage to do next (its position and the stage), or null when every stage is done or the item has none. */
+export function nextStage(item: Pick<PlanItem, 'stages'>): { index: number; stage: Stage } | null {
+  const index = item.stages?.findIndex(s => !s.doneAt) ?? -1;
+  return index >= 0 ? { index, stage: item.stages![index]! } : null;
+}
+
+/** The schedule address that books the next stage: patient, dentist, the stage's length and the visit's chair (the booking form fills them in). */
+export const nextStageAddress = (patientId: string, doctorId: string, minutes: number, chairId: string | null) =>
+  new URLSearchParams({ patient: patientId, doctor: doctorId, minutes: String(minutes), ...(chairId ? { chair: chairId } : {}) }).toString();
 /** A signed procedure consent. current: on the current form version and not withdrawn, so the item may start. */
 export type Consent = {
   id: string; planItemId: string; templateKey: string; templateVersion: number; language: string; signedBy: string; signedAt: string;
@@ -38,6 +51,8 @@ export type HistoryCheck = { id: string; encounterId: string; yes: HistoryQuesti
 export type DentalChart = {
   teeth: ToothFinding[]; history: ToothFinding[]; plan: DentalPlan; openEncounterId: string | null; timeZone: string; rulesSignedOff: boolean;
   historyCheck: HistoryCheck | null;
+  /** The chair the open consultation's visit holds (MDV-P8-009), for booking the next stage in it. */
+  openVisitChairId: string | null;
 };
 
 /** Whether the history was confirmed on the doctor's open visit: treatment starts only then (the server refuses otherwise, "historyCheck:required"). */
@@ -118,7 +133,7 @@ export const dentalErrors = [
   'tooth:invalid', 'condition:invalid', 'surfaces:required', 'surfaces:not_allowed', 'surfaces:invalid', 'surfaces:needs_tooth', 'note:too_long',
   'encounter:ended', 'encounterId:required', 'encounterId:ended', 'encounterId:invalid', 'to:not_allowed', 'reason:required', 'reason:too_long',
   'serviceId:required', 'serviceId:unknown', 'serviceId:no_price', 'phase:range', 'acceptedBy:required', 'acceptedBy:too_long', 'method:invalid', 'plan:empty',
-  'historyCheck:required', 'consent:required', 'consent:not_needed', 'consent:withdrawn', 'language:invalid', 'signedBy:required', 'signedBy:too_long', 'signature:invalid',
+  'historyCheck:required', 'stages:none', 'stage:not_next', 'item:not_started', 'encounter:unsigned', 'consent:required', 'consent:not_needed', 'consent:withdrawn', 'language:invalid', 'signedBy:required', 'signedBy:too_long', 'signature:invalid',
 ] as const;
 
 /** A server field error as its catalogue key, or null when it is not one of the dental errors (the screen then says the generic failure). */
@@ -148,6 +163,7 @@ export type DentalView = {
   onSignature: (png: string | null) => void; hasSignature: boolean; consentSaving: boolean; consentError: MessageKey | null; consentFailed: boolean; onSignConsent: () => void;
   withdrawing: string | null; onWithdrawing: (consentId: string | null) => void; withdrawReason: string; onWithdrawReason: (reason: string) => void;
   withdrawSaving: boolean; withdrawFailed: boolean; onWithdraw: () => void; onConsentPdf: (consentId: string) => void; consentPdfFailed: boolean;
+  staging: string | null; stageError: MessageKey | null; stageFailed: boolean; onStage: (item: PlanItem, index: number) => void;
 };
 
 /** Settings › Dental, the clinic's note template (MDV-P8-015): on means new notes start on the dental template. */

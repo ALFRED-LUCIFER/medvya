@@ -70,6 +70,7 @@ const ProblemsRoute = lazy(() => import('./ProblemsRoute'));
 const Patient360Route = lazy(() => import('./Patient360Route'));
 const TimelineRoute = lazy(() => import('./TimelineRoute'));
 const DocumentsRoute = lazy(() => import('./DocumentsRoute'));
+const DentalRoute = lazy(() => import('./DentalRoute'));
 const AdjustmentsRoute = lazy(() => import('./AdjustmentsRoute'));
 const OrganisationRoute = lazy(() => import('./OrganisationRoute'));
 const CompleteRegistrationRoute = lazy(() => import('./PatientRoutes').then(m => ({ default: m.CompleteRegistrationRoute })));
@@ -129,7 +130,7 @@ export default function App({ locale, onLocaleChange }: Props) {
   const leavePath = pathOf('schedule') && active?.capabilities.RegisterBookPatients === 'Full' ? `${pathOf('schedule')}/leave` : null;
   // The Patient record's tabs (MDV-P2-051): exactly the patient screens this role already has routes for below.
   const clinical = allows(active ?? null, clinicalRecord);
-  const record = { clinical, details: !!searchPath, documents: clinical || deskDocuments };
+  const record = { clinical, details: !!searchPath, documents: clinical || deskDocuments, dental: clinical && !!active?.flags.includes('clinical.dental') };
   const registration = active && <RegistrationRoute country={country} scope={active.facilityId} actorName={shell.displayName ?? ''} timeZone={active.timeZone} bookPath={pathOf('schedule')} checkInPath={walkInPath} />;
 
   // F-05a: an ended session replaces every screen; signing in again comes back to this route.
@@ -244,6 +245,8 @@ export default function App({ locale, onLocaleChange }: Props) {
             </>}
             {/* Documents (MDV-P2-006): clinicians, and the front desk (upload and list only; the server refuses it any file). */}
             {record.documents && <Route path="/patients/:patientId/docs" element={<DocumentsRoute />} />}
+            {/* Dental (MDV-P8-E02): the tooth chart, plan and estimate; changing them needs a doctor who signs notes, and the server decides again. */}
+            {record.dental && <Route path="/patients/:patientId/dental" element={<DentalRoute canChange={active.capabilities.ClinicalNotes === 'Sign'} />} />}
             {/* Details: the registration record (MDV-P1-018), for the directory's roles. */}
             {searchPath && <Route path={`${searchPath}/:patientId`} element={<PatientRecordRoute canReveal={active.capabilities.RegisterBookPatients === 'Full'} facilityId={active.facilityId} timeZone={active.timeZone} bookPath={pathOf('schedule')} checkInPath={walkInPath} />} />}
           </Route>

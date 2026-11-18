@@ -34,6 +34,9 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
     public DbSet<PregnancyRuledOut> PregnancyRuledOuts => Set<PregnancyRuledOut>();
     public DbSet<Immunisation> Immunisations => Set<Immunisation>();
     public DbSet<MilestoneResponse> MilestoneResponses => Set<MilestoneResponse>();
+    public DbSet<DentalFinding> DentalFindings => Set<DentalFinding>();
+    public DbSet<DentalPlanItem> DentalPlanItems => Set<DentalPlanItem>();
+    public DbSet<DentalEstimateAcceptance> DentalEstimateAcceptances => Set<DentalEstimateAcceptance>();
 
     Guid? CurrentTenantId => tenant.TenantId;
 
@@ -137,6 +140,47 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
             e.Property(x => x.Section).HasConversion<string>().HasMaxLength(20);
             e.Property(x => x.Text).HasMaxLength(HistoryRules.MaxText);
             e.HasIndex(x => new { x.TenantId, x.PatientId, x.Section, x.RecordedAt }); // append-only: the newest row of a section is current
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        // Dental (MDV-P8-011, MDV-P8-012): findings and acceptances are append-only; plan items move but are never deleted.
+        modelBuilder.Entity<DentalFinding>(e =>
+        {
+            e.Property(x => x.Tooth).HasMaxLength(2);
+            e.Property(x => x.Surfaces).HasMaxLength(5);
+            e.Property(x => x.Note).HasMaxLength(DentalRules.MaxNote);
+            e.Property(x => x.Condition).HasConversion<string>().HasMaxLength(20);
+            e.HasIndex(x => new { x.TenantId, x.PatientId, x.RecordedAt }); // the patient's chart, newest first
+            e.ToTable(t => t.HasCheckConstraint("CK_DentalFindings_Surfaces", "(\"Condition\" IN ('Caries', 'Filling')) = (\"Surfaces\" IS NOT NULL)"));
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<DentalPlanItem>(e =>
+        {
+            e.Property(x => x.ServiceName).HasMaxLength(DentalPlanItem.MaxServiceName);
+            e.Property(x => x.Tooth).HasMaxLength(2);
+            e.Property(x => x.Surfaces).HasMaxLength(5);
+            e.Property(x => x.Currency).HasMaxLength(3);
+            e.Property(x => x.Reason).HasMaxLength(DentalPlanItem.MaxReason);
+            e.Property(x => x.Version).IsRowVersion(); // xmin: two dentists moving one item, the later save is refused (409)
+            e.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
+            e.ToTable(t =>
+            {
+                t.HasCheckConstraint("CK_DentalPlanItems_Phase", $"\"Phase\" BETWEEN {DentalRules.MinPhase} AND {DentalRules.MaxPhase}");
+                t.HasCheckConstraint("CK_DentalPlanItems_Estimate", "\"EstimateMinor\" >= 0");
+                // A done item always names the visit it is billed to, and only a done item does.
+                t.HasCheckConstraint("CK_DentalPlanItems_DoneHasVisit", "(\"Status\" = 'Done') = (\"DoneAppointmentId\" IS NOT NULL AND \"DoneAt\" IS NOT NULL)");
+                t.HasCheckConstraint("CK_DentalPlanItems_DeclinedHasReason", "\"Status\" <> 'Declined' OR \"Reason\" IS NOT NULL");
+            });
+            e.HasIndex(x => new { x.TenantId, x.PatientId });
+            e.HasIndex(x => new { x.TenantId, x.DoneAppointmentId }); // the visit's bill asks for its done items
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<DentalEstimateAcceptance>(e =>
+        {
+            e.Property(x => x.AcceptedByName).HasMaxLength(DentalEstimateAcceptance.MaxName);
+            e.Property(x => x.Currency).HasMaxLength(3);
+            e.Property(x => x.ItemsKey).HasMaxLength(64);
+            e.Property(x => x.Method).HasConversion<string>().HasMaxLength(20);
+            e.HasIndex(x => new { x.TenantId, x.PatientId, x.AcceptedAt });
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<GeriatricAssessment>(e =>

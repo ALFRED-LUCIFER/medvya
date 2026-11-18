@@ -89,6 +89,8 @@ public sealed class InvoiceLine
     [Classification(DataClass.Internal)] public long AmountMinor { get; set; }
     /// <summary>Proposed from the visit; the desk confirms it before the bill can be issued.</summary>
     [Classification(DataClass.Internal)] public bool Suggested { get; set; }
+    /// <summary>The dental plan item (Encounters, MDV-P8-012) this line bills, so a done item is billed once; null for every other line.</summary>
+    [Classification(DataClass.Internal)] public Guid? SourceId { get; init; }
     [Classification(DataClass.Internal)] public DateTimeOffset CreatedAt { get; init; }
 
     /// <summary>Sets the quantity and the amounts that follow from it. Tax per line: amount × rate (basis points) / 10 000, half up.</summary>

@@ -535,6 +535,9 @@ namespace Medvya.Billing.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("ServiceId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("SourceId")
+                        .HasColumnType("uuid");
+
                     b.Property<bool>("Suggested")
                         .HasColumnType("boolean");
 
@@ -559,6 +562,13 @@ namespace Medvya.Billing.Infrastructure.Persistence.Migrations
                     b.HasIndex("PriceVersionId");
 
                     b.HasIndex("ServiceId");
+
+                    b.HasIndex("TenantId", "SourceId")
+                        .HasFilter("\"SourceId\" IS NOT NULL");
+
+                    b.HasIndex("TenantId", "InvoiceId", "SourceId")
+                        .IsUnique()
+                        .HasFilter("\"SourceId\" IS NOT NULL");
 
                     b.ToTable("InvoiceLines", "billing", t =>
                         {

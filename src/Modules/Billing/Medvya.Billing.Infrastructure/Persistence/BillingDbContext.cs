@@ -114,6 +114,8 @@ public sealed class BillingDbContext(DbContextOptions<BillingDbContext> options,
             e.HasOne<Service>().WithMany().HasForeignKey(x => x.ServiceId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<PriceVersion>().WithMany().HasForeignKey(x => x.PriceVersionId).OnDelete(DeleteBehavior.Restrict);
             e.ToTable(t => t.HasCheckConstraint("CK_InvoiceLines_Quantity", $"\"Quantity\" BETWEEN 1 AND {InvoiceLine.MaxQuantity}"));
+            e.HasIndex(x => new { x.TenantId, x.InvoiceId, x.SourceId }).IsUnique().HasFilter("\"SourceId\" IS NOT NULL"); // a plan item once per bill
+            e.HasIndex(x => new { x.TenantId, x.SourceId }).HasFilter("\"SourceId\" IS NOT NULL");
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<Payment>(e =>

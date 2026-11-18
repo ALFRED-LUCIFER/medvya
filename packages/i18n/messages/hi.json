@@ -5875,6 +5875,7 @@
   "audit.actionName.billing.invoice.issue": "बिल जारी किया",
   "audit.actionName.billing.invoice.cancel": "बिल रद्द किया",
   "audit.actionName.billing.payment.record": "भुगतान दर्ज किया",
+  "audit.actionName.billing.refund": "वापसी दी गई, क्रेडिट नोट जारी",
   "audit.actionName.billing.payment.link_create": "भुगतान लिंक माँगा",
   "audit.actionName.billing.payment.link_ready": "भुगतान लिंक बना",
   "audit.actionName.billing.payment.link_cancel": "भुगतान लिंक रद्द किया",

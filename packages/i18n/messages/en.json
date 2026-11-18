@@ -5927,6 +5927,7 @@
   "audit.actionName.billing.invoice.issue": "Bill issued",
   "audit.actionName.billing.invoice.cancel": "Bill cancelled",
   "audit.actionName.billing.payment.record": "Payment recorded",
+  "audit.actionName.billing.refund": "Refund given, credit note issued",
   "audit.actionName.billing.payment.link_create": "Payment link requested",
   "audit.actionName.billing.payment.link_ready": "Payment link created",
   "audit.actionName.billing.payment.link_cancel": "Payment link cancelled",

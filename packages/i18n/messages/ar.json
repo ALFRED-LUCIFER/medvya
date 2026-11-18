@@ -5924,6 +5924,7 @@
   "audit.actionName.billing.invoice.issue": "إصدار فاتورة",
   "audit.actionName.billing.invoice.cancel": "إلغاء فاتورة",
   "audit.actionName.billing.payment.record": "تسجيل دفعة",
+  "audit.actionName.billing.refund": "تم الاسترداد وإصدار إشعار دائن",
   "audit.actionName.billing.payment.link_create": "طلب رابط دفع",
   "audit.actionName.billing.payment.link_ready": "إنشاء رابط دفع",
   "audit.actionName.billing.payment.link_cancel": "إلغاء رابط دفع",

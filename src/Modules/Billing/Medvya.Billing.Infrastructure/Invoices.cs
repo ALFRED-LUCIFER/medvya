@@ -5,6 +5,7 @@ using Medvya.Billing.Application;
 using Medvya.Billing.Domain;
 using Medvya.Billing.Infrastructure.Persistence;
 using Medvya.BuildingBlocks.Domain;
+using Medvya.Identity.Application;
 using Medvya.Patients.Application;
 using Medvya.Scheduling.Application;
 using Medvya.Scheduling.Domain;
@@ -24,7 +25,7 @@ namespace Medvya.Billing.Infrastructure;
 public sealed partial class Invoices(
     BillingDbContext db, ICurrentTenant tenant, ICurrentUser user, ICurrentFacility facility, IStaffAccess staff, IFacilityDirectory facilities,
     IBillingSettings settings, ICatalogue catalogue, IDocumentNumbering numbering, IPatientDirectory patients, IConsultVisits visits, IPaymentLinks links,
-    IAuditLog audit, TimeProvider clock, ILogger<Invoices> log, Medvya.Encounters.Application.IDentalCharges dental) : IInvoices
+    IStaffUsers users, IAuditLog audit, TimeProvider clock, ILogger<Invoices> log, Medvya.Encounters.Application.IDentalCharges dental) : IInvoices
 {
     public const string Resource = "invoice";
     /// <summary>Razorpay wants a link to expire at least 15 minutes after it receives it; this covers the time the request takes.</summary>
@@ -59,7 +60,7 @@ public sealed partial class Invoices(
             .Select(i => new { i, Awaiting = db.Payments.Any(p => p.InvoiceId == i.Id && p.State == PaymentState.Pending) }).ToListAsync(cancellationToken);
         var people = await patients.SummariesAsync([.. rows.Select(r => r.i.PatientId).Distinct()], cancellationToken);
         return [.. rows.Select(r => new InvoiceRow(r.i.Id, r.i.State, r.i.Number, r.i.PatientId, people.GetValueOrDefault(r.i.PatientId)?.FullName ?? "",
-            people.GetValueOrDefault(r.i.PatientId)?.Mrn ?? "", r.i.Currency, r.i.TotalMinor, r.i.PaidMinor, r.Awaiting, r.i.CreatedAt, r.i.IssuedAt))];
+            people.GetValueOrDefault(r.i.PatientId)?.Mrn ?? "", r.i.Currency, r.i.TotalMinor, r.i.PaidMinor, r.Awaiting, r.i.CreatedAt, r.i.IssuedAt, r.i.RefundedMinor))];
     }
 
     public async Task<InvoiceView?> GetAsync(Guid id, CancellationToken cancellationToken = default)
@@ -70,6 +71,8 @@ public sealed partial class Invoices(
         if (row is null) return null;
         var lines = await db.InvoiceLines.AsNoTracking().Where(l => l.InvoiceId == id).OrderBy(l => l.CreatedAt).ToListAsync(cancellationToken);
         var payments = await db.Payments.AsNoTracking().Where(p => p.InvoiceId == id).OrderBy(p => p.RecordedAt).ToListAsync(cancellationToken);
+        var notes = await db.CreditNotes.AsNoTracking().Where(n => n.InvoiceId == id).OrderBy(n => n.CreatedAt).ToListAsync(cancellationToken);
+        var names = notes.Count == 0 ? new Dictionary<Guid, string>().AsReadOnly() : await users.DisplayNamesAsync([.. notes.Select(n => n.CreatedBy).OfType<Guid>().Distinct()], cancellationToken);
         var person = (await patients.SummariesAsync([row.i.PatientId], cancellationToken)).GetValueOrDefault(row.i.PatientId);
         var s = await settings.GetAsync(cancellationToken);
         var config = await staff.AccessAsync(Capability.StaffRolesIntegrations, cancellationToken) == Access.Config;
@@ -80,7 +83,9 @@ public sealed partial class Invoices(
             [.. lines.Select(l => new InvoiceLineView(l.Id, l.ServiceId, l.PriceVersionId, l.Description, l.Sac, l.Quantity, l.UnitMinor, l.TaxTreatment, l.GstRateBasisPoints, l.TaxMinor, l.AmountMinor, l.Suggested))],
             i.SubtotalMinor, i.DiscountMinor, i.DiscountReason, i.TaxMinor, i.RoundOffMinor, i.TotalMinor, i.PaidMinor, Balance(i),
             [.. payments.Select(p => new PaymentView(p.Id, p.Method, p.AmountMinor, p.State, p.Reference, p.State == PaymentState.Pending ? p.LinkUrl : null, p.RecordedAt, p.ConfirmedAt))],
-            i.CancelReason, i.CancelledAt, i.CreatedAt, new InvoiceOptions(s.PaymentMethods, s.DiscountReasons, s.MaxDiscountPercent, config), row.Version);
+            i.CancelReason, i.CancelledAt, i.CreatedAt, new InvoiceOptions(s.PaymentMethods, s.DiscountReasons, s.MaxDiscountPercent, config, s.RefundApprovalAboveMinor), row.Version,
+            i.RefundedMinor, [.. notes.Select(n => new CreditNoteView(n.Id, n.Number, n.AmountMinor, n.Method, n.Reference, n.Reason,
+                n.CreatedBy is { } by ? names.GetValueOrDefault(by) ?? "" : "", n.CreatedAt))]);
     }
 
     static long Balance(Invoice i) => i.State is InvoiceState.Draft or InvoiceState.Cancelled ? 0 : i.TotalMinor - i.PaidMinor;
@@ -361,7 +366,7 @@ public sealed partial class Invoices(
         await using (var tx = await db.Database.BeginTransactionAsync(cancellationToken))
         {
             if (await LockAsync(id, command.Version, cancellationToken) is not { } invoice) return null;
-            if (!InvoiceFlow.CanCancel(invoice.State, invoice.PaidMinor)) throw new BillingValidationException([("state", "invalid")]);
+            if (!InvoiceFlow.CanCancel(invoice.State, invoice.PaidMinor, invoice.RefundedMinor)) throw new BillingValidationException([("state", "invalid")]);
             // A link the patient may still pay is closed first ("Cancel link"), so no money arrives for a cancelled bill.
             if (await db.Payments.AnyAsync(p => p.InvoiceId == id && p.State == PaymentState.Pending, cancellationToken)) throw new BillingValidationException([("payment", "pending")]);
             (invoice.State, invoice.CancelReason, invoice.CancelledAt) = (InvoiceState.Cancelled, reason, clock.GetUtcNow()); // keeps its number; never deleted
@@ -385,19 +390,13 @@ public sealed partial class Invoices(
         else if (method == PaymentMethod.RazorpayLink) errors.Add(("method", "invalid")); // a link is created, never recorded by hand
         else if (!enabled.Contains(method)) errors.Add(("method", "disabled"));
         if (command.AmountMinor is not > 0) errors.Add(("amountMinor", "range"));
-        if (command.Method is PaymentMethod.Card or PaymentMethod.UpiDirect)
-        {
-            if (reference is null) errors.Add(("reference", "required"));
-            else if (reference.Length > Payment.MaxReference || !ReferenceChars().IsMatch(reference)) errors.Add(("reference", "format"));
-            // Medvya never stores a card number: 13 or more digits in a row (spaces and dashes ignored) is refused as one.
-            else if (CardNumber().IsMatch(reference.Replace(" ", "", StringComparison.Ordinal).Replace("-", "", StringComparison.Ordinal))) errors.Add(("reference", "card_number"));
-        }
+        if (command.Method is PaymentMethod.Card or PaymentMethod.UpiDirect) CheckReference(reference, errors); // Medvya never stores a card number
         BillingValidationException.ThrowIfAny(errors);
 
         await using (var tx = await db.Database.BeginTransactionAsync(cancellationToken))
         {
             if (await LockAsync(id, null, cancellationToken) is not { } invoice) return null;
-            if (!InvoiceFlow.CanPay(invoice.State)) throw new BillingValidationException([("state", "invalid")]);
+            if (!InvoiceFlow.CanPay(invoice.State, invoice.RefundedMinor)) throw new BillingValidationException([("state", "invalid")]);
             // SAFETY: mutation check: removed this over-collection check -> BillingInvoiceTests.TwoPaymentsAtOnceCannotOverCollect failed (CK_Invoices_Paid then threw on the second save)
             if (command.AmountMinor > await AvailableAsync(invoice, cancellationToken)) throw new BillingValidationException([("amountMinor", "over_collected")]);
             var now = clock.GetUtcNow();
@@ -415,6 +414,71 @@ public sealed partial class Invoices(
             await tx.CommitAsync(cancellationToken);
         }
         return await GetAsync(id, cancellationToken);
+    }
+
+    // ---- Refunds and credit notes (MDV-P4-006) ----
+
+    public async Task<InvoiceView?> RefundAsync(Guid id, RecordRefund command, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        var s = await settings.GetAsync(cancellationToken);
+        var reference = string.IsNullOrWhiteSpace(command.Reference) ? null : command.Reference.Trim();
+        var reason = string.IsNullOrWhiteSpace(command.Reason) ? null : command.Reason.Trim();
+        var errors = new List<(string, string)>();
+        if (command.Method is not { } method || !Enum.IsDefined(method)) errors.Add(("method", "required"));
+        else if (method == PaymentMethod.RazorpayLink) errors.Add(("method", "invalid")); // shortcut on IInvoices.RefundAsync: no provider refunds yet
+        if (command.AmountMinor is not > 0) errors.Add(("amountMinor", "range"));
+        if (reason is null) errors.Add(("reason", "required"));
+        else if (reason.Length > CreditNote.MaxReason) errors.Add(("reason", "too_long"));
+        if (command.Method is PaymentMethod.Card or PaymentMethod.UpiDirect) CheckReference(reference, errors);
+        BillingValidationException.ThrowIfAny(errors);
+        var admin = await staff.AccessAsync(Capability.StaffRolesIntegrations, cancellationToken) == Access.Config;
+
+        await using (var tx = await db.Database.BeginTransactionAsync(cancellationToken))
+        {
+            if (await LockAsync(id, null, cancellationToken) is not { } invoice) return null;
+            if (!InvoiceFlow.CanRefund(invoice.State)) throw new BillingValidationException([("state", "invalid")]);
+            var rules = await RulesAsync(cancellationToken);
+            var amount = command.AmountMinor!.Value;
+            // The threshold is on all the bill gives back, so two small refunds cannot pass it together.
+            // SAFETY: mutation check: compared the threshold with this refund alone -> BillingInvoiceTests.ARefundAboveTheThresholdNeedsPracticeConfiguration failed (two refunds under ₹1,000 gave back ₹1,500 without the admin)
+            if (invoice.RefundedMinor + amount > s.RefundApprovalAboveMinor && !admin) throw new BillingValidationException([("amountMinor", "approval_required")]);
+            // SAFETY: mutation check: removed this over-refund check -> BillingInvoiceTests.ARefundIsAtMostWhatWasPaidAndACardRefundAtMostWhatTheCardPaid failed (no over_refunded refusal)
+            if (amount > invoice.PaidMinor - invoice.RefundedMinor) throw new BillingValidationException([("amountMinor", "over_refunded")]);
+            if (command.Method is PaymentMethod.Card or PaymentMethod.UpiDirect)
+            {
+                // Back the way it came: at most what was paid by this method, less what already went back that way. Cash may give back any of it.
+                var paidThatWay = await db.Payments.Where(p => p.InvoiceId == id && p.State == PaymentState.Succeeded && p.Method == command.Method).SumAsync(p => p.AmountMinor, cancellationToken);
+                var backThatWay = await db.CreditNotes.Where(n => n.InvoiceId == id && n.Method == command.Method).SumAsync(n => n.AmountMinor, cancellationToken);
+                if (amount > paidThatWay - backThatWay) throw new BillingValidationException([("amountMinor", "over_method")]);
+            }
+            var now = clock.GetUtcNow();
+            // The credit note's legal number in this transaction: a rollback gives it back, so the series has no gaps (MDV-P4-001).
+            var number = await numbering.IssueAsync(rules.CountryCode, DocumentType.CreditNote, s.CreditNotePrefix, now, cancellationToken);
+            var note = new CreditNote
+            {
+                Id = Guid.CreateVersion7(), TenantId = invoice.TenantId, FacilityId = invoice.FacilityId, InvoiceId = id, Number = number.Value, Currency = invoice.Currency,
+                AmountMinor = amount, Method = command.Method!.Value, Reference = command.Method == PaymentMethod.Cash ? null : reference, Reason = reason!,
+                CashSessionId = await OpenCashSessionAsync(invoice.FacilityId, cancellationToken), CreatedBy = user.UserId, CreatedAt = now,
+            };
+            db.CreditNotes.Add(note);
+            invoice.RefundedMinor += amount;
+            invoice.State = InvoiceFlow.AfterRefund(invoice.State, invoice.PaidMinor, invoice.RefundedMinor);
+            Touch(invoice);
+            await db.SaveChangesAsync(cancellationToken);
+            // Which refund: ids, amount and method only; the reason may name the patient and stays out of the audit detail.
+            await AuditAsync(tx, "billing.refund", invoice, cancellationToken, $"creditNote:{note.Id};amountMinor:{amount};method:{note.Method}");
+            await tx.CommitAsync(cancellationToken);
+        }
+        return await GetAsync(id, cancellationToken);
+    }
+
+    /// <summary>A card terminal or UPI reference: required, plain characters, and never a card number (13 or more digits in a row, spaces and dashes ignored).</summary>
+    static void CheckReference(string? reference, List<(string, string)> errors)
+    {
+        if (reference is null) errors.Add(("reference", "required"));
+        else if (reference.Length > Payment.MaxReference || !ReferenceChars().IsMatch(reference)) errors.Add(("reference", "format"));
+        else if (CardNumber().IsMatch(reference.Replace(" ", "", StringComparison.Ordinal).Replace("-", "", StringComparison.Ordinal))) errors.Add(("reference", "card_number"));
     }
 
     /// <summary>What may still be collected: the balance less any link the patient may still pay.</summary>
@@ -439,7 +503,7 @@ public sealed partial class Invoices(
         {
             if (await LockAsync(id, null, cancellationToken) is not { } locked) return null;
             invoice = locked;
-            if (!InvoiceFlow.CanPay(invoice.State)) throw new BillingValidationException([("state", "invalid")]);
+            if (!InvoiceFlow.CanPay(invoice.State, invoice.RefundedMinor)) throw new BillingValidationException([("state", "invalid")]);
             if (await db.Payments.AnyAsync(p => p.InvoiceId == id && p.State == PaymentState.Pending, cancellationToken)) throw new BillingValidationException([("payment", "pending")]);
             var balance = await AvailableAsync(invoice, cancellationToken);
             if (balance < MinLinkMinor) throw new BillingValidationException([("amountMinor", "too_small")]);
@@ -619,10 +683,11 @@ public sealed partial class Invoices(
     void Touch(Invoice invoice) => (invoice.ChangedBy, invoice.ChangedAt) = (user.UserId, clock.GetUtcNow());
 
     /// <summary>The audit row, written last before the commit (AGENTS.md 3.1).</summary>
-    Task AuditAsync(IDbContextTransaction tx, string action, Invoice invoice, CancellationToken cancellationToken) => audit.WriteAsync(new AuditEvent
+    Task AuditAsync(IDbContextTransaction tx, string action, Invoice invoice, CancellationToken cancellationToken, string? detail = null) => audit.WriteAsync(new AuditEvent
     {
         Id = Guid.CreateVersion7(), TenantId = invoice.TenantId, ActorUserId = user.UserId, Action = action, ResourceType = Resource, ResourceId = invoice.Id,
         PatientId = invoice.PatientId, Purpose = AuditPurpose.Billing, Outcome = AuditOutcome.Allowed, OccurredAt = clock.GetUtcNow(), FacilityId = invoice.FacilityId,
+        Detail = detail,
     }, tx.GetDbTransaction(), cancellationToken);
 
     async Task<BillingCountryRules> RulesAsync(CancellationToken cancellationToken) =>

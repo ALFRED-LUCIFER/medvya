@@ -5,12 +5,12 @@ import { useForm, useWatch } from 'react-hook-form';
 import { ApiError } from '../../api/services/apiClient';
 import { toMinor } from '../domain/catalogue';
 import {
-  actionsFor, coverage, discountSchema, invoiceProblem, paymentSchema, providerPayment, toMajor, toPaymentBody,
-  type DiscountForm, type Invoice, type InvoiceProblem, type PaymentForm, type PrintPaper,
+  actionsFor, coverage, discountSchema, invoiceProblem, needsApproval, paymentSchema, providerPayment, refundable, refundSchema, toMajor, toPaymentBody, toRefundBody,
+  type DiscountForm, type Invoice, type InvoiceProblem, type PaymentForm, type PrintPaper, type RefundForm,
 } from '../domain/invoice';
 import {
-  addLine, cancelInvoice, cancelPaymentLink, checkPayment, createPaymentLink, downloadBillingPdf, fetchBillableServices, fetchInvoice, issueInvoice, recordPayment,
-  removeLine, setDiscount, updateLine,
+  addLine, cancelInvoice, cancelPaymentLink, checkPayment, createPaymentLink, downloadBillingPdf, downloadCreditNotePdf, fetchBillableServices, fetchInvoice, issueInvoice,
+  recordPayment, refundInvoice, removeLine, setDiscount, updateLine,
 } from '../services/invoicesApi';
 
 const problemOf = (e: unknown) => invoiceProblem(e instanceof ApiError ? e.code : undefined);
@@ -49,6 +49,8 @@ export function useInvoiceController(id: string) {
   const issue = useAct(() => issueInvoice(id, b().version), done, failed);
   const cancel = useAct((reason: string) => cancelInvoice(id, reason, b().version), done, failed);
   const pay = useAct((f: PaymentForm) => recordPayment(id, toPaymentBody(f)), done, failed);
+  const [refunding, setRefunding] = useState(false);
+  const refund = useAct((f: RefundForm) => refundInvoice(id, toRefundBody(f)), bill => { done(bill); setRefunding(false); }, failed);
   const check = useAct((paymentId: string) => checkPayment(id, paymentId), done, failed);
   const closeLink = useAct((paymentId: string) => cancelPaymentLink(id, paymentId), done, failed);
   const link = useMutation({
@@ -62,12 +64,21 @@ export function useInvoiceController(id: string) {
     onSuccess: () => setProblem(null),
     onError: () => setProblem('print_failed'),
   });
+  const printNote = useMutation({
+    mutationFn: (noteId: string) => downloadCreditNotePdf(id, noteId, paper),
+    onSuccess: () => setProblem(null),
+    onError: () => setProblem('print_failed'),
+  });
 
   const discountForm = useForm<DiscountForm>({ resolver: zodResolver(discountSchema), values: { amount: toMajor(invoice?.discountMinor ?? 0), reason: invoice?.discountReason ?? '' } });
   const paymentForm = useForm<PaymentForm>({ resolver: zodResolver(paymentSchema), defaultValues: { method: 'Cash', amount: '', reference: '' } });
   const entered = toMinor(useWatch({ control: paymentForm.control, name: 'amount' }) || '0');
   const method = useWatch({ control: paymentForm.control, name: 'method' });
-  const busy = [add, quantity, remove, discount, issue, cancel, pay, check, closeLink, link].some(m => m.isPending);
+  const refundForm = useForm<RefundForm>({ resolver: zodResolver(refundSchema), defaultValues: { method: 'Cash', amount: '', reference: '', reason: '' } });
+  const refundMethod = useWatch({ control: refundForm.control, name: 'method' });
+  const refundAmount = toMinor(useWatch({ control: refundForm.control, name: 'amount' }) || '0');
+  const refundMax = invoice ? refundable(invoice, refundMethod) : 0;
+  const busy = [add, quantity, remove, discount, issue, cancel, pay, check, closeLink, link, refund].some(m => m.isPending);
 
   return {
     invoice, loading: query.isPending,
@@ -100,5 +111,18 @@ export function useInvoiceController(id: string) {
     checking: check.isPending, onCheck: (paymentId: string) => check.mutate(paymentId),
     onCancelLink: (paymentId: string) => closeLink.mutate(paymentId),
     paper, onPaper: setPaper, printing: print.isPending ? print.variables : null, onPrint: (kind: 'bill' | 'receipt') => print.mutate(kind),
+    printingNote: printNote.isPending ? printNote.variables : null, onPrintNote: (noteId: string) => printNote.mutate(noteId),
+    // MDV-P4-006: "Refund" opens the form with what may still go back in cash; the server checks the amount, the method's share and the threshold again.
+    refunding, refundForm, refundMethod, refundMax, refunded: refund.isPending,
+    refundNeedsAdmin: invoice !== null && Number.isFinite(refundAmount) && needsApproval(refundAmount, invoice),
+    refundOver: Number.isFinite(refundAmount) && refundAmount > refundMax,
+    onStartRefund: () => {
+      if (!invoice) return;
+      refundForm.reset({ method: 'Cash', amount: toMajor(refundable(invoice, 'Cash')), reference: '', reason: '' });
+      setProblem(null);
+      setRefunding(true);
+    },
+    onStopRefund: () => setRefunding(false),
+    onRefund: refundForm.handleSubmit(f => refund.mutate(f)),
   };
 }

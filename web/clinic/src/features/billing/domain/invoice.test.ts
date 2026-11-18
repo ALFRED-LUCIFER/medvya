@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  actionsFor, coverage, discountSchema, invoiceProblem, looksLikeCardNumber, maxDiscountMinor, paymentSchema, providerPayment, toMajor, toPaymentBody,
-  type Invoice, type Payment,
+  actionsFor, coverage, discountSchema, invoiceProblem, looksLikeCardNumber, maxDiscountMinor, needsApproval, paymentSchema, providerPayment, refundable, refundSchema,
+  toMajor, toPaymentBody, toRefundBody, type Invoice, type Payment,
 } from './invoice';
 
 const line = (suggested = false) => ({ suggested }) as Invoice['lines'][number];
@@ -11,19 +11,19 @@ const pay = (state: Payment['state'], id: string = state): Payment =>
 describe('invoice actions per state (screen-specs "Billing (P4)")', () => {
   it('edits and issues a draft only once every suggested line is confirmed', () => {
     expect(actionsFor({ state: 'Draft', paidMinor: 0, payments: [], lines: [line(true)] }))
-      .toEqual({ edit: true, issue: false, pay: false, cancel: true, printBill: false, printReceipt: false });
+      .toEqual({ edit: true, issue: false, pay: false, cancel: true, printBill: false, printReceipt: false, refund: false });
     expect(actionsFor({ state: 'Draft', paidMinor: 0, payments: [], lines: [] }).issue).toBe(false);
     expect(actionsFor({ state: 'Draft', paidMinor: 0, payments: [], lines: [line()] }).issue).toBe(true);
   });
 
   it('takes payments on an issued or partly paid bill, but not while a link is pending, and cancels only an unpaid one', () => {
     expect(actionsFor({ state: 'Issued', paidMinor: 0, payments: [], lines: [line()] }))
-      .toEqual({ edit: false, issue: false, pay: true, cancel: true, printBill: true, printReceipt: false });
+      .toEqual({ edit: false, issue: false, pay: true, cancel: true, printBill: true, printReceipt: false, refund: false });
     expect(actionsFor({ state: 'PartlyPaid', paidMinor: 100, payments: [], lines: [line()] }))
-      .toEqual({ edit: false, issue: false, pay: true, cancel: false, printBill: true, printReceipt: true });
+      .toEqual({ edit: false, issue: false, pay: true, cancel: false, printBill: true, printReceipt: true, refund: true });
     expect(actionsFor({ state: 'Issued', paidMinor: 0, payments: [pay('Pending')], lines: [line()] })).toMatchObject({ pay: false, cancel: false });
     expect(actionsFor({ state: 'Paid', paidMinor: 100, payments: [], lines: [line()] }))
-      .toEqual({ edit: false, issue: false, pay: false, cancel: false, printBill: true, printReceipt: true });
+      .toEqual({ edit: false, issue: false, pay: false, cancel: false, printBill: true, printReceipt: true, refund: true });
     expect(actionsFor({ state: 'Paid', paidMinor: 0, payments: [], lines: [line()] }).cancel).toBe(true); // a fully discounted bill
   });
 
@@ -86,5 +86,48 @@ describe('server refusals', () => {
     expect(invoiceProblem('provider_not_connected')).toBe('provider_not_connected');
     expect(invoiceProblem('provider_something_new')).toBe('failed');
     expect(invoiceProblem(undefined)).toBe('failed');
+  });
+});
+
+describe('refunds and credit notes (MDV-P4-006)', () => {
+  const paid = (method: Payment['method'], amountMinor: number): Payment =>
+    ({ id: method, method, amountMinor, state: 'Succeeded', reference: null, linkUrl: null, recordedAt: '2026-10-19T04:00:00Z', confirmedAt: null });
+  const note = (method: Payment['method'], amountMinor: number) =>
+    ({ id: `n-${method}`, number: 'CN/26-27/00001', amountMinor, method, reference: null, reason: 'Synthetic', createdByName: 'A. Joseph', createdAt: '2026-10-19T05:00:00Z' });
+
+  it('offers a refund only on a paid bill; a refunded one takes no more', () => {
+    expect(actionsFor({ state: 'Refunded', paidMinor: 100, payments: [], lines: [line()] })).toMatchObject({ refund: false, printBill: true, printReceipt: true });
+  });
+
+  it('gives back up to what is left in cash, and to a card or UPI at most what was paid that way', () => {
+    const bill = { paidMinor: 50_000, refundedMinor: 10_000, payments: [paid('Cash', 20_000), paid('Card', 30_000)], creditNotes: [note('Cash', 10_000)] };
+    expect(refundable(bill, 'Cash')).toBe(40_000);
+    expect(refundable(bill, 'Card')).toBe(30_000);
+    expect(refundable(bill, 'UpiDirect')).toBe(0);
+    expect(refundable({ ...bill, refundedMinor: 35_000, creditNotes: [note('Cash', 10_000), note('Card', 25_000)] }, 'Card')).toBe(5_000);
+  });
+
+  it('asks for the practice admin once the bill\'s refunds together pass the threshold, unless the user has practice configuration', () => {
+    const options = { paymentMethods: [], discountReasons: [], maxDiscountPercent: 10, mayExceedMaxDiscount: false, refundApprovalAboveMinor: 100_000 };
+    expect(needsApproval(100_000, { refundedMinor: 0, options })).toBe(false);
+    expect(needsApproval(100_001, { refundedMinor: 0, options })).toBe(true);
+    expect(needsApproval(60_000, { refundedMinor: 50_000, options })).toBe(true); // two small refunds cannot pass it together
+    expect(needsApproval(500_000, { refundedMinor: 0, options: { ...options, mayExceedMaxDiscount: true } })).toBe(false);
+  });
+
+  it('refunds a partly paid bill, then takes no more payments, and cancels it once all is given back', () => {
+    expect(actionsFor({ state: 'PartlyPaid', paidMinor: 50_000, refundedMinor: 0, payments: [], lines: [line()] })).toMatchObject({ refund: true, pay: true, cancel: false });
+    expect(actionsFor({ state: 'PartlyPaid', paidMinor: 50_000, refundedMinor: 20_000, payments: [], lines: [line()] })).toMatchObject({ refund: true, pay: false, cancel: false });
+    expect(actionsFor({ state: 'PartlyPaid', paidMinor: 50_000, refundedMinor: 50_000, payments: [], lines: [line()] })).toMatchObject({ refund: false, pay: false, cancel: true });
+  });
+
+  it('needs a reason, and a reference that is never a card number for a card or UPI refund', () => {
+    expect(refundSchema.safeParse({ method: 'Cash', amount: '100', reference: '', reason: ' ' }).success).toBe(false);
+    expect(refundSchema.safeParse({ method: 'Card', amount: '100', reference: '', reason: 'Synthetic' }).success).toBe(false);
+    expect(refundSchema.safeParse({ method: 'Card', amount: '100', reference: '4111 1111 1111 1111', reason: 'Synthetic' }).success).toBe(false);
+    expect(toRefundBody({ method: 'Cash', amount: '250.50', reference: 'ignored', reason: 'Synthetic' }))
+      .toEqual({ method: 'Cash', amountMinor: 25_050, reference: null, reason: 'Synthetic' });
+    expect(invoiceProblem('amountMinor:approval_required')).toBe('approval_required');
+    expect(invoiceProblem('amountMinor:over_method')).toBe('over_method');
   });
 });

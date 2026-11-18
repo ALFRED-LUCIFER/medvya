@@ -9,6 +9,8 @@ import { fetchBillingSettings, saveBillingSettings } from '../services/billingAp
 
 const key = ['billing', 'settings'];
 const fields: readonly string[] = ['invoicePrefix', 'receiptPrefix', 'creditNotePrefix', 'paymentMethods', 'discountReasons', 'maxDiscountPercent', 'paymentLinkExpiryMinutes'];
+// The server's refundApprovalAboveMinor is the form's refundApprovalAbove (whole units).
+const serverField = (field: string) => (field === 'refundApprovalAboveMinor' ? 'refundApprovalAbove' : field);
 
 /** Settings, Billing (MDV-P4-002): prefixes, payment methods, discount reasons and limits. The server checks prefixes by the country's numbering rules. */
 export function useBillingSettingsController() {
@@ -23,7 +25,7 @@ export function useBillingSettingsController() {
     onSuccess: data => { setSaveFailed(null); queryClient.setQueryData(key, data); },
     onError: e => {
       const { field, code } = catalogueProblem(e instanceof ApiError ? e.code : undefined);
-      if (field && fields.includes(field)) form.setError(field as keyof BillingSettingsForm, { type: 'server', message: code });
+      if (field && (fields.includes(field) || field === 'refundApprovalAboveMinor')) form.setError(serverField(field) as keyof BillingSettingsForm, { type: 'server', message: code });
       else setSaveFailed(code === 'changed' ? 'changed' : 'failed');
     },
   });

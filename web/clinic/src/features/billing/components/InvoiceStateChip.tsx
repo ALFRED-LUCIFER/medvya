@@ -1,10 +1,10 @@
-import { Ban, CircleCheck, CircleDashed, FileText, Hourglass, type LucideIcon } from 'lucide-react';
+import { Ban, CircleCheck, CircleDashed, FileText, Hourglass, Undo2, type LucideIcon } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
 import { Chip } from '@medvya/ui';
 import { stateLook, type InvoiceState } from '../domain/invoice';
 
 const icons: Record<(typeof stateLook)[InvoiceState]['icon'], LucideIcon> = {
-  draft: CircleDashed, issued: FileText, partly: Hourglass, paid: CircleCheck, cancelled: Ban,
+  draft: CircleDashed, issued: FileText, partly: Hourglass, paid: CircleCheck, cancelled: Ban, refunded: Undo2,
 };
 
 /** A bill's state in words with an icon; the tone only repeats them (never colour alone). */

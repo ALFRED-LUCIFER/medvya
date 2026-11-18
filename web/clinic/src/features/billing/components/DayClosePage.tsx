@@ -80,7 +80,10 @@ export default function DayClosePage(p: Props) {
               <Detail label={t('billing.dayClose.float')}>{money(s.openingFloatMinor)}</Detail>
               {s.totals.length === 0 ? <Detail label={t('billing.dayClose.takings')}>{t('billing.dayClose.noPayments')}</Detail>
                 : s.totals.map(x => (
-                  <Detail key={x.method} label={t(`billing.method.${x.method}`)}>{t('billing.dayClose.methodTotal', { count: formatNumber(x.payments), amount: money(x.amountMinor) })}</Detail>
+                  <Detail key={x.method} label={t(`billing.method.${x.method}`)}>
+                    {t('billing.dayClose.methodTotal', { count: formatNumber(x.payments), amount: money(x.amountMinor) })}
+                    {x.refunds > 0 && <span className="block">{t('billing.dayClose.methodRefunds', { count: formatNumber(x.refunds), amount: money(-x.refundsMinor) })}</span>}
+                  </Detail>
                 ))}
               <Detail label={t('billing.dayClose.expected')}><strong>{money(s.expectedMinor)}</strong></Detail>
             </DetailList>

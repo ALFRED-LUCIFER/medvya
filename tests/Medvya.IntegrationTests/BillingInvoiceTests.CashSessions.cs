@@ -37,7 +37,7 @@ public sealed partial class BillingInvoiceTests
     [Fact]
     public void ExpectedCashIsTheFloatPlusCashReceiptsMinusCashRefunds()
     {
-        Assert.Equal(160_000, CashSession.Expected(100_000, 60_000));
+        Assert.Equal(160_000, CashSession.Expected(100_000, 60_000, 0));
         Assert.Equal(150_000, CashSession.Expected(100_000, 60_000, 10_000));
         Assert.Equal([50_000L, 20_000, 10_000, 5_000, 2_000, 1_000, 500, 200, 100], BillingCountryRules.India.CashDenominationsMinor);
     }

@@ -88,7 +88,7 @@ public interface ICatalogue
 /// <summary><see cref="Version"/>: the row version a save must send back (0 before the first save); a save from an older version is refused (409, #889).</summary>
 public sealed record BillingSettingsView(
     string InvoicePrefix, string ReceiptPrefix, string CreditNotePrefix, IReadOnlyList<PaymentMethod> PaymentMethods, IReadOnlyList<string> DiscountReasons,
-    int MaxDiscountPercent, int PaymentLinkExpiryMinutes, uint Version);
+    int MaxDiscountPercent, int PaymentLinkExpiryMinutes, uint Version, long RefundApprovalAboveMinor);
 
 public sealed record SaveBillingSettings
 {
@@ -99,6 +99,8 @@ public sealed record SaveBillingSettings
     public IReadOnlyList<string>? DiscountReasons { get; init; }
     public int? MaxDiscountPercent { get; init; }
     public int? PaymentLinkExpiryMinutes { get; init; }
+    /// <summary>A refund above this (minor units) needs practice configuration; 0 means every refund does. Left out: unchanged.</summary>
+    public long? RefundApprovalAboveMinor { get; init; }
     /// <summary>Required: the version the editor read (<see cref="BillingSettingsView.Version"/>).</summary>
     public uint? Version { get; init; }
 }

@@ -34,12 +34,14 @@ sealed record BillPaperLine(string Service, string Detail, string Quantity, stri
 
 /// <summary>
 /// What a printed bill or receipt says, already worded and formatted (BillingDocuments builds it): the clinic, the title and number, labelled facts,
-/// the patient, the lines, the totals with the grand total, the amount in words, the payments (a receipt) and the closing note.
+/// the patient, the lines, the totals with the grand total, the amount in words, the payments (a receipt) or refund (a credit note) under
+/// <see cref="PaymentsLabel"/>, and the closing note.
 /// </summary>
 sealed record BillPaper(
     string Clinic, string? Address, string? Phone, string? TaxLine, byte[]? Logo, string Title, string Number, string When,
     IReadOnlyList<(string Label, string Value)> Facts, string Patient, string Mrn, IReadOnlyList<BillPaperLine> Lines,
-    IReadOnlyList<(string Label, string Amount)> Totals, string GrandLabel, string GrandAmount, string Words, IReadOnlyList<string> Payments, string Note);
+    IReadOnlyList<(string Label, string Amount)> Totals, string GrandLabel, string GrandAmount, string Words, IReadOnlyList<string> Payments, string Note,
+    string PaymentsLabel);
 
 /// <summary>
 /// The bill and the receipt as PDFs (MDV-P4-005, design docs/02-design/print-family/billing.html): A5 in the print family layout (PlainPdf: masthead,
@@ -63,7 +65,7 @@ static class BillPdf
         List<PlainPdf.Row> rows = [.. p.Facts.Select(f => new PlainPdf.Row(f.Label, PlainPdf.Lines((f.Value, PlainPdf.Tone.Body))))];
         rows.Add(new(T("billing.print.services"), e => Services(e, p)));
         rows.Add(new(T("billing.print.inWords"), PlainPdf.Lines((p.Words, PlainPdf.Tone.Strong))));
-        if (p.Payments.Count > 0) rows.Add(new(T("billing.print.paidBy"), PlainPdf.Lines([.. p.Payments.Select(x => (x, PlainPdf.Tone.Body))])));
+        if (p.Payments.Count > 0) rows.Add(new(p.PaymentsLabel, PlainPdf.Lines([.. p.Payments.Select(x => (x, PlainPdf.Tone.Body))])));
         var patient = new PlainPdf.Row(T("billing.print.billedTo"), PlainPdf.Lines((p.Patient, PlainPdf.Tone.Name), (T("billing.print.mrn", ("mrn", p.Mrn)), PlainPdf.Tone.Muted)));
         var sign = new PlainPdf.Signature(null, T("billing.print.for", ("clinic", p.Clinic)), [T("billing.print.signatory")]);
         var footer = new PlainPdf.Footer(null, p.Note, null, null, p.Number,
@@ -169,7 +171,7 @@ static class BillPdf
             if (p.Payments.Count > 0)
                 c.Item().PaddingTop(3 * Mm).Border(1.4f).BorderColor(Colors.Black).Padding(2 * Mm).Column(box =>
                 {
-                    box.Item().AlignCenter().Text(T("billing.print.paidBy").ToUpperInvariant()).FontSize(10).ExtraBold().LetterSpacing(0.06f);
+                    box.Item().AlignCenter().Text(p.PaymentsLabel.ToUpperInvariant()).FontSize(10).ExtraBold().LetterSpacing(0.06f);
                     foreach (var payment in p.Payments) box.Item().AlignCenter().Text(payment).FontSize(7.5f).SemiBold();
                 });
             c.Item().PaddingTop(3 * Mm).Text(p.Note).FontSize(7);

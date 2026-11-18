@@ -6,7 +6,8 @@ import type { PaymentMethod } from './invoice';
 // these only decide what the screen offers and show the sums as the desk types.
 export type CashSessionState = 'Open' | 'AwaitingConfirmation' | 'Closed';
 export type CashCount = { valueMinor: number; count: number };
-export type MethodTotal = { method: PaymentMethod; payments: number; amountMinor: number };
+/** Payments of one method in the session, and the refunds (credit notes) made that way. */
+export type MethodTotal = { method: PaymentMethod; payments: number; amountMinor: number; refunds: number; refundsMinor: number };
 export type CashAdjustment = { id: string; amountMinor: number; reason: string; createdByName: string; createdAt: string };
 export type CashSession = {
   id: string; state: CashSessionState; currency: Currency; openingFloatMinor: number; openedByName: string; openedAt: string;

@@ -50,6 +50,9 @@ export default function BillingSettingsPanel(p: Props) {
           <Field id="billing-link-expiry" label={t('billing.settings.linkExpiry')} hint={t('billing.settings.linkExpiry.hint')} unit={t('billing.field.minutes')} error={problem(errors.paymentLinkExpiryMinutes)}>
             <Input dir="ltr" inputMode="numeric" {...p.form.register('paymentLinkExpiryMinutes')} />
           </Field>
+          <Field id="billing-refund-approval" label={t('billing.settings.refundApproval')} hint={t('billing.settings.refundApproval.hint')} error={problem(errors.refundApprovalAbove)}>
+            <Input dir="ltr" inputMode="numeric" {...p.form.register('refundApprovalAbove')} />
+          </Field>
         </div>
         <p className="text-sm text-muted-foreground">{t('billing.settings.roundOff')}</p>
         <StickyActionBar className={cardBar} status={<>

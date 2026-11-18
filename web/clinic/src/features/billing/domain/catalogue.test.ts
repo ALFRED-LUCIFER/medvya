@@ -66,11 +66,13 @@ describe('services', () => {
 });
 
 describe('billing settings', () => {
-  const settings = { invoicePrefix: 'INV', receiptPrefix: 'RCT', creditNotePrefix: 'CN', paymentMethods: ['Cash' as const], discountReasons: ['Staff family'], maxDiscountPercent: 10, paymentLinkExpiryMinutes: 60, version: 7 };
+  const settings = { invoicePrefix: 'INV', receiptPrefix: 'RCT', creditNotePrefix: 'CN', paymentMethods: ['Cash' as const], discountReasons: ['Staff family'], maxDiscountPercent: 10, paymentLinkExpiryMinutes: 60, refundApprovalAboveMinor: 100_000, version: 7 };
 
   it('round-trips the form and keeps the limits', () => {
     const form = toSettingsForm(settings);
-    expect(toSettingsBody({ ...form, discountReasons: 'Staff family\n\n Senior citizen ' }, settings.version)).toMatchObject({ discountReasons: ['Staff family', 'Senior citizen'], maxDiscountPercent: 10, version: 7 });
+    expect(toSettingsBody({ ...form, discountReasons: 'Staff family\n\n Senior citizen ' }, settings.version)).toMatchObject({ discountReasons: ['Staff family', 'Senior citizen'], maxDiscountPercent: 10, refundApprovalAboveMinor: 100_000, version: 7 });
+    expect(form.refundApprovalAbove).toBe('1000'); // whole rupees on the form, minor units on the wire
+    expect(billingSettingsSchema.safeParse({ ...form, refundApprovalAbove: '10.5' }).success).toBe(false);
     expect(billingSettingsSchema.safeParse(form).success).toBe(true);
     expect(billingSettingsSchema.safeParse({ ...form, paymentLinkExpiryMinutes: '14' }).success).toBe(false);
     expect(billingSettingsSchema.safeParse({ ...form, paymentMethods: [] }).success).toBe(false);

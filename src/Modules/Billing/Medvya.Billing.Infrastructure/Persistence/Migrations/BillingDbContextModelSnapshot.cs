@@ -34,6 +34,9 @@ namespace Medvya.Billing.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<Guid?>("CreditNoteId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid>("FacilityId")
                         .HasColumnType("uuid");
 
@@ -75,10 +78,17 @@ namespace Medvya.Billing.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CreditNoteId");
+
                     b.HasIndex("InvoiceId");
 
+                    b.HasIndex("TenantId", "CreditNoteId", "Layout")
+                        .IsUnique()
+                        .HasFilter("\"CreditNoteId\" IS NOT NULL");
+
                     b.HasIndex("TenantId", "InvoiceId", "Kind", "Layout", "PaidMinor")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("\"CreditNoteId\" IS NULL");
 
                     b.ToTable("BillingDocuments", "billing", t =>
                         {
@@ -126,6 +136,9 @@ namespace Medvya.Billing.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(16)
                         .HasColumnType("character varying(16)");
+
+                    b.Property<long>("RefundApprovalAboveMinor")
+                        .HasColumnType("bigint");
 
                     b.Property<uint>("xmin")
                         .IsConcurrencyToken()
@@ -255,6 +268,75 @@ namespace Medvya.Billing.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Medvya.Billing.Domain.CreditNote", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("AmountMinor")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid?>("CashSessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character(3)")
+                        .IsFixedLength();
+
+                    b.Property<Guid>("FacilityId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("InvoiceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Method")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("Number")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Reference")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CashSessionId");
+
+                    b.HasIndex("InvoiceId");
+
+                    b.HasIndex("TenantId", "Number")
+                        .IsUnique();
+
+                    b.ToTable("CreditNotes", "billing", t =>
+                        {
+                            t.HasTrigger("TR_CreditNotes_AppendOnly");
+
+                            t.HasCheckConstraint("CK_CreditNotes_Amount", "\"AmountMinor\" > 0");
+                        });
+                });
+
             modelBuilder.Entity("Medvya.Billing.Domain.DocSequence", b =>
                 {
                     b.Property<Guid>("Id")
@@ -361,6 +443,9 @@ namespace Medvya.Billing.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("PatientId")
                         .HasColumnType("uuid");
 
+                    b.Property<long>("RefundedMinor")
+                        .HasColumnType("bigint");
+
                     b.Property<long>("RoundOffMinor")
                         .HasColumnType("bigint");
 
@@ -408,6 +493,8 @@ namespace Medvya.Billing.Infrastructure.Persistence.Migrations
                             t.HasCheckConstraint("CK_Invoices_Number", "\"State\" IN ('Draft', 'Cancelled') OR \"Number\" IS NOT NULL");
 
                             t.HasCheckConstraint("CK_Invoices_Paid", "\"PaidMinor\" >= 0 AND \"PaidMinor\" <= GREATEST(\"TotalMinor\", 0)");
+
+                            t.HasCheckConstraint("CK_Invoices_Refunded", "\"RefundedMinor\" >= 0 AND \"RefundedMinor\" <= \"PaidMinor\"");
                         });
                 });
 
@@ -709,6 +796,11 @@ namespace Medvya.Billing.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Medvya.Billing.Domain.BillingDocument", b =>
                 {
+                    b.HasOne("Medvya.Billing.Domain.CreditNote", null)
+                        .WithMany()
+                        .HasForeignKey("CreditNoteId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Medvya.Billing.Domain.Invoice", null)
                         .WithMany()
                         .HasForeignKey("InvoiceId")
@@ -764,6 +856,10 @@ namespace Medvya.Billing.Infrastructure.Persistence.Migrations
 
                             b1.Property<int>("Payments");
 
+                            b1.Property<int>("Refunds");
+
+                            b1.Property<long>("RefundsMinor");
+
                             b1.HasKey("CashSessionId", "__synthesizedOrdinal");
 
                             b1.ToTable("CashSessions", "billing");
@@ -779,6 +875,20 @@ namespace Medvya.Billing.Infrastructure.Persistence.Migrations
                     b.Navigation("Counts");
 
                     b.Navigation("Totals");
+                });
+
+            modelBuilder.Entity("Medvya.Billing.Domain.CreditNote", b =>
+                {
+                    b.HasOne("Medvya.Billing.Domain.CashSession", null)
+                        .WithMany()
+                        .HasForeignKey("CashSessionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Medvya.Billing.Domain.Invoice", null)
+                        .WithMany()
+                        .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Medvya.Billing.Domain.InvoiceLine", b =>

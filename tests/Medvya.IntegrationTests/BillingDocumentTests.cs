@@ -267,4 +267,44 @@ public sealed class BillingDocumentTests(PostgresFixture sql, AzuriteFixture blo
         await h.Get<IFeatureFlags>(h.Admin).SetAsync(Medvya.Tenancy.Domain.Features.Billing, false, "practice", "Billing (synthetic test)");
         using (var r = await Client(h.Reception).PostAsync(path, null)) Assert.Equal(HttpStatusCode.NotFound, r.StatusCode);
     }
+    /// <summary>
+    /// MDV-P4-006: a credit note prints against its bill (number and date) with the amount given back in words and how it went back, never the reason;
+    /// A5 and thermal are separate papers stored once with their hash, re-printed byte for byte; the bill's own paper is unchanged.
+    /// </summary>
+    [Fact]
+    public async Task ACreditNotePrintsAgainstItsBillAndARePrintIsTheSamePaper()
+    {
+        var bill = await IssuedAsync(("Consultation, follow-up (synthetic)", 60_000, TaxTreatment.Exempt));
+        await Desk().RecordPaymentAsync(bill.Id, new RecordPayment { Method = PaymentMethod.Card, AmountMinor = 60_000, Reference = "TID 0042" });
+        var billPaper = (await Printer().PdfAsync(bill.Id, BillingDocumentKind.Bill, DocumentLayout.A5))!;
+        var refunded = (await Desk().RefundAsync(bill.Id, new RecordRefund
+        {
+            Method = PaymentMethod.Card, AmountMinor = 20_000, Reference = "TID 0042 RFND 9", Reason = "Meera Iyer asked to cancel the review (synthetic)",
+        }))!;
+        var note = Assert.Single(refunded.CreditNotes);
+
+        var a5 = (await Printer().CreditNotePdfAsync(bill.Id, note.Id, DocumentLayout.A5))!;
+        var text = Text(a5.Content, Medvya.BuildingBlocks.Infrastructure.PlainPdf.A5.Margin);
+        foreach (var expected in new[]
+                 {
+                     "CREDIT NOTE", note.Number, $"AGAINST BILL {bill.Number}", "BILL DATE", "Meera Iyer (synthetic)", "Amount given back 1 200.00 200.00", "Bill total 600.00",
+                     "Credit note total (INR) 200.00", "Rupees two hundred only", "REFUNDED BY Card (on the clinic’s terminal) · ref TID 0042 RFND 9 · 200.00", "exempt from GST",
+                 })
+            Assert.Contains(expected, text, StringComparison.Ordinal);
+        Assert.DoesNotContain("asked to cancel", text, StringComparison.Ordinal); // the reason stays on screen
+
+        var again = (await Printer().CreditNotePdfAsync(bill.Id, note.Id, DocumentLayout.A5))!;
+        Assert.Equal(a5.Content, again.Content);
+        var thermal = (await Printer().CreditNotePdfAsync(bill.Id, note.Id, DocumentLayout.Thermal))!;
+        Assert.Contains("Credit note total (INR) 200.00", Assert.Single(PdfPages.Read(thermal.Content, 4 * 2.8346)).Text, StringComparison.Ordinal);
+        Assert.Equal(billPaper.Content, (await Printer().PdfAsync(bill.Id, BillingDocumentKind.Bill, DocumentLayout.A5))!.Content);
+
+        var rows = (await RowsAsync()).Where(r => r.Kind == BillingDocumentKind.CreditNote).ToList();
+        Assert.Equal([(DocumentLayout.A5, note.Number, (Guid?)note.Id, a5.Sha256), (DocumentLayout.Thermal, note.Number, (Guid?)note.Id, thermal.Sha256)],
+            rows.Select(r => (r.Layout, r.Number, r.CreditNoteId, r.Sha256)));
+        Assert.Equal(["kind:CreditNote;layout:A5;copy:original", "kind:CreditNote;layout:A5;copy:reprint", "kind:CreditNote;layout:Thermal;copy:original"],
+            (await AuditAsync(bill.Id)).Where(d => d!.StartsWith("kind:CreditNote", StringComparison.Ordinal)));
+        Assert.Null(await Printer().CreditNotePdfAsync(bill.Id, Guid.NewGuid(), DocumentLayout.A5));
+        Assert.Null(await Printer(Guid.NewGuid()).CreditNotePdfAsync(bill.Id, note.Id, DocumentLayout.A5)); // another tenant
+    }
 }

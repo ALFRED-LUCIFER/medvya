@@ -38,6 +38,8 @@ public static class ShiftReportPdfDocument
         [
             Row(Text("billing.dayClose.pdf.byMethod"), [.. s.Totals.Select(t => (Text("billing.dayClose.pdf.methodLine", ("method", Text($"billing.method.{t.Method}")),
                 ("count", t.Payments.ToString(CultureInfo.InvariantCulture)), ("amount", Amount(t.AmountMinor))), Tone.Body)),
+                .. s.Totals.Where(t => t.Refunds > 0).Select(t => (Text("billing.dayClose.pdf.refundLine", ("method", Text($"billing.method.{t.Method}")),
+                    ("count", t.Refunds.ToString(CultureInfo.InvariantCulture)), ("amount", Amount(-t.RefundsMinor))), Tone.Body)),
                 .. s.Totals.Count == 0 ? [(Text("billing.dayClose.noPayments"), Tone.Muted)] : Array.Empty<(string, Tone)>()]),
             Row(Text("billing.dayClose.pdf.denominations"), [.. s.Counts.Where(c => c.Count > 0).Select(c => (Text("billing.dayClose.pdf.denominationLine",
                 ("value", Amount(c.ValueMinor)), ("count", c.Count.ToString(CultureInfo.InvariantCulture)), ("amount", Amount(c.ValueMinor * c.Count))), Tone.Body)),
@@ -45,6 +47,7 @@ public static class ShiftReportPdfDocument
             Row(Text("billing.dayClose.pdf.cash"),
                 (Text("billing.dayClose.float") + " " + Amount(s.OpeningFloatMinor), Tone.Body),
                 (Text("billing.dayClose.cashReceipts") + " " + Amount(s.Totals.Where(t => t.Method == PaymentMethod.Cash).Sum(t => t.AmountMinor)), Tone.Body),
+                (Text("billing.dayClose.cashRefunds") + " " + Amount(-s.Totals.Where(t => t.Method == PaymentMethod.Cash).Sum(t => t.RefundsMinor)), Tone.Body),
                 (Text("billing.dayClose.expected") + " " + Amount(s.ExpectedMinor), Tone.Strong),
                 (Text("billing.dayClose.variance") + " " + Signed(s.VarianceMinor ?? 0), Tone.Strong)),
         ];

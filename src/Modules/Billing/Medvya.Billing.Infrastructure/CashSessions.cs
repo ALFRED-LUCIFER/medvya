@@ -157,12 +157,19 @@ public sealed class CashSessions(
         return (await ViewsAsync([session], cancellationToken))[0];
     }
 
-    /// <summary>The succeeded payments stamped with the session, by method.</summary>
+    /// <summary>The succeeded payments and the refunds (credit notes, MDV-P4-006) stamped with the session, by method.</summary>
     async Task<List<MethodTotal>> TotalsAsync(Guid sessionId, CancellationToken cancellationToken)
     {
-        var totals = await db.Payments.AsNoTracking().Where(p => p.CashSessionId == sessionId && p.State == PaymentState.Succeeded).GroupBy(p => p.Method)
-            .Select(g => new MethodTotal { Method = g.Key, Payments = g.Count(), AmountMinor = g.Sum(x => x.AmountMinor) }).ToListAsync(cancellationToken);
-        return [.. totals.OrderBy(t => t.Method)]; // the enum's order (cash first), not the stored name's
+        var paid = await db.Payments.AsNoTracking().Where(p => p.CashSessionId == sessionId && p.State == PaymentState.Succeeded).GroupBy(p => p.Method)
+            .Select(g => new { Method = g.Key, Count = g.Count(), Amount = g.Sum(x => x.AmountMinor) }).ToListAsync(cancellationToken);
+        var back = await db.CreditNotes.AsNoTracking().Where(n => n.CashSessionId == sessionId).GroupBy(n => n.Method)
+            .Select(g => new { Method = g.Key, Count = g.Count(), Amount = g.Sum(x => x.AmountMinor) }).ToListAsync(cancellationToken);
+        return [.. paid.Select(p => p.Method).Union(back.Select(b => b.Method)).Order() // the enum's order (cash first), not the stored name's
+            .Select(m => new MethodTotal
+            {
+                Method = m, Payments = paid.FirstOrDefault(p => p.Method == m)?.Count ?? 0, AmountMinor = paid.FirstOrDefault(p => p.Method == m)?.Amount ?? 0,
+                Refunds = back.FirstOrDefault(b => b.Method == m)?.Count ?? 0, RefundsMinor = back.FirstOrDefault(b => b.Method == m)?.Amount ?? 0,
+            })];
     }
 
     async Task<List<CashSessionView>> ViewsAsync(IReadOnlyList<CashSession> sessions, CancellationToken cancellationToken)
@@ -179,7 +186,7 @@ public sealed class CashSessions(
         {
             // An open session shows its takings so far; a counted one what the count saw.
             var totals = s.CountedAt is null ? await TotalsAsync(s.Id, cancellationToken) : s.Totals;
-            var expected = s.ExpectedMinor ?? CashSession.Expected(s.OpeningFloatMinor, totals.Where(t => t.Method == PaymentMethod.Cash).Sum(t => t.AmountMinor));
+            var expected = s.ExpectedMinor ?? CashSession.Expected(s.OpeningFloatMinor, totals);
             views.Add(new CashSessionView(s.Id, s.State, s.Currency, s.OpeningFloatMinor, Name(s.OpenedBy), s.OpenedAt, s.Counts, totals, expected, s.CountedMinor,
                 s.VarianceMinor, s.Note, s.CountedBy is null ? null : Name(s.CountedBy), s.CountedAt, s.ConfirmedBy is null ? null : Name(s.ConfirmedBy), s.ClosedAt,
                 s.MayConfirm(user.UserId),

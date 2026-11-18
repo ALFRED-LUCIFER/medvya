@@ -18,6 +18,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Npgsql;
+using Xunit.Abstractions;
 
 namespace Medvya.IntegrationTests;
 
@@ -26,7 +27,7 @@ namespace Medvya.IntegrationTests;
 /// split payments with the over-collection guard, Razorpay links settled only on the provider's word (a fake provider), tenant isolation in both layers,
 /// and the endpoints' capability, flag and payload rules.
 /// </summary>
-public sealed partial class BillingInvoiceTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IAsyncLifetime
+public sealed partial class BillingInvoiceTests(PostgresFixture sql, ITestOutputHelper output) : IClassFixture<PostgresFixture>, IAsyncLifetime
 {
     readonly SchedulingHarness h = new(sql);
     readonly FakeLinks links = new();

@@ -82,33 +82,110 @@ public sealed class BillingDocuments(
             long running = 0;
             foreach (var p in payments) { running += p.AmountMinor; if (running > before) covered.Add(p); }
             pdf = BillPdf.Render(Paper(kind, rules, place, logo, person, doctor, invoice, number, lines, covered, before, sibling?.IssuedAt ?? now), layout);
-            var id = Guid.CreateVersion7();
-            var key = $"{TenantId}/billing/{id}"; // ids only, no names in blob paths
-            // Written before the row, as the prescription's PDF: a failed commit leaves only an unreachable blob, never a row without its copy.
-            // shortcut: the upload runs while the bill (and, for a receipt, the clinic's receipt series) is locked, so a slow Blob holds payments and the
-            // Razorpay webhook for up to this timeout; move the upload out of the transaction (reserve, commit, upload) before more than a few desks share a clinic (#1432).
-            using (var upload = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken))
-            {
-                upload.CancelAfter(UploadTimeout);
-                await using var stream = new MemoryStream(pdf, writable: false);
-                await files.PutAsync(key, stream, "application/pdf", upload.Token);
-            }
-            row = new BillingDocument
-            {
-                Id = id, TenantId = invoice.TenantId, FacilityId = invoice.FacilityId, InvoiceId = invoiceId, Kind = kind, Layout = layout, Number = number, PaidMinor = paid,
-                Sha256 = Convert.ToHexStringLower(SHA256.HashData(pdf)), BlobKey = key, IssuedBy = user.UserId ?? throw new InvalidOperationException("No user."), IssuedAt = now,
-            };
-            db.BillingDocuments.Add(row);
-            await db.SaveChangesAsync(cancellationToken);
+            row = await StoreAsync(invoice, kind, layout, number, paid, null, pdf, now, cancellationToken);
             await audit.WriteAsync(Event(invoice, row, "original"), tx.GetDbTransaction(), cancellationToken);
             await tx.CommitAsync(cancellationToken);
         }
         return new BillingPdf(pdf, row.Sha256);
     }
 
+    public async Task<BillingPdf?> CreditNotePdfAsync(Guid invoiceId, Guid creditNoteId, DocumentLayout layout, CancellationToken cancellationToken = default)
+    {
+        var facilityId = FacilityId;
+        var invoice = await db.Invoices.AsNoTracking().SingleOrDefaultAsync(i => i.Id == invoiceId && i.FacilityId == facilityId, cancellationToken);
+        var note = await db.CreditNotes.AsNoTracking().SingleOrDefaultAsync(n => n.Id == creditNoteId && n.InvoiceId == invoiceId && n.FacilityId == facilityId, cancellationToken);
+        if (invoice is null || note is null) return null;
+        if (await StoredNoteAsync(note, layout, cancellationToken) is { } stored) return await ReprintAsync(invoice, stored, cancellationToken);
+
+        // Everything from the other modules first, and the PDF rendered: no network call inside the transaction below, apart from the PDF's own write.
+        var rules = BillingCountryRules.For(await staff.TenantCountryAsync(cancellationToken) ?? throw new InvalidOperationException("No tenant country."));
+        var place = await facilities.FindAsync(facilityId, cancellationToken) ?? throw new InvalidOperationException("No facility context.");
+        var person = (await patients.SummariesAsync([invoice.PatientId], cancellationToken)).GetValueOrDefault(invoice.PatientId);
+        var logo = layout == DocumentLayout.A5 ? await facilities.LogoAsync(cancellationToken) : null;
+        var treatments = await db.InvoiceLines.AsNoTracking().Where(l => l.InvoiceId == invoiceId).Select(l => l.TaxTreatment).ToListAsync(cancellationToken);
+        // Given back before this note: the bill's earlier notes (append-only, so this never changes for a stored note).
+        var before = await db.CreditNotes.AsNoTracking().Where(n => n.InvoiceId == invoiceId && n.CreatedAt < note.CreatedAt).SumAsync(n => n.AmountMinor, cancellationToken);
+        var pdf = BillPdf.Render(NotePaper(rules, place, logo, person, invoice, note, before, treatments), layout);
+        await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
+        // The bill locked: two first prints of one note at once make one paper.
+        await db.Database.ExecuteSqlAsync($"""SELECT 1 FROM billing."Invoices" WHERE "Id" = {invoiceId} AND "FacilityId" = {facilityId} FOR UPDATE""", cancellationToken);
+        if (await StoredNoteAsync(note, layout, cancellationToken) is { } meanwhile)
+        {
+            await tx.RollbackAsync(cancellationToken);
+            return await ReprintAsync(invoice, meanwhile, cancellationToken);
+        }
+        var row = await StoreAsync(invoice, BillingDocumentKind.CreditNote, layout, note.Number, 0, note.Id, pdf, clock.GetUtcNow(), cancellationToken);
+        await audit.WriteAsync(Event(invoice, row, "original"), tx.GetDbTransaction(), cancellationToken);
+        await tx.CommitAsync(cancellationToken);
+        return new BillingPdf(pdf, row.Sha256);
+    }
+
+    Task<BillingDocument?> StoredNoteAsync(CreditNote note, DocumentLayout layout, CancellationToken cancellationToken) =>
+        db.BillingDocuments.AsNoTracking().SingleOrDefaultAsync(d => d.CreditNoteId == note.Id && d.Layout == layout, cancellationToken);
+
+    /// <summary>Writes the PDF to Blob, then saves its row with the SHA-256 (in that order: a failed commit leaves only an unreachable blob, never a row without its copy).</summary>
+    async Task<BillingDocument> StoreAsync(Invoice invoice, BillingDocumentKind kind, DocumentLayout layout, string number, long paid, Guid? creditNoteId, byte[] pdf,
+        DateTimeOffset issuedAt, CancellationToken cancellationToken)
+    {
+        var id = Guid.CreateVersion7();
+        var key = $"{TenantId}/billing/{id}"; // ids only, no names in blob paths
+        // shortcut: the upload runs while the bill (and, for a receipt, the clinic's receipt series) is locked, so a slow Blob holds payments and the
+        // Razorpay webhook for up to this timeout; move the upload out of the transaction (reserve, commit, upload) before more than a few desks share a clinic (#1432).
+        using (var upload = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken))
+        {
+            upload.CancelAfter(UploadTimeout);
+            await using var stream = new MemoryStream(pdf, writable: false);
+            await files.PutAsync(key, stream, "application/pdf", upload.Token);
+        }
+        var row = new BillingDocument
+        {
+            Id = id, TenantId = invoice.TenantId, FacilityId = invoice.FacilityId, InvoiceId = invoice.Id, Kind = kind, Layout = layout, Number = number, PaidMinor = paid,
+            CreditNoteId = creditNoteId, Sha256 = Convert.ToHexStringLower(SHA256.HashData(pdf)), BlobKey = key,
+            IssuedBy = user.UserId ?? throw new InvalidOperationException("No user."), IssuedAt = issuedAt,
+        };
+        db.BillingDocuments.Add(row);
+        await db.SaveChangesAsync(cancellationToken);
+        return row;
+    }
+
+    /// <summary>
+    /// A credit note's words and numbers: the bill it is against (number and date), one line for the money given back, the bill total and what went back
+    /// before, the note's amount in words and how it went back. The reason stays on screen: it may name the patient.
+    /// </summary>
+    static BillPaper NotePaper(BillingCountryRules rules, FacilityInfo place, byte[]? logo, PatientSummary? person, Invoice invoice, CreditNote note, long before,
+        List<TaxTreatment> treatments)
+    {
+        var zone = TimeZoneInfo.FindSystemTimeZoneById(place.TimeZone);
+        string When(DateTimeOffset at) => T("billing.print.when", ("when", TimeZoneInfo.ConvertTime(at, zone).ToString("dd MMM yyyy, HH:mm", CultureInfo.InvariantCulture)), ("zone", place.TimeZone));
+        var amount = BillText.Amount;
+        List<(string, string)> facts = [(T("billing.print.against"), invoice.Number!), (T("billing.print.billDate"), When(invoice.IssuedAt!.Value))];
+        List<(string, string)> totals = [(T("billing.print.billTotal"), amount(invoice.TotalMinor))];
+        if (before > 0) totals.Add((T("billing.print.refundedBefore"), amount(before)));
+        var how = T(note.Reference is null ? "billing.print.payment" : "billing.print.paymentRef", ("method", T($"billing.method.{note.Method}")),
+            ("reference", note.Reference ?? ""), ("amount", amount(note.AmountMinor)), ("when", When(note.CreatedAt)));
+        return new BillPaper(place.TenantName, place.Address, place.Phone, TaxLine(place), logo, T("billing.print.creditNote"), note.Number, When(note.CreatedAt), facts,
+            person?.FullName ?? "", person?.Mrn ?? "",
+            [new BillPaperLine(T("billing.print.refundLine"), "", "1", amount(note.AmountMinor), amount(note.AmountMinor))], // the bill's number is the "Against bill" fact
+            totals, T("billing.print.creditTotal", ("currency", note.Currency)), amount(note.AmountMinor),
+            rules.AmountInWords(new Money(note.AmountMinor, Currency.From(note.Currency))), [how],
+            T(treatments.Contains(TaxTreatment.Exempt) ? "billing.print.exemptNote" : "billing.print.taxNote"), T("billing.print.refundedBy"));
+    }
+
+    /// <summary>The practice's GSTIN and the location's registration, as the masthead prints them; null when it has neither.</summary>
+    static string? TaxLine(FacilityInfo place)
+    {
+        var line = string.Join(" · ", new[]
+        {
+            place.TaxNumber is { } tax ? T("billing.print.gstin", ("number", tax)) : null,
+            place.Registration is { } reg ? T("rxPrint.registration", ("number", reg)) : null,
+        }.OfType<string>());
+        return line.Length == 0 ? null : line;
+    }
+
     /// <summary>A draft has no number and a cancelled bill is void: neither prints. A receipt needs something paid.</summary>
     static void Check(Invoice invoice, BillingDocumentKind kind)
     {
+        if (kind == BillingDocumentKind.CreditNote) throw new ArgumentOutOfRangeException(nameof(kind), "A credit note prints through CreditNotePdfAsync.");
         if (invoice.State is InvoiceState.Draft or InvoiceState.Cancelled) throw new BillingValidationException([("state", "invalid")]);
         if (kind == BillingDocumentKind.Receipt && invoice.PaidMinor == 0) throw new BillingValidationException([("payment", "none")]);
     }
@@ -147,11 +224,6 @@ public sealed class BillingDocuments(
         var amount = BillText.Amount;
         var receipt = kind == BillingDocumentKind.Receipt;
 
-        var taxLine = string.Join(" · ", new[]
-        {
-            place.TaxNumber is { } tax ? T("billing.print.gstin", ("number", tax)) : null,
-            place.Registration is { } reg ? T("rxPrint.registration", ("number", reg)) : null,
-        }.OfType<string>());
         List<(string, string)> facts = [];
         if (receipt) facts.Add((T("billing.print.against"), invoice.Number!));
         if (doctor is not null)
@@ -195,8 +267,8 @@ public sealed class BillingDocuments(
         // A receipt is dated by its own issue (its A5 and thermal copies share it), the instant its number's financial year comes from; a bill by its issue.
         var at = receipt ? issuedAt : invoice.IssuedAt!.Value;
         // The business that supplies the care (the practice's name), as GST asks; the location's own address under it.
-        return new BillPaper(place.TenantName, place.Address, place.Phone, taxLine.Length == 0 ? null : taxLine, logo,
+        return new BillPaper(place.TenantName, place.Address, place.Phone, TaxLine(place), logo,
             T(receipt ? "billing.print.receipt" : rules.BillTitle(treatments)), number, When(at), facts, person?.FullName ?? "", person?.Mrn ?? "", printed, totals,
-            grandLabel, grand, words, paidBy, T(treatments.Contains(TaxTreatment.Exempt) ? "billing.print.exemptNote" : "billing.print.taxNote"));
+            grandLabel, grand, words, paidBy, T(treatments.Contains(TaxTreatment.Exempt) ? "billing.print.exemptNote" : "billing.print.taxNote"), T("billing.print.paidBy"));
     }
 }

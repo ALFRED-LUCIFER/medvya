@@ -367,6 +367,10 @@ test('the selected date and view survive a reload, and a stale visit panel close
 test('a dental booking: the procedure sets the length, reception lengthens it, and the chair is held with the dentist (MDV-P8-009)', async ({ page }) => {
   await page.route('**/v1/schedule/procedures?*', r => r.fulfill({ json: [{ id: 'p-rct', name: 'Root canal, molar (synthetic)', code: 'DN-END003', durationMinutes: 60 }] }));
   const calls = await open(page);
+  // Only the dentist's column on screen: the location's chairs are still offered (found on the real stack, where a doctor's own column is the default).
+  await page.getByRole('combobox', { name: 'Doctor or resource' }).click();
+  await page.getByRole('option', { name: 'Dr. Arjun Rao (synthetic)' }).click();
+  await expect(column(page, 'Procedure room (synthetic)')).toHaveCount(0);
   await bookButton(page, '10:00').click();
   const panel = page.getByRole('complementary', { name: 'Book appointment' });
   await panel.getByRole('combobox', { name: 'Procedure' }).click();

@@ -249,6 +249,7 @@ public sealed class DentalTests(PostgresFixture sql) : IClassFixture<PostgresFix
         var first = (await Dental().MarkStageAsync(h.Patient, h.Facility, item.Id, new(encounter, 0)))!;
         Assert.Equal((encounter, (DateTimeOffset?)null), (first.Stages![0].EncounterId!.Value, first.Stages[1].DoneAt));
         Assert.Equal("stage:not_next", await Refused(Dental().MarkStageAsync(h.Patient, h.Facility, item.Id, new(encounter, 0)))); // once
+        Assert.Equal("stages:incomplete", await Refused(Dental().MovePlanItemAsync(h.Patient, h.Facility, item.Id, new(DentalPlanStatus.Done, null, encounter, null)))); // done after its last stage
         Assert.Equal("stages:none", await Refused(Dental().MarkStageAsync(h.Patient, h.Facility, (await Dental().AddPlanItemAsync(h.Patient, h.Facility, new((await PricedAsync("Scaling (synthetic)", 1)).Id, null, null, 1))).Id, new(encounter, 0)))
             .ContinueWith(t => t.Result.Split(',').Single(c => c.StartsWith("stages", StringComparison.Ordinal))));
         Assert.Equal(DentalPlanStatus.InProgress, started.Status);

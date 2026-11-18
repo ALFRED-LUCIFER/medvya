@@ -6086,6 +6086,7 @@
   "dental.stage.impressions": "माप (इंप्रेशन)",
   "dental.stage.trial": "ट्रायल",
   "dental.error.stages.none": "यह आइटम एक विज़िट में होता है।",
+  "dental.error.stages.incomplete": "आइटम से पहले हर चरण पूरा करें।",
   "dental.error.stage.not_next": "चरण क्रम से पूरे करें, हर एक एक बार।",
   "dental.error.item.not_started": "चरण पूरा करने से पहले आइटम शुरू करें।",
   "dental.error.encounter.unsigned": "पहले इस विज़िट का नोट साइन करें: चरण साइन की गई विज़िट पर पूरा होता है।",

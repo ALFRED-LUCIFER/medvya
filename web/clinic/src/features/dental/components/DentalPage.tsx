@@ -250,7 +250,7 @@ function PlanRow({ item, ...p }: DentalView & { item: PlanItem; amount: (minor: 
         <div className="flex flex-wrap gap-2">
           {steps.map(step => step === 'decline'
             ? <Button key={step} variant="ghost" onClick={() => p.onDecline(item.id)}>{t('dental.plan.decline')}</Button>
-            : <Button key={step} variant="outline" loading={p.moving === item.id} disabled={((step === 'start' || step === 'done') && (!p.encounterId || needsConsent(item))) || (step === 'start' && !p.historyOnVisit)}
+            : <Button key={step} variant="outline" loading={p.moving === item.id} disabled={((step === 'start' || step === 'done') && (!p.encounterId || needsConsent(item))) || (step === 'start' && !p.historyOnVisit) || (step === 'done' && nextStage(item) !== null)}
                 onClick={() => p.onStep(item, step)}>{t(`dental.plan.${step}`)}</Button>)}
         </div>
       )}

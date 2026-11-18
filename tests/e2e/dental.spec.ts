@@ -21,14 +21,16 @@ const item = (id: string, serviceName: string, tooth: string | null, phase: numb
 const check = (encounterId: string) => ({ id: 'h-1', encounterId, yes: ['BloodThinners'], note: null, confirmedBy: 'u-das', confirmedAt: '2026-11-06T04:40:00Z', author: 'Dr. Kiran Das (synthetic)' });
 const signed = { id: 'c-1', planItemId: 'p-5', templateKey: 'extraction', templateVersion: 1, language: 'en', signedBy: 'Farhan Qureshi (synthetic)', signedAt: '2026-11-06T05:02:00Z', withdrawnAt: null, withdrawalReason: null, current: true };
 const extraction = (consent: unknown) => ({ ...item('p-5', 'Simple extraction (synthetic)', '48', 1, 80_000, 'Planned'), consentKey: 'extraction', consent });
-const chart = (openEncounterId: string | null, acceptanceCurrent = true, historyOn: string | null = openEncounterId, consent: unknown = undefined) => ({
+const stagedItem = { ...item('p-6', 'Root canal, premolar (synthetic)', '24', 1, 450_000, 'InProgress'), stages: [
+  { name: 'accessAndCleaning', minutes: 60, doneAt: '2026-10-30T05:00:00Z', encounterId: 'e-1' }, { name: 'shaping', minutes: 45, doneAt: null, encounterId: null },
+  { name: 'obturation', minutes: 45, doneAt: null, encounterId: null }] };
+const chart = (openEncounterId: string | null, acceptanceCurrent = true, historyOn: string | null = openEncounterId, consent: unknown = undefined, staged = false) => ({
   teeth: [finding('f-3', '36', 'Caries', 'DO', '2026-11-06T04:51:00Z'), finding('f-2', '46', 'Missing', null, '2026-11-06T04:45:00Z')],
   history: [finding('f-3', '36', 'Caries', 'DO', '2026-11-06T04:51:00Z'), finding('f-2', '46', 'Missing', null, '2026-11-06T04:45:00Z'), finding('f-1', '36', 'Caries', 'O', '2026-10-01T04:30:00Z')],
   plan: {
-    items: [{ ...item('p-1', 'Root canal, molar (synthetic)', '36', 1, 650_000, 'InProgress'), stages: [
-      { name: 'accessAndCleaning', minutes: 60, doneAt: '2026-10-30T05:00:00Z', encounterId: 'e-1' }, { name: 'shaping', minutes: 45, doneAt: null, encounterId: null },
-      { name: 'obturation', minutes: 45, doneAt: null, encounterId: null }] }, item('p-2', 'Crown, zirconia (synthetic)', '36', 2, 1_200_000, 'Planned'),
-      item('p-3', 'Scaling and polishing (synthetic)', null, 2, 150_000, 'Declined', 'Patient: later, cost (synthetic)'), ...(consent === undefined ? [] : [extraction(consent)])],
+    items: [item('p-1', 'Root canal, molar (synthetic)', '36', 1, 650_000, 'InProgress'), item('p-2', 'Crown, zirconia (synthetic)', '36', 2, 1_200_000, 'Planned'),
+      item('p-3', 'Scaling and polishing (synthetic)', null, 2, 150_000, 'Declined', 'Patient: later, cost (synthetic)'), ...(consent === undefined ? [] : [extraction(consent)]),
+      ...(staged ? [stagedItem] : [])],
     totalMinor: 1_850_000, currency: 'INR',
     acceptance: { id: 'a-1', acceptedBy: 'Farhan Qureshi (synthetic)', method: 'OnTablet', totalMinor: 1_850_000, currency: 'INR', acceptedAt: '2026-11-06T05:08:00Z', recordedBy: 'u-das' },
     acceptanceCurrent,
@@ -46,12 +48,12 @@ const section = (within: Page | import('@playwright/test').Locator, heading: str
   const page = 'page' in within && typeof within.page === 'function' ? within.page() : within as Page;
   return within.locator('section').filter({ has: page.getByRole('heading', { name: heading, exact: true }) }).last();
 };
-async function open(page: Page, { locale = 'en', openEncounterId = 'e-9' as string | null, acceptanceCurrent = true, move = 200, flags = ['clinical.dental'], notes = 'Sign', historyOn = 'same' as string | null, consent = undefined as unknown } = {}) {
+async function open(page: Page, { locale = 'en', openEncounterId = 'e-9' as string | null, acceptanceCurrent = true, move = 200, flags = ['clinical.dental'], notes = 'Sign', historyOn = 'same' as string | null, consent = undefined as unknown, staged = false } = {}) {
   const calls: Call[] = [];
   const log = (r: import('@playwright/test').Route) => calls.push({ method: r.request().method(), url: r.request().url(), body: r.request().postDataJSON() });
   await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
   await page.route('**/v1/me/context', r => r.fulfill({ json: session(flags, notes) }));
-  await page.route('**/v1/patients/p-1/dental', r => { log(r); return r.fulfill({ json: chart(openEncounterId, acceptanceCurrent, historyOn === 'same' ? openEncounterId : historyOn, consent) }); });
+  await page.route('**/v1/patients/p-1/dental', r => { log(r); return r.fulfill({ json: chart(openEncounterId, acceptanceCurrent, historyOn === 'same' ? openEncounterId : historyOn, consent, staged) }); });
   await page.route('**/v1/patients/p-1/dental/plan/*/stages', r => { log(r); return r.fulfill({ json: item('p-1', 'x', '36', 1, 1, 'InProgress') }); });
   await page.route('**/v1/patients/p-1/dental/plan/*/consent', r => { log(r); return r.fulfill({ json: signed }); });
   await page.route('**/v1/patients/p-1/dental/consents/*/withdraw', r => { log(r); return r.fulfill({ json: { ...signed, current: false, withdrawnAt: '2026-11-06T05:30:00Z', withdrawalReason: 'x' } }); });
@@ -171,8 +173,9 @@ test('a signed consent shows who and when, the stored form, and a withdrawal nee
 });
 
 test('a root canal across visits: the stage done, the next with its length, mark it on this visit, book the next one filled in (MDV-P8-013)', async ({ page }) => {
-  const calls = await open(page);
-  const row = page.getByRole('region', { name: 'Treatment plan' }).getByRole('listitem').filter({ hasText: 'Root canal, molar (synthetic)' });
+  const calls = await open(page, { staged: true });
+  const row = page.getByRole('region', { name: 'Treatment plan' }).getByRole('listitem').filter({ hasText: 'Root canal, premolar (synthetic)' });
+  await expect(row.getByRole('button', { name: 'Mark done' })).toBeDisabled(); // done only after its last stage
   const stages = row.getByRole('list', { name: 'Stages: 1 of 3 done' });
   await expect(stages.getByRole('listitem')).toHaveText(['Access and cleaning done', 'Next: Shaping (45 min)', 'Obturation (45 min)']);
   await expect(row.getByRole('link', { name: 'Book the next stage (45 min)' })).toHaveAttribute('href', '/schedule?patient=p-1&doctor=u-das&minutes=45&chair=r-1');

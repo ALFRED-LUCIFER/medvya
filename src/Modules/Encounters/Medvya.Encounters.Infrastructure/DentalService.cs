@@ -170,6 +170,10 @@ public sealed class DentalService(
             // MDV-P8-014: treatment starts only after the history that matters for it was confirmed with the patient on this visit.
             else if (command.To == DentalPlanStatus.InProgress && !await db.DentalHistoryChecks.AnyAsync(c => c.EncounterId == encounter.Id, cancellationToken))
                 errors.Add(("historyCheck", "required"));
+            // MDV-P8-013: a multi-visit item is done only once its last stage is.
+            if (command.To == DentalPlanStatus.Done && item.StagesKey is { } stagesKey && DentalStageRules.Sets.TryGetValue(stagesKey, out var stageSet)
+                && await db.DentalStagesDone.CountAsync(s => s.PlanItemId == item.Id, cancellationToken) < stageSet.Count)
+                errors.Add(("stages", "incomplete"));
             // MDV-P8-019: a procedure that needs consent starts and finishes only on a current, unwithdrawn consent signed for this item.
             if (item.ConsentKey is { } key && !await db.DentalConsents.AnyAsync(c => c.PlanItemId == item.Id && c.WithdrawnAt == null
                     && c.TemplateKey == key && c.TemplateVersion == DentalConsentRules.Versions[key], cancellationToken))

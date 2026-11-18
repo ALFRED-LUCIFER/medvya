@@ -6138,6 +6138,7 @@
   "dental.stage.impressions": "Impressions",
   "dental.stage.trial": "Trial",
   "dental.error.stages.none": "This item is done in one visit.",
+  "dental.error.stages.incomplete": "Mark every stage done before the item.",
   "dental.error.stage.not_next": "Mark the stages done in order, each once.",
   "dental.error.item.not_started": "Start the item before marking a stage done.",
   "dental.error.encounter.unsigned": "Sign this visit's note first: a stage is marked done on a signed visit.",

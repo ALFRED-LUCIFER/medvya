@@ -6135,6 +6135,7 @@
   "dental.stage.impressions": "الطبعات",
   "dental.stage.trial": "التجربة",
   "dental.error.stages.none": "يُنجز هذا البند في زيارة واحدة.",
+  "dental.error.stages.incomplete": "سجّل اكتمال كل المراحل قبل البند.",
   "dental.error.stage.not_next": "سجّل المراحل بالترتيب، كل مرحلة مرة واحدة.",
   "dental.error.item.not_started": "ابدأ البند قبل تسجيل اكتمال مرحلة.",
   "dental.error.encounter.unsigned": "وقّع ملاحظة هذه الزيارة أولًا: تُسجَّل المرحلة في زيارة موقّعة.",

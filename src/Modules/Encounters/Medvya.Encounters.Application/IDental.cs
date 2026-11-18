@@ -125,7 +125,7 @@ public interface IDental
     Task<DentalHistoryCheckView?> ConfirmHistoryAsync(Guid encounterId, Guid facilityId, ConfirmDentalHistory command, CancellationToken cancellationToken = default);
 
     /// <summary>Null when the item is not the patient's. Starting an item needs the history check confirmed on that visit (MDV-P8-014).</summary>
-    /// <exception cref="DentalValidationException">"to:not_allowed", "reason:required", "encounterId:required|invalid|ended", "historyCheck:required", "consent:required".</exception>
+    /// <exception cref="DentalValidationException">"to:not_allowed", "reason:required", "encounterId:required|invalid|ended", "historyCheck:required", "consent:required", "stages:incomplete".</exception>
     /// <exception cref="DentalConflictException"/>
     Task<DentalPlanItemView?> MovePlanItemAsync(Guid patientId, Guid facilityId, Guid itemId, MoveDentalPlanItem command, CancellationToken cancellationToken = default);
 

@@ -133,7 +133,7 @@ export const dentalErrors = [
   'tooth:invalid', 'condition:invalid', 'surfaces:required', 'surfaces:not_allowed', 'surfaces:invalid', 'surfaces:needs_tooth', 'note:too_long',
   'encounter:ended', 'encounterId:required', 'encounterId:ended', 'encounterId:invalid', 'to:not_allowed', 'reason:required', 'reason:too_long',
   'serviceId:required', 'serviceId:unknown', 'serviceId:no_price', 'phase:range', 'acceptedBy:required', 'acceptedBy:too_long', 'method:invalid', 'plan:empty',
-  'historyCheck:required', 'stages:none', 'stage:not_next', 'item:not_started', 'encounter:unsigned', 'consent:required', 'consent:not_needed', 'consent:withdrawn', 'language:invalid', 'signedBy:required', 'signedBy:too_long', 'signature:invalid',
+  'historyCheck:required', 'stages:none', 'stages:incomplete', 'stage:not_next', 'item:not_started', 'encounter:unsigned', 'consent:required', 'consent:not_needed', 'consent:withdrawn', 'language:invalid', 'signedBy:required', 'signedBy:too_long', 'signature:invalid',
 ] as const;
 
 /** A server field error as its catalogue key, or null when it is not one of the dental errors (the screen then says the generic failure). */

@@ -95,6 +95,8 @@ try {
       Operations__OrganisationApprovers__0: '5e1d0001-0002-4000-8000-000000000007',
       Web__AppPath: '/app/', // as on Azure: server-made redirects (sign-in refused, signed out) go to the app, not the public site
       Testing__ClockStartUtc: clockStart,
+      // The seeded India clinic is one of Medvya's own test organisations, so Internal-stage features (billing.invoices, MDV-P4) reach it.
+      Features__InternalOrganisations__0: '5e1d0001-0000-4000-8000-000000000001',
       // Every browser here is one client IP, and Host.Api also serves the app's scripts: the per-IP budget (300/min) is for a real desk.
       RateLimiting__PermitsPerMinute: '3000',
       RateLimiting__SignInPerMinute: '600', // the suite signs in over 20 times a minute from this one IP; the 20/min default is for a real desk

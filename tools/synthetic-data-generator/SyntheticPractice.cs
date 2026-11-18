@@ -92,7 +92,7 @@ public static class SyntheticPractice
                     AttestedAt = at, AttestedBy = by,
                 });
             }
-            await SyntheticSeed.SaveWithFeesAsync(db, connectionString, tenant, added, ct);
+            await SyntheticSeed.SaveWithFeesAsync(db, connectionString, tenant, "IN", added, ct);
             doctors = await db.Memberships.CountAsync(m => m.Role == Role.HospitalDoctor, ct);
             nurses = await db.Memberships.CountAsync(m => m.Role == Role.Nurse, ct);
             receptionists = await db.Memberships.CountAsync(m => m.Role == Role.Receptionist, ct);
@@ -179,7 +179,7 @@ public static class SyntheticPractice
                     ExpiresOn = DateOnly.FromDateTime(at.UtcDateTime).AddYears(5), AttestedAt = at, AttestedBy = by,
                 });
             }
-            await SyntheticSeed.SaveWithFeesAsync(db, connectionString, tenant, added, ct);
+            await SyntheticSeed.SaveWithFeesAsync(db, connectionString, tenant, "IN", added, ct);
         }
 
         await using (var identity = new IdentityDbContext(new DbContextOptionsBuilder<IdentityDbContext>().UseNpgsql(connectionString).Options))

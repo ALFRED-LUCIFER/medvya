@@ -164,8 +164,10 @@ public static class SyntheticSeed
             // Every doctor has the licence and profile rows the app creates with them, so Settings, Doctors lists them (#892). The licence
             // is attested by the practice owner like a new doctor's (ADR-016); Medvya does not check it.
             var listed = await db.DoctorLicences.Select(l => l.MembershipId).ToListAsync(ct);
+            var added = new List<Guid>();
             foreach (var d in c.Members.Where(m => m.Membership.Role is Role.SoloDoctor or Role.HospitalDoctor && !listed.Contains(m.Membership.Id)))
             {
+                added.Add(d.Membership.Id);
                 var at = new DateTimeOffset(2026, 11, 1, 4, 0, 0, TimeSpan.Zero);
                 db.DoctorLicences.Add(new DoctorLicence
                 {
@@ -174,7 +176,8 @@ public static class SyntheticSeed
                 });
                 db.DoctorProfiles.Add(new DoctorProfile { MembershipId = d.Membership.Id, TenantId = c.Tenant.Id, FullName = d.Name, ChangedAt = at });
             }
-            await db.SaveChangesAsync(ct);
+            // Each new doctor's consultation fees, as the app sets them when a doctor is added, so a visit's bill suggests its consultation (MDV-P4-004).
+            await SaveWithFeesAsync(db, connectionString, c.Tenant.Id, c.Tenant.CountryCode, added, ct);
 
             // Accounts for the development sign-in provider (Development only); the subject is the Medvya user id.
             var users = await identity.Users.Select(u => u.Id).ToListAsync(ct);
@@ -211,15 +214,17 @@ public static class SyntheticSeed
 
     sealed class FixedTenant(Guid? id) : ICurrentTenant { public Guid? TenantId => id; }
     sealed class NoUser : ICurrentUser { public Guid? UserId => null; }
+    // The seeded fees are in force from 1 Nov 2026, like the cast's licences, so a stack whose clock starts early in November (E2E_CLOCK_START) finds them.
+    sealed class At(DateTimeOffset at) : TimeProvider { public override DateTimeOffset GetUtcNow() => at; }
 
     /// <summary>Saves the tenancy rows and the new doctors' fees, which are Billing catalogue prices (MDV-P4-002), in one transaction.</summary>
-    internal static async Task SaveWithFeesAsync(TenancyDbContext db, string connectionString, Guid tenant, IReadOnlyCollection<Guid> newDoctors, CancellationToken ct)
+    internal static async Task SaveWithFeesAsync(TenancyDbContext db, string connectionString, Guid tenant, string countryCode, IReadOnlyCollection<Guid> newDoctors, CancellationToken ct)
     {
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         await db.SaveChangesAsync(ct);
         await using var billing = new Medvya.Billing.Infrastructure.Persistence.BillingDbContext(Options<Medvya.Billing.Infrastructure.Persistence.BillingDbContext>(connectionString, tenant), new FixedTenant(tenant));
-        var fees = new Medvya.Billing.Infrastructure.DoctorFees(billing, new FixedTenant(tenant), new NoUser(), TimeProvider.System);
-        foreach (var doctor in newDoctors) await fees.SetAsync(doctor, "IN", 50_000, 30_000, Microsoft.EntityFrameworkCore.Storage.DbContextTransactionExtensions.GetDbTransaction(tx), ct);
+        var fees = new Medvya.Billing.Infrastructure.DoctorFees(billing, new FixedTenant(tenant), new NoUser(), new At(new DateTimeOffset(2026, 11, 1, 4, 0, 0, TimeSpan.Zero)));
+        foreach (var doctor in newDoctors) await fees.SetAsync(doctor, countryCode, 50_000, 30_000, Microsoft.EntityFrameworkCore.Storage.DbContextTransactionExtensions.GetDbTransaction(tx), ct);
         await tx.CommitAsync(ct);
     }
 

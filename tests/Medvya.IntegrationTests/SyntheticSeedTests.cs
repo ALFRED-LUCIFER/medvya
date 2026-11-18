@@ -9,6 +9,8 @@ namespace Medvya.IntegrationTests;
 /// <summary>MDV-P0-027: the synthetic seed is idempotent, covers every role, is visibly synthetic and never runs in production.</summary>
 public class SyntheticSeedTests(PostgresFixture sql) : IClassFixture<PostgresFixture>
 {
+    sealed class NoUser : Medvya.BuildingBlocks.Domain.ICurrentUser { public Guid? UserId => null; }
+
     async Task<(int Tenants, int Facilities, int Memberships)> Counts(Guid tenantId)
     {
         await using var db = sql.Context(tenantId);
@@ -33,6 +35,13 @@ public class SyntheticSeedTests(PostgresFixture sql) : IClassFixture<PostgresFix
         var doctors = await db.Memberships.Where(m => m.Role == Role.SoloDoctor || m.Role == Role.HospitalDoctor).Select(m => m.Id).ToListAsync();
         Assert.Equal(doctors.Order(), (await db.DoctorLicences.Select(l => l.MembershipId).ToListAsync()).Order());
         Assert.Equal(doctors.Order(), (await db.DoctorProfiles.Select(p => p.MembershipId).ToListAsync()).Order());
+        // MDV-P4-004: and the consultation fees a visit's bill suggests, set once (a re-run adds no price), in the tenant's currency.
+        var fees = await new Medvya.Billing.Infrastructure.DoctorFees(sql.Billing(SyntheticSeed.India.Tenant.Id), new PostgresFixture.FixedTenant(SyntheticSeed.India.Tenant.Id),
+            new NoUser(), TimeProvider.System).ForDoctorsAsync(doctors);
+        Assert.All(doctors, d => Assert.Equal(((long?)50_000, (long?)30_000), (fees[d].NewVisitMinor, fees[d].FollowUpMinor)));
+        await using var billing = sql.Billing(SyntheticSeed.India.Tenant.Id);
+        Assert.Equal(doctors.Count * 2, await billing.PriceVersions.CountAsync());
+        Assert.All(await billing.PriceVersions.ToListAsync(), v => Assert.Equal("INR", v.Currency));
         Assert.EndsWith(SyntheticSeed.Marker, (await db.Tenants.SingleAsync()).Name, StringComparison.Ordinal);
         Assert.EndsWith(SyntheticSeed.Marker, (await db.Facilities.SingleAsync()).Name, StringComparison.Ordinal);
         Assert.All(SyntheticSeed.Tenants(includeUae: true).SelectMany(t => t.Members),

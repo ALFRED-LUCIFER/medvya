@@ -1183,6 +1183,134 @@
         }
       }
     },
+    "/v1/patients/{patientId}/dental/plan/{itemId}/consent": {
+      "post": {
+        "tags": [
+          "DentalEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "patientId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/SignDentalConsent"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/patients/{patientId}/dental/consents/{consentId}/withdraw": {
+      "post": {
+        "tags": [
+          "DentalEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "patientId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "consentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/WithdrawDentalConsent"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/patients/{patientId}/dental/consents/{consentId}/pdf": {
+      "post": {
+        "tags": [
+          "DentalEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "patientId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "consentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/v1/patients/{patientId}/dental/estimate/acceptance": {
       "post": {
         "tags": [
@@ -15838,6 +15966,42 @@
           }
         }
       },
+      "SignDentalConsent": {
+        "required": [
+          "encounterId",
+          "language",
+          "signedBy",
+          "signature"
+        ],
+        "type": "object",
+        "properties": {
+          "encounterId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "language": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signedBy": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signature": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "SignInStart": {
         "type": "object",
         "properties": {
@@ -16885,6 +17049,20 @@
           },
           "allowRepeat": {
             "type": "boolean"
+          }
+        }
+      },
+      "WithdrawDentalConsent": {
+        "required": [
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

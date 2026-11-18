@@ -1,13 +1,13 @@
 import { Link } from 'react-router';
 import { ltr, useI18n } from '@medvya/i18n';
 import {
-  Button, buttonVariants, Card, PageContainer, PageHeader, PageMessage, Chip, ChoiceRow, Field, FilterChip, Input, Section, SegmentedControl, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea, ToothChart,
+  Button, buttonVariants, Card, PageContainer, PageHeader, PageMessage, Chip, ChoiceRow, Field, FilterChip, Input, Section, SegmentedControl, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SignaturePad, Textarea, ToothChart,
 } from '@medvya/ui';
 import { CircleAlert, CircleCheck, Clock, Ban, CircleDot, FileDown, Lock } from 'lucide-react';
 import { fieldError } from '../../settings/components/fieldStyles';
 import { ChartBanner } from '../../patient360/components/Patient360Page';
 import type { Patient360 } from '../../patient360/domain/chart';
-import { byPhase, conditions, conditionTone, dentitions, historyQuestions, marksFor, money, nextSteps, surfaceConditions, surfaceOrder, type DentalView, type PlanItem, type PlanStatus } from '../domain/dental';
+import { byPhase, conditions, conditionTone, dentitions, historyQuestions, marksFor, money, needsConsent, nextSteps, surfaceConditions, surfaceOrder, type ConsentKey, type DentalView, type PlanItem, type PlanStatus } from '../domain/dental';
 
 const statusLook: Record<PlanStatus, { tone: 'info' | 'warning' | 'success' | 'neutral'; icon: typeof Clock }> = {
   Planned: { tone: 'info', icon: CircleDot }, InProgress: { tone: 'warning', icon: Clock }, Done: { tone: 'success', icon: CircleCheck }, Declined: { tone: 'neutral', icon: Ban },
@@ -234,6 +234,7 @@ function PlanRow({ item, ...p }: DentalView & { item: PlanItem; amount: (minor: 
       </div>
       {item.reason && <p className="text-caption">{t('dental.plan.reason', { reason: item.reason })}</p>}
       {item.status === 'Done' && <p className="text-caption text-muted-foreground">{t('dental.plan.billed')}</p>}
+      {item.consentKey && item.status !== 'Done' && item.status !== 'Declined' && <ConsentLine item={item} {...p} />}
       {p.declining === item.id ? (
         <form className="flex flex-col gap-2" onSubmit={e => { e.preventDefault(); p.onStep(item, 'decline'); }}>
           <Field id={`decline-${item.id}`} label={t('dental.plan.declineReason')}>
@@ -248,11 +249,70 @@ function PlanRow({ item, ...p }: DentalView & { item: PlanItem; amount: (minor: 
         <div className="flex flex-wrap gap-2">
           {steps.map(step => step === 'decline'
             ? <Button key={step} variant="ghost" onClick={() => p.onDecline(item.id)}>{t('dental.plan.decline')}</Button>
-            : <Button key={step} variant="outline" loading={p.moving === item.id} disabled={((step === 'start' || step === 'done') && !p.encounterId) || (step === 'start' && !p.historyOnVisit)}
+            : <Button key={step} variant="outline" loading={p.moving === item.id} disabled={((step === 'start' || step === 'done') && (!p.encounterId || needsConsent(item))) || (step === 'start' && !p.historyOnVisit)}
                 onClick={() => p.onStep(item, step)}>{t(`dental.plan.${step}`)}</Button>)}
         </div>
       )}
     </li>
+  );
+}
+
+/**
+ * MDV-P8-019: the procedure consent of one plan item. Before it is signed: what is needed and, in the open consultation, the form to read and sign on the
+ * tablet (in the app's language; the patient switches it to read in theirs). Signed: who and when, the stored form, and a withdrawal with its reason.
+ */
+function ConsentLine({ item, ...p }: DentalView & { item: PlanItem }) {
+  const { t, formatDate } = useI18n();
+  const key = item.consentKey as ConsentKey;
+  const c = item.consent;
+  const when = (at: string) => formatDate(new Date(at), p.chart!.timeZone);
+  if (p.consenting === item.id) return (
+    <form className="flex flex-col gap-3 rounded-md border border-border p-3" onSubmit={e => { e.preventDefault(); p.onSignConsent(); }}>
+      <h4 className="text-label font-bold">{t(`dentalConsent.${key}.title`)}</h4>
+      <p className="text-caption text-muted-foreground">{t('dental.consent.language')}</p>
+      {t(`dentalConsent.${key}.body`).split('\n\n').map((para, i) => <p key={i}>{para}</p>)}
+      <p className="font-bold">{t('dentalConsent.declaration')}</p>
+      <p className="text-caption text-muted-foreground">{t('dentalConsent.draft')}</p>
+      <Field id={`consent-signer-${item.id}`} label={t('dental.consent.signer')}>
+        <Input value={p.consentSigner} maxLength={200} autoComplete="off" onChange={e => p.onConsentSigner(e.target.value)} />
+      </Field>
+      <SignaturePad label={t('dental.consent.signature')} hint={t('dental.consent.signatureHint')} clearLabel={t('dental.consent.clear')} onChange={p.onSignature} />
+      {p.consentError && <p role="alert" className={fieldError}>{t(p.consentError)}</p>}
+      {p.consentFailed && <p role="alert" className={fieldError}>{t('dental.consent.failed')}</p>}
+      <div className="flex flex-wrap gap-2">
+        <Button type="submit" loading={p.consentSaving} disabled={!p.hasSignature || !p.consentSigner.trim()}>{t('dental.consent.confirm')}</Button>
+        <Button type="button" variant="ghost" onClick={() => p.onConsenting(null)}>{t('dental.plan.cancel')}</Button>
+      </div>
+    </form>
+  );
+  return (
+    <div className="flex flex-col gap-2">
+      {c?.current
+        ? <p className="flex items-center gap-2 text-caption"><CircleCheck aria-hidden className="size-4 shrink-0" />
+            {t('dental.consent.signed', { name: c.signedBy, when: when(c.signedAt), version: String(c.templateVersion) })}</p>
+        : <p className="flex items-center gap-2 text-caption font-bold"><CircleAlert aria-hidden className="size-4 shrink-0 text-warning-700" />
+            {c?.withdrawnAt ? t('dental.consent.withdrawnLine', { when: when(c.withdrawnAt), reason: c.withdrawalReason ?? '' })
+              : c ? t('dental.consent.outdated') : t('dental.consent.needed', { form: t(`dentalConsent.${key}.title`) })}</p>}
+      {p.withdrawing === c?.id && c ? (
+        <form className="flex flex-col gap-2" onSubmit={e => { e.preventDefault(); p.onWithdraw(); }}>
+          <Field id={`withdraw-${c.id}`} label={t('dental.consent.withdrawReason')}>
+            <Input value={p.withdrawReason} maxLength={200} onChange={e => p.onWithdrawReason(e.target.value)} />
+          </Field>
+          {p.withdrawFailed && <p role="alert" className={fieldError}>{t('dental.consent.failed')}</p>}
+          <div className="flex flex-wrap gap-2">
+            <Button type="submit" variant="outline" loading={p.withdrawSaving} disabled={!p.withdrawReason.trim()}>{t('dental.consent.withdrawConfirm')}</Button>
+            <Button type="button" variant="ghost" onClick={() => p.onWithdrawing(null)}>{t('dental.plan.cancel')}</Button>
+          </div>
+        </form>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {p.canChange && p.encounterId && !c?.current && <Button variant="outline" onClick={() => p.onConsenting(item.id)}>{t('dental.consent.sign')}</Button>}
+          {c && <Button variant="ghost" onClick={() => p.onConsentPdf(c.id)}><FileDown aria-hidden />{t('dental.consent.download')}</Button>}
+          {p.canChange && c?.current && <Button variant="ghost" onClick={() => p.onWithdrawing(c.id)}>{t('dental.consent.withdraw')}</Button>}
+        </div>
+      )}
+      {p.consentPdfFailed && <p role="alert" className={fieldError}>{t('dental.consent.pdfFailed')}</p>}
+    </div>
   );
 }
 

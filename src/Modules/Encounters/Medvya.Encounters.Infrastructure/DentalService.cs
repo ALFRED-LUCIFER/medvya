@@ -21,11 +21,12 @@ namespace Medvya.Encounters.Infrastructure;
 /// </summary>
 public sealed class DentalService(
     EncountersDbContext db, IClinicalAccess clinical, ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, TimeProvider clock, ICatalogue catalogue,
-    IPatientDirectory patients, IFacilityDirectory facilities, IStaffUsers staff) : IDental, IDentalCharges
+    IPatientDirectory patients, IFacilityDirectory facilities, IStaffUsers staff, IDocumentStore documents) : IDental, IDentalCharges
 {
     public const string ReadAction = "patient.dental.read", FindingAction = "patient.dental.finding", PlanAction = "patient.dental.plan",
         MoveAction = "patient.dental.plan_move", AcceptAction = "patient.dental.estimate_accept", PdfAction = "patient.dental.pdf",
-        HistoryAction = "patient.dental.history_check";
+        HistoryAction = "patient.dental.history_check", ConsentAction = "patient.dental.consent_sign", WithdrawAction = "patient.dental.consent_withdraw",
+        ConsentPdfAction = "patient.dental.consent_pdf";
     static readonly Access[] Treats = [Access.Read, Access.Limited, Access.Full, Access.Sign];
     static readonly Access[] Dentists = [Access.Sign];
 
@@ -79,9 +80,11 @@ public sealed class DentalService(
     {
         var items = await db.DentalPlanItems.AsNoTracking().Where(i => i.PatientId == patientId)
             .OrderBy(i => i.Phase).ThenBy(i => i.CreatedAt).ThenBy(i => i.Id).ToListAsync(cancellationToken);
+        var consents = (await db.DentalConsents.AsNoTracking().Where(c => c.PatientId == patientId).ToListAsync(cancellationToken))
+            .GroupBy(c => c.PlanItemId).ToDictionary(g => g.Key, g => g.OrderByDescending(c => c.SignedAt).ThenByDescending(c => c.Id).First());
         var accepted = await db.DentalEstimateAcceptances.AsNoTracking().Where(a => a.PatientId == patientId)
             .OrderByDescending(a => a.AcceptedAt).ThenByDescending(a => a.Id).FirstOrDefaultAsync(cancellationToken);
-        return new DentalPlanView([.. items.Select(View)], DentalRules.EstimateTotal(items), items.FirstOrDefault()?.Currency,
+        return new DentalPlanView([.. items.Select(i => View(i) with { Consent = consents.GetValueOrDefault(i.Id) is { } c ? View(c) : null })], DentalRules.EstimateTotal(items), items.FirstOrDefault()?.Currency,
             accepted is null ? null : new(accepted.Id, accepted.AcceptedByName, accepted.Method, accepted.TotalMinor, accepted.Currency, accepted.AcceptedAt, accepted.RecordedBy),
             accepted is not null && accepted.ItemsKey == DentalRules.EstimateKey(items));
     }
@@ -131,7 +134,7 @@ public sealed class DentalService(
         var row = new DentalPlanItem
         {
             Id = Guid.CreateVersion7(), TenantId = TenantId, PatientId = patientId, FacilityId = facilityId, ServiceId = service.Id, ServiceName = service.Name,
-            Tooth = tooth, Surfaces = DentalRules.Surfaces(command.Surfaces) is { Length: > 0 } s ? s : null, Phase = command.Phase!.Value,
+            Tooth = tooth, Surfaces = DentalRules.Surfaces(command.Surfaces) is { Length: > 0 } s ? s : null, Phase = command.Phase!.Value, ConsentKey = DentalConsentRules.For(service.Code),
             EstimateMinor = price.AmountMinor, Currency = price.Currency, Status = DentalPlanStatus.Planned, CreatedBy = Me, CreatedAt = now, ChangedBy = Me, ChangedAt = now,
         };
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
@@ -163,6 +166,10 @@ public sealed class DentalService(
             // MDV-P8-014: treatment starts only after the history that matters for it was confirmed with the patient on this visit.
             else if (command.To == DentalPlanStatus.InProgress && !await db.DentalHistoryChecks.AnyAsync(c => c.EncounterId == encounter.Id, cancellationToken))
                 errors.Add(("historyCheck", "required"));
+            // MDV-P8-019: a procedure that needs consent starts and finishes only on a current, unwithdrawn consent signed for this item.
+            if (item.ConsentKey is { } key && !await db.DentalConsents.AnyAsync(c => c.PlanItemId == item.Id && c.WithdrawnAt == null
+                    && c.TemplateKey == key && c.TemplateVersion == DentalConsentRules.Versions[key], cancellationToken))
+                errors.Add(("consent", "required"));
         }
         if (errors.Count > 0) throw new DentalValidationException(errors);
         if (command.Version is { } read && read != item.Version) throw new DentalConflictException();
@@ -231,7 +238,82 @@ public sealed class DentalService(
     static ToothFindingView View(DentalFinding f) => new(f.Id, f.Tooth, f.Condition, f.Surfaces, f.Note, f.EncounterId, f.RecordedBy, f.RecordedAt);
 
     static DentalPlanItemView View(DentalPlanItem i) =>
-        new(i.Id, i.ServiceId, i.ServiceName, i.Tooth, i.Surfaces, i.Phase, i.EstimateMinor, i.Currency, i.Status, i.Reason, i.CreatedAt, i.ChangedAt, i.DoneAt, i.Version);
+        new(i.Id, i.ServiceId, i.ServiceName, i.Tooth, i.Surfaces, i.Phase, i.EstimateMinor, i.Currency, i.Status, i.Reason, i.CreatedAt, i.ChangedAt, i.DoneAt, i.Version, i.ConsentKey);
+
+    static DentalConsentView View(DentalConsent c) => new(c.Id, c.PlanItemId, c.TemplateKey, c.TemplateVersion, c.Language, c.SignedByName, c.SignedAt, c.WithdrawnAt,
+        c.WithdrawalReason, c.WithdrawnAt is null && DentalConsentRules.Versions.GetValueOrDefault(c.TemplateKey) == c.TemplateVersion);
+
+    public async Task<DentalConsentView?> SignConsentAsync(Guid patientId, Guid facilityId, Guid itemId, SignDentalConsent command, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        await clinical.RequireAsync(patientId, facilityId, Capability.ClinicalNotes, Dentists, cancellationToken);
+        if (await db.DentalPlanItems.AsNoTracking().SingleOrDefaultAsync(i => i.Id == itemId && i.PatientId == patientId, cancellationToken) is not { } item) return null;
+        var errors = new List<(string, string)>();
+        if (item.ConsentKey is null) errors.Add(("consent", "not_needed"));
+        if (command.Language is null || !DentalConsentRules.Languages.Contains(command.Language)) errors.Add(("language", "invalid"));
+        var signer = command.SignedBy?.Trim();
+        if (string.IsNullOrEmpty(signer)) errors.Add(("signedBy", "required"));
+        else if (signer.Length > DentalConsent.MaxName) errors.Add(("signedBy", "too_long"));
+        byte[]? png = null;
+        try { png = command.Signature is { Length: > 0 and < 500_000 } b64 ? Convert.FromBase64String(b64) : null; } catch (FormatException) { }
+        if (!DentalConsentRules.IsSignature(png)) errors.Add(("signature", "invalid"));
+        Encounter? encounter = null;
+        if (command.EncounterId is not { } encounterId) errors.Add(("encounterId", "required"));
+        else if ((encounter = await db.Encounters.AsNoTracking().SingleOrDefaultAsync(e => e.Id == encounterId, cancellationToken)) is null
+            || encounter.PatientId != patientId || encounter.FacilityId != facilityId) errors.Add(("encounterId", "invalid"));
+        else if (encounter.Status != EncounterStatus.Active) errors.Add(("encounterId", "ended"));
+        if (errors.Count > 0) throw new DentalValidationException(errors);
+
+        var now = clock.GetUtcNow();
+        var patient = (await patients.SummariesAsync([patientId], cancellationToken)).GetValueOrDefault(patientId) ?? throw new InvalidOperationException("The patient was not found.");
+        var facility = await facilities.FindAsync(facilityId, cancellationToken) ?? throw new InvalidOperationException("Session facility not in this tenant.");
+        var names = await staff.DisplayNamesAsync([Me], cancellationToken);
+        var key = item.ConsentKey!;
+        var pdf = DentalConsentPdfDocument.Render(patient, facility, item, key, DentalConsentRules.Versions[key], command.Language!, signer!, png!, names.GetValueOrDefault(Me) ?? "", now);
+        // A random key with no patient data in it; the row keeps the hash, so the stored form can be shown to be the one signed.
+        var blobKey = $"{TenantId}/dental-consent/{Guid.CreateVersion7()}";
+        await using (var stream = new MemoryStream(pdf)) await documents.PutAsync(blobKey, stream, "application/pdf", cancellationToken);
+        var row = new DentalConsent
+        {
+            Id = Guid.CreateVersion7(), TenantId = TenantId, PatientId = patientId, FacilityId = facilityId, PlanItemId = item.Id, EncounterId = encounter!.Id,
+            TemplateKey = key, TemplateVersion = DentalConsentRules.Versions[key], Language = command.Language!, SignedByName = signer!, SignedAt = now, RecordedBy = Me,
+            BlobKey = blobKey, Sha256 = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(pdf)),
+        };
+        await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
+        db.DentalConsents.Add(row);
+        await db.SaveChangesAsync(cancellationToken);
+        await audit.WriteAsync(Event(ConsentAction, patientId, row.Id), tx.GetDbTransaction(), cancellationToken);
+        await tx.CommitAsync(cancellationToken);
+        return View(row);
+    }
+
+    public async Task<DentalConsentView?> WithdrawConsentAsync(Guid patientId, Guid facilityId, Guid consentId, WithdrawDentalConsent command, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        await clinical.RequireAsync(patientId, facilityId, Capability.ClinicalNotes, Dentists, cancellationToken);
+        if (await db.DentalConsents.SingleOrDefaultAsync(c => c.Id == consentId && c.PatientId == patientId, cancellationToken) is not { } consent) return null;
+        var reason = command.Reason?.Trim();
+        var errors = new List<(string, string)>();
+        if (string.IsNullOrEmpty(reason)) errors.Add(("reason", "required"));
+        else if (reason.Length > DentalConsent.MaxReason) errors.Add(("reason", "too_long"));
+        if (consent.WithdrawnAt is not null) errors.Add(("consent", "withdrawn"));
+        if (errors.Count > 0) throw new DentalValidationException(errors);
+        (consent.WithdrawnAt, consent.WithdrawnBy, consent.WithdrawalReason) = (clock.GetUtcNow(), Me, reason);
+        await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
+        await audit.WriteAsync(Event(WithdrawAction, patientId, consent.Id), tx.GetDbTransaction(), cancellationToken);
+        await tx.CommitAsync(cancellationToken);
+        return View(consent);
+    }
+
+    public async Task<DentalPdf?> ConsentPdfAsync(Guid patientId, Guid facilityId, Guid consentId, CancellationToken cancellationToken = default)
+    {
+        await clinical.RequireAsync(patientId, facilityId, Capability.Patient360Chart, [Access.Full, Access.Sign], cancellationToken);
+        if (await db.DentalConsents.AsNoTracking().SingleOrDefaultAsync(c => c.Id == consentId && c.PatientId == patientId, cancellationToken) is not { } consent) return null;
+        var bytes = await documents.ReadAsync(consent.BlobKey, cancellationToken);
+        await audit.WriteAsync(Event(ConsentPdfAction, patientId, consent.Id), cancellationToken);
+        return new DentalPdf(bytes);
+    }
 
     AuditEvent Event(string action, Guid patientId, Guid? resource = null) => new()
     {

@@ -55,6 +55,11 @@ BEGIN
         REVOKE UPDATE, DELETE, TRUNCATE ON encounters."DentalHistoryChecks" FROM medvya_encounters;
         GRANT UPDATE ("PatientId", "MergedFromPatientId") ON encounters."DentalHistoryChecks" TO medvya_encounters;
     END IF;
+    -- A signed procedure consent is never edited (MDV-P8-019): only its withdrawal is added, and a merge moves it.
+    IF to_regclass('encounters."DentalConsents"') IS NOT NULL THEN
+        REVOKE UPDATE, DELETE, TRUNCATE ON encounters."DentalConsents" FROM medvya_encounters;
+        GRANT UPDATE ("PatientId", "MergedFromPatientId", "WithdrawnAt", "WithdrawnBy", "WithdrawalReason") ON encounters."DentalConsents" TO medvya_encounters;
+    END IF;
 
     -- The chain trigger lists a tenant's first row in ledger."Chains"; ledger."Tables" stays read-only (roles.sql).
     IF to_regclass('ledger."Chains"') IS NOT NULL THEN

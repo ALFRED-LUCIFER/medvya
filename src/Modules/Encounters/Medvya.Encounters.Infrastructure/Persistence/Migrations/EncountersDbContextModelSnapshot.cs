@@ -363,6 +363,87 @@ namespace Medvya.Encounters.Infrastructure.Persistence.Migrations
                     b.ToTable("ConsultNotes", "encounters");
                 });
 
+            modelBuilder.Entity("Medvya.Encounters.Domain.DentalConsent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("BlobKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("EncounterId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("FacilityId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .HasMaxLength(5)
+                        .HasColumnType("character varying(5)");
+
+                    b.Property<Guid?>("MergedFromPatientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PlanItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("RecordedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Sha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .IsFixedLength();
+
+                    b.Property<DateTimeOffset>("SignedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("SignedByName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("TemplateKey")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<int>("TemplateVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("WithdrawalReason")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset?>("WithdrawnAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("WithdrawnBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "PatientId");
+
+                    b.HasIndex("TenantId", "PlanItemId");
+
+                    b.ToTable("DentalConsents", "encounters", t =>
+                        {
+                            t.HasCheckConstraint("CK_DentalConsents_Withdrawal", "(\"WithdrawnAt\" IS NULL) = (\"WithdrawalReason\" IS NULL)");
+                        });
+                });
+
             modelBuilder.Entity("Medvya.Encounters.Domain.DentalEstimateAcceptance", b =>
                 {
                     b.Property<Guid>("Id")
@@ -527,6 +608,10 @@ namespace Medvya.Encounters.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid>("ChangedBy")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("ConsentKey")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");

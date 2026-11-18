@@ -14,7 +14,19 @@ export type ToothFinding = {
 export type PlanItem = {
   id: string; serviceId: string; serviceName: string; tooth: string | null; surfaces: string | null; phase: number; estimateMinor: number; currency: string;
   status: PlanStatus; reason: string | null; createdAt: string; changedAt: string; doneAt: string | null; version: number;
+  /** The procedure consent the item needs before it starts (MDV-P8-019), and the latest one signed. */
+  consentKey: string | null; consent: Consent | null;
 };
+/** A signed procedure consent. current: on the current form version and not withdrawn, so the item may start. */
+export type Consent = {
+  id: string; planItemId: string; templateKey: string; templateVersion: number; language: string; signedBy: string; signedAt: string;
+  withdrawnAt: string | null; withdrawalReason: string | null; current: boolean;
+};
+/** The consent forms (DentalConsentRules on the server); the wording is in the catalogue (dentalConsent.<key>.*). */
+export const consentKeys = ['extraction', 'rootCanal', 'implant', 'sedation'] as const;
+export type ConsentKey = (typeof consentKeys)[number];
+/** Whether the item waits for a consent before it can start or finish. */
+export const needsConsent = (item: Pick<PlanItem, 'consentKey' | 'consent'>) => !!item.consentKey && !item.consent?.current;
 export type Acceptance = { id: string; acceptedBy: string; method: AcceptanceMethod; totalMinor: number; currency: string; acceptedAt: string; recordedBy: string };
 export type DentalPlan = { items: PlanItem[]; totalMinor: number; currency: string | null; acceptance: Acceptance | null; acceptanceCurrent: boolean };
 /** The medical history questions asked before dental treatment (MDV-P8-014), in the order they are asked (DentalHistoryRules.Questions on the server). */
@@ -106,7 +118,7 @@ export const dentalErrors = [
   'tooth:invalid', 'condition:invalid', 'surfaces:required', 'surfaces:not_allowed', 'surfaces:invalid', 'surfaces:needs_tooth', 'note:too_long',
   'encounter:ended', 'encounterId:required', 'encounterId:ended', 'encounterId:invalid', 'to:not_allowed', 'reason:required', 'reason:too_long',
   'serviceId:required', 'serviceId:unknown', 'serviceId:no_price', 'phase:range', 'acceptedBy:required', 'acceptedBy:too_long', 'method:invalid', 'plan:empty',
-  'historyCheck:required',
+  'historyCheck:required', 'consent:required', 'consent:not_needed', 'consent:withdrawn', 'language:invalid', 'signedBy:required', 'signedBy:too_long', 'signature:invalid',
 ] as const;
 
 /** A server field error as its catalogue key, or null when it is not one of the dental errors (the screen then says the generic failure). */
@@ -132,6 +144,10 @@ export type DentalView = {
   printing: boolean; printFailed: boolean; onPrint: () => void;
   answers: Partial<Record<HistoryQuestion, boolean>>; onAnswer: (q: HistoryQuestion, yes: boolean) => void; historyNote: string; onHistoryNote: (note: string) => void;
   historyOnVisit: boolean; historySaving: boolean; historyFailed: boolean; historyIncomplete: boolean; historyDone: boolean; onConfirmHistory: () => void;
+  consenting: string | null; onConsenting: (itemId: string | null) => void; consentSigner: string; onConsentSigner: (name: string) => void;
+  onSignature: (png: string | null) => void; hasSignature: boolean; consentSaving: boolean; consentError: MessageKey | null; consentFailed: boolean; onSignConsent: () => void;
+  withdrawing: string | null; onWithdrawing: (consentId: string | null) => void; withdrawReason: string; onWithdrawReason: (reason: string) => void;
+  withdrawSaving: boolean; withdrawFailed: boolean; onWithdraw: () => void; onConsentPdf: (consentId: string) => void; consentPdfFailed: boolean;
 };
 
 /** Settings › Dental, the clinic's note template (MDV-P8-015): on means new notes start on the dental template. */

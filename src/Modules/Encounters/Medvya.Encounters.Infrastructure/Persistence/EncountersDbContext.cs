@@ -37,6 +37,7 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
     public DbSet<MilestoneResponse> MilestoneResponses => Set<MilestoneResponse>();
     public DbSet<DentalFinding> DentalFindings => Set<DentalFinding>();
     public DbSet<DentalHistoryCheck> DentalHistoryChecks => Set<DentalHistoryCheck>();
+    public DbSet<DentalConsent> DentalConsents => Set<DentalConsent>();
     public DbSet<DentalPlanItem> DentalPlanItems => Set<DentalPlanItem>();
     public DbSet<DentalEstimateAcceptance> DentalEstimateAcceptances => Set<DentalEstimateAcceptance>();
 
@@ -166,8 +167,23 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
             e.HasIndex(x => new { x.TenantId, x.EncounterId }); // confirmed on this visit?
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
+        // MDV-P8-019: a signed consent is never edited; only its withdrawal columns are added once (table-rights.sql).
+        modelBuilder.Entity<DentalConsent>(e =>
+        {
+            e.Property(x => x.TemplateKey).HasMaxLength(30);
+            e.Property(x => x.Language).HasMaxLength(5);
+            e.Property(x => x.SignedByName).HasMaxLength(DentalConsent.MaxName);
+            e.Property(x => x.BlobKey).HasMaxLength(200);
+            e.Property(x => x.Sha256).HasMaxLength(64).IsFixedLength();
+            e.Property(x => x.WithdrawalReason).HasMaxLength(DentalConsent.MaxReason);
+            e.HasIndex(x => new { x.TenantId, x.PlanItemId });
+            e.HasIndex(x => new { x.TenantId, x.PatientId });
+            e.ToTable(t => t.HasCheckConstraint("CK_DentalConsents_Withdrawal", "(\"WithdrawnAt\" IS NULL) = (\"WithdrawalReason\" IS NULL)"));
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
         modelBuilder.Entity<DentalPlanItem>(e =>
         {
+            e.Property(x => x.ConsentKey).HasMaxLength(30);
             e.Property(x => x.ServiceName).HasMaxLength(DentalPlanItem.MaxServiceName);
             e.Property(x => x.Tooth).HasMaxLength(2);
             e.Property(x => x.Surfaces).HasMaxLength(5);

@@ -41,7 +41,26 @@ public sealed class DentalTests(PostgresFixture sql) : IClassFixture<PostgresFix
         await h.CloseAsync();
     }
 
-    IDental Dental(Guid? user = null) => h.Get<IDental>(user ?? h.Doctor);
+    readonly MemoryDocuments documents = new();
+    IDental Dental(Guid? user = null) => h.Get<IDental>(user ?? h.Doctor, s => s.Replace(ServiceDescriptor.Singleton<IDocumentStore>(documents)));
+
+    /// <summary>The document store in memory: written once, never replaced (as the blob store).</summary>
+    sealed class MemoryDocuments : IDocumentStore
+    {
+        public System.Collections.Concurrent.ConcurrentDictionary<string, byte[]> Stored { get; } = new();
+        public async Task PutAsync(string key, Stream content, string contentType, CancellationToken cancellationToken = default)
+        {
+            using var copy = new MemoryStream();
+            await content.CopyToAsync(copy, cancellationToken);
+            if (!Stored.TryAdd(key, copy.ToArray())) throw new InvalidOperationException("The key already exists.");
+        }
+        public Task<byte[]> ReadAsync(string key, CancellationToken cancellationToken = default) => Task.FromResult(Stored[key]);
+        public Task<Uri> ViewLinkAsync(string key, string contentType, Guid viewer, TimeSpan lifetime, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task QuarantineAsync(string key, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+    }
+
+    /// <summary>A 1×1 PNG: the drawn signature as the tablet sends it (base64).</summary>
+    static readonly string Signature = Convert.ToBase64String(TestImages.Png);
 
     /// <summary>The patient checked in at <paramref name="hour"/> and the doctor's consultation started: the open encounter and its visit.</summary>
     async Task<(Guid Encounter, Guid Visit)> ConsultAsync(int hour, Guid? patient = null)
@@ -148,6 +167,54 @@ public sealed class DentalTests(PostgresFixture sql) : IClassFixture<PostgresFix
         await using var db = sql.Encounters(h.Tenant);
         var e = await Assert.ThrowsAnyAsync<PostgresException>(() => db.DentalHistoryChecks.ExecuteUpdateAsync(x => x.SetProperty(c => c.Note, "changed")));
         Assert.Equal(PostgresErrorCodes.InsufficientPrivilege, e.SqlState); // append-only
+    }
+
+    /// <summary>
+    /// MDV-P8-019: an extraction needs the patient's signed consent of the current version before it starts or finishes; the signed form is stored as a PDF
+    /// with its hash; a withdrawal is recorded with its reason and stops the item; the database refuses to change a signed consent.
+    /// SAFETY (mutation check: let MovePlanItemAsync skip the consent, or accept a withdrawn one, and this fails).
+    /// </summary>
+    [Fact]
+    public async Task AProcedureNeedingConsentStartsOnlyOnASignedCurrentConsentAndAWithdrawalStopsIt()
+    {
+        var (encounter, _) = await ConsultAsync(10);
+        await CheckedAsync(encounter);
+        var catalogue = h.Get<ICatalogue>(h.Admin);
+        var extraction = await catalogue.CreateAsync(new SaveService { Name = "Simple extraction (synthetic)", Code = "DN-SRG001", Category = ServiceCategory.Procedure, Sac = "999312", DurationMinutes = 30 });
+        await catalogue.AddPriceAsync(extraction.Id, new AddPrice { AmountMinor = 80_000 });
+        var scaling = await PricedAsync("Scaling (synthetic)", 150_000);
+
+        var item = await Dental().AddPlanItemAsync(h.Patient, h.Facility, new(extraction.Id, "48", null, 1));
+        Assert.Equal("extraction", item.ConsentKey);
+        Assert.Equal("consent:required", await Refused(Dental().MovePlanItemAsync(h.Patient, h.Facility, item.Id, new(DentalPlanStatus.InProgress, null, encounter, item.Version))));
+        var other = await Dental().AddPlanItemAsync(h.Patient, h.Facility, new(scaling.Id, null, null, 1));
+        Assert.Equal("consent:not_needed", await Refused(Dental().SignConsentAsync(h.Patient, h.Facility, other.Id, new(encounter, "en", "Meera Iyer (synthetic)", Signature))));
+        Assert.Equal("language:invalid,signature:invalid,signedBy:required",
+            await Refused(Dental().SignConsentAsync(h.Patient, h.Facility, item.Id, new(encounter, "fr", " ", Convert.ToBase64String("not a png"u8.ToArray())))));
+
+        var consent = (await Dental().SignConsentAsync(h.Patient, h.Facility, item.Id, new(encounter, "hi", "Meera Iyer (synthetic)", Signature)))!;
+        Assert.Equal(("extraction", 1, "hi", true), (consent.TemplateKey, consent.TemplateVersion, consent.Language, consent.Current));
+        var pdf = (await Dental().ConsentPdfAsync(h.Patient, h.Facility, consent.Id))!.Content;
+        Assert.StartsWith("%PDF-", System.Text.Encoding.ASCII.GetString(pdf)[..5]);
+        await using (var db = sql.Encounters(h.Tenant))
+        {
+            var row = await db.DentalConsents.SingleAsync();
+            Assert.Equal(Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(pdf)), row.Sha256); // the stored form is the one signed
+            Assert.DoesNotContain(h.Patient.ToString(), row.BlobKey, StringComparison.Ordinal);
+            var e = await Assert.ThrowsAnyAsync<PostgresException>(() => db.DentalConsents.ExecuteUpdateAsync(x => x.SetProperty(c => c.SignedByName, "Someone else")));
+            Assert.Equal(PostgresErrorCodes.InsufficientPrivilege, e.SqlState);
+        }
+        Assert.Equal(consent.Id, (await Dental().ChartAsync(h.Patient, h.Facility)).Plan.Items.Single(i => i.Id == item.Id).Consent!.Id);
+
+        var started = (await Dental().MovePlanItemAsync(h.Patient, h.Facility, item.Id, new(DentalPlanStatus.InProgress, null, encounter, item.Version)))!;
+        Assert.Equal("reason:required", await Refused(Dental().WithdrawConsentAsync(h.Patient, h.Facility, consent.Id, new(" "))));
+        var withdrawn = (await Dental().WithdrawConsentAsync(h.Patient, h.Facility, consent.Id, new("Patient changed their mind (synthetic)")))!;
+        Assert.False(withdrawn.Current);
+        Assert.Equal("consent:withdrawn", await Refused(Dental().WithdrawConsentAsync(h.Patient, h.Facility, consent.Id, new("Again"))));
+        Assert.Equal("consent:required", await Refused(Dental().MovePlanItemAsync(h.Patient, h.Facility, item.Id, new(DentalPlanStatus.Done, null, encounter, started.Version))));
+        await using var audit = sql.Audit(h.Tenant);
+        Assert.Equal(["patient.dental.consent_pdf", "patient.dental.consent_sign", "patient.dental.consent_withdraw"],
+            (await audit.Events.Where(e => e.Action.StartsWith("patient.dental.consent")).Select(e => e.Action).ToListAsync()).Order());
     }
 
     /// <summary>SAFETY (mutation check: let MovePlanItemAsync skip DentalRules.CanMove, the decline reason or the encounter check, and this fails).</summary>

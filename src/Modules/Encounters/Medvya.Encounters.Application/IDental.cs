@@ -18,9 +18,24 @@ public sealed record AddDentalPlanItem(Guid? ServiceId, string? Tooth, string? S
 /// </summary>
 public sealed record MoveDentalPlanItem(DentalPlanStatus? To, string? Reason, Guid? EncounterId, uint? Version);
 
+/// <summary>A plan item. <see cref="ConsentKey"/>: the procedure consent it needs before it starts (MDV-P8-019), with the latest one signed (<see cref="Consent"/>).</summary>
 public sealed record DentalPlanItemView(
     Guid Id, Guid ServiceId, string ServiceName, string? Tooth, string? Surfaces, int Phase, long EstimateMinor, string Currency, DentalPlanStatus Status,
-    string? Reason, DateTimeOffset CreatedAt, DateTimeOffset ChangedAt, DateTimeOffset? DoneAt, uint Version);
+    string? Reason, DateTimeOffset CreatedAt, DateTimeOffset ChangedAt, DateTimeOffset? DoneAt, uint Version, string? ConsentKey = null, DentalConsentView? Consent = null);
+
+/// <summary>
+/// The patient signs a plan item's procedure consent on the tablet (MDV-P8-019), in the patient's open consultation: the language the form was read in, the
+/// signer's name, and the drawn signature as a base64 PNG.
+/// </summary>
+public sealed record SignDentalConsent(Guid? EncounterId, string? Language, string? SignedBy, string? Signature);
+
+/// <summary>The patient withdraws a signed consent; the reason is required.</summary>
+public sealed record WithdrawDentalConsent(string? Reason);
+
+/// <summary>A signed consent. <see cref="Current"/>: signed on the template's current version and not withdrawn, so the item may start.</summary>
+public sealed record DentalConsentView(
+    Guid Id, Guid PlanItemId, string TemplateKey, int TemplateVersion, string Language, string SignedBy, DateTimeOffset SignedAt, DateTimeOffset? WithdrawnAt,
+    string? WithdrawalReason, bool Current);
 
 /// <summary>The patient (or a guardian) accepts the estimate as it stands now.</summary>
 public sealed record AcceptDentalEstimate(string? AcceptedBy, AcceptanceMethod? Method);
@@ -82,12 +97,23 @@ public interface IDental
     /// <exception cref="DentalValidationException">Field errors; "serviceId:unknown" or "serviceId:no_price".</exception>
     Task<DentalPlanItemView> AddPlanItemAsync(Guid patientId, Guid facilityId, AddDentalPlanItem command, CancellationToken cancellationToken = default);
 
+    /// <summary>Records the patient's signed consent for a plan item (MDV-P8-019); null when the item is not the patient's.</summary>
+    /// <exception cref="DentalValidationException">"consent:not_needed", "language:invalid", "signedBy:required|too_long", "signature:invalid", "encounterId:required|invalid|ended".</exception>
+    Task<DentalConsentView?> SignConsentAsync(Guid patientId, Guid facilityId, Guid itemId, SignDentalConsent command, CancellationToken cancellationToken = default);
+
+    /// <summary>Records the patient's withdrawal of a consent: the item can no longer start or finish. Null when the consent is not the patient's.</summary>
+    /// <exception cref="DentalValidationException">"reason:required|too_long", "consent:withdrawn".</exception>
+    Task<DentalConsentView?> WithdrawConsentAsync(Guid patientId, Guid facilityId, Guid consentId, WithdrawDentalConsent command, CancellationToken cancellationToken = default);
+
+    /// <summary>The signed consent form as stored; null when the consent is not the patient's.</summary>
+    Task<DentalPdf?> ConsentPdfAsync(Guid patientId, Guid facilityId, Guid consentId, CancellationToken cancellationToken = default);
+
     /// <summary>Records the history check in the patient's open consultation (MDV-P8-014); null when the consultation is not at this facility.</summary>
     /// <exception cref="DentalValidationException">"answers.&lt;question&gt;:required", "note:too_long", "encounter:ended".</exception>
     Task<DentalHistoryCheckView?> ConfirmHistoryAsync(Guid encounterId, Guid facilityId, ConfirmDentalHistory command, CancellationToken cancellationToken = default);
 
     /// <summary>Null when the item is not the patient's. Starting an item needs the history check confirmed on that visit (MDV-P8-014).</summary>
-    /// <exception cref="DentalValidationException">"to:not_allowed", "reason:required", "encounterId:required|invalid|ended", "historyCheck:required".</exception>
+    /// <exception cref="DentalValidationException">"to:not_allowed", "reason:required", "encounterId:required|invalid|ended", "historyCheck:required", "consent:required".</exception>
     /// <exception cref="DentalConflictException"/>
     Task<DentalPlanItemView?> MovePlanItemAsync(Guid patientId, Guid facilityId, Guid itemId, MoveDentalPlanItem command, CancellationToken cancellationToken = default);
 

@@ -1,5 +1,5 @@
 import { answer, ApiError, post, send } from '../../api/services/apiClient';
-import type { BookedAppointment, BookingForm, Hold, PatientMatch, SlotChoice } from '../domain/booking';
+import type { BookedAppointment, BookingForm, Hold, PatientMatch, SlotChoice, Procedure } from '../domain/booking';
 import type { Occurrence, SeriesResult } from '../domain/series';
 import type { CancelReason, VisitMove } from '../domain/changes';
 import type { PatientMessage } from '../domain/messages';
@@ -30,7 +30,12 @@ export function fetchScheduleWeek(facilityId: string, calendarId: string, date: 
 }
 
 export const holdSlot = (facilityId: string, s: SlotChoice) =>
-  post<Hold>('/v1/slot-holds', { facilityId, calendarId: s.calendarId, start: s.start, visitType: s.visitType });
+  post<Hold>('/v1/slot-holds', {
+    facilityId, calendarId: s.calendarId, start: s.start, visitType: s.visitType, ...(s.resourceId ? { resourceId: s.resourceId } : {}), ...(s.minutes ? { minutes: s.minutes } : {}),
+  });
+
+/** MDV-P8-009: procedures with their usual length, for the booking form. */
+export const fetchProcedures = (facilityId: string) => send<Procedure[]>(`/v1/schedule/procedures?facilityId=${facilityId}`);
 
 export const releaseHold = (holdId: string) => send<void>(`/v1/slot-holds/${holdId}`, { method: 'DELETE' });
 

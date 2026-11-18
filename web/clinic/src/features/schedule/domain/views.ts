@@ -29,8 +29,14 @@ export const lookOf = (state: AppointmentState): StateLook => looks[state];
 
 
 /** The columns a filter shows: every doctor and resource, or one calendar. */
-export const filterColumns = (day: ScheduleDay, calendarId: string | null): ScheduleDay =>
-  calendarId ? { ...day, columns: day.columns.filter(c => c.calendarId === calendarId) } : day;
+/** The day by column kind (MDV-P8-009): every doctor or dentist, or every chair or room. */
+export const kindFilters = { doctors: 'kind:Doctor', resources: 'kind:Resource' } as const;
+
+/** One calendar's column, every column of a kind (kindFilters), or all of them (null). */
+export const filterColumns = (day: ScheduleDay, filter: string | null): ScheduleDay =>
+  !filter ? day
+  : filter.startsWith('kind:') ? { ...day, columns: day.columns.filter(c => `kind:${c.calendarKind}` === filter) }
+  : { ...day, columns: day.columns.filter(c => c.calendarId === filter) };
 
 export type AgendaEntry =
   | ({ kind: 'appointment' } & Appointment)

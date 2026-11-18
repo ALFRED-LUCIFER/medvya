@@ -16,7 +16,8 @@ namespace Medvya.Scheduling.Infrastructure;
 /// with the attempt's audit event (MDV-P0-017), which carries the patient id.
 /// </summary>
 public sealed class BookingService(
-    SchedulingDbContext db, SchedulingContext context, DoctorDayTransaction transaction, IOptions<SchedulingOptions> options, IBoardNotifier notifier, ILogger<BookingService> log)
+    SchedulingDbContext db, SchedulingContext context, DoctorDayTransaction transaction, IOptions<SchedulingOptions> options, IBoardNotifier notifier, ILogger<BookingService> log,
+    Medvya.Billing.Application.ICatalogue catalogue)
     : IBookingService
 {
     const int MaxReason = 500;
@@ -26,16 +27,20 @@ public sealed class BookingService(
         ArgumentNullException.ThrowIfNull(command);
         await context.RequireAsync(command.FacilityId, SchedulingAccess.CanBook, cancellationToken);
         if (!Enum.IsDefined(command.VisitType)) throw new SchedulingValidationException([new("visitType", "invalid")]);
+        if (command.Minutes is < ScheduleSlot.UnitMinutes or > ScheduleRules.MaxVisitMinutes) throw new SchedulingValidationException([new("minutes", "range")]);
+        if (command.ResourceId == command.CalendarId) throw new SchedulingValidationException([new("resourceId", "invalid")]);
         var (_, zone) = await context.FacilityAsync(command.FacilityId, cancellationToken);
         var (now, me) = (context.Now, context.UserId!.Value); // RequireAsync found this user's membership
         if (command.Start < now) throw new SlotUnavailableException("in_past");
 
-        return await transaction.RunAsync([(command.CalendarId, ScheduleRules.LocalDate(command.Start, zone))], async () =>
+        var date = ScheduleRules.LocalDate(command.Start, zone);
+        return await transaction.RunAsync(command.ResourceId is { } chair ? [(command.CalendarId, date), (chair, date)] : [(command.CalendarId, date)], async () =>
         {
-            var end = await BookableEndAsync(command.FacilityId, command.CalendarId, command.Start, command.VisitType, zone, cancellationToken);
+            var end = await BookableEndAsync(command.FacilityId, command.CalendarId, command.Start, command.VisitType, zone, cancellationToken, minutes: command.Minutes);
             if (await db.SlotHolds.AnyAsync(h => h.CalendarId == command.CalendarId && h.FacilityId == command.FacilityId && h.Start < end && command.Start < h.End
                     && h.ExpiresAt > now && h.HeldBy != me, cancellationToken))
                 throw new SlotUnavailableException("being_booked");
+            if (command.ResourceId is { } resource) await ChairFreeAsync(command.FacilityId, command.CalendarId, resource, command.Start, end, zone, now, me, null, cancellationToken);
 
             // One hold per user (picking another slot or visit type replaces it); expired holds of this calendar go as well.
             await db.SlotHolds.Where(h => (h.HeldBy == me && h.FacilityId == command.FacilityId) || (h.CalendarId == command.CalendarId && h.ExpiresAt <= now))
@@ -43,12 +48,12 @@ public sealed class BookingService(
             var hold = new SlotHold
             {
                 Id = Guid.CreateVersion7(), TenantId = context.TenantId, FacilityId = command.FacilityId, CalendarId = command.CalendarId,
-                VisitType = command.VisitType, Start = command.Start, End = end, HeldBy = me, ExpiresAt = now + options.Value.SlotHold,
+                VisitType = command.VisitType, Start = command.Start, End = end, HeldBy = me, ExpiresAt = now + options.Value.SlotHold, ResourceId = command.ResourceId,
             };
             db.SlotHolds.Add(hold);
             await db.SaveChangesAsync(cancellationToken);
             await context.AuditAsync(SchedulingAudit.SlotHold, SchedulingAudit.HoldResource, SchedulingAudit.Treatment, hold.Id, null, cancellationToken);
-            return new HoldView(hold.Id, hold.FacilityId, hold.CalendarId, hold.VisitType, hold.Start, hold.End, hold.ExpiresAt);
+            return new HoldView(hold.Id, hold.FacilityId, hold.CalendarId, hold.VisitType, hold.Start, hold.End, hold.ExpiresAt, hold.ResourceId);
         }, cancellationToken);
     }
 
@@ -92,14 +97,17 @@ public sealed class BookingService(
         Appointment appointment;
         try
         {
-            appointment = await transaction.RunAsync([(hold.CalendarId, ScheduleRules.LocalDate(hold.Start, zone))], async () =>
+            var date = ScheduleRules.LocalDate(hold.Start, zone);
+            appointment = await transaction.RunAsync(hold.ResourceId is { } chair ? [(hold.CalendarId, date), (chair, date)] : [(hold.CalendarId, date)], async () =>
         {
-            // The hold proved the slot was free; the template or another booking may have changed since.
-            if (await BookableEndAsync(hold.FacilityId, hold.CalendarId, hold.Start, hold.VisitType, zone, cancellationToken) != hold.End)
+            // The hold proved the slot was free; the template or another booking may have changed since. Its length is the one held (a procedure's, MDV-P8-009).
+            if (await BookableEndAsync(hold.FacilityId, hold.CalendarId, hold.Start, hold.VisitType, zone, cancellationToken, minutes: (int)(hold.End - hold.Start).TotalMinutes) != hold.End)
                 throw new SlotUnavailableException("slot_unavailable");
+            // The caller's own hold reserved the chair; another desk's hold cannot overlap it (HoldAsync), so only visits are checked now, as for the doctor.
+            if (hold.ResourceId is { } resource) await ChairFreeAsync(hold.FacilityId, hold.CalendarId, resource, hold.Start, hold.End, zone, now, context.UserId!.Value, null, cancellationToken, holds: false);
             var kind = await db.Templates.Where(t => t.FacilityId == hold.FacilityId && t.CalendarId == hold.CalendarId).Select(t => t.CalendarKind).SingleAsync(cancellationToken);
             await db.SlotHolds.Where(h => h.Id == hold.Id).ExecuteDeleteAsync(cancellationToken);
-            return await CreateAsync(Draft(hold.FacilityId, hold.CalendarId, kind, patient.Id, hold.VisitType, hold.Start, hold.End, command.ReasonCategory, reason, command.Channel, now),
+            return await CreateAsync(Draft(hold.FacilityId, hold.CalendarId, kind, patient.Id, hold.VisitType, hold.Start, hold.End, command.ReasonCategory, reason, command.Channel, now, resourceId: hold.ResourceId),
                 SchedulingAudit.Book, cancellationToken, key);
         }, cancellationToken);
         }
@@ -258,8 +266,9 @@ public sealed class BookingService(
     }
 
     internal static Appointment Draft(Guid facilityId, Guid calendarId, CalendarKind kind, Guid patientId, VisitType type, DateTimeOffset start, DateTimeOffset end,
-        ReasonCategory reason, string? reasonText, BookingChannel channel, DateTimeOffset now, bool walkIn = false, bool unscheduled = false, Guid? seriesId = null) => new()
+        ReasonCategory reason, string? reasonText, BookingChannel channel, DateTimeOffset now, bool walkIn = false, bool unscheduled = false, Guid? seriesId = null, Guid? resourceId = null) => new()
     {
+        ResourceId = resourceId,
         Id = Guid.CreateVersion7(), FacilityId = facilityId, CalendarId = calendarId, CalendarKind = kind, PatientId = patientId, VisitType = type,
         Start = start, End = end, State = AppointmentState.Booked, ReasonCategory = reason, ReasonText = reasonText, Channel = channel,
         WalkIn = walkIn, Unscheduled = unscheduled, SeriesId = seriesId, BookedAt = now, ChangedAt = now,
@@ -275,7 +284,7 @@ public sealed class BookingService(
         var booked = new Appointment
         {
             Id = draft.Id, TenantId = context.TenantId, FacilityId = draft.FacilityId, CalendarId = draft.CalendarId, CalendarKind = draft.CalendarKind,
-            PatientId = draft.PatientId, VisitType = draft.VisitType, Start = draft.Start, End = draft.End, State = AppointmentState.Booked,
+            PatientId = draft.PatientId, VisitType = draft.VisitType, Start = draft.Start, End = draft.End, State = AppointmentState.Booked, ResourceId = draft.ResourceId,
             ReasonCategory = draft.ReasonCategory, ReasonText = draft.ReasonText, Channel = draft.Channel, WalkIn = draft.WalkIn, Unscheduled = draft.Unscheduled, SeriesId = draft.SeriesId,
             BookedBy = context.UserId, BookedAt = draft.BookedAt, ChangedBy = context.UserId, ChangedAt = draft.ChangedAt,
             IdempotencyKeyHash = key?.Key, IdempotencyRequestHash = key?.Request,
@@ -312,13 +321,18 @@ public sealed class BookingService(
         if (command.Start < now) throw new SlotUnavailableException("in_past");
 
         // Both doctor-days are locked, in the transaction's fixed order, so a booking of either slot waits for this move.
-        var days = new[] { (seen.CalendarId, ScheduleRules.LocalDate(seen.Start, zone)), (command.CalendarId, ScheduleRules.LocalDate(command.Start, zone)) };
+        var days = new[] { (seen.CalendarId, ScheduleRules.LocalDate(seen.Start, zone)), (command.CalendarId, ScheduleRules.LocalDate(command.Start, zone)) }.ToList();
+        if (seen.ResourceId is { } chair) days.AddRange([(chair, ScheduleRules.LocalDate(seen.Start, zone)), (chair, ScheduleRules.LocalDate(command.Start, zone))]); // the chair moves with the visit (MDV-P8-009)
         var moved = await transaction.RunAsync(days, async () =>
         {
-            var end = await BookableEndAsync(seen.FacilityId, command.CalendarId, command.Start, seen.VisitType, zone, cancellationToken, moving: seen);
+            var end = await BookableEndAsync(seen.FacilityId, command.CalendarId, command.Start, seen.VisitType, zone, cancellationToken, moving: seen,
+                // shortcut: a visit holding a chair keeps its length (a procedure's) when moved; any other visit takes its type's length as before. Store the
+                // booked length on every visit when procedure lengths are used without a chair.
+                minutes: seen.ResourceId is null ? null : (int)(seen.End - seen.Start).TotalMinutes);
             if (await db.SlotHolds.AnyAsync(h => h.CalendarId == command.CalendarId && h.FacilityId == seen.FacilityId && h.Start < end && command.Start < h.End
                     && h.ExpiresAt > now && h.HeldBy != me, cancellationToken))
                 throw new SlotUnavailableException("being_booked");
+            if (seen.ResourceId is { } resource) await ChairFreeAsync(seen.FacilityId, command.CalendarId, resource, command.Start, end, zone, now, me, seen.Id, cancellationToken);
             if (await db.Appointments.Where(a => a.Id == seen.Id && a.State == seen.State && a.CalendarId == seen.CalendarId && a.Start == seen.Start)
                     .ExecuteUpdateAsync(s => s.SetProperty(a => a.State, AppointmentState.Booked).SetProperty(a => a.CalendarId, command.CalendarId).SetProperty(a => a.Start, command.Start).SetProperty(a => a.End, end).SetProperty(a => a.Unscheduled, false)
                         .SetProperty(a => a.ChangedBy, me).SetProperty(a => a.ChangedAt, now), cancellationToken) == 0)
@@ -475,7 +489,7 @@ public sealed class BookingService(
     /// <summary>A copy of the visit in its new slot; the original stays as it was, so a retried attempt starts from the same picture.</summary>
     static Appointment Moved(Appointment a, Guid calendarId, DateTimeOffset start, DateTimeOffset end, Guid? by, DateTimeOffset at) => new()
     {
-        Id = a.Id, TenantId = a.TenantId, FacilityId = a.FacilityId, CalendarId = calendarId, CalendarKind = a.CalendarKind, PatientId = a.PatientId, VisitType = a.VisitType, SeriesId = a.SeriesId,
+        Id = a.Id, TenantId = a.TenantId, FacilityId = a.FacilityId, CalendarId = calendarId, CalendarKind = a.CalendarKind, PatientId = a.PatientId, VisitType = a.VisitType, SeriesId = a.SeriesId, ResourceId = a.ResourceId,
         Start = start, End = end, State = a.State, ReasonCategory = a.ReasonCategory, Channel = a.Channel, BookedBy = a.BookedBy, BookedAt = a.BookedAt, ChangedBy = by, ChangedAt = at,
     };
 
@@ -619,7 +633,7 @@ public sealed class BookingService(
     /// is a visit being rescheduled, its own time does not count as taken and the calendar must be of its kind.
     /// </summary>
     internal async Task<DateTimeOffset> BookableEndAsync(Guid facilityId, Guid calendarId, DateTimeOffset start, VisitType type, TimeZoneInfo zone, CancellationToken cancellationToken,
-        Appointment? moving = null)
+        Appointment? moving = null, int? minutes = null)
     {
         var template = await db.Templates.AsNoTracking().SingleOrDefaultAsync(t => t.FacilityId == facilityId && t.CalendarId == calendarId, cancellationToken);
         if (template is null || (moving is not null && template.CalendarKind != moving.CalendarKind)
@@ -628,7 +642,8 @@ public sealed class BookingService(
         var date = ScheduleRules.LocalDate(start, zone);
         if ((await context.ClosuresAsync(facilityId, date, date, cancellationToken)).Count > 0) throw new SlotUnavailableException("closed"); // a holiday at the location (MDV-P1-005)
         var exceptions = await context.ExceptionsAsync(facilityId, date, date, calendarId, cancellationToken);
-        var end = ScheduleRules.SpanEnd(ScheduleRules.Day(template, date, zone, exceptions), start, ScheduleRules.SlotsFor(template, type))
+        var slots = minutes is { } m ? ScheduleRules.SlotsForMinutes(template, m) : ScheduleRules.SlotsFor(template, type);
+        var end = ScheduleRules.SpanEnd(ScheduleRules.Day(template, date, zone, exceptions), start, slots)
             ?? throw new SlotUnavailableException("not_bookable"); // outside hours, in a break or too long for what is left
         var earliest = start.AddMinutes(-ScheduleRules.MaxVisitMinutes); // no visit is longer, so the index seek has a lower bound
         var self = moving?.Id;
@@ -636,6 +651,34 @@ public sealed class BookingService(
                 .AnyAsync(a => a.FacilityId == facilityId && a.CalendarId == calendarId && a.Start < end && start < a.End && a.Start > earliest && a.Id != self && !a.Unscheduled, cancellationToken))
             throw new SlotUnavailableException("slot_unavailable");
         return end;
+    }
+
+    /// <summary>
+    /// MDV-P8-009: the chair is a resource of this facility, other than the doctor, open for the whole of [start, end) in its own hours, with no visit and
+    /// no other desk's hold in it (<paramref name="self"/>: the visit being moved). The SCHEDULE_SLOT index refuses a double booking even past this check.
+    /// </summary>
+    async Task ChairFreeAsync(Guid facilityId, Guid doctorId, Guid chairId, DateTimeOffset start, DateTimeOffset end, TimeZoneInfo zone, DateTimeOffset now, Guid me, Guid? self,
+        CancellationToken cancellationToken, bool holds = true)
+    {
+        var template = await db.Templates.AsNoTracking().SingleOrDefaultAsync(t => t.FacilityId == facilityId && t.CalendarId == chairId, cancellationToken);
+        if (chairId == doctorId || template is not { CalendarKind: CalendarKind.Resource } || !await context.IsActiveAsync(facilityId, chairId, CalendarKind.Resource, cancellationToken))
+            throw new SlotUnavailableException("chair_unavailable");
+        var date = ScheduleRules.LocalDate(start, zone);
+        var exceptions = await context.ExceptionsAsync(facilityId, date, date, chairId, cancellationToken);
+        if (!ScheduleRules.Covers(ScheduleRules.Day(template, date, zone, exceptions), start, end)) throw new SlotUnavailableException("chair_unavailable");
+        var earliest = start.AddMinutes(-ScheduleRules.MaxVisitMinutes);
+        if (await db.Appointments.Where(Appointment.HoldsSlot).AnyAsync(a => a.FacilityId == facilityId && (a.CalendarId == chairId || a.ResourceId == chairId)
+                && a.Start < end && start < a.End && a.Start > earliest && a.Id != self && !a.Unscheduled, cancellationToken)
+            || holds && await db.SlotHolds.AnyAsync(h => h.FacilityId == facilityId && (h.CalendarId == chairId || h.ResourceId == chairId) && h.Start < end && start < h.End
+                && h.ExpiresAt > now && h.HeldBy != me, cancellationToken))
+            throw new SlotUnavailableException("chair_unavailable");
+    }
+
+    public async Task<IReadOnlyList<ProcedureOption>> ProceduresAsync(Guid facilityId, CancellationToken cancellationToken = default)
+    {
+        await context.RequireAsync(facilityId, SchedulingAccess.CanBook, cancellationToken);
+        return [.. (await catalogue.ListAsync(includeArchived: false, cancellationToken)).Where(s => s.DurationMinutes is > 0)
+            .OrderBy(s => s.Code ?? s.Name, StringComparer.Ordinal).Select(s => new ProcedureOption(s.Id, s.Name, s.Code, s.DurationMinutes!.Value))];
     }
 
     /// <summary>AppointmentBooked.v1: opaque ids, instants and flags only.</summary>

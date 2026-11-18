@@ -95,6 +95,9 @@ public static class ScheduleRules
 
     static bool OnFiveMinutes(TimeOnly t) => t.Minute % 5 == 0 && t.Second == 0 && t.Millisecond == 0;
 
+    /// <summary>Slots a visit of <paramref name="minutes"/> takes (MDV-P8-009, a procedure's length): rounded up to whole slots of the template.</summary>
+    public static int SlotsForMinutes(ScheduleTemplate t, int minutes) => (minutes + t.SlotMinutes - 1) / t.SlotMinutes;
+
     /// <summary>Slots a visit of this type takes: its configured length in slots, else one slot.</summary>
     public static int SlotsFor(ScheduleTemplate t, VisitType type) =>
         t.VisitLengths.FirstOrDefault(v => v.VisitType == type) is { } v ? v.Minutes / t.SlotMinutes : 1;

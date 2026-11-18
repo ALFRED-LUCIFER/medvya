@@ -1057,6 +1057,45 @@
         }
       }
     },
+    "/v1/encounters/{encounterId}/dental/history-check": {
+      "post": {
+        "tags": [
+          "DentalEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "encounterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ConfirmDentalHistory"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/v1/patients/{patientId}/dental/plan": {
       "post": {
         "tags": [
@@ -1986,6 +2025,38 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ScheduleWeek"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/schedule/procedures": {
+      "get": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "facilityId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProcedureOption"
+                  }
                 }
               }
             }
@@ -10028,6 +10099,20 @@
               "string"
             ],
             "format": "uuid"
+          },
+          "calendarId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "resourceId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },
@@ -10967,6 +11052,30 @@
               "string"
             ],
             "format": "uint32"
+          }
+        }
+      },
+      "ConfirmDentalHistory": {
+        "required": [
+          "answers",
+          "note"
+        ],
+        "type": "object",
+        "properties": {
+          "answers": {
+            "type": [
+              "null",
+              "object"
+            ],
+            "additionalProperties": {
+              "type": "boolean"
+            }
+          },
+          "note": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -12218,6 +12327,22 @@
           },
           "visitType": {
             "$ref": "#/components/schemas/VisitType"
+          },
+          "resourceId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "minutes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -12259,6 +12384,13 @@
           "expiresAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "resourceId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },
@@ -13540,6 +13672,38 @@
           "Provisional",
           null
         ]
+      },
+      "ProcedureOption": {
+        "required": [
+          "id",
+          "name",
+          "code",
+          "durationMinutes"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "code": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "durationMinutes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
       },
       "ProfileView": {
         "required": [

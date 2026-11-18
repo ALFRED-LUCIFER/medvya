@@ -62,11 +62,12 @@ public sealed class ScheduleService(SchedulingDbContext db, SchedulingContext co
         var ids = calendars.Select(c => c.Id).ToList();
         var templates = await db.Templates.AsNoTracking().Where(t => t.FacilityId == facility.Id && ids.Contains(t.CalendarId)).ToDictionaryAsync(t => t.CalendarId, cancellationToken);
         var appointments = await db.Appointments.AsNoTracking()
-            .Where(a => a.FacilityId == facility.Id && a.Start < to && a.End > from && a.Start > earliest && ids.Contains(a.CalendarId) && !a.Unscheduled) // queued walk-ins take no slot
+            // A visit shows in its doctor's column and in the column of the chair it holds (MDV-P8-009); queued walk-ins take no slot.
+            .Where(a => a.FacilityId == facility.Id && a.Start < to && a.End > from && a.Start > earliest && (ids.Contains(a.CalendarId) || (a.ResourceId != null && ids.Contains(a.ResourceId.Value))) && !a.Unscheduled)
             .OrderBy(a => a.Start).ToListAsync(cancellationToken);
         var me = context.UserId;
         var holds = await db.SlotHolds.AsNoTracking()
-            .Where(h => h.FacilityId == facility.Id && ids.Contains(h.CalendarId) && h.Start < to && h.End > from && h.ExpiresAt > now && h.HeldBy != me).ToListAsync(cancellationToken);
+            .Where(h => h.FacilityId == facility.Id && (ids.Contains(h.CalendarId) || (h.ResourceId != null && ids.Contains(h.ResourceId.Value))) && h.Start < to && h.End > from && h.ExpiresAt > now && h.HeldBy != me).ToListAsync(cancellationToken);
         var names = await context.PatientsAsync(appointments.Select(a => a.PatientId), cancellationToken);
         var closures = await context.ClosuresAsync(facility.Id, dates.Min(), dates.Max(), cancellationToken);
         var exceptions = await context.ExceptionsAsync(facility.Id, dates.Min(), dates.Max(), null, cancellationToken);
@@ -83,7 +84,7 @@ public sealed class ScheduleService(SchedulingDbContext db, SchedulingContext co
         var days = calendars
             .Select(c => (Calendar: c, Template: templates.GetValueOrDefault(c.Id)))
             .Select(x => (x.Calendar, x.Template, Day: x.Template is null ? CalendarDay.Closed : ScheduleRules.Day(x.Template, date, zone, exceptions.Where(e => e.CalendarId == x.Calendar.Id)),
-                Booked: appointments.Where(a => a.CalendarId == x.Calendar.Id && a.Start < to && a.End > from).ToList()))
+                Booked: appointments.Where(a => (a.CalendarId == x.Calendar.Id || a.ResourceId == x.Calendar.Id) && a.Start < to && a.End > from).ToList()))
             .ToList();
 
         // The frame covers every column's hours and every appointment, including one left outside changed hours.
@@ -94,7 +95,7 @@ public sealed class ScheduleService(SchedulingDbContext db, SchedulingContext co
         var columns = days.Select(x =>
         {
             var occupied = x.Booked.Where(a => Appointment.Occupies(a.State)).ToList();
-            var held = holds.Where(h => h.CalendarId == x.Calendar.Id).ToList();
+            var held = holds.Where(h => h.CalendarId == x.Calendar.Id || h.ResourceId == x.Calendar.Id).ToList();
             // A holiday offers no slot and shows the whole day as closed under its name.
             var slots = holiday is not null ? [] : x.Day.Slots
                 .Where(s => !occupied.Exists(a => a.Start < s.End && s.Start < a.End))

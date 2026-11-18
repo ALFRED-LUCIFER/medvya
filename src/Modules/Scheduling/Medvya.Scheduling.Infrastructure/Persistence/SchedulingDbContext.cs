@@ -72,7 +72,8 @@ public sealed class SchedulingDbContext(DbContextOptions<SchedulingDbContext> op
             e.Property(x => x.Channel).HasConversion<string>().HasMaxLength(20);
             e.HasIndex(x => new { x.TenantId, x.FacilityId, x.CalendarId, x.Start });
             // The day view and the board read a facility's time range: seek on Start and cover what the views need.
-            e.HasIndex(x => new { x.TenantId, x.FacilityId, x.Start }).IncludeProperties(x => new { x.End, x.CalendarId, x.State, x.PatientId, x.VisitType });
+            e.HasIndex(x => new { x.TenantId, x.FacilityId, x.Start }).IncludeProperties(x => new { x.End, x.CalendarId, x.State, x.PatientId, x.VisitType, x.ResourceId });
+            e.HasIndex(x => new { x.TenantId, x.FacilityId, x.ResourceId, x.Start }).HasFilter("\"ResourceId\" IS NOT NULL"); // the chair's visits (MDV-P8-009)
             e.HasIndex(x => new { x.TenantId, x.PatientId });
             e.HasIndex(x => new { x.TenantId, x.SeriesId }).HasFilter("\"SeriesId\" IS NOT NULL");
             e.Property(x => x.IdempotencyKeyHash).HasMaxLength(64).IsFixedLength();

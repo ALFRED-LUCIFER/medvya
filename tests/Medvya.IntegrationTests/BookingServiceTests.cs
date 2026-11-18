@@ -186,7 +186,7 @@ public sealed class BookingServiceTests(PostgresFixture sql) : IClassFixture<Pos
         var columns = new List<string>();
         await using (var reader = await cmd.ExecuteReaderAsync())
             while (await reader.ReadAsync()) columns.Add((reader.GetBoolean(1) ? "+" : "") + reader.GetString(0));
-        Assert.Equal(["TenantId", "FacilityId", "Start", "+CalendarId", "+End", "+PatientId", "+State", "+VisitType"], columns);
+        Assert.Equal(["TenantId", "FacilityId", "Start", "+CalendarId", "+End", "+PatientId", "+ResourceId", "+State", "+VisitType"], columns); // the chair (MDV-P8-009) too
     }
 
     [Fact]

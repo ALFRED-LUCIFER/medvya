@@ -7,7 +7,7 @@ import { Button, ChoiceRow, buttonVariants, Card, cn, Input, Label, Select, Sele
 import PatientSummaryLine from '../../patients/components/PatientSummaryLine';
 import { cardBar } from '../../settings/components/fieldStyles';
 import { pageCount, spokenExtras, type SearchErrorCode, type SearchResult } from '../../patients/domain/directory';
-import { channels, reasonCategories, visitTypes, type BookedAppointment, type BookingForm, type Hold, type PatientMatch, type SlotChoice, type SlotError } from '../domain/booking';
+import { channels, reasonCategories, visitTypes, type BookedAppointment, type BookingForm, type Hold, type PatientMatch, type Procedure, type SlotChoice, type SlotError } from '../domain/booking';
 import type { VisitLength, VisitType } from '../domain/schedule';
 import { localTime, weekdayOrder, type PlanRow, type SeriesDone } from '../domain/series';
 import { slotError } from '../domain/booking';
@@ -42,6 +42,12 @@ type Props = {
   bookError: SlotError | null;
   booked: BookedAppointment | null;
   onVisitType: (v: VisitType) => void;
+  /** MDV-P8-009: procedures that set the visit's length, the chairs of the location, and their choices (empty lists: the fields are not shown). */
+  procedures: Procedure[];
+  chairs: { id: string; name: string }[];
+  onProcedure: (id: string | null) => void;
+  onMinutes: (minutes: number) => void;
+  onChair: (id: string | null) => void;
   /** MDV-P1-026: repeat weekly. `plan` is the reviewed series (null until previewed); the desk skips or moves conflicts before confirming. */
   repeat: number;
   /** The repeat controls are shown (the desk asked for them). */
@@ -68,6 +74,35 @@ type Props = {
 };
 
 const field = 'flex flex-col gap-1.5';
+
+/** MDV-P8-009: the procedure sets the visit's length; reception can make it longer (never shorter than the procedure), applied when the field is left. */
+function ProcedureFields(p: Pick<Props, 'procedures' | 'onProcedure' | 'onMinutes'> & { choice: SlotChoice }) {
+  const { t } = useI18n();
+  const procedure = p.procedures.find(x => x.id === p.choice.procedureId);
+  return (
+    <>
+      <div className={field}>
+        <Label htmlFor="booking-procedure">{t('booking.procedure')}</Label>
+        <Select value={p.choice.procedureId ?? 'none'} onValueChange={v => p.onProcedure(v === 'none' ? null : v)}>
+          <SelectTrigger id="booking-procedure" className="w-full"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">{t('booking.noProcedure')}</SelectItem>
+            {p.procedures.map(x => <SelectItem key={x.id} value={x.id}>{t('booking.procedureLength', { name: x.name, minutes: x.durationMinutes })}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+      {procedure && (
+        <div className={field}>
+          <Label htmlFor="booking-minutes">{t('booking.minutes')}</Label>
+          <Input id="booking-minutes" key={`${procedure.id}-${p.choice.minutes}`} type="number" inputMode="numeric" min={procedure.durationMinutes} max={480} step={5} dir="ltr" className="w-32"
+            defaultValue={p.choice.minutes ?? procedure.durationMinutes} aria-describedby="booking-minutes-hint"
+            onBlur={e => p.onMinutes(Number(e.target.value))} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); p.onMinutes(Number(e.currentTarget.value)); } }} />
+          <p id="booking-minutes-hint" className="text-sm text-muted-foreground">{t('booking.minutesHint', { minutes: procedure.durationMinutes })}</p>
+        </div>
+      )}
+    </>
+  );
+}
 
 /** P-04 booking panel: confirm the patient, visit type, nonclinical reason category and channel for the held slot. */
 export default function BookingPanel(p: Props) {
@@ -178,6 +213,20 @@ export default function BookingPanel(p: Props) {
             </SelectContent>
           </Select>
         </div>
+
+        {p.procedures.length > 0 && <ProcedureFields {...p} choice={p.choice} />}
+        {p.chairs.length > 0 && (
+          <div className={field}>
+            <Label htmlFor="booking-chair">{t('booking.chair')}</Label>
+            <Select value={p.choice.resourceId ?? 'none'} onValueChange={v => p.onChair(v === 'none' ? null : v)}>
+              <SelectTrigger id="booking-chair" className="w-full"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">{t('booking.noChair')}</SelectItem>
+                {p.chairs.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         <PatientPicker search={p.patientSearch} chosen={p.chosenPatientId} registerPath={p.registerPath} invalid={!!errors.patientId} />
 

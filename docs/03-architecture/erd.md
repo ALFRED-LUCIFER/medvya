@@ -91,6 +91,7 @@ flowchart LR
   Prescribing -->|"Application"| Patients
   Prescribing -->|"Application"| Tenancy
   Scheduling -->|"Application"| Audit
+  Scheduling -->|"Application"| Billing
   Scheduling -->|"Application"| Encounters
   Scheduling -->|"Application"| Identity
   Scheduling -->|"Application"| Patients
@@ -1089,7 +1090,7 @@ erDiagram
 
 | Table | Columns | Primary key | Notes |
 |---|---|---|---|
-| `Appointments` | 24 | Id | tenant-scoped |
+| `Appointments` | 25 | Id | tenant-scoped |
 | `AppointmentReschedules` | 12 | Id | tenant-scoped |
 | `BookingConflicts` | 5 | Id | tenant-scoped |
 | `MetricBaselines` | 10 | Id | tenant-scoped |
@@ -1101,7 +1102,7 @@ erDiagram
 | `Resources` | 6 | Id | tenant-scoped |
 | `ScheduleSlots` | 6 | Id | tenant-scoped |
 | `Templates` | 8 | Id | tenant-scoped |
-| `SlotHolds` | 9 | Id | tenant-scoped |
+| `SlotHolds` | 10 | Id | tenant-scoped |
 | `VisitStatusEvents` | 10 | Id | tenant-scoped |
 | `Waitlist` | 21 | Id | tenant-scoped |
 
@@ -1125,6 +1126,7 @@ erDiagram
 | `PatientId` | guid |  | id of `patients.Patients` |
 | `ReasonCategory` | character varying(30) |  |  |
 | `ReasonText` | character varying(500) |  |  |
+| `ResourceId` | guid | yes |  |
 | `Room` | character varying(50) |  |  |
 | `SeriesId` | guid | yes |  |
 | `Start` | timestamptz |  |  |
@@ -1308,6 +1310,7 @@ erDiagram
 | `ExpiresAt` | timestamptz |  |  |
 | `FacilityId` | guid |  | id of `tenancy.Facilities` |
 | `HeldBy` | guid |  | id of `identity.Users` |
+| `ResourceId` | guid | yes |  |
 | `Start` | timestamptz |  |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
 | `VisitType` | character varying(30) |  |  |

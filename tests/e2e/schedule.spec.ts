@@ -364,6 +364,32 @@ test('the selected date and view survive a reload, and a stale visit panel close
   await expect(shown(page)).toHaveText('Monday, 19 October 2026');
 });
 
+test('a dental booking: the procedure sets the length, reception lengthens it, and the chair is held with the dentist (MDV-P8-009)', async ({ page }) => {
+  await page.route('**/v1/schedule/procedures?*', r => r.fulfill({ json: [{ id: 'p-rct', name: 'Root canal, molar (synthetic)', code: 'DN-END003', durationMinutes: 60 }] }));
+  const calls = await open(page);
+  await bookButton(page, '10:00').click();
+  const panel = page.getByRole('complementary', { name: 'Book appointment' });
+  await panel.getByRole('combobox', { name: 'Procedure' }).click();
+  await page.getByRole('option', { name: 'Root canal, molar (synthetic) · 60 min' }).click();
+  await expect.poll(() => calls.holds.at(-1)).toMatchObject({ calendarId: 'd-1', visitType: 'Procedure', minutes: 60 });
+  const minutes = panel.getByRole('spinbutton', { name: 'Length (minutes)' });
+  await minutes.fill('30'); // shorter than the procedure: kept at 60, nothing new is held
+  await minutes.press('Enter');
+  await minutes.fill('75');
+  await minutes.press('Enter');
+  await expect.poll(() => calls.holds.at(-1)).toMatchObject({ minutes: 75 });
+  await panel.getByRole('combobox', { name: 'Chair' }).click();
+  await page.getByRole('option', { name: 'Procedure room (synthetic)' }).click();
+  await expect.poll(() => calls.holds.at(-1)).toMatchObject({ minutes: 75, resourceId: 'r-1' });
+  expect(calls.holds.filter(h => (h as { minutes?: number }).minutes === 30)).toHaveLength(0);
+
+  // The day by chair: only the chairs' and rooms' columns.
+  await page.getByRole('combobox', { name: 'Doctor or resource' }).click();
+  await page.getByRole('option', { name: 'All chairs and rooms' }).click();
+  await expect(column(page, 'Procedure room (synthetic)')).toBeVisible();
+  await expect(column(page, 'Dr. Arjun Rao (synthetic)')).toHaveCount(0);
+});
+
 test('reception books an empty slot: hold, longer visit type, confirm the patient, book', async ({ page }) => {
   const calls = await open(page);
   await expect(bookButton(page, '09:40')).toHaveCount(0); // being booked elsewhere

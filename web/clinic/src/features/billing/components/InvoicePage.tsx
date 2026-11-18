@@ -1,7 +1,7 @@
 import type { FormEventHandler } from 'react';
 import { Link } from 'react-router';
 import { Controller, type FieldError, type UseFormReturn } from 'react-hook-form';
-import { ArrowLeft, CircleAlert, Hourglass, Link2, Printer, Sparkles } from 'lucide-react';
+import { ArrowLeft, CircleAlert, Hourglass, Link2, Printer, ShieldAlert, Sparkles, Undo2 } from 'lucide-react';
 import { useI18n, type MessageKey } from '@medvya/i18n';
 import {
   Banner, Button, buttonVariants, Card, cn, Dialog, DialogContent, DialogDescription, DialogTitle, Field, Input, PageContainer, PageHeader, PageMessage,
@@ -11,7 +11,7 @@ import { ageOn } from '../../registration/domain/registration';
 import { todayIn, type Service } from '../domain/catalogue';
 import {
   deskMethods, maxDiscountMinor, printPapers, type actionsFor, type coverage, type DiscountForm, type Invoice, type InvoiceProblem, type Payment, type PaymentForm,
-  type PrintPaper,
+  type PrintPaper, type RefundForm,
 } from '../domain/invoice';
 import InvoiceStateChip from './InvoiceStateChip';
 
@@ -28,6 +28,9 @@ type Props = {
   paymentForm: UseFormReturn<PaymentForm>; method: PaymentForm['method']; paying: boolean; onPay: FormEventHandler<HTMLFormElement>; onFillBalance: () => void; onRecordCash: () => void;
   linkUrl: string | null; linking: boolean; onCreateLink: () => void; checking: boolean; onCheck: (paymentId: string) => void; onCancelLink: (paymentId: string) => void;
   paper: PrintPaper; onPaper: (paper: PrintPaper) => void; printing: 'bill' | 'receipt' | null; onPrint: (kind: 'bill' | 'receipt') => void;
+  printingNote: string | null; onPrintNote: (noteId: string) => void;
+  refunding: boolean; refundForm: UseFormReturn<RefundForm>; refundMethod: RefundForm['method']; refundMax: number; refunded: boolean; refundNeedsAdmin: boolean;
+  refundOver: boolean; onStartRefund: () => void; onStopRefund: () => void; onRefund: FormEventHandler<HTMLFormElement>;
 };
 
 /** One bill (P-06, MDV-P4-004): who it is for (identity only), its lines, discount and totals with the round-off line, and its payments. */
@@ -145,6 +148,7 @@ export default function InvoicePage(p: Props) {
             <dt>{t('billing.invoice.paid')}</dt><dd className="text-end">{money(i.paidMinor)}</dd>
             <dt className="font-bold">{t('billing.invoice.balance')}</dt><dd className="text-end font-bold">{money(i.balanceMinor)}</dd>
           </>}
+          {i.refundedMinor > 0 && <><dt>{t('billing.refund.refundedLine')}</dt><dd className="text-end">{money(-i.refundedMinor)}</dd></>}
         </dl>
       </Card>
 
@@ -230,6 +234,40 @@ export default function InvoicePage(p: Props) {
         </Card>
       )}
 
+      {i.creditNotes.length > 0 && (
+        <Card title={t('billing.refund.notes')}>
+          <Table label={t('billing.refund.notesLabel')} stacked>
+            <TableHeader>
+              <TableRow>
+                <TableHead scope="col">{t('billing.refund.col.number')}</TableHead>
+                <TableHead scope="col">{t('billing.invoice.col.amount')}</TableHead>
+                <TableHead scope="col">{t('billing.invoice.col.method')}</TableHead>
+                <TableHead scope="col">{t('billing.refund.col.reason')}</TableHead>
+                <TableHead scope="col">{t('billing.refund.col.print')}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {i.creditNotes.map(n => (
+                <TableRow key={n.id}>
+                  <TableHead scope="row"><bdi dir="ltr">{n.number}</bdi></TableHead>
+                  <TableCell label={t('billing.invoice.col.amount')}>{money(n.amountMinor)}</TableCell>
+                  <TableCell label={t('billing.invoice.col.method')}>
+                    {t(`billing.method.${n.method}`)}{n.reference && <bdi dir="ltr" className="block text-sm text-muted-foreground">{n.reference}</bdi>}
+                  </TableCell>
+                  <TableCell label={t('billing.refund.col.reason')}>{n.reason}<span className="block text-sm text-muted-foreground">{n.createdByName}</span></TableCell>
+                  <TableCell label={t('billing.refund.col.print')}>
+                    <Button variant="outline" loading={p.printingNote === n.id} disabled={p.printingNote !== null && p.printingNote !== n.id} onClick={() => p.onPrintNote(n.id)}
+                      aria-label={t('billing.refund.printFor', { number: n.number })}>
+                      <Printer aria-hidden />{t('billing.refund.printPdf')}
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
+      )}
+
       {(a.issue || a.edit || a.cancel || (a.pay && canLink) || a.printBill) && (
         <StickyActionBar status={a.printBill && (
           <SegmentedControl label={t('billing.print.paper')} value={p.paper} onValueChange={p.onPaper}
@@ -246,6 +284,7 @@ export default function InvoicePage(p: Props) {
             </Button>
           )}
           {a.cancel && <Button variant="ghost" disabled={p.busy} onClick={p.onStartCancel}>{t('billing.invoice.cancel')}</Button>}
+          {a.refund && <Button variant="outline" disabled={p.busy} onClick={p.onStartRefund}><Undo2 aria-hidden />{t('billing.refund.action')}</Button>}
           {a.pay && canLink && <Button variant="outline" loading={p.linking} disabled={p.busy && !p.linking} onClick={p.onCreateLink}>{t('billing.payment.sendLink')}</Button>}
           {a.edit && <Button loading={p.issuing} disabled={!a.issue || (p.busy && !p.issuing)} onClick={p.onIssue}>{t('billing.invoice.issue')}</Button>}
         </StickyActionBar>
@@ -263,6 +302,44 @@ export default function InvoicePage(p: Props) {
             <Button variant="destructive" loading={p.cancelPending} disabled={!p.cancelReason.trim()} onClick={p.onCancel}>{t('billing.invoice.cancelConfirm')}</Button>
             <Button variant="outline" disabled={p.cancelPending} onClick={p.onStopCancel}>{t('billing.invoice.cancelKeep')}</Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={p.refunding} onOpenChange={o => { if (!o) p.onStopRefund(); }}>
+        <DialogContent closeLabel={t('billing.refund.close')}>
+          <DialogTitle>{t('billing.refund.title', { number: i.number ?? '' })}</DialogTitle>
+          <DialogDescription>{t('billing.refund.body')}</DialogDescription>
+          <form noValidate onSubmit={p.onRefund} className="flex flex-col gap-3">
+            <div aria-live="polite">{p.problem && <Banner tone="danger" icon={CircleAlert} title={t(`billing.error.${p.problem}`)} />}</div>
+            <Controller control={p.refundForm.control} name="method" render={({ field }) => (
+              <Select value={field.value} onValueChange={field.onChange}>
+                <Field id="refund-method" label={t('billing.refund.method')}>
+                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                </Field>
+                <SelectContent>{deskMethods.map(m => <SelectItem key={m} value={m}>{t(`billing.method.${m}`)}</SelectItem>)}</SelectContent>
+              </Select>
+            )} />
+            <Field id="refund-amount" label={t('billing.payment.amount', { currency: i.currency })} hint={t('billing.refund.upTo', { amount: money(p.refundMax) })}
+              error={p.refundOver ? t('billing.error.over_refunded') : fieldProblem(p.refundForm.formState.errors.amount)}>
+              <Input dir="ltr" inputMode="decimal" autoComplete="off" {...p.refundForm.register('amount')} />
+            </Field>
+            {p.refundMethod !== 'Cash' && (
+              <Field id="refund-reference" label={t(p.refundMethod === 'Card' ? 'billing.refund.cardReference' : 'billing.payment.utr')}
+                hint={t('billing.payment.referenceHint')} error={fieldProblem(p.refundForm.formState.errors.reference)}>
+                <Input dir="ltr" autoComplete="off" {...p.refundForm.register('reference')} />
+              </Field>
+            )}
+            <Field id="refund-reason" label={t('billing.refund.reason')} hint={t('billing.refund.reasonHint')} error={fieldProblem(p.refundForm.formState.errors.reason)}>
+              <Input autoComplete="off" {...p.refundForm.register('reason')} />
+            </Field>
+            {p.refundNeedsAdmin && (
+              <Banner tone="warning" icon={ShieldAlert} title={t('billing.refund.needsAdmin', { amount: money(i.options.refundApprovalAboveMinor) })} />
+            )}
+            <div className="flex flex-wrap gap-2">
+              <Button type="submit" loading={p.refunded} disabled={p.refundOver || p.refundNeedsAdmin}>{t('billing.refund.confirm')}</Button>
+              <Button type="button" variant="outline" disabled={p.refunded} onClick={p.onStopRefund}>{t('billing.refund.keep')}</Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
     </PageContainer>

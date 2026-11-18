@@ -43,8 +43,14 @@ public sealed class CashSession
     [Classification(DataClass.Internal)] public DateTimeOffset? ClosedAt { get; set; }
 
     /// <summary>Expected cash in the drawer: the float plus cash receipts minus cash refunds.</summary>
-    // shortcut: refunds are not built (MDV-P4-006), so cash refunds are 0 here; subtract the session's cash refunds when they exist.
-    public static long Expected(long floatMinor, long cashReceiptsMinor, long cashRefundsMinor = 0) => floatMinor + cashReceiptsMinor - cashRefundsMinor;
+    public static long Expected(long floatMinor, long cashReceiptsMinor, long cashRefundsMinor) => floatMinor + cashReceiptsMinor - cashRefundsMinor;
+
+    /// <summary><see cref="Expected(long, long, long)"/> from the session's takings by method.</summary>
+    public static long Expected(long floatMinor, IEnumerable<MethodTotal> totals)
+    {
+        var cash = totals.Where(t => t.Method == PaymentMethod.Cash).ToList();
+        return Expected(floatMinor, cash.Sum(t => t.AmountMinor), cash.Sum(t => t.RefundsMinor));
+    }
 
     /// <summary>
     /// Records a count: its totals, expected cash and variance. A count that matches closes the session; any variance waits for a second person's
@@ -58,7 +64,7 @@ public sealed class CashSession
         Counts = [.. counts];
         Totals = [.. totals];
         CountedMinor = counts.Sum(c => c.ValueMinor * c.Count);
-        ExpectedMinor = Expected(OpeningFloatMinor, totals.Where(t => t.Method == PaymentMethod.Cash).Sum(t => t.AmountMinor));
+        ExpectedMinor = Expected(OpeningFloatMinor, totals);
         VarianceMinor = CountedMinor - ExpectedMinor;
         (Note, CountedBy, CountedAt) = (note, by, at);
         (State, ClosedAt) = VarianceMinor == 0 ? (CashSessionState.Closed, at) : (CashSessionState.AwaitingConfirmation, (DateTimeOffset?)null);
@@ -76,12 +82,14 @@ public sealed record CashCount
     [Classification(DataClass.Internal)] public int Count { get; init; }
 }
 
-/// <summary>Succeeded payments of one method in a session: how many and how much.</summary>
+/// <summary>Succeeded payments of one method in a session, how many and how much, and the refunds (credit notes) made that way in it.</summary>
 public sealed record MethodTotal
 {
     [Classification(DataClass.Internal)] public PaymentMethod Method { get; init; }
     [Classification(DataClass.Internal)] public int Payments { get; init; }
     [Classification(DataClass.Internal)] public long AmountMinor { get; init; }
+    [Classification(DataClass.Internal)] public int Refunds { get; init; }
+    [Classification(DataClass.Internal)] public long RefundsMinor { get; init; }
 }
 
 /// <summary>A correction to a closed session (MDV-P4-012): the session stays as it closed; the adjustment says what changed and why. Append-only.</summary>

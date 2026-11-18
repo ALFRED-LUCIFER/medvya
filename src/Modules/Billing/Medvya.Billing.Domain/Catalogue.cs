@@ -87,6 +87,8 @@ public sealed class BillingSettings
     /// <summary>The largest discount staff without practice configuration may give; above it needs the Config capability.</summary>
     [Classification(DataClass.Internal)] public int MaxDiscountPercent { get; set; } = 10;
     [Classification(DataClass.Internal)] public int PaymentLinkExpiryMinutes { get; set; } = 60;
+    /// <summary>A refund above this (minor units) is made only by a user with practice configuration (MDV-P4-006); ₹1,000 until the clinic sets its own.</summary>
+    [Classification(DataClass.Internal)] public long RefundApprovalAboveMinor { get; set; } = 100_000;
     [Classification(DataClass.Internal)] public Guid? ChangedBy { get; set; }
     [Classification(DataClass.Internal)] public DateTimeOffset ChangedAt { get; set; }
 }

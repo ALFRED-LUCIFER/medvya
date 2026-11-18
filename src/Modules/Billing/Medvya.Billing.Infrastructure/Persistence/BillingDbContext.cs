@@ -14,6 +14,7 @@ public sealed class BillingDbContext(DbContextOptions<BillingDbContext> options,
     public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<InvoiceLine> InvoiceLines => Set<InvoiceLine>();
     public DbSet<Payment> Payments => Set<Payment>();
+    public DbSet<CreditNote> CreditNotes => Set<CreditNote>();
     public DbSet<ProviderEvent> ProviderEvents => Set<ProviderEvent>();
     public DbSet<BillingDocument> BillingDocuments => Set<BillingDocument>();
     public DbSet<CashSession> CashSessions => Set<CashSession>();
@@ -98,6 +99,8 @@ public sealed class BillingDbContext(DbContextOptions<BillingDbContext> options,
                 t.HasCheckConstraint("CK_Invoices_Amounts", "\"SubtotalMinor\" >= 0 AND \"DiscountMinor\" >= 0 AND \"TaxMinor\" >= 0");
                 // Never more collected than the bill's total: the database's own guard against over-collection.
                 t.HasCheckConstraint("CK_Invoices_Paid", "\"PaidMinor\" >= 0 AND \"PaidMinor\" <= GREATEST(\"TotalMinor\", 0)");
+                // Never more given back than was paid: the database's own guard against over-refunding (MDV-P4-006).
+                t.HasCheckConstraint("CK_Invoices_Refunded", "\"RefundedMinor\" >= 0 AND \"RefundedMinor\" <= \"PaidMinor\"");
                 t.HasCheckConstraint("CK_Invoices_Number", "\"State\" IN ('Draft', 'Cancelled') OR \"Number\" IS NOT NULL");
             });
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
@@ -129,6 +132,24 @@ public sealed class BillingDbContext(DbContextOptions<BillingDbContext> options,
             e.ToTable(t => t.HasCheckConstraint("CK_Payments_Amount", "\"AmountMinor\" > 0"));
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
+        modelBuilder.Entity<CreditNote>(e =>
+        {
+            e.Property(x => x.Number).HasMaxLength(32);
+            e.Property(x => x.Currency).HasMaxLength(3).IsFixedLength();
+            e.Property(x => x.Method).HasConversion<string>().HasMaxLength(16);
+            e.Property(x => x.Reference).HasMaxLength(Payment.MaxReference);
+            e.Property(x => x.Reason).HasMaxLength(CreditNote.MaxReason);
+            e.HasOne<Invoice>().WithMany().HasForeignKey(x => x.InvoiceId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<CashSession>().WithMany().HasForeignKey(x => x.CashSessionId).OnDelete(DeleteBehavior.Restrict);
+            e.HasIndex(x => new { x.TenantId, x.Number }).IsUnique();
+            e.HasIndex(x => x.InvoiceId);
+            e.ToTable(t =>
+            {
+                t.HasCheckConstraint("CK_CreditNotes_Amount", "\"AmountMinor\" > 0");
+                t.HasTrigger("TR_CreditNotes_AppendOnly");
+            });
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
         modelBuilder.Entity<ProviderEvent>(e =>
         {
             // Per tenant: another clinic signing an event with the same id (with its own secret) can never mark this clinic's event as handled.
@@ -146,8 +167,10 @@ public sealed class BillingDbContext(DbContextOptions<BillingDbContext> options,
             e.Property(x => x.Sha256).HasMaxLength(64).IsFixedLength();
             e.Property(x => x.BlobKey).HasMaxLength(100);
             e.HasOne<Invoice>().WithMany().HasForeignKey(x => x.InvoiceId).OnDelete(DeleteBehavior.Restrict);
-            // One paper per bill, kind, layout and paid total: two first prints at once cannot both store one.
-            e.HasIndex(x => new { x.TenantId, x.InvoiceId, x.Kind, x.Layout, x.PaidMinor }).IsUnique();
+            e.HasOne<CreditNote>().WithMany().HasForeignKey(x => x.CreditNoteId).OnDelete(DeleteBehavior.Restrict);
+            // One paper per bill, kind, layout and paid total, or per credit note and layout: two first prints at once cannot both store one.
+            e.HasIndex(x => new { x.TenantId, x.InvoiceId, x.Kind, x.Layout, x.PaidMinor }).IsUnique().HasFilter("\"CreditNoteId\" IS NULL");
+            e.HasIndex(x => new { x.TenantId, x.CreditNoteId, x.Layout }).IsUnique().HasFilter("\"CreditNoteId\" IS NOT NULL");
             e.ToTable(t => t.HasCheckConstraint("CK_BillingDocuments_Paid", "\"PaidMinor\" >= 0"));
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });

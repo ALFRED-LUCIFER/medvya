@@ -10471,6 +10471,82 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/billing/invoices/{id}/refunds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["RecordRefund"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/billing/invoices/{id}/credit-notes/{noteId}/{layout}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    noteId: string;
+                    layout: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/settings/billing/razorpay": {
         parameters: {
             query?: never;
@@ -11544,7 +11620,7 @@ export interface components {
             patientId?: null | string;
         };
         /** @enum {unknown} */
-        InvoiceState: "Draft" | "Issued" | "PartlyPaid" | "Paid" | "Cancelled" | null;
+        InvoiceState: "Draft" | "Issued" | "PartlyPaid" | "Paid" | "Cancelled" | "Refunded" | null;
         InvoiceVersion: {
             /** Format: uint32 */
             version?: null | number | string;
@@ -11912,6 +11988,13 @@ export interface components {
             amountMinor?: null | number | string;
             reference?: null | string;
         };
+        RecordRefund: {
+            method?: null | components["schemas"]["PaymentMethod"];
+            /** Format: int64 */
+            amountMinor?: null | number | string;
+            reference?: null | string;
+            reason?: null | string;
+        };
         /** @enum {unknown} */
         ReferralChannel: "Print" | "Email" | "PatientCarries" | null;
         /** @enum {unknown} */
@@ -12030,6 +12113,8 @@ export interface components {
             maxDiscountPercent?: null | number | string;
             /** Format: int32 */
             paymentLinkExpiryMinutes?: null | number | string;
+            /** Format: int64 */
+            refundApprovalAboveMinor?: null | number | string;
             /** Format: uint32 */
             version?: null | number | string;
         };

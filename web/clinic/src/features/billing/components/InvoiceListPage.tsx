@@ -82,7 +82,10 @@ export default function InvoiceListPage(p: Props) {
                   </span>
                 </TableCell>
                 <TableCell label={col('total')}>{formatMoney(r.totalMinor, r.currency)}</TableCell>
-                <TableCell label={col('paid')}>{formatMoney(r.paidMinor, r.currency)}</TableCell>
+                <TableCell label={col('paid')}>
+                  {formatMoney(r.paidMinor, r.currency)}
+                  {r.refundedMinor > 0 && <span className="block text-sm text-muted-foreground">{t('billing.invoices.refunded', { amount: formatMoney(r.refundedMinor, r.currency) })}</span>}
+                </TableCell>
                 <TableCell label={col('created')}><time dateTime={r.createdAt}>{formatDate(new Date(r.createdAt), p.timeZone)}</time></TableCell>
               </TableRow>
             ))}

@@ -40,6 +40,7 @@ public sealed class BillingSettingsService(BillingDbContext db, ICurrentTenant t
         else if (reasons.Any(r => r.Length > BillingSettings.MaxReason)) errors.Add(("discountReasons", "too_long"));
         if (command.MaxDiscountPercent is not (>= 0 and <= 100)) errors.Add(("maxDiscountPercent", "range"));
         if (command.PaymentLinkExpiryMinutes is not (>= BillingSettings.MinLinkExpiry and <= BillingSettings.MaxLinkExpiry)) errors.Add(("paymentLinkExpiryMinutes", "range"));
+        if (command.RefundApprovalAboveMinor is < 0 or > CashSession.MaxFloatMinor) errors.Add(("refundApprovalAboveMinor", "range"));
         var tenantId = tenant.TenantId ?? throw new InvalidOperationException("No tenant context.");
         // SAFETY: mutation check: removed this check -> BillingInvoiceTests.RazorpayLinksNeedAConnectedAccount failed (saved without an account)
         if (methods.Contains(PaymentMethod.RazorpayLink) && !await RazorpayConnectedAsync(tenantId, cancellationToken))
@@ -56,6 +57,7 @@ public sealed class BillingSettingsService(BillingDbContext db, ICurrentTenant t
         (settings.InvoicePrefix, settings.ReceiptPrefix, settings.CreditNotePrefix) = (command.InvoicePrefix!.Trim(), command.ReceiptPrefix!.Trim(), command.CreditNotePrefix!.Trim());
         (settings.PaymentMethods, settings.DiscountReasons) = (methods, reasons);
         (settings.MaxDiscountPercent, settings.PaymentLinkExpiryMinutes) = (command.MaxDiscountPercent!.Value, command.PaymentLinkExpiryMinutes!.Value);
+        settings.RefundApprovalAboveMinor = command.RefundApprovalAboveMinor ?? settings.RefundApprovalAboveMinor; // left out: kept
         (settings.ChangedBy, settings.ChangedAt) = (user.UserId, clock.GetUtcNow());
 
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
@@ -89,5 +91,5 @@ public sealed class BillingSettingsService(BillingDbContext db, ICurrentTenant t
     }
 
     static BillingSettingsView View(BillingSettings s, uint version) =>
-        new(s.InvoicePrefix, s.ReceiptPrefix, s.CreditNotePrefix, s.PaymentMethods, s.DiscountReasons, s.MaxDiscountPercent, s.PaymentLinkExpiryMinutes, version);
+        new(s.InvoicePrefix, s.ReceiptPrefix, s.CreditNotePrefix, s.PaymentMethods, s.DiscountReasons, s.MaxDiscountPercent, s.PaymentLinkExpiryMinutes, version, s.RefundApprovalAboveMinor);
 }

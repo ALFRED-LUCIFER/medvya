@@ -70,9 +70,23 @@ public static class InvoiceEndpoints
         // MDV-P4-005: the bill or its receipt as a PDF, A5 or 80 mm thermal. POST: the first print issues and stores the paper; later ones re-print it.
         g.MapPost("/invoices/{id:guid}/documents/{kind}/{layout}", async (Guid id, string kind, string layout, HttpContext http, [FromServices] IBillingDocuments s, CancellationToken ct) =>
             {
-                if (!Enum.TryParse<BillingDocumentKind>(kind, ignoreCase: true, out var k) || !Enum.IsDefined(k) || !Enum.TryParse<DocumentLayout>(layout, ignoreCase: true, out var l) || !Enum.IsDefined(l))
+                if (!Enum.TryParse<BillingDocumentKind>(kind, ignoreCase: true, out var k) || !Enum.IsDefined(k) || k == BillingDocumentKind.CreditNote
+                    || !Enum.TryParse<DocumentLayout>(layout, ignoreCase: true, out var l) || !Enum.IsDefined(l))
                     return Results.NotFound();
                 if (await s.PdfAsync(id, k, l, ct) is not { } pdf) return Results.NotFound();
+                http.Response.Headers["X-Content-SHA256"] = pdf.Sha256;
+                http.Response.Headers.CacheControl = "no-store";
+                return Results.File(pdf.Content, "application/pdf");
+            })
+            .AuditedByUseCase(BillingDocumentsAction, Resource, Purpose).AddEndpointFilter(CatalogueEndpoints.MapErrors);
+        // MDV-P4-006: money given back on a paid bill, with its credit note; and the credit note as a PDF (stored once, re-printed byte for byte).
+        g.MapPost("/invoices/{id:guid}/refunds", async (Guid id, [FromBody] RecordRefund? body, [FromServices] IInvoices s, CancellationToken ct) =>
+                body is null ? CatalogueEndpoints.Required() : Found(await s.RefundAsync(id, body, ct)))
+            .AuditedByUseCase("billing.refund", Resource, Purpose).AddEndpointFilter(CatalogueEndpoints.MapErrors);
+        g.MapPost("/invoices/{id:guid}/credit-notes/{noteId:guid}/{layout}", async (Guid id, Guid noteId, string layout, HttpContext http, [FromServices] IBillingDocuments s, CancellationToken ct) =>
+            {
+                if (!Enum.TryParse<DocumentLayout>(layout, ignoreCase: true, out var l) || !Enum.IsDefined(l)) return Results.NotFound();
+                if (await s.CreditNotePdfAsync(id, noteId, l, ct) is not { } pdf) return Results.NotFound();
                 http.Response.Headers["X-Content-SHA256"] = pdf.Sha256;
                 http.Response.Headers.CacheControl = "no-store";
                 return Results.File(pdf.Content, "application/pdf");

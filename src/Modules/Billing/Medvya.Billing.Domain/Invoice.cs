@@ -3,7 +3,7 @@ using Medvya.BuildingBlocks.Domain;
 namespace Medvya.Billing.Domain;
 
 /// <summary>Invoice states (docs/03-architecture/state-machines.md "Invoice (P4)"). Pending and Failed belong to a payment, not the invoice.</summary>
-public enum InvoiceState { Draft, Issued, PartlyPaid, Paid, Cancelled }
+public enum InvoiceState { Draft, Issued, PartlyPaid, Paid, Cancelled, Refunded }
 
 /// <summary>A payment's state. Cash, card and UPI direct are recorded Succeeded; a Razorpay link is Pending until the provider says it is paid.</summary>
 public enum PaymentState { Pending, Succeeded, Failed, Expired }
@@ -42,6 +42,8 @@ public sealed class Invoice
     [Classification(DataClass.Internal)] public long TotalMinor { get; set; }
     /// <summary>The sum of the succeeded payments; never more than the total.</summary>
     [Classification(DataClass.Internal)] public long PaidMinor { get; set; }
+    /// <summary>The sum of the bill's credit notes (MDV-P4-006): money given back, never more than was paid. The bill itself stays as issued.</summary>
+    [Classification(DataClass.Internal)] public long RefundedMinor { get; set; }
     [Classification(DataClass.Personal)] public string? CancelReason { get; set; }
     [Classification(DataClass.Internal)] public DateTimeOffset? CancelledAt { get; set; }
     [Classification(DataClass.Internal)] public Guid? CreatedBy { get; init; }
@@ -125,6 +127,34 @@ public sealed class Payment
     [Classification(DataClass.Internal)] public Guid? CashSessionId { get; set; }
 }
 
+/// <summary>
+/// A refund against a paid bill and the credit note that documents it (MDV-P4-006): its own number from the credit note series, the amount given back,
+/// how (cash from the drawer, back to the card on the terminal, or UPI to the patient) and why. Append-only (TR_CreditNotes_AppendOnly): a wrong refund
+/// is never edited, and the bill it references never changes.
+/// </summary>
+public sealed class CreditNote
+{
+    public const int MaxReason = 200;
+
+    [Classification(DataClass.Internal)] public Guid Id { get; init; }
+    [Classification(DataClass.Internal)] public Guid TenantId { get; init; }
+    [Classification(DataClass.Internal)] public Guid FacilityId { get; init; }
+    [Classification(DataClass.Internal)] public Guid InvoiceId { get; init; }
+    /// <summary>The legal number (DOC_SEQUENCE, the settings' credit note prefix).</summary>
+    [Classification(DataClass.Internal)] public required string Number { get; init; }
+    [Classification(DataClass.Internal)] public required string Currency { get; init; }
+    [Classification(DataClass.Internal)] public long AmountMinor { get; init; }
+    [Classification(DataClass.Internal)] public PaymentMethod Method { get; init; }
+    /// <summary>The card terminal's refund reference or the UPI UTR; null for cash. Never a card number (refused on entry).</summary>
+    [Classification(DataClass.Internal)] public string? Reference { get; init; }
+    /// <summary>Why the money went back. Shown on screen, not printed (it may name the patient); no clinical detail belongs here.</summary>
+    [Classification(DataClass.Personal)] public required string Reason { get; init; }
+    /// <summary>The location's open cash session when the refund was made (MDV-P4-012); a cash refund comes out of its drawer.</summary>
+    [Classification(DataClass.Internal)] public Guid? CashSessionId { get; init; }
+    [Classification(DataClass.Internal)] public Guid? CreatedBy { get; init; }
+    [Classification(DataClass.Internal)] public DateTimeOffset CreatedAt { get; init; }
+}
+
 /// <summary>Every allowed invoice and payment move, in one place; the services ask here and refuse anything else ("state:invalid").</summary>
 public static class InvoiceFlow
 {
@@ -142,6 +172,12 @@ public static class InvoiceFlow
     /// <summary>The state an issued bill is in once <paramref name="paidMinor"/> of <paramref name="totalMinor"/> is paid.</summary>
     public static InvoiceState AfterPayment(long totalMinor, long paidMinor) =>
         paidMinor <= 0 && totalMinor > 0 ? InvoiceState.Issued : paidMinor < totalMinor ? InvoiceState.PartlyPaid : InvoiceState.Paid;
+
+    /// <summary>A paid bill takes refunds until all it was paid is given back; it is then Refunded, which is final.</summary>
+    public static bool CanRefund(InvoiceState state) => state == InvoiceState.Paid;
+
+    /// <summary>The state after a refund: Refunded once everything paid is given back, else still Paid (the credit notes say how much went back).</summary>
+    public static InvoiceState AfterRefund(long paidMinor, long refundedMinor) => refundedMinor >= paidMinor ? InvoiceState.Refunded : InvoiceState.Paid;
 
     /// <summary>Only a pending payment moves, and only once: Succeeded, Failed and Expired are final.</summary>
     public static bool CanSettle(PaymentState state) => state == PaymentState.Pending;

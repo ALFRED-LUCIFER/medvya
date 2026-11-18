@@ -25,7 +25,7 @@ export async function mockBilling(page: Page, { country = 'IN', flags, locale = 
   const session = billingOwner(country, flags);
   // MDV-P4-007: the clinic's Razorpay connection; secrets go in, only the status comes back.
   let razorpay: Record<string, unknown> = { connected: false, mode: null, keyIdEnding: null, webhookPath: null };
-  let settings = { invoicePrefix: 'INV', receiptPrefix: 'RCT', creditNotePrefix: 'CN', paymentMethods: ['Cash', 'Card', 'UpiDirect'], discountReasons: [] as string[], maxDiscountPercent: 10, paymentLinkExpiryMinutes: 60, version: 0 };
+  let settings = { invoicePrefix: 'INV', receiptPrefix: 'RCT', creditNotePrefix: 'CN', paymentMethods: ['Cash', 'Card', 'UpiDirect'], discountReasons: [] as string[], maxDiscountPercent: 10, paymentLinkExpiryMinutes: 60, refundApprovalAboveMinor: 100_000, version: 0 };
 
   await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
   await page.route('**/v1/me/context', r => r.fulfill({ json: session }));
@@ -109,7 +109,8 @@ export async function mockInvoices(page: Page, { locale = 'en', methods = ['Cash
       taxTreatment: 'Exempt', gstRateBasisPoints: null, taxMinor: 0, amountMinor: 30_000, suggested: true }],
     subtotalMinor: 30_000, discountMinor: 0, discountReason: null as string | null, taxMinor: 0, roundOffMinor: 0, totalMinor: 30_000, paidMinor: 0, balanceMinor: 0,
     payments: [] as Record<string, unknown>[], cancelReason: null, cancelledAt: null, createdAt: '2026-10-19T05:00:00Z',
-    options: { paymentMethods: methods, discountReasons: ['Senior citizen'], maxDiscountPercent: 10, mayExceedMaxDiscount: false }, version: 1,
+    options: { paymentMethods: methods, discountReasons: ['Senior citizen'], maxDiscountPercent: 10, mayExceedMaxDiscount: false, refundApprovalAboveMinor: 100_000 }, version: 1,
+    refundedMinor: 0, creditNotes: [] as unknown[],
   };
   const provider = { paid: false };
   const posts: { path: string; body: unknown }[] = [];
@@ -127,7 +128,7 @@ export async function mockInvoices(page: Page, { locale = 'en', methods = ['Cash
   await page.route('**/v1/billing/visits/*/invoice', r => r.fulfill(answer()));
   await page.route('**/v1/billing/invoices/search', r => r.fulfill({ json: [{
     id: bill.id, state: bill.state, number: bill.number, patientId: 'p-1', patientName: bill.patient.fullName, mrn: bill.patient.mrn, currency: 'INR',
-    totalMinor: bill.totalMinor, paidMinor: bill.paidMinor, awaitingProvider: bill.payments.some(p => p.state === 'Pending'), createdAt: bill.createdAt, issuedAt: bill.issuedAt,
+    totalMinor: bill.totalMinor, paidMinor: bill.paidMinor, awaitingProvider: bill.payments.some(p => p.state === 'Pending'), createdAt: bill.createdAt, issuedAt: bill.issuedAt, refundedMinor: bill.refundedMinor,
   }] }));
   await page.route('**/v1/billing/invoices/inv-1', r => r.fulfill(answer()));
   await page.route('**/v1/billing/invoices/inv-1/lines/*', r => {

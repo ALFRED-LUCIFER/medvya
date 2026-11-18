@@ -12,8 +12,15 @@ public sealed record InvoiceLineView(
 public sealed record PaymentView(
     Guid Id, PaymentMethod Method, long AmountMinor, PaymentState State, string? Reference, string? LinkUrl, DateTimeOffset RecordedAt, DateTimeOffset? ConfirmedAt);
 
-/// <summary>What the desk may do with a bill: the methods the clinic takes, its preset discount reasons and the discount staff may give without practice configuration.</summary>
-public sealed record InvoiceOptions(IReadOnlyList<PaymentMethod> PaymentMethods, IReadOnlyList<string> DiscountReasons, int MaxDiscountPercent, bool MayExceedMaxDiscount);
+/// <summary>A refund given back on the bill and its credit note (MDV-P4-006).</summary>
+public sealed record CreditNoteView(Guid Id, string Number, long AmountMinor, PaymentMethod Method, string? Reference, string Reason, string CreatedByName, DateTimeOffset CreatedAt);
+
+/// <summary>
+/// What the desk may do with a bill: the methods the clinic takes, its preset discount reasons, the discount staff may give without practice configuration,
+/// and the refund above which practice configuration is needed. <see cref="MayExceedMaxDiscount"/> is that configuration: it lifts both limits.
+/// </summary>
+public sealed record InvoiceOptions(
+    IReadOnlyList<PaymentMethod> PaymentMethods, IReadOnlyList<string> DiscountReasons, int MaxDiscountPercent, bool MayExceedMaxDiscount, long RefundApprovalAboveMinor);
 
 /// <summary>
 /// A bill with its lines and payments. <see cref="BalanceMinor"/> is what is still to collect; <see cref="Version"/> guards a draft edit (409 when stale).
@@ -23,12 +30,12 @@ public sealed record InvoiceView(
     Guid Id, InvoiceState State, string? Number, DateTimeOffset? IssuedAt, InvoicePatient Patient, Guid? AppointmentId, Guid? DoctorId, string Currency,
     IReadOnlyList<InvoiceLineView> Lines, long SubtotalMinor, long DiscountMinor, string? DiscountReason, long TaxMinor, long RoundOffMinor, long TotalMinor,
     long PaidMinor, long BalanceMinor, IReadOnlyList<PaymentView> Payments, string? CancelReason, DateTimeOffset? CancelledAt, DateTimeOffset CreatedAt,
-    InvoiceOptions Options, uint Version);
+    InvoiceOptions Options, uint Version, long RefundedMinor, IReadOnlyList<CreditNoteView> CreditNotes);
 
 /// <summary>One row of the bills list.</summary>
 public sealed record InvoiceRow(
     Guid Id, InvoiceState State, string? Number, Guid PatientId, string PatientName, string Mrn, string Currency, long TotalMinor, long PaidMinor,
-    bool AwaitingProvider, DateTimeOffset CreatedAt, DateTimeOffset? IssuedAt);
+    bool AwaitingProvider, DateTimeOffset CreatedAt, DateTimeOffset? IssuedAt, long RefundedMinor);
 
 /// <summary>The bills list filters. Ids and dates only: a patient is chosen by id, never searched by name in the request (no PHI in URLs or queries).</summary>
 public sealed record InvoiceSearch
@@ -86,6 +93,18 @@ public sealed record RecordPayment
     public string? Reference { get; init; }
 }
 
+/// <summary>
+/// Money given back on a paid bill (MDV-P4-006): cash from the drawer, back to the card on the terminal (its refund reference) or UPI to the patient (the
+/// UTR), with the reason. A card or UPI refund goes back the way it was paid, at most what was paid that way.
+/// </summary>
+public sealed record RecordRefund
+{
+    public PaymentMethod? Method { get; init; }
+    public long? AmountMinor { get; init; }
+    public string? Reference { get; init; }
+    public string? Reason { get; init; }
+}
+
 /// <summary>A Razorpay link for the balance: the payment (Pending) and the hosted page's address for the desk to show or copy.</summary>
 public sealed record PaymentLinkView(InvoiceView Invoice, Guid PaymentId, string ShortUrl);
 
@@ -127,6 +146,14 @@ public interface IInvoices
 
     /// <summary>Records a cash, card or UPI direct payment as Succeeded; a payment beyond the balance is refused.</summary>
     Task<InvoiceView?> RecordPaymentAsync(Guid id, RecordPayment command, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gives money back on a paid bill and issues its credit note (DOC_SEQUENCE, the settings' credit note prefix) in the same transaction; the bill is
+    /// Refunded once all it was paid is given back. "amountMinor:over_refunded" beyond what is left, "amountMinor:over_method" beyond what was paid by
+    /// that card or UPI, "amountMinor:approval_required" above the settings' threshold without practice configuration.
+    /// </summary>
+    // shortcut: no refund through Razorpay (provider refund confirmed by its webhook); money paid by a link is given back in cash until clinics connect Razorpay (#489).
+    Task<InvoiceView?> RefundAsync(Guid id, RecordRefund command, CancellationToken cancellationToken = default);
 
     /// <summary>A Razorpay link for the remaining balance (at most one pending at a time).</summary>
     Task<PaymentLinkView?> CreatePaymentLinkAsync(Guid id, CancellationToken cancellationToken = default);

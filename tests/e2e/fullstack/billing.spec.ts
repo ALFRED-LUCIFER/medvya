@@ -2,9 +2,9 @@ import { createHash } from 'node:crypto';
 import { expect, test, type Browser, type Page } from '@playwright/test';
 import { expectArabicAxeClean, expectNoAxeViolations, signIn, syntheticPatient, walkIn, watchUrls } from './support';
 
-// MDV-P4-004, MDV-P4-005, MDV-P4-012 through the real stack (real Host.Api, real PostgreSQL, real Blob): the owner switches billing on, the desk
+// MDV-P4-004, MDV-P4-005, MDV-P4-006, MDV-P4-012 through the real stack (real Host.Api, real PostgreSQL, real Blob): the owner switches billing on, the desk
 // opens the drawer, a walk-in patient is checked in and billed, pays part cash and part card, the bill and receipt print as PDFs (a re-print is the
-// same bytes), and the day closes short, so a second staff member confirms before the shift report prints. Razorpay is not called (no keys here).
+// same bytes), ₹100 goes back in cash with a credit note, and the day closes short, so a second staff member confirms before the shift report prints. Razorpay is not called (no keys here).
 const joseph = /A\. Joseph/;
 const lakshmi = /K\. Lakshmi/;
 
@@ -96,11 +96,27 @@ test('billing: switch on, open the drawer, bill a walk-in, split payment, print 
     expect((await download(page, 'Receipt PDF')).sha).toBe(receipt.sha);
   });
 
+  await test.step('₹100 goes back in cash with a reason: a credit note against the bill, printed and re-printed identically (MDV-P4-006)', async () => {
+    await page.getByRole('button', { name: 'Refund' }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.getByText('Up to ₹500.00 this way')).toBeVisible();
+    await dialog.getByLabel('Amount (INR)').fill('100');
+    await dialog.getByLabel('Reason').fill('Dressing not needed (synthetic)');
+    await expectNoAxeViolations(page);
+    await dialog.getByRole('button', { name: 'Give back and issue credit note' }).click();
+    await expect(dialog).toHaveCount(0);
+    const notes = page.getByRole('region', { name: 'Credit notes on this bill' });
+    await expect(notes.getByText(/^CN\/\d{2}-\d{2}\/00001$/)).toBeVisible();
+    await expect(page.getByText('Paid', { exact: true }).first()).toBeVisible(); // ₹400 still paid: not Refunded
+    const note = await download(page, /Print credit note CN/);
+    expect(note.name).toBe('credit-note-thermal.pdf');
+    expect((await download(page, /Print credit note CN/)).sha).toBe(note.sha);
+  });
+
   await test.step('the drawer is counted ₹100 short: a note, then the receptionist cannot confirm her own count', async () => {
     await page.goto('/app/billing/day-close');
-    await expect(page.getByText('₹1,200.00').first()).toBeVisible(); // ₹1,000 float + ₹200 cash; the card part is not in the drawer
-    await page.getByLabel('₹500.00').fill('2');
-    await page.getByLabel('₹100.00').fill('1'); // ₹1,100 counted
+    await expect(page.getByText('₹1,100.00').first()).toBeVisible(); // ₹1,000 float + ₹200 cash − ₹100 cash refund; the card part is not in the drawer
+    await page.getByLabel('₹500.00').fill('2'); // ₹1,000 counted
     await expect(page.getByText('Attention · cash short ₹100.00')).toBeVisible();
     await page.getByLabel('Variance note').fill('₹100 change given from personal cash');
     await page.getByRole('button', { name: 'Send for confirmation' }).click();

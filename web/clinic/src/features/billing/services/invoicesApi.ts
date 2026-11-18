@@ -25,5 +25,10 @@ export const cancelPaymentLink = (id: string, paymentId: string) => post<Invoice
 /** The bill or its receipt as a PDF (MDV-P4-005): the first print issues and stores it, later ones return the same paper. Saved under a name with no patient data. */
 export const downloadBillingPdf = (id: string, kind: 'bill' | 'receipt', paper: PrintPaper) =>
   downloadPaperPdf(`${bill(id)}/documents/${kind}/${paper}`, `${kind}-${paper}.pdf`);
+/** Money given back on a paid bill, with its credit note (MDV-P4-006); the reason travels in the body, never the URL. */
+export const refundInvoice = (id: string, body: { method: string; amountMinor: number; reference: string | null; reason: string }) => post<Invoice>(`${bill(id)}/refunds`, body);
+/** A credit note as a PDF, stored on first print and re-printed byte for byte. Saved under a name with no patient data. */
+export const downloadCreditNotePdf = (id: string, noteId: string, paper: PrintPaper) =>
+  downloadPaperPdf(`${bill(id)}/credit-notes/${noteId}/${paper}`, `credit-note-${paper}.pdf`);
 /** The active catalogue with clinic prices, for the desk's "Add line" (Invoices and payments at Full). */
 export const fetchBillableServices = () => send<Service[]>('/v1/billing/services');

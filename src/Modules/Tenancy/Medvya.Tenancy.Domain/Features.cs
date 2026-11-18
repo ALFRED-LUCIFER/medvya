@@ -31,12 +31,19 @@ public static class Features
     /// </summary>
     public static readonly Feature Billing = new("billing.invoices", Clinical: false, ClinicSwitch: true, AlwaysOn: false, ReleaseStage.Internal, Both);
 
+    /// <summary>
+    /// The dental pack (MDV-P8-E02): tooth chart, treatment plan and estimate, and done items on the visit's bill. Clinical: it reaches everyone only with a
+    /// recorded clinical sign-off (a dentist walks the dental journey, MDV-P8-022). Internal while it is built, as billing was: only Medvya's own test
+    /// organisations reach it until Medvya's release console moves it on; the practice owner also switches it on.
+    /// </summary>
+    public static readonly Feature Dental = new("clinical.dental", Clinical: true, ClinicSwitch: true, AlwaysOn: false, ReleaseStage.Internal, Both);
+
     // Keys that existed before Medvya's release switch start at Everyone, so nothing disappears for a clinic; a new key starts Off. Billing starts
     // Internal: no clinic had it switched on yet.
     // Always on: the core of the record, shown locked in the console. Nothing gates them; they are listed so they can never be switched off.
     public static readonly IReadOnlyList<Feature> All =
     [
-        NurseIntake, Billing,
+        NurseIntake, Billing, Dental,
         Locked("patients.record", clinical: true), Locked("clinical.allergies", clinical: true), Locked("prescribing.signing", clinical: true),
         Locked("audit.log", clinical: false), Locked("data.export", clinical: false),
     ];

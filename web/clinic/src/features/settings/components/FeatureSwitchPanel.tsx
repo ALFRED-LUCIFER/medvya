@@ -4,7 +4,7 @@ import { fieldError } from './fieldStyles';
 
 type Props = {
   /** Whose words: nurse intake (MDV-P2-007) or billing (MDV-P4-002, #1430). */
-  copy: 'nurseIntake' | 'billingSwitch';
+  copy: 'nurseIntake' | 'billingSwitch' | 'dental';
   enabled: boolean; loading: boolean; forbidden: boolean; unavailable: boolean; loadFailed: boolean; saving: boolean; saveFailed: boolean;
   withNurse: number | null; confirming: boolean | null; onChange: (enabled: boolean) => void; onConfirm: () => void; onCancel: () => void;
 };

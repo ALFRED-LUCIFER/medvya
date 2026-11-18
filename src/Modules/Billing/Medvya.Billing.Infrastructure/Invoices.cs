@@ -24,7 +24,7 @@ namespace Medvya.Billing.Infrastructure;
 public sealed partial class Invoices(
     BillingDbContext db, ICurrentTenant tenant, ICurrentUser user, ICurrentFacility facility, IStaffAccess staff, IFacilityDirectory facilities,
     IBillingSettings settings, ICatalogue catalogue, IDocumentNumbering numbering, IPatientDirectory patients, IConsultVisits visits, IPaymentLinks links,
-    IAuditLog audit, TimeProvider clock, ILogger<Invoices> log) : IInvoices
+    IAuditLog audit, TimeProvider clock, ILogger<Invoices> log, Medvya.Encounters.Application.IDentalCharges dental) : IInvoices
 {
     public const string Resource = "invoice";
     /// <summary>Razorpay wants a link to expire at least 15 minutes after it receives it; this covers the time the request takes.</summary>
@@ -108,6 +108,14 @@ public sealed partial class Invoices(
         if (await OpenForVisitAsync(appointmentId, cancellationToken) is { } open)
         {
             var existing = await GetAsync(open, cancellationToken);
+            // Dental items marked done after the bill was opened join it as suggested lines while it is a draft (MDV-P8-012).
+            if (existing is { State: InvoiceState.Draft } draft && (await UnbilledDentalAsync(appointmentId, cancellationToken)).Count > 0)
+                return await EditDraftAsync(open, draft.Version, "billing.invoice.line_add", async (invoice, lines) =>
+                {
+                    var added = await DentalLinesAsync(invoice, appointmentId, cancellationToken);
+                    db.InvoiceLines.AddRange(added);
+                    lines.AddRange(added);
+                }, cancellationToken);
             await audit.WriteAsync(new AuditEvent // opening the visit's bill again changes nothing, but it is a look at the bill
             {
                 Id = Guid.CreateVersion7(), TenantId = TenantId, ActorUserId = user.UserId, Action = "billing.invoice.read", ResourceType = Resource, ResourceId = open,
@@ -130,6 +138,7 @@ public sealed partial class Invoices(
         var service = kind is null ? null : await db.Services.AsNoTracking().SingleOrDefaultAsync(s => s.ConsultationKind == kind && s.ArchivedAt == null, cancellationToken);
         if (service is not null && await catalogue.ResolvePriceAsync(service.Id, doctor, clock.GetUtcNow(), cancellationToken) is { } price && price.Currency == invoice.Currency)
             lines.Add(NewLine(invoice, service, price, 1, suggested: true));
+        lines.AddRange(await DentalLinesAsync(invoice, appointmentId, cancellationToken)); // the dental items done in this visit (MDV-P8-012)
         invoice.Recalculate(lines, (await RulesAsync(cancellationToken)).RoundOff);
 
         try
@@ -148,6 +157,35 @@ public sealed partial class Invoices(
         return await GetAsync(await OpenForVisitAsync(appointmentId, cancellationToken) ?? invoice.Id, cancellationToken);
     }
 
+    /// <summary>The visit's done dental items not yet on a bill that still counts (any bill but a cancelled one).</summary>
+    async Task<List<Medvya.Encounters.Application.DentalCharge>> UnbilledDentalAsync(Guid appointmentId, CancellationToken cancellationToken)
+    {
+        var charges = await dental.DoneInVisitAsync(appointmentId, cancellationToken);
+        if (charges.Count == 0) return [];
+        var ids = charges.Select(c => c.PlanItemId).ToList();
+        var billed = await db.InvoiceLines.AsNoTracking().Where(l => l.SourceId != null && ids.Contains(l.SourceId.Value))
+            .Join(db.Invoices.AsNoTracking().Where(i => i.State != InvoiceState.Cancelled), l => l.InvoiceId, i => i.Id, (l, _) => l.SourceId!.Value).ToListAsync(cancellationToken);
+        return [.. charges.Where(c => !billed.Contains(c.PlanItemId))];
+    }
+
+    /// <summary>
+    /// One suggested line per unbilled done dental item of the visit, priced on the day for the bill's doctor (the fee version of the day) and linked to its item.
+    /// shortcut: an item whose service has no price in the bill's currency gets no line (the desk adds it by hand); say so on the bill if clinics hit it.
+    /// shortcut: a suggested dental line the desk removes from a draft is suggested again when the bill opens (no charge is lost, but none can be waived
+    /// here), and an item done after the visit's bill was issued joins no bill; add a waive reason and an "unbilled done items" list for the desk (MDV-P8-012).
+    /// </summary>
+    async Task<List<InvoiceLine>> DentalLinesAsync(Invoice invoice, Guid appointmentId, CancellationToken cancellationToken)
+    {
+        var lines = new List<InvoiceLine>();
+        foreach (var charge in await UnbilledDentalAsync(appointmentId, cancellationToken))
+        {
+            var service = await db.Services.AsNoTracking().SingleOrDefaultAsync(s => s.Id == charge.ServiceId, cancellationToken);
+            if (service is null || await catalogue.ResolvePriceAsync(service.Id, invoice.DoctorId, clock.GetUtcNow(), cancellationToken) is not { } price || price.Currency != invoice.Currency) continue;
+            lines.Add(NewLine(invoice, service, price, 1, suggested: true, source: charge.PlanItemId));
+        }
+        return lines;
+    }
+
     Task<Guid?> OpenForVisitAsync(Guid appointmentId, CancellationToken cancellationToken) =>
         db.Invoices.AsNoTracking().Where(i => i.AppointmentId == appointmentId && i.State != InvoiceState.Cancelled).Select(i => (Guid?)i.Id).SingleOrDefaultAsync(cancellationToken);
 
@@ -161,13 +199,13 @@ public sealed partial class Invoices(
         };
     }
 
-    InvoiceLine NewLine(Invoice invoice, Service service, ResolvedPrice price, int quantity, bool suggested)
+    InvoiceLine NewLine(Invoice invoice, Service service, ResolvedPrice price, int quantity, bool suggested, Guid? source = null)
     {
         var line = new InvoiceLine
         {
             Id = Guid.CreateVersion7(), TenantId = invoice.TenantId, InvoiceId = invoice.Id, ServiceId = service.Id, PriceVersionId = price.PriceVersionId,
             Description = service.Name, Sac = service.Sac, UnitMinor = price.AmountMinor, TaxTreatment = service.TaxTreatment,
-            GstRateBasisPoints = service.GstRateBasisPoints, Suggested = suggested, CreatedAt = clock.GetUtcNow(),
+            GstRateBasisPoints = service.GstRateBasisPoints, Suggested = suggested, SourceId = source, CreatedAt = clock.GetUtcNow(),
         };
         line.SetQuantity(quantity);
         return line;

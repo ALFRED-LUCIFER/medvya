@@ -89,6 +89,9 @@ public sealed class EndpointAuditTests(PostgresFixture sql) : IClassFixture<Post
         "PUT /v1/settings/nurse-intake", // audited by the flag service (flag.enable / flag.disable), no patient data
         "GET /v1/settings/billing-switch", // #1430: the clinic's billing switch, no patient data
         "PUT /v1/settings/billing-switch", // audited by the flag service (flag.enable / flag.disable), no patient data
+        "GET /v1/settings/dental", // MDV-P8-E02: the clinic's dental switch, no patient data
+        "PUT /v1/settings/dental", // audited by the flag service (flag.enable / flag.disable), no patient data
+        "GET /v1/patients/{patientId:guid}/dental/services", // MDV-P8-012: catalogue names and prices only; the patient id picks the care-relationship check (DentalTests)
         "POST /v1/chart/allergy-flags", // MDV-P2-002: one patient.chart.allergy-flag event per patient answered, written by the use case (PatientChartTests)
         "GET /v1/prescriptions/pending", // MDV-P1-090: one rx.pending event per patient answered, written by the use case (RxFinishTests)
         "GET /v1/notes/pending", // MDV-P2-002: one note.pending event per patient answered, written by the use case (SignNoteTests)
@@ -168,6 +171,7 @@ public sealed class EndpointAuditTests(PostgresFixture sql) : IClassFixture<Post
         // Feature-gated routes (nurse intake, billing) answer 404 before the audit filter when their flag is off; on, so they are enumerated too.
         db.FeatureFlags.Add(new FeatureFlag { Id = Guid.NewGuid(), TenantId = tenant, Key = "clinical.nurse-intake", Enabled = true, Owner = "clinical-team", Description = "Nurse intake (synthetic test)", CreatedAt = DateTimeOffset.UtcNow, ChangedAt = DateTimeOffset.UtcNow });
         db.FeatureFlags.Add(new FeatureFlag { Id = Guid.NewGuid(), TenantId = tenant, Key = "billing.invoices", Enabled = true, Owner = "practice", Description = "Billing (synthetic test)", CreatedAt = DateTimeOffset.UtcNow, ChangedAt = DateTimeOffset.UtcNow });
+        db.FeatureFlags.Add(new FeatureFlag { Id = Guid.NewGuid(), TenantId = tenant, Key = "clinical.dental", Enabled = true, Owner = "practice", Description = "Dental (synthetic test)", CreatedAt = DateTimeOffset.UtcNow, ChangedAt = DateTimeOffset.UtcNow });
         await db.SaveChangesAsync();
     }
 
@@ -288,7 +292,7 @@ public sealed class EndpointAuditTests(PostgresFixture sql) : IClassFixture<Post
         new WebApplicationFactory<Program>().WithWebHostBuilder(b => b
             .UseSetting("ConnectionStrings:Medvya", sql.ConnectionString)
             .UseSetting("RateLimiting:PermitsPerMinute", "100000") // this test calls every endpoint once per role: more than the per-IP limit of production traffic
-            .UseSetting("Features:InternalOrganisations:0", tenant.ToString()) // billing is at the Internal release stage (MDV-P4-002)
+            .UseSetting("Features:InternalOrganisations:0", tenant.ToString()) // billing and dental are at the Internal release stage (MDV-P4-002, MDV-P8-E02)
             .ConfigureServices(s => s.AddSingleton<IStartupFilter>(new SignedIn(tenant, facility, extra))));
 
     /// <summary>The synthetic staff user named by <see cref="UserHeader"/>, in the test tenant and facility, plus optional extra endpoints.</summary>

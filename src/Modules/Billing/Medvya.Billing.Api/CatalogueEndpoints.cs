@@ -43,6 +43,9 @@ public static class CatalogueEndpoints
         admin.MapPost("/services/{id:guid}/prices", async (Guid id, [FromBody] AddPrice? body, [FromServices] ICatalogue c, CancellationToken ct) =>
                 body is null ? Required() : await c.AddPriceAsync(id, body, ct) is { } v ? Results.Created($"/v1/settings/services/{id}/prices", v) : Results.NotFound())
             .AuditedByUseCase("billing.price.add", "service", Purpose).AddEndpointFilter(MapErrors);
+        // The dental starter list (MDV-P8-010): only with the dental pack on too; one transaction and one audit event for the whole load.
+        admin.MapPost("/services/dental-starter", async ([FromServices] ICatalogue c, CancellationToken ct) => Results.Ok(await c.LoadDentalStarterAsync(ct)))
+            .AuditedByUseCase("billing.service.dental_starter", "service", Purpose).AddEndpointFilter(MapErrors).RequireFeature(Features.Dental);
         admin.MapGet("/billing", async ([FromServices] IBillingSettings s, CancellationToken ct) => Results.Ok(await s.GetAsync(ct)))
             .Audited("billing.settings.read", "billing_settings", Purpose).AddEndpointFilter(MapErrors);
         admin.MapPut("/billing", async ([FromBody] SaveBillingSettings? body, [FromServices] IBillingSettings s, CancellationToken ct) =>

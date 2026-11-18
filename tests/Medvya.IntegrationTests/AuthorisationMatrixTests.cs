@@ -40,10 +40,12 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         theirs = await TheirIdsAsync();
         // On, so the intake routes reach their use case: with it off the feature gate's 404 would hide whether isolation holds.
         await h.Get<IFeatureFlags>(h.Admin).SetAsync(Features.NurseIntake, true, "clinical-team", "Nurse intake (synthetic test)");
+        await h.Get<IFeatureFlags>(h.Admin).SetAsync(Features.Dental, true, "practice", "Dental (synthetic test)"); // MDV-P8-E02, same reason
         factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b
             .UseSetting("ConnectionStrings:Medvya", sql.ConnectionString)
             .UseSetting("RateLimiting:PermitsPerMinute", "100000")
             .UseSetting("RateLimiting:PatientRecordsPerMinute", "100000")
+            .UseSetting("Features:InternalOrganisations:0", h.Tenant.ToString()) // dental is at the Internal release stage (MDV-P8-E02)
             .ConfigureTestServices(s =>
             {
                 PatientEndpointTests.SignInFromHeaders(s, h.Tenant); // every caller is signed in to tenant A (h)
@@ -145,6 +147,17 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
             orders.Referrals.Add(referral);
             await orders.SaveChangesAsync();
         }
+        var dentalItem = new Encounters.Domain.DentalPlanItem
+        {
+            Id = Guid.CreateVersion7(), TenantId = other.Tenant, FacilityId = other.Facility, PatientId = other.Patient, ServiceId = Guid.NewGuid(), ServiceName = $"Root canal {Theirs}",
+            Tooth = "36", Phase = 1, EstimateMinor = 650_000, Currency = "INR", Status = Encounters.Domain.DentalPlanStatus.Planned, CreatedBy = other.Doctor, CreatedAt = SchedulingHarness.MondayMorning,
+            ChangedBy = other.Doctor, ChangedAt = SchedulingHarness.MondayMorning,
+        };
+        await using (var dental = sql.Encounters(other.Tenant))
+        {
+            dental.DentalPlanItems.Add(dentalItem);
+            await dental.SaveChangesAsync();
+        }
         await using var db = sql.Context(other.Tenant);
         var invited = new Membership { Id = Guid.NewGuid(), TenantId = other.Tenant, FacilityId = other.Facility, Role = Role.Receptionist, Status = MembershipStatus.Invited };
         var invitation = new Invitation
@@ -162,7 +175,7 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         {
             ["patient"] = other.Patient, ["appointment"] = visit, ["encounter"] = encounter, ["document"] = document.Id, ["order"] = order.Id, ["rxItem"] = rxItem.Id, ["rxShare"] = rxShare.Id, ["referral"] = referral.Id, ["hold"] = hold.Id, ["display"] = display.Display.Id,
             ["closure"] = closure!.Id, ["exception"] = leave.Exception.Id, ["accessRequest"] = request.Id, ["invitation"] = invitation.Id,
-            ["membership"] = membership, ["doctor"] = doctor, ["location"] = other.Facility, ["role"] = role.Id, ["user"] = other.Reception,
+            ["membership"] = membership, ["doctor"] = doctor, ["location"] = other.Facility, ["role"] = role.Id, ["user"] = other.Reception, ["dentalItem"] = dentalItem.Id,
         };
     }
 
@@ -268,6 +281,14 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.SoloDoctor, new("GET", "/v1/patients/{patient}/referrals")),
         (Role.SoloDoctor, new("GET", "/v1/patients/{patient}/geriatric-assessments")),
         (Role.Nurse, new("POST", "/v1/patients/{patient}/geriatric-assessments", """{"clinicalFrailtyScale":4}""")),
+        // The dental pack (MDV-P8-011, MDV-P8-012): their patient, consultation and plan item answer like unknown ones.
+        (Role.SoloDoctor, new("GET", "/v1/patients/{patient}/dental")),
+        (Role.SoloDoctor, new("GET", "/v1/patients/{patient}/dental/services")),
+        (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/dental/findings", """{"tooth":"36","condition":"Sound"}""")),
+        (Role.SoloDoctor, new("POST", "/v1/patients/{patient}/dental/plan", """{"serviceId":"{dentalItem}","phase":1}""")),
+        (Role.SoloDoctor, new("POST", "/v1/patients/{patient}/dental/plan/{dentalItem}/move", """{"to":"Declined","reason":"Synthetic"}""")),
+        (Role.SoloDoctor, new("POST", "/v1/patients/{patient}/dental/estimate/acceptance", """{"acceptedBy":"Synthetic","method":"OnTablet"}""")),
+        (Role.SoloDoctor, new("POST", "/v1/patients/{patient}/dental/pdf")),
         (Role.SoloDoctor, new("GET", "/v1/patients/{patient}/medicine-review")),
         (Role.Nurse, new("GET", "/v1/patients/{patient}/chronic-care")),
         (Role.SoloDoctor, new("PUT", "/v1/patients/{patient}/care-targets", """{"code":"HbA1c","limit":7.5}""")),
@@ -509,6 +530,10 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.Nurse, new("POST", "/v1/encounters/{encounter}/referrals", """{"provider":"Dr. Synthetic","urgency":"Routine","reason":"Synthetic","sections":[]}""")), // Prescriptions & orders: X
         (Role.Receptionist, new("GET", "/v1/patients/{patient}/referrals")), // Patient 360: X
         (Role.Receptionist, new("GET", "/v1/patients/{patient}/geriatric-assessments")), // Patient 360: X
+        (Role.Receptionist, new("GET", "/v1/patients/{patient}/dental")), // Patient 360: X
+        (Role.Nurse, new("POST", "/v1/encounters/{encounter}/dental/findings", """{"tooth":"36","condition":"Sound"}""")), // Clinical notes: R, not S
+        (Role.CareCoordinator, new("POST", "/v1/patients/{patient}/dental/estimate/acceptance", """{"acceptedBy":"Synthetic","method":"OnTablet"}""")), // Clinical notes: R
+        (Role.Nurse, new("POST", "/v1/patients/{patient}/dental/pdf")), // Patient 360: L, the PDF needs Full
         (Role.CareCoordinator, new("POST", "/v1/patients/{patient}/geriatric-assessments", """{"clinicalFrailtyScale":4}""")), // Vitals & allergies entry: X
         (Role.Nurse, new("GET", "/v1/patients/{patient}/medicine-review")), // Prescriptions & orders: X
         (Role.Receptionist, new("GET", "/v1/patients/{patient}/chronic-care")), // Patient 360: X

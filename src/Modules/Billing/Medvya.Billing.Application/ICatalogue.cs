@@ -7,6 +7,9 @@ public sealed record ServiceView(
     Guid Id, string Name, ServiceCategory Category, string? Code, string? Sac, TaxTreatment TaxTreatment, int? GstRateBasisPoints, int? DurationMinutes,
     ConsultationKind? ConsultationKind, DateTimeOffset? ArchivedAt, long? ClinicPriceMinor, string Currency, uint Version);
 
+/// <summary>What a starter list load did: services added, and rows skipped because the clinic already has their code.</summary>
+public sealed record StarterLoadResult(int Added, int Skipped);
+
 public sealed record PriceVersionView(Guid Id, Guid? DoctorId, long AmountMinor, string Currency, DateTimeOffset EffectiveFrom, DateTimeOffset CreatedAt);
 
 /// <summary>What an invoice line takes from the catalogue (MDV-P4-004): the version it was priced from, kept on the line.</summary>
@@ -73,6 +76,10 @@ public interface ICatalogue
     /// <summary>Inserts a price version; null when there is no such service.</summary>
     /// <exception cref="BillingValidationException"/>
     Task<PriceVersionView?> AddPriceAsync(Guid id, AddPrice command, CancellationToken cancellationToken = default);
+
+    /// <summary>Loads the dental starter list (MDV-P8-010): the rows whose code the clinic does not use yet, each with its default price. Idempotent.</summary>
+    /// <exception cref="BillingValidationException">"country:unsupported".</exception>
+    Task<StarterLoadResult> LoadDentalStarterAsync(CancellationToken cancellationToken = default);
 
     /// <summary>The price of a service for a doctor at a moment (<see cref="PriceVersion.Resolve"/>); null when it has none, or there is no such service.</summary>
     Task<ResolvedPrice?> ResolvePriceAsync(Guid serviceId, Guid? doctorId, DateTimeOffset at, CancellationToken cancellationToken = default);

@@ -972,6 +972,240 @@
         }
       }
     },
+    "/v1/patients/{patientId}/dental": {
+      "get": {
+        "tags": [
+          "DentalEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "patientId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/patients/{patientId}/dental/services": {
+      "get": {
+        "tags": [
+          "DentalEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "patientId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/encounters/{encounterId}/dental/findings": {
+      "post": {
+        "tags": [
+          "DentalEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "encounterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/RecordToothFinding"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/patients/{patientId}/dental/plan": {
+      "post": {
+        "tags": [
+          "DentalEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "patientId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AddDentalPlanItem"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/patients/{patientId}/dental/plan/{itemId}/move": {
+      "post": {
+        "tags": [
+          "DentalEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "patientId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/MoveDentalPlanItem"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/patients/{patientId}/dental/estimate/acceptance": {
+      "post": {
+        "tags": [
+          "DentalEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "patientId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AcceptDentalEstimate"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/patients/{patientId}/dental/pdf": {
+      "post": {
+        "tags": [
+          "DentalEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "patientId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/v1/patients/{patientId}/chronic-care": {
       "get": {
         "tags": [
@@ -4027,6 +4261,38 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/BillingSwitch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/settings/dental": {
+      "get": {
+        "tags": [
+          "Host.Api"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Host.Api"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DentalSwitch"
               }
             }
           },
@@ -7889,6 +8155,18 @@
         }
       }
     },
+    "/v1/settings/services/dental-starter": {
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/v1/settings/billing": {
       "get": {
         "tags": [
@@ -8677,6 +8955,38 @@
   },
   "components": {
     "schemas": {
+      "AcceptanceMethod": {
+        "enum": [
+          "OnTablet",
+          "PrintedAndSigned",
+          null
+        ]
+      },
+      "AcceptDentalEstimate": {
+        "required": [
+          "acceptedBy",
+          "method"
+        ],
+        "type": "object",
+        "properties": {
+          "acceptedBy": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "method": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AcceptanceMethod"
+              }
+            ]
+          }
+        }
+      },
       "AccessRequestBody": {
         "required": [
           "reason"
@@ -8793,6 +9103,45 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "AddDentalPlanItem": {
+        "required": [
+          "serviceId",
+          "tooth",
+          "surfaces",
+          "phase"
+        ],
+        "type": "object",
+        "properties": {
+          "serviceId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "tooth": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "surfaces": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "phase": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -11074,6 +11423,26 @@
           }
         }
       },
+      "DentalPlanStatus": {
+        "enum": [
+          "Planned",
+          "InProgress",
+          "Done",
+          "Declined",
+          null
+        ]
+      },
+      "DentalSwitch": {
+        "required": [
+          "enabled"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          }
+        }
+      },
       "DirectoryFilter": {
         "enum": [
           "All",
@@ -12177,6 +12546,49 @@
           "Clinician",
           null
         ]
+      },
+      "MoveDentalPlanItem": {
+        "required": [
+          "to",
+          "reason",
+          "encounterId",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "to": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/DentalPlanStatus"
+              }
+            ]
+          },
+          "reason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "encounterId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "uint32"
+          }
+        }
       },
       "MoveVisit": {
         "type": "object",
@@ -13726,6 +14138,45 @@
             "format": "int64"
           },
           "reference": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "RecordToothFinding": {
+        "required": [
+          "tooth",
+          "condition",
+          "surfaces",
+          "note"
+        ],
+        "type": "object",
+        "properties": {
+          "tooth": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "condition": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ToothCondition"
+              }
+            ]
+          },
+          "surfaces": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "note": {
             "type": [
               "null",
               "string"
@@ -15620,6 +16071,21 @@
           }
         }
       },
+      "ToothCondition": {
+        "enum": [
+          "Sound",
+          "Caries",
+          "Filling",
+          "Crown",
+          "RootCanalTreated",
+          "Missing",
+          "Implant",
+          "Bridge",
+          "Mobile",
+          "Fractured",
+          null
+        ]
+      },
       "UnavailableBlock": {
         "required": [
           "start",
@@ -16279,6 +16745,9 @@
     },
     {
       "name": "GeriatricEndpoints"
+    },
+    {
+      "name": "DentalEndpoints"
     },
     {
       "name": "ChronicCareEndpoints"

@@ -43,6 +43,14 @@ BEGIN
         GRANT DELETE ON billing."InvoiceLines" TO medvya_billing;
     END IF;
 
+    -- Dental findings and estimate acceptances are append-only (MDV-P8-011, MDV-P8-012): a correction is a newer finding, a new acceptance a new row. A patient
+    -- merge (MDV-P1-017) moves them, so only the patient columns can change. Plan items move between states but are never deleted.
+    IF to_regclass('encounters."DentalFindings"') IS NOT NULL THEN
+        REVOKE UPDATE, DELETE, TRUNCATE ON encounters."DentalFindings", encounters."DentalEstimateAcceptances" FROM medvya_encounters;
+        GRANT UPDATE ("PatientId", "MergedFromPatientId") ON encounters."DentalFindings", encounters."DentalEstimateAcceptances" TO medvya_encounters;
+        REVOKE DELETE, TRUNCATE ON encounters."DentalPlanItems" FROM medvya_encounters;
+    END IF;
+
     -- The chain trigger lists a tenant's first row in ledger."Chains"; ledger."Tables" stays read-only (roles.sql).
     IF to_regclass('ledger."Chains"') IS NOT NULL THEN
         GRANT INSERT ON ledger."Chains" TO medvya_tenancy, medvya_patients, medvya_audit, medvya_encounters, medvya_prescribing;

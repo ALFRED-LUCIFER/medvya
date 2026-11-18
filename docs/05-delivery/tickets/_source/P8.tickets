@@ -197,6 +197,10 @@ notes:
 - Data to take: the duration of each procedure from prisma/seed-data/IN/procedures.ts (feeds P8-010).
 
 === MDV-P8-010
+status: Done
+progress:
+- Merged [PR #1437](https://github.com/ALFRED-LUCIFER/medvya/pull/1437): 76 India dental procedures (adapted from DentalERP, MIT) with code, length, editable INR price, SAC 999312 and GST on the 8 cosmetic rows; loaded from Settings › Dental in one transaction with one audit event; loading again adds nothing; India only
+- Needs a person: a dentist signs off the 76 fees and a chartered accountant confirms the GST treatment (MDV-P4-031); see the session handoff
 title: Dental services and fees list
 type: Story
 epic: MDV-P8-E02
@@ -222,6 +226,10 @@ notes:
 - Code to read: app/api/procedures, app/api/settings/procedures (catalogue screens); lib/treatment-utils.ts `procedureCategoryConfig` for labels.
 
 === MDV-P8-011
+status: Done
+progress:
+- Merged [PR #1437](https://github.com/ALFRED-LUCIFER/medvya/pull/1437): FDI tooth chart (permanent, primary, mixed) drawn as real teeth with the five surfaces of the design (DN-02), codes always printed, history per tooth; findings append-only (the database refuses UPDATE), recorded in an open consultation; the same chart on the dental PDF; ToothChart in @medvya/ui; behind `clinical.dental` (Internal release stage)
+- Needs a person: a dentist signs off the condition list and surfaces (`DentalRules.SignOff`) and the open questions on the design canvas before the feature leaves the Internal stage
 title: Tooth chart: FDI numbering, adult and milk teeth, surfaces and conditions, with history per tooth
 type: Story
 epic: MDV-P8-E02
@@ -249,6 +257,10 @@ notes:
 - Do not take: conditions shown by colour only (bg-red-500 etc.) break AGENTS.md 1.5; adult teeth only (no 51 to 85); entries are edited in place, while Medvya needs signed, append-only findings. Rebuild on @medvya/ui.
 
 === MDV-P8-012
+status: Done
+progress:
+- Merged [PR #1437](https://github.com/ALFRED-LUCIFER/medvya/pull/1437): plan items from the services list per tooth or whole mouth in phases 1–9; Planned → In progress → Done or Declined with a reason, never deleted; estimate without declined items; acceptance with who, how and when, and "changed since accepted"; a done item is one suggested line on the visit's bill, never billed twice
+- Follow-up: a waive reason for a removed suggested line, and an "unbilled done items" list for items done after the bill is issued
 title: Dental treatment plan: items per tooth, phases, cost estimate and patient acceptance
 type: Story
 epic: MDV-P8-E02

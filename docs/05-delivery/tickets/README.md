@@ -19,7 +19,7 @@ Conventions, Definition of Ready/Done and the confidence scale: [docs/05-deliver
 | P5 Commercial launch v1.0 | [P5-commercial-launch](P5-commercial-launch/README.md) | 05 Apr 2027 → 04 Jun 2027 | 66 | 0 | 0 | 176 | 45 | 66% |
 | P6 Wearable capture and advanced AI | [P6-clip-advanced-ai](P6-clip-advanced-ai/README.md) | 07 Jun 2027 → 13 Aug 2027 | 10 | 0 | 0 | 32 | 50 | 59% |
 | P7 Hospital enterprise and integrations | [P7-hospital-enterprise](P7-hospital-enterprise/README.md) | 28 Jun 2027 → 17 Dec 2027 | 13 | 0 | 0 | 48 | 125 | 66% |
-| P8 Scale and specialty features | [P8-scale-specialty](P8-scale-specialty/README.md) | 18 Oct 2027 → 14 Jan 2028 | 22 | 0 | 0 | 81 | 65 | 60% |
+| P8 Scale and specialty features | [P8-scale-specialty](P8-scale-specialty/README.md) | 18 Oct 2027 → 14 Jan 2028 | 22 | 3 | 0 | 81 | 65 | 60% |
 | P9 Practice operations and engagement | [P9-practice-operations](P9-practice-operations/README.md) | 17 Jan 2028 → 24 Mar 2028 | 22 | 0 | 0 | 48 | 50 | 62% |
 
 ## Capacity check (read this before committing to dates)

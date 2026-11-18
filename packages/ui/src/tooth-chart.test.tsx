@@ -34,6 +34,26 @@ describe('ToothChart (MDV-P8-011)', () => {
     expect(blank.getAttribute('aria-pressed')).toBe('false');
   });
 
+  /** SAFETY (mutation check: swap the mesial and distal zones, or stop mirroring the lower left quadrant, and this fails: a caries would be drawn on the wrong side). */
+  it('paints only the recorded surfaces, on the side they are on for the viewer facing the patient, and prints them under the tooth', () => {
+    const { container } = render(<ToothChart dentition="permanent" marks={{ '36': { abbr: 'C', label: 'Caries (DO)', tone: 'danger', surfaces: 'DO', fill: 'hatch' } }} notRecorded="Not recorded" selected={null} onSelect={noop} />);
+    const tooth = screen.getByRole('button', { name: '36 C·DO, Caries (DO)' });
+    expect(tooth.textContent).toBe('36 C·DO');
+    const painted = [...tooth.querySelectorAll('[data-surface]')].filter(p => (p as SVGElement).style.fill.startsWith('url(')).map(p => p.getAttribute('data-surface'));
+    expect(painted.sort()).toEqual(['D', 'O']);
+    // 36 is lower left: mirrored both ways, so its mesial side faces the midline (the viewer's left) and buccal faces down.
+    expect(tooth.querySelector('svg g')!.getAttribute('transform')).toMatch(/scale\(-[\d.]+ -[\d.]+\)/);
+    expect(container.querySelector('pattern[id$="-hatch-danger"]')).not.toBeNull();
+  });
+
+  it('draws primary 4s and 5s as molars, smaller than the permanent teeth', () => {
+    render(<ToothChart dentition="mixed" marks={{}} notRecorded="Not recorded" selected={null} onSelect={noop} />);
+    const outline = (n: string) => document.querySelector(`[data-tooth="${n}"] svg g > path`)!.getAttribute('d');
+    expect(outline('54')).toBe(outline('16'));
+    expect(outline('55')).toBe(outline('17'));
+    expect(outline('53')).toBe(outline('13'));
+  });
+
   it('is one tab stop: arrows move along and across the arches, two digits jump and select', () => {
     const picked: string[] = [];
     render(<ToothChart dentition="permanent" marks={{}} notRecorded="Not recorded" selected={null} onSelect={t => picked.push(t)} />);

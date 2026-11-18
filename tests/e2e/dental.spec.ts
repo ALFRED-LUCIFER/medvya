@@ -60,7 +60,7 @@ async function open(page: Page, { locale = 'en', openEncounterId = 'e-9' as stri
 test('the chart prints each tooth\'s code and says its state in words; an unrecorded tooth is "not recorded"; the rules are a draft', async ({ page }) => {
   await open(page);
   const chartGroup = page.getByRole('group', { name: 'Tooth chart, FDI numbering, shown facing the patient' });
-  await expect(chartGroup.getByRole('button', { name: '36 C, Caries (DO)' })).toHaveText('36 C');
+  await expect(chartGroup.getByRole('button', { name: '36 C·DO, Caries (DO)' })).toHaveText('36 C·DO');
   await expect(chartGroup.getByRole('button', { name: '46 X, Missing' })).toHaveText('46 X');
   await expect(chartGroup.getByRole('button', { name: '11, Not recorded' })).toHaveText('11–');
   await expect(page.getByText('The condition list and surface rules are a draft until a dentist signs them off.')).toBeVisible();
@@ -69,7 +69,7 @@ test('the chart prints each tooth\'s code and says its state in words; an unreco
 
 test('a tooth\'s history keeps every finding, newest first, and says a correction is a newer finding', async ({ page }) => {
   await open(page);
-  await page.getByRole('button', { name: '36 C, Caries (DO)' }).click();
+  await page.getByRole('button', { name: '36 C·DO, Caries (DO)' }).click();
   const tooth = page.getByRole('region', { name: 'Tooth 36' });
   await expect(tooth).toContainText('Now: Caries · surfaces DO');
   const history = tooth.locator('section').filter({ has: page.getByRole('heading', { name: 'History of tooth 36' }) }).getByRole('listitem');
@@ -99,7 +99,7 @@ test('a caries finding needs a surface, then goes in the body with the surfaces 
 
 test('without an open consultation a finding cannot be added and Start and Mark done wait for one', async ({ page }) => {
   const calls = await open(page, { openEncounterId: null });
-  await page.getByRole('button', { name: '36 C, Caries (DO)' }).click();
+  await page.getByRole('button', { name: '36 C·DO, Caries (DO)' }).click();
   await expect(page.getByRole('region', { name: 'Tooth 36' })).toContainText('Start this patient\'s consultation to add one.');
   const plan = page.getByRole('region', { name: 'Treatment plan' });
   await expect(plan.getByRole('button', { name: 'Mark done' })).toBeDisabled();
@@ -148,7 +148,7 @@ test('a plan changed since acceptance says so and records a new acceptance with 
 
 test('a procedure is added from the catalogue on the picked tooth; an unpriced one cannot be chosen', async ({ page }) => {
   const calls = await open(page);
-  await page.getByRole('button', { name: '36 C, Caries (DO)' }).click();
+  await page.getByRole('button', { name: '36 C·DO, Caries (DO)' }).click();
   const plan = page.getByRole('region', { name: 'Treatment plan' });
   await plan.getByLabel('Procedure').click();
   await expect(page.getByRole('option', { name: 'Unpriced item (synthetic) · not priced' })).toBeDisabled();
@@ -168,7 +168,7 @@ test('the chart and estimate download as a PDF', async ({ page }) => {
 
 test('a nurse reads the chart but gets no forms, and without the dental switch the record has no Dental tab', async ({ page }) => {
   await open(page, { notes: 'Read' });
-  await page.getByRole('button', { name: '36 C, Caries (DO)' }).click();
+  await page.getByRole('button', { name: '36 C·DO, Caries (DO)' }).click();
   await expect(page.getByRole('region', { name: 'Tooth 36' }).getByRole('radio')).toHaveCount(0);
   await expect(page.getByRole('region', { name: 'Treatment plan' }).getByRole('button', { name: 'Mark done' })).toHaveCount(0);
   await page.unrouteAll();

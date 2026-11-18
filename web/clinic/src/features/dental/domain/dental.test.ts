@@ -35,7 +35,7 @@ describe('dental chart and plan (MDV-P8-011, MDV-P8-012)', () => {
   it('marks a recorded tooth with its code and words, surfaces included', () => {
     const f: ToothFinding = { id: '1', tooth: '36', condition: 'Caries', surfaces: 'DO', note: null, encounterId: 'e', recordedBy: 'u', recordedAt: '', author: null };
     const t = (key: string) => (en as Record<string, string>)[key] ?? key;
-    expect(marksFor([f], t as never)['36']).toEqual({ abbr: 'C', label: 'Caries (DO)', tone: 'danger' });
+    expect(marksFor([f], t as never)['36']).toEqual({ abbr: 'C', label: 'Caries (DO)', tone: 'danger', surfaces: 'DO', fill: 'hatch' });
   });
 
   it('has words for every error the dental routes answer, and none for an unknown one', () => {

@@ -29,13 +29,22 @@ export type Surface = (typeof surfaceOrder)[number];
 
 /** The library's tooth chart vocabulary (ToothChart in @medvya/ui), restated here because the domain is pure. */
 export type Dentition = 'permanent' | 'primary' | 'mixed';
-export type ConditionTone = 'danger' | 'warning' | 'success' | 'info' | 'neutral';
-export type ToothMark = { abbr: string; label: string; tone: ConditionTone };
+export type ConditionTone = 'danger' | 'warning' | 'success' | 'info' | 'brand' | 'neutral';
+export type ToothFill = 'hatch' | 'solid' | 'dots' | 'faded';
+export type ToothSymbol = 'line' | 'cross' | 'screw' | 'bar' | 'arrows' | 'zigzag';
+export type ToothMark = { abbr: string; label: string; tone: ConditionTone; surfaces?: string; fill?: ToothFill; symbol?: ToothSymbol };
 
 /** The tone each condition draws in; the code on the tooth carries the meaning, the tone only backs it up. */
 export const conditionTone: Record<ToothCondition, ConditionTone> = {
   Sound: 'success', Caries: 'danger', Fractured: 'danger', Mobile: 'warning', Missing: 'neutral',
-  Filling: 'info', Crown: 'info', RootCanalTreated: 'info', Implant: 'info', Bridge: 'info',
+  Filling: 'info', Crown: 'warning', RootCanalTreated: 'info', Implant: 'brand', Bridge: 'warning',
+};
+
+/** How each condition is drawn on the tooth (Medvya Dental DN-02): caries hatched and fillings solid on their surfaces, a crown dotted, a missing or implant
+ * tooth faded, and the symbol on top. */
+export const conditionDrawing: Record<ToothCondition, { fill?: ToothFill; symbol?: ToothSymbol }> = {
+  Sound: {}, Caries: { fill: 'hatch' }, Filling: { fill: 'solid' }, Crown: { fill: 'dots' }, RootCanalTreated: { symbol: 'line' },
+  Missing: { fill: 'faded', symbol: 'cross' }, Implant: { fill: 'faded', symbol: 'screw' }, Bridge: { symbol: 'bar' }, Mobile: { symbol: 'arrows' }, Fractured: { symbol: 'zigzag' },
 };
 
 export const dentitions: readonly Dentition[] = ['permanent', 'primary', 'mixed'];
@@ -56,6 +65,8 @@ export function marksFor(teeth: readonly ToothFinding[], t: I18n['t']): Record<s
     abbr: t(`dental.condition.abbr.${f.condition}`),
     label: f.surfaces ? `${t(`dental.condition.${f.condition}`)} (${f.surfaces})` : t(`dental.condition.${f.condition}`),
     tone: conditionTone[f.condition],
+    ...(f.surfaces ? { surfaces: f.surfaces } : {}),
+    ...conditionDrawing[f.condition],
   }]));
 }
 

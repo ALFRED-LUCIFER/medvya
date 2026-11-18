@@ -13,4 +13,10 @@ public interface INoteTemplates
 
     /// <summary>Replaces the caller's choice. Null when a key is not a template.</summary>
     Task<IReadOnlyList<string>?> ChooseAsync(ChooseNoteTemplates command, CancellationToken cancellationToken = default);
+
+    /// <summary>The clinic's default templates (MDV-P8-015): what a doctor who has not chosen works with.</summary>
+    Task<IReadOnlyList<string>> ClinicDefaultAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Replaces the clinic's default (the owner, in Settings). Null when a key is not a template.</summary>
+    Task<IReadOnlyList<string>?> SetClinicDefaultAsync(ChooseNoteTemplates command, CancellationToken cancellationToken = default);
 }

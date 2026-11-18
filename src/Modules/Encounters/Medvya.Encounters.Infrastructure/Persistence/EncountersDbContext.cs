@@ -24,6 +24,7 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
     public DbSet<MedicationDecision> MedicationDecisions => Set<MedicationDecision>();
     public DbSet<MedicationReconciliation> MedicationReconciliations => Set<MedicationReconciliation>();
     public DbSet<DoctorNoteTemplate> DoctorNoteTemplates => Set<DoctorNoteTemplate>();
+    public DbSet<ClinicNoteTemplate> ClinicNoteTemplates => Set<ClinicNoteTemplate>();
     public DbSet<ConsultNote> ConsultNotes => Set<ConsultNote>();
     public DbSet<SignedNoteVersion> SignedNoteVersions => Set<SignedNoteVersion>();
     public DbSet<SignedNotePdf> SignedNotePdfs => Set<SignedNotePdf>();
@@ -238,6 +239,11 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
         modelBuilder.Entity<DoctorNoteTemplate>(e =>
         {
             e.HasIndex(x => new { x.TenantId, x.UserId }).IsUnique();
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<ClinicNoteTemplate>(e =>
+        {
+            e.HasKey(x => x.TenantId);
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<ConsultNote>(e =>

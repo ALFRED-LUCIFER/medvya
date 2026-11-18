@@ -209,3 +209,21 @@ test('Settings › Dental: the owner switch, then the dental list loads once and
   await expect(list.getByRole('status')).toContainText('76 services added; 0 were already in your list.');
   expect(loads).toBe(1);
 });
+
+test('Settings › Dental: the owner makes the dental template the clinic default for new notes (MDV-P8-015)', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('medvya.locale', 'en'));
+  await page.route('**/v1/me/context', r => r.fulfill({ json: session(['clinical.dental']) }));
+  await page.route('**/v1/settings/dental', r => r.fulfill({ json: { enabled: true } }));
+  const saved: unknown[] = [];
+  await page.route('**/v1/settings/note-templates/', r => {
+    if (r.request().method() === 'PUT') { saved.push(r.request().postDataJSON()); return r.fulfill({ json: ['dental'] }); }
+    return r.fulfill({ json: ['general-opd'] });
+  });
+  await page.goto('/settings?tab=dental');
+  const card = page.getByRole('region', { name: 'Dental note template' });
+  const toggle = card.getByRole('switch', { name: 'Start new notes on the dental template' });
+  await expect(toggle).toHaveAttribute('aria-checked', 'false');
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-checked', 'true');
+  expect(saved).toEqual([{ keys: ['dental'] }]);
+});

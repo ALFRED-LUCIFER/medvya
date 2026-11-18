@@ -37,15 +37,23 @@ public sealed class ConsultNoteService(
         return Empty(encounterId, suggested) with { SignAsName = await SignAsAsync(encounter.FacilityId, cancellationToken) };
     }
 
-    /// <summary>MDV-P2-042: the template a new note starts on, from the patient's age on the facility's date and their active problems.</summary>
+    /// <summary>
+    /// MDV-P2-042: the template a new note starts on, from the patient's age on the facility's date and their active problems, when the doctor works with
+    /// that template. MDV-P8-015: otherwise the first template the doctor works with (their own choice or the clinic default), so a dental clinic's notes
+    /// start on the dental template, a child's included; null means General OPD.
+    /// </summary>
     async Task<string?> SuggestAsync(Encounter encounter, CancellationToken cancellationToken)
     {
+        var working = await NoteTemplateService.WorkingListAsync(db, user.UserId ?? throw new InvalidOperationException("No user."), cancellationToken);
+        var first = working.FirstOrDefault(k => k != NoteTemplates.Default);
         var patient = (await patients.SummariesAsync([encounter.PatientId], cancellationToken)).GetValueOrDefault(encounter.PatientId);
         var facility = await facilities.FindAsync(encounter.FacilityId, cancellationToken);
-        if (patient is null || facility is null) return null;
+        if (patient is null || facility is null) return working.Contains(NoteTemplates.Default) ? null : first;
         var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(clock.GetUtcNow(), TimeZoneInfo.FindSystemTimeZoneById(facility.TimeZone)).DateTime);
         var codes = await db.Problems.AsNoTracking().Where(p => p.PatientId == encounter.PatientId && p.Status == ProblemStatus.Active).Select(p => p.Icd10Code).ToListAsync(cancellationToken);
-        return NoteTemplates.Suggest(patient.DateOfBirth, today, codes);
+        var byLifeStage = NoteTemplates.Suggest(patient.DateOfBirth, today, codes);
+        if (byLifeStage is not null && (working.Contains(byLifeStage) || working.Contains(NoteTemplates.Default))) return byLifeStage;
+        return working.Contains(NoteTemplates.Default) ? null : first;
     }
 
     public async Task<NotePrefill?> PrefillAsync(Guid encounterId, CancellationToken cancellationToken = default)

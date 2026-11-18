@@ -74,6 +74,10 @@ public static class NoteTemplates
             ["weightLoss", "dizzyOnStanding", "breathless", "indigestion", "nightUrination", "kneePain", "weakness", "lowMood"],
             ["general", "heart", "lungs", "joints", "nervousSystem", "feet"], S("standingBloodPressure"), S("walkingTest"), S("frailty"), S("homeSafety")),
             ["homeSafetyAdvice", "medicineReviewDone", "advanceCarePlanDiscussed"]),
+        // MDV-P8-015, DN-01: the dental consultation. Sections follow DentalERP's treatment editor (chief complaint, findings, diagnosis, procedure
+        // notes) and the design; the tooth chart itself is recorded on the chart, the note says what it shows. A dentist approves it (intake record).
+        new("dental", 1, [S("chiefComplaint", true), S("subjective"), S("extraOral"), S("intraOral"), S("toothFindings"), S("assessment", true), S("plan", true), S("advice")],
+            ["localAnaesthesiaGiven", "postOpInstructionsGiven", "reviewIfPainOrSwelling"]),
     ];
 
     public static IReadOnlyList<string> Keys => [.. History.Select(t => t.Key).Distinct()];
@@ -102,11 +106,21 @@ public static class NoteTemplates
     }
 }
 
-/// <summary>The templates a doctor chose to work with (MDV-P2-025), one row per doctor. No row means General OPD only.</summary>
+/// <summary>The templates a doctor chose to work with (MDV-P2-025), one row per doctor. No row means the clinic default (<see cref="ClinicNoteTemplate"/>), else General OPD only.</summary>
 public sealed class DoctorNoteTemplate
 {
     [Classification(DataClass.Internal)] public Guid Id { get; init; }
     [Classification(DataClass.Internal)] public Guid TenantId { get; init; }
     [Classification(DataClass.Internal)] public Guid UserId { get; init; }
+    [Classification(DataClass.Internal)] public string[] TemplateKeys { get; set; } = [];
+}
+
+/// <summary>
+/// The clinic's default templates (MDV-P8-015), one row per organisation, set by the owner in Settings: what a doctor who has not chosen their own
+/// works with (a dental clinic picks the dental template). No row means General OPD.
+/// </summary>
+public sealed class ClinicNoteTemplate
+{
+    [Classification(DataClass.Internal)] public Guid TenantId { get; init; }
     [Classification(DataClass.Internal)] public string[] TemplateKeys { get; set; } = [];
 }

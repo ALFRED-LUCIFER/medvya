@@ -526,6 +526,7 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.Receptionist, new("POST", "/v1/chart/allergy-flags", """{"patientIds":["{patient}"]}""")), // Patient 360: X
         (Role.Receptionist, new("PUT", "/v1/note-templates/mine", """{"keys":["general-opd"]}""")), // Patient 360: X
         (Role.Nurse, new("GET", "/v1/note-templates/")),
+        (Role.HospitalDoctor, new("PUT", "/v1/settings/note-templates/", """{"keys":["dental"]}""")), // the clinic default is practice management (MDV-P8-015)
         (Role.PracticeAdmin, new("POST", "/v1/chart/allergy-flags", """{"patientIds":["{patient}"]}""")),
         (Role.Nurse, new("POST", "/v1/encounters/{encounter}/referrals", """{"provider":"Dr. Synthetic","urgency":"Routine","reason":"Synthetic","sections":[]}""")), // Prescriptions & orders: X
         (Role.Receptionist, new("GET", "/v1/patients/{patient}/referrals")), // Patient 360: X

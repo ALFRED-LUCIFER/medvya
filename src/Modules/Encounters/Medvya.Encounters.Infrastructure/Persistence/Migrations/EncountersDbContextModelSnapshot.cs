@@ -207,6 +207,21 @@ namespace Medvya.Encounters.Infrastructure.Persistence.Migrations
                     b.ToTable("CareTargets", "encounters");
                 });
 
+            modelBuilder.Entity("Medvya.Encounters.Domain.ClinicNoteTemplate", b =>
+                {
+                    b.Property<Guid>("TenantId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.PrimitiveCollection<string[]>("TemplateKeys")
+                        .IsRequired()
+                        .HasColumnType("text[]");
+
+                    b.HasKey("TenantId");
+
+                    b.ToTable("ClinicNoteTemplates", "encounters");
+                });
+
             modelBuilder.Entity("Medvya.Encounters.Domain.ClinicalDocument", b =>
                 {
                     b.Property<Guid>("Id")

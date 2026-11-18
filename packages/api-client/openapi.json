@@ -7963,6 +7963,44 @@
         }
       }
     },
+    "/v1/settings/note-templates": {
+      "get": {
+        "tags": [
+          "Host.Api"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Host.Api"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ChooseNoteTemplates"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/v1/settings/services": {
       "get": {
         "tags": [
@@ -12444,6 +12482,10 @@
           },
           "name": {
             "type": "string"
+          },
+          "dental": {
+            "type": "boolean",
+            "default": false
           }
         }
       },

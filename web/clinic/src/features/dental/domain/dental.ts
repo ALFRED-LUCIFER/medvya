@@ -119,4 +119,10 @@ export type DentalView = {
 };
 
 /** The dental services starter list load (MDV-P8-010) on Settings › Dental. */
+/** Settings › Dental, the clinic's note template (MDV-P8-015): on means new notes start on the dental template. */
+export type DentalTemplateView = { loading: boolean; loadFailed: boolean; on: boolean; saving: boolean; saveFailed: boolean; onChange: (on: boolean) => void };
+
+/** The clinic default the switch saves: the dental template only, or General OPD. */
+export const dentalTemplateDefault = (on: boolean): string[] => (on ? ['dental'] : ['general-opd']);
+
 export type StarterView = { loading: boolean; result: { added: number; skipped: number } | null; unsupported: boolean; failed: boolean; onLoad: () => void };

@@ -36,6 +36,9 @@ async function download(page: Page, name: string | RegExp) {
   return { name: d.suggestedFilename(), sha: createHash('sha256').update(bytes).digest('hex') };
 }
 
+// The stack's database is shared with the other journeys, which expect a visit to go straight from the consult to Done: billing goes off again.
+test.afterAll(async ({ browser }) => setBilling(browser, false));
+
 test('billing: switch on, open the drawer, bill a walk-in, split payment, print bill and receipt, close the day with a second person', async ({ page, browser }) => {
   test.setTimeout(300_000);
   const watch = watchUrls(page);

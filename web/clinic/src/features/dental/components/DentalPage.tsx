@@ -1,13 +1,13 @@
 import { Link } from 'react-router';
-import { ltr, useI18n } from '@medvya/i18n';
+import { ltr, useI18n, type MessageKey } from '@medvya/i18n';
 import {
-  Button, buttonVariants, Card, PageContainer, PageHeader, PageMessage, Chip, ChoiceRow, Field, FilterChip, Input, Section, SegmentedControl, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea, ToothChart,
+  Button, buttonVariants, Card, PageContainer, PageHeader, PageMessage, Chip, ChoiceRow, Field, FilterChip, Input, Section, SegmentedControl, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SignaturePad, Textarea, ToothChart,
 } from '@medvya/ui';
 import { CircleAlert, CircleCheck, Clock, Ban, CircleDot, FileDown, Lock } from 'lucide-react';
 import { fieldError } from '../../settings/components/fieldStyles';
 import { ChartBanner } from '../../patient360/components/Patient360Page';
 import type { Patient360 } from '../../patient360/domain/chart';
-import { byPhase, conditions, conditionTone, dentitions, marksFor, money, nextSteps, surfaceConditions, surfaceOrder, type DentalView, type PlanItem, type PlanStatus } from '../domain/dental';
+import { byPhase, conditions, conditionTone, dentitions, historyQuestions, marksFor, money, needsConsent, nextStage, nextSteps, surfaceConditions, surfaceOrder, type ConsentKey, type DentalView, type PlanItem, type PlanStatus } from '../domain/dental';
 
 const statusLook: Record<PlanStatus, { tone: 'info' | 'warning' | 'success' | 'neutral'; icon: typeof Clock }> = {
   Planned: { tone: 'info', icon: CircleDot }, InProgress: { tone: 'warning', icon: Clock }, Done: { tone: 'success', icon: CircleCheck }, Declined: { tone: 'neutral', icon: Ban },
@@ -19,7 +19,7 @@ const statusLook: Record<PlanStatus, { tone: 'info' | 'warning' | 'success' | 'n
  * the printed chart and estimate. A finding is never edited (a correction is a newer finding). Changing anything needs a doctor who signs notes; the
  * server decides again on every call. The rules are a draft until a dentist signs them, and the screen says so.
  */
-export default function DentalPage(p: DentalView & { consultPath: string | null; patient: Patient360 | null }) {
+export default function DentalPage(p: DentalView & { consultPath: string | null; patient: Patient360 | null; bookStage?: (minutes: number) => string | null }) {
   const { t, formatDate, formatTime, formatMoney } = useI18n();
   const header = <PageHeader title={t('dental.title')} />;
   if (p.loading) return <PageContainer>{header}<PageMessage kind="busy">{t('dental.loading')}</PageMessage></PageContainer>;
@@ -47,11 +47,56 @@ export default function DentalPage(p: DentalView & { consultPath: string | null;
         <p className="text-caption text-muted-foreground">{t(c.rulesSignedOff ? 'dental.rulesSigned' : 'dental.rulesDraft')}</p>
       </Card>
 
+      <MedicalHistoryCard {...p} when={when} />
+
       <div className="grid gap-4 wide:grid-cols-2">
         <ToothPanel {...p} when={when} />
         <PlanCard {...p} amount={amount} when={when} />
       </div>
     </PageContainer>
+  );
+}
+
+/**
+ * The medical history check before treatment (MDV-P8-014): when it was last confirmed and by whom, each answer that raises a risk in words, and, in the
+ * doctor's open consultation, the six questions to ask the patient again. Treatment on the plan starts only once it is confirmed on this visit.
+ */
+function MedicalHistoryCard(p: DentalView & { when: (at: string) => string }) {
+  const { t } = useI18n();
+  const check = p.chart!.historyCheck;
+  return (
+    <Card title={t('dental.medical.title')}>
+      <p>{check ? t('dental.medical.lastConfirmed', { who: check.author ?? '', when: p.when(check.confirmedAt) }) : t('dental.medical.never')}</p>
+      {check && (check.yes.length > 0 ? (
+        <div className="flex flex-col gap-1 rounded-md border border-warning-border bg-warning-bg p-3 text-warning-text">
+          <p className="flex items-center gap-2 font-bold"><CircleAlert aria-hidden className="size-4 shrink-0" />{t('dental.medical.risks')}</p>
+          <ul className="list-disc ps-6">{check.yes.map(q => <li key={q}>{t(`dental.medical.question.${q}`)}</li>)}</ul>
+        </div>
+      ) : <p className="flex items-center gap-2"><CircleCheck aria-hidden className="size-4 shrink-0" />{t('dental.medical.noRisks')}</p>)}
+      {check?.note && <p>{t('dental.medical.noteShown', { note: check.note })}</p>}
+      {p.canChange && p.encounterId && (p.historyOnVisit
+        ? <p role="status" className="flex items-center gap-2 font-bold"><CircleCheck aria-hidden className="size-4 shrink-0" />{t('dental.medical.thisVisit')}</p>
+        : <form className="flex flex-col gap-3" onSubmit={e => { e.preventDefault(); p.onConfirmHistory(); }}>
+            <p className="font-bold">{t('dental.medical.ask')}</p>
+            <div className="grid gap-x-6 gap-y-2 wide:grid-cols-2">
+              {historyQuestions.map(q => (
+                <fieldset key={q} className="flex flex-col gap-1">
+                  <legend className="text-label font-bold">{t(`dental.medical.question.${q}`)}</legend>
+                  <div className="flex gap-4">
+                    <ChoiceRow type="radio" name={`history-${q}`} checked={p.answers[q] === true} onChange={() => p.onAnswer(q, true)}>{t('dental.medical.yes')}</ChoiceRow>
+                    <ChoiceRow type="radio" name={`history-${q}`} checked={p.answers[q] === false} onChange={() => p.onAnswer(q, false)}>{t('dental.medical.no')}</ChoiceRow>
+                  </div>
+                </fieldset>
+              ))}
+            </div>
+            <Field id="dental-history-note" label={t('dental.medical.note')}>
+              <Textarea value={p.historyNote} maxLength={500} onChange={e => p.onHistoryNote(e.target.value)} />
+            </Field>
+            {p.historyIncomplete && <p role="alert" className={fieldError}>{t('dental.medical.answerAll')}</p>}
+            {p.historyFailed && <p role="alert" className={fieldError}>{t('dental.medical.failed')}</p>}
+            <div><Button type="submit" loading={p.historySaving}>{t('dental.medical.confirm')}</Button></div>
+          </form>)}
+    </Card>
   );
 }
 
@@ -135,7 +180,7 @@ function FindingForm(p: DentalView & { consultPath: string | null }) {
   );
 }
 
-function PlanCard(p: DentalView & { consultPath: string | null; amount: (minor: number, currency: string | null) => string; when: (at: string) => string }) {
+function PlanCard(p: DentalView & { consultPath: string | null; amount: (minor: number, currency: string | null) => string; when: (at: string) => string; bookStage?: (minutes: number) => string | null }) {
   const { t } = useI18n();
   const plan = p.chart!.plan;
   return (
@@ -152,6 +197,9 @@ function PlanCard(p: DentalView & { consultPath: string | null; amount: (minor: 
       {p.moveFailed && <p role="alert" className={fieldError}>{t('dental.plan.failed')}</p>}
       {p.canChange && !p.encounterId && plan.items.some(i => i.status === 'Planned' || i.status === 'InProgress') && (
         <p className="flex items-center gap-2 text-muted-foreground"><CircleAlert aria-hidden className="size-4 shrink-0" />{t('dental.plan.needsConsult')}</p>
+      )}
+      {p.canChange && p.encounterId && !p.historyOnVisit && plan.items.some(i => i.status === 'Planned') && (
+        <p className="flex items-center gap-2 text-muted-foreground"><CircleAlert aria-hidden className="size-4 shrink-0" />{t('dental.plan.needsHistory')}</p>
       )}
       {p.canChange && <AddItem {...p} />}
       <Section title={t('dental.estimate.title')}>
@@ -172,7 +220,7 @@ function PlanCard(p: DentalView & { consultPath: string | null; amount: (minor: 
   );
 }
 
-function PlanRow({ item, ...p }: DentalView & { item: PlanItem; amount: (minor: number, currency: string | null) => string }) {
+function PlanRow({ item, ...p }: DentalView & { item: PlanItem; amount: (minor: number, currency: string | null) => string; bookStage?: (minutes: number) => string | null }) {
   const { t } = useI18n();
   const look = statusLook[item.status];
   const steps = p.canChange ? nextSteps(item.status) : [];
@@ -186,6 +234,8 @@ function PlanRow({ item, ...p }: DentalView & { item: PlanItem; amount: (minor: 
       </div>
       {item.reason && <p className="text-caption">{t('dental.plan.reason', { reason: item.reason })}</p>}
       {item.status === 'Done' && <p className="text-caption text-muted-foreground">{t('dental.plan.billed')}</p>}
+      {item.stages && <StagesLine item={item} {...p} />}
+      {item.consentKey && item.status !== 'Done' && item.status !== 'Declined' && <ConsentLine item={item} {...p} />}
       {p.declining === item.id ? (
         <form className="flex flex-col gap-2" onSubmit={e => { e.preventDefault(); p.onStep(item, 'decline'); }}>
           <Field id={`decline-${item.id}`} label={t('dental.plan.declineReason')}>
@@ -200,11 +250,105 @@ function PlanRow({ item, ...p }: DentalView & { item: PlanItem; amount: (minor: 
         <div className="flex flex-wrap gap-2">
           {steps.map(step => step === 'decline'
             ? <Button key={step} variant="ghost" onClick={() => p.onDecline(item.id)}>{t('dental.plan.decline')}</Button>
-            : <Button key={step} variant="outline" loading={p.moving === item.id} disabled={(step === 'start' || step === 'done') && !p.encounterId}
+            : <Button key={step} variant="outline" loading={p.moving === item.id} disabled={((step === 'start' || step === 'done') && (!p.encounterId || needsConsent(item))) || (step === 'start' && !p.historyOnVisit) || (step === 'done' && nextStage(item) !== null)}
                 onClick={() => p.onStep(item, step)}>{t(`dental.plan.${step}`)}</Button>)}
         </div>
       )}
     </li>
+  );
+}
+
+/**
+ * MDV-P8-013: a multi-visit procedure's stages: how many are done, the current one and the next with its visit length; the dentist marks the next stage
+ * done on this visit (once its note is signed) and books the next stage with the schedule filled in.
+ */
+function StagesLine({ item, ...p }: DentalView & { item: PlanItem; bookStage?: (minutes: number) => string | null }) {
+  const { t } = useI18n();
+  const stages = item.stages!;
+  const next = nextStage(item);
+  const done = stages.filter(s => s.doneAt).length;
+  const book = next && p.bookStage?.(next.stage.minutes);
+  return (
+    <div className="flex flex-col gap-2">
+      <ol className="flex flex-wrap gap-2" aria-label={t('dental.stage.list', { done: String(done), total: String(stages.length) })}>
+        {stages.map((s, i) => (
+          <li key={s.name} className="flex items-center gap-1 text-caption">
+            {s.doneAt ? <CircleCheck aria-hidden className="size-4 shrink-0" /> : i === next?.index ? <CircleDot aria-hidden className="size-4 shrink-0" /> : <Clock aria-hidden className="size-4 shrink-0 text-muted-foreground" />}
+            <span className={s.doneAt ? '' : i === next?.index ? 'font-bold' : 'text-muted-foreground'}>
+              {t(s.doneAt ? 'dental.stage.done' : i === next?.index ? 'dental.stage.next' : 'dental.stage.later', { stage: t(`dental.stage.${s.name}` as MessageKey), minutes: String(s.minutes) })}
+            </span>
+          </li>
+        ))}
+      </ol>
+      {next && item.status === 'InProgress' && (
+        <div className="flex flex-wrap gap-2">
+          {p.canChange && p.encounterId && <Button variant="outline" loading={p.staging === item.id} onClick={() => p.onStage(item, next.index)}>
+            {t('dental.stage.mark', { stage: t(`dental.stage.${next.stage.name}` as MessageKey) })}</Button>}
+          {book && <Link to={book} className={buttonVariants({ variant: 'ghost' })}>{t('dental.stage.book', { minutes: String(next.stage.minutes) })}</Link>}
+        </div>
+      )}
+      {p.stageError && p.staging === null && <p role="alert" className={fieldError}>{t(p.stageError)}</p>}
+      {p.stageFailed && <p role="alert" className={fieldError}>{t('dental.stage.failed')}</p>}
+    </div>
+  );
+}
+
+/**
+ * MDV-P8-019: the procedure consent of one plan item. Before it is signed: what is needed and, in the open consultation, the form to read and sign on the
+ * tablet (in the app's language; the patient switches it to read in theirs). Signed: who and when, the stored form, and a withdrawal with its reason.
+ */
+function ConsentLine({ item, ...p }: DentalView & { item: PlanItem }) {
+  const { t, formatDate } = useI18n();
+  const key = item.consentKey as ConsentKey;
+  const c = item.consent;
+  const when = (at: string) => formatDate(new Date(at), p.chart!.timeZone);
+  if (p.consenting === item.id) return (
+    <form className="flex flex-col gap-3 rounded-md border border-border p-3" onSubmit={e => { e.preventDefault(); p.onSignConsent(); }}>
+      <h4 className="text-label font-bold">{t(`dentalConsent.${key}.title`)}</h4>
+      <p className="text-caption text-muted-foreground">{t('dental.consent.language')}</p>
+      {t(`dentalConsent.${key}.body`).split('\n\n').map((para, i) => <p key={i}>{para}</p>)}
+      <p className="font-bold">{t('dentalConsent.declaration')}</p>
+      <p className="text-caption text-muted-foreground">{t('dentalConsent.draft')}</p>
+      <Field id={`consent-signer-${item.id}`} label={t('dental.consent.signer')}>
+        <Input value={p.consentSigner} maxLength={200} autoComplete="off" onChange={e => p.onConsentSigner(e.target.value)} />
+      </Field>
+      <SignaturePad label={t('dental.consent.signature')} hint={t('dental.consent.signatureHint')} clearLabel={t('dental.consent.clear')} onChange={p.onSignature} />
+      {p.consentError && <p role="alert" className={fieldError}>{t(p.consentError)}</p>}
+      {p.consentFailed && <p role="alert" className={fieldError}>{t('dental.consent.failed')}</p>}
+      <div className="flex flex-wrap gap-2">
+        <Button type="submit" loading={p.consentSaving} disabled={!p.hasSignature || !p.consentSigner.trim()}>{t('dental.consent.confirm')}</Button>
+        <Button type="button" variant="ghost" onClick={() => p.onConsenting(null)}>{t('dental.plan.cancel')}</Button>
+      </div>
+    </form>
+  );
+  return (
+    <div className="flex flex-col gap-2">
+      {c?.current
+        ? <p className="flex items-center gap-2 text-caption"><CircleCheck aria-hidden className="size-4 shrink-0" />
+            {t('dental.consent.signed', { name: c.signedBy, when: when(c.signedAt), version: String(c.templateVersion) })}</p>
+        : <p className="flex items-center gap-2 text-caption font-bold"><CircleAlert aria-hidden className="size-4 shrink-0 text-warning-700" />
+            {c?.withdrawnAt ? t('dental.consent.withdrawnLine', { when: when(c.withdrawnAt), reason: c.withdrawalReason ?? '' })
+              : c ? t('dental.consent.outdated') : t('dental.consent.needed', { form: t(`dentalConsent.${key}.title`) })}</p>}
+      {p.withdrawing === c?.id && c ? (
+        <form className="flex flex-col gap-2" onSubmit={e => { e.preventDefault(); p.onWithdraw(); }}>
+          <Field id={`withdraw-${c.id}`} label={t('dental.consent.withdrawReason')}>
+            <Input value={p.withdrawReason} maxLength={200} onChange={e => p.onWithdrawReason(e.target.value)} />
+          </Field>
+          {p.withdrawFailed && <p role="alert" className={fieldError}>{t('dental.consent.failed')}</p>}
+          <div className="flex flex-wrap gap-2">
+            <Button type="submit" variant="outline" loading={p.withdrawSaving} disabled={!p.withdrawReason.trim()}>{t('dental.consent.withdrawConfirm')}</Button>
+            <Button type="button" variant="ghost" onClick={() => p.onWithdrawing(null)}>{t('dental.plan.cancel')}</Button>
+          </div>
+        </form>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {p.canChange && p.encounterId && !c?.current && <Button variant="outline" onClick={() => p.onConsenting(item.id)}>{t('dental.consent.sign')}</Button>}
+          {c && <Button variant="ghost" onClick={() => p.onConsentPdf(c.id)}><FileDown aria-hidden />{t('dental.consent.download')}</Button>}
+          {p.canChange && c?.current && <Button variant="ghost" onClick={() => p.onWithdrawing(c.id)}>{t('dental.consent.withdraw')}</Button>}
+        </div>
+      )}
+      {p.consentPdfFailed && <p role="alert" className={fieldError}>{t('dental.consent.pdfFailed')}</p>}
+    </div>
   );
 }
 

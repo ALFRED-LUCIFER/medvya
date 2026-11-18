@@ -46,6 +46,11 @@ public sealed class Appointment
     [Classification(DataClass.Internal)] public Guid PatientId { get; init; }
     /// <summary>Set while a patient merge (MDV-P1-017) holds this visit on the surviving record: the record it came from, so an undo moves it back.</summary>
     [Classification(DataClass.Internal)] public Guid? MergedFromPatientId { get; init; }
+    /// <summary>
+    /// A resource the visit also holds besides its doctor, such as a dental chair (MDV-P8-009): its time is taken in the resource's calendar too (its own
+    /// SCHEDULE_SLOT rows), so neither the doctor nor the chair can be double-booked.
+    /// </summary>
+    [Classification(DataClass.Internal)] public Guid? ResourceId { get; init; }
     [Classification(DataClass.Internal)] public VisitType VisitType { get; set; }
     [Classification(DataClass.Internal)] public DateTimeOffset Start { get; set; }
     [Classification(DataClass.Internal)] public DateTimeOffset End { get; set; }
@@ -185,6 +190,8 @@ public sealed class SlotHold
     [Classification(DataClass.Internal)] public DateTimeOffset End { get; init; }
     [Classification(DataClass.Internal)] public Guid HeldBy { get; init; }
     [Classification(DataClass.Internal)] public DateTimeOffset ExpiresAt { get; init; }
+    /// <summary>The chair (a resource) held with the doctor (MDV-P8-009); null when the visit needs none.</summary>
+    [Classification(DataClass.Internal)] public Guid? ResourceId { get; init; }
 }
 
 /// <summary>
@@ -203,11 +210,15 @@ public sealed class ScheduleSlot
     [Classification(DataClass.Internal)] public DateTimeOffset SlotStart { get; init; }
     [Classification(DataClass.Internal)] public Guid AppointmentId { get; init; }
 
-    /// <summary>The 5-minute units of [start, end); start and end lie on 5-minute boundaries (template rule).</summary>
+    /// <summary>
+    /// The 5-minute units of [start, end) in the visit's calendar and, when it holds one, its resource's calendar (MDV-P8-009): the same unique index then
+    /// refuses a second visit in the chair. Start and end lie on 5-minute boundaries (template rule).
+    /// </summary>
     public static IEnumerable<ScheduleSlot> For(Appointment a)
     {
-        for (var t = a.Start; t < a.End; t = t.AddMinutes(UnitMinutes))
-            yield return new ScheduleSlot { Id = Guid.CreateVersion7(), TenantId = a.TenantId, FacilityId = a.FacilityId, CalendarId = a.CalendarId, SlotStart = t, AppointmentId = a.Id };
+        foreach (var calendar in a.ResourceId is { } resource ? [a.CalendarId, resource] : new[] { a.CalendarId })
+            for (var t = a.Start; t < a.End; t = t.AddMinutes(UnitMinutes))
+                yield return new ScheduleSlot { Id = Guid.CreateVersion7(), TenantId = a.TenantId, FacilityId = a.FacilityId, CalendarId = calendar, SlotStart = t, AppointmentId = a.Id };
     }
 }
 

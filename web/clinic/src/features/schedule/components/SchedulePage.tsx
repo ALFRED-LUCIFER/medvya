@@ -5,7 +5,7 @@ import { CalendarOff, ChevronLeft, ChevronRight, Info, Ellipsis, Plus, Printer }
 import { useI18n } from '@medvya/i18n';
 import { Button, buttonVariants, cn, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, EmptyState, FocusScope, PageContainer, PageHeader, PageMessage, SegmentedControl, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Skeleton, SkeletonGroup } from '@medvya/ui';
 import type { DayLayout, ScheduleColumn } from '../domain/schedule';
-import { scheduleViews, type AgendaEntry, type ScheduleView, type WeekDay } from '../domain/views';
+import { kindFilters, scheduleViews, type AgendaEntry, type ScheduleView, type WeekDay } from '../domain/views';
 import AgendaView from './AgendaView';
 import type { DaySheet } from '../domain/daySheet';
 import DayGrid, { type Earlier, type GridActions } from './DayGrid';
@@ -25,6 +25,8 @@ type Props = {
   /** This device is in another zone than the facility: the page then says times are the facility's. */
   otherZone: boolean;
   calendars: { id: string; name: string }[];
+  /** MDV-P8-009: offer the day by dentist or by chair (the location has both). */
+  byKind?: boolean;
   /** The doctor or resource shown; null shows every column (day and list only). */
   filter: string | null;
   day: DayLayout | null;
@@ -103,6 +105,8 @@ export default function SchedulePage(props: Props) {
             <SelectTrigger aria-label={t('schedule.filter')} className="w-56"><SelectValue /></SelectTrigger>
             <SelectContent>
               {!isWeek && <SelectItem value={all}>{t('schedule.filter.all')}</SelectItem>}
+              {!isWeek && props.byKind && <SelectItem value={kindFilters.doctors}>{t('schedule.filter.doctors')}</SelectItem>}
+              {!isWeek && props.byKind && <SelectItem value={kindFilters.resources}>{t('schedule.filter.resources')}</SelectItem>}
               {props.calendars.map(c => <SelectItem key={c.id} value={c.id}>{c.name || t('schedule.doctor')}</SelectItem>)}
             </SelectContent>
           </Select>

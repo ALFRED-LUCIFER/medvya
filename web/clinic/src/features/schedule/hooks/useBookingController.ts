@@ -4,12 +4,12 @@ import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
-import { bookingSchema, emptyBooking, readSlotReturn, slotError, withoutSlotReturn, type BookedAppointment, type BookingForm, type SlotChoice } from '../domain/booking';
+import { bookingSchema, carriedStageOf, emptyBooking, lengthFor, readSlotReturn, slotError, withoutSlotReturn, type BookedAppointment, type BookingForm, type SlotChoice } from '../domain/booking';
 import type { ScheduleColumn, VisitType } from '../domain/schedule';
 import { includedStarts, maxRepeat, moveRow, planOf, replanOf, summarise, toggleRow, type PlanRow, type SeriesDone } from '../domain/series';
 import { forgetKey, type HeldKey, keyFor } from '../../api/services/idempotencyKey';
 import { ApiError } from '../../api/services/apiClient';
-import { bookAppointment, bookSeries, findPatient, holdSlot, previewSeries, releaseHold } from '../services/scheduleApi';
+import { bookAppointment, bookSeries, fetchProcedures, findPatient, holdSlot, previewSeries, releaseHold } from '../services/scheduleApi';
 import { usePatientSearch } from '../../patients/hooks/usePatientSearch';
 
 const errorOf = (e: unknown) => slotError(e instanceof ApiError ? e.code : undefined);
@@ -20,13 +20,15 @@ const errorOf = (e: unknown) => slotError(e instanceof ApiError ? e.code : undef
  * collects reason and channel, and confirming books from the hold. Closing releases the hold. Back from registering a new patient,
  * the address names the slot and the patient: the slot is held again with the patient chosen.
  */
-export function useBookingController(facilityId: string, timeZone: string | null = null, columns: Pick<ScheduleColumn, 'calendarId' | 'name'>[] | undefined = undefined) {
+export function useBookingController(facilityId: string, timeZone: string | null = null, columns: Pick<ScheduleColumn, 'calendarId' | 'name' | 'calendarKind'>[] | undefined = undefined) {
   const queryClient = useQueryClient();
   const [params, setParams] = useSearchParams();
   // Back from registering a new patient: the slot to hold again and the patient to choose (read once, at mount).
   const [resumed] = useState(() => { const back = readSlotReturn(params); return back && { choice: { ...back, calendarName: '' }, patientId: back.patientId }; });
   // From the global search's "Book" (MDV-P2-003): the address names a patient but no slot, and the next slot chosen is booked for them.
   const [carried, setCarried] = useState(() => { const id = params.get('patient') ?? ''; return !readSlotReturn(params) && z.uuid().safeParse(id).success ? id : ''; });
+  // MDV-P8-013: booking a procedure's next stage carries its length and the chair, filled in on the slot chosen.
+  const [carriedStage] = useState(() => carriedStageOf(params));
   const [choice, setChoice] = useState<SlotChoice | null>(resumed?.choice ?? null);
   const [booked, setBooked] = useState<BookedAppointment | null>(null);
   // A no-show's rebook (MDV-P1-024): the next slot chosen is booked for this patient, already filled in.
@@ -103,6 +105,10 @@ export function useBookingController(facilityId: string, timeZone: string | null
     holdFor(next, { onError: () => { typePicked.current = true; setChoice(choice); holdFor(choice); } });
   }, [choice, patient.data, holdFor]);
 
+  // MDV-P8-009: the procedures with a usual length (a catalogue read, no patient data), fetched once a slot is chosen.
+  const procedures = useQuery({ queryKey: ['schedule-procedures', facilityId], queryFn: () => fetchProcedures(facilityId), enabled: !!choice, staleTime: 5 * 60_000, retry: false });
+  const onDoctor = !!choice && columns?.find(c => c.calendarId === choice.calendarId)?.calendarKind !== 'Resource';
+
   const search = usePatientSearch(id => form.setValue('patientId', id, { shouldValidate: true }));
   const clearSearch = search.clear;
 
@@ -161,8 +167,26 @@ export function useBookingController(facilityId: string, timeZone: string | null
     onBackToForm: () => { setPlan(null); bookMany.reset(); },
     onDismissSeries: () => setSeriesDone(null),
     booked,
-    onSlot: (calendarId: string, calendarName: string, start: string) => { typePicked.current = false; choose({ calendarId, calendarName, start, visitType: 'FollowUp' }); },
+    onSlot: (calendarId: string, calendarName: string, start: string) => {
+      typePicked.current = !!carriedStage;
+      choose(carriedStage ? { calendarId, calendarName, start, visitType: 'Procedure', minutes: carriedStage.minutes, resourceId: carriedStage.chair } : { calendarId, calendarName, start, visitType: 'FollowUp' });
+    },
     onVisitType: (visitType: VisitType) => { typePicked.current = true; if (choice) choose({ ...choice, visitType }); },
+    // MDV-P8-009: a procedure sets the length; reception can lengthen it; a chair is held with the dentist. Each change holds again (one hold per user).
+    procedures: onDoctor ? procedures.data ?? [] : [],
+    chairs: onDoctor ? (columns ?? []).filter(c => c.calendarKind === 'Resource').map(c => ({ id: c.calendarId, name: c.name })) : [],
+    onProcedure: (id: string | null) => {
+      if (!choice) return;
+      const procedure = procedures.data?.find(x => x.id === id);
+      typePicked.current = true;
+      choose({ ...choice, visitType: procedure ? 'Procedure' : choice.visitType, procedureId: procedure?.id ?? null, minutes: lengthFor(procedure, null) });
+    },
+    onMinutes: (minutes: number) => {
+      const procedure = procedures.data?.find(x => x.id === choice?.procedureId);
+      const next = lengthFor(procedure, minutes);
+      if (choice && procedure && next !== choice.minutes) choose({ ...choice, minutes: next });
+    },
+    onChair: (id: string | null) => { if (choice && (choice.resourceId ?? null) !== id) choose({ ...choice, resourceId: id }); },
     onConfirm: form.handleSubmit(values => (plan ? bookMany.mutate(values) : repeat > 1 ? preview.mutate() : book.mutate(values))),
     onClose: () => {
       if (hold.data) release.mutate(hold.data.id);

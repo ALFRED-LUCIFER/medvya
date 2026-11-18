@@ -18,7 +18,7 @@ type Props = { facilityId: string; userId: string; userName: string; canBook: bo
 export default function ScheduleRoute({ facilityId, userId, userName, canBook, canCheckIn, registerPath, leavePath }: Props) {
   const { t } = useI18n();
   const schedule = useScheduleController(facilityId, userId);
-  const booking = useBookingController(facilityId, schedule.timeZone, schedule.day?.columns);
+  const booking = useBookingController(facilityId, schedule.timeZone, schedule.allColumns);
   const visit = useAppointmentController(facilityId, { timeZone: schedule.timeZone, canBook, canCheckIn });
   const dirty = booking.dirty;
   useEffect(() => {

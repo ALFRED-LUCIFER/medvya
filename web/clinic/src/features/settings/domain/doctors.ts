@@ -1,7 +1,11 @@
 import { z } from 'zod';
 
 // Mirrors src/Modules/Tenancy/Medvya.Tenancy.Application/IDoctors.cs (the server is the authority; these checks only save a round trip).
-export type Authority = { code: string; name: string };
+/** dental: a dental council or dental licence (MDV-P8-008); the doctor holding it is shown as a dentist, with a doctor's access. */
+export type Authority = { code: string; name: string; dental?: boolean };
+
+/** Whether the doctor's licence is dental, so the list says "Dentist". */
+export const isDentist = (d: { authority: string }, authorities: readonly Authority[]) => authorities.some(a => a.code === d.authority && a.dental);
 export type Doctor = {
   id: string;
   fullName: string;

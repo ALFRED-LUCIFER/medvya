@@ -18,7 +18,7 @@ namespace Medvya.Scheduling.Infrastructure.Persistence.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasDefaultSchema("scheduling")
-                .HasAnnotation("ProductVersion", "10.0.14")
+                .HasAnnotation("ProductVersion", "10.0.15")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -85,6 +85,9 @@ namespace Medvya.Scheduling.Infrastructure.Persistence.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<Guid?>("ResourceId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Room")
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
@@ -127,9 +130,12 @@ namespace Medvya.Scheduling.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TenantId", "FacilityId", "Start");
 
-                    NpgsqlIndexBuilderExtensions.IncludeProperties(b.HasIndex("TenantId", "FacilityId", "Start"), new[] { "End", "CalendarId", "State", "PatientId", "VisitType" });
+                    NpgsqlIndexBuilderExtensions.IncludeProperties(b.HasIndex("TenantId", "FacilityId", "Start"), new[] { "End", "CalendarId", "State", "PatientId", "VisitType", "ResourceId" });
 
                     b.HasIndex("TenantId", "FacilityId", "CalendarId", "Start");
+
+                    b.HasIndex("TenantId", "FacilityId", "ResourceId", "Start")
+                        .HasFilter("\"ResourceId\" IS NOT NULL");
 
                     b.ToTable("Appointments", "scheduling");
                 });
@@ -552,6 +558,9 @@ namespace Medvya.Scheduling.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("HeldBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ResourceId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("Start")

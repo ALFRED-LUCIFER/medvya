@@ -1435,6 +1435,45 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/encounters/{encounterId}/dental/history-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    encounterId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["ConfirmDentalHistory"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/patients/{patientId}/dental/plan": {
         parameters: {
             query?: never;
@@ -1498,6 +1537,122 @@ export interface paths {
                     "application/json": null | components["schemas"]["MoveDentalPlanItem"];
                 };
             };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/patients/{patientId}/dental/plan/{itemId}/consent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                    itemId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["SignDentalConsent"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/patients/{patientId}/dental/consents/{consentId}/withdraw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                    consentId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["WithdrawDentalConsent"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/patients/{patientId}/dental/consents/{consentId}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                    consentId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
             responses: {
                 /** @description OK */
                 200: {
@@ -2478,6 +2633,43 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["ScheduleWeek"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/schedule/procedures": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    facilityId?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ProcedureOption"][];
                     };
                 };
             };
@@ -9914,6 +10106,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/settings/note-templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["ChooseNoteTemplates"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/settings/services": {
         parameters: {
             query?: never;
@@ -11310,6 +11556,10 @@ export interface components {
             state: components["schemas"]["AppointmentState"];
             /** Format: uuid */
             seriesId?: null | string;
+            /** Format: uuid */
+            calendarId?: null | string;
+            /** Format: uuid */
+            resourceId?: null | string;
         };
         /** @enum {unknown} */
         AppointmentState: "Booked" | "CheckedIn" | "WithNurse" | "ReadyForDoctor" | "InConsult" | "Billing" | "Done" | "Cancelled" | "NoShow" | "NeedsRebooking" | "LeftWithoutBeingSeen";
@@ -11542,6 +11792,12 @@ export interface components {
         ConfirmCashSession: {
             /** Format: uint32 */
             version?: null | number | string;
+        };
+        ConfirmDentalHistory: {
+            answers: null | {
+                [key: string]: boolean;
+            };
+            note: null | string;
         };
         ConnectRazorpay: {
             keyId?: null | string;
@@ -11851,6 +12107,10 @@ export interface components {
             /** Format: date-time */
             start?: string;
             visitType?: components["schemas"]["VisitType"];
+            /** Format: uuid */
+            resourceId?: null | string;
+            /** Format: int32 */
+            minutes?: null | number | string;
         };
         HoldView: {
             /** Format: uuid */
@@ -11866,6 +12126,8 @@ export interface components {
             end: string;
             /** Format: date-time */
             expiresAt: string;
+            /** Format: uuid */
+            resourceId?: null | string;
         };
         HoursWindow: {
             start: null | string;
@@ -11920,6 +12182,8 @@ export interface components {
         LicenceAuthority: {
             code: string;
             name: string;
+            /** @default false */
+            dental: boolean;
         };
         LocationView: {
             /** Format: uuid */
@@ -12148,6 +12412,14 @@ export interface components {
         ProblemStatus: "Active" | "Resolved" | null;
         /** @enum {unknown} */
         ProblemVerification: "Verified" | "PatientReported" | "Provisional" | null;
+        ProcedureOption: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            code: null | string;
+            /** Format: int32 */
+            durationMinutes: number | string;
+        };
         ProfileView: {
             name: string;
             address: null | string;
@@ -12626,6 +12898,13 @@ export interface components {
             pharmacyName: null | string;
             pharmacyEmail: null | string;
         };
+        SignDentalConsent: {
+            /** Format: uuid */
+            encounterId: null | string;
+            language: null | string;
+            signedBy: null | string;
+            signature: null | string;
+        };
         SignInStart: {
             loginHint?: null | string;
             returnUrl?: null | string;
@@ -12867,6 +13146,9 @@ export interface components {
             visitType?: components["schemas"]["VisitType"];
             reasonCategory?: components["schemas"]["ReasonCategory"];
             allowRepeat?: boolean;
+        };
+        WithdrawDentalConsent: {
+            reason: null | string;
         };
         WorkingHours: {
             weekday?: components["schemas"]["DayOfWeek"];

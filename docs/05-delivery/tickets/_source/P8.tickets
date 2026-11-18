@@ -8,6 +8,10 @@
 @epic MDV-P8-E02 | Dental clinic pack | P8-06 | A dental clinic runs its chair in Medvya, not on paper: tooth chart, treatment plan with an estimate, procedure billing and dental follow-up.
 
 === MDV-P8-001
+status: Partly done
+progress:
+- [PR #1440](https://github.com/ALFRED-LUCIFER/medvya/pull/1440): the intake process (docs/05-delivery/intake), the dental pack intake record (adoption target, evidence, regulatory classification, sign-offs) and the minor-version release notes template
+- Left: the founder approves the dental pack intake record (its approval table is empty); every other P8 epic needs its own record before work starts
 title: Feature intake: adoption target, evidence review and regulatory classification check for every P8 feature
 type: Chore
 epic: MDV-P8-E01
@@ -149,6 +153,10 @@ ac:
 - Public APIs enforce the same tenant/relationship/purpose authorisation and audit.
 
 === MDV-P8-008
+status: Done
+progress:
+- [PR #1440](https://github.com/ALFRED-LUCIFER/medvya/pull/1440): the Dental Council of India and 14 state dental councils, and the DHA, DoH and MOHAP dental licences, flagged dental; a doctor with a dental licence is listed as "Dentist" and prints the dental council on prescriptions, notes and the dental PDF; expiry reminders cover it; a test pins every capability of a dentist to the doctor's
+- Decision: no separate Dentist role (same access as a doctor, ADR-016: access never depends on the licence), so the role matrix and foundations.json stay unchanged
 title: Dental practitioner licences: dental councils in India and dental licences in the UAE, printed on prescriptions
 type: Story
 epic: MDV-P8-E02
@@ -173,6 +181,10 @@ notes:
 - Pick up from DentalERP: nothing; it has no licence fields. Build on P1-065.
 
 === MDV-P8-009
+status: Done
+progress:
+- [PR #1440](https://github.com/ALFRED-LUCIFER/medvya/pull/1440): chairs are schedule resources with their own hours; a booking holds a dentist and a chair (own SCHEDULE_SLOT rows under the same unique index, the chair's day locked with the dentist's); a procedure sets the length (GET /v1/schedule/procedures), reception lengthens it; the day view filters by chairs or by doctors; tests include 40 desks of two dentists racing for one chair
+- shortcut: a rescheduled visit keeps its own length only when it holds a chair (BookingService); chair-column cards do not name the dentist yet
 title: Book by chair and procedure length: chairs as bookable resources, durations per dental procedure
 type: Story
 epic: MDV-P8-E02
@@ -285,6 +297,10 @@ notes:
 - Missing there and new here: phases, patient acceptance with who and when, idempotent charge on done. `toothNumbers` is a free string there; use a typed list of FDI codes and surfaces.
 
 === MDV-P8-013
+status: Done
+progress:
+- [PR #1440](https://github.com/ALFRED-LUCIFER/medvya/pull/1440): stage sets with visit lengths (root canal, crown or bridge, implant, braces, dentures) by service code; the plan shows done, current and next; a stage is marked done in order on a visit whose note is signed; the item is done only after its last stage; "Book the next stage" opens the schedule with patient, dentist, chair and length filled in
+- Needs a person: a dentist approves the stages and lengths; braces repeat adjustments in real treatment (one adjustment stage for now)
 title: Multi-visit procedures: root canal, crown, implant and braces stages across visits
 type: Story
 epic: MDV-P8-E02
@@ -308,6 +324,10 @@ notes:
 - Pick up from DentalERP: nothing beyond `followUpRequired` and `followUpDate` on Treatment; stages are new work.
 
 === MDV-P8-014
+status: Done
+progress:
+- [PR #1440](https://github.com/ALFRED-LUCIFER/medvya/pull/1440): six questions (blood thinners, diabetes, pregnancy, heart condition or endocarditis risk, bisphosphonates, local anaesthetic allergy) confirmed on the visit, append-only and audited; the Dental tab shows the date last confirmed and each risk in words; treatment starts only after the check on that visit; printed on the dental PDF
+- Needs a person: a dentist approves the questions; a regulatory adviser confirms the warning is not decision support (intake record)
 title: Medical history check before dental treatment
 type: Story
 epic: MDV-P8-E02
@@ -331,6 +351,10 @@ notes:
 - Pick up from DentalERP: `MedicalHistory` model fields as a checklist starting point; the dental risk questions are new and need a dentist.
 
 === MDV-P8-015
+status: Done
+progress:
+- [PR #1440](https://github.com/ALFRED-LUCIFER/medvya/pull/1440): note template "dental" v1; the clinic default templates (Settings › Dental), so a dental clinic's notes start on it; lidocaine and articaine with adrenaline, chlorhexidine, metronidazole, clindamycin and diclofenac on the shared starter list with their classes
+- Needs a person (AC3): a dentist approves the template and the medicine list; a regulatory adviser confirms each class
 title: Dental note template and dental medicines in the formulary
 type: Task
 epic: MDV-P8-E02
@@ -426,6 +450,10 @@ notes:
 - Share the lab list with MDV-P9-007 (external lab send-outs).
 
 === MDV-P8-019
+status: Done
+progress:
+- [PR #1440](https://github.com/ALFRED-LUCIFER/medvya/pull/1440): consent forms for extraction, root canal, implant and sedation in English, Hindi and Arabic; signed on the tablet (SignaturePad) with the signer's name; the signed form is a PDF in the document store with its hash and version; the item cannot start or finish without a current consent; a withdrawal (reason required) stops it
+- Needs a person (AC3): a lawyer and a dentist approve the wording (DentalConsentRules.Approved is null and the screen and form say it is a draft)
 title: Procedure consent forms signed on a tablet
 type: Story
 epic: MDV-P8-E02

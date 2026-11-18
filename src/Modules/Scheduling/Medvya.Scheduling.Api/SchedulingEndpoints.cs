@@ -44,6 +44,11 @@ public static class SchedulingEndpoints
                 service.GetWeekAsync(facilityId ?? Guid.Empty, calendarId ?? Guid.Empty, date, ct))
             .AuditedWithErrors("schedule.read", "schedule", window: AuditWindow.Repeated);
 
+        // MDV-P8-009: procedures with their usual length, so choosing one sets the visit's length in the booking form. No prices, no patient data.
+        schedule.MapGet("/procedures", (Guid? facilityId, [FromServices] IBookingService service, CancellationToken ct) =>
+                service.ProceduresAsync(facilityId ?? Guid.Empty, ct))
+            .AuditedWithErrors("schedule.procedures.read", "schedule", window: AuditWindow.Repeated);
+
         schedule.MapGet("/templates", (Guid? facilityId, [FromServices] IScheduleService service, CancellationToken ct) =>
                 service.ListTemplatesAsync(facilityId ?? Guid.Empty, ct))
             .AuditedWithErrors("schedule.template.read", "schedule_template", "operations");

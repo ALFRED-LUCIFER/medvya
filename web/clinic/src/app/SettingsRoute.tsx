@@ -19,6 +19,8 @@ import RazorpayPanel from '../features/billing/components/RazorpayPanel';
 import ServicesPanel from '../features/billing/components/ServicesPanel';
 import DentalStarterCard from '../features/dental/components/DentalStarterCard';
 import { useDentalStarterController } from '../features/dental/hooks/useDentalStarterController';
+import DentalTemplateCard from '../features/dental/components/DentalTemplateCard';
+import { useDentalTemplateController } from '../features/dental/hooks/useDentalTemplateController';
 import { useBillingSettingsController } from '../features/billing/hooks/useBillingSettingsController';
 import { useRazorpayController } from '../features/billing/hooks/useRazorpayController';
 import { useServicesController } from '../features/billing/hooks/useServicesController';
@@ -90,9 +92,10 @@ const BillingSwitch = () => <FeatureSwitchPanel copy="billingSwitch" {...useFeat
 /** Dental (MDV-P8-E02): the owner's switch, then, with it and billing on, the dental services starter list (MDV-P8-010). */
 function Dental({ billing }: { billing: boolean }) {
   const dental = useFeatureSwitchController('dental');
-  return <><FeatureSwitchPanel copy="dental" {...dental} />{billing && dental.enabled && <DentalStarter />}</>;
+  return <><FeatureSwitchPanel copy="dental" {...dental} />{dental.enabled && <DentalTemplate />}{billing && dental.enabled && <DentalStarter />}</>;
 }
 const DentalStarter = () => <DentalStarterCard {...useDentalStarterController()} />;
+const DentalTemplate = () => <DentalTemplateCard {...useDentalTemplateController()} />;
 const Queue = () => <QueueRulePanel {...useQueueRuleController()} />;
 const BillingSettings = () => <BillingSettingsPanel {...useBillingSettingsController()} />;
 const Razorpay = () => <RazorpayPanel {...useRazorpayController()} />;

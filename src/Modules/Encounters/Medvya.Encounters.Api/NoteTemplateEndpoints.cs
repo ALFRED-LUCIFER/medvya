@@ -18,6 +18,13 @@ public static class NoteTemplateEndpoints
         g.MapPut("/mine", async ([FromBody] ChooseNoteTemplates? body, [FromServices] INoteTemplates service, CancellationToken ct) =>
             body is not null && await service.ChooseAsync(body, ct) is { } mine ? Results.Ok(mine)
             : Results.ValidationProblem(new Dictionary<string, string[]> { ["keys"] = ["invalid"] }));
+
+        // MDV-P8-015: the clinic's default templates, set by whoever manages the practice (a dental clinic picks the dental template).
+        var clinic = app.MapGroup("/v1/settings/note-templates").RequireAuthorization(StaffPolicies.ManageStaff);
+        clinic.MapGet("/", async ([FromServices] INoteTemplates service, CancellationToken ct) => Results.Ok(await service.ClinicDefaultAsync(ct)));
+        clinic.MapPut("/", async ([FromBody] ChooseNoteTemplates? body, [FromServices] INoteTemplates service, CancellationToken ct) =>
+            body is not null && await service.SetClinicDefaultAsync(body, ct) is { } keys ? Results.Ok(keys)
+            : Results.ValidationProblem(new Dictionary<string, string[]> { ["keys"] = ["invalid"] }));
         return app;
     }
 }

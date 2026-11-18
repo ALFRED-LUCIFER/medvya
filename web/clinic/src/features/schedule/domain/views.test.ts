@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Appointment, ScheduleColumn, ScheduleDay } from './schedule';
-import { agenda, filterColumns, firstFreeSlot, lookOf, readAddress, weekDays, weekSpan, type ScheduleWeek } from './views';
+import { agenda, filterColumns, firstFreeSlot, kindFilters, lookOf, readAddress, weekDays, weekSpan, type ScheduleWeek } from './views';
 
 describe('the schedule address (MDV-P1-052)', () => {
   it('reads a real date and a known view, and ignores anything else', () => {
@@ -33,6 +33,10 @@ describe('schedule views', () => {
     expect(agenda(d).map(s => s.entries.map(e => e.kind))).toEqual([['slot', 'appointment', 'unavailable'], []]);
     expect(filterColumns(d, 'd-2').columns.map(c => c.calendarId)).toEqual(['d-2']);
     expect(filterColumns(d, null).columns).toHaveLength(2);
+    // MDV-P8-009: by kind, every doctor's column or every chair's.
+    const chairs = { ...d, columns: [...d.columns, { ...d.columns[0]!, calendarId: 'r-1', calendarKind: 'Resource' as const }] };
+    expect(filterColumns(chairs, kindFilters.resources).columns.map(c => c.calendarId)).toEqual(['r-1']);
+    expect(filterColumns(chairs, kindFilters.doctors).columns.map(c => c.calendarId)).toEqual(d.columns.map(c => c.calendarId));
   });
 
   it('shows in the week exactly the appointments of each day, counting only those that take time', () => {

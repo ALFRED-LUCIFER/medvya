@@ -153,9 +153,16 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
             Tooth = "36", Phase = 1, EstimateMinor = 650_000, Currency = "INR", Status = Encounters.Domain.DentalPlanStatus.Planned, CreatedBy = other.Doctor, CreatedAt = SchedulingHarness.MondayMorning,
             ChangedBy = other.Doctor, ChangedAt = SchedulingHarness.MondayMorning,
         };
+        var dentalConsent = new Encounters.Domain.DentalConsent
+        {
+            Id = Guid.CreateVersion7(), TenantId = other.Tenant, FacilityId = other.Facility, PatientId = other.Patient, PlanItemId = dentalItem.Id, EncounterId = Guid.NewGuid(),
+            TemplateKey = "extraction", TemplateVersion = 1, Language = "en", SignedByName = $"Signer {Theirs}", SignedAt = SchedulingHarness.MondayMorning, RecordedBy = other.Doctor,
+            BlobKey = $"{other.Tenant}/dental-consent/{Guid.NewGuid()}", Sha256 = new string('0', 64),
+        };
         await using (var dental = sql.Encounters(other.Tenant))
         {
             dental.DentalPlanItems.Add(dentalItem);
+            dental.DentalConsents.Add(dentalConsent);
             await dental.SaveChangesAsync();
         }
         await using var db = sql.Context(other.Tenant);
@@ -175,7 +182,7 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         {
             ["patient"] = other.Patient, ["appointment"] = visit, ["encounter"] = encounter, ["document"] = document.Id, ["order"] = order.Id, ["rxItem"] = rxItem.Id, ["rxShare"] = rxShare.Id, ["referral"] = referral.Id, ["hold"] = hold.Id, ["display"] = display.Display.Id,
             ["closure"] = closure!.Id, ["exception"] = leave.Exception.Id, ["accessRequest"] = request.Id, ["invitation"] = invitation.Id,
-            ["membership"] = membership, ["doctor"] = doctor, ["location"] = other.Facility, ["role"] = role.Id, ["user"] = other.Reception, ["dentalItem"] = dentalItem.Id,
+            ["membership"] = membership, ["doctor"] = doctor, ["location"] = other.Facility, ["role"] = role.Id, ["user"] = other.Reception, ["dentalItem"] = dentalItem.Id, ["dentalConsent"] = dentalConsent.Id,
         };
     }
 
@@ -285,8 +292,13 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.SoloDoctor, new("GET", "/v1/patients/{patient}/dental")),
         (Role.SoloDoctor, new("GET", "/v1/patients/{patient}/dental/services")),
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/dental/findings", """{"tooth":"36","condition":"Sound"}""")),
+        (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/dental/history-check", """{"answers":{"BloodThinners":false,"Diabetes":false,"Pregnancy":false,"HeartOrEndocarditisRisk":false,"Bisphosphonates":false,"LocalAnaestheticAllergy":false}}""")),
         (Role.SoloDoctor, new("POST", "/v1/patients/{patient}/dental/plan", """{"serviceId":"{dentalItem}","phase":1}""")),
         (Role.SoloDoctor, new("POST", "/v1/patients/{patient}/dental/plan/{dentalItem}/move", """{"to":"Declined","reason":"Synthetic"}""")),
+        (Role.SoloDoctor, new("POST", "/v1/patients/{patient}/dental/plan/{dentalItem}/stages", """{"stage":0}""")),
+        (Role.SoloDoctor, new("POST", "/v1/patients/{patient}/dental/plan/{dentalItem}/consent", """{"language":"en","signedBy":"Synthetic"}""")),
+        (Role.SoloDoctor, new("POST", "/v1/patients/{patient}/dental/consents/{dentalConsent}/withdraw", """{"reason":"Synthetic"}""")),
+        (Role.SoloDoctor, new("POST", "/v1/patients/{patient}/dental/consents/{dentalConsent}/pdf")),
         (Role.SoloDoctor, new("POST", "/v1/patients/{patient}/dental/estimate/acceptance", """{"acceptedBy":"Synthetic","method":"OnTablet"}""")),
         (Role.SoloDoctor, new("POST", "/v1/patients/{patient}/dental/pdf")),
         (Role.SoloDoctor, new("GET", "/v1/patients/{patient}/medicine-review")),
@@ -526,12 +538,14 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.Receptionist, new("POST", "/v1/chart/allergy-flags", """{"patientIds":["{patient}"]}""")), // Patient 360: X
         (Role.Receptionist, new("PUT", "/v1/note-templates/mine", """{"keys":["general-opd"]}""")), // Patient 360: X
         (Role.Nurse, new("GET", "/v1/note-templates/")),
+        (Role.HospitalDoctor, new("PUT", "/v1/settings/note-templates/", """{"keys":["dental"]}""")), // the clinic default is practice management (MDV-P8-015)
         (Role.PracticeAdmin, new("POST", "/v1/chart/allergy-flags", """{"patientIds":["{patient}"]}""")),
         (Role.Nurse, new("POST", "/v1/encounters/{encounter}/referrals", """{"provider":"Dr. Synthetic","urgency":"Routine","reason":"Synthetic","sections":[]}""")), // Prescriptions & orders: X
         (Role.Receptionist, new("GET", "/v1/patients/{patient}/referrals")), // Patient 360: X
         (Role.Receptionist, new("GET", "/v1/patients/{patient}/geriatric-assessments")), // Patient 360: X
         (Role.Receptionist, new("GET", "/v1/patients/{patient}/dental")), // Patient 360: X
         (Role.Nurse, new("POST", "/v1/encounters/{encounter}/dental/findings", """{"tooth":"36","condition":"Sound"}""")), // Clinical notes: R, not S
+        (Role.Nurse, new("POST", "/v1/encounters/{encounter}/dental/history-check", """{"answers":{}}""")), // Clinical notes: R, not S
         (Role.CareCoordinator, new("POST", "/v1/patients/{patient}/dental/estimate/acceptance", """{"acceptedBy":"Synthetic","method":"OnTablet"}""")), // Clinical notes: R
         (Role.Nurse, new("POST", "/v1/patients/{patient}/dental/pdf")), // Patient 360: L, the PDF needs Full
         (Role.CareCoordinator, new("POST", "/v1/patients/{patient}/geriatric-assessments", """{"clinicalFrailtyScale":4}""")), // Vitals & allergies entry: X

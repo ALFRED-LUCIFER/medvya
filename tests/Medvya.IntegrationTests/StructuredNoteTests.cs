@@ -1,3 +1,4 @@
+using Medvya.Encounters.Application;
 using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
@@ -206,6 +207,27 @@ public sealed class StructuredNoteTests(PostgresFixture sql) : IClassFixture<Pos
         using var after = await Client().GetAsync(U($"/v1/encounters/{encounter}/note"));
         var a = await Json(after);
         Assert.Equal(("general-opd", JsonValueKind.Null), (a.GetProperty("templateKey").GetString(), a.GetProperty("suggestedTemplateKey").ValueKind));
+    }
+
+    /// <summary>
+    /// MDV-P8-015: in a clinic whose default is the dental template, a new note starts on it, even for a patient the life stage would send to another
+    /// template; a doctor who works with General OPD keeps the life-stage suggestion. SAFETY (mutation check: drop the working-list check in
+    /// SuggestAsync and this fails: a dental visit would open on the diabetes review).
+    /// </summary>
+    [Fact]
+    public async Task ADentalClinicsNewNoteStartsOnTheDentalTemplate()
+    {
+        await using (var db = sql.Encounters(h.Tenant))
+        {
+            db.Problems.Add(new Problem { Id = Guid.NewGuid(), TenantId = h.Tenant, PatientId = h.Patient, Description = "Type 2 diabetes (synthetic)", Icd10Code = "E11.9", Verification = ProblemVerification.Verified, Source = ChartSource.ClinicianVerified, RecordedAt = h.Clock.GetUtcNow() });
+            await db.SaveChangesAsync();
+        }
+        Assert.Equal(["dental"], await h.Get<INoteTemplates>(h.Admin).SetClinicDefaultAsync(new(["dental"])));
+        using (var dental = await Client().GetAsync(U($"/v1/encounters/{encounter}/note")))
+            Assert.Equal("dental", (await Json(dental)).GetProperty("templateKey").GetString());
+        await h.Get<INoteTemplates>(h.Doctor).ChooseAsync(new(["general-opd", "dental"]));
+        using var gp = await Client().GetAsync(U($"/v1/encounters/{encounter}/note"));
+        Assert.Equal(Diabetes, (await Json(gp)).GetProperty("templateKey").GetString());
     }
 
     [Fact]

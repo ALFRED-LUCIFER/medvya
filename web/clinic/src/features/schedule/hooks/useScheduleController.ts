@@ -56,7 +56,7 @@ export function useScheduleController(facilityId: string, userId: string) {
   });
   const columns = query.data?.columns ?? [];
   const filter = chosen !== undefined ? chosen : columns.some(c => c.calendarId === userId) ? userId : null;
-  const weekCalendar = filter ?? columns[0]?.calendarId ?? null;
+  const weekCalendar = (filter?.startsWith('kind:') ? null : filter) ?? columns[0]?.calendarId ?? null;
 
   const week = useQuery({
     queryKey: ['schedule', facilityId, 'week', weekCalendar, date],
@@ -98,6 +98,10 @@ export function useScheduleController(facilityId: string, userId: string) {
     // MDV-P1-097: the page names the facility's zone only on a device elsewhere.
     otherZone: !!query.data && !isDeviceTimeZone(query.data.timeZone),
     calendars: columns.map(c => ({ id: c.calendarId, name: c.name })),
+    /** Every column of the day, whatever the filter shows: the booking form offers the location's chairs from it (MDV-P8-009). */
+    allColumns: columns,
+    // MDV-P8-009: the day by chair or by dentist, offered when the location has chairs or rooms.
+    byKind: columns.some(c => c.calendarKind === 'Resource') && columns.some(c => c.calendarKind === 'Doctor'),
     filter: isWeek ? weekCalendar : filter,
     day: fold && !earlierOpen ? fold.day : laidOut,
     earlier: fold && { count: fold.earlier, open: earlierOpen, onToggle: () => setOpenedEarlier(earlierOpen ? null : fold.day.date) },

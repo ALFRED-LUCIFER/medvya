@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { useI18n } from '@medvya/i18n';
 import { ApiError } from '../../api/services/apiClient';
-import { errorKey, findingProblem, sortSurfaces, stepTarget, type AcceptanceMethod, type Dentition, type DentalView, type PlanItem, type ToothCondition } from '../domain/dental';
-import { acceptEstimate, addPlanItem, downloadDentalPdf, fetchDental, fetchDentalServices, movePlanItem, recordFinding } from '../services/dentalApi';
+import { errorKey, findingProblem, historyComplete, historyOnVisit, sortSurfaces, stepTarget, type AcceptanceMethod, type Dentition, type DentalView, type HistoryQuestion, type PlanItem, type ToothCondition } from '../domain/dental';
+import { acceptEstimate, addPlanItem, confirmHistory, markStage, downloadConsentPdf, downloadDentalPdf, fetchDental, fetchDentalServices, movePlanItem, recordFinding, signConsent, withdrawConsent } from '../services/dentalApi';
 
 const status = (e: unknown) => (e instanceof ApiError ? e.status : null);
 const code = (e: unknown) => (e instanceof ApiError ? e.code : undefined);
@@ -58,6 +59,37 @@ export function useDentalController(patientId: string, canChange: boolean): Dent
   });
   const pdf = useMutation({ mutationFn: () => downloadDentalPdf(patientId) });
 
+  // MDV-P8-019: the consent is read and signed in the language the app shows (the tablet's language switch changes it), and recorded with it.
+  const { locale } = useI18n();
+  const [consenting, setConsenting] = useState<string | null>(null);
+  const [consentSigner, setConsentSigner] = useState('');
+  const [signature, setSignature] = useState<string | null>(null);
+  const consent = useMutation({
+    mutationFn: () => signConsent(patientId, consenting!, { encounterId: encounterId!, language: locale, signedBy: consentSigner, signature: signature!.replace(/^data:image\/png;base64,/, '') }),
+    onSuccess: () => { setConsenting(null); setConsentSigner(''); setSignature(null); void reload(); },
+  });
+  const [withdrawing, setWithdrawing] = useState<string | null>(null);
+  const [withdrawReason, setWithdrawReason] = useState('');
+  const withdraw = useMutation({
+    mutationFn: () => withdrawConsent(patientId, withdrawing!, withdrawReason),
+    onSuccess: () => { setWithdrawing(null); setWithdrawReason(''); void reload(); },
+  });
+  const consentPdf = useMutation({ mutationFn: (consentId: string) => downloadConsentPdf(patientId, consentId) });
+  // MDV-P8-013: the next stage of a multi-visit item, on this visit (the server needs its note signed and says so).
+  const stage = useMutation({
+    mutationFn: ({ item, index }: { item: PlanItem; index: number }) => markStage(patientId, item.id, { encounterId: encounterId!, stage: index }),
+    onSuccess: () => { void reload(); },
+  });
+
+  // MDV-P8-014: the history check, answered with the patient on this visit; nothing is pre-filled from the last check (each answer is asked again).
+  const [answers, setAnswers] = useState<Partial<Record<HistoryQuestion, boolean>>>({});
+  const [historyNote, setHistoryNote] = useState('');
+  const [historyTried, setHistoryTried] = useState(false);
+  const history = useMutation({
+    mutationFn: () => confirmHistory(encounterId!, { answers, note: historyNote }),
+    onSuccess: () => { setAnswers({}); setHistoryNote(''); setHistoryTried(false); void reload(); },
+  });
+
   const d = chart.data;
   const selectedHistory = d && tooth ? d.history.filter(f => f.tooth === tooth) : [];
   return {
@@ -108,6 +140,32 @@ export function useDentalController(patientId: string, canChange: boolean): Dent
     onAccept: () => accept.mutate(),
 
     printing: pdf.isPending, printFailed: pdf.isError, onPrint: () => pdf.mutate(),
+
+    answers, onAnswer: (q: HistoryQuestion, yes: boolean) => setAnswers(a => ({ ...a, [q]: yes })),
+    historyNote, onHistoryNote: setHistoryNote,
+    historyOnVisit: d ? historyOnVisit(d) : false,
+    historySaving: history.isPending,
+    historyFailed: history.isError,
+    historyIncomplete: historyTried && !historyComplete(answers),
+    historyDone: history.isSuccess,
+    onConfirmHistory: () => { setHistoryTried(true); if (encounterId && historyComplete(answers)) history.mutate(); },
+
+    consenting, onConsenting: (id: string | null) => { setConsenting(id); setConsentSigner(''); setSignature(null); consent.reset(); },
+    consentSigner, onConsentSigner: setConsentSigner,
+    onSignature: setSignature, hasSignature: !!signature,
+    consentSaving: consent.isPending,
+    consentError: consent.isError ? errorKey(code(consent.error)) : null,
+    consentFailed: consent.isError && !errorKey(code(consent.error)),
+    onSignConsent: () => { if (consenting && encounterId && signature && consentSigner.trim()) consent.mutate(); },
+    withdrawing, onWithdrawing: (id: string | null) => { setWithdrawing(id); setWithdrawReason(''); withdraw.reset(); },
+    withdrawReason, onWithdrawReason: setWithdrawReason,
+    withdrawSaving: withdraw.isPending, withdrawFailed: withdraw.isError,
+    onWithdraw: () => { if (withdrawing && withdrawReason.trim()) withdraw.mutate(); },
+    onConsentPdf: (id: string) => consentPdf.mutate(id), consentPdfFailed: consentPdf.isError,
+    staging: stage.isPending ? stage.variables?.item.id ?? null : null,
+    stageError: stage.isError ? errorKey(code(stage.error)) : null,
+    stageFailed: stage.isError && !errorKey(code(stage.error)),
+    onStage: (item: PlanItem, index: number) => { if (encounterId) stage.mutate({ item, index }); },
   };
 }
 

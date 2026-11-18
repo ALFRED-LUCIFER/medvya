@@ -20,7 +20,7 @@ public sealed class ConsultVisits(SchedulingDbContext db, SchedulingContext cont
 
     public Task<ConsultVisit?> FindAsync(Guid appointmentId, CancellationToken cancellationToken = default) =>
         db.Appointments.AsNoTracking().Where(a => a.Id == appointmentId)
-            .Select(a => new ConsultVisit(a.Id, a.FacilityId, a.PatientId, a.State, a.Room, a.Start, a.CalendarId, a.CalendarKind, a.VisitType)).SingleOrDefaultAsync(cancellationToken);
+            .Select(a => new ConsultVisit(a.Id, a.FacilityId, a.PatientId, a.State, a.Room, a.Start, a.CalendarId, a.CalendarKind, a.VisitType, a.ResourceId)).SingleOrDefaultAsync(cancellationToken);
 
     public async Task<Guid?> StartableTodayAsync(Guid patientId, Guid facilityId, Guid calendarId, CancellationToken cancellationToken = default)
     {
@@ -85,7 +85,7 @@ public sealed class ConsultVisits(SchedulingDbContext db, SchedulingContext cont
         }
         shared.StatusEvents.Add(new VisitStatusEvent { Id = Guid.CreateVersion7(), TenantId = visit.TenantId, AppointmentId = visit.Id, State = to, FromState = visit.State, ActorUserId = me, OccurredAt = now });
         await shared.SaveChangesAsync(cancellationToken);
-        return new ConsultVisit(visit.Id, visit.FacilityId, visit.PatientId, to, room, visit.Start, visit.CalendarId, visit.CalendarKind, visit.VisitType);
+        return new ConsultVisit(visit.Id, visit.FacilityId, visit.PatientId, to, room, visit.Start, visit.CalendarId, visit.CalendarKind, visit.VisitType, visit.ResourceId);
     }
 
     async Task<SchedulingDbContext> SharedAsync(DbTransaction transaction, CancellationToken cancellationToken)

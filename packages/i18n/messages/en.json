@@ -2086,6 +2086,7 @@
   "doctors.room.save": "Save room",
   "doctors.fees.hint": "Defaults for this doctor, filled in from your practice fees. Full service pricing comes later.",
   "doctors.access.role": "Role",
+  "doctors.dentist": "Dentist",
   "doctors.access.roleValue": "Doctor",
   "doctors.access.roleHint": "Doctors join with the doctor role. Practice settings stay with practice admins.",
   "doctors.access.facility": "Works at",

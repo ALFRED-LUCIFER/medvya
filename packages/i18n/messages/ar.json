@@ -2085,6 +2085,7 @@
   "doctors.room.save": "حفظ الغرفة",
   "doctors.fees.hint": "رسوم افتراضية لهذا الطبيب، مأخوذة من رسوم عيادتك. تسعير الخدمات الكامل يأتي لاحقًا.",
   "doctors.access.role": "الدور",
+  "doctors.dentist": "طبيب أسنان",
   "doctors.access.roleValue": "طبيب",
   "doctors.access.roleHint": "ينضم الأطباء بدور الطبيب. تبقى إعدادات العيادة لدى مديري العيادة.",
   "doctors.access.facility": "مكان العمل",

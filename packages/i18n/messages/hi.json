@@ -2072,6 +2072,7 @@
   "doctors.room.save": "कमरा सहेजें",
   "doctors.fees.hint": "इस डॉक्टर के डिफ़ॉल्ट शुल्क, आपके क्लिनिक के शुल्क से भरे गए। सेवाओं का पूरा मूल्य बाद में आएगा।",
   "doctors.access.role": "भूमिका",
+  "doctors.dentist": "दंत चिकित्सक",
   "doctors.access.roleValue": "डॉक्टर",
   "doctors.access.roleHint": "डॉक्टर डॉक्टर की भूमिका के साथ जुड़ते हैं। क्लिनिक की सेटिंग्स प्रैक्टिस एडमिन के पास रहती हैं।",
   "doctors.access.facility": "कार्यस्थल",

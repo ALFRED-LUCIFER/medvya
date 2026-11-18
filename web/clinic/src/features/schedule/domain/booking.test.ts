@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bookingSchema, emptyBooking, pickSlot, readSlotReturn, slotAddress, slotError, withoutSlotReturn } from './booking';
+import { bookingSchema, carriedStageOf, emptyBooking, lengthFor, pickSlot, readSlotReturn, slotAddress, slotError, withoutSlotReturn } from './booking';
 
 describe('booking form', () => {
   it('needs a patient id and keeps the free-text reason short', () => {
@@ -41,5 +41,25 @@ describe('back to the held slot after registering a new patient (MDV-P1-021)', (
     expect(readSlotReturn(new URLSearchParams({ ...good, visitType: 'Procedure' }))?.visitType).toBe('Procedure'); // a type the desk chose stays
     for (const bad of [{ calendar: '' }, { patient: '' }, { start: 'tomorrow' }, { visitType: 'Surgery' }])
       expect(readSlotReturn(new URLSearchParams({ ...good, ...bad }))).toBeNull();
+  });
+});
+
+describe('a procedure sets the length (MDV-P8-009)', () => {
+  it('is never shorter than the procedure, rounds up to 5 minutes and stops at 8 hours', () => {
+    expect(lengthFor({ durationMinutes: 45 }, null)).toBe(45);
+    expect(lengthFor({ durationMinutes: 45 }, 30)).toBe(45); // reception lengthens, never shortens
+    expect(lengthFor({ durationMinutes: 45 }, 62)).toBe(65);
+    expect(lengthFor({ durationMinutes: 45 }, 900)).toBe(480);
+    expect(lengthFor(undefined, 60)).toBeNull(); // no procedure: the visit type's length
+  });
+});
+
+describe('booking the next stage of a procedure (MDV-P8-013)', () => {
+  it('reads the length and the chair from the address, and nothing that is not one', () => {
+    const chair = '5e1d0001-0009-4000-8000-000000000001';
+    expect(carriedStageOf(new URLSearchParams(`patient=x&minutes=45&chair=${chair}`))).toEqual({ minutes: 45, chair });
+    expect(carriedStageOf(new URLSearchParams('minutes=45&chair=Chair 1'))).toEqual({ minutes: 45, chair: null });
+    expect(carriedStageOf(new URLSearchParams('minutes=4'))).toBeNull();
+    expect(carriedStageOf(new URLSearchParams('patient=x'))).toBeNull();
   });
 });

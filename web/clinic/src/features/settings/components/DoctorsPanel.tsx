@@ -5,7 +5,7 @@ import { useI18n } from '@medvya/i18n';
 import { Card, Button, Field, Input, Tag } from '@medvya/ui';
 import type { Authority, Doctor, DoctorForm, DoctorStep, FieldProblem, LicenceForm } from '../domain/doctors';
 import type { Location } from '../domain/settings';
-import { licenceFields } from '../domain/doctors';
+import { isDentist, licenceFields } from '../domain/doctors';
 import DoctorWizard, { LicenceFields, StepErrorSummary } from './DoctorWizard';
 import { fieldError, fieldGrid } from './fieldStyles';
 import SignatureImage from './SignatureImage';
@@ -105,7 +105,7 @@ function DoctorRow({ doctor: d, ...p }: Props & { doctor: Doctor }) {
         <LicenceBadge doctor={d} timeZone={p.timeZone} />
         <span className="text-muted-foreground">{t(`doctors.status.${d.status}`)}</span>
       </div>
-      <p className="text-sm text-muted-foreground">{[d.specialty, d.facilityName].filter(Boolean).join(' · ')}</p>
+      <p className="text-sm text-muted-foreground">{[isDentist(d, p.authorities) ? t('doctors.dentist') : null, d.specialty, d.facilityName].filter(Boolean).join(' · ')}</p>
       <p className="text-sm"><span dir="ltr">{d.authority} {d.number}</span>{d.expiresOn ? ` · ${t('doctors.licence.until', { date: d.expiresOn })}` : ''}</p>
       {d.expired && <p role="note" className="text-sm font-semibold">{t('doctors.licence.expiredNote')}</p>}
       {!editing && <div><Button type="button" variant="outline" onClick={() => p.onCorrect(d)}>{t(d.expired ? 'doctors.licence.renew' : 'doctors.licence.correct')}</Button></div>}

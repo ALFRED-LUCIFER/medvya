@@ -21,9 +21,19 @@ public sealed record HoldSlot
     public Guid CalendarId { get; init; }
     public DateTimeOffset Start { get; init; }
     public VisitType VisitType { get; init; }
+    /// <summary>A chair (a resource of the facility) held with the doctor (MDV-P8-009): both are reserved, neither can be double-booked.</summary>
+    public Guid? ResourceId { get; init; }
+    /// <summary>
+    /// The visit's length in minutes when a procedure sets it (MDV-P8-009; reception may lengthen it), rounded up to the doctor's slots; null: the visit
+    /// type's length.
+    /// </summary>
+    public int? Minutes { get; init; }
 }
 
-public sealed record HoldView(Guid Id, Guid FacilityId, Guid CalendarId, VisitType VisitType, DateTimeOffset Start, DateTimeOffset End, DateTimeOffset ExpiresAt);
+public sealed record HoldView(Guid Id, Guid FacilityId, Guid CalendarId, VisitType VisitType, DateTimeOffset Start, DateTimeOffset End, DateTimeOffset ExpiresAt, Guid? ResourceId = null);
+
+/// <summary>A procedure of the services catalogue with its usual length (MDV-P8-009): choosing it sets the visit's length.</summary>
+public sealed record ProcedureOption(Guid Id, string Name, string? Code, int DurationMinutes);
 
 /// <summary>Confirm the caller's hold as an appointment.</summary>
 public sealed record BookAppointment
@@ -127,8 +137,12 @@ public sealed record SeriesResult(Guid SeriesId, IReadOnlyList<SeriesBooked> Occ
 /// </summary>
 public interface IBookingService
 {
-    /// <exception cref="SlotUnavailableException">Taken, being booked, not a slot of the template or in the past.</exception>
+    /// <exception cref="SlotUnavailableException">Taken, being booked, not a slot of the template or in the past; "chair_unavailable" when the chair is
+    /// closed, taken or being booked then.</exception>
     Task<HoldView> HoldAsync(HoldSlot command, CancellationToken cancellationToken = default);
+
+    /// <summary>The catalogue's active services that have a usual length, for the booking form (MDV-P8-009); no prices.</summary>
+    Task<IReadOnlyList<ProcedureOption>> ProceduresAsync(Guid facilityId, CancellationToken cancellationToken = default);
 
     /// <summary>Releases the caller's hold; releasing a hold that is gone does nothing.</summary>
     Task ReleaseHoldAsync(Guid holdId, CancellationToken cancellationToken = default);

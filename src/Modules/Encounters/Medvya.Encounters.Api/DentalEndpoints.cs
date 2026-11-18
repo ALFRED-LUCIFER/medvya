@@ -19,7 +19,8 @@ namespace Medvya.Encounters.Api;
 /// awaiting a dentist (the screen says so).
 /// </summary>
 public sealed record DentalChartResponse(
-    IReadOnlyList<ToothFindingView> Teeth, IReadOnlyList<ToothFindingView> History, DentalPlanView Plan, Guid? OpenEncounterId, string TimeZone, bool RulesSignedOff);
+    IReadOnlyList<ToothFindingView> Teeth, IReadOnlyList<ToothFindingView> History, DentalPlanView Plan, Guid? OpenEncounterId, string TimeZone, bool RulesSignedOff,
+    DentalHistoryCheckView? HistoryCheck = null, Guid? OpenVisitChairId = null);
 
 public static class DentalEndpoints
 {
@@ -41,6 +42,10 @@ public static class DentalEndpoints
             .RequireCapability(Capability.ClinicalNotes, Access.Sign)
             .AuditedByUseCase("patient.dental.finding", "patient", AuditPurpose.Treatment)
             .AddEndpointFilter(MapErrors).RequireFeature(Features.Dental);
+        app.MapPost("/v1/encounters/{encounterId:guid}/dental/history-check", ConfirmHistory)
+            .RequireCapability(Capability.ClinicalNotes, Access.Sign)
+            .AuditedByUseCase("patient.dental.history_check", "patient", AuditPurpose.Treatment)
+            .AddEndpointFilter(MapErrors).RequireFeature(Features.Dental);
         app.MapPost("/v1/patients/{patientId:guid}/dental/plan", Plan)
             .RequireCapability(Capability.ClinicalNotes, Access.Sign)
             .AuditedByUseCase("patient.dental.plan", "dental_plan", AuditPurpose.Treatment, patientRouteKey: "patientId")
@@ -48,6 +53,23 @@ public static class DentalEndpoints
         app.MapPost("/v1/patients/{patientId:guid}/dental/plan/{itemId:guid}/move", Move)
             .RequireCapability(Capability.ClinicalNotes, Access.Sign)
             .AuditedByUseCase("patient.dental.plan_move", "dental_plan", AuditPurpose.Treatment, patientRouteKey: "patientId")
+            .AddEndpointFilter(MapErrors).RequireFeature(Features.Dental);
+        app.MapPost("/v1/patients/{patientId:guid}/dental/plan/{itemId:guid}/stages", MarkStage)
+            .RequireCapability(Capability.ClinicalNotes, Access.Sign)
+            .AuditedByUseCase("patient.dental.stage_done", "dental_plan", AuditPurpose.Treatment, patientRouteKey: "patientId")
+            .AddEndpointFilter(MapErrors).RequireFeature(Features.Dental);
+        // MDV-P8-019: the procedure consent signed on the tablet, its withdrawal, and the stored form.
+        app.MapPost("/v1/patients/{patientId:guid}/dental/plan/{itemId:guid}/consent", SignConsent)
+            .RequireCapability(Capability.ClinicalNotes, Access.Sign)
+            .AuditedByUseCase("patient.dental.consent_sign", "dental_consent", AuditPurpose.Treatment, patientRouteKey: "patientId")
+            .AddEndpointFilter(MapErrors).RequireFeature(Features.Dental);
+        app.MapPost("/v1/patients/{patientId:guid}/dental/consents/{consentId:guid}/withdraw", WithdrawConsent)
+            .RequireCapability(Capability.ClinicalNotes, Access.Sign)
+            .AuditedByUseCase("patient.dental.consent_withdraw", "dental_consent", AuditPurpose.Treatment, patientRouteKey: "patientId")
+            .AddEndpointFilter(MapErrors).RequireFeature(Features.Dental);
+        app.MapPost("/v1/patients/{patientId:guid}/dental/consents/{consentId:guid}/pdf", ConsentPdf)
+            .RequireCapability(Capability.Patient360Chart, Access.Full, Access.Sign)
+            .AuditedByUseCase("patient.dental.consent_pdf", "dental_consent", AuditPurpose.Treatment, patientRouteKey: "patientId")
             .AddEndpointFilter(MapErrors).RequireFeature(Features.Dental);
         app.MapPost("/v1/patients/{patientId:guid}/dental/estimate/acceptance", Accept)
             .RequireCapability(Capability.ClinicalNotes, Access.Sign)
@@ -66,10 +88,11 @@ public static class DentalEndpoints
         if (current.FacilityId is not { } facilityId) return NoFacility();
         if (!(await patients.SummariesAsync([patientId], ct)).ContainsKey(patientId)) return Results.NotFound();
         var chart = await service.ChartAsync(patientId, facilityId, ct);
-        var names = await users.DisplayNamesAsync([.. chart.History.Select(f => f.RecordedBy).Distinct()], ct);
+        var names = await users.DisplayNamesAsync([.. chart.History.Select(f => f.RecordedBy).Concat(chart.HistoryCheck is { } c ? [c.ConfirmedBy] : []).Distinct()], ct);
         ToothFindingView Named(ToothFindingView f) => f with { Author = names.GetValueOrDefault(f.RecordedBy) };
         return Results.Ok(new DentalChartResponse([.. chart.Teeth.Select(Named)], [.. chart.History.Select(Named)], chart.Plan, chart.OpenEncounterId,
-            (await facilities.FindAsync(facilityId, ct) ?? throw new InvalidOperationException("Session facility not in this tenant.")).TimeZone, DentalRules.SignOff is not null));
+            (await facilities.FindAsync(facilityId, ct) ?? throw new InvalidOperationException("Session facility not in this tenant.")).TimeZone, DentalRules.SignOff is not null,
+            chart.HistoryCheck is { } check ? check with { Author = names.GetValueOrDefault(check.ConfirmedBy) } : null, chart.OpenVisitChairId));
     }
 
     static async Task<IResult> Services(Guid patientId, [FromServices] IDental service, [FromServices] IPatientDirectory patients, [FromServices] ICurrentFacility current, CancellationToken ct)
@@ -88,6 +111,15 @@ public static class DentalEndpoints
         return Results.Ok(row with { Author = (await users.DisplayNamesAsync([row.RecordedBy], ct)).GetValueOrDefault(row.RecordedBy) });
     }
 
+    static async Task<IResult> ConfirmHistory(Guid encounterId, [FromBody] ConfirmDentalHistory? body, [FromServices] IDental service, [FromServices] IStaffUsers users,
+        [FromServices] ICurrentFacility current, CancellationToken ct)
+    {
+        if (current.FacilityId is not { } facilityId) return NoFacility();
+        if (body is null) return Results.ValidationProblem(new Dictionary<string, string[]> { ["check"] = ["empty"] });
+        if (await service.ConfirmHistoryAsync(encounterId, facilityId, body, ct) is not { } row) return Results.NotFound();
+        return Results.Ok(row with { Author = (await users.DisplayNamesAsync([row.ConfirmedBy], ct)).GetValueOrDefault(row.ConfirmedBy) });
+    }
+
     static async Task<IResult> Plan(Guid patientId, [FromBody] AddDentalPlanItem? body, [FromServices] IDental service, [FromServices] IPatientDirectory patients,
         [FromServices] ICurrentFacility current, CancellationToken ct)
     {
@@ -104,6 +136,40 @@ public static class DentalEndpoints
         if (!(await patients.SummariesAsync([patientId], ct)).ContainsKey(patientId)) return Results.NotFound();
         if (body is null) return Results.ValidationProblem(new Dictionary<string, string[]> { ["move"] = ["empty"] });
         return await service.MovePlanItemAsync(patientId, facilityId, itemId, body, ct) is { } item ? Results.Ok(item) : Results.NotFound();
+    }
+
+    static async Task<IResult> MarkStage(Guid patientId, Guid itemId, [FromBody] MarkDentalStage? body, [FromServices] IDental service, [FromServices] IPatientDirectory patients,
+        [FromServices] ICurrentFacility current, CancellationToken ct)
+    {
+        if (current.FacilityId is not { } facilityId) return NoFacility();
+        if (!(await patients.SummariesAsync([patientId], ct)).ContainsKey(patientId)) return Results.NotFound();
+        if (body is null) return Results.ValidationProblem(new Dictionary<string, string[]> { ["stage"] = ["empty"] });
+        return await service.MarkStageAsync(patientId, facilityId, itemId, body, ct) is { } item ? Results.Ok(item) : Results.NotFound();
+    }
+
+    static async Task<IResult> SignConsent(Guid patientId, Guid itemId, [FromBody] SignDentalConsent? body, [FromServices] IDental service, [FromServices] IPatientDirectory patients,
+        [FromServices] ICurrentFacility current, CancellationToken ct)
+    {
+        if (current.FacilityId is not { } facilityId) return NoFacility();
+        if (!(await patients.SummariesAsync([patientId], ct)).ContainsKey(patientId)) return Results.NotFound();
+        if (body is null) return Results.ValidationProblem(new Dictionary<string, string[]> { ["consent"] = ["empty"] });
+        return await service.SignConsentAsync(patientId, facilityId, itemId, body, ct) is { } consent ? Results.Ok(consent) : Results.NotFound();
+    }
+
+    static async Task<IResult> WithdrawConsent(Guid patientId, Guid consentId, [FromBody] WithdrawDentalConsent? body, [FromServices] IDental service, [FromServices] IPatientDirectory patients,
+        [FromServices] ICurrentFacility current, CancellationToken ct)
+    {
+        if (current.FacilityId is not { } facilityId) return NoFacility();
+        if (!(await patients.SummariesAsync([patientId], ct)).ContainsKey(patientId)) return Results.NotFound();
+        if (body is null) return Results.ValidationProblem(new Dictionary<string, string[]> { ["withdrawal"] = ["empty"] });
+        return await service.WithdrawConsentAsync(patientId, facilityId, consentId, body, ct) is { } consent ? Results.Ok(consent) : Results.NotFound();
+    }
+
+    static async Task<IResult> ConsentPdf(Guid patientId, Guid consentId, [FromServices] IDental service, [FromServices] IPatientDirectory patients, [FromServices] ICurrentFacility current, CancellationToken ct)
+    {
+        if (current.FacilityId is not { } facilityId) return NoFacility();
+        if (!(await patients.SummariesAsync([patientId], ct)).ContainsKey(patientId)) return Results.NotFound();
+        return await service.ConsentPdfAsync(patientId, facilityId, consentId, ct) is { } pdf ? Results.File(pdf.Content, "application/pdf") : Results.NotFound();
     }
 
     static async Task<IResult> Accept(Guid patientId, [FromBody] AcceptDentalEstimate? body, [FromServices] IDental service, [FromServices] IPatientDirectory patients,
@@ -142,6 +208,10 @@ public static class DentalEndpoints
         catch (DentalConflictException)
         {
             return Results.Problem(statusCode: StatusCodes.Status409Conflict, title: "The plan changed; reload");
+        }
+        catch (DocumentStorageUnavailableException) // MDV-P8-019: the signed consent form cannot be stored or read
+        {
+            return Results.Problem(statusCode: StatusCodes.Status503ServiceUnavailable, title: "Document storage is not available");
         }
         catch (NotePdfUnsupportedTextException)
         {

@@ -308,7 +308,7 @@ public sealed class FormularyTests(PostgresFixture sql) : IClassFixture<Postgres
         await using var db = sql.Prescribing(null);
         Assert.Equal(0, await db.OrderSets.IgnoreQueryFilters().CountAsync());
         Assert.Equal(0, await db.FormularyItems.IgnoreQueryFilters().CountAsync(i => i.TenantId != null));
-        Assert.Equal(FormularySeed.Rows.Count, await db.FormularyItems.IgnoreQueryFilters().CountAsync());
+        Assert.Equal(FormularySeed.Rows.Count + DentalFormularySeed.Rows.Count, await db.FormularyItems.IgnoreQueryFilters().CountAsync());
     }
 
     [Fact]
@@ -334,12 +334,25 @@ public sealed class FormularyTests(PostgresFixture sql) : IClassFixture<Postgres
     [Fact]
     public void TheStarterListIsUniqueAndEveryClassBelongsToItsCountry()
     {
-        Assert.Equal(FormularySeed.Rows.Count, FormularySeed.Rows.Select(FormularySeed.IdOf).Distinct().Count());
-        Assert.All(FormularySeed.Rows, r =>
+        IReadOnlyList<FormularySeed.Row> all = [.. FormularySeed.Rows, .. DentalFormularySeed.Rows];
+        Assert.Equal(all.Count, all.Select(FormularySeed.IdOf).Distinct().Count());
+        Assert.Equal(all.Count, all.Select(r => (r.Country, r.Generic.ToUpperInvariant(), r.Strength, r.Form)).Distinct().Count()); // no medicine in both lists
+        Assert.All(all, r =>
         {
             Assert.Contains(r.RegClass, FormularyRules.For(r.Country).Classes());
             Assert.Contains(r.Form, FormularyRules.Forms);
             Assert.True(FormularyRules.IsAtc(r.Atc));
         });
+    }
+    /// <summary>MDV-P8-015: the dental medicines are on the shared list in both countries, searchable, each with its country's class (local anaesthetic and the antibiotics Schedule H in India).</summary>
+    [Fact]
+    public async Task DentalMedicinesAreSearchableWithTheirClass()
+    {
+        var lidocaine = Assert.Single(await Doctor(india).SearchAsync("lidocaine", 25));
+        Assert.Equal(("Lidocaine with adrenaline", "Injection", RegulatoryClass.ScheduleH, FormularySource.Starter), (lidocaine.Generic, lidocaine.Form, lidocaine.RegClass, lidocaine.Source));
+        Assert.Equal(["warning_schedule_h"], lidocaine.PrintRequirements);
+        Assert.Equal(RegulatoryClass.None, Assert.Single(await Doctor(india).SearchAsync("chlorhexidine", 25)).RegClass);
+        Assert.Equal(RegulatoryClass.None, Assert.Single(await Doctor(uae).SearchAsync("articaine", 25)).RegClass);
+        Assert.Equal(RegulatoryClass.ScheduleH, Assert.Single(await Doctor(india).SearchAsync("clindamycin", 25)).RegClass);
     }
 }

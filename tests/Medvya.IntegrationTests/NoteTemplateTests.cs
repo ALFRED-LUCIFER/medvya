@@ -16,7 +16,7 @@ public sealed class NoteTemplateTests(PostgresFixture sql) : IClassFixture<Postg
     [Fact]
     public void TheDesignedTemplatesExistWithTheRequiredSections()
     {
-        Assert.Equal(["general-opd", "diabetes-review", "hypertension", "paediatrics", "antenatal", "teleconsult", "older-adult-review"], NoteTemplates.Keys);
+        Assert.Equal(["general-opd", "diabetes-review", "hypertension", "paediatrics", "antenatal", "teleconsult", "older-adult-review", "dental"], NoteTemplates.Keys);
         foreach (var t in NoteTemplates.History)
             Assert.Equal(["chiefComplaint", "assessment", "plan"], t.Sections.Where(s => s.Required).Select(s => s.Id));
     }
@@ -38,6 +38,7 @@ public sealed class NoteTemplateTests(PostgresFixture sql) : IClassFixture<Postg
             ["paediatrics@2"] = "paediatrics@2|chiefComplaint!,subjective,reviewOfSystems[ReviewOfSystems:fever;runnyNose;coughWheeze;earPain;vomitingDiarrhoea;lessUrine;rash;fitsOrDrowsy],growthAndDevelopment,immunisations,examination[Examination:general;ears;throat;lungs;heart;skin],objective,assessment!,plan!|feedingDiscussed,immunisationsUpToDate,guardianUnderstands",
             ["antenatal@2"] = "antenatal@2|chiefComplaint!,subjective,reviewOfSystems[ReviewOfSystems:fever;headacheOrVision;palpitations;breathless;constipation;burningUrine;swellingFaceHands;vaginalBleeding],obstetricHistory,fetalWellbeing,examination[Examination:general;heart;lungs;abdomen;legs;breast],objective,assessment!,plan!|fetalMovementsFelt,supplementsContinued,dangerSignsExplained",
             ["older-adult-review@1"] = "older-adult-review@1|chiefComplaint!,subjective,reviewOfSystems[ReviewOfSystems:weightLoss;dizzyOnStanding;breathless;indigestion;nightUrination;kneePain;weakness;lowMood],standingBloodPressure,walkingTest,frailty,homeSafety,examination[Examination:general;heart;lungs;joints;nervousSystem;feet],objective,assessment!,plan!|homeSafetyAdvice,medicineReviewDone,advanceCarePlanDiscussed",
+            ["dental@1"] = "dental@1|chiefComplaint!,subjective,extraOral,intraOral,toothFindings,assessment!,plan!,advice|localAnaesthesiaGiven,postOpInstructionsGiven,reviewIfPainOrSwelling",
         };
         foreach (var t in NoteTemplates.History) Assert.Equal(pinned[$"{t.Key}@{t.Version}"], t.Fingerprint);
         foreach (var g in NoteTemplates.History.GroupBy(t => t.Key)) Assert.Equal(Enumerable.Range(1, g.Count()), g.Select(t => t.Version).Order());
@@ -51,7 +52,7 @@ public sealed class NoteTemplateTests(PostgresFixture sql) : IClassFixture<Postg
     {
         var mine = h.Get<INoteTemplates>(h.Doctor);
         Assert.Equal(["general-opd"], (await mine.CatalogAsync()).Mine);
-        Assert.Equal(7, (await mine.CatalogAsync()).Templates.Count);
+        Assert.Equal(8, (await mine.CatalogAsync()).Templates.Count);
 
         Assert.Equal(["diabetes-review", "hypertension"], await mine.ChooseAsync(new(["hypertension", "diabetes-review", "hypertension"])));
         Assert.Equal(["hypertension"], await h.Get<INoteTemplates>(h.Doctor).ChooseAsync(new(["hypertension"])));
@@ -67,5 +68,22 @@ public sealed class NoteTemplateTests(PostgresFixture sql) : IClassFixture<Postg
         foreach (var bad in new IReadOnlyList<string>?[] { null, [], ["nope"], ["antenatal", "nope"] })
             Assert.Null(await h.Get<INoteTemplates>(h.Doctor).ChooseAsync(new(bad)));
         Assert.Equal(["antenatal"], (await h.Get<INoteTemplates>(h.Doctor).CatalogAsync()).Mine);
+    }
+    /// <summary>
+    /// MDV-P8-015: the owner sets the clinic default (a dental clinic picks the dental template); a doctor who has not chosen works with it, a doctor's own
+    /// choice still wins, and an unknown key is refused. SAFETY (mutation check: drop the clinic default from CatalogAsync and this fails).
+    /// </summary>
+    [Fact]
+    public async Task TheClinicDefaultIsWhatADoctorWhoHasNotChosenWorksWith()
+    {
+        var clinic = h.Get<INoteTemplates>(h.Admin);
+        Assert.Equal(["general-opd"], await clinic.ClinicDefaultAsync());
+        Assert.Null(await clinic.SetClinicDefaultAsync(new(["dental", "orthodontics"])));
+        Assert.Equal(["general-opd", "dental"], await clinic.SetClinicDefaultAsync(new(["dental", "general-opd"])));
+        Assert.Equal(["general-opd", "dental"], (await h.Get<INoteTemplates>(h.SecondDoctor).CatalogAsync()).Mine);
+        await h.Get<INoteTemplates>(h.Doctor).ChooseAsync(new(["hypertension"]));
+        Assert.Equal(["hypertension"], (await h.Get<INoteTemplates>(h.Doctor).CatalogAsync()).Mine);
+        Assert.Equal(["dental"], await clinic.SetClinicDefaultAsync(new(["dental"])));
+        Assert.Equal(["dental"], (await h.Get<INoteTemplates>(h.SecondDoctor).CatalogAsync()).Mine);
     }
 }

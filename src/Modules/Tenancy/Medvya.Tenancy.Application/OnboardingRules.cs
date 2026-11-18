@@ -5,8 +5,11 @@ using Medvya.Tenancy.Domain;
 
 namespace Medvya.Tenancy.Application;
 
-/// <summary>A registration authority a doctor can choose in step 1 (code is stored; the name is shown, in English).</summary>
-public sealed record LicenceAuthority(string Code, string Name);
+/// <summary>
+/// A registration authority a doctor can choose in step 1 (code is stored; the name is shown, in English). Dental is true for a dental council or a
+/// dental licence (MDV-P8-008): the doctor holding it is a dentist, with the same access as any doctor (access never depends on the licence, ADR-016).
+/// </summary>
+public sealed record LicenceAuthority(string Code, string Name, bool Dental = false);
 
 /// <summary>A specialty chip of step 1: the page translates the code; the English name is what the practice defaults keep.</summary>
 public sealed record SpecialtyOption(string Code, string Name);
@@ -286,6 +289,13 @@ internal sealed partial class IndiaOnboardingRules : OnboardingRules
         new("OCMR", "Odisha Council of Medical Registration"), new("PMC", "Punjab Medical Council"), new("RMC", "Rajasthan Medical Council"),
         new("TNMC", "Tamil Nadu Medical Council"), new("TSMC", "Telangana State Medical Council"), new("UPMC", "Uttar Pradesh Medical Council"),
         new("UKMC", "Uttarakhand Medical Council"), new("WBMC", "West Bengal Medical Council"),
+        // MDV-P8-008. shortcut: the Dental Council of India and the larger state dental councils, names in English, not exhaustive; add councils
+        // as clinics ask, or replace with the DCI register lookup when verification ships.
+        new("DCI", "Dental Council of India", true), new("APSDC", "Andhra Pradesh State Dental Council", true), new("DDC", "Delhi Dental Council", true),
+        new("GSDC", "Gujarat State Dental Council", true), new("HSDC", "Haryana State Dental Council", true), new("KSDC", "Karnataka State Dental Council", true),
+        new("KDC", "Kerala Dental Council", true), new("MPDC", "Madhya Pradesh Dental Council", true), new("MSDC", "Maharashtra State Dental Council", true),
+        new("PSDC", "Punjab State Dental Council", true), new("RDC", "Rajasthan Dental Council", true), new("TNDC", "Tamil Nadu Dental Council", true),
+        new("TSDC", "Telangana State Dental Council", true), new("UPSDC", "Uttar Pradesh State Dental Council", true), new("WBDC", "West Bengal Dental Council", true),
     ];
 
     [GeneratedRegex(@"^[A-Za-z0-9][A-Za-z0-9/\-]{2,19}$")] private static partial Regex RegistrationNumber();
@@ -302,6 +312,9 @@ internal sealed partial class UaeOnboardingRules : OnboardingRules
     public override IReadOnlyList<LicenceAuthority> Authorities { get; } =
     [
         new("DoH", "Department of Health Abu Dhabi"), new("DHA", "Dubai Health Authority"), new("MOHAP", "Ministry of Health and Prevention"),
+        // MDV-P8-008: the same three authorities license dentists; the dental licence is its own entry so the print and the doctor list say so.
+        new("DoH-D", "Department of Health Abu Dhabi (dental licence)", true), new("DHA-D", "Dubai Health Authority (dental licence)", true),
+        new("MOHAP-D", "Ministry of Health and Prevention (dental licence)", true),
     ];
 
     // Licences look like GD-29918 (prefix, dash, digits); other forms are letters and digits with dashes.

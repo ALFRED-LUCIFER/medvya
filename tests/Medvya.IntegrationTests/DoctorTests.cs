@@ -205,6 +205,42 @@ public sealed class DoctorTests(PostgresFixture sql) : IClassFixture<PostgresFix
         return await new StaffAccess(db, new FacilityDirectory(db, new NoLogoStore()), new Who(user), new At(facility)).AccessAsync(Capability.ClinicalNotes);
     }
 
+    /// <summary>
+    /// MDV-P8-008: a dentist is added like any doctor with a dental council licence (no medical council needed), keeps a doctor's clinical access and no
+    /// more, prints the dental council on prescriptions and signed notes, and their licence expiry is watched like any other.
+    /// SAFETY (mutation check: drop the dental councils from the India list, or let the print fall back to the code, and this fails).
+    /// </summary>
+    [Fact]
+    public async Task ADentistIsADoctorWithADentalLicenceThatPrintsAndIsWatched()
+    {
+        var expires = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(20);
+        var id = await AddDoctor(Body(authority: "DCI", number: "A-12345", expiresOn: expires.ToString("O", System.Globalization.CultureInfo.InvariantCulture)));
+        await using (var db = sql.Context(h.Tenant))
+            await db.Memberships.Where(m => m.Id == id).ExecuteUpdateAsync(s => s.SetProperty(m => m.UserId, h.Doctor).SetProperty(m => m.FacilityId, h.OtherFacility).SetProperty(m => m.Status, MembershipStatus.Active));
+
+        using var admin = Client(Role.PracticeAdmin);
+        var list = await admin.GetFromJsonAsync<JsonElement>("/v1/settings/doctors");
+        var dci = list.GetProperty("authorities").EnumerateArray().Single(a => a.GetProperty("code").GetString() == "DCI");
+        Assert.Equal(("Dental Council of India", true), (dci.GetProperty("name").GetString(), dci.GetProperty("dental").GetBoolean()));
+        Assert.False(list.GetProperty("authorities").EnumerateArray().Single(a => a.GetProperty("code").GetString() == "NMC").GetProperty("dental").GetBoolean());
+
+        // The same clinical access as a doctor, and no more: every capability equals a medical doctor's in the same role.
+        await using (var db = sql.Context(h.Tenant))
+            foreach (var capability in Enum.GetValues<Capability>())
+            {
+                var dentist = await new StaffAccess(db, new FacilityDirectory(db, new NoLogoStore()), new Who(h.Doctor), new At(h.OtherFacility)).AccessAsync(capability);
+                Assert.Equal(RoleMatrix.Of(Role.HospitalDoctor, capability), dentist);
+            }
+
+        await using (var db = sql.Context(h.Tenant))
+        {
+            var printed = await new FacilityDirectory(db, new NoLogoStore()).MembershipPrescriberAsync(id);
+            Assert.Equal(("A-12345", "Dental Council of India"), (printed!.LicenceNumber, printed.LicenceAuthority)); // "Reg. A-12345 · Dental Council of India"
+            var facts = await new ComplianceFactsReader(db).ReadAsync(DateOnly.FromDateTime(DateTime.UtcNow));
+            Assert.Contains(facts.Licences, l => l.ExpiresOn == expires);
+        }
+    }
+
     [Fact]
     public async Task TheMedvyaLicenceReviewEndpointIsGone()
     {

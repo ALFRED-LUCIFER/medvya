@@ -14,8 +14,35 @@ export type Hold = { id: string; facilityId: string; calendarId: string; visitTy
 export type BookedAppointment = { id: string; reference: string; patientName: string; mrn: string; calendarId: string; start: string; end: string; state: 'Booked' };
 export type PatientMatch = { id: string; fullName: string; mrn: string; hasVisited: boolean };
 
-/** The slot the user clicked, and the visit type that decides how many slots the hold covers. */
-export type SlotChoice = { calendarId: string; calendarName: string; start: string; visitType: VisitType };
+/**
+ * The slot the user clicked, and the visit type that decides how many slots the hold covers. MDV-P8-009: a procedure sets the length in minutes instead
+ * (reception may lengthen it, never shorten it below the procedure's), and a chair can be held with the dentist.
+ */
+export type SlotChoice = {
+  calendarId: string; calendarName: string; start: string; visitType: VisitType;
+  procedureId?: string | null; minutes?: number | null; resourceId?: string | null;
+};
+
+/**
+ * MDV-P8-013: the next stage of a procedure, carried in the address from the Dental tab: its length (5 to 480 minutes) and the chair (an opaque id), or
+ * null when the address names none.
+ */
+export function carriedStageOf(params: URLSearchParams): { minutes: number; chair: string | null } | null {
+  const minutes = Number(params.get('minutes'));
+  if (!Number.isInteger(minutes) || minutes < 5 || minutes > 480) return null;
+  const chair = params.get('chair');
+  return { minutes, chair: chair && z.uuid().safeParse(chair).success ? chair : null };
+}
+
+/** A procedure of the catalogue with its usual length (GET /v1/schedule/procedures). */
+export type Procedure = { id: string; name: string; code: string | null; durationMinutes: number };
+
+/** The length the hold asks for: at least the procedure's, in whole 5 minutes, at most 8 hours (the server's limits); null without a procedure. */
+export function lengthFor(procedure: Pick<Procedure, 'durationMinutes'> | undefined, asked: number | null | undefined): number | null {
+  if (!procedure) return null;
+  const minutes = Math.max(procedure.durationMinutes, Math.ceil((asked ?? 0) / 5) * 5);
+  return Math.min(minutes, 480);
+}
 
 // The patient is chosen with front-desk search (MDV-P1-018); the API takes the chosen opaque id and the panel shows name and MRN.
 export const bookingSchema = z.object({
@@ -29,7 +56,7 @@ export type BookingForm = z.infer<typeof bookingSchema>;
 export const emptyBooking: BookingForm = { patientId: '', reasonCategory: 'General', reasonText: '', channel: 'InPerson' };
 
 /** 409 codes from the API (SlotUnavailableException); anything else is a generic failure. */
-export const slotErrors = ['being_booked', 'slot_unavailable', 'not_bookable', 'in_past', 'hold_expired', 'busy', 'closed', 'terms_not_accepted', 'series_not_booked'] as const;
+export const slotErrors = ['being_booked', 'slot_unavailable', 'not_bookable', 'in_past', 'hold_expired', 'busy', 'closed', 'terms_not_accepted', 'series_not_booked', 'chair_unavailable'] as const;
 export type SlotError = (typeof slotErrors)[number] | 'failed';
 export const slotError = (code: string | undefined): SlotError =>
   (slotErrors as readonly string[]).includes(code ?? '') ? (code as SlotError) : 'failed';

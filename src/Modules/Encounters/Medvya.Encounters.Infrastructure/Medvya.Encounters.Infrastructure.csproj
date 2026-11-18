@@ -15,6 +15,8 @@
   <ItemGroup>
     <!-- The signed note PDF's English copy (MDV-P2-013), from the shared catalogue. -->
     <EmbeddedResource Include="..\..\..\..\packages\i18n\messages\en.json" LogicalName="Medvya.Encounters.messages.en.json" />
+    <EmbeddedResource Include="..\..\..\..\packages\i18n\messages\hi.json" LogicalName="Medvya.Encounters.messages.hi.json" />
+    <EmbeddedResource Include="..\..\..\..\packages\i18n\messages\ar.json" LogicalName="Medvya.Encounters.messages.ar.json" />
   </ItemGroup>
 
   <ItemGroup>

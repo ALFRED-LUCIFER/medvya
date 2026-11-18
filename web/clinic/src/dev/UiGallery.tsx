@@ -14,6 +14,7 @@ import PatientBannerSection from './gallery/PatientBannerSection';
 import PopoverSection from './gallery/PopoverSection';
 import DetailListSection from './gallery/DetailListSection';
 import ToothChartSection from './gallery/ToothChartSection';
+import SignaturePadSection from './gallery/SignaturePadSection';
 import ShellComponentsGallery from './ShellComponentsGallery';
 
 const keys = <T extends object>(o: T) => Object.keys(o) as (keyof T)[];
@@ -189,6 +190,7 @@ export default function UiGallery({ switcher }: { switcher: ReactNode }) {
       <PageComponentsGallery />
       <DetailListSection />
       <ToothChartSection />
+      <SignaturePadSection />
       <FieldGallery />
       <StickyActionBarSection />
       <ChipTagBannerSection />

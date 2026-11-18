@@ -1,3 +1,4 @@
+using Medvya.Encounters.Application;
 using Medvya.Encounters.Domain;
 
 namespace Medvya.IntegrationTests;
@@ -83,7 +84,12 @@ public sealed class DentalRulesTests
 
     static DentalPlanItem Item(long minor, DentalPlanStatus status, Guid? id = null) => new()
     {
-        Id = id ?? Guid.CreateVersion7(), ServiceName = "Synthetic", Currency = "INR", EstimateMinor = minor, Status = status, Phase = 1,
+        Id = id ?? Guid.CreateVersion7(),
+        ServiceName = "Synthetic",
+        Currency = "INR",
+        EstimateMinor = minor,
+        Status = status,
+        Phase = 1,
     };
 
     [Fact]
@@ -108,4 +114,21 @@ public sealed class DentalRulesTests
 
     [Fact]
     public void TheChartRulesAreADraftUntilADentistSignsThem() => Assert.Null(DentalRules.SignOff);
+    /// <summary>SAFETY (mutation check: swap the M and D zones, or stop mirroring the lower left quadrant, and this fails: the printed caries would be on the wrong side).</summary>
+    [Fact]
+    public void ThePrintedChartPaintsOnlyTheRecordedSurfacesOnTheirSide()
+    {
+        var caries = new ToothFindingView(Guid.NewGuid(), "36", ToothCondition.Caries, "DO", null, Guid.NewGuid(), Guid.NewGuid(), DateTimeOffset.UnixEpoch);
+        var svg = System.Xml.Linq.XElement.Parse(Medvya.Encounters.Infrastructure.DentalChartPdf.Glyph("36", caries));
+        System.Xml.Linq.XNamespace ns = "http://www.w3.org/2000/svg";
+        var painted = svg.Descendants(ns + "polygon").Select((p, i) => (Surface: "BMLDO"[i], Fill: (string?)p.Attribute("fill"))).Where(z => z.Fill == "url(#p)").Select(z => z.Surface);
+        Assert.Equal("DO", string.Concat(painted.Order()));
+        Assert.Matches(@"scale\(-[\d.]+ -[\d.]+\)", (string?)svg.Element(ns + "g")!.Attribute("transform")); // lower left: mirrored both ways
+        Assert.Contains("patternTransform=\"rotate(45)\"", svg.ToString(System.Xml.Linq.SaveOptions.DisableFormatting), StringComparison.Ordinal); // hatched, not colour alone
+
+        var blank = Medvya.Encounters.Infrastructure.DentalChartPdf.Glyph("54", null);
+        Assert.Contains("stroke-dasharray", blank, StringComparison.Ordinal); // unrecorded is dashed, never drawn as healthy
+        Assert.Equal(Outline(Medvya.Encounters.Infrastructure.DentalChartPdf.Glyph("16", null)), Outline(blank)); // primary 4s and 5s are molars
+        static string Outline(string glyph) => System.Text.RegularExpressions.Regex.Match(glyph, "<clipPath id=\"c\"><path d=\"([^\"]+)\"").Groups[1].Value;
+    }
 }

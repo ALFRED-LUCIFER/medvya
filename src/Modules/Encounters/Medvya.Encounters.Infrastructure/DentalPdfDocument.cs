@@ -12,7 +12,7 @@ namespace Medvya.Encounters.Infrastructure;
 
 /// <summary>
 /// The dental record and estimate as an A4 PDF (MDV-P8-011, MDV-P8-012) in the print family frame (MDV-P1-111): the clinic and the dentist printing it
-/// in the masthead, the patient on every page, then labelled rows: the tooth chart (each tooth with a finding, in FDI order, condition in words, surfaces,
+/// in the masthead, the patient on every page, then labelled rows: the tooth chart (drawn as on screen, DentalChartPdf, then each tooth with a finding, in FDI order, condition in words, surfaces,
 /// who and when), the treatment plan by phase with each item's tooth, state and estimate, the estimate total and the acceptance (who, how, when, or
 /// "not accepted yet", and "changed since accepted" when the plan moved on). The chart rules are a draft until a dentist signs them; the page says so.
 /// Copy comes from the shared English catalogue (packages/i18n/messages/en.json); the server never invents wording.
@@ -47,8 +47,8 @@ public static class DentalPdfDocument
         var plan = chart.Plan;
         List<PlainPdf.Row> rows =
         [
-            Row(Text("dentalPdf.label.chart"), [.. teeth.Count == 0 ? [(Text("dentalPdf.noFindings"), Tone.Body)] : teeth.Select(t => (Finding(t), Tone.Body)),
-                (Text(DentalRules.SignOff is null ? "dental.rulesDraft" : "dental.rulesSigned"), Tone.Small)]),
+            new(Text("dentalPdf.label.chart"), DentalChartPdf.Part(teeth, key => Text(key)), PlainPdf.Lines([.. teeth.Count == 0 ? [(Text("dentalPdf.noFindings"), Tone.Body)]
+                : teeth.Select(t => (Finding(t), Tone.Body)), (Text(DentalRules.SignOff is null ? "dental.rulesDraft" : "dental.rulesSigned"), Tone.Small)])),
         ];
         foreach (var phase in plan.Items.GroupBy(i => i.Phase).OrderBy(g => g.Key))
             rows.Add(Row(Text("dentalPdf.label.phase", ("phase", phase.Key.ToString(CultureInfo.InvariantCulture))), [.. phase.Select(i => (Item(i), Tone.Body))]));

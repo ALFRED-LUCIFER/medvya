@@ -270,6 +270,11 @@ public sealed class DentalTests(PostgresFixture sql) : IClassFixture<PostgresFix
             body.GetProperty("teeth")[0].GetProperty("surfaces").GetString(), body.GetProperty("teeth")[0].GetProperty("author").GetString()));
         Assert.False(body.GetProperty("rulesSignedOff").GetBoolean());
 
+        // Every condition on the drawn chart, a primary tooth among them: the PDF fonts have no "✓", so a healthy tooth must still print (its check is drawn).
+        foreach (var (tooth, condition, surfaces) in new[] { ("11", "Sound", (string?)null), ("37", "Filling", "MO"), ("16", "Crown", null), ("26", "RootCanalTreated", null),
+            ("46", "Missing", null), ("24", "Implant", null), ("14", "Bridge", null), ("31", "Mobile", null), ("21", "Fractured", null), ("55", "Sound", null) })
+            using (var r = await doctor.PostAsJsonAsync(new Uri($"/v1/encounters/{encounter}/dental/findings", UriKind.Relative), new { tooth, condition, surfaces }))
+                Assert.Equal(HttpStatusCode.OK, r.StatusCode);
         using var pdf = await doctor.PostAsync(new Uri($"/v1/patients/{h.Patient}/dental/pdf", UriKind.Relative), null);
         Assert.Equal(HttpStatusCode.OK, pdf.StatusCode);
         Assert.Equal("application/pdf", pdf.Content.Headers.ContentType?.MediaType);

@@ -285,6 +285,7 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.SoloDoctor, new("GET", "/v1/patients/{patient}/dental")),
         (Role.SoloDoctor, new("GET", "/v1/patients/{patient}/dental/services")),
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/dental/findings", """{"tooth":"36","condition":"Sound"}""")),
+        (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/dental/history-check", """{"answers":{"BloodThinners":false,"Diabetes":false,"Pregnancy":false,"HeartOrEndocarditisRisk":false,"Bisphosphonates":false,"LocalAnaestheticAllergy":false}}""")),
         (Role.SoloDoctor, new("POST", "/v1/patients/{patient}/dental/plan", """{"serviceId":"{dentalItem}","phase":1}""")),
         (Role.SoloDoctor, new("POST", "/v1/patients/{patient}/dental/plan/{dentalItem}/move", """{"to":"Declined","reason":"Synthetic"}""")),
         (Role.SoloDoctor, new("POST", "/v1/patients/{patient}/dental/estimate/acceptance", """{"acceptedBy":"Synthetic","method":"OnTablet"}""")),
@@ -533,6 +534,7 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.Receptionist, new("GET", "/v1/patients/{patient}/geriatric-assessments")), // Patient 360: X
         (Role.Receptionist, new("GET", "/v1/patients/{patient}/dental")), // Patient 360: X
         (Role.Nurse, new("POST", "/v1/encounters/{encounter}/dental/findings", """{"tooth":"36","condition":"Sound"}""")), // Clinical notes: R, not S
+        (Role.Nurse, new("POST", "/v1/encounters/{encounter}/dental/history-check", """{"answers":{}}""")), // Clinical notes: R, not S
         (Role.CareCoordinator, new("POST", "/v1/patients/{patient}/dental/estimate/acceptance", """{"acceptedBy":"Synthetic","method":"OnTablet"}""")), // Clinical notes: R
         (Role.Nurse, new("POST", "/v1/patients/{patient}/dental/pdf")), // Patient 360: L, the PDF needs Full
         (Role.CareCoordinator, new("POST", "/v1/patients/{patient}/geriatric-assessments", """{"clinicalFrailtyScale":4}""")), // Vitals & allergies entry: X

@@ -13,6 +13,13 @@ public enum ToothCondition { Sound, Caries, Filling, Crown, RootCanalTreated, Mi
 [JsonConverter(typeof(JsonStringEnumConverter<DentalPlanStatus>))]
 public enum DentalPlanStatus { Planned, InProgress, Done, Declined }
 
+/// <summary>
+/// The medical history questions asked before dental treatment (MDV-P8-014): blood thinners (anticoagulants or antiplatelets), diabetes, pregnancy, a heart
+/// condition or endocarditis risk, bisphosphonates, and an allergy to local anaesthetic. A dentist approves the list (intake record).
+/// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter<DentalHistoryQuestion>))]
+public enum DentalHistoryQuestion { BloodThinners, Diabetes, Pregnancy, HeartOrEndocarditisRisk, Bisphosphonates, LocalAnaestheticAllergy }
+
 /// <summary>How the patient accepted the estimate: on the clinic tablet, or on the printed estimate signed by hand.</summary>
 [JsonConverter(typeof(JsonStringEnumConverter<AcceptanceMethod>))]
 public enum AcceptanceMethod { OnTablet, PrintedAndSigned }
@@ -185,4 +192,42 @@ public static class DentalRules
         var text = string.Join(";", Estimated(items).OrderBy(i => i.Id).Select(i => $"{i.Id:N}:{i.EstimateMinor}"));
         return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(text)));
     }
+}
+
+/// <summary>
+/// DENTAL_HISTORY_CHECK (MDV-P8-014): the medical history that matters for dental care, confirmed with the patient in a consultation. Every question is
+/// answered; <see cref="Yes"/> holds the ones answered yes (each raises a risk the dentist must see before treatment starts). Append-only: a later visit
+/// confirms again with a new row, so the date it was last confirmed is the newest row's.
+/// </summary>
+public sealed class DentalHistoryCheck
+{
+    public const int MaxNote = 500;
+    [Classification(DataClass.Internal)] public Guid Id { get; init; }
+    [Classification(DataClass.Internal)] public Guid TenantId { get; init; }
+    [Classification(DataClass.Internal)] public Guid PatientId { get; init; }
+    [Classification(DataClass.Internal)] public Guid FacilityId { get; init; }
+    [Classification(DataClass.Internal)] public Guid? MergedFromPatientId { get; init; }
+    [Classification(DataClass.Internal)] public Guid EncounterId { get; init; }
+    [Classification(DataClass.SensitiveHealth)] public required DentalHistoryQuestion[] Yes { get; init; }
+    [Classification(DataClass.SensitiveHealth)] public string? Note { get; init; }
+    [Classification(DataClass.Internal)] public Guid ConfirmedBy { get; init; }
+    [Classification(DataClass.Internal)] public DateTimeOffset ConfirmedAt { get; init; }
+}
+
+/// <summary>The history check's rules (MDV-P8-014): every question answered yes or no, a short optional note.</summary>
+public static class DentalHistoryRules
+{
+    public static readonly IReadOnlyList<DentalHistoryQuestion> Questions = Enum.GetValues<DentalHistoryQuestion>();
+
+    public static List<(string Field, string Code)> Validate(IReadOnlyDictionary<DentalHistoryQuestion, bool>? answers, string? note)
+    {
+        var errors = new List<(string, string)>();
+        foreach (var q in Questions)
+            if (answers is null || !answers.ContainsKey(q)) errors.Add(($"answers.{q}", "required"));
+        if (note?.Trim().Length > DentalHistoryCheck.MaxNote) errors.Add(("note", "too_long"));
+        return errors;
+    }
+
+    /// <summary>The questions answered yes, in the order they are asked.</summary>
+    public static DentalHistoryQuestion[] Yes(IReadOnlyDictionary<DentalHistoryQuestion, bool> answers) => [.. Questions.Where(q => answers[q])];
 }

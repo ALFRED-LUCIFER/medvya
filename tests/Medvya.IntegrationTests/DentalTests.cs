@@ -60,6 +60,10 @@ public sealed class DentalTests(PostgresFixture sql) : IClassFixture<PostgresFix
         return service;
     }
 
+    /// <summary>The history check confirmed on the visit (MDV-P8-014), with the questions answered yes; every other answer is no.</summary>
+    Task<DentalHistoryCheckView?> CheckedAsync(Guid encounter, params DentalHistoryQuestion[] yes) =>
+        Dental().ConfirmHistoryAsync(encounter, h.Facility, new(DentalHistoryRules.Questions.ToDictionary(q => q, yes.Contains), null));
+
     static async Task<string> Refused(Task task) => string.Join(",", (await Assert.ThrowsAsync<DentalValidationException>(() => task)).Errors.Select(e => $"{e.Field}:{e.Code}").Order());
 
     [Fact]
@@ -117,6 +121,35 @@ public sealed class DentalTests(PostgresFixture sql) : IClassFixture<PostgresFix
         return await db.DentalFindings.CountAsync();
     }
 
+    /// <summary>
+    /// MDV-P8-014: the history check is confirmed on an open visit with every question answered, audited, and the chart shows the latest with its date and the
+    /// risks; a check is append-only (the database refuses an UPDATE), so a later visit confirms again with a new row.
+    /// SAFETY (mutation check: accept a check with a question unanswered, or let the chart show an older check, and this fails).
+    /// </summary>
+    [Fact]
+    public async Task TheHistoryCheckIsConfirmedOnTheVisitWithEveryAnswerAndTheLatestIsShown()
+    {
+        var (encounter, _) = await ConsultAsync(10);
+        var partial = DentalHistoryRules.Questions.Where(q => q != DentalHistoryQuestion.Pregnancy).ToDictionary(q => q, _ => false);
+        Assert.Equal("answers.Pregnancy:required", await Refused(Dental().ConfirmHistoryAsync(encounter, h.Facility, new(partial, null))));
+        Assert.Null(await Dental().ConfirmHistoryAsync(encounter, h.OtherFacility, new(partial, null))); // not this facility's visit
+
+        var first = (await CheckedAsync(encounter))!;
+        Assert.Empty(first.Yes);
+        var second = (await CheckedAsync(encounter, DentalHistoryQuestion.LocalAnaestheticAllergy, DentalHistoryQuestion.BloodThinners))!;
+        Assert.Equal([DentalHistoryQuestion.BloodThinners, DentalHistoryQuestion.LocalAnaestheticAllergy], second.Yes); // in the order asked
+
+        var chart = await Dental().ChartAsync(h.Patient, h.Facility);
+        Assert.Equal((second.Id, encounter), (chart.HistoryCheck!.Id, chart.HistoryCheck.EncounterId));
+        Assert.Equal(second.Yes, chart.HistoryCheck.Yes);
+        await using (var audit = sql.Audit(h.Tenant))
+            Assert.Equal(2, await audit.Events.CountAsync(e => e.Action == Medvya.Encounters.Infrastructure.DentalService.HistoryAction && e.PatientId == h.Patient));
+
+        await using var db = sql.Encounters(h.Tenant);
+        var e = await Assert.ThrowsAnyAsync<PostgresException>(() => db.DentalHistoryChecks.ExecuteUpdateAsync(x => x.SetProperty(c => c.Note, "changed")));
+        Assert.Equal(PostgresErrorCodes.InsufficientPrivilege, e.SqlState); // append-only
+    }
+
     /// <summary>SAFETY (mutation check: let MovePlanItemAsync skip DentalRules.CanMove, the decline reason or the encounter check, and this fails).</summary>
     [Fact]
     public async Task APlanItemIsPricedFromTheCatalogueAndMovesOnlyByTheAllowedSteps()
@@ -132,6 +165,9 @@ public sealed class DentalTests(PostgresFixture sql) : IClassFixture<PostgresFix
         Assert.Equal("to:not_allowed", await Refused(Dental().MovePlanItemAsync(h.Patient, h.Facility, item.Id, new(DentalPlanStatus.Done, null, encounter, null))));
         Assert.Equal("reason:required", await Refused(Dental().MovePlanItemAsync(h.Patient, h.Facility, item.Id, new(DentalPlanStatus.Declined, " ", null, null))));
         Assert.Equal("encounterId:required", await Refused(Dental().MovePlanItemAsync(h.Patient, h.Facility, item.Id, new(DentalPlanStatus.InProgress, null, null, null))));
+        // MDV-P8-014: no treatment before the history is confirmed on this visit.
+        Assert.Equal("historyCheck:required", await Refused(Dental().MovePlanItemAsync(h.Patient, h.Facility, item.Id, new(DentalPlanStatus.InProgress, null, encounter, item.Version))));
+        await CheckedAsync(encounter);
 
         var started = (await Dental().MovePlanItemAsync(h.Patient, h.Facility, item.Id, new(DentalPlanStatus.InProgress, null, encounter, item.Version)))!;
         await Assert.ThrowsAsync<DentalConflictException>(() => Dental().MovePlanItemAsync(h.Patient, h.Facility, item.Id, new(DentalPlanStatus.Done, null, encounter, item.Version))); // stale
@@ -174,6 +210,7 @@ public sealed class DentalTests(PostgresFixture sql) : IClassFixture<PostgresFix
     {
         await h.StepsAsync(nurse: false, billing: true);
         var (encounter, visit) = await ConsultAsync(10);
+        await CheckedAsync(encounter);
         var rct = await PricedAsync("Root canal, stage 1 (synthetic)", 250_000);
         var xray = await PricedAsync("IOPA X-ray (synthetic)", 30_000);
         async Task DoneAsync(Guid service)
@@ -275,6 +312,9 @@ public sealed class DentalTests(PostgresFixture sql) : IClassFixture<PostgresFix
             ("46", "Missing", null), ("24", "Implant", null), ("14", "Bridge", null), ("31", "Mobile", null), ("21", "Fractured", null), ("55", "Sound", null) })
             using (var r = await doctor.PostAsJsonAsync(new Uri($"/v1/encounters/{encounter}/dental/findings", UriKind.Relative), new { tooth, condition, surfaces }))
                 Assert.Equal(HttpStatusCode.OK, r.StatusCode);
+        using (var r = await doctor.PostAsJsonAsync(new Uri($"/v1/encounters/{encounter}/dental/history-check", UriKind.Relative),
+            new { answers = DentalHistoryRules.Questions.ToDictionary(q => q.ToString(), q => q == DentalHistoryQuestion.BloodThinners), note = "Aspirin 75 mg (synthetic)" }))
+            Assert.Equal(HttpStatusCode.OK, r.StatusCode); // printed as "Answered yes: Takes blood thinners…"
         using var pdf = await doctor.PostAsync(new Uri($"/v1/patients/{h.Patient}/dental/pdf", UriKind.Relative), null);
         Assert.Equal(HttpStatusCode.OK, pdf.StatusCode);
         Assert.Equal("application/pdf", pdf.Content.Headers.ContentType?.MediaType);

@@ -18,7 +18,8 @@ const item = (id: string, serviceName: string, tooth: string | null, phase: numb
   ({ id, serviceId: `s-${id}`, serviceName, tooth, surfaces: null, phase, estimateMinor, currency: 'INR', status, reason, createdAt: '2026-11-06T04:30:00Z',
     changedAt: '2026-11-06T04:30:00Z', doneAt: status === 'Done' ? '2026-11-06T05:00:00Z' : null, version: 7 });
 
-const chart = (openEncounterId: string | null, acceptanceCurrent = true) => ({
+const check = (encounterId: string) => ({ id: 'h-1', encounterId, yes: ['BloodThinners'], note: null, confirmedBy: 'u-das', confirmedAt: '2026-11-06T04:40:00Z', author: 'Dr. Kiran Das (synthetic)' });
+const chart = (openEncounterId: string | null, acceptanceCurrent = true, historyOn: string | null = openEncounterId) => ({
   teeth: [finding('f-3', '36', 'Caries', 'DO', '2026-11-06T04:51:00Z'), finding('f-2', '46', 'Missing', null, '2026-11-06T04:45:00Z')],
   history: [finding('f-3', '36', 'Caries', 'DO', '2026-11-06T04:51:00Z'), finding('f-2', '46', 'Missing', null, '2026-11-06T04:45:00Z'), finding('f-1', '36', 'Caries', 'O', '2026-10-01T04:30:00Z')],
   plan: {
@@ -28,7 +29,7 @@ const chart = (openEncounterId: string | null, acceptanceCurrent = true) => ({
     acceptance: { id: 'a-1', acceptedBy: 'Farhan Qureshi (synthetic)', method: 'OnTablet', totalMinor: 1_850_000, currency: 'INR', acceptedAt: '2026-11-06T05:08:00Z', recordedBy: 'u-das' },
     acceptanceCurrent,
   },
-  openEncounterId, timeZone: 'Asia/Kolkata', rulesSignedOff: false,
+  openEncounterId, timeZone: 'Asia/Kolkata', rulesSignedOff: false, historyCheck: historyOn ? check(historyOn) : null,
 });
 const services = [
   { id: 's-rct', name: 'Root canal, molar (synthetic)', code: 'DN-END003', durationMinutes: 60, priceMinor: 650_000, currency: 'INR' },
@@ -41,12 +42,13 @@ const section = (within: Page | import('@playwright/test').Locator, heading: str
   const page = 'page' in within && typeof within.page === 'function' ? within.page() : within as Page;
   return within.locator('section').filter({ has: page.getByRole('heading', { name: heading, exact: true }) }).last();
 };
-async function open(page: Page, { locale = 'en', openEncounterId = 'e-9' as string | null, acceptanceCurrent = true, move = 200, flags = ['clinical.dental'], notes = 'Sign' } = {}) {
+async function open(page: Page, { locale = 'en', openEncounterId = 'e-9' as string | null, acceptanceCurrent = true, move = 200, flags = ['clinical.dental'], notes = 'Sign', historyOn = 'same' as string | null } = {}) {
   const calls: Call[] = [];
   const log = (r: import('@playwright/test').Route) => calls.push({ method: r.request().method(), url: r.request().url(), body: r.request().postDataJSON() });
   await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
   await page.route('**/v1/me/context', r => r.fulfill({ json: session(flags, notes) }));
-  await page.route('**/v1/patients/p-1/dental', r => { log(r); return r.fulfill({ json: chart(openEncounterId, acceptanceCurrent) }); });
+  await page.route('**/v1/patients/p-1/dental', r => { log(r); return r.fulfill({ json: chart(openEncounterId, acceptanceCurrent, historyOn === 'same' ? openEncounterId : historyOn) }); });
+  await page.route('**/v1/encounters/*/dental/history-check', r => { log(r); return r.fulfill({ json: check(openEncounterId ?? 'e-9') }); });
   await page.route('**/v1/patients/p-1/dental/services', r => r.fulfill({ json: services }));
   await page.route('**/v1/encounters/*/dental/findings', r => { log(r); return r.fulfill({ json: finding('f-4', '37', 'Caries', 'DO', '2026-11-06T05:10:00Z') }); });
   await page.route('**/v1/patients/p-1/dental/plan', r => { log(r); return r.fulfill({ json: item('p-4', 'Root canal, molar (synthetic)', '36', 1, 650_000, 'Planned') }); });
@@ -95,6 +97,28 @@ test('a caries finding needs a surface, then goes in the body with the surfaces 
   expect(posted).toHaveLength(1);
   expect(posted[0]!.url).toMatch(/\/v1\/encounters\/e-9\/dental\/findings$/);
   expect(posted[0]!.body).toEqual({ tooth: '37', condition: 'Caries', surfaces: 'DO', note: '' });
+});
+
+test('the medical history check: the risk in words, and treatment starts only once it is confirmed on this visit (MDV-P8-014)', async ({ page }) => {
+  const calls = await open(page, { historyOn: 'e-earlier' });
+  const card = page.getByRole('region', { name: 'Medical history check' });
+  await expect(card).toContainText('Last confirmed');
+  await expect(card).toContainText('Answered yes: check before treatment');
+  await expect(card.getByRole('listitem')).toHaveText(['Takes blood thinners (anticoagulants or antiplatelets)']);
+  const plan = page.getByRole('region', { name: 'Treatment plan' });
+  await expect(plan.getByRole('button', { name: 'Start' })).toBeDisabled();
+  await expect(plan).toContainText('Confirm the medical history check on this visit before starting treatment.');
+
+  await card.getByRole('button', { name: 'Confirm the history check' }).click();
+  await expect(card.getByRole('alert')).toHaveText('Answer every question with yes or no.');
+  expect(calls.filter(c => c.url.includes('history-check'))).toHaveLength(0);
+  for (const q of ['Diabetes', 'Pregnant or may be pregnant', 'Heart condition or endocarditis risk', 'Takes or has taken bisphosphonates', 'Allergy to local anaesthetic'])
+    await card.getByRole('group', { name: q }).getByRole('radio', { name: 'No' }).check();
+  await card.getByRole('group', { name: 'Takes blood thinners (anticoagulants or antiplatelets)' }).getByRole('radio', { name: 'Yes' }).check();
+  await card.getByRole('button', { name: 'Confirm the history check' }).click();
+  await expect.poll(() => calls.filter(c => c.url.includes('history-check')).map(c => c.body)).toEqual([{
+    answers: { Diabetes: false, Pregnancy: false, HeartOrEndocarditisRisk: false, Bisphosphonates: false, LocalAnaestheticAllergy: false, BloodThinners: true }, note: '',
+  }]);
 });
 
 test('without an open consultation a finding cannot be added and Start and Mark done wait for one', async ({ page }) => {

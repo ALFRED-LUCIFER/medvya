@@ -24,7 +24,8 @@ public sealed class DentalService(
     IPatientDirectory patients, IFacilityDirectory facilities, IStaffUsers staff) : IDental, IDentalCharges
 {
     public const string ReadAction = "patient.dental.read", FindingAction = "patient.dental.finding", PlanAction = "patient.dental.plan",
-        MoveAction = "patient.dental.plan_move", AcceptAction = "patient.dental.estimate_accept", PdfAction = "patient.dental.pdf";
+        MoveAction = "patient.dental.plan_move", AcceptAction = "patient.dental.estimate_accept", PdfAction = "patient.dental.pdf",
+        HistoryAction = "patient.dental.history_check";
     static readonly Access[] Treats = [Access.Read, Access.Limited, Access.Full, Access.Sign];
     static readonly Access[] Dentists = [Access.Sign];
 
@@ -46,8 +47,33 @@ public sealed class DentalService(
             .OrderByDescending(f => f.RecordedAt).ThenByDescending(f => f.Id).Take(DentalRules.MaxHistory).ToListAsync(cancellationToken);
         var views = history.Select(View).ToList();
         var teeth = views.GroupBy(f => f.Tooth).Select(g => g.First()).OrderBy(f => f.Tooth, StringComparer.Ordinal).ToList();
-        return new DentalChartView(teeth, views, await PlanAsync(patientId, cancellationToken));
+        var check = await db.DentalHistoryChecks.AsNoTracking().Where(c => c.PatientId == patientId)
+            .OrderByDescending(c => c.ConfirmedAt).ThenByDescending(c => c.Id).FirstOrDefaultAsync(cancellationToken);
+        return new DentalChartView(teeth, views, await PlanAsync(patientId, cancellationToken), HistoryCheck: check is null ? null : View(check));
     }
+
+    public async Task<DentalHistoryCheckView?> ConfirmHistoryAsync(Guid encounterId, Guid facilityId, ConfirmDentalHistory command, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        if (await db.Encounters.AsNoTracking().SingleOrDefaultAsync(e => e.Id == encounterId, cancellationToken) is not { } encounter || encounter.FacilityId != facilityId) return null;
+        await clinical.RequireAsync(encounter.PatientId, facilityId, Capability.ClinicalNotes, Dentists, cancellationToken);
+        var errors = DentalHistoryRules.Validate(command.Answers, command.Note);
+        if (encounter.Status != EncounterStatus.Active) errors.Add(("encounter", "ended"));
+        if (errors.Count > 0) throw new DentalValidationException(errors);
+        var row = new DentalHistoryCheck
+        {
+            Id = Guid.CreateVersion7(), TenantId = TenantId, PatientId = encounter.PatientId, FacilityId = facilityId, EncounterId = encounter.Id,
+            Yes = DentalHistoryRules.Yes(command.Answers!), Note = command.Note?.Trim() is { Length: > 0 } note ? note : null, ConfirmedBy = Me, ConfirmedAt = clock.GetUtcNow(),
+        };
+        await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
+        db.DentalHistoryChecks.Add(row);
+        await db.SaveChangesAsync(cancellationToken);
+        await audit.WriteAsync(Event(HistoryAction, encounter.PatientId), tx.GetDbTransaction(), cancellationToken);
+        await tx.CommitAsync(cancellationToken);
+        return View(row);
+    }
+
+    static DentalHistoryCheckView View(DentalHistoryCheck c) => new(c.Id, c.EncounterId, c.Yes, c.Note, c.ConfirmedBy, c.ConfirmedAt);
 
     async Task<DentalPlanView> PlanAsync(Guid patientId, CancellationToken cancellationToken)
     {
@@ -134,6 +160,9 @@ public sealed class DentalService(
             else if ((encounter = await db.Encounters.AsNoTracking().SingleOrDefaultAsync(e => e.Id == encounterId, cancellationToken)) is null
                 || encounter.PatientId != patientId || encounter.FacilityId != facilityId) errors.Add(("encounterId", "invalid"));
             else if (encounter.Status != EncounterStatus.Active) errors.Add(("encounterId", "ended"));
+            // MDV-P8-014: treatment starts only after the history that matters for it was confirmed with the patient on this visit.
+            else if (command.To == DentalPlanStatus.InProgress && !await db.DentalHistoryChecks.AnyAsync(c => c.EncounterId == encounter.Id, cancellationToken))
+                errors.Add(("historyCheck", "required"));
         }
         if (errors.Count > 0) throw new DentalValidationException(errors);
         if (command.Version is { } read && read != item.Version) throw new DentalConflictException();
@@ -188,7 +217,7 @@ public sealed class DentalService(
         var chart = await ReadAsync(patientId, cancellationToken);
         var patient = (await patients.SummariesAsync([patientId], cancellationToken)).GetValueOrDefault(patientId) ?? throw new InvalidOperationException("The patient was not found.");
         var facility = await facilities.FindAsync(facilityId, cancellationToken) ?? throw new InvalidOperationException("Session facility not in this tenant.");
-        var names = await staff.DisplayNamesAsync([.. chart.History.Select(f => f.RecordedBy).Append(Me).Distinct()], cancellationToken);
+        var names = await staff.DisplayNamesAsync([.. chart.History.Select(f => f.RecordedBy).Append(Me).Concat(chart.HistoryCheck is { } c ? [c.ConfirmedBy] : []).Distinct()], cancellationToken);
         var content = DentalPdfDocument.Render(patient, facility, chart, names, await facilities.PrintImagesAsync(Me, facilityId, cancellationToken),
             await facilities.PrescriberAsync(Me, facilityId, cancellationToken), names.GetValueOrDefault(Me) ?? "", clock.GetUtcNow());
         await audit.WriteAsync(Event(PdfAction, patientId), cancellationToken);

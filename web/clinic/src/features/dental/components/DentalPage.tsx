@@ -7,7 +7,7 @@ import { CircleAlert, CircleCheck, Clock, Ban, CircleDot, FileDown, Lock } from 
 import { fieldError } from '../../settings/components/fieldStyles';
 import { ChartBanner } from '../../patient360/components/Patient360Page';
 import type { Patient360 } from '../../patient360/domain/chart';
-import { byPhase, conditions, conditionTone, dentitions, marksFor, money, nextSteps, surfaceConditions, surfaceOrder, type DentalView, type PlanItem, type PlanStatus } from '../domain/dental';
+import { byPhase, conditions, conditionTone, dentitions, historyQuestions, marksFor, money, nextSteps, surfaceConditions, surfaceOrder, type DentalView, type PlanItem, type PlanStatus } from '../domain/dental';
 
 const statusLook: Record<PlanStatus, { tone: 'info' | 'warning' | 'success' | 'neutral'; icon: typeof Clock }> = {
   Planned: { tone: 'info', icon: CircleDot }, InProgress: { tone: 'warning', icon: Clock }, Done: { tone: 'success', icon: CircleCheck }, Declined: { tone: 'neutral', icon: Ban },
@@ -47,11 +47,56 @@ export default function DentalPage(p: DentalView & { consultPath: string | null;
         <p className="text-caption text-muted-foreground">{t(c.rulesSignedOff ? 'dental.rulesSigned' : 'dental.rulesDraft')}</p>
       </Card>
 
+      <MedicalHistoryCard {...p} when={when} />
+
       <div className="grid gap-4 wide:grid-cols-2">
         <ToothPanel {...p} when={when} />
         <PlanCard {...p} amount={amount} when={when} />
       </div>
     </PageContainer>
+  );
+}
+
+/**
+ * The medical history check before treatment (MDV-P8-014): when it was last confirmed and by whom, each answer that raises a risk in words, and, in the
+ * doctor's open consultation, the six questions to ask the patient again. Treatment on the plan starts only once it is confirmed on this visit.
+ */
+function MedicalHistoryCard(p: DentalView & { when: (at: string) => string }) {
+  const { t } = useI18n();
+  const check = p.chart!.historyCheck;
+  return (
+    <Card title={t('dental.medical.title')}>
+      <p>{check ? t('dental.medical.lastConfirmed', { who: check.author ?? '', when: p.when(check.confirmedAt) }) : t('dental.medical.never')}</p>
+      {check && (check.yes.length > 0 ? (
+        <div className="flex flex-col gap-1 rounded-md border border-warning-border bg-warning-bg p-3 text-warning-text">
+          <p className="flex items-center gap-2 font-bold"><CircleAlert aria-hidden className="size-4 shrink-0" />{t('dental.medical.risks')}</p>
+          <ul className="list-disc ps-6">{check.yes.map(q => <li key={q}>{t(`dental.medical.question.${q}`)}</li>)}</ul>
+        </div>
+      ) : <p className="flex items-center gap-2"><CircleCheck aria-hidden className="size-4 shrink-0" />{t('dental.medical.noRisks')}</p>)}
+      {check?.note && <p>{t('dental.medical.noteShown', { note: check.note })}</p>}
+      {p.canChange && p.encounterId && (p.historyOnVisit
+        ? <p role="status" className="flex items-center gap-2 font-bold"><CircleCheck aria-hidden className="size-4 shrink-0" />{t('dental.medical.thisVisit')}</p>
+        : <form className="flex flex-col gap-3" onSubmit={e => { e.preventDefault(); p.onConfirmHistory(); }}>
+            <p className="font-bold">{t('dental.medical.ask')}</p>
+            <div className="grid gap-x-6 gap-y-2 wide:grid-cols-2">
+              {historyQuestions.map(q => (
+                <fieldset key={q} className="flex flex-col gap-1">
+                  <legend className="text-label font-bold">{t(`dental.medical.question.${q}`)}</legend>
+                  <div className="flex gap-4">
+                    <ChoiceRow type="radio" name={`history-${q}`} checked={p.answers[q] === true} onChange={() => p.onAnswer(q, true)}>{t('dental.medical.yes')}</ChoiceRow>
+                    <ChoiceRow type="radio" name={`history-${q}`} checked={p.answers[q] === false} onChange={() => p.onAnswer(q, false)}>{t('dental.medical.no')}</ChoiceRow>
+                  </div>
+                </fieldset>
+              ))}
+            </div>
+            <Field id="dental-history-note" label={t('dental.medical.note')}>
+              <Textarea value={p.historyNote} maxLength={500} onChange={e => p.onHistoryNote(e.target.value)} />
+            </Field>
+            {p.historyIncomplete && <p role="alert" className={fieldError}>{t('dental.medical.answerAll')}</p>}
+            {p.historyFailed && <p role="alert" className={fieldError}>{t('dental.medical.failed')}</p>}
+            <div><Button type="submit" loading={p.historySaving}>{t('dental.medical.confirm')}</Button></div>
+          </form>)}
+    </Card>
   );
 }
 
@@ -153,6 +198,9 @@ function PlanCard(p: DentalView & { consultPath: string | null; amount: (minor: 
       {p.canChange && !p.encounterId && plan.items.some(i => i.status === 'Planned' || i.status === 'InProgress') && (
         <p className="flex items-center gap-2 text-muted-foreground"><CircleAlert aria-hidden className="size-4 shrink-0" />{t('dental.plan.needsConsult')}</p>
       )}
+      {p.canChange && p.encounterId && !p.historyOnVisit && plan.items.some(i => i.status === 'Planned') && (
+        <p className="flex items-center gap-2 text-muted-foreground"><CircleAlert aria-hidden className="size-4 shrink-0" />{t('dental.plan.needsHistory')}</p>
+      )}
       {p.canChange && <AddItem {...p} />}
       <Section title={t('dental.estimate.title')}>
         <p className="text-heading font-bold">{t('dental.estimate.total', { total: ltr(p.amount(plan.totalMinor, plan.currency)) })}</p>
@@ -200,7 +248,7 @@ function PlanRow({ item, ...p }: DentalView & { item: PlanItem; amount: (minor: 
         <div className="flex flex-wrap gap-2">
           {steps.map(step => step === 'decline'
             ? <Button key={step} variant="ghost" onClick={() => p.onDecline(item.id)}>{t('dental.plan.decline')}</Button>
-            : <Button key={step} variant="outline" loading={p.moving === item.id} disabled={(step === 'start' || step === 'done') && !p.encounterId}
+            : <Button key={step} variant="outline" loading={p.moving === item.id} disabled={((step === 'start' || step === 'done') && !p.encounterId) || (step === 'start' && !p.historyOnVisit)}
                 onClick={() => p.onStep(item, step)}>{t(`dental.plan.${step}`)}</Button>)}
         </div>
       )}

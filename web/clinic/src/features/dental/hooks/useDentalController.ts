@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { ApiError } from '../../api/services/apiClient';
-import { errorKey, findingProblem, sortSurfaces, stepTarget, type AcceptanceMethod, type Dentition, type DentalView, type PlanItem, type ToothCondition } from '../domain/dental';
-import { acceptEstimate, addPlanItem, downloadDentalPdf, fetchDental, fetchDentalServices, movePlanItem, recordFinding } from '../services/dentalApi';
+import { errorKey, findingProblem, historyComplete, historyOnVisit, sortSurfaces, stepTarget, type AcceptanceMethod, type Dentition, type DentalView, type HistoryQuestion, type PlanItem, type ToothCondition } from '../domain/dental';
+import { acceptEstimate, addPlanItem, confirmHistory, downloadDentalPdf, fetchDental, fetchDentalServices, movePlanItem, recordFinding } from '../services/dentalApi';
 
 const status = (e: unknown) => (e instanceof ApiError ? e.status : null);
 const code = (e: unknown) => (e instanceof ApiError ? e.code : undefined);
@@ -58,6 +58,15 @@ export function useDentalController(patientId: string, canChange: boolean): Dent
   });
   const pdf = useMutation({ mutationFn: () => downloadDentalPdf(patientId) });
 
+  // MDV-P8-014: the history check, answered with the patient on this visit; nothing is pre-filled from the last check (each answer is asked again).
+  const [answers, setAnswers] = useState<Partial<Record<HistoryQuestion, boolean>>>({});
+  const [historyNote, setHistoryNote] = useState('');
+  const [historyTried, setHistoryTried] = useState(false);
+  const history = useMutation({
+    mutationFn: () => confirmHistory(encounterId!, { answers, note: historyNote }),
+    onSuccess: () => { setAnswers({}); setHistoryNote(''); setHistoryTried(false); void reload(); },
+  });
+
   const d = chart.data;
   const selectedHistory = d && tooth ? d.history.filter(f => f.tooth === tooth) : [];
   return {
@@ -108,6 +117,15 @@ export function useDentalController(patientId: string, canChange: boolean): Dent
     onAccept: () => accept.mutate(),
 
     printing: pdf.isPending, printFailed: pdf.isError, onPrint: () => pdf.mutate(),
+
+    answers, onAnswer: (q: HistoryQuestion, yes: boolean) => setAnswers(a => ({ ...a, [q]: yes })),
+    historyNote, onHistoryNote: setHistoryNote,
+    historyOnVisit: d ? historyOnVisit(d) : false,
+    historySaving: history.isPending,
+    historyFailed: history.isError,
+    historyIncomplete: historyTried && !historyComplete(answers),
+    historyDone: history.isSuccess,
+    onConfirmHistory: () => { setHistoryTried(true); if (encounterId && historyComplete(answers)) history.mutate(); },
   };
 }
 

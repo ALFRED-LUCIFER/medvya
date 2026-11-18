@@ -45,8 +45,17 @@ public static class DentalPdfDocument
 
         var teeth = chart.Teeth.OrderBy(t => t.Tooth, StringComparer.Ordinal).ToList();
         var plan = chart.Plan;
+        var check = chart.HistoryCheck;
         List<PlainPdf.Row> rows =
         [
+            // MDV-P8-014: the medical history check, with each answer that raises a risk in words.
+            Row(Text("dentalPdf.label.history"), check is null ? [(Text("dentalPdf.historyNever"), Tone.Body)] :
+            [
+                (Text("dentalPdf.historyConfirmed", ("when", When(check.ConfirmedAt)), ("who", names.GetValueOrDefault(check.ConfirmedBy) ?? "")), Tone.Body),
+                (check.Yes.Count == 0 ? Text("dentalPdf.historyNone")
+                    : Text("dentalPdf.historyYes", ("list", string.Join(", ", check.Yes.Select(q => Text($"dental.medical.question.{q}"))))), check.Yes.Count == 0 ? Tone.Body : Tone.Strong),
+                .. check.Note is { } n ? [(n, Tone.Muted)] : Array.Empty<(string, Tone)>(),
+            ]),
             new(Text("dentalPdf.label.chart"), DentalChartPdf.Part(teeth, key => Text(key)), PlainPdf.Lines([.. teeth.Count == 0 ? [(Text("dentalPdf.noFindings"), Tone.Body)]
                 : teeth.Select(t => (Finding(t), Tone.Body)), (Text(DentalRules.SignOff is null ? "dental.rulesDraft" : "dental.rulesSigned"), Tone.Small)])),
         ];

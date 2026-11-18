@@ -34,7 +34,7 @@ flowchart LR
   api --> Identity["Identity<br/>schema identity<br/>5 tables"]
   api --> Patients["Patients<br/>schema patients<br/>7 tables"]
   api --> Scheduling["Scheduling<br/>schema scheduling<br/>15 tables"]
-  api --> Encounters["Encounters<br/>schema encounters<br/>29 tables"]
+  api --> Encounters["Encounters<br/>schema encounters<br/>30 tables"]
   api --> Prescribing["Prescribing<br/>schema prescribing<br/>18 tables"]
   api --> Notifications["Notifications<br/>schema notifications<br/>5 tables"]
   api --> Audit["Audit<br/>schema audit<br/>1 table"]
@@ -1359,7 +1359,7 @@ erDiagram
 
 </details>
 
-### Encounters (schema `encounters`, 29 tables)
+### Encounters (schema `encounters`, 30 tables)
 
 ```mermaid
 erDiagram
@@ -1417,6 +1417,14 @@ erDiagram
     guid MergedFromPatientId "id of patients.Patients"
     guid PatientId "id of patients.Patients"
     guid RecordedBy "id of identity.Users"
+  }
+  DentalHistoryChecks {
+    guid Id PK
+    guid ConfirmedBy "id of identity.Users"
+    guid EncounterId "id of encounters.Encounters"
+    guid FacilityId "id of tenancy.Facilities"
+    guid MergedFromPatientId "id of patients.Patients"
+    guid PatientId "id of patients.Patients"
   }
   DentalPlanItems {
     guid Id PK
@@ -1602,6 +1610,11 @@ erDiagram
   patients_Patients |o..o{ DentalFindings : "MergedFromPatientId"
   patients_Patients ||..o{ DentalFindings : "PatientId"
   identity_Users ||..o{ DentalFindings : "RecordedBy"
+  identity_Users ||..o{ DentalHistoryChecks : "ConfirmedBy"
+  Encounters ||..o{ DentalHistoryChecks : "EncounterId, no FK"
+  tenancy_Facilities ||..o{ DentalHistoryChecks : "FacilityId"
+  patients_Patients |o..o{ DentalHistoryChecks : "MergedFromPatientId"
+  patients_Patients ||..o{ DentalHistoryChecks : "PatientId"
   identity_Users ||..o{ DentalPlanItems : "ChangedBy"
   identity_Users ||..o{ DentalPlanItems : "CreatedBy"
   tenancy_Facilities ||..o{ DentalPlanItems : "FacilityId"
@@ -1696,6 +1709,7 @@ erDiagram
 | `ConsultNotes` | 16 | Id | tenant-scoped |
 | `DentalEstimateAcceptances` | 12 | Id | tenant-scoped |
 | `DentalFindings` | 12 | Id | tenant-scoped |
+| `DentalHistoryChecks` | 10 | Id | tenant-scoped |
 | `DentalPlanItems` | 21 | Id | tenant-scoped |
 | `DoctorNoteTemplates` | 4 | Id | tenant-scoped |
 | `Encounters` | 14 | Id | tenant-scoped |
@@ -1877,6 +1891,23 @@ erDiagram
 | `Surfaces` | character varying(5) |  |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
 | `Tooth` | character varying(2) |  |  |
+
+</details>
+
+<details><summary><code>encounters.DentalHistoryChecks</code> columns</summary>
+
+| Column | Type | Null | Links to |
+|---|---|---|---|
+| `Id` | guid |  |  |
+| `ConfirmedAt` | timestamptz |  |  |
+| `ConfirmedBy` | guid |  | id of `identity.Users` |
+| `EncounterId` | guid |  | id of `encounters.Encounters` |
+| `FacilityId` | guid |  | id of `tenancy.Facilities` |
+| `MergedFromPatientId` | guid | yes | id of `patients.Patients` |
+| `Note` | character varying(500) |  |  |
+| `PatientId` | guid |  | id of `patients.Patients` |
+| `TenantId` | guid |  | `tenancy.Tenants` |
+| `Yes` | text[] |  |  |
 
 </details>
 
@@ -3621,13 +3652,13 @@ From `docs/03-architecture/data-model.md` (areas A to D). "Built" means a table 
 | D · Care, portal, integration, audit | `AUDIT_EVENT` | built | `audit.AuditEvents` |
 | D · Care, portal, integration, audit | `OUTBOX_EVENT` | built | `scheduling.OutboxEvents` |
 
-Tables that exist but were added while building (not named in the plan): `billing.BillingDocuments`, `billing.CashAdjustments`, `billing.ProviderEvents`, `billing.Settings`, `encounters.CareChecks`, `encounters.CareGoals`, `encounters.CareTargets`, `encounters.ClinicNoteTemplates`, `encounters.ConsultNotes`, `encounters.DentalEstimateAcceptances`, `encounters.DentalFindings`, `encounters.DentalPlanItems`, `encounters.DoctorNoteTemplates`, `encounters.EncounterHandovers`, `encounters.GeriatricAssessments`, `encounters.HistoryEntries`, `encounters.Immunisations`, `encounters.IntakeEscalations`, `encounters.Intakes`, `encounters.MedicationDecisions`, `encounters.MedicationReconciliations`, `encounters.MilestoneResponses`, `encounters.OutboxEvents`, `encounters.PregnancyEpisodes`, `encounters.PregnancyRuledOuts`, `encounters.SignedNotePdfs`, `encounters.SignedNoteVersions`, `identity.OnboardingDrafts`, `identity.PatientSessions`, `identity.Sessions`, `identity.SmsSignIns`, `leads.DemoRequests`, `leads.Waitlist`, `notifications.Preferences`, `notifications.StaffNotificationReads`, `notifications.StaffNotifications`, `patients.DataKeys`, `patients.MergeRequests`, `platform.AuditEntries`, `platform.KeyLinks`, `platform.Members`, `platform.PlanPrices`, `platform.PlanVersions`, `platform.SecurityKeys`, `platform.Sessions`, `prescribing.FormularyBrands`, `prescribing.PrescriptionCancellations`, `prescribing.PrescriptionDiscards`, `prescribing.PrescriptionPdfs`, `prescribing.PrintedPapers`, `prescribing.ReferralEvents`, `prescribing.RxAdvice`, `prescribing.RxAlertOverrides`, `prescribing.RxLayoutApprovals`, `prescribing.RxShareCodes`, `prescribing.RxShares`, `scheduling.AppointmentReschedules`, `scheduling.BookingConflicts`, `scheduling.MetricBaselines`, `scheduling.OutboxTenants`, `scheduling.QueueDisplays`, `scheduling.Resources`, `scheduling.SlotHolds`, `scheduling.VisitStatusEvents`, `tenancy.AccessRequests`, `tenancy.AccessReviewDecisions`, `tenancy.AccessReviews`, `tenancy.FeatureFlags`, `tenancy.FeatureReleases`, `tenancy.Invitations`, `tenancy.OperatingHours`, `tenancy.OrganisationDocuments`, `tenancy.OrganisationRequests`, `tenancy.PracticeDefaults`, `tenancy.Profiles`, `tenancy.SettingsChanges`, `tenancy.TenantIndex`, `tenancy.TermsAcceptances`.
+Tables that exist but were added while building (not named in the plan): `billing.BillingDocuments`, `billing.CashAdjustments`, `billing.ProviderEvents`, `billing.Settings`, `encounters.CareChecks`, `encounters.CareGoals`, `encounters.CareTargets`, `encounters.ClinicNoteTemplates`, `encounters.ConsultNotes`, `encounters.DentalEstimateAcceptances`, `encounters.DentalFindings`, `encounters.DentalHistoryChecks`, `encounters.DentalPlanItems`, `encounters.DoctorNoteTemplates`, `encounters.EncounterHandovers`, `encounters.GeriatricAssessments`, `encounters.HistoryEntries`, `encounters.Immunisations`, `encounters.IntakeEscalations`, `encounters.Intakes`, `encounters.MedicationDecisions`, `encounters.MedicationReconciliations`, `encounters.MilestoneResponses`, `encounters.OutboxEvents`, `encounters.PregnancyEpisodes`, `encounters.PregnancyRuledOuts`, `encounters.SignedNotePdfs`, `encounters.SignedNoteVersions`, `identity.OnboardingDrafts`, `identity.PatientSessions`, `identity.Sessions`, `identity.SmsSignIns`, `leads.DemoRequests`, `leads.Waitlist`, `notifications.Preferences`, `notifications.StaffNotificationReads`, `notifications.StaffNotifications`, `patients.DataKeys`, `patients.MergeRequests`, `platform.AuditEntries`, `platform.KeyLinks`, `platform.Members`, `platform.PlanPrices`, `platform.PlanVersions`, `platform.SecurityKeys`, `platform.Sessions`, `prescribing.FormularyBrands`, `prescribing.PrescriptionCancellations`, `prescribing.PrescriptionDiscards`, `prescribing.PrescriptionPdfs`, `prescribing.PrintedPapers`, `prescribing.ReferralEvents`, `prescribing.RxAdvice`, `prescribing.RxAlertOverrides`, `prescribing.RxLayoutApprovals`, `prescribing.RxShareCodes`, `prescribing.RxShares`, `scheduling.AppointmentReschedules`, `scheduling.BookingConflicts`, `scheduling.MetricBaselines`, `scheduling.OutboxTenants`, `scheduling.QueueDisplays`, `scheduling.Resources`, `scheduling.SlotHolds`, `scheduling.VisitStatusEvents`, `tenancy.AccessRequests`, `tenancy.AccessReviewDecisions`, `tenancy.AccessReviews`, `tenancy.FeatureFlags`, `tenancy.FeatureReleases`, `tenancy.Invitations`, `tenancy.OperatingHours`, `tenancy.OrganisationDocuments`, `tenancy.OrganisationRequests`, `tenancy.PracticeDefaults`, `tenancy.Profiles`, `tenancy.SettingsChanges`, `tenancy.TenantIndex`, `tenancy.TermsAcceptances`.
 
-**Counts:** 121 tables across 11 schemas; 43 of 90 planned entities are built; 78 tables were added during the build.
+**Counts:** 122 tables across 11 schemas; 43 of 90 planned entities are built; 79 tables were added during the build.
 
 ## 6. Rules the model follows
 
-- **Tenant isolation:** 106 of 121 tables carry `TenantId` (EF query filter plus PostgreSQL forced row-level security on `medvya.tenant_id`). Without `TenantId`: `identity.OnboardingDrafts`, `identity.PatientSessions`, `identity.SmsSignIns`, `identity.Users`, `leads.DemoRequests`, `leads.Waitlist`, `platform.AuditEntries`, `platform.KeyLinks`, `platform.Members`, `platform.PlanPrices`, `platform.PlanVersions`, `platform.SecurityKeys`, `platform.Sessions`, `tenancy.FeatureReleases`, `tenancy.Tenants`. (`TenantId` present is not proof the row-level-security policy covers the table; see `docs/03-architecture/database-security.md`.)
+- **Tenant isolation:** 107 of 122 tables carry `TenantId` (EF query filter plus PostgreSQL forced row-level security on `medvya.tenant_id`). Without `TenantId`: `identity.OnboardingDrafts`, `identity.PatientSessions`, `identity.SmsSignIns`, `identity.Users`, `leads.DemoRequests`, `leads.Waitlist`, `platform.AuditEntries`, `platform.KeyLinks`, `platform.Members`, `platform.PlanPrices`, `platform.PlanVersions`, `platform.SecurityKeys`, `platform.Sessions`, `tenancy.FeatureReleases`, `tenancy.Tenants`. (`TenantId` present is not proof the row-level-security policy covers the table; see `docs/03-architecture/database-security.md`.)
 - **Append-only ledgers:** `audit.AuditEvents`, `encounters.SignedNotePdfs`, `encounters.SignedNoteVersions`, `patients.ConsentReceipts`, `prescribing.AuthorisedPrescriptions`, `prescribing.PharmacyDispatchEvents`, `prescribing.PrescriptionPdfs`, `prescribing.PrintedPapers`, `prescribing.RxLayoutApprovals`, `prescribing.RxShares`, `tenancy.TermsAcceptances` (hash-chained, MDV-P0-036; each also has ChainSeq, PrevHash and RowHash added by `LedgerSql`, outside the EF model).
 - **No cross-module foreign keys:** modules link by id and through application services (AGENTS.md 3.1).
 - **Country data plane:** one deployment and one database per country (ADR-003); this diagram is the same in each.

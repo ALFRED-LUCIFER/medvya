@@ -38,7 +38,15 @@ public sealed record DentalPlanView(IReadOnlyList<DentalPlanItemView> Items, lon
 /// <see cref="DentalRules.MaxHistory"/>), and the plan. A tooth with no finding is "not recorded", never healthy. <see cref="OpenEncounterId"/>: the caller's
 /// open consultation with the patient at this facility, where findings are recorded and items started or finished (null: none open).
 /// </summary>
-public sealed record DentalChartView(IReadOnlyList<ToothFindingView> Teeth, IReadOnlyList<ToothFindingView> History, DentalPlanView Plan, Guid? OpenEncounterId = null);
+/// <see cref="HistoryCheck"/>: the latest medical history check (MDV-P8-014), null when never confirmed.
+public sealed record DentalChartView(IReadOnlyList<ToothFindingView> Teeth, IReadOnlyList<ToothFindingView> History, DentalPlanView Plan, Guid? OpenEncounterId = null,
+    DentalHistoryCheckView? HistoryCheck = null);
+
+/// <summary>The history check as confirmed with the patient: a yes or no for every question (MDV-P8-014), and an optional note.</summary>
+public sealed record ConfirmDentalHistory(IReadOnlyDictionary<DentalHistoryQuestion, bool>? Answers, string? Note);
+
+/// <summary>A confirmed history check: the questions answered yes (the risks), on which visit, by whom and when. <see cref="Author"/> is filled by the endpoint.</summary>
+public sealed record DentalHistoryCheckView(Guid Id, Guid EncounterId, IReadOnlyList<DentalHistoryQuestion> Yes, string? Note, Guid ConfirmedBy, DateTimeOffset ConfirmedAt, string? Author = null);
 
 /// <summary>A catalogue service a dentist can plan, with the clinic's price now (null: not priced, cannot be planned).</summary>
 public sealed record DentalServiceOption(Guid Id, string Name, string? Code, int? DurationMinutes, long? PriceMinor, string Currency);
@@ -74,8 +82,12 @@ public interface IDental
     /// <exception cref="DentalValidationException">Field errors; "serviceId:unknown" or "serviceId:no_price".</exception>
     Task<DentalPlanItemView> AddPlanItemAsync(Guid patientId, Guid facilityId, AddDentalPlanItem command, CancellationToken cancellationToken = default);
 
-    /// <summary>Null when the item is not the patient's.</summary>
-    /// <exception cref="DentalValidationException">"to:not_allowed", "reason:required", "encounterId:required|invalid|ended".</exception>
+    /// <summary>Records the history check in the patient's open consultation (MDV-P8-014); null when the consultation is not at this facility.</summary>
+    /// <exception cref="DentalValidationException">"answers.&lt;question&gt;:required", "note:too_long", "encounter:ended".</exception>
+    Task<DentalHistoryCheckView?> ConfirmHistoryAsync(Guid encounterId, Guid facilityId, ConfirmDentalHistory command, CancellationToken cancellationToken = default);
+
+    /// <summary>Null when the item is not the patient's. Starting an item needs the history check confirmed on that visit (MDV-P8-014).</summary>
+    /// <exception cref="DentalValidationException">"to:not_allowed", "reason:required", "encounterId:required|invalid|ended", "historyCheck:required".</exception>
     /// <exception cref="DentalConflictException"/>
     Task<DentalPlanItemView?> MovePlanItemAsync(Guid patientId, Guid facilityId, Guid itemId, MoveDentalPlanItem command, CancellationToken cancellationToken = default);
 

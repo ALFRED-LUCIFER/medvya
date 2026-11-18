@@ -36,6 +36,7 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
     public DbSet<Immunisation> Immunisations => Set<Immunisation>();
     public DbSet<MilestoneResponse> MilestoneResponses => Set<MilestoneResponse>();
     public DbSet<DentalFinding> DentalFindings => Set<DentalFinding>();
+    public DbSet<DentalHistoryCheck> DentalHistoryChecks => Set<DentalHistoryCheck>();
     public DbSet<DentalPlanItem> DentalPlanItems => Set<DentalPlanItem>();
     public DbSet<DentalEstimateAcceptance> DentalEstimateAcceptances => Set<DentalEstimateAcceptance>();
 
@@ -152,6 +153,17 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
             e.Property(x => x.Condition).HasConversion<string>().HasMaxLength(20);
             e.HasIndex(x => new { x.TenantId, x.PatientId, x.RecordedAt }); // the patient's chart, newest first
             e.ToTable(t => t.HasCheckConstraint("CK_DentalFindings_Surfaces", "(\"Condition\" IN ('Caries', 'Filling')) = (\"Surfaces\" IS NOT NULL)"));
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        // MDV-P8-014: append-only like findings; the answers stored as the questions answered yes, by name.
+        modelBuilder.Entity<DentalHistoryCheck>(e =>
+        {
+            e.Property(x => x.Yes).HasConversion(
+                v => v.Select(q => q.ToString()).ToArray(), v => v.Select(Enum.Parse<DentalHistoryQuestion>).ToArray(),
+                new Microsoft.EntityFrameworkCore.ChangeTracking.ValueComparer<DentalHistoryQuestion[]>((a, b) => a!.SequenceEqual(b!), v => v.Aggregate(0, (h, q) => HashCode.Combine(h, q)), v => v.ToArray()));
+            e.Property(x => x.Note).HasMaxLength(DentalHistoryCheck.MaxNote);
+            e.HasIndex(x => new { x.TenantId, x.PatientId, x.ConfirmedAt }); // the latest check of the patient
+            e.HasIndex(x => new { x.TenantId, x.EncounterId }); // confirmed on this visit?
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<DentalPlanItem>(e =>

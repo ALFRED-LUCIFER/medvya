@@ -50,6 +50,11 @@ BEGIN
         GRANT UPDATE ("PatientId", "MergedFromPatientId") ON encounters."DentalFindings", encounters."DentalEstimateAcceptances" TO medvya_encounters;
         REVOKE DELETE, TRUNCATE ON encounters."DentalPlanItems" FROM medvya_encounters;
     END IF;
+    -- The dental history check is append-only too (MDV-P8-014): a later visit confirms again with a new row.
+    IF to_regclass('encounters."DentalHistoryChecks"') IS NOT NULL THEN
+        REVOKE UPDATE, DELETE, TRUNCATE ON encounters."DentalHistoryChecks" FROM medvya_encounters;
+        GRANT UPDATE ("PatientId", "MergedFromPatientId") ON encounters."DentalHistoryChecks" TO medvya_encounters;
+    END IF;
 
     -- The chain trigger lists a tenant's first row in ledger."Chains"; ledger."Tables" stays read-only (roles.sql).
     IF to_regclass('ledger."Chains"') IS NOT NULL THEN

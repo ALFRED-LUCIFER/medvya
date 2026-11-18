@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { byPhase, dentalErrors, errorKey, findingProblem, marksFor, nextSteps, sortSurfaces, type PlanItem, type ToothFinding } from './dental';
+import { byPhase, dentalErrors, errorKey, findingProblem, historyComplete, historyOnVisit, historyQuestions, marksFor, nextSteps, sortSurfaces, type PlanItem, type ToothFinding } from './dental';
 import en from '../../../../../../packages/i18n/messages/en.json';
 
 const item = (id: string, phase: number): PlanItem => ({
@@ -42,5 +42,18 @@ describe('dental chart and plan (MDV-P8-011, MDV-P8-012)', () => {
     for (const code of dentalErrors) expect((en as Record<string, string>)[errorKey(code)!], code).toBeTruthy();
     expect(errorKey('version:stale')).toBeNull();
     expect(errorKey(undefined)).toBeNull();
+  });
+});
+
+describe('the medical history check (MDV-P8-014)', () => {
+  it('counts as confirmed only on the open visit, and needs every question answered', () => {
+    const c = (encounterId: string) => ({ id: 'h', encounterId, yes: [], note: null, confirmedBy: 'u', confirmedAt: '2026-11-06T04:40:00Z', author: null });
+    expect(historyOnVisit({ openEncounterId: 'e-9', historyCheck: c('e-9') })).toBe(true);
+    expect(historyOnVisit({ openEncounterId: 'e-9', historyCheck: c('e-1') })).toBe(false); // an earlier visit's check
+    expect(historyOnVisit({ openEncounterId: null, historyCheck: c('e-9') })).toBe(false);
+    expect(historyOnVisit({ openEncounterId: 'e-9', historyCheck: null })).toBe(false);
+    const all = Object.fromEntries(historyQuestions.map(q => [q, false]));
+    expect(historyComplete(all)).toBe(true);
+    expect(historyComplete({ ...all, Pregnancy: undefined })).toBe(false);
   });
 });

@@ -19,7 +19,8 @@ namespace Medvya.Encounters.Api;
 /// awaiting a dentist (the screen says so).
 /// </summary>
 public sealed record DentalChartResponse(
-    IReadOnlyList<ToothFindingView> Teeth, IReadOnlyList<ToothFindingView> History, DentalPlanView Plan, Guid? OpenEncounterId, string TimeZone, bool RulesSignedOff);
+    IReadOnlyList<ToothFindingView> Teeth, IReadOnlyList<ToothFindingView> History, DentalPlanView Plan, Guid? OpenEncounterId, string TimeZone, bool RulesSignedOff,
+    DentalHistoryCheckView? HistoryCheck = null);
 
 public static class DentalEndpoints
 {
@@ -40,6 +41,10 @@ public static class DentalEndpoints
         app.MapPost("/v1/encounters/{encounterId:guid}/dental/findings", Record)
             .RequireCapability(Capability.ClinicalNotes, Access.Sign)
             .AuditedByUseCase("patient.dental.finding", "patient", AuditPurpose.Treatment)
+            .AddEndpointFilter(MapErrors).RequireFeature(Features.Dental);
+        app.MapPost("/v1/encounters/{encounterId:guid}/dental/history-check", ConfirmHistory)
+            .RequireCapability(Capability.ClinicalNotes, Access.Sign)
+            .AuditedByUseCase("patient.dental.history_check", "patient", AuditPurpose.Treatment)
             .AddEndpointFilter(MapErrors).RequireFeature(Features.Dental);
         app.MapPost("/v1/patients/{patientId:guid}/dental/plan", Plan)
             .RequireCapability(Capability.ClinicalNotes, Access.Sign)
@@ -66,10 +71,11 @@ public static class DentalEndpoints
         if (current.FacilityId is not { } facilityId) return NoFacility();
         if (!(await patients.SummariesAsync([patientId], ct)).ContainsKey(patientId)) return Results.NotFound();
         var chart = await service.ChartAsync(patientId, facilityId, ct);
-        var names = await users.DisplayNamesAsync([.. chart.History.Select(f => f.RecordedBy).Distinct()], ct);
+        var names = await users.DisplayNamesAsync([.. chart.History.Select(f => f.RecordedBy).Concat(chart.HistoryCheck is { } c ? [c.ConfirmedBy] : []).Distinct()], ct);
         ToothFindingView Named(ToothFindingView f) => f with { Author = names.GetValueOrDefault(f.RecordedBy) };
         return Results.Ok(new DentalChartResponse([.. chart.Teeth.Select(Named)], [.. chart.History.Select(Named)], chart.Plan, chart.OpenEncounterId,
-            (await facilities.FindAsync(facilityId, ct) ?? throw new InvalidOperationException("Session facility not in this tenant.")).TimeZone, DentalRules.SignOff is not null));
+            (await facilities.FindAsync(facilityId, ct) ?? throw new InvalidOperationException("Session facility not in this tenant.")).TimeZone, DentalRules.SignOff is not null,
+            chart.HistoryCheck is { } check ? check with { Author = names.GetValueOrDefault(check.ConfirmedBy) } : null));
     }
 
     static async Task<IResult> Services(Guid patientId, [FromServices] IDental service, [FromServices] IPatientDirectory patients, [FromServices] ICurrentFacility current, CancellationToken ct)
@@ -86,6 +92,15 @@ public static class DentalEndpoints
         if (body is null) return Results.ValidationProblem(new Dictionary<string, string[]> { ["finding"] = ["empty"] });
         if (await service.RecordFindingAsync(encounterId, facilityId, body, ct) is not { } row) return Results.NotFound();
         return Results.Ok(row with { Author = (await users.DisplayNamesAsync([row.RecordedBy], ct)).GetValueOrDefault(row.RecordedBy) });
+    }
+
+    static async Task<IResult> ConfirmHistory(Guid encounterId, [FromBody] ConfirmDentalHistory? body, [FromServices] IDental service, [FromServices] IStaffUsers users,
+        [FromServices] ICurrentFacility current, CancellationToken ct)
+    {
+        if (current.FacilityId is not { } facilityId) return NoFacility();
+        if (body is null) return Results.ValidationProblem(new Dictionary<string, string[]> { ["check"] = ["empty"] });
+        if (await service.ConfirmHistoryAsync(encounterId, facilityId, body, ct) is not { } row) return Results.NotFound();
+        return Results.Ok(row with { Author = (await users.DisplayNamesAsync([row.ConfirmedBy], ct)).GetValueOrDefault(row.ConfirmedBy) });
     }
 
     static async Task<IResult> Plan(Guid patientId, [FromBody] AddDentalPlanItem? body, [FromServices] IDental service, [FromServices] IPatientDirectory patients,

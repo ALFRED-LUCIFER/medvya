@@ -17,9 +17,22 @@ export type PlanItem = {
 };
 export type Acceptance = { id: string; acceptedBy: string; method: AcceptanceMethod; totalMinor: number; currency: string; acceptedAt: string; recordedBy: string };
 export type DentalPlan = { items: PlanItem[]; totalMinor: number; currency: string | null; acceptance: Acceptance | null; acceptanceCurrent: boolean };
+/** The medical history questions asked before dental treatment (MDV-P8-014), in the order they are asked (DentalHistoryRules.Questions on the server). */
+export const historyQuestions = ['BloodThinners', 'Diabetes', 'Pregnancy', 'HeartOrEndocarditisRisk', 'Bisphosphonates', 'LocalAnaestheticAllergy'] as const;
+export type HistoryQuestion = (typeof historyQuestions)[number];
+/** A confirmed history check: the questions answered yes, on which visit, by whom and when. */
+export type HistoryCheck = { id: string; encounterId: string; yes: HistoryQuestion[]; note: string | null; confirmedBy: string; confirmedAt: string; author: string | null };
+
 export type DentalChart = {
   teeth: ToothFinding[]; history: ToothFinding[]; plan: DentalPlan; openEncounterId: string | null; timeZone: string; rulesSignedOff: boolean;
+  historyCheck: HistoryCheck | null;
 };
+
+/** Whether the history was confirmed on the doctor's open visit: treatment starts only then (the server refuses otherwise, "historyCheck:required"). */
+export const historyOnVisit = (c: Pick<DentalChart, 'historyCheck' | 'openEncounterId'>) => !!c.openEncounterId && c.historyCheck?.encounterId === c.openEncounterId;
+
+/** Every question answered, yes or no. */
+export const historyComplete = (answers: Partial<Record<HistoryQuestion, boolean>>) => historyQuestions.every(q => answers[q] !== undefined);
 export type DentalService = { id: string; name: string; code: string | null; durationMinutes: number | null; priceMinor: number | null; currency: string };
 
 /** Caries and fillings are recorded on surfaces; every other condition is of the whole tooth (DentalRules.SurfaceConditions on the server). */
@@ -93,6 +106,7 @@ export const dentalErrors = [
   'tooth:invalid', 'condition:invalid', 'surfaces:required', 'surfaces:not_allowed', 'surfaces:invalid', 'surfaces:needs_tooth', 'note:too_long',
   'encounter:ended', 'encounterId:required', 'encounterId:ended', 'encounterId:invalid', 'to:not_allowed', 'reason:required', 'reason:too_long',
   'serviceId:required', 'serviceId:unknown', 'serviceId:no_price', 'phase:range', 'acceptedBy:required', 'acceptedBy:too_long', 'method:invalid', 'plan:empty',
+  'historyCheck:required',
 ] as const;
 
 /** A server field error as its catalogue key, or null when it is not one of the dental errors (the screen then says the generic failure). */
@@ -116,13 +130,15 @@ export type DentalView = {
   acceptedBy: string; onAcceptedBy: (name: string) => void; method: AcceptanceMethod; onMethod: (m: AcceptanceMethod) => void;
   accepting: boolean; acceptError: MessageKey | null; acceptFailed: boolean; acceptDone: boolean; onAccept: () => void;
   printing: boolean; printFailed: boolean; onPrint: () => void;
+  answers: Partial<Record<HistoryQuestion, boolean>>; onAnswer: (q: HistoryQuestion, yes: boolean) => void; historyNote: string; onHistoryNote: (note: string) => void;
+  historyOnVisit: boolean; historySaving: boolean; historyFailed: boolean; historyIncomplete: boolean; historyDone: boolean; onConfirmHistory: () => void;
 };
 
-/** The dental services starter list load (MDV-P8-010) on Settings › Dental. */
 /** Settings › Dental, the clinic's note template (MDV-P8-015): on means new notes start on the dental template. */
 export type DentalTemplateView = { loading: boolean; loadFailed: boolean; on: boolean; saving: boolean; saveFailed: boolean; onChange: (on: boolean) => void };
 
 /** The clinic default the switch saves: the dental template only, or General OPD. */
 export const dentalTemplateDefault = (on: boolean): string[] => (on ? ['dental'] : ['general-opd']);
 
+/** The dental services starter list load (MDV-P8-010) on Settings › Dental. */
 export type StarterView = { loading: boolean; result: { added: number; skipped: number } | null; unsupported: boolean; failed: boolean; onLoad: () => void };
